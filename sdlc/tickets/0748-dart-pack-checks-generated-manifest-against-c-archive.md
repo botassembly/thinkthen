@@ -14,9 +14,10 @@ Phase: 2
 
 ### Proof
 
+- The focused archive fixture runs through `pm job run --machine gator 0748 SHA --memory 7 -- sdlc/scripts/job python3 sdlc/scripts/release-archive-self-test.py` at the pushed repair revision.
 - `pm job run --machine gator 0748 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes; it failed on main's source in Gator receipt 0744/1792529452380-1255765.
 - A planted Dart source edit still fails the archived-source check, and a planted manifest checksum that differs from the C archive fails the new check.
-- The configured landing gate passes.
+- The configured landing gate passes through `pm job run --machine m5 0748 SHA --disk 20 --memory 8 -- sdlc/scripts/gate`.
 
 ## Evidence
 
