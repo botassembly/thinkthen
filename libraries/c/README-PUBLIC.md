@@ -32,7 +32,6 @@ int main(void) {
 ```
 
 To inspect a construction failure, pass a `thinkthen_call_error **` output to any engine constructor. Failure returns NULL with an independent owned error; success clears the output to NULL. Read its code, safe message, retryability and optional facts with `thinkthen_call_error_*`, then free it once with `thinkthen_call_error_free`. Passing NULL discards construction diagnostics.
-
 Save the caller as `consumer.c`. From the extracted directory on Linux or macOS, run `export PKG_CONFIG_PATH="$PWD/lib/pkgconfig"`, then `case $(uname -s) in Darwin) static_selection=-Wl,-dead_strip_dylibs ;; *) static_selection=-Wl,--as-needed ;; esac`, then `cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) "$PWD/lib/libthinkthen.a" "$static_selection" $(pkg-config --libs --static thinkthen)` and `./consumer`. The archive supplies the engine and pkg-config supplies its native dependencies. Shared callers use `pkg-config --cflags --libs thinkthen` and deploy the shared library.
 
 On Windows, open an MSVC developer command prompt in the extracted directory. Run `cl /nologo /W4 /I include consumer.c lib\thinkthen.dll.lib /Fe:consumer.exe`, then `set "PATH=%CD%\bin;%PATH%"` and `consumer.exe`.
