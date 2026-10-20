@@ -2313,6 +2313,7 @@ pub fn readAnswerShape2(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
 }
 
 pub fn readAnswerShape8AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_any_of_1_items_v1) anyerror!AnswerShape8AnyOf1Items {
+    _ = a;
     return switch (v.kind) {
         1 => .{ .number = v.data.number },
         2 => .null_value,
@@ -2361,6 +2362,7 @@ pub fn readAnswerShape4(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
 }
 
 pub fn readAnswerShape4AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_any_of_1_items_v1) anyerror!AnswerShape4AnyOf1Items {
+    _ = a;
     return switch (v.kind) {
         1 => .{ .integer = v.data.integer },
         2 => .null_value,

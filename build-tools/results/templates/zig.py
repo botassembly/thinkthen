@@ -283,6 +283,8 @@ def render_results(definitions):
                     body.append('        ' + str(index) + ' => .{ .' + identifier(kind) + ' = ' + decode(schema, path, 'v.data.' + identifier(kind)) + ' },')
             declarations.append('pub const ' + typ + ' = union(enum) {\n' + '\n'.join(members) + '\n};')
             body += ['        else => error.InvalidNativeDiscriminator,', '    };']
+            if not any(re.search(r'\ba[,.]', line) for line in body):
+                body.insert(0, '    _ = a;')
         else:
             declarations.append('pub const ' + typ + ' = ' + native_type(source, key + '_value') + ';')
             expression = decode(source, key + '_value', 'v.value')
