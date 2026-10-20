@@ -1,5 +1,27 @@
 {
   "tools": {
+    "cargo-pgrx": {
+      "commands": [
+        "cargo-pgrx"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "postgresql"
+      ],
+      "provider": "cargo:cargo-pgrx",
+      "version": "0.17.0",
+      "probe": {
+        "argv": [
+          "cargo",
+          "pgrx",
+          "--version"
+        ],
+        "contains": "cargo-pgrx {version}"
+      }
+    },
     "postgresql": {
       "commands": [
         "pg_config",

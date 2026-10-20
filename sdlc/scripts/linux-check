@@ -78,6 +78,16 @@ command = [args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label'
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
            '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
+# Resolve dependency locations once, before a gate replaces HOME. The tool
+# resolver uses this same mounted uv cache; no host package cache is imported.
+home = owned / 'home'
+toolchains = home / '.cache/thinkthen-toolchains'
+for name, value in dict(THINKTHEN_TOOLCHAINS=toolchains,
+                        R_LIBS_USER=toolchains / 'r-library',
+                        SQLITE_AMALGAMATION=toolchains / 'sqlite-amalgamation-3500000',
+                        UV_CACHE_DIR=Path(manifest['linux_prefix']) / 'uv-cache',
+                        PUB_CACHE=home / '.pub-cache', npm_config_cache=home / '.npm').items():
+    command += ['-e', name + '=' + str(value)]
 # Cargo embeds these fixture paths at compile time. Host-shared filesystems
 # can bypass Unix permissions and locks and reject filename bytes, even for
 # a nonroot container user. Keep fixtures on Linux while retaining builds,
@@ -98,6 +108,56 @@ for relative in locks.splitlines():
 # Advisory data is a separate prerequisite from Cargo registry dependencies.
 # Fetch it in this same mounted home before the offline checks consume it.
 script += 'cargo deny fetch db\n'
+# These are external source inputs and package caches. Product artifacts still
+# build from this checkout in the checks below. Prefer verified cached inputs
+# and offline installers, then acquire missing pinned inputs in this container.
+if set(args.checks) & {'test-full-cases', 'package', 'test-stress'}:
+    preparation = r'''set -eu
+repo=$PWD
+. sdlc/scripts/scratch.sh
+scratch_dir dependencies
+if ! (cd "$THINKTHEN_TOOLCHAINS/archives" && sha256sum -c "$repo/libraries/r/tools/pins.sha256") ||
+   ! Rscript --vanilla -e '
+     pins <- read.table(commandArgs(TRUE)[1], col.names=c("sha", "archive"))
+     for (archive in pins$archive) {
+       parts <- strsplit(sub("[.]tar[.]gz$", "", archive), "_", fixed=TRUE)[[1]]
+       stopifnot(packageVersion(parts[1]) == parts[2])
+     }
+   ' libraries/r/tools/pins.sha256; then
+    bash libraries/r/tools/setup.sh
+fi
+if (cd "$SQLITE_AMALGAMATION" && sha256sum -c "$repo/databases/sqlite/amalgamation.sha256"); then
+    sh databases/sqlite/setup.sh "$SQLITE_AMALGAMATION"
+else
+    sh databases/sqlite/setup.sh
+fi
+for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
+if ! sh databases/duckdb/tools/setup.sh; then
+    sh databases/duckdb/tools/setup.sh --fetch
+fi
+. libraries/python/host.sh
+python=$(python_host)
+[ -n "$python" ] || { echo 'linux-check: no Python host for pinned dependencies' >&2; exit 1; }
+uv venv --quiet --offline --python "$python" "$dependencies/python"
+uv pip install --quiet --offline --require-hashes --python "$dependencies/python/bin/python" -r libraries/python/requirements-dev.txt ||
+    uv pip install --quiet --require-hashes --python "$dependencies/python/bin/python" -r libraries/python/requirements-dev.txt
+mkdir "$dependencies/npm"
+cp libraries/typescript/package.json libraries/typescript/package-lock.json "$dependencies/npm/"
+npm ci --offline --no-audit --no-fund --silent --prefix "$dependencies/npm" ||
+    npm ci --no-audit --no-fund --silent --prefix "$dependencies/npm"
+'''
+    if arch == 'x86_64':
+        preparation += r'''
+# Keep the existing local Flutter override and all three consumer locks. Only
+# the owned copy receives generated package state, never the committed tree.
+git archive HEAD libraries/dart | tar -x -C "$dependencies"
+printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$dependencies/libraries/dart/flutter/example/pubspec_overrides.yaml"
+for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
+    (cd "$dependencies/$project" &&
+        { flutter pub get --offline --enforce-lockfile || flutter pub get --enforce-lockfile; })
+done
+'''
+    script += 'sdlc/scripts/job sh -c ' + shlex.quote(preparation) + '\n'
 # Check the whole manifest before any gate work, including the mounted advisory DB.
 groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
 script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(sorted(groups))) + '\n'

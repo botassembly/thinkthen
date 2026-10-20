@@ -152,6 +152,26 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     env['PATH'] = str(root / 'bin') + ':' + env['PATH']
     if name == 'rust':
         rust_components(manifest, env, install=True)
+    if name == 'flutter':
+        sdk = (root / 'bin/flutter').resolve().parent.parent
+        revision = subprocess.check_output(['git', '-C', str(sdk), 'rev-parse', 'HEAD'],
+                                           env=env, text=True).strip()
+        if revision != tool['source_commit']:
+            raise SystemExit('Flutter framework differs from tools.json')
+        # The SDK stays root-owned. Its launcher reads Git metadata even when
+        # the checked image later runs as the host's unprivileged user.
+        subprocess.run(['git', 'config', '--system', '--add', 'safe.directory', str(sdk)],
+                       env=env, check=True)
+        subprocess.run([str(root / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
+        # The launcher atomically replaces engine.stamp and writes engine.realm;
+        # the tool opens lockfile for writing and refreshes flutter.version.json.
+        # Keep cached compilers, engine artifacts and SDK source read-only.
+        cache = sdk / 'bin/cache'
+        subprocess.run(['chmod', 'a+rwx', str(cache)], env=env, check=True)
+        for name in ('lockfile', 'engine.realm', 'flutter.version.json'):
+            state = cache / name
+            if state.is_file():
+                subprocess.run(['chmod', 'a+rw', str(state)], env=env, check=True)
 python = root / 'bin/python3'
 packages = dict(manifest['python_packages'])
 packages.update({tool['commands'][0]: tool['version'] for tool in manifest['tools'].values()
