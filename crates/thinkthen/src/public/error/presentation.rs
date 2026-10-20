@@ -311,6 +311,18 @@ impl Error {
             Diagnostic::ThresholdFunction(crate::RequestFunction::Annotate) => {
                 ErrorDiagnostic::AnnotationThreshold
             }
+            Diagnostic::ThresholdFunction(function) => {
+                use crate::core::{QuestionFileError as E, Source::CommandLine};
+                let cause = match function {
+                    crate::RequestFunction::Choose => E::BandOnChoose(CommandLine),
+                    crate::RequestFunction::Tag => E::BandOnTag(CommandLine),
+                    crate::RequestFunction::Score => E::RuleOnScore(CommandLine),
+                    crate::RequestFunction::Filter => E::BandOnFilter(CommandLine),
+                    crate::RequestFunction::Rank => E::BandOnRank(CommandLine),
+                    _ => return None,
+                };
+                ErrorDiagnostic::Question { message: cause.to_string(), from_file: false }
+            }
             Diagnostic::QuestionRead(crate::QuestionFileError::Unreadable(cause)) => {
                 ErrorDiagnostic::QuestionUnreadable(cause.to_string())
             }
@@ -415,6 +427,7 @@ fn refusal(
         match error {
             crate::core::BlankTextError::ModelControl => return Some(D::ModelControl),
             crate::core::BlankTextError::ModelName => return Some(D::ModelBlank),
+            crate::core::BlankTextError::Evidence => return Some(D::Reading(error.to_string())),
             _ => {}
         }
     }

@@ -717,6 +717,12 @@ pub(super) fn apply(
     definition: &mut RequestDefinition,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    if let RequestDefinition::DynamicChoose(question) = definition
+        && let Some(labels) = &options.labels
+    {
+        let labels = crate::RecordOptions::new(labels.clone())?;
+        *definition = RequestDefinition::Atomic(LoadedQuestion::Question(question.with_options(&labels)?));
+    }
     match definition {
         RequestDefinition::Atomic(q) => match q {
             LoadedQuestion::Question(q) => apply_question(q, options)?,

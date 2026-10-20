@@ -129,7 +129,7 @@ fn authored(file: Option<&str>, admitted: &mut AdmittedRequest) -> Result<Option
                 // mismatch; saved parser/name/content failures are Local.
                 if error.kind() == crate::ErrorKind::Usage {
                     Failure::Relate(crate::failure::relate::Error::Config {
-                        file: true,
+                        file: false,
                         error: "the question file holds another command's question".to_owned(),
                     })
                 } else {

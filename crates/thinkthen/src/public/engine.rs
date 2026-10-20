@@ -124,8 +124,10 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
     core::Evidence::new(text).map_err(evidence_error)
 }
 
-pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
-    Error::usage("evidence is text, not white space")
+pub(crate) fn evidence_error(cause: core::BlankTextError) -> Error {
+    Error::usage("evidence is text, not white space").with_diagnostic(
+        crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(cause)),
+    )
 }
 
 impl Engine {

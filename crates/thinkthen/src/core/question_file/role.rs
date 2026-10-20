@@ -20,6 +20,11 @@ pub enum QuestionRole {
 }
 impl QuestionRole {
     pub(crate) fn differs(self, text: &str) -> bool {
+        // Find's closed saved grammar owns its key/function refusals, including
+        // their local-file classification. Other roles retain role admission.
+        if matches!(self, Self::Find) {
+            return false;
+        }
         // Syntax, duplicate members, unsupported keys and multiple roles stay
         // with the owning grammar; only an unambiguous different role is Usage.
         let Ok(Json::Object(members)) = Json::parse(text) else {

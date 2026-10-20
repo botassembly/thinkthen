@@ -158,7 +158,6 @@ fn host_error(error: crate::Error, streams: bool) -> Failure {
                 cause,
                 Failure::Transport(_)
                     | Failure::Status(..)
-                    | Failure::Provider { .. }
                     | Failure::TokenLimit
                     | Failure::Reply(_)
             ) =>

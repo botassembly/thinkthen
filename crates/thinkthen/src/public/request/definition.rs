@@ -173,7 +173,7 @@ impl RequestDefinition {
     }
     fn parse(value: &crate::core::Json, text: &str) -> Result<Self, Error> {
         let crate::core::Json::Object(members) = value else {
-            return Err(Error::usage("a definition is an authored question object"));
+            return Err(Error::refused(crate::core::QuestionFileError::NotAnObject));
         };
         let has = |key: &str| members.iter().any(|(name, _)| name == key);
         if has("questions") {

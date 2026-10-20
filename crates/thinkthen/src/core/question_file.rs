@@ -197,7 +197,6 @@ pub(crate) enum QuestionFileError {
         "{}`filter` takes a single cut, so ask `decide --details` and split the three piles with `jq`",
         named(*.0, "threshold")
     )]
-    #[cfg(test)]
     BandOnFilter(Source),
     /// A rule reached the caller that orders records and selects none.
     #[error("{}`rank` with a score question or question set takes no threshold", named(*.0, "threshold"))]
@@ -300,7 +299,6 @@ impl QuestionFileError {
             | Self::RuleOnScore(origin)
             | Self::RuleOnRank(origin)
             | Self::BandOnRank(origin) => *origin,
-            #[cfg(test)]
             Self::BandOnFilter(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.

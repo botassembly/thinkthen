@@ -209,7 +209,7 @@ fn reference_role(value: &str, role: QuestionRole) -> Result<String, Error> {
     }
 }
 fn file_error(error: Error) -> Error {
-    Error::local(error.detail().message())
+    error.into_local()
 }
 impl Question {
     /// Load exactly NAME.json from the native config questions folder.

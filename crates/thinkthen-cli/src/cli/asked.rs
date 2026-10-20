@@ -87,6 +87,7 @@ fn prepare(
         top
     };
     let (kind, dynamic, context_schema) = definition_details(&definition, member)?;
+    let dynamic = dynamic && options.labels.is_none();
     admit_rank_meanings(function, options, rank_set.is_some(), kind)?;
     let key = match kind {
         QuestionKind::Choose => "choose",
@@ -227,6 +228,9 @@ fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
                 .options
                 .options_field
                 .is_some();
+        let scalar_choose = function == crate::RequestFunction::Choose
+            && !dynamic
+            && admitted.request().call.arguments().options.labels.is_none();
         let definition = reference.parse(&text, role, |text| {
             if function == crate::RequestFunction::Rank
                 && matches!(role, crate::QuestionFileRole::Set)
@@ -234,6 +238,8 @@ fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
                 crate::RankSet::from_json(text).map(RequestDefinition::RankSet)
             } else if dynamic {
                 crate::RecordChooseQuestion::from_json(text).map(RequestDefinition::DynamicChoose)
+            } else if scalar_choose {
+                crate::Question::from_json(text).map(RequestDefinition::Atomic)
             } else {
                 RequestDefinition::from_authored_json(text)
             }

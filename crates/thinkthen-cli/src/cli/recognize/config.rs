@@ -19,7 +19,13 @@ pub(super) fn settle(
                 },
             ));
         }
-        let question = crate::RecognizeQuestionFile::load_reference(reference)?;
+        let reference = crate::QuestionFileReference::reference(reference)?;
+        let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
+        let question = reference.parse(
+            &text,
+            crate::QuestionFileRole::Recognize,
+            crate::RecognizeQuestionFile::from_json,
+        )?;
         admitted =
             admitted.with_resolved_definition(crate::RequestDefinition::Recognize(question))?;
     }
