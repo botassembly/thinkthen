@@ -1,12 +1,14 @@
 # 0634: Rewrite the binding author guide as the current contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0635, 0637, 0638, 0642, 0692
+
+Reviews: revision 37ea94c, accept
 
 ## Outcome
 
@@ -28,3 +30,9 @@ Depends on: 0635, 0637, 0638, 0642, 0692
 - Current main already has the new path: `thinkthen_run_call`, `thinkthen_call_result_json`, `thinkthen_call_error_*` and `thinkthen_call_cancel_*` in `libraries/c/include/thinkthen.h` (0638), the canonical C input path (0635), declarations-only generation (0637), `thinkthen_version` with its interface number (0692), and `Engine::call` (0629) declared in `specification/rust-api-0.2.md`.
 - `libraries/files.md` repeats per-language file rules for Python and C and ends with the COBOL scalar limit.
 - Readers of the guide: `specification/README.md`, `specification/settings.md`, `libraries/r/NOTES.md` and several decisions link to it; the file keeps its name.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: M5 job 1792478403348-80741 at source 52516c1b1bb7477158e9557dfb645491b7eea329 passed with exit 0 using disk 1 GiB and memory 1 GiB: no ticket numbers in either page, no COBOL in the shared file guide, all 28 relative links resolve, no embedded code, and permitted C/Rust example origins verified. Receipt: /Users/ian/workspace/job-runs/thinkthen/0634/1792478403348-80741/log. Git whitespace and history checks passed. Fresh review is next, followed by the coordinator's integrated batch gate; no standalone full gate ran.
+- 2026-10-20 next: Fresh fixing review corrected libraries/files.md:9 at a497df6513251dbaaad644f9c7fb30663d701a0f: qualify complete-record entity naming to plain-text source records, preserving JSONL entity parsing under specification/files.md. M5 documentation job 1792478672942-81818 at a497df651 passed with exit 0 (disk 1 GiB, memory 1 GiB): no ticket numbers, no COBOL in common file guide, all 28 relative links resolve, no embedded code, approved C/Rust example origins, and plain-text relation scope matches native file contract. Git whitespace, history and connectivity checks passed. Coordinator acceptance and integrated 0704+0634 batch gate are next; no standalone full gate ran.
