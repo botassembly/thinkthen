@@ -37,7 +37,7 @@ fn loaded_interface_must_match_before_any_other_operation() {
     if cfg!(windows) {
         compiler.args(["/nologo", "/LD"]).arg(&fixture).arg(format!("/Fe{}", library.display()));
     } else {
-        compiler.args(["-shared", "-fPIC"]).arg(&fixture).arg("-o").arg(&library);
+        compiler.args([if cfg!(target_os = "macos") { "-dynamiclib" } else { "-shared" }, "-fPIC"]).arg(&fixture).arg("-o").arg(&library);
     }
     successful(&compiler.current_dir(&incompatible).output().expect("compile library"));
     let output = run_with(&binary, &base, b"", &[("THINKTHEN_TEST_LIBRARY", &library)]);
