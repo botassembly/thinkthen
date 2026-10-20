@@ -29,3 +29,4 @@ Shares specification pages with 0707 and 0706; any order lands. Paths under `cra
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Independent command writers readers plans and public examples are pushed at c9f9ec588 with fixture checkpoint 0f6be3a74; two shared backend test files remain held until 0721 lands, then the remaining references and admitted M5 red-green replay proof follow.
