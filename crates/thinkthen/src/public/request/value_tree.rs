@@ -43,19 +43,20 @@ impl Call<RequestValue> {
             .ok_or_else(|| projection_error("native call has no settled answer"))?;
         let answer = settled_answer(answer)?;
         let mut tree = serialized(self)?;
-        if let RequestValueTree::Map(fields) = &mut tree {
-            if let Some(results) = fields.remove("value") {
-                fields.insert("results".into(), results);
-            }
-            if let RequestValueTree::Map(answer_fields) = &answer {
-                for name in ["value", "probability", "pick", "index", "resolution"] {
-                    if let Some(value) = answer_fields.get(name) {
-                        fields.insert(name.into(), value.clone());
-                    }
+        let RequestValueTree::Map(fields) = &mut tree else {
+            return Ok(tree);
+        };
+        if let Some(results) = fields.remove("value") {
+            fields.insert("results".into(), results);
+        }
+        if let RequestValueTree::Map(answer_fields) = &answer {
+            for name in ["value", "probability", "pick", "index", "resolution"] {
+                if let Some(value) = answer_fields.get(name) {
+                    fields.insert(name.into(), value.clone());
                 }
             }
-            fields.remove("answer");
         }
+        fields.remove("answer");
         Ok(tree)
     }
 }
@@ -73,20 +74,22 @@ fn settled_answer(answer: &SettledAnswer) -> Result<RequestValueTree, Error> {
         SettledAnswer::Relate(value) => settled("relate", value),
         SettledAnswer::Annotate(value) => {
             let mut tree = settled("annotate", value)?;
-            if let RequestValueTree::Map(fields) = &mut tree
-                && let Some(values) = fields.get_mut("value")
-            {
-                match (values, &value.resolution) {
-                    (values, AnswerShape::Scalar(resolution)) => {
-                        missing_members(values, resolution);
-                    }
-                    (RequestValueTree::List(values), AnswerShape::Collection(resolutions)) => {
-                        for (value, resolution) in values.iter_mut().zip(resolutions) {
-                            missing_members(value, resolution);
-                        }
-                    }
-                    _ => {}
+            let RequestValueTree::Map(fields) = &mut tree else {
+                return Ok(tree);
+            };
+            let Some(values) = fields.get_mut("value") else {
+                return Ok(tree);
+            };
+            match (values, &value.resolution) {
+                (values, AnswerShape::Scalar(resolution)) => {
+                    missing_members(values, resolution);
                 }
+                (RequestValueTree::List(values), AnswerShape::Collection(resolutions)) => {
+                    for (value, resolution) in values.iter_mut().zip(resolutions) {
+                        missing_members(value, resolution);
+                    }
+                }
+                _ => {}
             }
             Ok(tree)
         }
