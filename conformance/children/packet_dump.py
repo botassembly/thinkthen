@@ -3,7 +3,10 @@
 Dumpers return {"packets": [native packet JSON, ...]} and optional host
 conversions. Only this comparator normalizes runtime identities and timing.
 """
+import base64
 import difflib
+import gzip
+import io
 import json
 import os
 from pathlib import Path
@@ -79,10 +82,51 @@ def folded(document):
     return packet
 
 
+def stored(document):
+    """Store large strings losslessly while leaving ordinary packet JSON readable."""
+    # Image boundary cases repeat padded inputs into a 1.2 GB expanded oracle.
+    # Paths belong to this storage envelope, never to authored packet objects.
+    compressed = []
+
+    def visit(value, path):
+        if isinstance(value, dict):
+            return {key: visit(child, [*path, key]) for key, child in value.items()}
+        if isinstance(value, list):
+            return [visit(child, [*path, index]) for index, child in enumerate(value)]
+        if isinstance(value, str) and len(value) >= 16384:
+            buffer = io.BytesIO()
+            with gzip.GzipFile(filename='', mode='wb', fileobj=buffer, mtime=0) as writer:
+                writer.write(value.encode('utf-8'))
+            payload = base64.b64encode(buffer.getvalue()).decode('ascii')
+            if len(payload) < len(value):
+                compressed.append({'path': path, 'gzip_base64': payload})
+                return None
+        return value
+
+    result = visit(document, [])
+    if compressed:
+        result['compressed_strings'] = compressed
+    return result
+
+
+def expanded(document):
+    """Restore exact strings before comparing any native packet value or type."""
+    for entry in document.pop('compressed_strings', []):
+        parent = document
+        for key in entry['path'][:-1]:
+            parent = parent[key]
+        key = entry['path'][-1]
+        if parent[key] is not None:
+            raise ValueError('compressed oracle path must contain its null placeholder')
+        parent[key] = gzip.decompress(base64.b64decode(
+            entry['gzip_base64'], validate=True)).decode('utf-8')
+    return document
+
+
 def run(consumer, command, root, *, update=False):
     """Keep every required Rust cell, its probes and assertions, then compare packets."""
     from fixture_suite import run as shared_run
-    oracle = None if update else json.loads(ORACLE.read_text())
+    oracle = None if update else expanded(json.loads(ORACLE.read_text()))
     actual = {}
 
     def record(stdout, row, step, home):
@@ -100,7 +144,7 @@ def run(consumer, command, root, *, update=False):
         'private_cases': [{'id': PRIVATE_CASE, 'reason':
             'Private invariant injection has no admitted public input and is outside parity.required_cases.'}]}
     if update:
-        ORACLE.write_text(json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
+        ORACLE.write_text(json.dumps(stored(document), ensure_ascii=False, sort_keys=True, indent=2) + '\n')
         return 0
     expected = {case['id']: case['dumps'] for case in oracle['cases']}
     failed = False
