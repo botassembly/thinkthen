@@ -34,3 +34,4 @@ The core cut moved each language's and database's toolchain into its own phase 3
 - 2026-10-20 Standing ruling7 covers shared parity, smoke and surface selection, canonical Python tool ownership and their existing fixtures; applicable pure and mechanical Gator proofs passed, while real image and C surface proofs remain before acceptance.
 - 2026-10-20 started
 - 2026-10-20 next: setup: original Gator prepare failed on pkg-config discovery, fixed by cee0c65d8; fresh review accepted e0dfd1a after actual M5 C, Gator C and scratch fragment proofs passed, and the configured landing gate is next.
+- 2026-10-20 next: setup: configured landing gate 1792523048499-73469 failed the unsynchronized closed-pipe fixture with nine sends, now owned by 0745, while the approved resolver diagnostic repair is ready for its exact red and green tool-fixture commands before review renewal.
