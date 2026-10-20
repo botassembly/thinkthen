@@ -26,3 +26,7 @@ Phase: 2
 - The current packet corpus has twenty-seven case IDs with native failing positions: twenty-four at one, two at two, and one at three. The cache and replay declaration cases fail on their second invocation. Native admission attaches the position before creating the session.
 - 0690 deletes the session packet and thread-local error paths, leaving `thinkthen_run_call` and its owned error as the public C failure path used by host libraries.
 - PM approved this pre-freeze ticket in ask two of the 2026-10-20 0640 C boundary ruling and requires 0688 to depend on it. The 0640 installed-call checks retain their current observable error contract until this repair lands.
+
+## Progress
+
+- 2026-10-20 started
