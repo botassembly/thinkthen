@@ -2,6 +2,8 @@
 
 Status: OPEN.
 
+Progress: Frame requests now call Engine::call; generated fixed Polars types and direct settled answer projection remain unfinished.
+
 Milestone: 0.2.1
 
 Phase: 3
