@@ -617,7 +617,9 @@ def main():
             result = swift.bridge(abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h'))
             output = output_path(ROOT, 'swift', 'ABIGenerated.swift')
             loader = output_path(ROOT, 'swift', 'bridge.c')
-            linux_bridge = swift.linux_bridge(selected_functions(abi.declarations(ROOT / 'libraries/c/include/thinkthen.h')['functions'], 'swift'))
+            linux_bridge = swift.linux_bridge(selected_functions(
+                abi.declarations(ROOT / 'libraries/c/include/thinkthen.h')['functions'], 'swift',
+                {output.relative_to(ROOT).as_posix(): result}))
             if args.check:
                 if not loader.exists() or loader.read_text() != linux_bridge:
                     print('generated Swift Linux bridge differs', file=sys.stderr)

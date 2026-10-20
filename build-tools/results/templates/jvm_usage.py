@@ -67,7 +67,7 @@ def outputs(root):
     carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
     waits += ['static int waitReady(MemorySegment session, int interest, int timeout, MemorySegment ready) {',
               'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}']
-    for prefix in ('THINKTHEN_SESSION_RESULT_', 'THINKTHEN_SESSION_PENDING_', 'THINKTHEN_SESSION_END_'):
+    for prefix in ('THINKTHEN_SESSION_RESULT', 'THINKTHEN_SESSION_PENDING', 'THINKTHEN_SESSION_END'):
         for name, value in native['constants'].items():
             if name == prefix:
                 waits += ['static final int READ_' + name.removeprefix('THINKTHEN_SESSION_') + ' = ' + str(value) + ';']

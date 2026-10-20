@@ -33,7 +33,7 @@ USE = {
 }
 
 
-def referenced_symbols(language):
+def referenced_symbols(language, overrides=None):
     """Derive native references from production and registered generated host source."""
     from sources import load_manifest, production
     from registry import generated_paths
@@ -46,12 +46,13 @@ def referenced_symbols(language):
     for path in sorted(paths):
         relative = path.relative_to(root).as_posix()
         if relative in generated or production(relative, manifest):
-            names.update(re.findall(r'\b(?:thinkthen_\w+|THINKTHEN_\w+)\b', path.read_text()))
+            source = overrides[relative] if overrides and relative in overrides else path.read_text()
+            names.update(re.findall(r'\b(?:thinkthen_\w+|THINKTHEN_\w+)\b', source))
     return names
 
 
-def selected_functions(functions, language):
-    names = (referenced_symbols(language) & functions.keys() if language == 'swift' else
+def selected_functions(functions, language, overrides=None):
+    names = (referenced_symbols(language, overrides) & functions.keys() if language == 'swift' else
              {name for name in USE[language] if name.startswith('thinkthen_')})
     missing = names - functions.keys()
     if missing:
