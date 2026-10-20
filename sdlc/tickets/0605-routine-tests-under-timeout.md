@@ -30,7 +30,7 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 
 ## Scope
 
-- Changes: `.config/nextest.toml` and the test files named above.
+- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
 - Keeps: every check's coverage.
 
 ## Proof
