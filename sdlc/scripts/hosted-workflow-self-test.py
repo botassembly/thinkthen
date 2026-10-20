@@ -734,6 +734,8 @@ def preflight_cases():
         (root / 'libraries/typescript').mkdir(parents=True)
         (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
         (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
+        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
+        maturin_pin = json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
         tools = root / 'bin'
         tools.mkdir()
         probe = tools / 'fixture'
@@ -742,7 +744,7 @@ def preflight_cases():
                          'name = Path(sys.argv[0]).name\n' +
                          'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
                          'if name == "node": print("v22.22.3")\n' +
-                         'if name == "maturin": print("maturin 1.15.0")\n' +
+                         f'if name == "maturin": print("maturin {maturin_pin}")\n' +
                          'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
         probe.chmod(0o755)
         required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')

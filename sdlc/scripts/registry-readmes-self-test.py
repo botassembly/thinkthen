@@ -588,19 +588,23 @@ class PackageText(unittest.TestCase):
         for name, path in [('r-package', 'r-dist'), ('crate-package', 'crate-dist')]:
             self.assertTrue(any(step.get('with', {}).get('name') == name
                                 and step['with']['path'] == path for step in steps))
-        # Execute the actual workflow staging step with the runner replaced at its CLI boundary.
+        # Execute the real stage and observe package staging at its helper boundaries.
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
-            for name in ('r-dist', 'crate-dist', 'smoke-files', 'sdlc/scripts'):
-                (root / name).mkdir(parents=True)
+            stage_checkout(readmes.REPO, root)
+            entrypoint = root / 'sdlc/scripts/release-stage'
+            entrypoint.write_text(script)
+            (root / 'sdlc/scripts/hosted-preflight.py').write_text('pass\n')
+            for name in ('r-dist', 'crate-dist', 'smoke-files'):
+                (root / name).mkdir(parents=True, exist_ok=True)
             (root / 'r-dist/thinkthen.tar.gz').write_text('R package')
             (root / 'crate-dist/thinkthen.crate').write_text('Rust package')
             runner = root / 'sdlc/scripts/release-workflow'
-            runner.write_text('#!/bin/sh\nset -eu\n[ "$1" = public-examples ]\n[ -f "$3/thinkthen.crate" ]\nif [ "$2" = x86_64-unknown-linux-gnu ]; then [ -f "$3/thinkthen.tar.gz" ]; fi\n')
+            runner.write_text('#!/bin/sh\nset -eu\ncase $1 in *-gate | smoke-bundle) exit 0 ;; esac\n[ "$1" = public-examples ]\n[ -f "$3/thinkthen.crate" ]\nif [ "$2" = x86_64-unknown-linux-gnu ]; then [ -f "$3/thinkthen.tar.gz" ]; fi\n')
             runner.chmod(0o755)
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
-                subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
-                               env=child_env(home=root / 'home', PATH=os.environ['PATH'], TARGET=target), check=True)
+                subprocess.run(['/bin/sh', str(entrypoint), 'smoke-stage', target, 'a' * 40, 'examples'],
+                               cwd=root, env=child_env(home=root / 'home', PATH=os.environ['PATH']), check=True)
             stage_checkout(readmes.REPO, root)
             home = root / 'home'
             prepared = [root / 'resolved/ruby/bin']

@@ -22,7 +22,8 @@ import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
 
-from tools import bootstrap, environment, load_manifest
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from sdlc.scripts.tools import bootstrap, environment, load_manifest
 
 SNAPSHOT = "20260923T150000Z"
 RELEASES = {

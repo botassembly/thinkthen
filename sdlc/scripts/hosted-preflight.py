@@ -396,8 +396,7 @@ def qualify(check, stage, target):
         check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    maturin = re.search(r"'maturin==([^']+)'", bootstrap)[1]
+    maturin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
     check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
