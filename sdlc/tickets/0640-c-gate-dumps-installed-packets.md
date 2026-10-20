@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0618, 0638, 0642
 
+Reviews: revision fd5b452, accept
+
 ## Outcome
 
 - Changes: `libraries/c/check.sh`, `libraries/c/examples/session.c`, `libraries/c/README.md`, `libraries/c/tests/`, `conformance/children/packet_normalize.py`, `conformance/test_parity.py`.
