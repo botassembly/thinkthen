@@ -30,3 +30,7 @@ Depends on: 0688
 - **JSON in the frame path.** `frame/result.rs` serializes `RequestValue` rows into `serde_json::Value` (`json`, `probabilities`, `documents`, `value_column`, `annotation_values`, `restore`) before it builds columns.
 - **Old entry point.** `execute_feed` in `frame/request.rs` runs calls through `Engine::execute_request`, not `Engine::call`.
 - **Likely break point.** This is the part of Polars most likely to break when the result schema changes (uncertain).
+
+## Progress
+
+- 2026-10-20 started
