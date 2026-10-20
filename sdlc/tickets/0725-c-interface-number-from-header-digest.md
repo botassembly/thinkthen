@@ -30,3 +30,4 @@ Starts from `THINKTHEN_INTERFACE_NUMBER` in `libraries/c/src/ffi/values.rs` and 
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: PM defers C sharp installed proof to its provider wave once dotnet is in the manifest; native digest regression, Go and Zig passed in the recorded mixed-result jobs, and the combined configured landing gate remains required.
