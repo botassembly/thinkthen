@@ -639,7 +639,9 @@ fn run(
     // The existing release hook selects native incremental rank intake. Session
     // packets own the final result, so discarded originals need no host callback.
     let release: Option<&dyn Fn(usize)> = options.incremental_ranking.then_some(&|_| {});
-    let outcome = engine.execute_request_sink(&request, environment, Some(&sink), release, None);
+    let outcome = crate::public::options::guarded(|| {
+        engine.execute_request_sink(&request, environment, Some(&sink), release, None)
+    });
     queue.close_intake();
     let mut terminal = match outcome {
         Ok(RequestOutcome::Complete(call)) => {
@@ -777,7 +779,10 @@ fn run_recovering(
             _ => None,
         },
     };
-    let mut terminal = match engine.execute_request_recovering_sink(&request, environment, &sink) {
+    let outcome = crate::public::options::guarded(|| {
+        engine.execute_request_recovering_sink(&request, environment, &sink)
+    });
+    let mut terminal = match outcome {
         Ok(call) => RequestSessionTerminal {
             facts: Some(call.facts().clone()),
             answer: None,

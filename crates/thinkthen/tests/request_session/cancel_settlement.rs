@@ -204,11 +204,7 @@ fn owned_interrupt_cancels_or_contains_panics_before_any_send() {
             ..Default::default()
         };
         let session = engine(&listener)
-            .request_session_with_feed_options(
-                ranked_request().unwrap(),
-                Surface::Rust,
-                options(),
-            )
+            .request_session_with_feed_options(ranked_request().unwrap(), Surface::Rust, options())
             .unwrap();
         let packets = drain(&session);
         assert_eq!(packets.len(), 1);
