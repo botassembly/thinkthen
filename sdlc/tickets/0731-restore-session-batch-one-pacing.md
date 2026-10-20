@@ -10,6 +10,8 @@ Depends on: 0639
 
 Reviews: revision b2b8488, accept
 
+Reviews: revision 3c92f21, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/public/pull.rs`, `crates/thinkthen/src/public/pull/`, `crates/thinkthen/src/public/options/readiness.rs`, `crates/thinkthen/src/public/request/`, `crates/thinkthen/tests/request_session.rs`, `crates/thinkthen/tests/request_session/`, `crates/thinkthen/tests/public_batches.rs`, `crates/thinkthen/tests/public_batches/`. Private readiness carries the pacing distinction so session construction preserves the command-line parallel path without changing public controls.
