@@ -12,6 +12,8 @@ Reviews: revision 5b6430e, accept
 
 Reviews: revision 63cc2ab, accept
 
+Reviews: revision 5ad7d11, accept
+
 ## Outcome
 
 - Changes: `AGENTS.md`, `conformance/test_candidate_campaign.py`, `sdlc/planning/release-process.md`, `sdlc/scripts/README.md`, `sdlc/scripts/test-full-cases`.
