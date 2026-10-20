@@ -99,7 +99,7 @@ jobs:
         env: {TARGET: "${{ matrix.target }}"}
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
-          sdlc/scripts/release-workflow host-setup "$TARGET"
+          sdlc/scripts/release-workflow setup-stage host "$TARGET"
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -380,7 +380,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {pattern: 'platform-*', path: platform, merge-multiple: true}
       - name: Install the pinned Dart
-        run: sdlc/scripts/release-workflow dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
+        run: sdlc/scripts/release-workflow setup-stage registry x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
       - name: Pack and check the NuGet, Maven and pub packages
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
         run: |
@@ -566,7 +566,7 @@ jobs:
       - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow host-setup "$TARGET"
+          sdlc/scripts/release-workflow setup-stage host "$TARGET"
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -583,36 +583,11 @@ jobs:
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           python3 sdlc/scripts/release-language-tools.py smoke "$RUNNER_TEMP/thinkthen-language-smoke" "$SHA" --acquire
-      - name: Check and install pinned Go/C++ consumer tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+      - name: Prepare the target consumers
         env: {TARGET: "${{ matrix.target }}"}
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RUNNER_TEMP/thinkthen-go"
-      - name: Check and install pinned Swift/Zig consumer tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {TARGET: "${{ matrix.target }}"}
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow swift-zig-tools "$TARGET" "$RUNNER_TEMP/thinkthen-zig"
-      - name: Check and install pinned PHP/Dart consumer tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {TARGET: "${{ matrix.target }}"}
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RUNNER_TEMP/thinkthen-dart"
-      - name: Check Ada, GNU Objective-C and COBOL consumer tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {TARGET: "${{ matrix.target }}"}
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
-      - name: Check selected managed consumer tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {TARGET: "${{ matrix.target }}"}
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          sdlc/scripts/release-workflow managed-tools "$TARGET"
+          sdlc/scripts/release-workflow setup-stage consumers "$TARGET" "$RUNNER_TEMP/thinkthen-consumers"
       - name: Select x64 MSVC
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |

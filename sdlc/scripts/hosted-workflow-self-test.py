@@ -89,7 +89,7 @@ def linux_nested_tools_case():
     handoff = next(line for line in selected.splitlines()
                    if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
+    host_setup = workflow.split('host_setup() (\n', 1)[1].split('\n)\n', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
     formatters = '\n'.join(line for line in installed.splitlines()
                            if line.strip().startswith(('mkdir -p "$generator_tools/bin"',

@@ -47,7 +47,7 @@ def hosted_manifest_pins():
         env = dict(os.environ, PATH=fixture_path(binary), PIN_LOG=str(log),
                    PIN_PYTHON=sys.executable, PIN_RUST=manifest['tools']['rust']['version'],
                    PIN_SYSROOT=str(sysroot), RUSTUP_HOME=str(root / "rustup"))
-        result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "host-setup",
+        result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "setup-stage", "host",
                                  "x86_64-pc-windows-msvc"], env=env, text=True, capture_output=True)
         assert result.returncode == 0, result.stderr
         calls = log.read_text().splitlines()
