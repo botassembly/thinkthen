@@ -11,7 +11,7 @@ Depends on: 0619
 ## Outcome
 
 - Changes: `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
-- The archive's `lib/pkgconfig/thinkthen.pc` gives separate shared and static link lines, so `pkg-config --libs --static thinkthen` works unedited on Linux and macOS. The Windows archive keeps its `lib/thinkthen.dll.lib` import library, and the README documents the MSVC command.
+- The archive's one `lib/pkgconfig/thinkthen.pc` follows standard pkg-config semantics: `--static` adds the native static dependencies and the caller selects static linkage. Add no variable or second package name. The README shows the Linux and macOS static link commands without `sed`; macOS names the archive path because its linker prefers the dylib. The Windows archive keeps its `lib/thinkthen.dll.lib` import library, and the README documents the MSVC command.
 - Symbol hiding moves into the Rust build (an export list or version script passed by `build.rs`) where the linker supports it. `localize.sh` shrinks to what remains, or is deleted.
 - Coverage-only branches leave `localize.sh`; the coverage driver passes what it needs itself.
 - The README's compile command has no `sed`.
@@ -19,7 +19,7 @@ Depends on: 0619
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0641 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check compiles an outside C program against the unpacked archive with only the README's `pkg-config` command, and a second program that also links its own SQLite links without symbol clashes. Before the change the README command without `sed` does not link the static archive.
+- On the M5 natively: `pm job run --machine m5 0641 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check compiles an outside C program against the real unpacked static archive using the README's platform-specific command and pkg-config dependencies without `sed`, and a second program that also links its own SQLite links without symbol clashes. Before the change the README command without `sed` does not link the static archive.
 - On the M5 natively, `sdlc/scripts/surfaces` runs `libraries/c/check.sh` in its source mode; before the change it fails on macOS copying `libthinkthen_c.so`.
 - Linux arm64 and x86_64 run at the 0619 container checkpoint. Windows and Intel macOS are proven on the candidate in 0687.
 
@@ -40,3 +40,7 @@ Depends on: 0619
 ## Existing caller paths, 2026-10-20
 
 The release-pack dispatcher now delegates C packaging to release-pack.d/c. The initial coverage driver also calls localize.sh and must retain its distinct collection when that calling convention changes. The claim follows these existing implementation and caller paths; the Outcome is unchanged.
+
+## Static linkage ruling, PM 2026-10-20
+
+Use one conventional thinkthen.pc. Its --static output supplies static dependencies; callers choose the archive with the documented platform command. The native proof must link that real archive, not accidentally select its neighboring shared library. No new pkg-config variable or second package is introduced.
