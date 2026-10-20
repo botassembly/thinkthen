@@ -10,7 +10,16 @@ Phase: 2
 
 No routine test comes near the 5-second nextest limit, and a retry reruns only the tests that failed.
 
-## Amendment, 2026-10-20 (timing root cause)
+### Scope
+
+- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, `crates/thinkthen-cli/tests/backend/default_cache/prune.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
+- Keeps: every check's coverage.
+
+### Proof
+
+Five consecutive routine runs with no timeout, and the slowest test under 2.5 seconds. After landing, measure again and record the result here.
+
+## Amendment, 2026-10-20
 
 Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../records/2026-10-20-five-delays-root-cause.md), rule 4 of [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md). It gates qualification (0687), not the freeze, and runs alongside language lanes.
 
@@ -30,15 +39,6 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 - At 583079a on 2026-10-16, four aggregate-command tests timed out across two routine attempts while another team's disk-heavy job ran. They launch 44, 33, 8 and 30 real command processes with answer-store fsyncs. A bounded trace found 898 fsync calls taking 4.637 seconds in total, and no lock contention or product defect.
 - The slowest tests take 3.0 to 3.4 seconds, and 89 tests take over 1 second.
 - Cost before: 33.4 minutes of reruns over 22 revisions, plus failed revisions. Expected after: no timeout reruns, and a failed-only retry when one is needed.
-
-## Scope
-
-- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, `crates/thinkthen-cli/tests/backend/default_cache/prune.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
-- Keeps: every check's coverage.
-
-## Proof
-
-Five consecutive routine runs with no timeout, and the slowest test under 2.5 seconds. After landing, measure again and record the result here.
 
 ## Progress
 
