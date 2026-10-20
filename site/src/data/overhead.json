@@ -513,7 +513,7 @@
   "rank-306": {
    "live_ms": 321.8,
    "live_facts": {
-    "schema": "thinkthen.run/1",
+    "schema": "thinkthen.run",
     "records": 306,
     "requests_sent": 1,
     "retries": 0,
@@ -566,7 +566,7 @@
   "lines-1000": {
    "live_ms": 491.6,
    "live_facts": {
-    "schema": "thinkthen.run/1",
+    "schema": "thinkthen.run",
     "records": 1000,
     "requests_sent": 2,
     "retries": 0,

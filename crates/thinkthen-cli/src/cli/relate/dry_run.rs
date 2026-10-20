@@ -11,7 +11,6 @@ use crate::{RequestFraming as Framing, ResolvedSettings};
 
 #[derive(Serialize)]
 struct Report<'a> {
-    schema: &'static str,
     url: &'a str,
     model: &'a str,
     key_env: &'a str,
@@ -110,7 +109,6 @@ pub(super) fn write(
         })
         .collect::<Result<Vec<_>, Failure>>()?;
     let report = Report {
-        schema: "thinkthen.relate-plan/1",
         url: &context.backend.url,
         model: &context.backend.model,
         key_env: context.key_env,

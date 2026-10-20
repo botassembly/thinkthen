@@ -26,7 +26,7 @@ struct Miss<'a> {
 
 pub(crate) fn missed(at: usize, pointer: &str) -> Result<Judged, Failure> {
     let printed = json_line(&Row {
-        schema: "thinkthen.record-error/1",
+        schema: "thinkthen.record-error",
         at,
         failure: Miss {
             kind: "usage",

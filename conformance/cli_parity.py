@@ -250,7 +250,7 @@ def execute(binary, value, settings, home, env, backend=None):
     for at, line in enumerate(lines):
         if line.startswith("{"):
             candidate = json.loads(line)
-            assert candidate["schema"] == "thinkthen.run/1", candidate
+            assert candidate["schema"] == "thinkthen.run", candidate
             assert facts is None, "duplicate terminal facts"
             assert at == len(lines) - 1, "run facts must be the last diagnostic line"
             facts = candidate

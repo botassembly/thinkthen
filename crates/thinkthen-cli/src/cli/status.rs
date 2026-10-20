@@ -123,7 +123,7 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
         Some(Err(failure)) => (None, Some(failure.to_string())),
     };
     Ok(Status {
-        schema: "thinkthen.status/2",
+        schema: "thinkthen.status",
         version: env!("CARGO_PKG_VERSION"),
         configuration: Configuration {
             path: resolved.configuration_path.as_deref().map(display),

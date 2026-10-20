@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.status/2",
+  "schema": "thinkthen.status",
   "backend": {
     "name": null,
     "url": "https://api.typesafe.ai/v1/systemone",

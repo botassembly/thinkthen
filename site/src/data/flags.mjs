@@ -39,7 +39,7 @@ export const GLOBAL_FLAGS = [
   flag('--field POINTER', 'an RFC 6901 pointer, and it may repeat', dflt('Evidence pointer'), 'Sends only the part of each record the pointer names. Several pointers send one object of the parts. Input below gives every rule.'),
   flag('--plan', 'nothing', dflt('Plan preview'), 'Checks the whole input, prints the first request it would send and a summary line, and sends nothing. It needs no key, and it opens no connection.'),
   flag('--details', 'nothing', dflt('Details'), 'Prints the full result object in place of the bare value. In record mode the object also carries the whole record under `input`.'),
-  flag('--facts', 'nothing', dflt('Run facts'), 'Prints one `thinkthen.run/1` line last on standard error. It holds the run\'s counts, and on a failure it names the cause.'),
+  flag('--facts', 'nothing', dflt('Run facts'), 'Prints one `thinkthen.run` line last on standard error. It holds the run\'s counts, and on a failure it names the cause.'),
   flag('--max-requests-total N', 'a whole number of 0 or more', dflt('Process request total'), 'Refuses a live attempt once this process has sent N attempts. An answer from the cache or a replay uses no attempt. 0 allows no live send.'),
   flag('--max-estimated-input-tokens-total N', 'a whole number of 0 or more', dflt('Estimated input admission total'), 'Refuses a live request once the estimated input tokens of this process would pass N. Each request body counts 0.908 tokens a byte. The estimate is not the backend\'s bill.'),
   flag('--url BASE', 'an `https` address, or `http` on `localhost`, `127.0.0.1` or `[::1]`', setting('Address').default, 'The server\'s base address. The tool posts to BASE/systemone. It outranks `THINKTHEN_BASE_URL` and the configuration file.'),

@@ -11,7 +11,7 @@ Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 | Arguments | The command, its options, and the question. Never data |
 | Standard input | The evidence. Never instructions |
 | Standard output | Results, and nothing else. One bare JSON value, or one value per record |
-| Standard error | Diagnostics for a person, except the final `thinkthen.run/1` line requested by `--facts`, which a script may parse |
+| Standard error | Diagnostics for a person, except the final `thinkthen.run` line requested by `--facts`, which a script may parse |
 | Exit code | The outcome class, from the table below |
 
 ## What the tool never does
@@ -41,7 +41,7 @@ Without a named input file the evidence comes from standard input. When standard
 ## Standard output
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
-The six ordinary judgment verbs may add row-scoped live `meta.attempts` under `--details`; `--facts` remains one terminal `thinkthen.run/1` line on standard error without an attempt list. A terminal failure with no printed detail row does not print a separate attempt array.
+The six ordinary judgment verbs may add row-scoped live `meta.attempts` under `--details`; `--facts` remains one terminal `thinkthen.run` line on standard error without an attempt list. A terminal failure with no printed detail row does not print a separate attempt array.
 
 `--quiet` suppresses standard output on `decide` and `choose` over one document. Record mode refuses it because no record's answer sets the exit code. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--plan` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
 
@@ -131,6 +131,6 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `annotate --plan` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 
-`recognize --plan` reports the first record’s exact step-1 requests under `thinkthen.recognize-plan/2` and counts the complete input on the second line. [recognize.md](recognize.md) fixes that schema.
+`recognize --plan` reports the first record’s exact step-1 requests in a request-plan object without a `schema` member and counts the complete input on the second line. [recognize.md](recognize.md) fixes that schema.
 
-`relate --plan` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request under `thinkthen.relate-plan/1`. Its second line marks the request count as an upper bound. It sends nothing. [relate.md](relate.md) fixes that schema.
+`relate --plan` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request in a request-plan object without a `schema` member. Its second line marks the request count as an upper bound. It sends nothing. [relate.md](relate.md) fixes that schema.

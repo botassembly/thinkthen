@@ -136,7 +136,7 @@ Under `--plan`, a run that used a file prints a `from` object before the request
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --plan` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --plan` prints a request plan without a `schema` member. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 

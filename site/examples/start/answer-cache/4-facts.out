@@ -1,6 +1,6 @@
 true
 {
-  "schema": "thinkthen.run/1",
+  "schema": "thinkthen.run",
   "records": 1,
   "requests_sent": 0,
   "largest_request_bytes": 0,

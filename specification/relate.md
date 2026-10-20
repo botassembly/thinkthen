@@ -74,7 +74,7 @@ A cut tuned by `thinkthen runs audit` on half the sets chose 0.47. On the held h
 
 ## Plan
 
-`--plan` sends nothing, inspects an optional key for an address collision without requiring one, and prints one compact `thinkthen.relate-plan/1` object followed by a whole-input count line marked as an upper bound. Keys appear in this order: `schema`, `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
+`--plan` sends nothing, inspects an optional key for an address collision without requiring one, and prints one compact request-plan object without a `schema` member followed by a whole-input count line marked as an upper bound. Keys appear in this order: `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
 
 Each relation is one rule as given. It carries `name`, `source`, `target`, `reads`, `either`, `method` (`choice` for a `single` rule, otherwise `yes_no`), `fallback` always null, `logical_questions`, and `request_count`. Its request count includes each request carrying one of its questions, so per-rule counts may add to more than the run count. Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. The plan makes no token or price claim.
 

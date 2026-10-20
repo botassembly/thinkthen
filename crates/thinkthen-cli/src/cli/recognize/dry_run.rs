@@ -15,7 +15,6 @@ use crate::{Engine, Recognize, ResolvedSettings};
 
 #[derive(Serialize)]
 struct DryRun<'a> {
-    schema: &'static str,
     url: &'a str,
     model: &'a str,
     key_env: &'a str,
@@ -35,7 +34,6 @@ impl fmt::Debug for DryRun<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("DryRun")
-            .field("schema", &self.schema)
             .field("url", &"<withheld>")
             .field("model", &self.model)
             .field("key_env", &self.key_env)
@@ -166,7 +164,6 @@ fn print(
         .collect::<Result<Vec<_>, Failure>>()?;
     crate::cli::check::say_dropped_detail(preview.drops_detail(), backend_name)?;
     let report = DryRun {
-        schema: "thinkthen.recognize-plan/2",
         url: &backend.url,
         model: &backend.model,
         key_env,
@@ -199,7 +196,6 @@ mod tests {
         let url = "http://localhost/plan-marker-0210";
         let body = "request-marker-0210";
         let plan = DryRun {
-            schema: "thinkthen.recognize-plan/2",
             url,
             model: "local-1",
             key_env: "THINKTHEN_API_KEY",
