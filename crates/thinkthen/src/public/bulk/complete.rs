@@ -147,8 +147,9 @@ impl Question {
 }
 
 pub(in crate::public) fn count_error(none: bool) -> Error {
-    Error::usage(count_message(none))
-        .with_diagnostic(crate::public::error::diagnostic::Diagnostic::FindCount(none))
+    Error::usage(count_message(none)).with_diagnostic(
+        crate::public::error::diagnostic::Diagnostic::FindCount(none),
+    )
 }
 
 fn count_message(none: bool) -> &'static str {
