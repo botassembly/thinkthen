@@ -7,9 +7,7 @@ pub(crate) fn render(value: &RequestValueTree) -> Result<String, String> {
             let values = fields
                 .iter()
                 .filter(|(_, value)| !absent(value))
-                .map(|(name, value)| {
-                    Ok(format!("{}:{}", quote(name)?, render(value)?))
-                })
+                .map(|(name, value)| Ok(format!("{}:{}", quote(name)?, render(value)?)))
                 .collect::<Result<Vec<_>, String>>()?;
             format!("{{{}}}", values.join(","))
         }

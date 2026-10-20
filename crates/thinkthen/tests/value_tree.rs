@@ -21,7 +21,8 @@ fn field<'a>(tree: &'a RequestValueTree, name: &str) -> &'a RequestValueTree {
 }
 
 #[test]
-fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn std::error::Error>> {
+fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn std::error::Error>>
+{
     let cases: Value = serde_json::from_str(CASES)?;
     let fixtures: Fixtures = serde_json::from_str(CASES)?;
     let backend = Backend::start()?;
@@ -47,17 +48,17 @@ fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn
                 .iter()
                 .map(|text| json!({"original":{"kind":"text","text":text}}))
                 .collect();
-            (
-                json!({"kind":"units","items":items}),
-                json!({"none":none}),
-            )
+            (json!({"kind":"units","items":items}), json!({"none":none}))
         } else {
             (
                 json!({"kind":"text","text":case["exchanges"][0]["evidence"]}),
                 json!({}),
             )
         };
-        let authored = fixtures.cases.iter().find(|case| case.id == id)
+        let authored = fixtures
+            .cases
+            .iter()
+            .find(|case| case.id == id)
             .and_then(|case| case.question_set.as_ref());
         let question = authored.map_or_else(|| question.to_string(), |raw| raw.get().to_owned());
         let request = Request::named_from_json(
@@ -91,7 +92,8 @@ fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn
 }
 
 #[test]
-fn authored_objects_keep_exact_numbers_and_native_looking_keys() -> Result<(), Box<dyn std::error::Error>> {
+fn authored_objects_keep_exact_numbers_and_native_looking_keys()
+-> Result<(), Box<dyn std::error::Error>> {
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
     })?;
@@ -106,7 +108,11 @@ fn authored_objects_keep_exact_numbers_and_native_looking_keys() -> Result<(), B
         r#"{"kind":"text","text":"evidence"}"#,
         "{}",
     )?;
-    let call = engine.call("decide", request.call.arguments, RequestEnvironment::default())?;
+    let call = engine.call(
+        "decide",
+        request.call.arguments,
+        RequestEnvironment::default(),
+    )?;
     let tree = call.value_tree()?;
     let value = field(&tree, "value");
     assert_eq!(field(value, "value"), &RequestValueTree::Null);
@@ -122,7 +128,10 @@ fn authored_objects_keep_exact_numbers_and_native_looking_keys() -> Result<(), B
         field(value, "number"),
         &RequestValueTree::Number("18446744073709551615".into())
     );
-    assert_eq!(field(value, "decimal"), &RequestValueTree::Number("0.125".into()));
+    assert_eq!(
+        field(value, "decimal"),
+        &RequestValueTree::Number("0.125".into())
+    );
     assert!(!format!("{tree:?}").contains("caller-secret"));
     assert_eq!(listener.count(), 1);
     Ok(())

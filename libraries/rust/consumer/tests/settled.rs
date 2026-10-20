@@ -1,5 +1,8 @@
 //! The real Rust consumer reads final native answers from the shared loopback cases.
-#[allow(dead_code, reason = "reuse fixture admission without invoking the session dumper")]
+#[allow(
+    dead_code,
+    reason = "reuse fixture admission without invoking the session dumper"
+)]
 #[path = "settled/native.rs"]
 mod native;
 #[path = "settled/tree.rs"]
@@ -315,7 +318,6 @@ fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> 
     Ok(())
 }
 
-
 #[test]
 #[ignore = "installed value-tree proof supplies one owned canonical fixture on stdin"]
 fn shared_value_tree_fixture() -> Result<(), String> {
@@ -327,37 +329,55 @@ fn shared_value_tree_fixture() -> Result<(), String> {
         let mut request = native::request(&document)?;
         if document.call_result_contract {
             let RequestInput::Records { items } = &request.call.arguments.input else {
-                return Err(thinkthen::Error::new(thinkthen::ErrorKind::Usage, "scalar fixture requires records"));
+                return Err(thinkthen::Error::new(
+                    thinkthen::ErrorKind::Usage,
+                    "scalar fixture requires records",
+                ));
             };
             let [item] = items.as_slice() else {
-                return Err(thinkthen::Error::new(thinkthen::ErrorKind::Usage, "scalar fixture requires one record"));
+                return Err(thinkthen::Error::new(
+                    thinkthen::ErrorKind::Usage,
+                    "scalar fixture requires one record",
+                ));
             };
             let Some(thinkthen::RequestOriginal::Text { text }) = &item.original else {
-                return Err(thinkthen::Error::new(thinkthen::ErrorKind::Usage, "scalar fixture requires original text"));
+                return Err(thinkthen::Error::new(
+                    thinkthen::ErrorKind::Usage,
+                    "scalar fixture requires original text",
+                ));
             };
-            request.call.arguments.input = RequestInput::Text { text: text.clone(), images: vec![] };
+            request.call.arguments.input = RequestInput::Text {
+                text: text.clone(),
+                images: vec![],
+            };
         }
         let engine = native::fixture_engine(document.settings.get())?;
         let cancel = thinkthen::CancelToken::new();
         if document.cancel {
             cancel.cancel();
         }
-        let invoke = || engine.call(
-            &document.verb,
-            request.call.arguments,
-            RequestEnvironment {
-                controls: thinkthen::CallOptions::new().cancel(&cancel),
-                feed: None,
-            },
-        );
+        let invoke = || {
+            engine.call(
+                &document.verb,
+                request.call.arguments,
+                RequestEnvironment {
+                    controls: thinkthen::CallOptions::new().cancel(&cancel),
+                    feed: None,
+                },
+            )
+        };
         if document.held_cancel {
             std::thread::scope(|scope| {
                 let worker = scope.spawn(invoke);
                 let mut resume = String::new();
                 let read = std::io::stdin().read_line(&mut resume);
                 cancel.cancel();
-                read.map_err(|_| thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture input failed"))?;
-                worker.join().map_err(|_| thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture worker failed"))?
+                read.map_err(|_| {
+                    thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture input failed")
+                })?;
+                worker.join().map_err(|_| {
+                    thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture worker failed")
+                })?
             })
         } else {
             invoke()
