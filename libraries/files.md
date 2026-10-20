@@ -1,19 +1,13 @@
 # Explicit files in libraries
 
-The [files and folders page](https://thinkthen.dev/start/files/) runs all ten CLI and Python examples over the shared `specification/fixtures/files` corpus.
+Select paths explicitly through the host's file input selector. A text argument is always evidence; it never becomes a filename. Each package README describes its named calls and file input types. The [file contract](../specification/files.md) owns the shared reader behavior, and the [canonical Request grammar](../specification/request.schema.json) defines source selectors.
 
-Select paths explicitly. A text argument is always evidence; it never becomes a filename. All readers use the native engine's file parser. Reader options are `unit: "line"` (the default), `unit: "window", window: N` for a positive nonoverlapping line window, or `unit: "file"` for complete documents. Files follow operand order; real folder contents follow sorted relative paths. Unrepresentable UTF-8 source paths fail before content admission. Physical lines are one-based and inclusive, including skipped blank lines. Windows preserve internal LF/CRLF bytes; file units preserve the whole file.
+All readers use the native engine's file parser. Reader options select lines by default, positive nonoverlapping line windows, or complete files. Files follow operand order; real folder contents follow sorted relative paths. Unrepresentable UTF-8 source paths fail before content admission. Physical lines are one-based and inclusive, including skipped blank lines. Windows preserve internal LF/CRLF bytes; file units preserve the whole file.
 
-Python uses `read_files(path_or_paths, *, unit="line", window=None)`. Iteration yields immutable `SourceRecord` values with `record`, `file`, `first_line`, and `last_line`. Passing the selection to any of the ten existing engine functions returns a `Result`. Its `.value` presents the ordinary answer; `.details` retains typed result rows with provenance. Read typed properties such as `row.value`, `row.source.file`, and `row.source.first_line` to present an answer and its source. Find retains original input and physical sources on its candidates; relate returns typed edges whose source and target retain their coordinates. Recognize keeps local Unicode scalar offsets and adds physical line coordinates to its spans. `on=` frame recognition is refused for a source selection because decoded fields have no physical source map.
+Located input records retain the original record, file and first and last physical lines. Complete typed results preserve source metadata on rows, find candidates and relation endpoints. Recognition keeps local Unicode scalar offsets and adds physical line coordinates to its spans. Field-based recognition with `on` is refused for a source selection because decoded fields have no physical source map.
 
-Use `Item`, `Image`, `Files` and `QuestionSource` with Python's named `Engine` calls. The [Python package guide](python/README.md) owns current examples and argument order.
+Source metadata stays outside caller records, annotated values, model payload and cache identity. Relate judges the complete supplied record content as the name and `*` as the kind; it never runs recognize implicitly. Find and relate retain their native complete-set and distinct-entity limits. The examples make no promise about model quality.
 
-C callers supply the canonical Request source input selector to an owned session. Typed packet views retain located rows, candidate sources and relation endpoints. The [C guide](c/README.md) owns the interface and its current example.
+Request preview reads selected evidence to estimate supported fixed atomic questions without a key or request. Preview support and ownership follow the native planning contract; preview support does not limit the functions that accept file inputs.
 
-Source metadata stays outside caller records, annotated values, model payload and cache identity. Relate judges the complete supplied record content as name and `*` as kind; it never runs recognize implicitly. Find retains its complete-set size/count limits and relate retains its distinct-entity limit. No model quality is promised by these examples.
-
-Canonical Request preview reads selected evidence to estimate supported fixed atomic questions without a key or request. The C guide describes its question and ownership limits.
-
-Each host supplies generated file input selectors to its named function. Each package README describes its current calls. Generated request records replace the removed JSON/file helper APIs. Rust callers use `thinkthen::read_files` and retain source records when judging selected evidence.
-
-COBOL request text and authored JSON scalars have a per-scalar representation limit; the [COBOL guide](cobol/README.md) describes overflow and borrowed native views.
+The [files and folders page](https://thinkthen.dev/start/files/) runs the ten CLI and Python examples over the shared [file corpus](../specification/fixtures/files/).
