@@ -53,7 +53,7 @@ fn lines(case: &str, size: usize, answer: Option<usize>) -> Vec<u8> {
 
 fn recording() -> String {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/fixtures/find-reach")
+        .join("../thinkthen/tests/fixtures/find-reach")
         .to_string_lossy()
         .into_owned()
 }

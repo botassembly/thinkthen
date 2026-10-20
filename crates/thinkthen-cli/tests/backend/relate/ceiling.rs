@@ -11,7 +11,7 @@ const BEATLES: [&str; 2] = ["sung_by=song:person", "appears_on=song:album"];
 fn beatles() -> Vec<u8> {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/recognize-239/input.json"
+        "/../thinkthen/tests/fixtures/recognize-239/input.json"
     );
     let fixture: Value = serde_json::from_slice(&fs::read(path).expect("fixture")).expect("json");
     serde_json::to_vec(&fixture["entities"]).expect("entities")

@@ -3,7 +3,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use super::DEFAULT_MODEL;
+use super::default_model;
 use clap::Args;
 
 use super::Common;
@@ -104,7 +104,7 @@ pub(crate) struct FindCommon {
         long,
         value_name = "NAME",
         hide_short_help = true,
-        help = format!("The model named in the request. [default: {DEFAULT_MODEL}]")
+        help = format!("The model named in the request. [default: {}]", default_model())
     )]
     pub(crate) model: Option<String>,
     /// Call the backend for every request, then write its exchange into DIR.

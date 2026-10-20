@@ -222,6 +222,7 @@ fn options(
     threshold: Option<&String>,
 ) -> RequestOptions {
     RequestOptions {
+        attempts: common.details,
         model: common.model.clone(),
         threshold: threshold.cloned().map(crate::RequestThreshold::Rule),
         field: (!common.field.is_empty()).then(|| common.field.clone()),

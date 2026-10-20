@@ -249,7 +249,7 @@ pub(super) fn run(
     }
     let result = terminal.ok_or(Failure::Defect("native session ended without settlement"))?;
     let failure = result.err().map(|error| {
-        let at = error.stopped().at().or(ended.input_at);
+        let at = ended.input_at.or(error.stopped().at());
         let cause = Failure::from(error)
             .with_replay_context(ReplayContext::Recognize)
             .with_size_advice(crate::failure::SizeAdvice::Batches);

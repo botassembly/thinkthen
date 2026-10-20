@@ -136,7 +136,8 @@ pub(super) fn run(
                 ..
             }) if configuration.keeping == crate::judge::Keeping::Ordered => {
                 progress.observe(value);
-                if progress.failure.is_some() {
+                if let Some(failure) = progress.failure.take() {
+                    ended.failure.get_or_insert(failure);
                     session.cancel();
                     cancelled = true;
                     input_done = true;
@@ -359,7 +360,7 @@ impl Renderer {
     ) -> Result<ExitCode, Failure> {
         let (recording, verb, closed) = completion;
         let failure = result.err().map(|error| {
-            let at = error.stopped().at().or(ended.input_at);
+            let at = ended.input_at.or(error.stopped().at());
             (
                 at,
                 host_error(error, self.streams).with_size_advice(self.size_advice),

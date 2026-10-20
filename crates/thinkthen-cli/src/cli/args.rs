@@ -5,8 +5,13 @@ use std::path::PathBuf;
 
 use crate::RequestFraming as Framing;
 
-/// The command help's published default model name.
-pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
+/// Read the help's default from the native builder without capturing configuration.
+pub(super) fn default_model() -> String {
+    crate::Engine::builder()
+        .resolved_settings()
+        .map(|settings| settings.model)
+        .unwrap_or_default()
+}
 use clap::{Args, Parser};
 
 /// How many times every command sends a retried status again by default: ADR 0052's
@@ -154,17 +159,18 @@ pub(crate) struct Common {
     #[arg(long, value_name = "FILE")]
     pub(crate) profile: Option<PathBuf>,
 
-    // The default is the adapter's, so the sentence is built from the constant
-    // rather than written again here. A doc comment cannot read a constant, so
+    // The default is the adapter's, so the sentence is built from the builder
+    // rather than written again here. A doc comment cannot query the builder, so
     // clap is given the two texts as expressions instead.
     #[arg(
         long,
         value_name = "NAME",
         hide_short_help = true,
-        help = format!("The model named in the request. [default: {DEFAULT_MODEL}]"),
+        help = format!("The model named in the request. [default: {}]", default_model()),
         long_help = format!(
-            "The model named in the request. [default: {DEFAULT_MODEL}]\n\n\
-             It outranks a `model` key in a single question file. A question set holds no model."
+            "The model named in the request. [default: {}]\n\n\
+             It outranks a `model` key in a single question file. A question set holds no model.",
+            default_model()
         )
     )]
     pub(crate) model: Option<String>,

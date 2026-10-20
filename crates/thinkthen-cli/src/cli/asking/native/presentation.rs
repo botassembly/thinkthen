@@ -124,11 +124,31 @@ impl Serialize for Details<'_> {
             }
             if name == "meta" && self.strip_batch {
                 map.serialize_entry(name, &WithoutBatch(value))?;
+            } else if name == "question" {
+                map.serialize_entry(name, &Question(value))?;
             } else {
                 map.serialize_entry(name, value)?;
             }
             if name == "value" {
                 self.write_input(&mut map)?;
+            }
+        }
+        map.end()
+    }
+}
+// The command reports its selected model in metadata. Its question view retains
+// the authored content, without the request API's runtime model overlay.
+struct Question<'a>(&'a Json);
+impl Serialize for Question<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap as _;
+        let Kind::Object(fields) = self.0.kind() else {
+            return self.0.serialize(serializer);
+        };
+        let mut map = serializer.serialize_map(None)?;
+        for (name, value) in fields {
+            if name != "model" {
+                map.serialize_entry(name, value)?;
             }
         }
         map.end()
@@ -170,6 +190,8 @@ impl Serialize for Document<'_> {
         for (name, value) in self.0 {
             if name == "meta" {
                 map.serialize_entry(name, &WithoutBatch(value))?;
+            } else if name == "question" {
+                map.serialize_entry(name, &Question(value))?;
             } else {
                 map.serialize_entry(name, value)?;
             }

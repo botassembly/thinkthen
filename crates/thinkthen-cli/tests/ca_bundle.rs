@@ -141,8 +141,15 @@ fn certificate_admission_precedes_cache_and_cost_warnings() {
     fs::write(&malformed, b"distinctive-private-certificate-marker").unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
+    use std::net::ToSocketAddrs as _;
+    let bound = listener.local_addr().unwrap();
+    assert_eq!(
+        ("127.1", bound.port()).to_socket_addrs().unwrap().collect::<Vec<_>>(),
+        [bound],
+        "the key-required address reaches the counted listener"
+    );
     let url = format!(
-        "https://127.0.0.1:{}",
+        "https://127.1:{}",
         listener.local_addr().unwrap().port()
     );
     let run = |bundle: &Path, cache: &Path, model: &str, refresh: bool| {

@@ -506,6 +506,12 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
 
 #[test]
 fn offline_readers_keep_unbounded_object_bytes_and_reject_other_shapes() {
+    let key = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "offline-reader-key-{}.jsonl",
+        std::process::id()
+    ));
+    fs::write(&key, "{\"id\":1,\"value\":true}\n").expect("owned answer key");
+    let key_path = key.to_str().expect("owned key path");
     // This unused member exceeds execution admission. Offline commands keep their
     // historical read-only parser behavior and never render it or open a backend.
     let large = format!(
@@ -514,7 +520,7 @@ fn offline_readers_keep_unbounded_object_bytes_and_reject_other_shapes() {
     );
     assert!(thinkthen::RawRecord::json(large.trim()).is_err());
     for arguments in [
-        vec!["runs", "audit", "-"],
+        vec!["runs", "audit", "-", key_path],
         vec!["runs", "diff", "-", "--compare-threshold", "0.5"],
     ] {
         let (code, stdout, stderr) = measure(&arguments, large.as_bytes());
@@ -522,10 +528,11 @@ fn offline_readers_keep_unbounded_object_bytes_and_reject_other_shapes() {
         assert!(!stdout.contains("xxxx"));
     }
     for input in ["null", "false", "1", "\"private_shape_marker\"", "[]"] {
-        let (code, stdout, stderr) = measure(&["runs", "audit", "-"], input.as_bytes());
+        let (code, stdout, stderr) = measure(&["runs", "audit", "-", key_path], input.as_bytes());
         assert_eq!(code, 2);
         assert!(stdout.is_empty());
         assert!(stderr.contains("results line 1 is not a JSON object"));
         assert!(!stderr.contains("private_shape_marker"));
     }
+    fs::remove_file(key).expect("remove owned answer key");
 }
