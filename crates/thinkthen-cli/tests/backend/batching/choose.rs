@@ -324,7 +324,7 @@ fn a_profile_refuses_later_large_options_after_the_closed_prefix() {
     let profile = format!("{place}/limit.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":500}"#,
+        r#"{"name":"small","max_request_bytes":500}"#,
     )
     .expect("profile");
     let large: Vec<String> = (1..=100).map(|at| format!("option_{at:03}")).collect();

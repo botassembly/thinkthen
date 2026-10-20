@@ -131,7 +131,7 @@ fn configuration_profile_observation_borrows_the_actual_built_profile_without_se
     fs::write(&config, serde_json::json!({
          "backend":"local", "backends": {"local": {
             "url":listener.base(), "key_env":"UNSET_CONFIGURED_PROFILE_KEY", "model":"fixed",
-            "profile":{"schema":"thinkthen.backend-profile/1","name":"configured-profile","max_questions":3}
+            "profile":{"name":"configured-profile","max_questions":3}
         }}
     }).to_string()).unwrap();
     let written = in_child(

@@ -369,7 +369,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
     fired.fire();
     let spent = Cancel::default().with_deadline(Deadline::after(Duration::ZERO));
     let profile = BackendProfile::parse(
-        r#"{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":4}"#,
+        r#"{"name":"edge","max_evidence_bytes":4}"#,
     )
     .expect("profile");
     let limited = Engine::new(Settings {
@@ -426,7 +426,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
 fn spent_deadline_before_empty_or_split_work_never_looks_up_a_key() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let profile = BackendProfile::parse(
-        r#"{"schema":"thinkthen.backend-profile/1","name":"split","max_questions":1}"#,
+        r#"{"name":"split","max_questions":1}"#,
     )
     .expect("profile");
     let engine = Engine::new(Settings {

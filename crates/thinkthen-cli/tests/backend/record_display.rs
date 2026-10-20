@@ -205,7 +205,7 @@ fn batched_and_split_views_keep_stable_ties_and_file_local_top_positions() -> io
     fs::write(&two, "two\nend\n")?;
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"split","max_questions":1}"#,
+        r#"{"name":"split","max_questions":1}"#,
     )?;
     let one = one.to_str().expect("path");
     let two = two.to_str().expect("path");

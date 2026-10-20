@@ -95,7 +95,7 @@ fn a_saved_relate_name_reaches_details_identity_and_warning() {
     let running = folder.join("runtime.json");
     fs::write(
         &running,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1000}"#,
+        r#"{"name":"new","max_evidence_bytes":1000}"#,
     )
     .expect("runtime profile");
     let listener = Listener::answering(answered).expect("listener");
@@ -356,7 +356,7 @@ fn an_option_limit_does_not_change_pair_requests() {
     let profile = folder.join("narrow.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"narrow","max_options":2}"#,
+        r#"{"name":"narrow","max_options":2}"#,
     )
     .expect("profile");
     let listener = Listener::answering(answered).expect("listener");

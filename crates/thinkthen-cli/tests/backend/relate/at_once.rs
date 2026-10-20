@@ -43,7 +43,7 @@ fn four_a_request() -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-at-once");
     fs::create_dir_all(&folder).expect("profile folder");
     let path = folder.join("four.json");
-    let text = r#"{"schema":"thinkthen.backend-profile/1","name":"four","max_questions":4}"#;
+    let text = r#"{"name":"four","max_questions":4}"#;
     fs::write(&path, text).expect("profile");
     path
 }
@@ -104,7 +104,7 @@ fn failing(jobs: &str, fail: fn(&str) -> Canned) -> (Output, usize) {
     let profile = folder.join("two.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"two","max_questions":2}"#,
+        r#"{"name":"two","max_questions":2}"#,
     )
     .expect("profile");
     let options = [

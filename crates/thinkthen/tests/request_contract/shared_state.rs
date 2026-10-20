@@ -265,7 +265,7 @@ fn shared_state_admits_the_full_group_before_packing_or_sending() {
         .unwrap()
         .no_cache()
         .profile_json(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"one-question","max_questions":1}"#,
+            r#"{"name":"one-question","max_questions":1}"#,
         )
         .unwrap()
         .build()

@@ -240,7 +240,7 @@ fn an_evidence_limit_counts_the_fixed_state_and_not_the_quoted_record() {
         let _written = fs::write(
             &path,
             format!(
-                r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}","max_evidence_bytes":{bytes}}}"#
+                r#"{{"name":"{name}","max_evidence_bytes":{bytes}}}"#
             ),
         );
         path
@@ -296,7 +296,7 @@ fn a_request_limit_counts_the_complete_body_with_a_structured_state() {
         let _written = fs::write(
             &path,
             format!(
-                r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}","max_request_bytes":{bytes}}}"#
+                r#"{{"name":"{name}","max_request_bytes":{bytes}}}"#
             ),
         );
         path

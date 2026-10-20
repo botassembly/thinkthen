@@ -137,7 +137,7 @@ fn impossible_relation_state_uses_cached_recognition_and_sends_nothing() {
     assert_eq!(listener.requests().len(), 2);
 
     let profile = root.with_extension("profile.json");
-    fs::write(&profile, r#"{"schema":"thinkthen.backend-profile/1","name":"source-only","max_evidence_bytes":11,"max_options":2}"#).expect("profile");
+    fs::write(&profile, r#"{"name":"source-only","max_evidence_bytes":11,"max_options":2}"#).expect("profile");
     let profile = profile.to_string_lossy();
     let options = [
         "person",
@@ -227,7 +227,7 @@ fn a_pair_request_over_the_byte_limit_refuses_after_cached_recognition_without_a
     let fixture = Fixture::new()?;
     let one = fixture.profile(
         "one-question.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+        r#"{"name":"one","max_questions":1}"#,
     )?;
     fixture.run(&one, false, true)?;
     let limit = fixture.largest_sent()?;
@@ -237,7 +237,7 @@ fn a_pair_request_over_the_byte_limit_refuses_after_cached_recognition_without_a
 
     let bytes = fixture.profile(
         "bytes.json",
-        &format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"final-byte","max_questions":1,"max_request_bytes":{limit}}}"#),
+        &format!(r#"{{"name":"final-byte","max_questions":1,"max_request_bytes":{limit}}}"#),
     )?;
     let refused = fixture.run(&bytes, true, false)?;
     assert_eq!(refused.status.code(), Some(2));

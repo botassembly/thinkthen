@@ -90,7 +90,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
         questions(
             name,
             &format!(
-                r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}","max_request_bytes":{limit}}}"#
+                r#"{{"name":"{name}","max_request_bytes":{limit}}}"#
             ),
         )
     };

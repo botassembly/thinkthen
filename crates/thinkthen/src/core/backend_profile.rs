@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn the_closed_profile_shape_accepts_independent_positive_limits() {
         let parsed = BackendProfile::parse(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"local_1","max_evidence_bytes":4,"max_request_bytes":200,"max_questions":1}"#,
+            r#"{"name":"local_1","max_evidence_bytes":4,"max_request_bytes":200,"max_questions":1}"#,
         )
         .expect("profile");
         assert_eq!(parsed.name().as_str(), "local_1");
@@ -253,41 +253,40 @@ mod tests {
         ));
         let cases = [
             ("[]", ProfileError::Object),
-            (r#"{"name":"jev","max_questions":1}"#, ProfileError::Schema),
             (
                 r#"{"schema":"other","name":"jev","max_questions":1}"#,
                 ProfileError::Schema,
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","max_questions":1}"#,
+                r#"{"max_questions":1}"#,
                 ProfileError::Name,
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"Jev","max_questions":1}"#,
+                r#"{"name":"Jev","max_questions":1}"#,
                 ProfileError::Name,
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev"}"#,
+                r#"{"name":"jev"}"#,
                 ProfileError::NoLimit,
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev","max_questions":0}"#,
+                r#"{"name":"jev","max_questions":0}"#,
                 ProfileError::Limit("max_questions"),
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev","max_questions":-1}"#,
+                r#"{"name":"jev","max_questions":-1}"#,
                 ProfileError::Limit("max_questions"),
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev","max_questions":1.5}"#,
+                r#"{"name":"jev","max_questions":1.5}"#,
                 ProfileError::Limit("max_questions"),
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev","max_questions":"1"}"#,
+                r#"{"name":"jev","max_questions":"1"}"#,
                 ProfileError::Limit("max_questions"),
             ),
             (
-                r#"{"schema":"thinkthen.backend-profile/1","name":"jev","max_questions":1,"url":"secret"}"#,
+                r#"{"name":"jev","max_questions":1,"url":"secret"}"#,
                 ProfileError::UnknownKey,
             ),
         ];

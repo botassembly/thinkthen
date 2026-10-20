@@ -211,7 +211,7 @@ fn profile(name: &str, body: &str) -> PathBuf {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("recognize-{name}.json"));
     fs::write(
         &path,
-        format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{body}}}"#),
+        format!(r#"{{"name":"{name}",{body}}}"#),
     )
     .expect("profile");
     path

@@ -316,7 +316,7 @@ fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .profile_json(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":500}"#,
+            r#"{"name":"small","max_request_bytes":500}"#,
         )
         .expect("profile")
         .no_cache()
@@ -397,7 +397,7 @@ fn a_question_limit_packs_whole_records_and_every_group_together() {
         .throttle(THROTTLE)
         .expect("throttle")
         .profile_json(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"eight","max_questions":8}"#,
+            r#"{"name":"eight","max_questions":8}"#,
         )
         .expect("profile")
         .no_cache()

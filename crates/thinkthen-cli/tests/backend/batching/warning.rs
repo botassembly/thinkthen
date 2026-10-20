@@ -93,7 +93,7 @@ fn batch_warning_uses_the_successful_output_boundary() {
     let profile = format!("{place}/profile.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_questions":10}"#,
+        r#"{"name":"new","max_questions":10}"#,
     )
     .expect("profile");
     let question = format!("@{file}");

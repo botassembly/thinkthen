@@ -403,7 +403,7 @@ fn batches_and_splits_preserve_global_labels_and_file_positions() -> io::Result<
     let profile = place.join("profile.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"split","max_questions":1}"#,
+        r#"{"name":"split","max_questions":1}"#,
     )?;
     for split in [false, true] {
         let listener = Listener::answering(answer)?;

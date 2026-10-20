@@ -57,7 +57,7 @@ fn built_engine_observations_use_actual_adapter_model_and_profile_without_sendin
     ] {
         let builder = Engine::builder().backend(backend).unwrap()
             .base_url(listener.base()).unwrap().model(model).unwrap()
-            .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"explicit-profile","max_questions":3}"#).unwrap()
+            .profile_json(r#"{"name":"explicit-profile","max_questions":3}"#).unwrap()
             .no_cache();
         assert_eq!(
             builder.resolved_settings().unwrap().model_is_mutable_alias,

@@ -40,7 +40,7 @@ fn profile(name: &str, limit: &str) -> PathBuf {
     let path = folder.join(format!("{name}.json"));
     fs::write(
         &path,
-        format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{limit}}}"#),
+        format!(r#"{{"name":"{name}",{limit}}}"#),
     )
     .expect("profile");
     path

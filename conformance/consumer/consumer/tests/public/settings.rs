@@ -63,7 +63,7 @@ fn builder_validates_new_settings_at_the_public_edge() {
     let bad = std::env::temp_dir().join(format!("consumer-profile-invalid-{}", std::process::id()));
     std::fs::write(
         &bad,
-        r#"{"schema":"thinkthen.backend-profile/1","unknown":1}"#,
+        r#"{"unknown":1}"#,
     )
     .expect("bad profile");
     let error = Engine::builder()
@@ -452,7 +452,7 @@ fn relate_follows_the_engine_profile_like_the_command() {
     let profile = folder.join("profile.json");
     std::fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":4}"#,
+        r#"{"name":"small","max_evidence_bytes":4}"#,
     )
     .expect("profile");
     let base = format!("{}/generic/v1", backend.origin());

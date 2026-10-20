@@ -119,7 +119,7 @@ fn one_input_over_the_ceiling_splits_with_its_state_repeated() {
 #[test]
 fn a_lone_question_over_a_profile_limit_is_refused_and_packs_nothing() {
     let profile = BackendProfile::parse(
-        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":80}"#,
+        r#"{"name":"small","max_request_bytes":80}"#,
     )
     .expect("a profile");
     let one = state("one");

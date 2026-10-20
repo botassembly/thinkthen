@@ -332,7 +332,7 @@ fn a_tag_record_over_a_limit_splits_its_labels_across_requests() {
     let profile = format!("{directory}/profile.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"tag-wire","max_questions":1}"#,
+        r#"{"name":"tag-wire","max_questions":1}"#,
     )
     .expect("profile");
     for limit in [

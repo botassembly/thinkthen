@@ -155,22 +155,23 @@ fn profile_grammar_has_closed_safe_classifications() {
             }),
         ),
         ("[]".into(), ProfileFailure::Object),
-        ("{}".into(), ProfileFailure::Schema),
+        ("{}".into(), ProfileFailure::Name),
+        (r#"{"schema":null}"#.into(), ProfileFailure::Schema),
         (
-            format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{marker} !"}}"#),
+            format!(r#"{{"name":"{marker} !"}}"#),
             ProfileFailure::Name,
         ),
         (format!(r#"{{"{marker}":1}}"#), ProfileFailure::UnknownKey),
         (
-            r#"{"schema":"thinkthen.backend-profile/1","name":"valid","max_questions":0}"#.into(),
+            r#"{"name":"valid","max_questions":0}"#.into(),
             ProfileFailure::Limit("max_questions"),
         ),
         (
-            r#"{"schema":"thinkthen.backend-profile/1","name":"valid"}"#.into(),
+            r#"{"name":"valid"}"#.into(),
             ProfileFailure::NoLimit,
         ),
         (
-            r#"{"schema":"thinkthen.backend-profile/2","name":"valid","image_profile":null}"#
+            r#"{"name":"valid","image_profile":null}"#
                 .into(),
             ProfileFailure::ImageProfile,
         ),
@@ -269,4 +270,14 @@ fn public_document_reading_preserves_numeric_syntax_and_literal_input() {
         .read_document(&vec![0xff; RawRecord::max_bytes() + 1])
         .unwrap_err();
     assert!(oversized.to_string().contains("over 16 MiB"));
+}
+
+#[test]
+fn unversioned_profiles_load_with_optional_image_declarations() {
+    for text in [
+        r#"{"name":"plain","max_questions":1}"#,
+        include_str!("../../../specification/fixtures/images/local/clef-profile.json"),
+    ] {
+        Engine::builder().profile_json(text).expect("unversioned profile");
+    }
 }

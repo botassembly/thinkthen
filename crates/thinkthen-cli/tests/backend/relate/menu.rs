@@ -309,7 +309,7 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
     let profile = folder.join("two-options.json");
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"two-options","max_options":2}"#,
+        r#"{"name":"two-options","max_options":2}"#,
     )
     .expect("profile");
     let rule = file(&folder, "works-for", WORKS_FOR);

@@ -17,7 +17,7 @@ fn interrupted_chunks(count: usize, framing: &[&str], stderr: &str) -> io::Resul
         .join(format!("recognize-interrupt-profile-{count}.json"));
     fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+        r#"{"name":"one","max_questions":1}"#,
     )?;
     let profile_name = profile.to_string_lossy();
     let arguments = [

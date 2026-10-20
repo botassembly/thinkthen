@@ -97,7 +97,7 @@ fn a_json_record_is_quoted_compact_in_its_own_key_order() {
 fn the_evidence_limit_bounds_each_quoted_record() {
     let state = QUOTED.len();
     let profile = BackendProfile::parse(&format!(
-        r#"{{"schema":"thinkthen.backend-profile/1","name":"test","max_evidence_bytes":{state}}}"#
+        r#"{{"name":"test","max_evidence_bytes":{state}}}"#
     ))
     .expect("profile");
     let bounded = |bytes: usize| {

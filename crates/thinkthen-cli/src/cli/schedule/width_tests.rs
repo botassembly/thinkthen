@@ -291,7 +291,7 @@ fn every_command_path_shares_the_cap() {
     let profile = file(
         &home,
         "one.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+        r#"{"name":"one","max_questions":1}"#,
     );
     let held = held("retried-mark");
     let base = held.listener.base().to_owned();

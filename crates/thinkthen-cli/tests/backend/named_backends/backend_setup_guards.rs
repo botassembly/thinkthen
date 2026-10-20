@@ -7,7 +7,7 @@ use serde_json::json;
 fn profile_only_default_builtin_is_inherited_and_an_unnamed_custom_route_is_not() {
     let home = Home::new("default-setup-0400");
     let target = listener();
-    home.config(&json!({"backends":{"typesafe":{"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}}}}).to_string());
+    home.config(&json!({"backends":{"typesafe":{"profile":{"name":"small","max_evidence_bytes":3}}}}).to_string());
     let input = home.evidence(&["alpha"]);
     let planned = home.run(
         &[
@@ -52,7 +52,7 @@ fn setup_entries_cannot_bypass_owner_or_named_key_host_guards() {
     let home = Home::new("setup-trust-0400");
     let target = listener();
     let profile =
-        json!({"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":100});
+        json!({"name":"small","max_evidence_bytes":100});
     home.config(&json!({"backends":{"typesafe":{"usd_per_million_input":"2","usd_per_million_output":"0","profile":profile}}}).to_string());
     let input = home.evidence(&["alpha"]);
     let configuration = crate::child::Folder::Config
@@ -118,7 +118,7 @@ fn selected_setup_does_not_hide_an_invalid_unselected_entry() {
     assert_eq!(out.status.code(), Some(5));
     assert_eq!(
         said(&out).1,
-        "thinkthen: configuration backend field `profile` has schema `thinkthen.backend-profile/1`\n"
+        "thinkthen: configuration backend field `profile` must delete the `schema` member\n"
     );
     assert!(!said(&out).1.contains("invalid-marker"));
     assert_eq!(target.count(), 0);
@@ -147,7 +147,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
         let home = Home::new("check-profile-0400");
         let target = listener();
         let profile =
-            json!({"schema":"thinkthen.backend-profile/1","name":"probe-limit",field:limit});
+            json!({"name":"probe-limit",field:limit});
         home.config(
             &json!({"backends":{"small":{
                 "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
@@ -201,14 +201,14 @@ fn an_explicit_command_profile_still_outranks_the_setup_request_limit() {
     home.config(
         &json!({"backend":"small","backends":{"small":{
             "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m",
-            "profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":1}
+            "profile":{"name":"small","max_request_bytes":1}
         }}})
         .to_string(),
     );
     let profile = home.path("explicit.json");
     std::fs::write(
         &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"explicit","max_request_bytes":4096}"#,
+        r#"{"name":"explicit","max_request_bytes":4096}"#,
     )
     .expect("explicit profile");
     let input = home.evidence(&["alpha"]);

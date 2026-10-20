@@ -184,7 +184,7 @@ fn derived_span_refusal_keeps_boundary_sends_usage_and_recordings() {
         let text = std::iter::repeat_n("Ada", 300)
             .collect::<Vec<_>>()
             .join(" ");
-        let profile = r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#;
+        let profile = r#"{"name":"one","max_questions":1}"#;
         let engine = builder(&listener, backend)
             .profile_json(profile)
             .unwrap()
@@ -313,7 +313,7 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
         }
         let engine = builder(&listener, backend)
             .profile_json(
-                r#"{"schema":"thinkthen.backend-profile/1","name":"explicit","max_options":256}"#,
+                r#"{"name":"explicit","max_options":256}"#,
             )
             .unwrap()
             .build()
