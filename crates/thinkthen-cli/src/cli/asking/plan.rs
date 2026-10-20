@@ -78,12 +78,7 @@ pub(super) fn packed(
     if let Some(shared) = shared {
         controls = controls.context(shared);
     }
-    if let Some(setting) = setting {
-        controls = controls.batch(match setting {
-            Setting::Max => crate::BatchSetting::Max,
-            Setting::Records(count) => crate::BatchSetting::Records(count),
-        });
-    }
+    controls = controls.batch(setting.unwrap_or(Setting::Max));
     let mut feed = crate::RequestFeed::from_records("cli-plan", rows);
     if configuration.common.images() {
         feed = feed.with_image_inputs();

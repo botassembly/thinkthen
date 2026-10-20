@@ -78,6 +78,18 @@ fn top_level_batch_uses_flag_environment_and_file_tiers() {
     .expect("flag overrides file");
     assert_eq!(overruled.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 1);
+    for options in [vec![], vec!["--plan"]] {
+        let document = crate::harness::annotate_at(
+            &invalid,
+            listener.base(),
+            &options,
+            &[("THINKTHEN_API_KEY", "key")],
+            b"one",
+        )
+        .expect("a document ignores saved batching");
+        assert_eq!(document.status.code(), Some(0));
+        assert_eq!(listener.requests().len(), usize::from(options.is_empty()));
+    }
 }
 
 #[test]

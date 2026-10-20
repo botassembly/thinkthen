@@ -57,12 +57,7 @@ pub(super) fn dry_run(
     if let Some(context) = judging.context.as_deref() {
         controls = controls.context(context);
     }
-    if let Some(setting) = setting {
-        controls = controls.batch(match setting {
-            Setting::Max => crate::BatchSetting::Max,
-            Setting::Records(count) => crate::BatchSetting::Records(count),
-        });
-    }
+    controls = controls.batch(setting.unwrap_or(Setting::Max));
     let summary = native.plan_request(
         &admitted,
         crate::RequestEnvironment {

@@ -96,6 +96,10 @@ fn the_batch_setting_follows_its_tiers() {
     }
     let one = planning(&place, (None, Some("5"), None), "line 1");
     crate::harness::exits(&one, 0);
+    for value in ["0", "true"] {
+        let document = planning(&place, (None, None, Some(value)), "line 1");
+        crate::harness::exits(&document, 0);
+    }
 }
 
 #[test]

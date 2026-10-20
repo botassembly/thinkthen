@@ -6,7 +6,7 @@ use std::process::ExitCode;
 
 use crate::cli::reading::Reading;
 use crate::{
-    BatchSetting as Setting, Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing,
+    Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing,
     ResolvedSettings,
 };
 

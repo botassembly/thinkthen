@@ -62,7 +62,7 @@ pub(super) fn run(
     arguments.options.context_field = None;
     arguments.options.context = judging.context.clone();
     arguments.options.attempts = judging.details();
-    arguments.options.batch = setting.map(|setting| match setting {
+    arguments.options.batch = Some(match setting.unwrap_or(BatchSetting::Max) {
         BatchSetting::Max => crate::RequestBatch::Named("max".to_owned()),
         BatchSetting::Records(count) => crate::RequestBatch::Count(count.get()),
     });
