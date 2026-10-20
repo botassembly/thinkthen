@@ -1,6 +1,6 @@
 # 0738: Build the Linux check image in per-tool layers and keep only the live image
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
