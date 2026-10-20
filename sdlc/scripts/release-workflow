@@ -441,6 +441,59 @@ dart_tools() (
 	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
 )
 case ${1:-} in
+crate-stage)
+	[ "$#" = 2 ] || fail 'crate-stage SHA'
+	SHA=$2
+test "$(git rev-parse HEAD)" = "$SHA"
+node site/scripts/check-binding-samples.mjs
+rustup toolchain install "$(manifest_version rust)" --profile minimal
+cargo fetch --locked
+cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
+cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
+cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+python3 -m pip install --disable-pip-version-check "jsonschema==$(manifest_version jsonschema)"
+sh sdlc/scripts/package
+cargo publish --dry-run --locked --package thinkthen
+cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml
+CARGO_NET_OFFLINE=true sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu r-dist r
+	;;
+apple-check-stage)
+	[ "$#" = 3 ] || fail 'apple-check-stage TARGET SHA'
+	TARGET=$2 SHA=$3 THINKTHEN_TEST_PROFILE=full
+	export TARGET SHA THINKTHEN_TEST_PROFILE
+set -eu
+sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages swift "$SHA"
+sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages objective-c "$SHA"
+	;;
+apple-prepare-stage)
+	[ "$#" = 1 ] || fail 'apple-prepare-stage' 
+set -eu
+rustup toolchain install "$(manifest_version rust)" --profile minimal
+cargo fetch --locked
+python3 -m pip install --disable-pip-version-check "jsonschema==$(manifest_version jsonschema)"
+CARGO_NET_OFFLINE=true python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline -p conformance-backend
+	;;
+apple-assemble-stage)
+	[ "$#" = 3 ] || fail 'apple-assemble-stage TARGET SHA'
+	TARGET=$2 THINKTHEN_RELEASE_EXPECTED_SHA=$3
+	export TARGET THINKTHEN_RELEASE_EXPECTED_SHA
+set -eu
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+for arch in x86_64 aarch64; do
+  input="target/apple-inputs/platform-$arch-apple-darwin"
+  name="thinkthen-c-$version-$arch-apple-darwin.tar.gz"
+  (cd "$input" && shasum -a 256 -c "$name.sha256")
+  mkdir "target/apple-$arch"
+  tar -xzf "$input/$name" -C "target/apple-$arch"
+  cmp "target/apple-$arch/include/thinkthen.h" libraries/c/include/thinkthen.h
+done
+sh libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
+cp -R target/apple-framework/CThinkThen.xcframework libraries/swift/
+mkdir target/apple-packages
+cp "target/apple-inputs/platform-$TARGET/thinkthen-c-$version-$TARGET.tar.gz"* target/apple-packages/
+sdlc/scripts/release-pack --apple-wrappers "$TARGET" target/apple-packages swift objective-c
+rm "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz" "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz.sha256"
+	;;
 setup-stage)
 	[ "$#" -ge 3 ] || fail 'setup-stage STAGE TARGET [INPUTS]'
 	stage=$2 target=$3

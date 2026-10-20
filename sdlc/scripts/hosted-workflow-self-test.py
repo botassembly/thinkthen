@@ -1052,8 +1052,8 @@ def parameter_cases():
         # stage_checkout preserves the tracked helper's non-executable mode.
         release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
         apple = release['jobs']['apple-packages']
-        assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
-                        'Assemble Swift and Foundation from both captured C packages')
+        assembly = (REPO / 'sdlc/scripts/release-workflow').read_text().split(
+            'apple-assemble-stage)\n', 1)[1].split('\n\t;;', 1)[0]
         command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
         (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
         for cell in apple['strategy']['matrix']['include']:
