@@ -6,9 +6,11 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision f9581f3, accept
+
 ## Outcome
 
-- Changes: `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`.
+- Changes: `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/tools-self-test.py`, `sdlc/tools.json`, `sdlc/tools/*.json`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`, `sdlc/records/0738-layered-check-image.md`.
 - The Dockerfile installs each toolchain in its own layer, one `COPY` of `sdlc/tools/NAME.json` followed by one `RUN` of `install.py` for that tool, in a fixed order. Editing one tool's file rebuilds that layer and the ones after it, and the build reuses every earlier layer from the cache.
 - Scripts that are not toolchains (`sdlc/scripts/tools.py`, `conformance/children/children.py`) leave the image and its tag hash. `linux-check` mounts them from the checkout at run time. The tag hash covers only the pinned base, `rust-toolchain.toml`, `sdlc/tools.json`, `sdlc/tools/*.json`, the Dockerfile and `install.py`.
 - After a successful `prepare`, `linux-check` removes that architecture's older `thinkthen-check` images, keeping the new one and any image a running container uses.
@@ -25,3 +27,7 @@ Phase: 1
 Ian asked why Docker kept filling the M5 (Jarvis, 2026-10-20). Seven arm64 images built in 18 hours, 12 to 21 GiB each, about 107 GiB in all. `linux-check` tags the image with a hash of seven inputs, including `tools.py` and `children.py`, which changed 9 and 3 times in 30 hours. One `RUN` installs every toolchain under the classic builder, so every edit rebuilt the whole image from nothing, and the old image stayed.
 
 This ticket goes first: every lane that touches a tool file pays a full image build on each edit.
+
+## Progress
+
+- 2026-10-20 started

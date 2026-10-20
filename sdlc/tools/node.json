@@ -1,0 +1,31 @@
+{
+  "tools": {
+    "node": {
+      "commands": [
+        "node",
+        "npm"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "typescript",
+        "surfaces",
+        "test",
+        "common"
+      ],
+      "provider": "node",
+      "version": "22.22.3",
+      "probe": {
+        "argv": [
+          "node",
+          "--version"
+        ],
+        "contains": "v{version}"
+      }
+    }
+  }
+}

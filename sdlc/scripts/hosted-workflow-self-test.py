@@ -365,6 +365,10 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         for name in ('scratch.sh', 'release-workflow'):
             shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
         shutil.copyfile(REPO / 'sdlc/tools.json', root / 'sdlc/tools.json')
+        shutil.copytree(REPO / 'sdlc/tools', root / 'sdlc/tools')
+        (root / 'sdlc/linux').mkdir()
+        shutil.copyfile(REPO / 'sdlc/linux/install.py', root / 'sdlc/linux/install.py')
+        shutil.copyfile(REPO / 'sdlc/scripts/tools.py', scripts / 'tools.py')
         for relative, body in (('libraries/ruby/toolchain.env', 'RUBY_MINORS=\n'),
                                ('libraries/python/host.sh', 'python_host() { command -v python3; }\n'),
                                ('libraries/typescript/node.sha256', ''),
@@ -736,6 +740,9 @@ def preflight_cases():
         (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
         (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
         (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
+        (root / 'sdlc/linux').mkdir()
+        shutil.copyfile(REPO / 'sdlc/linux/install.py', root / 'sdlc/linux/install.py')
+        shutil.copytree(REPO / 'sdlc/tools', root / 'sdlc/tools')
         maturin_pin = json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
         tools = root / 'bin'
         tools.mkdir()
