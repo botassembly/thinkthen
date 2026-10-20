@@ -17,7 +17,7 @@ Depends on: 0666, 0688, 0740
 - Errors are a Zig error set plus a retained failure record, as the contract table describes.
 - `build-tools/results/templates/zig.py` leaves this language's exception file `build-tools/results/legacy/zig.txt`.
 - The public surface change updates the Zig entry in `conformance/library-surface/zig.json` (`CallResult`, `Result`, `Failure`) in the same change. The README, README-PUBLIC, `examples/` and the ten site function samples change with the error shape. The test consumers change only enough to compile; 0716 replaces them.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

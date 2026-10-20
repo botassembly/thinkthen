@@ -18,7 +18,7 @@ Depends on: 0657, 0688, 0740
 - The JSON v2 build-tag files are deleted. Go marshals with encoding/json, and Rust rejects invalid input.
 - `libraries/go/session.go` and `build-tools/results/templates/go.py` leave this language's exception file `build-tools/results/legacy/go.txt`.
 - The public surface change updates the Go entry in `conformance/library-surface/go.json` (`Call`, `OwnedSession`, `SessionError`) in the same change. The README, `examples/decide` and the ten site function samples drop their type assertions in the same change.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

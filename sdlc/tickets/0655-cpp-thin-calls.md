@@ -18,7 +18,7 @@ Depends on: 0653, 0688
 - `plan_impl` passes the request through without re-splitting it.
 - A short installed C++ consumer over the public API replaces `fixtures/owned/main.cpp`, `fixtures/owned_calls.py`, `fixtures/result_construction.py`, `fixtures/schema_projection.cpp` and `fixtures/session_consumer.cpp`, which are deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back. The concurrency, lifetime and AddressSanitizer tests in `fixtures/tests/` stay as small tests of C++ ownership.
 - The C++ entry in `conformance/library-surface/cpp.json`, the README and the site's C++ text describe the remaining API. The site's C++ samples replay with it.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

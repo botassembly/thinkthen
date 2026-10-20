@@ -18,7 +18,7 @@ Depends on: 0672, 0688, 0740
 - The hand-written encoder `Json.java` is replaced by generated serialization of the request JSON.
 - Old public names are removed, with no compatibility shims. The JVM entry in `conformance/library-surface/jvm.json` names the lifecycle owners and members that remain.
 - `jvm.py` and `jvm_host.py` leave this language's exception file `build-tools/results/legacy/jvm.txt`.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

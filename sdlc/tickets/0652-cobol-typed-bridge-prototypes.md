@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0650, 0651, 0688, 0740
+Depends on: 0650, 0651, 0688, 0740, 0741
 
 ## Outcome
 
@@ -15,6 +15,7 @@ Depends on: 0650, 0651, 0688, 0740
 - The forced `-include` of `src/tt_session.h` becomes a normal include path.
 - The supported GnuCOBOL range is chosen from released versions and stated in the README. Its lowest and newest versions are both in `sdlc/tools/cobol.json`.
 - The COBOL build line in `site/src/data/build-lines.mjs` matches the README's command, and the site's COBOL samples replay with it.
+- Engine construction failures come through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

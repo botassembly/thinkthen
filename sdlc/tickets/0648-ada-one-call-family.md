@@ -17,7 +17,7 @@ Depends on: 0649, 0688
 - One installed Ada consumer replaces `checks/full_case.adb`, `checks/native_session.adb` and their Python drivers, which are deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
 - The Ada templates leave this language's exception file `build-tools/results/legacy/ada.txt`, and the Ada entry in `conformance/library-surface/ada.json` names only the remaining family.
 - The README and the site's Ada text describe only the remaining family. A site sample whose call changes replays with the change.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

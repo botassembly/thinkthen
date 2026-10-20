@@ -20,7 +20,7 @@ Depends on: 0669, 0688, 0740
 - The `V1` layout probes in `tests/package_check.py` and the `IgnoresAccessChecksTo` test hook are deleted.
 - The C# conformance runner becomes an installed consumer, and the old fixture consumer (`tests/public_types.py` with `tests/source/TypeCase.cs`) is deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
 - Sources follow standard .NET formatting, enforced in `check.sh` by `dotnet format --verify-no-changes`.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

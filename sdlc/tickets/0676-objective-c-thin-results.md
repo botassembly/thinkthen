@@ -17,7 +17,7 @@ Depends on: 0688
 - `TTSession`, the `TTTask` tick loop and their private closed, reader and producer error text are deleted. Async calls run the call on one dispatch queue worker and cancel through a `thinkthen_call_cancel` token.
 - `build-tools/results/templates/objc.py` and `build-tools/results/templates/objc_calls.py` leave this language's exception file `build-tools/results/legacy/objc.txt`.
 - The public surface change updates the `objc` entry in `conformance/library-surface/objc.json` (`TTSession`, `TTTask`, `TTCall`) in the same change. Both READMEs and the ten site function samples change with the result accessors.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

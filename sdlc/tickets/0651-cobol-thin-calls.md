@@ -17,7 +17,7 @@ Depends on: 0650, 0688
 - The projection code in `cobol_blocking.py` is deleted, and `cobol_results.py` leaves this language's exception file `build-tools/results/legacy/cobol.txt`. Generated copybooks shrink to match.
 - One installed COBOL consumer program over the public copybooks replaces the per-case drivers (`checks/blocking.py`, `checks/session.py`, `checks/session_records.py`, `checks/session_consumer.py`, `checks/native_parity.py`, `checks/owned_reader.py`), which are deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
 - The README, the COBOL entry in `conformance/library-surface/cobol.json` and the site's COBOL text describe one family. A site sample whose call changes replays with the change.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 

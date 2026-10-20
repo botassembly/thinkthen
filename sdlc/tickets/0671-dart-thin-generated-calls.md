@@ -18,7 +18,7 @@ Depends on: 0670, 0688, 0740
 - The Dart entry in `conformance/library-surface/dart.json` names the lifecycle owners that remain.
 
 - The Dart conformance runner becomes an installed consumer, and the old fixture consumer (`checks/session_consumer/bin/parity_consumer.dart` and the fixture typing it needs from `checks/fixture_types.py`) is deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
-- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
