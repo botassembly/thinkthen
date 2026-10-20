@@ -10,15 +10,13 @@ import io
 import json
 import os
 from pathlib import Path
-import re
 import sys
 from decimal import Decimal
+from packet_normalize import canonical
 
 ROOT = Path(__file__).resolve().parents[2]
 ORACLE = ROOT / 'conformance/fixtures/packets.json'
 PRIVATE_CASE = '25-defect-fault'
-IDENTITIES = {'call_id', 'observation_id', 'failure_id', 'answer_id',
-              'sdk_request_id', 'request_sha256', 'request'}
 
 
 def decimal_json(text):
@@ -28,30 +26,6 @@ def decimal_json(text):
         text = format(value, 'f')
         return (text.rstrip('0').rstrip('.') if '.' in text else text) if value else '0'
     return json.loads(text, parse_int=number, parse_float=number)
-
-
-def canonical(document):
-    """Keep packet structure, presence and identity equality; remove run entropy."""
-    identities = {}
-
-    def visit(value, key=''):
-        if isinstance(value, dict):
-            return {name: visit(child, name) for name, child in sorted(value.items())}
-        if isinstance(value, list):
-            return [visit(child, 'request_sha256' if key == 'requests' else key)
-                    for child in value]
-        if key in IDENTITIES and isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value):
-            group = 'request_sha256' if key == 'request' else key
-            table = identities.setdefault(group, {})
-            return table.setdefault(value, f'{group}:{len(table) + 1}')
-        if key in ('seconds', 'wall_ms') and isinstance(value, str):
-            assert Decimal(value) >= 0, (key, value)
-            return '0'
-        if key == 'url' and isinstance(value, str):
-            return re.sub(r'http://127\.0\.0\.1:\d+/', 'http://127.0.0.1:PORT/', value)
-        return value
-
-    return visit(document)
 
 
 def difference(want, got):
@@ -128,19 +102,21 @@ def run(consumer, command, root, *, update=False):
     from fixture_suite import run as shared_run
     oracle = None if update else expanded(json.loads(ORACLE.read_text()))
     actual = {}
+    folders = {}
 
     def record(stdout, row, step, home):
         # File locations use this run's owned home or this checkout. Keep their
         # relative names while replacing only the machine-specific prefixes.
-        raw = stdout.replace(str(home), '$FOLDER').replace(str(root), '$ROOT')
-        actual.setdefault(row['id'], []).append(decimal_json(raw))
+        dump = decimal_json(stdout)
+        actual.setdefault(row['id'], []).append(dump)
+        folders[row['id']] = ((str(home), '$FOLDER'), (str(root), '$ROOT'))
         return folded(json.loads(stdout))
 
     failures = shared_run(consumer, command, root, packet_transform=record)
     if failures:
         return failures
     document = {'schema': 'thinkthen.packet-oracle/1', 'cases': [
-        {'id': case, 'dumps': canonical(dumps)} for case, dumps in actual.items()],
+        {'id': case, 'dumps': canonical(dumps, folders[case])} for case, dumps in actual.items()],
         'private_cases': [{'id': PRIVATE_CASE, 'reason':
             'Private invariant injection has no admitted public input and is outside parity.required_cases.'}]}
     if update:
