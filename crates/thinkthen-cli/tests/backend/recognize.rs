@@ -209,11 +209,7 @@ pub(super) const REFUSED: &str = "thinkthen: the reply was refused: the answer t
 
 fn profile(name: &str, body: &str) -> PathBuf {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("recognize-{name}.json"));
-    fs::write(
-        &path,
-        format!(r#"{{"name":"{name}",{body}}}"#),
-    )
-    .expect("profile");
+    fs::write(&path, format!(r#"{{"name":"{name}",{body}}}"#)).expect("profile");
     path
 }
 

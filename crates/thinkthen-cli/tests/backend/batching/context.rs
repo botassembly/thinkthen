@@ -339,11 +339,7 @@ fn a_context_size_refusal_names_the_binding_limit_and_never_sends_that_record() 
     let small_context = format!("{place}/small-context.json");
     let small_request = format!("{place}/small-request.json");
     fs::write(&context, b"Shared evidence\n").expect("context file");
-    fs::write(
-        &profile,
-        r#"{"name":"small","max_request_bytes":500}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"small","max_request_bytes":500}"#).expect("profile");
     fs::write(
         &small_context,
         r#"{"name":"context","max_evidence_bytes":10}"#,

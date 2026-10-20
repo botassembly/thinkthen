@@ -161,8 +161,7 @@ fn raw_setting_pairs_share_document_validation_and_never_send() {
 
 #[test]
 fn profile_pairs_keep_sql_inline_and_documents_keep_native_files() {
-    let profile =
-        r#"{"name":"small","max_evidence_bytes":8}"#;
+    let profile = r#"{"name":"small","max_evidence_bytes":8}"#;
     let raw = serde_json::to_string(profile).unwrap();
     let listener = listener();
     let path = folder("settings-profile.json");

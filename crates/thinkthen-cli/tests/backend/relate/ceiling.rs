@@ -38,11 +38,7 @@ fn profile(name: &str, limit: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-ceiling");
     fs::create_dir_all(&folder).expect("profile folder");
     let path = folder.join(format!("{name}.json"));
-    fs::write(
-        &path,
-        format!(r#"{{"name":"{name}",{limit}}}"#),
-    )
-    .expect("profile");
+    fs::write(&path, format!(r#"{{"name":"{name}",{limit}}}"#)).expect("profile");
     path
 }
 

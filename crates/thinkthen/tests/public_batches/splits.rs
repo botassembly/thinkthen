@@ -257,9 +257,7 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
-        .profile_json(
-            r#"{"name":"one-question","max_questions":1}"#,
-        )
+        .profile_json(r#"{"name":"one-question","max_questions":1}"#)
         .expect("profile")
         .no_cache()
         .build()
@@ -330,9 +328,7 @@ fn a_later_profile_group_refuses_before_any_request() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
-        .profile_json(
-            r#"{"name":"tiny","max_evidence_bytes":1}"#,
-        )
+        .profile_json(r#"{"name":"tiny","max_evidence_bytes":1}"#)
         .expect("profile")
         .no_cache()
         .build()

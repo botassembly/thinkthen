@@ -89,9 +89,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     let profile = |name: &str, limit: usize| {
         questions(
             name,
-            &format!(
-                r#"{{"name":"{name}","max_request_bytes":{limit}}}"#
-            ),
+            &format!(r#"{{"name":"{name}","max_request_bytes":{limit}}}"#),
         )
     };
     let run = |profile: &PathBuf, listener: &Listener| {

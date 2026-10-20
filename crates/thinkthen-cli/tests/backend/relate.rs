@@ -93,11 +93,7 @@ fn a_saved_relate_name_reaches_details_identity_and_warning() {
     fs::write(&question, r#"{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"old"}"#)
         .expect("question file");
     let running = folder.join("runtime.json");
-    fs::write(
-        &running,
-        r#"{"name":"new","max_evidence_bytes":1000}"#,
-    )
-    .expect("runtime profile");
+    fs::write(&running, r#"{"name":"new","max_evidence_bytes":1000}"#).expect("runtime profile");
     let listener = Listener::answering(answered).expect("listener");
     let output = run(
         &listener,
@@ -354,11 +350,7 @@ fn an_option_limit_does_not_change_pair_requests() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-fallback");
     fs::create_dir_all(&folder).expect("profile folder");
     let profile = folder.join("narrow.json");
-    fs::write(
-        &profile,
-        r#"{"name":"narrow","max_options":2}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"narrow","max_options":2}"#).expect("profile");
     let listener = Listener::answering(answered).expect("listener");
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Beta","kind":"organization"},{"name":"Core","kind":"organization"}]"#;
     let mut plans = Vec::new();

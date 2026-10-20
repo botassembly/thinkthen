@@ -264,9 +264,7 @@ fn shared_state_admits_the_full_group_before_packing_or_sending() {
         .base_url(listener.base())
         .unwrap()
         .no_cache()
-        .profile_json(
-            r#"{"name":"one-question","max_questions":1}"#,
-        )
+        .profile_json(r#"{"name":"one-question","max_questions":1}"#)
         .unwrap()
         .build()
         .unwrap();

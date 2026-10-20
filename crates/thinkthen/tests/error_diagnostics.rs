@@ -157,22 +157,15 @@ fn profile_grammar_has_closed_safe_classifications() {
         ("[]".into(), ProfileFailure::Object),
         ("{}".into(), ProfileFailure::Name),
         (r#"{"schema":null}"#.into(), ProfileFailure::Schema),
-        (
-            format!(r#"{{"name":"{marker} !"}}"#),
-            ProfileFailure::Name,
-        ),
+        (format!(r#"{{"name":"{marker} !"}}"#), ProfileFailure::Name),
         (format!(r#"{{"{marker}":1}}"#), ProfileFailure::UnknownKey),
         (
             r#"{"name":"valid","max_questions":0}"#.into(),
             ProfileFailure::Limit("max_questions"),
         ),
+        (r#"{"name":"valid"}"#.into(), ProfileFailure::NoLimit),
         (
-            r#"{"name":"valid"}"#.into(),
-            ProfileFailure::NoLimit,
-        ),
-        (
-            r#"{"name":"valid","image_profile":null}"#
-                .into(),
+            r#"{"name":"valid","image_profile":null}"#.into(),
             ProfileFailure::ImageProfile,
         ),
     ] {
@@ -278,6 +271,8 @@ fn unversioned_profiles_load_with_optional_image_declarations() {
         r#"{"name":"plain","max_questions":1}"#,
         include_str!("../../../specification/fixtures/images/local/clef-profile.json"),
     ] {
-        Engine::builder().profile_json(text).expect("unversioned profile");
+        let _builder = Engine::builder()
+            .profile_json(text)
+            .expect("unversioned profile");
     }
 }

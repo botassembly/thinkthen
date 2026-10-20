@@ -61,11 +61,7 @@ fn builder_validates_new_settings_at_the_public_edge() {
         (ErrorKind::Local, "the profile file could not be read")
     );
     let bad = std::env::temp_dir().join(format!("consumer-profile-invalid-{}", std::process::id()));
-    std::fs::write(
-        &bad,
-        r#"{"unknown":1}"#,
-    )
-    .expect("bad profile");
+    std::fs::write(&bad, r#"{"unknown":1}"#).expect("bad profile");
     let error = Engine::builder()
         .profile(&bad)
         .expect("path")
@@ -450,11 +446,7 @@ fn relate_follows_the_engine_profile_like_the_command() {
         std::env::temp_dir().join(format!("consumer-relate-profile-{}", std::process::id()));
     std::fs::create_dir(&folder).expect("fresh folder");
     let profile = folder.join("profile.json");
-    std::fs::write(
-        &profile,
-        r#"{"name":"small","max_evidence_bytes":4}"#,
-    )
-    .expect("profile");
+    std::fs::write(&profile, r#"{"name":"small","max_evidence_bytes":4}"#).expect("profile");
     let base = format!("{}/generic/v1", backend.origin());
     let engine = Engine::builder()
         .base_url(&base)

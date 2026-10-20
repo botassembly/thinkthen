@@ -239,9 +239,7 @@ fn an_evidence_limit_counts_the_fixed_state_and_not_the_quoted_record() {
         let path = profile_dir.join(format!("{name}.json"));
         let _written = fs::write(
             &path,
-            format!(
-                r#"{{"name":"{name}","max_evidence_bytes":{bytes}}}"#
-            ),
+            format!(r#"{{"name":"{name}","max_evidence_bytes":{bytes}}}"#),
         );
         path
     };
@@ -295,9 +293,7 @@ fn a_request_limit_counts_the_complete_body_with_a_structured_state() {
         let path = profile_dir.join(format!("{name}.json"));
         let _written = fs::write(
             &path,
-            format!(
-                r#"{{"name":"{name}","max_request_bytes":{bytes}}}"#
-            ),
+            format!(r#"{{"name":"{name}","max_request_bytes":{bytes}}}"#),
         );
         path
     };

@@ -58,33 +58,28 @@ pub(crate) struct BackendProfile {
 }
 
 impl BackendProfile {
-    /// Parse a closed version-one or version-two profile object.
+    /// Parse one closed profile object with an optional image declaration.
     pub(crate) fn parse(text: &str) -> Result<Self, ProfileError> {
         let value = Json::parse(text).map_err(ProfileError::Json)?;
         let Json::Object(members) = &value else {
             return Err(ProfileError::Object);
         };
-        let version_two =
-            value.member("schema").and_then(Json::as_str) == Some("thinkthen.backend-profile/2");
+        if value.member("schema").is_some() {
+            return Err(ProfileError::Schema);
+        }
         for (name, _) in members {
-            if !([
-                "schema",
+            if ![
                 "name",
                 "max_evidence_bytes",
                 "max_request_bytes",
                 "max_questions",
                 "max_options",
+                "image_profile",
             ]
             .contains(&name.as_str())
-                || version_two && name == "image_profile")
             {
                 return Err(ProfileError::UnknownKey);
             }
-        }
-        if !version_two
-            && value.member("schema").and_then(Json::as_str) != Some("thinkthen.backend-profile/1")
-        {
-            return Err(ProfileError::Schema);
         }
         let name = value
             .member("name")
@@ -177,8 +172,8 @@ pub(crate) enum ProfileError {
     /// The top level is not an object.
     #[error("is one JSON object")]
     Object,
-    /// The schema is absent or wrong.
-    #[error("has schema `thinkthen.backend-profile/1`")]
+    /// The removed schema member is present.
+    #[error("must delete the `schema` member")]
     Schema,
     /// The name is absent or unsafe.
     #[error("has a nonempty lowercase name using letters, digits, hyphens, or underscores")]
@@ -257,18 +252,9 @@ mod tests {
                 r#"{"schema":"other","name":"jev","max_questions":1}"#,
                 ProfileError::Schema,
             ),
-            (
-                r#"{"max_questions":1}"#,
-                ProfileError::Name,
-            ),
-            (
-                r#"{"name":"Jev","max_questions":1}"#,
-                ProfileError::Name,
-            ),
-            (
-                r#"{"name":"jev"}"#,
-                ProfileError::NoLimit,
-            ),
+            (r#"{"max_questions":1}"#, ProfileError::Name),
+            (r#"{"name":"Jev","max_questions":1}"#, ProfileError::Name),
+            (r#"{"name":"jev"}"#, ProfileError::NoLimit),
             (
                 r#"{"name":"jev","max_questions":0}"#,
                 ProfileError::Limit("max_questions"),

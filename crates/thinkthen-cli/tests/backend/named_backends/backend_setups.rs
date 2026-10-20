@@ -6,8 +6,7 @@ use std::io::Write as _;
 use std::process::Command;
 use thinkthen::{Engine, EngineBuilder, Question};
 
-const PROFILE: &str =
-    r#"{"name":"small","max_evidence_bytes":3}"#;
+const PROFILE: &str = r#"{"name":"small","max_evidence_bytes":3}"#;
 const PAIR_ERROR: &str = "configuration backend fields `usd_per_million_input` and `usd_per_million_output` come together as decimal strings from 0 through 1000000 with at most six fractional digits";
 const BUILTIN_ERROR: &str = "a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
 
@@ -50,8 +49,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         ),
         (
             json!({"profile":{"schema":"sk-field-marker-0400"}}),
-            "configuration backend field `profile` must delete the `schema` member"
-                .to_owned(),
+            "configuration backend field `profile` must delete the `schema` member".to_owned(),
         ),
         (
             json!({"profile":{"name":"small"}}),
@@ -140,11 +138,7 @@ fn setup_profile_refuses_before_live_replay_cache_and_explicit_file_wins() {
         assert_eq!(target.count(), 0);
     }
     let profile = home.root.join("explicit.json");
-    std::fs::write(
-        &profile,
-        r#"{"name":"explicit","max_evidence_bytes":100}"#,
-    )
-    .unwrap();
+    std::fs::write(&profile, r#"{"name":"explicit","max_evidence_bytes":100}"#).unwrap();
     let out = ask(
         &home,
         target.base(),
@@ -205,7 +199,9 @@ fn backend_setup_builder_child() {
         builder = builder.prices_usd_per_million("3", "0").unwrap();
     }
     if case == "profile" {
-        builder=builder.profile_json(r#"{"name":"explicit","max_evidence_bytes":100}"#).unwrap();
+        builder = builder
+            .profile_json(r#"{"name":"explicit","max_evidence_bytes":100}"#)
+            .unwrap();
     }
     let mut out = std::io::stdout().lock();
     writeln!(out, "setup-debug {builder:?}").unwrap();

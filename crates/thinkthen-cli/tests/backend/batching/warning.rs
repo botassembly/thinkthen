@@ -91,11 +91,7 @@ fn batch_warning_uses_the_successful_output_boundary() {
     )
     .expect("question file");
     let profile = format!("{place}/profile.json");
-    fs::write(
-        &profile,
-        r#"{"name":"new","max_questions":10}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"new","max_questions":10}"#).expect("profile");
     let question = format!("@{file}");
     let listener = Listener::answering(answering).expect("listener");
     let output = spawn(

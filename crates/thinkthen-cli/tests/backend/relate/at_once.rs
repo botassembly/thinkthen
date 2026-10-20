@@ -102,11 +102,7 @@ fn failing(jobs: &str, fail: fn(&str) -> Canned) -> (Output, usize) {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-at-once");
     fs::create_dir_all(&folder).expect("profile folder");
     let profile = folder.join("two.json");
-    fs::write(
-        &profile,
-        r#"{"name":"two","max_questions":2}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"two","max_questions":2}"#).expect("profile");
     let options = [
         "alpha",
         "bravo",

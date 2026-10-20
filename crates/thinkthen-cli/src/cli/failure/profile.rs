@@ -19,7 +19,7 @@ pub(super) fn reason(failure: ProfileFailure) -> String {
     match failure {
         ProfileFailure::Json(_) => "is not valid JSON".to_owned(),
         ProfileFailure::Object => "is one JSON object".to_owned(),
-        ProfileFailure::Schema => "has schema `thinkthen.backend-profile/1`".to_owned(),
+        ProfileFailure::Schema => "must delete the `schema` member".to_owned(),
         ProfileFailure::Name => {
             "has a nonempty lowercase name using letters, digits, hyphens, or underscores"
                 .to_owned()
@@ -50,24 +50,18 @@ mod tests {
                 "must delete the `schema` member",
             ),
             (
-                format!(
-                    r#"{{"name":"{secret}","max_questions":0}}"#
-                ),
+                format!(r#"{{"name":"{secret}","max_questions":0}}"#),
                 "has a positive integer `max_questions`",
             ),
             (
-                r#"{"name":"INVALID","max_questions":1}"#
-                    .to_owned(),
+                r#"{"name":"INVALID","max_questions":1}"#.to_owned(),
                 "has a nonempty lowercase name using letters, digits, hyphens, or underscores",
             ),
             (
                 format!(r#"{{"name":"safe","{secret}":1}}"#),
                 "holds no unknown keys",
             ),
-            (
-                r#"{"name":"safe"}"#.to_owned(),
-                "names at least one limit",
-            ),
+            (r#"{"name":"safe"}"#.to_owned(), "names at least one limit"),
             (
                 format!(
                     r#"{{"name":"safe","max_questions":1,"image_profile":{{"id":"{secret}"}}}}"#

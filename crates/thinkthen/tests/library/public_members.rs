@@ -95,9 +95,7 @@ fn a_runtime_profile_limit_refuses_the_saved_question_before_sending() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let question = loaded(r#"{"decide":"Is this a request?","profile":"old"}"#);
     let engine = crate::api::builder(listener.base(), "sk-profile-local")
-        .profile_json(
-            r#"{"name":"new","max_evidence_bytes":1}"#,
-        )
+        .profile_json(r#"{"name":"new","max_evidence_bytes":1}"#)
         .expect("running profile")
         .no_cache()
         .build()

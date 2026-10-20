@@ -312,9 +312,7 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
             assert!(!crate::harness::said(&output).contains("context\""));
         }
         let engine = builder(&listener, backend)
-            .profile_json(
-                r#"{"name":"explicit","max_options":256}"#,
-            )
+            .profile_json(r#"{"name":"explicit","max_options":256}"#)
             .unwrap()
             .build()
             .unwrap();

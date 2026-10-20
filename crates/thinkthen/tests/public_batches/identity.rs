@@ -315,9 +315,7 @@ fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
-        .profile_json(
-            r#"{"name":"small","max_request_bytes":500}"#,
-        )
+        .profile_json(r#"{"name":"small","max_request_bytes":500}"#)
         .expect("profile")
         .no_cache()
         .build()
@@ -396,9 +394,7 @@ fn a_question_limit_packs_whole_records_and_every_group_together() {
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
-        .profile_json(
-            r#"{"name":"eight","max_questions":8}"#,
-        )
+        .profile_json(r#"{"name":"eight","max_questions":8}"#)
         .expect("profile")
         .no_cache()
         .build()

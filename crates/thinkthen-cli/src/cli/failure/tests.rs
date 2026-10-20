@@ -47,11 +47,11 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         },
         Failure::Profile {
             path: "safe-profile.json".into(),
-            error: Box::new(thinkthen::Engine::builder()
-                .profile_json(
-                    r#"{"name":"INVALID","max_questions":1}"#
-                )
-                .unwrap_err()),
+            error: Box::new(
+                thinkthen::Engine::builder()
+                    .profile_json(r#"{"name":"INVALID","max_questions":1}"#)
+                    .unwrap_err()
+            ),
         },
         Failure::ProfileLimit {
             profile: "safe-profile".to_owned(),

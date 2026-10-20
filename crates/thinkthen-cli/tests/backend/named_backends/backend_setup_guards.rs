@@ -7,7 +7,10 @@ use serde_json::json;
 fn profile_only_default_builtin_is_inherited_and_an_unnamed_custom_route_is_not() {
     let home = Home::new("default-setup-0400");
     let target = listener();
-    home.config(&json!({"backends":{"typesafe":{"profile":{"name":"small","max_evidence_bytes":3}}}}).to_string());
+    home.config(
+        &json!({"backends":{"typesafe":{"profile":{"name":"small","max_evidence_bytes":3}}}})
+            .to_string(),
+    );
     let input = home.evidence(&["alpha"]);
     let planned = home.run(
         &[
@@ -51,8 +54,7 @@ fn setup_entries_cannot_bypass_owner_or_named_key_host_guards() {
     use std::os::unix::fs::PermissionsExt as _;
     let home = Home::new("setup-trust-0400");
     let target = listener();
-    let profile =
-        json!({"name":"small","max_evidence_bytes":100});
+    let profile = json!({"name":"small","max_evidence_bytes":100});
     home.config(&json!({"backends":{"typesafe":{"usd_per_million_input":"2","usd_per_million_output":"0","profile":profile}}}).to_string());
     let input = home.evidence(&["alpha"]);
     let configuration = crate::child::Folder::Config
@@ -146,8 +148,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
     for (field, limit, words, actual) in cases {
         let home = Home::new("check-profile-0400");
         let target = listener();
-        let profile =
-            json!({"name":"probe-limit",field:limit});
+        let profile = json!({"name":"probe-limit",field:limit});
         home.config(
             &json!({"backends":{"small":{
                 "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
@@ -206,11 +207,8 @@ fn an_explicit_command_profile_still_outranks_the_setup_request_limit() {
         .to_string(),
     );
     let profile = home.path("explicit.json");
-    std::fs::write(
-        &profile,
-        r#"{"name":"explicit","max_request_bytes":4096}"#,
-    )
-    .expect("explicit profile");
+    std::fs::write(&profile, r#"{"name":"explicit","max_request_bytes":4096}"#)
+        .expect("explicit profile");
     let input = home.evidence(&["alpha"]);
     let out = home.run(
         &[
