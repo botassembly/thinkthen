@@ -1,12 +1,14 @@
 # 0620: Make release.yml one script per target driven by the manifest
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0613, 0614, 0615, 0619, 0622
+
+Reviews: revision 5c3886a, accept
 
 ## Outcome
 
