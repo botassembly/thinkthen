@@ -247,9 +247,7 @@ fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and
         .unwrap()
         .no_cache()
         .max_retries(0)
-        .profile_json(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"running","max_questions":400}"#,
-        )
+        .profile_json(r#"{"name":"running","max_questions":400}"#)
         .unwrap()
         .build()
         .unwrap();

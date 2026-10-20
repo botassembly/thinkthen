@@ -105,11 +105,11 @@ def test_selected_setup_profile_survives_model_override_and_explicit_profile_win
     backend = Backend()
     env = environment(backend, LOCAL_KEY="fake-profile")
     configuration(env,{"local":{"url":backend.base(),"key_env":"LOCAL_KEY","model":"setup",
-                                 "profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}}})
+                                 "profile":{"name":"small","max_evidence_bytes":3}}})
     for explicit in (False,True):
         settings = {"backend":"local","model":"override","cache":False}
         if explicit:
-            settings["profile"] = json.dumps({"schema":"thinkthen.backend-profile/1","name":"explicit","max_evidence_bytes":100})
+            settings["profile"] = json.dumps({"name":"explicit","max_evidence_bytes":100})
         source = json.dumps(settings)
         got = child(f'''db = connect()
 run(db,"SELECT thinkthen_configure(?)", ({source!r},))

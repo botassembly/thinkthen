@@ -330,11 +330,7 @@ fn a_tag_record_over_a_limit_splits_its_labels_across_requests() {
     let directory = folder("tag-profile-wire-limit");
     fs::create_dir_all(&directory).expect("profile directory");
     let profile = format!("{directory}/profile.json");
-    fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"tag-wire","max_questions":1}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"tag-wire","max_questions":1}"#).expect("profile");
     for limit in [
         ["--profile", profile.as_str()],
         ["--max-request-bytes", "10"],

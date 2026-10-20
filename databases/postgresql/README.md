@@ -195,7 +195,7 @@ Measure wall time around the SQL statement in the client. This includes database
 | `thinkthen.model` | any role | backend model. Empty keeps the environment value |
 | `thinkthen.timeout` | any role | positive attempt timeout in seconds; -1 keeps the environment value |
 | `thinkthen.max_retries` | any role | status retries, 0 or more; -1 keeps the environment value |
-| `thinkthen.profile` | any role | version-one backend profile as JSON text; empty keeps the environment value |
+| `thinkthen.profile` | any role | backend profile as JSON text; empty keeps the environment value |
 | `thinkthen.record`, `thinkthen.replay` | superuser | absolute folders for live recording or strict offline replay. Empty keeps the environment value |
 | `thinkthen.cache` | superuser | an absolute answer cache folder. `off` disables it; empty keeps `THINKTHEN_CACHE`, or no cache when that is unset |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from. A relative `'@name'` resolves inside it |
