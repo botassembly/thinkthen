@@ -207,6 +207,7 @@ thread_local! {
 
 /// Build an engine and keep it, or record why none came for the calling
 /// thread; a panic while building records the defect kind.
+#[cfg(test)]
 pub(crate) fn built<E: Into<Failure>>(build: impl FnOnce() -> Result<Engine, E>) -> Option<Engine> {
     let (engine, last) = match contained(build) {
         Some(Ok(engine)) => (Some(engine), None),

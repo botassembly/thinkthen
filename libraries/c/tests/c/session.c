@@ -283,7 +283,7 @@ static THREAD_RESULT wait_native(void *argument) {
     return THREAD_DONE;
 }
 int main(void) {
-    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
+    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}", NULL);
     check(engine != NULL, "engine builds");
     if (!engine) return 1;
     if (getenv("SESSION_NAMED_REFUSALS")) return legacy_named_refusals(engine);
@@ -346,10 +346,10 @@ int main(void) {
         int retryable = thinkthen_session_error_retryable();
         const char *facts = thinkthen_session_error_facts_json();
         check(retryable == 0 && facts == NULL, "admission diagnostic is nonretryable without facts");
-        thinkthen_engine *constructed = thinkthen_engine_new_with("{}");
+        thinkthen_engine *constructed = thinkthen_engine_new_with("{}", NULL);
         check(constructed != NULL, "independent successful constructor");
         thinkthen_engine_free(constructed);
-        check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "independent failed constructor");
+        check(thinkthen_engine_new_with("{\"bad\":1}", NULL) == NULL, "independent failed constructor");
         THREAD_TYPE thread;
         if (fixture_start(&thread, separate_error, NULL) != 0) return 1;
         check(fixture_join(thread) == 0, "join independent diagnostic thread");
@@ -383,8 +383,9 @@ int main(void) {
         usage_state.kind = 99; usage_advice.data = (const char *)(uintptr_t)7; usage_advice.len = 99;
     }
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "usage refusal owns session error slot");
-    check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "saved failed constructor");
-    const char *old_error = thinkthen_error_message(NULL);
+    thinkthen_call_error *construction=NULL;
+    check(thinkthen_engine_new_with("{\"bad\":1}", &construction) == NULL && construction, "saved failed constructor");
+    thinkthen_complete_utf8 old_error = thinkthen_call_error_message(construction);
     const char *bad_requests[] = {"", "{}", "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"}},\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"}}}", "{\"unknown\":0}"};
     for (size_t i = 0; i < sizeof bad_requests / sizeof bad_requests[0]; ++i) {
         thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
@@ -418,7 +419,8 @@ int main(void) {
     check(thinkthen_session_new(NULL, feed, strlen(feed), &sentinel) == THINKTHEN_EUSAGE, "NULL engine refusal");
     check(thinkthen_session_new(engine, feed, strlen(feed), NULL) == THINKTHEN_EUSAGE, "required constructor output");
     check(sentinel == (thinkthen_session *)(uintptr_t)7, "invalid bytes preserve output");
-    check(old_error == thinkthen_error_message(NULL), "session errors preserve failed constructor slot");
+    check(old_error.data == thinkthen_call_error_message(construction).data, "session errors preserve owned constructor diagnostic");
+    thinkthen_call_error_free(construction);
     check(thinkthen_session_error_retryable() == 0 && thinkthen_session_error_facts_json() == NULL, "argument failure owns nonretryable absent facts");
     const char *session_error = thinkthen_session_error_message();
     thinkthen_session *session = open_session(engine, feed);
@@ -475,7 +477,7 @@ int main(void) {
     retained_json(session, result);
     thinkthen_session_cancel(NULL); thinkthen_session_free(NULL); thinkthen_session_result_free(NULL);
     if (getenv("SESSION_CONTROLS")) return failed;
-    engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
+    engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}", NULL);
     session = open_session(engine, feed);
     if (!session) return 1;
     char descriptor[] = "{\"item\":{\"original\":{\"kind\":\"text\",\"text\":\"Evidence.\"}},\"location\":{\"file\":\"owned.txt\",\"first_line\":1,\"last_line\":1}}";

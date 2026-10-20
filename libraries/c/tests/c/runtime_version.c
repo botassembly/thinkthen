@@ -33,7 +33,7 @@ int main(void) {
                 (unsigned)THINKTHEN_INTERFACE_NUMBER, version, (unsigned)loaded);
         return 78;
     }
-    thinkthen_engine *engine = thinkthen_engine_new();
+    thinkthen_engine *engine = thinkthen_engine_new(NULL);
     if (!engine) return 1;
     thinkthen_engine_free(engine);
     printf("%s\n", version);

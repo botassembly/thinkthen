@@ -24,15 +24,16 @@ static THREAD_RESULT worker(void *argument) {
 int main(void) {
     binary_streams();
     assert(thinkthen_error_view(NULL)==NULL && thinkthen_session_error_view()==NULL);
-    assert(!thinkthen_engine_new_with("{\"unknown\":true}"));
-    const thinkthen_error_details *constructor=thinkthen_error_view(NULL);
-    assert(constructor && constructor->code==THINKTHEN_EUSAGE && !constructor->retryable && !constructor->facts);
+    thinkthen_call_error *constructor=NULL;
+    assert(!thinkthen_engine_new_with("{\"unknown\":true}", &constructor));
+    assert(constructor && thinkthen_call_error_code(constructor)==THINKTHEN_EUSAGE);
+    assert(!thinkthen_call_error_retryable(constructor) && !thinkthen_call_error_facts_json(constructor).len);
     uint32_t output=99;
     assert(thinkthen_session_wait(NULL,THINKTHEN_SESSION_WAIT_RESULT,0,&output)==THINKTHEN_EUSAGE && output==99);
     const thinkthen_error_details *session=thinkthen_session_error_view();
     assert(session && session->code==THINKTHEN_EUSAGE && !session->retryable && !session->facts);
-    assert(thinkthen_error_view(NULL)==constructor);
-    thinkthen_engine *engine=thinkthen_engine_new_with("{}");
+    assert(thinkthen_error_view(NULL)==NULL && thinkthen_call_error_code(constructor)==THINKTHEN_EUSAGE);
+    thinkthen_engine *engine=thinkthen_engine_new_with("{}", NULL);
     assert(engine && thinkthen_error_view(NULL)==NULL && thinkthen_error_view(engine)==NULL);
     assert(thinkthen_session_error_view()==session);
     thinkthen_question *question=(thinkthen_question *)(uintptr_t)7;
@@ -55,9 +56,10 @@ int main(void) {
     thinkthen_question_author_info author={0};
     assert(thinkthen_question_author(question,&author)==THINKTHEN_OK);
     assert(thinkthen_error_view(engine)==view && thinkthen_session_error_view()==session);
-    assert(!thinkthen_engine_new_with("{\"unknown\":false}"));
+    assert(!thinkthen_engine_new_with("{\"unknown\":false}", NULL));
     assert(thinkthen_error_view(engine)==view && thinkthen_session_error_view()==session);
     thinkthen_question_free(question); thinkthen_engine_free(engine);
     assert(thinkthen_session_error_view()==session);
+    thinkthen_call_error_free(constructor);
     return 0;
 }

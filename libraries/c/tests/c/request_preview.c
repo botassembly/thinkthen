@@ -48,27 +48,34 @@ static void print_value(const thinkthen_complete_json *value) {
         default:check(0,"known canonical value kind");
     }
 }
+static void settings_failure(thinkthen_call_error *error, const char *message) {
+    check(error && thinkthen_call_error_code(error)==THINKTHEN_EUSAGE,"settings own usage error");
+    check(thinkthen_call_error_retryable(error)==0,"invalid settings are not retryable");
+    check(thinkthen_call_error_facts_json(error).len==0,"unstarted settings have no facts");
+    thinkthen_complete_utf8 text=thinkthen_call_error_message(error);
+    if(message) check(text.len==strlen(message) && !memcmp(text.data,message,text.len),"settings preserve admission diagnostic");
+    thinkthen_call_error_free(error);
+}
 static thinkthen_engine *settings(void) {
-    thinkthen_engine *engine=thinkthen_engine_new_with("{}");
+    thinkthen_call_error *error=NULL;
+    thinkthen_engine *engine=thinkthen_engine_new_with("{}", NULL);
     check(engine!=NULL,"empty settings capture environment");
     thinkthen_engine_free(engine);
     uint32_t ready=99;
     check(thinkthen_session_wait(NULL,THINKTHEN_SESSION_WAIT_RESULT,0,&ready)==THINKTHEN_EUSAGE,
           "immediate session failure before construction");
     const char *session_error=thinkthen_session_error_message();
-    check(thinkthen_engine_new_with("{\"timeout\":0}")==NULL,"invalid timeout refuses");
-    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"settings use constructor slot");
-    check(!strcmp(thinkthen_error_message(NULL),"a timeout is a time above zero"),"settings preserve admission diagnostic");
-    check(thinkthen_error_retryable(NULL)==0,"invalid settings are not retryable");
+    check(thinkthen_engine_new_with("{\"timeout\":0}", &error)==NULL,"invalid timeout refuses");
+    settings_failure(error,"a timeout is a time above zero");
     check(thinkthen_session_error_message()==session_error,"constructor preserves independent session slot");
     char model[]="{\"model\":\"model-never-retained-from-host\"}";
-    engine=thinkthen_engine_new_with(model);
+    engine=thinkthen_engine_new_with(model, &error);
     check(engine!=NULL,"settings accept model");
     memset(model,'?',sizeof(model)-1);
-    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"successful constructor clears failed build");
+    check(error==NULL,"successful constructor clears error output");
     check(thinkthen_session_error_message()==session_error,"successful constructor preserves session slot");
     thinkthen_engine_free(engine);
-    return thinkthen_engine_new_with("{}");
+    return thinkthen_engine_new_with("{}", NULL);
 }
 /* Retained ABI safety regressions, isolated from the canonical C consumer. */
 static thinkthen_value *owned_plan(thinkthen_engine *engine) {
@@ -232,11 +239,12 @@ static void typed_json_preview(thinkthen_engine *engine) {
     json_refusal(engine,&arguments,"cobol",THINKTHEN_COBOL_OVERFLOW);
 }
 static thinkthen_engine *legacy_settings(void) {
-    thinkthen_engine *engine=thinkthen_engine_new_typed(NULL);
+    thinkthen_call_error *error=NULL;
+    thinkthen_engine *engine=thinkthen_engine_new_typed(NULL, NULL);
     check(engine!=NULL,"NULL typed settings capture environment");
     thinkthen_engine_free(engine);
     thinkthen_request_engine_settings settings={0};
-    engine=thinkthen_engine_new_typed(&settings);
+    engine=thinkthen_engine_new_typed(&settings, &error);
     check(engine!=NULL,"empty typed settings capture environment");
     thinkthen_engine_free(engine);
     uint32_t ready=99;
@@ -245,26 +253,23 @@ static thinkthen_engine *legacy_settings(void) {
     const char *session_error=thinkthen_session_error_message();
     thinkthen_request_unsigned timeout={.value=0};
     settings.m_timeout=&timeout;
-    check(thinkthen_engine_new_typed(&settings)==NULL,"typed invalid timeout refuses");
-    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"typed settings use constructor slot");
-    check(!strcmp(thinkthen_error_message(NULL),"a timeout is a time above zero"),"typed settings preserve admission diagnostic");
+    check(thinkthen_engine_new_typed(&settings, &error)==NULL,"typed invalid timeout refuses");
+    settings_failure(error,"a timeout is a time above zero");
     check(thinkthen_session_error_message()==session_error,"constructor preserves independent session slot");
-    check(thinkthen_error_retryable(NULL)==0,"invalid typed settings are not retryable");
     char model[]="model-never-retained-from-host";
     thinkthen_request_text bad={.text={NULL,1}};
     settings.m_timeout=NULL; settings.m_model=&bad;
-    check(thinkthen_engine_new_typed(&settings)==NULL,"typed NULL counted text refuses");
-    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"invalid carrier has usage kind");
+    check(thinkthen_engine_new_typed(&settings, &error)==NULL,"typed NULL counted text refuses");
+    settings_failure(error,NULL);
     bad.text=text(model); settings.m_model=&bad;
-    engine=thinkthen_engine_new_typed(&settings);
+    engine=thinkthen_engine_new_typed(&settings, &error);
     check(engine!=NULL,"typed settings accept model");
     memset(model,'?',sizeof(model)-1);
-    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"successful constructor clears failed build");
+    check(error==NULL,"successful constructor clears error output");
     check(thinkthen_session_error_message()==session_error,"successful constructor preserves session slot");
-    check(!strstr(thinkthen_error_message(NULL),"model"),"typed settings diagnostic is safe");
     thinkthen_engine_free(engine);
     settings.m_model=NULL;
-    return thinkthen_engine_new_typed(&settings);
+    return thinkthen_engine_new_typed(&settings, NULL);
 }
 static thinkthen_value *full_plan(thinkthen_engine *engine) {
     thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;

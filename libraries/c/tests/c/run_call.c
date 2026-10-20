@@ -46,14 +46,13 @@ static THREAD_RESULT print_error(void *argument) {
     if(facts.len)fwrite(facts.data,1,facts.len,stdout);else fputs("null",stdout);
     puts("}");return THREAD_DONE;
 }
-/* Constructors still expose their separate immediate diagnostic while shipped.
-   A refusal here creates no engine, call result or owned call error. */
-static int constructor_error(void) {
-    const thinkthen_error_details *error=thinkthen_error_view(NULL);
-    if(!error||error->facts)return 3;
+/* Constructor refusal uses the same independent owned failure as a call. */
+static int constructor_error(thinkthen_call_error *error) {
+    if(!error||thinkthen_call_error_facts_json(error).len)return 3;
     printf("{\"constructor\":true,\"code\":%d,\"retryable\":%s,\"message\":",
-           error->code,error->retryable?"true":"false");
-    quoted(error->message);puts(",\"facts\":null}");
+           thinkthen_call_error_code(error),thinkthen_call_error_retryable(error)?"true":"false");
+    quoted(thinkthen_call_error_message(error));puts(",\"facts\":null}");
+    thinkthen_call_error_free(error);
     return 0;
 }
 static THREAD_RESULT print_result(void *argument) {
@@ -63,7 +62,7 @@ static THREAD_RESULT print_result(void *argument) {
 }
 /* No platform state base disables usage persistence during constructor capture.
    Restore the owned home before calls resolve their named question files. */
-static thinkthen_engine *engine_without_usage(const char *settings) {
+static thinkthen_engine *engine_without_usage(const char *settings, thinkthen_call_error **error) {
     const char *names[]={"HOME","XDG_STATE_HOME","LOCALAPPDATA"};
     char *saved[3]={NULL,NULL,NULL};
     for(size_t i=0;i<3;++i) {
@@ -79,7 +78,7 @@ static thinkthen_engine *engine_without_usage(const char *settings) {
         if(unsetenv(names[i]))abort();
 #endif
     }
-    thinkthen_engine *engine=thinkthen_engine_new_with(settings);
+    thinkthen_engine *engine=thinkthen_engine_new_with(settings, error);
     for(size_t i=0;i<3;++i) {
 #ifdef _WIN32
         if(_putenv_s(names[i],saved[i]?saved[i]:""))abort();
@@ -115,11 +114,13 @@ int main(int argc,char **argv) {
     binary_streams();
     char *bytes=arguments(argv[1],&argc,&argv);
     if(!bytes||argc<8)return 2;
-    thinkthen_engine *engine=engine_without_usage(argv[1]);
+    thinkthen_call_error *construction=NULL;
+    thinkthen_engine *engine=engine_without_usage(argv[1], &construction);
     if(!engine) {
-        int status=constructor_error();
+        int status=constructor_error(construction);
         free(argv);free(bytes);return status;
     }
+    if(construction)return 3;
     thinkthen_named_request request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
     thinkthen_call_cancel *cancel=thinkthen_call_cancel_new();if(!cancel)return 3;
     if(!strcmp(argv[6],"cancel"))thinkthen_call_cancel_fire(cancel);

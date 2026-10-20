@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     if (argc != 3) return 1;
     char *settings = read_file(argv[1]), *request = read_file(argv[2]);
     if (!settings || !request) return 1;
-    thinkthen_engine *engine = thinkthen_engine_new_with(settings);
+    thinkthen_engine *engine = thinkthen_engine_new_with(settings, NULL);
     if (!engine) return 1;
     thinkthen_session *session = NULL;
     int code = thinkthen_session_new(engine, request, strlen(request), &session);

@@ -11,7 +11,7 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 #include <string.h>
 static thinkthen_complete_utf8 text(const char *s) { return (thinkthen_complete_utf8){s,strlen(s)}; }
 int main(void) {
-    thinkthen_engine *engine = thinkthen_engine_new(); if (!engine) return 1;
+    thinkthen_engine *engine = thinkthen_engine_new(NULL); if (!engine) return 1;
     thinkthen_named_request refund = {.function = {"decide",6},
         .question_json = text("{\"kind\":\"text\",\"text\":\"Does the customer ask for a refund?\"}"),
         .input_json = text("{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"Please refund my order. It arrived broken.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Thanks for the quick help yesterday!\"}},{\"original\":{\"kind\":\"text\",\"text\":\"I want to send this back.\"}}]}"), .options_json = text("{}")};
@@ -30,6 +30,8 @@ int main(void) {
     thinkthen_call_result_free(team_call); return 0;
 }
 ```
+
+To inspect a construction failure, pass a `thinkthen_call_error **` output to any engine constructor. Failure returns NULL with an independent owned error; success clears the output to NULL. Read its code, safe message, retryability and optional facts with `thinkthen_call_error_*`, then free it once with `thinkthen_call_error_free`. Passing NULL discards construction diagnostics.
 
 Save the caller as `consumer.c`. From the extracted directory on Linux or macOS, run `export PKG_CONFIG_PATH="$PWD/lib/pkgconfig"`, then `case $(uname -s) in Darwin) static_selection=-Wl,-dead_strip_dylibs ;; *) static_selection=-Wl,--as-needed ;; esac`, then `cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) "$PWD/lib/libthinkthen.a" "$static_selection" $(pkg-config --libs --static thinkthen)` and `./consumer`. The archive supplies the engine and pkg-config supplies its native dependencies. Shared callers use `pkg-config --cflags --libs thinkthen` and deploy the shared library.
 

@@ -28,6 +28,8 @@ Cancellation requests native cancellation. The binding waits for native completi
 
 On failure, retain the independent `thinkthen_call_error` owner. Read its kind with `thinkthen_call_error_code`, safe message with `thinkthen_call_error_message`, retryability with `thinkthen_call_error_retryable` and optional native Facts JSON with `thinkthen_call_error_facts_json`. Absent facts return empty text. The message and facts are borrowed until `thinkthen_call_error_free`. The immutable error may move to another thread and survives engine destruction. Free it only after all readers finish. Direct Rust bridges preserve the typed `Error` and its facts.
 
+Engine constructors accept a nullable `thinkthen_call_error **error` output. Failure returns NULL and publishes an independent error with the native code, safe message, retryability and optional facts. Success writes NULL to the output, including when it previously held a sentinel. A NULL output discards diagnostics. Read construction failures with the `thinkthen_call_error_*` accessors and free each returned error once with `thinkthen_call_error_free`. Constructors leave thread-local diagnostic slots unchanged.
+
 If the host's public failure exposes a record position, read it through `thinkthen_call_error_position` and preserve a null pointer as an absent position.
 
 Map these native fields to the host's typed error idiom. Preserve safe messages and facts without interpreting message text or replacing facts with host guesses. Keep private producer exceptions available to their host caller.

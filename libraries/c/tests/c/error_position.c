@@ -46,7 +46,7 @@ struct produced { char **argv; thinkthen_call_error *error; const size_t *positi
 static THREAD_RESULT create_errors(void *argument) {
     struct produced *produced = argument;
     char **argv = produced->argv;
-    thinkthen_engine *engine = thinkthen_engine_new_with(argv[1]);
+    thinkthen_engine *engine = thinkthen_engine_new_with(argv[1], NULL);
     check(engine != NULL, "engine construction failed");
     thinkthen_named_request request = {text(argv[2]), text(argv[3]), text(argv[4]), text(argv[5])};
     thinkthen_call_error *first = failed_call(engine, &request);
