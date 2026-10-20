@@ -33,3 +33,7 @@ The PM's second ruling in `repos/agents/inbox/thinkthen/2026-10-20-thinkthen-064
 - 0638 landed `thinkthen_run_call` and the `thinkthen_call_result` and `thinkthen_call_error` owners, and `examples/session.c` already calls `thinkthen_run_call`; it prints `thinkthen_call_result_json` whole.
 - `sdlc/scripts/release-pack` `part_c` packs `thinkthen-c-VERSION-TARGET.tar.gz` with the header, both libraries and a `.pc` file.
 - The Darwin linking defect in the source check, where `check.sh` copies `libthinkthen_c.so`, belongs to 0641, which also claims `libraries/c/check.sh`.
+
+## Progress
+
+- 2026-10-20 started
