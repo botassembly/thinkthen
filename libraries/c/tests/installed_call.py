@@ -179,9 +179,10 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
                 mode = 'fed' if step.get('incremental') else 'plain'
                 payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
                 count = int(backend.read('count'))
-                check_owned(row, step, payload, dumps[-1],
-                            count - before if step.get('count_delta') else count,
-                            count - before, expected_dumps[index], home, backend)
+                with chdir(home):
+                    check_owned(row, step, payload, dumps[-1],
+                                count - before if step.get('count_delta') else count,
+                                count - before, expected_dumps[index], home, backend)
                 if step.get('stored_answers') == 0:
                     database = home / 'saved/thinkthen.sqlite'
                     if database.exists():
