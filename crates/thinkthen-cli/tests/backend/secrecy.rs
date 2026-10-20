@@ -457,6 +457,7 @@ sweep_tests! {
 
 /// A sweep that proved only absence would pass on a run that sent no key at
 /// all, so one case pins where the key does go.
+#[cfg(test)]
 fn key_reaches_only_authorization(command: &str) {
     for (name, operands, answer) in VERBS.into_iter().filter(|verb| verb.0 == command) {
         let into = folder(&format!("header-{name}")).expect("a folder for this run");

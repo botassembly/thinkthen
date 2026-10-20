@@ -311,6 +311,7 @@ fn a_recording_made_by_decide_replays_under_both_commands_with_no_request_sent()
     Ok(())
 }
 
+#[cfg(test)]
 fn messages_do_not_disclose_key_or_record(command: &str) -> io::Result<()> {
     let key = KEY;
     let file = written(

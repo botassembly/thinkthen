@@ -133,6 +133,7 @@ fn removed(out: usize, kept: usize, before: u64, after: u64) -> String {
 /// or the refusal that deletes nothing.
 type PruneRow<'a> = (&'a str, &'a str, Result<[bool; 2], &'a str>);
 
+#[cfg(test)]
 fn prune_alias_row(row: usize) {
     const ALIAS: &str = concat!(
         "thinkthen: --answered-by-other-than names the model the requests asked for, ",
@@ -415,6 +416,7 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
     Ok((file, held))
 }
 
+#[cfg(test)]
 fn maintenance_refuses_old_files(old: &str) {
     let snapshot = |folder: &Path, file: &str| {
         let mut names: Vec<_> = fs::read_dir(folder)

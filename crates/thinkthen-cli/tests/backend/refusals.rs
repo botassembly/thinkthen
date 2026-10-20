@@ -498,6 +498,7 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
 ///
 /// One listener serves every case and answers nothing at all, so the count at
 /// the end proves no refusal reached a backend.
+#[cfg(test)]
 fn refusals_without_disclosure_or_sends(command: &str) {
     let listener = Listener::serving(Vec::<Canned>::new()).expect("a loopback listener");
 
