@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0629, 0642
 
+Reviews: revision 28b3e5d, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/public/request/value_tree.rs`, `crates/thinkthen/src/public/request.rs`, `crates/thinkthen/src/lib.rs`, `crates/thinkthen/tests/`, `libraries/rust/consumer/`, `libraries/rust/check.py`, `conformance/children/packet_normalize.py`, `conformance/test_parity.py`, `specification/rust-api-0.2.md`.
