@@ -97,12 +97,10 @@ fn execute(document: Document) -> Result<String, Error> {
             scope.spawn(move || {
                 for item in items {
                     if !matches!(
-                        session.push_with(|| Ok::<_, Error>(
-                            thinkthen::RequestSessionDescriptor {
-                                item,
-                                location: None
-                            }
-                        )),
+                        session.push_with(|| Ok::<_, Error>(thinkthen::RequestSessionDescriptor {
+                            item,
+                            location: None
+                        })),
                         Ok(thinkthen::RequestSessionPushStatus::Accepted)
                     ) {
                         break;
