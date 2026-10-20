@@ -15,7 +15,7 @@ pub(super) fn settle(
             return Err(Failure::Recognize(
                 crate::failure::recognize::Error::Config {
                     file: true,
-                    error: "a recognize question file is one closed version-one object".to_owned(),
+                    error: "a recognize question file is one closed object".to_owned(),
                 },
             ));
         }
