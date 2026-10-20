@@ -35,15 +35,13 @@ fn planted(function: &str, from: &str, to: &str) -> io::Result<PathBuf> {
     let table = fs::read_to_string(repository().join("probes/speed/functions.jsonl"))?;
     let key = format!("{{\"function\":\"{function}\",");
     let mut out = String::new();
-    for line in table.lines() {
-        out += &if line.starts_with(&key) {
-            line.replacen(from, to, 1)
-        } else {
-            line.to_owned()
-        };
-        out.push('\n');
-    }
-    assert_ne!(out, table, "the plant for {function} changed nothing");
+    let line = table
+        .lines()
+        .find(|line| line.starts_with(&key))
+        .expect("function row");
+    let mut out = line.replacen(from, to, 1);
+    assert_ne!(out, line, "the plant for {function} changed nothing");
+    out.push('\n');
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("speed-{function}.jsonl"));
     fs::write(&path, out)?;
     Ok(path)
@@ -91,7 +89,19 @@ fn the_speed_gate_holds_and_names_each_fault() {
         ),
     ];
     for (list, sentence) in cases {
-        let output = gate(&backend, &list.expect("planted table")).expect("the gate runs");
+        let before = backend.count();
+        let list = list.expect("planted table");
+        let output = gate(&backend, &list).expect("the gate runs");
+        let reported: usize = crate::harness::printed(&output)
+            .lines()
+            .map(|line| line.split('\t').nth(2).unwrap().parse::<usize>().unwrap())
+            .sum();
+        assert_eq!(
+            reported,
+            backend.count() - before,
+            "status must count the planted row's socket reads"
+        );
+        fs::remove_file(list).expect("remove planted table");
         assert_eq!(output.status.code(), Some(1), "{sentence}");
         stderr_is(&output, sentence);
     }

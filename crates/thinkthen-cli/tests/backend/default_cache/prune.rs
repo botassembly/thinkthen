@@ -133,8 +133,7 @@ fn removed(out: usize, kept: usize, before: u64, after: u64) -> String {
 /// or the refusal that deletes nothing.
 type PruneRow<'a> = (&'a str, &'a str, Result<[bool; 2], &'a str>);
 
-#[test]
-fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
+fn prune_alias_row(row: usize) {
     const ALIAS: &str = concat!(
         "thinkthen: --answered-by-other-than names the model the requests asked for, ",
         "and no reply names it, so prune removed nothing; ",
@@ -157,54 +156,73 @@ fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
         ("jev-latest", &echoed, Ok([true, false])),
         ("jev-1.14.0", &upgraded, Ok([true, false])),
     ];
-    for (row, (model, second_reply, leaves)) in rows.into_iter().enumerate() {
-        let folder = folder(&format!("prune-alias-{row}"));
-        let filled = fill(
-            &folder,
-            EVIDENCE,
-            &[
-                (DEFAULT_MODEL, "asks for a refund", ANSWERED),
-                ("jev-latest", "another question", second_reply),
-            ],
-        );
-        let before = fs::read(folder.join("thinkthen.sqlite")).expect("store bytes");
-        let options = ["--answered-by-other-than", model];
-        let leaves = match leaves {
-            Ok(leaves) => leaves,
-            Err(refusal) => {
-                for dry_run in [&["--dry-run"][..], &[]] {
-                    let output = prune(&folder, &[&options[..], dry_run].concat());
-                    assert_eq!(output.status.code(), Some(2), "{row}");
-                    assert!(output.stdout.is_empty(), "{row}");
-                    assert_eq!(crate::harness::said(&output), refusal, "{row}");
-                    assert_eq!(
-                        fs::read(folder.join("thinkthen.sqlite")).expect("kept"),
-                        before,
-                        "{row}"
-                    );
-                }
-                continue;
+    let (model, second_reply, leaves) = rows[row];
+    let folder = folder(&format!("prune-alias-{row}"));
+    let filled = fill(
+        &folder,
+        EVIDENCE,
+        &[
+            (DEFAULT_MODEL, "asks for a refund", ANSWERED),
+            ("jev-latest", "another question", second_reply),
+        ],
+    );
+    let before = fs::read(folder.join("thinkthen.sqlite")).expect("store bytes");
+    let options = ["--answered-by-other-than", model];
+    let leaves = match leaves {
+        Ok(leaves) => leaves,
+        Err(refusal) => {
+            for dry_run in [&["--dry-run"][..], &[]] {
+                let output = prune(&folder, &[&options[..], dry_run].concat());
+                assert_eq!(output.status.code(), Some(2), "{row}");
+                assert!(output.stdout.is_empty(), "{row}");
+                assert_eq!(crate::harness::said(&output), refusal, "{row}");
+                assert_eq!(
+                    fs::read(folder.join("thinkthen.sqlite")).expect("kept"),
+                    before,
+                    "{row}"
+                );
             }
-        };
-        let size = store_bytes(&folder);
-        let output = prune(&folder, &options);
-        let out = leaves.iter().filter(|leaves| **leaves).count();
-        assert_eq!(output.status.code(), Some(0), "{row}");
-        assert_eq!(
-            crate::harness::printed(&output),
-            removed(out, 2 - out, size, store_bytes(&folder)),
-            "{row}"
-        );
-        let mut kept: Vec<String> = filled
-            .iter()
-            .zip(leaves)
-            .filter(|(_, leaves)| !leaves)
-            .map(|(key, _)| key.clone())
-            .collect();
-        kept.sort();
-        assert_eq!(held(&folder), kept, "{row}");
-    }
+            return;
+        }
+    };
+    let size = store_bytes(&folder);
+    let output = prune(&folder, &options);
+    let out = leaves.iter().filter(|leaves| **leaves).count();
+    assert_eq!(output.status.code(), Some(0), "{row}");
+    assert_eq!(
+        crate::harness::printed(&output),
+        removed(out, 2 - out, size, store_bytes(&folder)),
+        "{row}"
+    );
+    let mut kept: Vec<String> = filled
+        .iter()
+        .zip(leaves)
+        .filter(|(_, leaves)| !leaves)
+        .map(|(key, _)| key.clone())
+        .collect();
+    kept.sort();
+    assert_eq!(held(&folder), kept, "{row}");
+}
 
+macro_rules! prune_alias_tests {
+    ($($name:ident => $row:literal),+ $(,)?) => {
+        $(#[test] fn $name() { prune_alias_row($row); })+
+    };
+}
+
+prune_alias_tests! {
+    prune_refuses_the_alias_without_changing_answers => 0,
+    prune_refuses_an_unobserved_upgrade_without_changing_answers => 1,
+    prune_refuses_an_unknown_model_without_changing_answers => 2,
+    prune_refuses_a_model_prefix_without_changing_answers => 3,
+    prune_refuses_a_differently_cased_alias_without_changing_answers => 4,
+    prune_keeps_answers_from_the_observed_model => 5,
+    prune_keeps_an_echoed_alias_and_removes_the_other_model => 6,
+    prune_keeps_the_upgrade_and_removes_the_old_model => 7,
+}
+
+#[test]
+fn prune_keeps_an_empty_folder_without_creating_a_store() {
     let empty = folder("prune-alias-empty");
     fs::create_dir_all(&empty).expect("empty folder");
     let output = prune(&empty, &["--answered-by-other-than", "jev-latest"]);

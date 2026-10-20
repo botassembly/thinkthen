@@ -221,7 +221,8 @@ fn a_profile_lowers_the_byte_size_and_one_question_still_goes_alone() {
 }
 
 #[test]
-fn a_full_line_set_plans_inside_the_child_deadline() {
+#[ignore = "large planning regression runs in test-full-cases"]
+fn release_only_full_line_set_plans_inside_the_child_deadline() {
     let run = plan(
         &[
             "linked",
@@ -236,6 +237,15 @@ fn a_full_line_set_plans_inside_the_child_deadline() {
     assert_eq!(run["logical_questions"], 64_770);
     assert_eq!(run["request_count"], 162);
     assert_eq!(questions(&run).last(), Some(&370));
+}
+
+#[test]
+fn a_line_set_crosses_the_question_limit_without_losing_pairs() {
+    let run = plan(&["linked", "--lines", "--url", ELSEWHERE], &lines(21));
+    assert_eq!(run["logical_questions"], 420);
+    assert_eq!(run["request_count"], 2);
+    assert_eq!(questions(&run), [400, 20]);
+    assert!(bytes(&run).iter().all(|size| *size <= 96_000));
 }
 
 /// With one job, 9,900 pairs still go as full requests of 400 and one of

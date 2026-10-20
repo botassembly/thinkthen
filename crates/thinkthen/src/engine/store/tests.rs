@@ -326,28 +326,42 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
     let folder = scratch();
     let state = state();
     written(folder.path(), &[row(&state, A, FIRST)]);
-    let mut store =
-        Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default()).expect("open");
+    let mut store = Store::open(folder.path(), Mode::Cache, false, None, &Cancel::default())
+        .expect("open")
+        .prepared(&Cancel::default())
+        .expect("prepare");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
-    // The flag goes up just before the commit, so a lookup that answered
-    // without waiting for the writer sees it down (ticket 0352).
-    let committing = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let released = std::thread::spawn({
-        let committing = std::sync::Arc::clone(&committing);
-        move || {
-            std::thread::sleep(Duration::from_millis(300));
-            committing.store(true, std::sync::atomic::Ordering::SeqCst);
-            holder.execute_batch("COMMIT").expect("unlock");
+    let (blocked, waiting) = std::sync::mpsc::sync_channel(1);
+    let lookup = std::thread::spawn(move || {
+        std::thread_local! {
+            static BLOCKED: std::cell::RefCell<Option<std::sync::mpsc::SyncSender<()>>> = const { std::cell::RefCell::new(None) };
         }
+        BLOCKED.with(|signal| *signal.borrow_mut() = Some(blocked));
+        store
+            .connection
+            .as_ref()
+            .expect("connection")
+            .busy_handler(Some(|_| {
+                BLOCKED.with(|signal| {
+                    if let Some(blocked) = signal.borrow_mut().take() {
+                        blocked.send(()).expect("report locked lookup");
+                    }
+                });
+                false
+            }))
+            .expect("observe SQLite contention");
+        store.lookup(&[key(A)], &Cancel::default()).expect("lookup")
     });
-    let found = store.lookup(&[key(A)], &Cancel::default()).expect("lookup");
-    assert!(found[0].is_some());
+    waiting.recv().expect("lookup reached the writer lock");
+    // The lookup cannot finish until this explicit contention event releases the writer.
     assert!(
-        committing.load(std::sync::atomic::Ordering::SeqCst),
+        !lookup.is_finished(),
         "the lookup answered before the writer let go"
     );
-    released.join().expect("holder");
+    holder.execute_batch("COMMIT").expect("unlock");
+    let found = lookup.join().expect("lookup worker");
+    assert!(found[0].is_some());
 }
 
 #[test]
@@ -397,14 +411,12 @@ fn a_read_only_replay_that_meets_an_unfinished_write_is_refused() {
     writer
         .execute_batch("PRAGMA cache_size = 1; BEGIN IMMEDIATE;")
         .expect("begin");
-    for place in 0..400 {
-        writer
-            .execute(
-                "INSERT INTO states (sha256, state) VALUES (randomblob(32), ?1)",
-                [format!("{place:0>2000}")],
-            )
-            .expect("spill");
-    }
+    writer
+        .execute(
+            "INSERT INTO states (sha256, state) VALUES (randomblob(32), ?1)",
+            ["unfinished".repeat(2048)],
+        )
+        .expect("spill");
     let hot = scratch();
     fs::create_dir_all(hot.path()).expect("folder");
     for name in [SQLITE.to_owned(), format!("{SQLITE}-journal")] {

@@ -59,7 +59,7 @@ fn legacy(place: &Path, url: &str, reported: &str) -> String {
     let key = legacy_key(url);
     let state = Sha256::digest(STATE);
     let db = Connection::open(place.join("thinkthen.sqlite")).unwrap();
-    db.execute_batch("CREATE TABLE states(id INTEGER PRIMARY KEY, sha256 BLOB UNIQUE NOT NULL, state TEXT NOT NULL);
+    db.execute_batch("BEGIN; CREATE TABLE states(id INTEGER PRIMARY KEY, sha256 BLOB UNIQUE NOT NULL, state TEXT NOT NULL);
         CREATE TABLE answers(id INTEGER PRIMARY KEY, key BLOB UNIQUE NOT NULL, url TEXT NOT NULL, model TEXT NOT NULL, state INTEGER NOT NULL REFERENCES states(id), question TEXT NOT NULL, answer TEXT NOT NULL, answered_by TEXT NOT NULL, input_tokens INTEGER, output_tokens INTEGER, taken_at INTEGER NOT NULL, origin TEXT NOT NULL);
         PRAGMA user_version=1;").unwrap();
     db.execute(
@@ -76,6 +76,7 @@ fn legacy(place: &Path, url: &str, reported: &str) -> String {
         (&bytes, url, QUESTION, ANSWER, reported),
     )
     .unwrap();
+    db.execute_batch("COMMIT").unwrap();
     key
 }
 
@@ -91,6 +92,10 @@ fn stored_metadata(db: &Connection) -> (String, String, String, Option<u32>) {
 
 #[test]
 fn old_store_refuses_every_mode_without_sends_or_file_changes() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let seed = folder();
+    let url = format!("{}/systemone", listener.base());
+    legacy(&seed, &url, "fixed");
     for (mode, format) in ["cache", "refresh", "record", "replay"]
         .into_iter()
         .flat_map(|mode| {
@@ -104,12 +109,14 @@ fn old_store_refuses_every_mode_without_sends_or_file_changes() {
             .map(|format| (mode, format))
         })
     {
-        let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
         let place = folder();
-        let url = format!("{}/systemone", listener.base());
         let database = match format {
             "sqlite" | "sqlite-previous" | "sqlite-unversioned" => {
-                legacy(&place, &url, "fixed");
+                std::fs::copy(
+                    seed.join("thinkthen.sqlite"),
+                    place.join("thinkthen.sqlite"),
+                )
+                .unwrap();
                 if format == "sqlite-unversioned" {
                     Connection::open(place.join("thinkthen.sqlite"))
                         .unwrap()
@@ -175,6 +182,7 @@ fn old_store_refuses_every_mode_without_sends_or_file_changes() {
         drop(engine);
         std::fs::remove_dir_all(place).unwrap();
     }
+    std::fs::remove_dir_all(seed).unwrap();
 }
 
 #[test]
@@ -269,15 +277,25 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
 
 #[test]
 fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+    let seed_place = folder();
+    let seed = build(&listener)
+        .record(&seed_place)
+        .unwrap()
+        .build()
+        .unwrap();
+    seed.decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+        .unwrap();
+    drop(seed);
+    let _ = listener.requests();
     for mode in ["cache", "refresh", "record", "replay"] {
         for column in ["answer", "origin"] {
-            let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
             let place = folder();
-            let seed = build(&listener).record(&place).unwrap().build().unwrap();
-            seed.decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
-                .unwrap();
-            drop(seed);
-            let _ = listener.requests();
+            std::fs::copy(
+                seed_place.join("thinkthen.sqlite"),
+                place.join("thinkthen.sqlite"),
+            )
+            .unwrap();
             let database = place.join("thinkthen.sqlite");
             let db = Connection::open(&database).unwrap();
             db.execute(
@@ -308,6 +326,7 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
             std::fs::remove_dir_all(place).unwrap();
         }
     }
+    std::fs::remove_dir_all(seed_place).unwrap();
 }
 
 #[path = "native_store/conversion.rs"]
