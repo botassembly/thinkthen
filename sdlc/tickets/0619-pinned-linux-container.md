@@ -81,6 +81,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: ARM image preparation passed, but Yellow job1792453161573-311087 stalled after successful installer and version probes while Docker commits its final image; bounded read-only diagnosis finds responsive container APIs but image APIs timing out, and no retry or daemon change is authorized while the combined M5 gate runs onb7befb48b6.
 - 2026-10-19 next: Yellow preparation job1792453161573-311087 eventually completed with real exit0 after prolonged Docker image-commit IO contention, producing x86 imagefa71288f842e543f5fa69789830925f723660f3f604326ec60dbd184ce2d081b at the same22-fragment fingerprint51d2ff24478158bce64f2d6debb7e270e61aacaa63c053636df88736aca400cf; the combined configured gate runs onb7befb48b6 and remaining capped Linux full cases, package and stress plus x86 qualification stay open.
 - 2026-10-19 next: Combined M5 job1792456808870-32467 passed configured Linux lint/test plus native macOS test atb7befb48b6 with both reviewed images prepared; shared configuration spec/demo proof and Yellow full-cases diagnosis are active, and capped full cases, package, stress and x86 receipts remain before whole closure.
+- 2026-10-19 landed 88cbe872b; next: Reviewed container and configured gate components landed with shared M5 gate1792456808870-32467; both architecture full-cases jobs continue on the same sourceb7befb48b6, and package, stress, x86 failure receipts and capped timing proof remain before whole closure.
 
 ## Amendment, 2026-10-18
 
