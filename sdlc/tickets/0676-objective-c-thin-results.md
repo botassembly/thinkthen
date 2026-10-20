@@ -37,3 +37,4 @@ Depends on: 0688
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Generate through pm job run --machine m5 0676 SHA --disk 20 --memory 8 -- sdlc/scripts/job python3 build-tools/results/generate.py --target objc, verify with the same command plus --check, and run sdlc/scripts/job python3 build-tools/results/answer_rules.py through the same wrapper.
