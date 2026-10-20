@@ -42,9 +42,10 @@ static THREAD_RESULT print_error(void *argument) {
     puts("}");
     return THREAD_DONE;
 }
-int main(int argc, char **argv) {
-    if (argc < 6) return 2;
-    check(thinkthen_call_error_position(NULL) == NULL, "null owner has no position");
+struct produced { char **argv; thinkthen_call_error *error; const size_t *position; size_t value; };
+static THREAD_RESULT create_errors(void *argument) {
+    struct produced *produced = argument;
+    char **argv = produced->argv;
     thinkthen_engine *engine = thinkthen_engine_new_with(argv[1]);
     check(engine != NULL, "engine construction failed");
     thinkthen_named_request_v1 request = {text(argv[2]), text(argv[3]), text(argv[4]), text(argv[5])};
@@ -62,10 +63,24 @@ int main(int argc, char **argv) {
     thinkthen_call_error_free(first);
     thinkthen_call_error_free(absent);
     check(*other == expected, "position survives engine and independent error destruction");
+    produced->error = second;
+    produced->position = other;
+    produced->value = expected;
+    return THREAD_DONE;
+}
+int main(int argc, char **argv) {
+    if (argc < 6) return 2;
+    check(thinkthen_call_error_position(NULL) == NULL, "null owner has no position");
+    struct produced produced = {argv, NULL, NULL, 0};
+    THREAD_TYPE producer;
+    check(!fixture_start(&producer, create_errors, &produced), "producer thread failed");
+    check(!fixture_join(producer), "producer join failed");
+    check(produced.position && *produced.position == produced.value,
+          "borrowed position survives the producing thread");
     THREAD_TYPE reader;
-    check(!fixture_start(&reader, print_error, second), "reader thread failed");
+    check(!fixture_start(&reader, print_error, produced.error), "reader thread failed");
     check(!fixture_join(reader), "reader join failed");
-    thinkthen_call_error_free(second);
+    thinkthen_call_error_free(produced.error);
     thinkthen_call_error_free(NULL);
     return 0;
 }

@@ -30,6 +30,7 @@ pub(crate) struct Failure {
     retryable: bool,
     message: String,
     facts: Option<Box<Facts>>,
+    position: Option<usize>,
 }
 
 impl fmt::Debug for Failure {
@@ -64,6 +65,7 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
+            position: None,
         }
     }
 
@@ -74,6 +76,7 @@ impl Failure {
             retryable: false,
             message: format!("defect: {message}"),
             facts: None,
+            position: None,
         }
     }
 }
@@ -91,6 +94,7 @@ impl From<thinkthen::Error> for Failure {
             retryable: error.retryable(),
             message: error.to_string(),
             facts: error.facts().map(|facts| Box::new(facts.clone())),
+            position: error.stopped().at(),
         }
     }
 }
@@ -416,6 +420,9 @@ impl Failure {
     }
     pub(crate) fn message_text(&self) -> &str {
         &self.message
+    }
+    pub(crate) fn position(&self) -> Option<&usize> {
+        self.position.as_ref()
     }
     pub(crate) fn owned_facts(&self) -> Option<String> {
         self.facts
