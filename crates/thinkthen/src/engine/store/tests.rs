@@ -168,6 +168,10 @@ pub(super) mod tempdir {
     }
 
     impl Drop for Scratch {
+        #[allow(
+            clippy::print_stderr,
+            reason = "a failed durability test must name its retained fixture"
+        )]
         fn drop(&mut self) {
             if std::thread::panicking() {
                 eprintln!("store fixture retained after failure: {}", self.0.display());
