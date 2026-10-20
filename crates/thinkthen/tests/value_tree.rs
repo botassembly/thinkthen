@@ -1,7 +1,17 @@
 //! Native host projection retains absence, authored null and opaque caller values.
 use conformance_backend::{Backend, CASES, Canned, Listener};
-use serde_json::{Value, json};
+use serde_json::{Value, json, value::RawValue};
 use thinkthen::{Engine, Request, RequestEnvironment, RequestValueTree};
+
+#[derive(serde::Deserialize)]
+struct Fixtures {
+    cases: Vec<Fixture>,
+}
+#[derive(serde::Deserialize)]
+struct Fixture {
+    id: String,
+    question_set: Option<Box<RawValue>>,
+}
 
 fn field<'a>(tree: &'a RequestValueTree, name: &str) -> &'a RequestValueTree {
     let RequestValueTree::Map(fields) = tree else {
@@ -13,6 +23,7 @@ fn field<'a>(tree: &'a RequestValueTree, name: &str) -> &'a RequestValueTree {
 #[test]
 fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn std::error::Error>> {
     let cases: Value = serde_json::from_str(CASES)?;
+    let fixtures: Fixtures = serde_json::from_str(CASES)?;
     let backend = Backend::start()?;
     for id in ["17-annotate-partial", "19-find-none"] {
         let case = cases["cases"]
@@ -46,6 +57,9 @@ fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn
                 json!({}),
             )
         };
+        let authored = fixtures.cases.iter().find(|case| case.id == id)
+            .and_then(|case| case.question_set.as_ref());
+        let question = authored.map_or_else(|| question.to_string(), |raw| raw.get().to_owned());
         let request = Request::named_from_json(
             verb,
             &format!(r#"{{"kind":"definition","value":{question}}}"#),
