@@ -70,18 +70,10 @@ PLACES = [
       ("libraries/dart/pubspec.yaml", "libraries/dart/flutter/pubspec.yaml",
        "libraries/dart/flutter/example/pubspec.yaml")],
     ("libraries/zig/build.zig.zon", r'(?m)^    \.version = "([^"]+)",$', WHOLE),
-    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ (\d+), \d+, \d+ \};$', PART[0]),
-    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ \d+, (\d+), \d+ \};$', PART[1]),
-    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ \d+, \d+, (\d+) \};$', PART[2]),
-    ("libraries/zig/build.zig", r'(?m)^    if \(!headerVersionMatches\(bytes\)\) @panic\("thinkthen C header does not match package ABI (\d+\.\d+\.\d+)"\);$', WHOLE),
-    ("libraries/zig/build.zig", r'(?m)^        if \(std\.mem\.indexOf\(u8, bytes, needle\) == null\) @panic\("thinkthen C header does not match package ABI (\d+\.\d+\.\d+)"\);$', WHOLE),
     ("libraries/cpp/CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION (\S+) LANGUAGES CXX\)$', WHOLE),
     *[(p, r'(?m)^  "version": "([^"]+)",$', WHOLE) for p in
       ("libraries/objective-c/source-package.json", "libraries/cobol/source-package.json")],
     # Ticket 0376: the copies the 0.1.0 dry run found outside this list.
-    *[("libraries/go/thinkthen.go", rf"(?m)^#if {pattern}", PART[i]) for i, pattern in enumerate([
-        r"THINKTHEN_VERSION_MAJOR != (\d+) \|\|", r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != (\d+) \|\|",
-        r"THINKTHEN_VERSION_MAJOR != \d+ \|\| THINKTHEN_VERSION_MINOR != \d+ \|\| THINKTHEN_VERSION_PATCH != (\d+)$"])],
     *[(p, r'<PackageReference Include="Botassembly\.ThinkThen" Version="([^"]+)"', WHOLE) for p in
       ("libraries/csharp/tests/Installed.csproj", "libraries/csharp/tests/Smoke.csproj")],
     *[(p, rf'(?m)^  {name}:\n(?:    .*\n)*?    version: "([^"]+)"$', WHOLE) for p, name in (

@@ -10,7 +10,7 @@ Depends on: 0709
 
 ## Outcome
 
-- Changes: `sdlc/scripts/generate-c-header.py`, `libraries/c/src/ffi/values.rs`, `libraries/c/src/ffi/runtime_version/ffi.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/README.md`, `libraries/c/tests/c/runtime_version.c`, `libraries/c/tests/door/runtime_version.rs`, `libraries/go/thinkthen.go`, `libraries/zig/build.zig`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/tests/package_check.py`.
+- Changes: `sdlc/scripts/generate-c-header.py`, `libraries/c/src/ffi/values.rs`, `libraries/c/src/ffi/runtime_version/ffi.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/README.md`, `libraries/c/tests/c/runtime_version.c`, `libraries/c/tests/door/runtime_version.rs`, `libraries/go/thinkthen.go`, `libraries/zig/build.zig`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/tests/package_check.py`, `libraries/c/build.rs`, `libraries/zig/src/thinkthen.zig`, `libraries/csharp/ThinkThen.csproj`, `sdlc/scripts/versions`.
 - The hand-bumped `THINKTHEN_INTERFACE_NUMBER` becomes a digest of the generated header, written by the header generator, so any change to the C interface changes it without anyone remembering to bump it. `thinkthen_version` returns it.
 - Go, Zig and C# stop comparing `THINKTHEN_VERSION_MAJOR`, `MINOR` and `PATCH` as a compatibility check and call `thinkthen_version` at load instead. The release number macros stay as the package release number.
 
