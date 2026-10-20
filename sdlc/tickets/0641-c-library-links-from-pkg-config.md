@@ -35,3 +35,4 @@ Depends on: 0619
 ## Progress
 
 - 2026-10-19 PM assigned the routine C source-check Darwin linking defect here: libraries/c/check.sh copies target/debug/libthinkthen_c.so and links libthinkthen.so despite declaring Darwin support; 0636 proves the installed CLI, Rust and C entrypoints and makes no source-linking repair.
+- 2026-10-20 started
