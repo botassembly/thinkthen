@@ -206,8 +206,8 @@ if [ "$registry_only" -eq 1 ]; then
 		deny=deny.toml
 		if [ -f "$surface/deny.toml" ]; then deny="$surface/deny.toml"; fi
 		if ! noncargo "$surface"; then
-			cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
-				advisories bans licenses sources
+			python3 sdlc/scripts/dependency-check.py --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" \
+				--config "$deny" --sources
 		fi
 	done
 	# time-limit returns the command's code, or 124 with nothing it started left alive.

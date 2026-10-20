@@ -23,16 +23,6 @@
           "--version"
         ],
         "contains": "cargo-deny {version}"
-      },
-      "readiness": {
-        "argv": [
-          "cargo",
-          "deny",
-          "--offline",
-          "check",
-          "advisories"
-        ],
-        "contains": "advisories ok"
       }
     }
   }

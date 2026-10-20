@@ -26,6 +26,8 @@ case ${1:-} in
     (set -C; : >"$checkpoint_log") || exit 2
     exec >>"$checkpoint_log" 2>&1
     printf 'checkpoint %s on %s %s\n' "$checkpoint_sha" "$(uname -s)" "$(uname -m)"
+    # Linux owns dependency policy, including when the campaign runs on macOS.
+    THINKTHEN_ADVISORY_MODE=checkpoint python3 sdlc/scripts/linux-check lint
     for checkpoint_step in test-full-cases package test-stress; do
         printf 'checkpoint: start %s\n' "$checkpoint_step"
         checkpoint_code=0

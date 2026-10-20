@@ -5,6 +5,7 @@ import hashlib
 import os
 from pathlib import Path
 import platform
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -21,9 +22,16 @@ args = parser.parse_args()
 if 'prepare' in args.checks and args.checks != ['prepare']:
     parser.error('prepare runs separately from checks')
 job = os.environ.get('PM_JOB', '').split()
-ticket = job[0] if job else os.environ.get('PM_TICKET', '0619')
+job_ticket = job[0] if job else os.environ.get('PM_TICKET')
+ticket = job_ticket or '0619'
 if len(ticket) != 4 or not ticket.isdigit():
     parser.error('container label requires a four-digit ticket')
+policy = runpy.run_path(str(ROOT / 'sdlc/scripts/dependency-check.py'))
+try:
+    advisory_mode = policy['context_mode'](args.checks, job_ticket,
+                                           os.environ.get('THINKTHEN_ADVISORY_MODE'))
+except ValueError as error:
+    parser.error(str(error))
 manifest = load_manifest()
 pin = manifest['linux']
 arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machine()]
@@ -81,6 +89,10 @@ sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True)
 if not source.is_dir():
     subprocess.run(['git', 'clone', '--no-hardlinks', str(ROOT), str(source)], check=True)
 subprocess.run(['git', 'fetch', 'origin', sha], cwd=source, check=True)
+# Local clones track the ticket branch. Carry the outer job's fetched main
+# explicitly so detached candidates compare against the same merge base.
+subprocess.run(['git', 'fetch', 'origin',
+                '+refs/remotes/origin/main:refs/remotes/origin/main'], cwd=source, check=True)
 # Each proof starts from committed source. Preserve only ignored build output.
 subprocess.run(['git', 'checkout', '--force', '--detach', sha], cwd=source, check=True)
 subprocess.run(['git', 'clean', '-fd'], cwd=source, check=True)
@@ -96,6 +108,7 @@ command = [args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label'
            '-v', str(owned) + ':' + str(owned),
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
            '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
+           '-e', 'THINKTHEN_ADVISORY_MODE=' + advisory_mode,
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
 # Both scripts come from this checkout, including edits made without a new image.
 for relative in ('sdlc/scripts/tools.py', 'conformance/children/children.py'):
