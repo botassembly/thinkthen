@@ -69,8 +69,7 @@ while IFS= read -r doc; do
 			--argjson label "$([ "$answer" = "$unit" ] && echo true || echo false)" \
 			--argjson hard "$(printf '%s\n' "$doc" | jq '.hard')" \
 			'. + {input: {id: ($doc + "/" + $unit), doc: $doc, unit: $unit,
-			   text: $text, label: $label, hard: $hard},
-			  question, answer, threshold, meta}' \
+			   text: $text, label: $label, hard: $hard}}' \
 			row.json >>"$out/rank.jsonl"
 		line=$((line + 1))
 	done

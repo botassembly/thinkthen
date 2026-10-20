@@ -162,7 +162,7 @@ count enters a question key.
 Grouping can move a model answer. Reuse returns the recorded observation;
 it makes no claim that a fresh scalar request would answer identically.
 Keep the experimental conditions fixed when comparing probabilities. Ticket
-0454 adds optional actual successful-request wire-question counts to result/2
+0454 adds optional actual successful-request wire-question counts to detailed results
 question sources and stored observations. Cache, replay and coalescing retain
 the original count; split children record their own counts. Missing historical
 counts stay absent. This metadata is an adoption target until the native slice

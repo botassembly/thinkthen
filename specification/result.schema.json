@@ -1266,6 +1266,12 @@
         }
       ]
     },
+    "ResultTag": {
+      "enum": [
+        "thinkthen.result"
+      ],
+      "type": "string"
+    },
     "SdkRequestId": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
@@ -1652,12 +1658,6 @@
     "Verb": {
       "enum": [
         "recognize"
-      ],
-      "type": "string"
-    },
-    "Version": {
-      "enum": [
-        "thinkthen.result"
       ],
       "type": "string"
     },

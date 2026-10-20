@@ -311,12 +311,11 @@ fi
 sed 's/^jq: error (at [^)]*): //' "$work/error" \
   | mustmatch 'compare: value must be null, boolean, string, or number'
 
-# Legacy, rank, null-threshold and choose values retain literal comparisons.
-for route in legacy rank null-threshold choose; do
+# Rank, null-threshold and choose values retain literal comparisons.
+for route in rank null-threshold choose; do
   jq -c --arg route "$route" '
     select(.input.id=="1-0") | .value=false |
-    if $route=="legacy" then .schema="thinkthen.result"
-    elif $route=="rank" then .question.verb="rank" | .threshold=null
+    if $route=="rank" then .question.verb="rank" | .threshold=null
     elif $route=="null-threshold" then .threshold=null
     else .question.verb="choose" | .answer={kind:"choice"} | .value="first" end' \
     "$work/meaning-before.jsonl" > "$work/literal-before.jsonl"

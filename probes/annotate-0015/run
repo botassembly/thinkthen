@@ -6,21 +6,21 @@ probe=$root/probes/annotate-0015
 base=https://api.typesafe.ai/v1
 
 thinkthen annotate "$root/demos/39-screen-a-message/hazards.json" --details \
-  --url "$base" --replay "$root/demos/39-screen-a-message/recording" \
+  --url "$base" --cache "$root/demos/39-screen-a-message/recording" \
   --input "$root/demos/39-screen-a-message/message.txt" \
   > "$probe/howto-39.jsonl"
 
 thinkthen annotate "$root/demos/14-grade-a-batch/checks.json" --jsonl --details \
-  --jobs 1 --url "$base" --replay "$root/demos/14-grade-a-batch/recording" \
+  --jobs 1 --url "$base" --cache "$root/demos/14-grade-a-batch/recording" \
   --input "$root/demos/14-grade-a-batch/cases.jsonl" \
   > "$probe/howto-14.jsonl"
 
 thinkthen annotate "$probe/mixed-packed.json" --jsonl --details --jobs 1 \
-  --url "$base" --replay "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
+  --url "$base" --cache "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
   > "$probe/mixed-packed.jsonl"
 for name in asks_money kind severity; do
   thinkthen annotate "$probe/mixed-$name.json" --jsonl --details --jobs 1 \
-    --url "$base" --replay "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
+    --url "$base" --cache "$probe/mixed-recording" --input "$probe/mixed.jsonl" \
     > "$probe/mixed-$name.jsonl"
 done
 jq -n \
@@ -32,10 +32,10 @@ jq -n \
   > "$probe/mixed-summary.json"
 
 thinkthen annotate "$probe/borderline-packed.json" --jsonl --details --jobs 1 \
-  --url "$base" --replay "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
+  --url "$base" --cache "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
   > "$probe/borderline-packed.jsonl"
 thinkthen annotate "$probe/borderline-alone.json" --jsonl --details --jobs 1 \
-  --url "$base" --replay "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
+  --url "$base" --cache "$probe/borderline-recording" --input "$probe/borderline.jsonl" \
   > "$probe/borderline-alone.jsonl"
 
 jq -n \

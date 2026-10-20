@@ -28,9 +28,9 @@ fi
 # Refuse an unknown row before any policy transform or publication.
 jq -e -s 'length == 6 and
   (map(select(.schema == "thinkthen.record-error")) | length) == 1 and
-  all(.[]; .schema == "thinkthen.result" or .schema == "thinkthen.result" or .schema == "thinkthen.record-error")' \
+  all(.[]; .schema == "thinkthen.result" or .schema == "thinkthen.record-error")' \
 	"$tmp/annotated.jsonl" >/dev/null
-jq -c 'select(.schema == "thinkthen.result" or .schema == "thinkthen.result")' "$tmp/annotated.jsonl" \
+jq -c 'select(.schema == "thinkthen.result")' "$tmp/annotated.jsonl" \
 	| jq -c -f "$HERE/../../transforms/triage/triage.jq" > "$tmp/decisions.jsonl"
 jq -c 'select(.schema == "thinkthen.record-error") |
   . + {policy:{action:"review",reason:"record_error"}}' \

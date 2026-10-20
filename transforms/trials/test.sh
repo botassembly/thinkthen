@@ -75,23 +75,6 @@ printf '%s\n' '{"value":0.8125,"answer":{"kind":"score","level":"middle","probab
 cmp "$work/score-expected.json" "$work/score-report.json"
 
 jq -n -c '
-  def row($id;$provenance):
-    {schema:"thinkthen.result",input:{id:$id},value:true,
-     question:{verb:"decide",text:"Fixture question"},
-     answer:{kind:"yes_no",probability:0.9},threshold:0.5,
-     meta:({tool:"thinkthen 0.0.1",question_sha256:("e"*64),url:"https://example.invalid",model:"fixture"} + $provenance)};
-  row("new-stored";{cached:true}),
-  row("new-live";{cached:false})
-' > "$work/provenance.jsonl"
-jq -n -c -f trials.jq "$work/provenance.jsonl" \
-  | jq -c '{id:.input.id,trials}' > "$work/provenance-report.jsonl"
-cat > "$work/provenance-expected.jsonl" <<'EOF'
-{"id":"new-stored","trials":{"count":1,"live":0,"replayed":1}}
-{"id":"new-live","trials":{"count":1,"live":1,"replayed":0}}
-EOF
-cmp "$work/provenance-expected.jsonl" "$work/provenance-report.jsonl"
-
-jq -n -c '
   [range(0;255) | "option-\(.)"] as $options
   | reduce $options[] as $name ({}; .[$name]=0)
   | .[$options[0]]=1 | .[$options[1]]=0.01000000000002

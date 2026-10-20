@@ -1,5 +1,7 @@
 # Ticket 0015 live job
 
+Saved result rows use complete synthetic packets rebuilt through the existing local test backend from the retained probabilities. The original request and reply files remain the historical evidence.
+
 Completed on 2026-09-20 after the local implementation and review passed and Ian authorized the paid work.
 
 ```sh
