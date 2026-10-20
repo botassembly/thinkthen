@@ -20,8 +20,9 @@ from fixture_suite import selected_case_ids, request, native_request, assert_req
 from c_images import assert_images
 from installed_cases import static_flags
 
+POSITION_CASES = {'item-missing-required', 'recognize-null-context', 'finite-all-before-send'}
 
-def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
+def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None, argument_file=True):
     source = native_request(request(value, Path('fixture-source'), home, settings,
                                     relative_sources=True))
     items = source['input'].get('items', [])
@@ -41,9 +42,10 @@ def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
             'held' if source['held_cancel'] else 'cancel' if source['cancel'] else '-', mode]
     if mode != 'plain':
         args += [json.dumps(item) for item in items]
-    arguments = home / 'call-arguments.txt'
-    arguments.write_text('\n'.join(args[1:]) + '\n')
-    args = [str(binary), str(arguments)]
+    if argument_file:
+        arguments = home / 'call-arguments.txt'
+        arguments.write_text('\n'.join(args[1:]) + '\n')
+        args = [str(binary), str(arguments)]
     if source['held_cancel']:
         before = int(backend.read('count'))
         process = subprocess.Popen(args, cwd=home, env=env, stdin=subprocess.PIPE,
@@ -169,7 +171,7 @@ def case_home(scratch, prefix):
             yield home
 
 
-def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
+def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps, position_binary):
     """Run every case helper and comparison inside its owned working folder."""
     with case_home(scratch, 'blocking-c-') as home:
         (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
@@ -211,6 +213,14 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
                 check_owned(row, step, payload, dumps[-1],
                             count - before if step.get('count_delta') else count,
                             count - before, expected_dumps[index], home, backend, history)
+                if name in POSITION_CASES:
+                    located = invoke(position_binary, step, settings, isolated, home, backend,
+                                     'plain', argument_file=False)
+                    native = expected_dumps[index]['error']['error']
+                    assert located['position'] == int(native['stopped']['at']), located
+                    assert {key: item for key, item in located.items() if key != 'position'} == payload
+                    assert int(backend.read('count')) == count == 0, 'admission sent a request'
+                    print(f'installed owned C position: {name} PASS', flush=True)
                 if step.get('stored_answers') == 0:
                     database = home / 'saved/thinkthen.sqlite'
                     if database.exists():
@@ -237,6 +247,8 @@ def run(native, scratch):
     binary = scratch / 'blocking-call'
     env = child_env(home=scratch / 'home')
     compile_consumer(native, scratch, 'run_call.c', binary, env)
+    position_binary = scratch / 'error-position'
+    compile_consumer(native, scratch, 'error_position.c', position_binary, env)
     rows = parity.required_cases(parity.inventory(), 'c')
     corpus = json.loads((ROOT / 'conformance/cases.json').read_text())
     cases = {case['id']: case for case in corpus['cases']}
@@ -249,6 +261,7 @@ def run(native, scratch):
         rows = {name: row for name, row in rows.items() if name in wanted}
     elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'routine':
         wanted = set((ROOT / 'conformance/routine-ids.txt').read_text().splitlines())
+        wanted.update(POSITION_CASES)
         rows = {name: row for name, row in rows.items() if name in wanted}
     oracle = {case['id']: case['dumps'] for case in expanded(json.loads(
         (ROOT / 'conformance/fixtures/packets.json').read_text()))['cases']}
@@ -256,7 +269,7 @@ def run(native, scratch):
     for name, row in rows.items():
         try:
             value = shared.document(row, cases, named)
-            run_case(binary, name, row, value, backend_binary, scratch, oracle[name])
+            run_case(binary, name, row, value, backend_binary, scratch, oracle[name], position_binary)
         except (AssertionError, ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
             failures.append(name)
             print(name + ': ' + str(error)[:2200], file=sys.stderr, flush=True)

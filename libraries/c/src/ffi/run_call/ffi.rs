@@ -232,6 +232,24 @@ pub unsafe extern "C" fn thinkthen_call_error_retryable(owner: *const CallErrorH
         unsafe { owner.as_ref() }.map_or(0, |owner| i32::from(owner.failure.retry_signal()))
     })
 }
+/// Borrow the native one-based failing record position until error_free.
+/// NULL means the native position is absent, or owner is NULL. Never free or
+/// modify the returned pointer. It survives engine destruction and thread exit;
+/// immutable reads may run on any thread while the independent error stays live.
+/// # Safety
+/// owner is NULL or live for every reader of the returned position. Free the
+/// error only after all concurrent operations and borrowed reads finish.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_error_position(
+    owner: *const CallErrorHandle,
+) -> *const usize {
+    failures::guard(None, std::ptr::null(), || {
+        // SAFETY: caller retains the immutable owner for every position reader.
+        unsafe { owner.as_ref() }
+            .and_then(|owner| owner.failure.position())
+            .map_or(std::ptr::null(), std::ptr::from_ref)
+    })
+}
 /// Borrow safe counted error text until error_free. NULL returns empty text.
 /// # Safety
 /// owner is NULL or live for every reader of the returned text.

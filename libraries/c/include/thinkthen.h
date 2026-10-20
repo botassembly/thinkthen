@@ -4867,6 +4867,17 @@ void thinkthen_call_error_free(struct thinkthen_call_error *owner);
 struct thinkthen_complete_utf8_v1 thinkthen_call_error_message(const struct thinkthen_call_error *owner);
 
 /*
+ Borrow the native one-based failing record position until error_free.
+ NULL means the native position is absent, or owner is NULL. Never free or
+ modify the returned pointer. It survives engine destruction and thread exit;
+ immutable reads may run on any thread while the independent error stays live.
+ # Safety
+ owner is NULL or live for every reader of the returned position. Free the
+ error only after all concurrent operations and borrowed reads finish.
+ */
+const size_t *thinkthen_call_error_position(const struct thinkthen_call_error *owner);
+
+/*
  Read retryability from any thread; NULL returns false.
  # Safety
  owner is NULL or live throughout this read.
