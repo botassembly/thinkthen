@@ -18,7 +18,7 @@ fn a_tag_row_whose_label_shares_overflow_fails() {
     let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
-        .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#)
+        .profile_json(r#"{"name":"one","max_questions":1}"#)
         .expect("one question per request")
         .no_cache()
         .build()

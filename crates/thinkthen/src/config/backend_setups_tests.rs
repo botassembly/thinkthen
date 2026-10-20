@@ -21,7 +21,7 @@ fn every_nonempty_builtin_subset_keeps_transport_and_selects_atomic_settings() {
                 fields["usd_per_million_output"] = json!("0");
             }
             if bits & 4 != 0 {
-                fields["profile"] = json!({"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1});
+                fields["profile"] = json!({"name":"small","max_questions":1});
             }
             let config = parse(json!({name:fields}));
             let selected = named::choose(&[(Some(name), None)], config.named()).unwrap();
@@ -46,7 +46,7 @@ fn every_nonempty_builtin_subset_keeps_transport_and_selects_atomic_settings() {
 
 #[test]
 fn unnamed_matches_final_posting_url_only_and_named_survives_overrides() {
-    let profile = json!({"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1});
+    let profile = json!({"name":"small","max_questions":1});
     let config = parse(
         json!({"typesafe":{"usd_per_million_input":"2","usd_per_million_output":"0"}, "perplexity":{"profile":profile}, "alias":{"url":"http://127.0.0.1:8080/v1","key_env":"K","model":"m","profile":profile}}),
     );

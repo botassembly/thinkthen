@@ -1,4 +1,7 @@
 /* Installed blocking caller: callbacks stay here; errors move to another thread. */
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include <thinkthen.h>
 #include "platform.h"
 #include <string.h>
@@ -43,10 +46,80 @@ static THREAD_RESULT print_error(void *argument) {
     if(facts.len)fwrite(facts.data,1,facts.len,stdout);else fputs("null",stdout);
     puts("}");return THREAD_DONE;
 }
+/* Constructors still expose their separate immediate diagnostic while shipped.
+   A refusal here creates no engine, call result or owned call error. */
+static int constructor_error(void) {
+    const thinkthen_error_view_v1 *error=thinkthen_error_view(NULL);
+    if(!error||error->facts)return 3;
+    printf("{\"constructor\":true,\"code\":%d,\"retryable\":%s,\"message\":",
+           error->code,error->retryable?"true":"false");
+    quoted(error->message);puts(",\"facts\":null}");
+    return 0;
+}
+static THREAD_RESULT print_result(void *argument) {
+    thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(argument);
+    fwrite(json.data,1,json.len,stdout);putchar('\n');
+    return THREAD_DONE;
+}
+/* No platform state base disables usage persistence during constructor capture.
+   Restore the owned home before calls resolve their named question files. */
+static thinkthen_engine *engine_without_usage(const char *settings) {
+    const char *names[]={"HOME","XDG_STATE_HOME","LOCALAPPDATA"};
+    char *saved[3]={NULL,NULL,NULL};
+    for(size_t i=0;i<3;++i) {
+        const char *value=getenv(names[i]);
+        if(value) {
+            saved[i]=malloc(strlen(value)+1);
+            if(!saved[i])abort();
+            strcpy(saved[i],value);
+        }
+#ifdef _WIN32
+        if(_putenv_s(names[i],""))abort();
+#else
+        if(unsetenv(names[i]))abort();
+#endif
+    }
+    thinkthen_engine *engine=thinkthen_engine_new_with(settings);
+    for(size_t i=0;i<3;++i) {
+#ifdef _WIN32
+        if(_putenv_s(names[i],saved[i]?saved[i]:""))abort();
+#else
+        if(saved[i]?setenv(names[i],saved[i],1):unsetenv(names[i]))abort();
+#endif
+        free(saved[i]);
+    }
+    return engine;
+}
+/* Large image cases stay in an owned input file instead of OS argument storage. */
+static char *arguments(const char *path, int *count, char ***values) {
+    FILE *input=fopen(path,"rb");
+    if(!input||fseek(input,0,SEEK_END))return NULL;
+    long size=ftell(input);
+    if(size<0||fseek(input,0,SEEK_SET))return NULL;
+    char *bytes=malloc((size_t)size+1);
+    if(!bytes||fread(bytes,1,(size_t)size,input)!=(size_t)size)return NULL;
+    fclose(input);bytes[size]=0;
+    size_t lines=1;
+    for(long i=0;i<size;++i)if(bytes[i]=='\n')++lines;
+    char **items=calloc(lines+1,sizeof(*items));
+    if(!items)return NULL;
+    items[0]=NULL;*count=1;
+    char *start=bytes;
+    for(long i=0;i<size;++i)if(bytes[i]=='\n') {
+        bytes[i]=0;items[(*count)++]=start;start=bytes+i+1;
+    }
+    *values=items;return bytes;
+}
 int main(int argc,char **argv) {
-    if(argc<8)return 2;
+    if(argc!=2)return 2;
     binary_streams();
-    thinkthen_engine *engine=thinkthen_engine_new_with(argv[1]);if(!engine)return 3;
+    char *bytes=arguments(argv[1],&argc,&argv);
+    if(!bytes||argc<8)return 2;
+    thinkthen_engine *engine=engine_without_usage(argv[1]);
+    if(!engine) {
+        int status=constructor_error();
+        free(argv);free(bytes);return status;
+    }
     thinkthen_named_request_v1 request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
     thinkthen_call_cancel *cancel=thinkthen_call_cancel_new();if(!cancel)return 3;
     if(!strcmp(argv[6],"cancel"))thinkthen_call_cancel_fire(cancel);
@@ -72,9 +145,10 @@ int main(int argc,char **argv) {
         thinkthen_call_error_free(error);
     } else {
         if(!result||error)return 5;
-        thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(result);
-        fwrite(json.data,1,json.len,stdout);putchar('\n');
+        /* Result readers also survive the engine and move to another thread. */
+        if(fixture_start(&worker,print_result,result)||fixture_join(worker))return 6;
         thinkthen_call_result_free(result);
     }
+    free(argv);free(bytes);
     return 0;
 }

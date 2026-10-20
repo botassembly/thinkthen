@@ -288,11 +288,7 @@ fn every_command_path_shares_the_cap() {
         "set.json",
         r#"{"questions":{"a":{"decide":"first?"},"b":{"decide":"second?"}}}"#,
     );
-    let profile = file(
-        &home,
-        "one.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
-    );
+    let profile = file(&home, "one.json", r#"{"name":"one","max_questions":1}"#);
     let held = held("retried-mark");
     let base = held.listener.base().to_owned();
     let with = |line: &[&str]| -> Vec<String> {

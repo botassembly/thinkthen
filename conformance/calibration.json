@@ -6,7 +6,7 @@
   "set": {"profile":"old","questions":{"answer":{"decide":"Is this a request?"}}},
   "set_canonical": "{\"profile\":\"old\",\"questions\":[{\"name\":\"answer\",\"question\":{\"verb\":\"decide\",\"text\":\"Is this a request?\",\"threshold\":0.5},\"on\":[\"\"]}]}",
   "questions_sha256": "54571ae50541ee61ba4c6fb68c663136d2b6ccff3d40ff44f5fbd0bc841c00b7",
-  "runtime_profile": {"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1000},
+  "runtime_profile": {"name":"new","max_evidence_bytes":1000},
   "evidence": "Please help me.",
   "warning": {"tuned_for":"old","running":"new"},
   "model": "jev-1.13.0"

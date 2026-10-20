@@ -22,7 +22,7 @@ fn profile(path: &str, name: &str, limit: usize) -> String {
     let file = format!("{path}/{name}.json");
     fs::write(
         &file,
-        format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}","max_request_bytes":{limit}}}"#),
+        format!(r#"{{"name":"{name}","max_request_bytes":{limit}}}"#),
     )
     .expect("a local profile");
     file

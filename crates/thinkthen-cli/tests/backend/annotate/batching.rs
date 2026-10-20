@@ -93,7 +93,7 @@ fn a_profile_splits_packed_records_at_its_question_count() {
     );
     let profile = set(
         "batch-profile-two-questions",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"two-questions","max_questions":2}"#,
+        r#"{"name":"two-questions","max_questions":2}"#,
     );
     let listener = Listener::answering(all_yes).expect("listener");
     let output = crate::harness::annotate_at(
@@ -231,7 +231,7 @@ fn a_question_cap_keeps_records_whole_and_rows_in_order() {
     );
     let profile = set(
         "batch-unequal-profile",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"eight","max_questions":8}"#,
+        r#"{"name":"eight","max_questions":8}"#,
     );
     for jobs in [1, 3] {
         let listener = Listener::answering(all_yes).expect("listener");
