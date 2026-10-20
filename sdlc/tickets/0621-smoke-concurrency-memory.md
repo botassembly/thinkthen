@@ -21,6 +21,16 @@ Depends on: 0619
 - On the M5: `pm job run --machine m5 0621 SHA --memory 8 -- python3 conformance/test_parity.py` passes, with a case that the pool never runs two consumers whose measured peaks exceed the limit together.
 - The hosted Linux pass on the candidate is part of 0687, not of this ticket.
 
+## Amendment, 2026-10-20 (core cut)
+
+0619 closed on a core-only image, so this ticket measures what that image can run now.
+
+- Measure C, Go and Zig in the capped x86_64 core container on Yellow through the existing child commands, with the exact time limits unchanged, recording each consumer's peak memory, time and real error.
+- Build the measured scheduling table from those measurements and prove it with the `conformance/test_parity.py` concurrency case on the M5.
+- Each other consumer's measurement (SQLite, C#, Polars and the rest) joins the table with that language's own wave, once its tools are in the manifest.
+- The three consecutive `test-full-cases` passes on Yellow move to 0691's checkpoint, once every language's toolchain is in the manifest.
+- Do not add tools to the core image for this ticket, and never weaken a missing-tool failure.
+
 ## Evidence
 
 The Linux full-case runs time out in C, Go, Zig, SQLite, C# and Rust Polars, while the same C image groups pass on the M5 in 16.10 seconds at about 4.06 GB peak. Run 39102240049 kept six failing consumer logs. C and Rust Polars exited 124 at about 902 seconds. Go, Zig, SQLite and C# exited 1. C, Go and SQLite show `image-admission-packing-overflow-decide` child timeouts at 120 seconds, and Zig also shows `body-excess-decide`. These cases include accepted 33554432-byte requests, not only refusals, so a failure label alone does not justify changing a contract or refusal assertion.
