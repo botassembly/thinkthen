@@ -311,10 +311,10 @@ class ToolResolution(unittest.TestCase):
             installer = resolved / 'bootstrap/mise/bin/mise'
             installer.parent.mkdir(parents=True)
             installer.write_text('#!/bin/sh\nset -eu\n'
-                                 'kind=${3%%@*}\nkind=${kind#cargo:}\n'
+                                 'identity=${3:-$2}\nkind=${identity%%@*}\nkind=${kind#cargo:}\n'
                                  'binary="$HOME/resolved/providers/$kind"\n'
                                  'case "$1" in\ninstall)\n'
-                                 'case "$3" in cargo:*) cargo --version ;; esac\n'
+                                 'case "$2" in cargo:*) cargo --version ;; esac\n'
                                  'mkdir -p "$binary"\n'
                                  'case "$kind" in\n'
                                  'rust) cp "$HOME/success" "$binary/cargo" ;;\n'
