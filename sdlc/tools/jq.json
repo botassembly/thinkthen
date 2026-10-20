@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "jq": {
+      "commands": [
+        "jq"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "spec",
+        "install"
+      ],
+      "provider": "aqua:jqlang/jq",
+      "version": "1.7.1",
+      "probe": {
+        "argv": [
+          "jq",
+          "--version"
+        ],
+        "contains": "jq-{version}"
+      }
+    }
+  }
+}

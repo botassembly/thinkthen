@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "prettier": {
+      "commands": [
+        "prettier"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "test"
+      ],
+      "provider": "npm:prettier",
+      "version": "3.6.2",
+      "probe": {
+        "argv": [
+          "prettier",
+          "--version"
+        ],
+        "contains": "{version}"
+      }
+    }
+  }
+}

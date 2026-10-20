@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "mustmatch": {
+      "commands": [
+        "mustmatch"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "spec",
+        "install"
+      ],
+      "provider": "python-package",
+      "version": "0.1.0"
+    }
+  }
+}

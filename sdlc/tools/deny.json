@@ -1,0 +1,39 @@
+{
+  "tools": {
+    "deny": {
+      "commands": [
+        "cargo-deny"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "typescript",
+        "ruby"
+      ],
+      "provider": "cargo:cargo-deny",
+      "version": "0.19.4",
+      "probe": {
+        "argv": [
+          "cargo",
+          "deny",
+          "--version"
+        ],
+        "contains": "cargo-deny {version}"
+      },
+      "readiness": {
+        "argv": [
+          "cargo",
+          "deny",
+          "--offline",
+          "check",
+          "advisories"
+        ],
+        "contains": "advisories ok"
+      }
+    }
+  }
+}

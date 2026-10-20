@@ -15,5 +15,57 @@
         "linux-x86_64"
       ]
     }
+  },
+  "tools": {
+    "rust": {
+      "commands": [
+        "cargo",
+        "rustc",
+        "rustup",
+        "rustfmt",
+        "cargo-fmt",
+        "cargo-clippy",
+        "clippy-driver",
+        "rustdoc"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ],
+      "provider": "rust",
+      "version": "1.95.0",
+      "probe": {
+        "argv": [
+          "rustc",
+          "--version"
+        ],
+        "contains": "rustc {version}"
+      },
+      "toolchain_file": "rust-toolchain.toml",
+      "components": [
+        "llvm-tools-preview"
+      ],
+      "probes": [
+        {
+          "argv": [
+            "cargo",
+            "fmt",
+            "--version"
+          ],
+          "contains": "rustfmt "
+        },
+        {
+          "argv": [
+            "cargo",
+            "clippy",
+            "--version"
+          ],
+          "contains": "clippy "
+        }
+      ]
+    }
   }
 }

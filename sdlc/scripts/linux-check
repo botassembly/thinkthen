@@ -31,10 +31,8 @@ base = pin['images'][arch]
 is_yellow = platform.node().split('.')[0] == 'yellow'
 memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 # The image identity includes all construction inputs and the pinned base.
-digest = hashlib.sha256()
+digest = hashlib.sha256(base.encode())
 inputs = ('rust-toolchain.toml', 'sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
-          'sdlc/scripts/tools.py',
-          'conformance/children/children.py',
           *[str(path.relative_to(ROOT)) for path in sorted((ROOT / 'sdlc/tools').glob('*.json'))])
 for path in inputs:
     digest.update((ROOT / path).read_bytes())
@@ -52,7 +50,28 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
                     '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
 image = subprocess.check_output([args.docker, 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
 print('linux-check: image=' + image + ' base=' + base, flush=True)
+# Runtime validation reads the checkout scripts without baking them into layers.
+subprocess.run([args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
+                '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
+                '-v', str(ROOT) + ':/opt/thinkthen-checkout:ro', '-w', '/opt/thinkthen-checkout',
+                image, 'python3', 'sdlc/scripts/tools.py', ','.join(pin['tool_groups'])], check=True)
 if args.checks == ['prepare']:
+    running = subprocess.check_output([args.docker, 'ps', '-q'], text=True).split()
+    live = set()
+    if running:
+        live.update(subprocess.check_output([args.docker, 'inspect', '--format', '{{.Image}}', *running],
+                                            text=True).splitlines())
+    candidates = subprocess.check_output([args.docker, 'image', 'ls', '--format', '{{.Repository}}:{{.Tag}}',
+                                          'thinkthen-check'], text=True).splitlines()
+    for candidate in candidates:
+        if candidate == tag or not candidate.startswith('thinkthen-check:' + arch + '-'):
+            continue
+        identity = subprocess.check_output([args.docker, 'image', 'inspect', '--format', '{{.Id}}', candidate],
+                                           text=True).strip()
+        if identity != image and identity not in live:
+            # Docker refuses removal if a container starts using it in the meantime.
+            # Keep untagged parent image metadata for the classic build cache.
+            subprocess.run([args.docker, 'image', 'rm', '--no-prune', candidate], check=True)
     raise SystemExit(0)
 owned = ROOT / ('.linux-' + arch)
 (owned / 'home').mkdir(parents=True, exist_ok=True)
@@ -78,6 +97,9 @@ command = [args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label'
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
            '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
+# Both scripts come from this checkout, including edits made without a new image.
+for relative in ('sdlc/scripts/tools.py', 'conformance/children/children.py'):
+    command += ['-v', str(ROOT / relative) + ':' + str(source / relative) + ':ro']
 # Resolve dependency locations once, before a gate replaces HOME. The tool
 # resolver uses this same mounted uv cache; no host package cache is imported.
 home = owned / 'home'

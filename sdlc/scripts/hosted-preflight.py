@@ -15,6 +15,8 @@ import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from sdlc.linux.install import load_manifest
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import SECRET  # noqa: E402
 
@@ -207,7 +209,7 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
 
 def installed(check, target, cache, installed_files=False):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
-    pins = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']
+    pins = load_manifest(ROOT / 'sdlc/tools.json')['tools']
     check.command(['uv', '--version'], '^uv ' + re.escape(pins['uv']['version']) + r'\b')
     check.check('native prepared inputs', lambda: native_inputs(check, target, cache, installed_files=installed_files))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
@@ -395,7 +397,7 @@ def qualify(check, stage, target):
         check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
-    maturin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
+    maturin = load_manifest(ROOT / 'sdlc/tools.json')['tools']['maturin']['version']
     check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))

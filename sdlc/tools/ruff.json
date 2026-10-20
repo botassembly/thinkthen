@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "ruff": {
+      "commands": [
+        "ruff"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "test"
+      ],
+      "provider": "python-package",
+      "version": "0.13.2",
+      "probe": {
+        "argv": [
+          "ruff",
+          "--version"
+        ],
+        "contains": "ruff {version}"
+      }
+    }
+  }
+}
