@@ -253,7 +253,10 @@ def resolve(manifest, groups, root, check=False):
                 result = subprocess.check_output(argv, env=probe_env, text=True, stderr=subprocess.STDOUT)
                 if probe['contains'].format(**tool) not in result:
                     failures.append(name + ': version differs from tools.json')
-            except (OSError, subprocess.CalledProcessError) as error:
+            except subprocess.CalledProcessError as error:
+                failures.append(name + ': ' + str(error)
+                                + ('\n' + error.output.rstrip() if error.output else ''))
+            except OSError as error:
                 failures.append(name + ': ' + str(error))
     packages = dict(manifest.get('python_packages', {}))
     packages.update({tool['commands'][0]: tool['version'] for tool in requirements.values()
