@@ -62,15 +62,15 @@ pub const Engine = struct {
         self.closed = true;
     }
     pub fn usagePersistence(self: *Engine) !UsageStatus {
-        return self.usageStatus(c.thinkthen_engine_usage_persistence_v1);
+        return self.usageStatus(c.thinkthen_engine_usage_persistence);
     }
     pub fn finishUsageStatus(self: *Engine) !UsageStatus {
-        return self.usageStatus(c.thinkthen_engine_finish_usage_status_v1);
+        return self.usageStatus(c.thinkthen_engine_finish_usage_status);
     }
     fn usageStatus(self: *Engine, operation: anytype) !UsageStatus {
         if (self.closed) return error.ClosedEngine;
-        var state: c.thinkthen_complete_usage_persistence_v1 = undefined;
-        var advice: c.thinkthen_complete_utf8_v1 = undefined;
+        var state: c.thinkthen_complete_usage_persistence = undefined;
+        var advice: c.thinkthen_complete_utf8 = undefined;
         try session.checked(operation(@as(*c.thinkthen_engine, @ptrCast(self.handle)), &state, &advice));
         const kind = try values.readUsagePersistence(self.allocator, state);
         if (advice.data == null and advice.len != 0) return error.InvalidNativeExtent;

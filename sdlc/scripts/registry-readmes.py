@@ -323,7 +323,7 @@ def host_functions(code, family):
                 pass
             # A blocking call's literal name belongs to its explicit request record.
             # Count it only when that exact record is passed to the exported call.
-            declaration = re.search(r'\bthinkthen_named_request_v1\s+(\w+)\s*=\s*\{\s*\.function\s*=\s*\{\s*$',
+            declaration = re.search(r'\bthinkthen_named_request\s+(\w+)\s*=\s*\{\s*\.function\s*=\s*\{\s*$',
                                     code[:token.start()])
             if declaration:
                 name = json.loads(token[0])

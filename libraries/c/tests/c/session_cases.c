@@ -5,7 +5,7 @@
 static int read_packet(thinkthen_session *session, thinkthen_session_result ***results, size_t *count, uint32_t *status) {
     thinkthen_session_result *result=NULL;
     if(thinkthen_session_try_read(session,status,&result)) return 1;
-    if(*status!=THINKTHEN_SESSION_RESULT_V1) return 0;
+    if(*status!=THINKTHEN_SESSION_RESULT) return 0;
     thinkthen_session_result **grown=realloc(*results,(*count+1)*sizeof(*grown));if(!grown)return 1;
     *results=grown;(*results)[(*count)++]=result;return 0;
 }
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     if(code) {
         const char *message=engine?thinkthen_session_error_message():thinkthen_error_message(NULL);
         printf("{\"admission\":{\"code\":%d,\"message\":",code);
-        quoted((thinkthen_complete_utf8_v1){message,strlen(message)});fputs("}}\n",stdout);
+        quoted((thinkthen_complete_utf8){message,strlen(message)});fputs("}}\n",stdout);
         thinkthen_engine_free(engine);return 0;
     }
     if(strcmp(argv[3],"cancel")==0) thinkthen_session_cancel(session);
@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
     for(int i=5;i<argc;++i) {
         uint32_t pushed;
         if(thinkthen_session_push(session,argv[i],strlen(argv[i]),&pushed))return 1;
-        if(pushed==THINKTHEN_SESSION_CLOSED_V1)break;
-        if(pushed!=THINKTHEN_SESSION_ACCEPTED_V1)return 1;
+        if(pushed==THINKTHEN_SESSION_CLOSED)break;
+        if(pushed!=THINKTHEN_SESSION_ACCEPTED)return 1;
     }
     if(thinkthen_session_finish(session,NULL,0)) return 1;
     if(strcmp(argv[4],"held")==0) {
@@ -44,16 +44,16 @@ int main(int argc, char **argv) {
     for(;;) {
         uint32_t status;
         if(read_packet(session,&results,&count,&status)) return 1;
-        if(status==THINKTHEN_SESSION_END_V1)break;
-        if(status==THINKTHEN_SESSION_PENDING_V1){uint32_t ready;if(thinkthen_session_wait(session,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,50,&ready))return 1;continue;}
+        if(status==THINKTHEN_SESSION_END)break;
+        if(status==THINKTHEN_SESSION_PENDING){uint32_t ready;if(thinkthen_session_wait(session,THINKTHEN_SESSION_WAIT_SETTLEMENT,50,&ready))return 1;continue;}
     }
     thinkthen_session_free(session);
     fputs("{\"packets\":[",stdout);
     for(size_t i=0;i<count;++i) {
-        const thinkthen_complete_session_packet_v1 *view=NULL;
+        const thinkthen_complete_session_packet *view=NULL;
         if(thinkthen_session_result_view(results[i],&view))return 1;
         if(i) { putchar(44); }
-        emit_thinkthen_complete_session_packet_v1(*view);
+        emit_thinkthen_complete_session_packet(*view);
     }
     fputs("],\"native\":[",stdout);
     for(size_t i=0;i<count;++i) {

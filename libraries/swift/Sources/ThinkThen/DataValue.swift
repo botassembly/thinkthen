@@ -82,24 +82,24 @@ public struct DataValue: ValueRepresentable, Equatable {
     }
 }
 
-func nativeString(_ value: thinkthen_complete_utf8_v1) -> String { String(decoding: UnsafeRawBufferPointer(start: value.data, count: value.len), as: UTF8.self) }
+func nativeString(_ value: thinkthen_complete_utf8) -> String { String(decoding: UnsafeRawBufferPointer(start: value.data, count: value.len), as: UTF8.self) }
 
 
 extension DataValue {
-    static func copyNative(_ pointer: UnsafePointer<thinkthen_complete_json_v1>) throws -> DataValue {
+    static func copyNative(_ pointer: UnsafePointer<thinkthen_complete_json>) throws -> DataValue {
         let value = pointer.pointee
         switch value.kind {
-        case UInt32(THINKTHEN_COMPLETE_JSON_NULL_V1): return .null
-        case UInt32(THINKTHEN_COMPLETE_JSON_BOOLEAN_V1): return .bool(value.data.boolean != 0)
-        case UInt32(THINKTHEN_COMPLETE_JSON_NUMBER_V1): return .number(NumberLiteral(unchecked: nativeString(value.data.number)))
-        case UInt32(THINKTHEN_COMPLETE_JSON_STRING_V1): return .string(nativeString(value.data.string))
-        case UInt32(THINKTHEN_COMPLETE_JSON_ARRAY_V1):
+        case UInt32(THINKTHEN_COMPLETE_JSON_NULL): return .null
+        case UInt32(THINKTHEN_COMPLETE_JSON_BOOLEAN): return .bool(value.data.boolean != 0)
+        case UInt32(THINKTHEN_COMPLETE_JSON_NUMBER): return .number(NumberLiteral(unchecked: nativeString(value.data.number)))
+        case UInt32(THINKTHEN_COMPLETE_JSON_STRING): return .string(nativeString(value.data.string))
+        case UInt32(THINKTHEN_COMPLETE_JSON_ARRAY):
             let values = value.data.array
             return .array(try (0..<values.len).map {
                 guard let child = values.data?[$0] else { throw ValueConversionError("Missing native array value") }
                 return try copyNative(child)
             })
-        case UInt32(THINKTHEN_COMPLETE_JSON_OBJECT_V1):
+        case UInt32(THINKTHEN_COMPLETE_JSON_OBJECT):
             let values = value.data.object
             return .orderedObject(try (0..<values.len).map {
                 guard let member = values.data?[$0], let child = member.value else { throw ValueConversionError("Missing native object value") }

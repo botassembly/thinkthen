@@ -113,7 +113,7 @@ mod tests {
     fn independent_declarations_and_refusals() {
         assert_eq!(
             declarations(
-                "/* thinkthen_hidden(void); */\ntypedef struct { int n; thinkthen_string_v1 value; } thinkthen_record_v1;\ntypedef union thinkthen_union_v1 { int boolean; thinkthen_string_v1 text; } thinkthen_union_v1;\nstruct thinkthen_view_v1 { thinkthen_union_v1 data; thinkthen_record_v1 record; };\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
+                "/* thinkthen_hidden(void); */\ntypedef struct { int n; thinkthen_string value; } thinkthen_record;\ntypedef union thinkthen_union { int boolean; thinkthen_string text; } thinkthen_union;\nstruct thinkthen_view { thinkthen_union data; thinkthen_record record; };\nvoid thinkthen_z(void);\nconst char *thinkthen_a(int n);"
             ),
             Ok(vec!["thinkthen_a".into(), "thinkthen_z".into()])
         );

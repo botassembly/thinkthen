@@ -15,16 +15,16 @@ def render(root):
             body.append(f'if(!code) code=plan_unsigned({access},&value.{member});')
         elif kind == 'boolean':
             header.append('uint64_t ' + member + ';')
-            body += [f'if(!code) {{const thinkthen_complete_json_v1 *field={access};', 'if(!field || field->kind!=THINKTHEN_COMPLETE_JSON_BOOLEAN_V1) code=THINKTHEN_COBOL_REPRESENTATION;', f'else value.{member}=field->data.boolean;}}']
+            body += [f'if(!code) {{const thinkthen_complete_json *field={access};', 'if(!field || field->kind!=THINKTHEN_COMPLETE_JSON_BOOLEAN) code=THINKTHEN_COBOL_REPRESENTATION;', f'else value.{member}=field->data.boolean;}}']
         elif kind == 'string':
             header.append('thinkthen_cobol_AnswerText ' + member + ';')
             body.append(f'if(!code) code=plan_text({access},&value.{member});')
         elif kind == ['string', 'null']:
             header += ['uint64_t ' + member + '_presence;', 'thinkthen_cobol_AnswerText ' + member + ';']
-            body += [f'if(!code) {{const thinkthen_complete_json_v1 *field={access};', f'value.{member}_presence=!field ? THINKTHEN_COMPLETE_PRESENCE_MISSING_V1 : field->kind==THINKTHEN_COMPLETE_JSON_NULL_V1 ? THINKTHEN_COMPLETE_PRESENCE_NULL_V1 : THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;', f'if(value.{member}_presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) code=plan_text(field,&value.{member});}}']
+            body += [f'if(!code) {{const thinkthen_complete_json *field={access};', f'value.{member}_presence=!field ? THINKTHEN_COMPLETE_PRESENCE_MISSING : field->kind==THINKTHEN_COMPLETE_JSON_NULL ? THINKTHEN_COMPLETE_PRESENCE_NULL : THINKTHEN_COMPLETE_PRESENCE_VALUE;', f'if(value.{member}_presence==THINKTHEN_COMPLETE_PRESENCE_VALUE) code=plan_text(field,&value.{member});}}']
         elif schema.get('$ref') == '#/$defs/tokenBand':
             header.append('thinkthen_cobol_AnswerTokenBand ' + member + ';')
-            body += [f'if(!code) {{const thinkthen_complete_json_v1 *field={access};', 'tt_value view={.value=(thinkthen_complete_json_v1 *)field};', 'if(!field || field->kind!=THINKTHEN_COMPLETE_JSON_OBJECT_V1) code=THINKTHEN_COBOL_REPRESENTATION;']
+            body += [f'if(!code) {{const thinkthen_complete_json *field={access};', 'tt_value view={.value=(thinkthen_complete_json *)field};', 'if(!field || field->kind!=THINKTHEN_COMPLETE_JSON_OBJECT) code=THINKTHEN_COBOL_REPRESENTATION;']
             for key in definitions['tokenBand']['properties']:
                 body.append(f'if(!code) code=plan_unsigned(field_value(&view,"{key}",{len(key)}),&value.{member}.{key});')
             body.append('}')
@@ -49,8 +49,8 @@ def render(root):
 
 
 SUPPORT = r'''
-static int plan_unsigned(const thinkthen_complete_json_v1 *value,uint64_t *out) {
-    if(!value || value->kind!=THINKTHEN_COMPLETE_JSON_NUMBER_V1 || !value->data.number.len || !value->data.number.data) return THINKTHEN_COBOL_REPRESENTATION;
+static int plan_unsigned(const thinkthen_complete_json *value,uint64_t *out) {
+    if(!value || value->kind!=THINKTHEN_COMPLETE_JSON_NUMBER || !value->data.number.len || !value->data.number.data) return THINKTHEN_COBOL_REPRESENTATION;
     uint64_t number=0;
     for(size_t i=0;i<value->data.number.len;i++) {
         unsigned char digit=(unsigned char)value->data.number.data[i];
@@ -61,8 +61,8 @@ static int plan_unsigned(const thinkthen_complete_json_v1 *value,uint64_t *out) 
     }
     *out=number; return 0;
 }
-static int plan_text(const thinkthen_complete_json_v1 *value,thinkthen_cobol_AnswerText *out) {
-    if(!value || value->kind!=THINKTHEN_COMPLETE_JSON_STRING_V1) return THINKTHEN_COBOL_REPRESENTATION;
+static int plan_text(const thinkthen_complete_json *value,thinkthen_cobol_AnswerText *out) {
+    if(!value || value->kind!=THINKTHEN_COMPLETE_JSON_STRING) return THINKTHEN_COBOL_REPRESENTATION;
     return answer_text(value->data.string,out);
 }
 '''

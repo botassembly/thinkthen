@@ -83,8 +83,8 @@ pub const Session = struct {
         var status: u32 = undefined;
         try checked(c.thinkthen_session_try_push(self.native(), json.ptr, json.len, &status));
         return switch (status) {
-            c.THINKTHEN_SESSION_ACCEPTED_V1 => .accepted,
-            c.THINKTHEN_SESSION_FULL_V1 => .full,
+            c.THINKTHEN_SESSION_ACCEPTED => .accepted,
+            c.THINKTHEN_SESSION_FULL => .full,
             else => .closed,
         };
     }
@@ -101,22 +101,22 @@ pub const Session = struct {
     }
     pub fn wait(self: Session, input: bool) Error!void {
         var ready: u32 = undefined;
-        try checked(c.thinkthen_session_wait(self.native(), if (input) c.THINKTHEN_SESSION_WAIT_INPUT_V1 else c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, std.math.maxInt(u32), &ready));
+        try checked(c.thinkthen_session_wait(self.native(), if (input) c.THINKTHEN_SESSION_WAIT_INPUT else c.THINKTHEN_SESSION_WAIT_SETTLEMENT, std.math.maxInt(u32), &ready));
     }
     fn readNext(self: Session, blocking: bool) !Read {
         var status: u32 = undefined;
         var raw: ?*c.thinkthen_session_result = null;
         try checked(if (blocking)
-            c.thinkthen_session_next_packet(self.native(), c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &status, &raw)
+            c.thinkthen_session_next_packet(self.native(), c.THINKTHEN_SESSION_WAIT_SETTLEMENT, &status, &raw)
         else
             c.thinkthen_session_try_read(self.native(), &status, &raw));
         switch (status) {
-            c.THINKTHEN_SESSION_PENDING_V1 => return .pending,
-            c.THINKTHEN_SESSION_END_V1 => return .end,
+            c.THINKTHEN_SESSION_PENDING => return .pending,
+            c.THINKTHEN_SESSION_END => return .end,
             else => {
                 const owner = raw orelse return error.Defect;
                 defer c.thinkthen_session_result_free(owner);
-                var view: [*c]const c.thinkthen_complete_session_packet_v1 = null;
+                var view: [*c]const c.thinkthen_complete_session_packet = null;
                 try checked(c.thinkthen_session_result_view(owner, &view));
                 const owned = try self.allocator.create(PacketStorage);
                 errdefer self.allocator.destroy(owned);

@@ -48,7 +48,7 @@ Saved JSON places `instructions` and `entity_definition` inside `recognize`. Exp
 {"recognize":{"instructions":"Find the numeric receipt total, not the TOTAL label.","entity_definition":"The literal decimal amount.","kinds":{"amount":"The receipt total amount."}}}
 ```
 
-The native Rust builder provides `instructions` and `entity_definition`. SDK typed constructors, common question-file readers, SQL declaration inputs, pandas, Polars and MCP carry the same declaration. C exposes the additive `thinkthen_recognition_task_v1` sidecar with copied inputs and owner-borrowed readers. Existing V1 layouts remain unchanged. Offline examples establish transport and output behavior; model accuracy requires the separately authorized evaluation.
+The native Rust builder provides `instructions` and `entity_definition`. SDK typed constructors, common question-file readers, SQL declaration inputs, pandas, Polars and MCP carry the same declaration. C exposes the additive `thinkthen_recognition_task` sidecar with copied inputs and owner-borrowed readers. Existing  layouts remain unchanged. Offline examples establish transport and output behavior; model accuracy requires the separately authorized evaluation.
 
 ## Step 1: boundaries
 

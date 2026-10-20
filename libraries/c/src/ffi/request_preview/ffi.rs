@@ -55,12 +55,12 @@ pub(super) fn value_output(
 }
 pub(super) fn value_view(
     owner: &crate::session::views::ValueHandle,
-) -> Result<*const crate::session::views::thinkthen_complete_json_v1, ErrorKind> {
+) -> Result<*const crate::session::views::thinkthen_complete_json, ErrorKind> {
     Ok(owner.0.root)
 }
 pub(super) unsafe fn named_plan(
     engine: &EngineHandle,
-    request: *const super::session::NamedRequestV1,
+    request: *const super::session::NamedRequest,
 ) -> Result<*mut crate::session::views::ValueHandle, crate::failures::Failure> {
     // SAFETY: all named components remain live until this operation returns.
     plan(

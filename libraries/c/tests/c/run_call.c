@@ -5,10 +5,10 @@
 #include <thinkthen.h>
 #include "platform.h"
 #include <string.h>
-static thinkthen_complete_utf8_v1 text(const char *s) {
-    return (thinkthen_complete_utf8_v1){s,strlen(s)};
+static thinkthen_complete_utf8 text(const char *s) {
+    return (thinkthen_complete_utf8){s,strlen(s)};
 }
-static void quoted(thinkthen_complete_utf8_v1 s) {
+static void quoted(thinkthen_complete_utf8 s) {
     putchar('"');
     for(size_t i=0;i<s.len;i++) {
         unsigned char c=(unsigned char)s.data[i];
@@ -19,7 +19,7 @@ static void quoted(thinkthen_complete_utf8_v1 s) {
     putchar('"');
 }
 struct producer {int index,count;char **items;THREAD_TYPE caller;int failed;};
-static uint32_t produce(void *context, thinkthen_complete_utf8_v1 *out) {
+static uint32_t produce(void *context, thinkthen_complete_utf8 *out) {
     struct producer *p=context;
 #ifndef _WIN32
     if(!pthread_equal(p->caller,pthread_self()))abort();
@@ -28,9 +28,9 @@ static uint32_t produce(void *context, thinkthen_complete_utf8_v1 *out) {
     thinkthen_call_cancel *token=thinkthen_call_cancel_new();
     if(!token)abort();
     thinkthen_call_cancel_free(token);
-    if(p->failed)return THINKTHEN_CALL_PRODUCER_FAILURE_V1;
-    if(p->index==p->count)return THINKTHEN_CALL_PRODUCER_END_V1;
-    *out=text(p->items[p->index++]);return THINKTHEN_CALL_PRODUCER_ITEM_V1;
+    if(p->failed)return THINKTHEN_CALL_PRODUCER_FAILURE;
+    if(p->index==p->count)return THINKTHEN_CALL_PRODUCER_END;
+    *out=text(p->items[p->index++]);return THINKTHEN_CALL_PRODUCER_ITEM;
 }
 static THREAD_RESULT cancel_held(void *argument) {
     if(getchar()!='!')abort();
@@ -41,7 +41,7 @@ static THREAD_RESULT print_error(void *argument) {
     thinkthen_call_error *error=argument;
     printf("{\"code\":%d,\"retryable\":%s,\"message\":",thinkthen_call_error_code(error),thinkthen_call_error_retryable(error)?"true":"false");
     quoted(thinkthen_call_error_message(error));
-    thinkthen_complete_utf8_v1 facts=thinkthen_call_error_facts_json(error);
+    thinkthen_complete_utf8 facts=thinkthen_call_error_facts_json(error);
     fputs(",\"facts\":",stdout);
     if(facts.len)fwrite(facts.data,1,facts.len,stdout);else fputs("null",stdout);
     puts("}");return THREAD_DONE;
@@ -49,7 +49,7 @@ static THREAD_RESULT print_error(void *argument) {
 /* Constructors still expose their separate immediate diagnostic while shipped.
    A refusal here creates no engine, call result or owned call error. */
 static int constructor_error(void) {
-    const thinkthen_error_view_v1 *error=thinkthen_error_view(NULL);
+    const thinkthen_error_details *error=thinkthen_error_view(NULL);
     if(!error||error->facts)return 3;
     printf("{\"constructor\":true,\"code\":%d,\"retryable\":%s,\"message\":",
            error->code,error->retryable?"true":"false");
@@ -57,7 +57,7 @@ static int constructor_error(void) {
     return 0;
 }
 static THREAD_RESULT print_result(void *argument) {
-    thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(argument);
+    thinkthen_complete_utf8 json=thinkthen_call_result_json(argument);
     fwrite(json.data,1,json.len,stdout);putchar('\n');
     return THREAD_DONE;
 }
@@ -120,7 +120,7 @@ int main(int argc,char **argv) {
         int status=constructor_error();
         free(argv);free(bytes);return status;
     }
-    thinkthen_named_request_v1 request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
+    thinkthen_named_request request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
     thinkthen_call_cancel *cancel=thinkthen_call_cancel_new();if(!cancel)return 3;
     if(!strcmp(argv[6],"cancel"))thinkthen_call_cancel_fire(cancel);
     struct producer p={0,argc-8,argv+8,0,!strcmp(argv[7],"fail")};

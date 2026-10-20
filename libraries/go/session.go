@@ -103,8 +103,8 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	if options == nil {
 		options = &RequestOptions{}
 	}
-	var request C.thinkthen_named_request_v1
-	views := []*C.thinkthen_complete_utf8_v1{&request.function, &request.question_json, &request.input_json, &request.options_json}
+	var request C.thinkthen_named_request
+	views := []*C.thinkthen_complete_utf8{&request.function, &request.question_json, &request.input_json, &request.options_json}
 	for i, value := range []any{verb, question, source, options} {
 		var data []byte
 		var err error
@@ -118,12 +118,12 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		}
 		bytes := C.CBytes(data)
 		defer C.free(bytes)
-		*views[i] = C.thinkthen_complete_utf8_v1{data: (*C.char)(bytes), len: C.size_t(len(data))}
+		*views[i] = C.thinkthen_complete_utf8{data: (*C.char)(bytes), len: C.size_t(len(data))}
 	}
 	const surfaceToken = "go"
 	surfaceBytes := C.CBytes([]byte(surfaceToken))
 	defer C.free(surfaceBytes)
-	surface := C.thinkthen_complete_utf8_v1{data: (*C.char)(surfaceBytes), len: C.size_t(len(surfaceToken))}
+	surface := C.thinkthen_complete_utf8{data: (*C.char)(surfaceBytes), len: C.size_t(len(surfaceToken))}
 	c.engine.mu.RLock()
 	if c.engine.raw == nil {
 		c.engine.mu.RUnlock()
@@ -198,7 +198,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		runtime.LockOSThread()
 		var status C.uint32_t
 		var packet *C.thinkthen_session_result
-		err = sessionFailure(C.thinkthen_session_next_packet(session, C.THINKTHEN_SESSION_WAIT_RESULT_V1, &status, &packet))
+		err = sessionFailure(C.thinkthen_session_next_packet(session, C.THINKTHEN_SESSION_WAIT_RESULT, &status, &packet))
 		if err != nil {
 			runtime.UnlockOSThread()
 			c.mu.Lock()
@@ -296,13 +296,13 @@ func (e *nativeEngine) usageStatus(finish bool) (UsageStatus, error) {
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	var state C.thinkthen_complete_usage_persistence_v1
-	var advice C.thinkthen_complete_utf8_v1
+	var state C.thinkthen_complete_usage_persistence
+	var advice C.thinkthen_complete_utf8
 	var code C.int
 	if finish {
-		code = C.thinkthen_engine_finish_usage_status_v1(e.raw, &state, &advice)
+		code = C.thinkthen_engine_finish_usage_status(e.raw, &state, &advice)
 	} else {
-		code = C.thinkthen_engine_usage_persistence_v1(e.raw, &state, &advice)
+		code = C.thinkthen_engine_usage_persistence(e.raw, &state, &advice)
 	}
 	if code != 0 {
 		return UsageStatus{}, sessionFailure(code)

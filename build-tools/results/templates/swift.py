@@ -166,7 +166,7 @@ def render(definitions, inputs=False):
 
 def bridge(abi):
     lines = ['// Generated from the compiler-derived C header. Do not edit.', 'import CThinkThen']
-    for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', '_V1'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1')]:
+    for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', ''), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '')]:
         lines += [f'{"public " if cls != "QuestionGrammar" else ""}enum {cls}: UInt32, Sendable {{']
         lines += ['    case ' + literal_member(key.removeprefix(prefix).removesuffix(suffix).lower()) + ' = ' + str(value)
                   for key, value in abi['constants'].items() if key.startswith(prefix) and key.endswith(suffix)]

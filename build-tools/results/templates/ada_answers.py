@@ -68,7 +68,7 @@ def readers(definitions):
                     lines += [f'case {native}.presence is', 'when 0 => null;', f'when 1 => Count := Count + 1; Fields (Count) := Named ({ada_string(member)}, Null_Item);', f'when 2 => Count := Count + 1; Fields (Count) := Named ({ada_string(member)}, {value});', 'when others => raise Constraint_Error with "invalid native presence";', 'end case;']
                 else:
                     lines += [f'Count := Count + 1; Fields (Count) := Named ({ada_string(member)}, {value});']
-            lines += ['declare', 'Extension_Count : constant Natural := Index (P.extensions.len);', 'type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;', 'type Extension_Access is access constant Extension_Array;', 'function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);', 'Extensions : Extension_Access;', 'begin', "if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;", 'for I in 1 .. Extension_Count loop', 'Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));', 'end loop;', 'end;', 'return Object_Item (Fields (1 .. Count));']
+            lines += ['declare', 'Extension_Count : constant Natural := Index (P.extensions.len);', 'type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension with Convention => C;', 'type Extension_Access is access constant Extension_Array;', 'function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);', 'Extensions : Extension_Access;', 'begin', "if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;", 'for I in 1 .. Extension_Count loop', 'Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));', 'end loop;', 'end;', 'return Object_Item (Fields (1 .. Count));']
         elif container:
             mapping = source.get('type') == 'object'
             item = source.get('additionalProperties', {}) if mapping else source.get('items',{})
@@ -89,7 +89,7 @@ def readers(definitions):
         return function
 
     emit('completesessionPacket', definitions['completesessionPacket'])
-    return '\n'.join(declarations) + '\nfunction Read_Json (P : access constant thinkthen_complete_json_v1) return Value renames Thinkthen.Native_Values.Read;\n' + '\n'.join(bodies)
+    return '\n'.join(declarations) + '\nfunction Read_Json (P : access constant thinkthen_complete_json) return Value renames Thinkthen.Native_Values.Read;\n' + '\n'.join(bodies)
 
 
 
@@ -240,7 +240,7 @@ package body Thinkthen.Answers is
             Result.Valid := False;
          else
             declare
-               Item : constant Value := Read_thinkthen_complete_session_packet_v1 (View (Packet));
+               Item : constant Value := Read_thinkthen_complete_session_packet (View (Packet));
             begin
                if As_String (Field_Value (Item, "kind")) = "terminal" then
                   Result.Terminal_Count := Result.Terminal_Count + 1;

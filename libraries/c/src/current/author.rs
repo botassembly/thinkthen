@@ -1,7 +1,7 @@
 //! Immutable author snapshots copied exclusively from native metadata getters.
 use super::Storage;
 use crate::ffi::carriers::{
-    InputDeclarationV1, InputPropertiesV1, InputPropertyV1, OptionalU64V1, QuestionAuthorV1,
+    InputDeclarationView, InputProperties, InputPropertyView, OptionalU64, QuestionAuthorInfo,
 };
 use crate::ffi::values as abi;
 use thinkthen::{InputDeclaration, InputPropertyType, QuestionName, WordingVersion};
@@ -41,7 +41,7 @@ macro_rules! native_author {
 pub(crate) use native_author;
 pub(crate) struct AuthorOwner {
     _storage: Storage,
-    pub(crate) view: QuestionAuthorV1,
+    pub(crate) view: QuestionAuthorInfo,
 }
 impl AuthorOwner {
     pub(crate) fn new(data: Author) -> Self {
@@ -54,40 +54,40 @@ impl AuthorOwner {
     }
 }
 impl Storage {
-    pub(crate) fn declaration(&mut self, value: Option<&InputDeclaration>) -> InputDeclarationV1 {
+    pub(crate) fn declaration(&mut self, value: Option<&InputDeclaration>) -> InputDeclarationView {
         match value {
-            None => InputDeclarationV1::default(),
-            Some(InputDeclaration::String) => InputDeclarationV1 {
-                kind: abi::DECLARATION_STRING_V1,
-                ..InputDeclarationV1::default()
+            None => InputDeclarationView::default(),
+            Some(InputDeclaration::String) => InputDeclarationView {
+                kind: abi::DECLARATION_STRING,
+                ..InputDeclarationView::default()
             },
             Some(InputDeclaration::Object(object)) => {
                 let properties = object
                     .properties()
                     .iter()
-                    .map(|p| InputPropertyV1 {
+                    .map(|p| InputPropertyView {
                         name: self.string(p.name()),
                         kind: match p.kind() {
-                            InputPropertyType::String => abi::PROPERTY_STRING_V1,
-                            InputPropertyType::Number => abi::PROPERTY_NUMBER_V1,
-                            InputPropertyType::Boolean => abi::PROPERTY_BOOLEAN_V1,
-                            InputPropertyType::StringList => abi::PROPERTY_STRING_LIST_V1,
+                            InputPropertyType::String => abi::PROPERTY_STRING,
+                            InputPropertyType::Number => abi::PROPERTY_NUMBER,
+                            InputPropertyType::Boolean => abi::PROPERTY_BOOLEAN,
+                            InputPropertyType::StringList => abi::PROPERTY_STRING_LIST,
                         },
                     })
                     .collect();
                 let (data, len) = self.slice(properties);
-                InputDeclarationV1 {
-                    kind: abi::DECLARATION_OBJECT_V1,
-                    properties: InputPropertiesV1 { data, len },
+                InputDeclarationView {
+                    kind: abi::DECLARATION_OBJECT,
+                    properties: InputProperties { data, len },
                     required: self.strings(object.required()),
                 }
             }
         }
     }
-    pub(crate) fn author(&mut self, data: &Author) -> QuestionAuthorV1 {
-        QuestionAuthorV1 {
+    pub(crate) fn author(&mut self, data: &Author) -> QuestionAuthorInfo {
+        QuestionAuthorInfo {
             name: self.optional_string(data.name.as_ref().map(QuestionName::as_str)),
-            wording_version: OptionalU64V1 {
+            wording_version: OptionalU64 {
                 present: i32::from(data.version.is_some()),
                 value: data.version.map_or(0, |v| u64::from(v.get())),
             },

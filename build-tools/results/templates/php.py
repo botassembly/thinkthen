@@ -62,7 +62,7 @@ def outputs(definitions, header):
     for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):
         constants += [f'const {key} = {value};']
     constants += ['namespace ThinkThen;', 'enum UsagePersistenceState: int {']
-    constants += ['case ' + word.title() + ' = ' + value + ';' for word, value in re.findall(r'^#define THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1 (\d+)\s*$', header, flags=re.M)]
+    constants += ['case ' + word.title() + ' = ' + value + ';' for word, value in re.findall(r'^#define THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+) (\d+)\s*$', header, flags=re.M)]
     errors = re.findall(r'^#define (THINKTHEN_E\w+) (\d+)\s*$', header, flags=re.M)
     constants += ['}', 'enum ErrorKind: int {']
     constants += ['    case ' + symbol.removeprefix('THINKTHEN_E').title() + ' = ' + code + ';' for symbol, code in errors]

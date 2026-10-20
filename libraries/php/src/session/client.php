@@ -57,7 +57,7 @@ final class Client
         $code = $this->ffi->thinkthen_request_plan_named_value($this->engine, \FFI::addr($request->value), \FFI::addr($owner));
         if ($code) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
         try {
-            $view = $this->ffi->new('const thinkthen_complete_json_v1 *');
+            $view = $this->ffi->new('const thinkthen_complete_json *');
             $code = $this->ffi->thinkthen_value_view($owner, \FFI::addr($view));
             if ($code) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
             return \ThinkThen\Internal\Decoder::plan($view);
@@ -68,11 +68,11 @@ final class Client
     private function usageStatus(bool $finish): UsageStatus
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
-        $state = $this->ffi->new('thinkthen_complete_usage_persistence_v1');
-        $advice = $this->ffi->new('thinkthen_complete_utf8_v1');
+        $state = $this->ffi->new('thinkthen_complete_usage_persistence');
+        $advice = $this->ffi->new('thinkthen_complete_utf8');
         $code = $finish
-            ? $this->ffi->thinkthen_engine_finish_usage_status_v1($this->engine, \FFI::addr($state), \FFI::addr($advice))
-            : $this->ffi->thinkthen_engine_usage_persistence_v1($this->engine, \FFI::addr($state), \FFI::addr($advice));
+            ? $this->ffi->thinkthen_engine_finish_usage_status($this->engine, \FFI::addr($state), \FFI::addr($advice))
+            : $this->ffi->thinkthen_engine_usage_persistence($this->engine, \FFI::addr($state), \FFI::addr($advice));
         if ($code !== 0) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
         return new UsageStatus(UsagePersistenceState::from($state->kind),
             \FFI::isNull($advice->data) ? null : \FFI::string($advice->data, $advice->len));
