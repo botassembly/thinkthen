@@ -3,9 +3,8 @@ use super::column::text;
 use crate::RequestFunction;
 use crate::{
     Call, CallOptions, CompleteRecord, Engine, Error, Question, QuestionInput, RecordInput,
-    RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed,
-    RequestFraming, RequestInput, RequestOptions, RequestQuestion, RequestValue,
-    Surface,
+    RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed, RequestFraming,
+    RequestInput, RequestOptions, RequestQuestion, RequestValue, Surface,
 };
 use polars::prelude::Series;
 
@@ -89,15 +88,15 @@ fn execute_feed(
         ..RequestOptions::default()
     };
     let arguments = RequestArguments {
-            question: RequestQuestion::Definition { value: definition },
-            input: RequestInput::Feed {
-                name: "column".into(),
-                framing: RequestFraming::Document,
-                reading: crate::ReaderOptions::default(),
-                images: vec![],
-            },
-            options,
-        };
+        question: RequestQuestion::Definition { value: definition },
+        input: RequestInput::Feed {
+            name: "column".into(),
+            framing: RequestFraming::Document,
+            reading: crate::ReaderOptions::default(),
+            images: vec![],
+        },
+        options,
+    };
     // Typed complete filters retain every observation, including rejected rows.
     let feed = if complete && call == RequestFunction::Filter {
         feed.with_all_filter_results()
@@ -105,7 +104,7 @@ fn execute_feed(
         feed
     };
     engine.call(
-        call,
+        call.name(),
         arguments,
         RequestEnvironment {
             controls: controls.surface(Surface::RustPolars),
