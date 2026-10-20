@@ -7,7 +7,7 @@ use crate::harness::{Listener, spawn};
 use serde_json::{Value, json};
 use std::{fs, path::Path};
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn the_facts_line_counts_filtered_records_and_matches_status() {

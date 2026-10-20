@@ -373,7 +373,7 @@ fn an_option_limit_does_not_change_pair_requests() {
     assert_eq!(listener.connections(), 0);
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {

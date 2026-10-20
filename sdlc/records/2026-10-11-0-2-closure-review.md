@@ -1,5 +1,7 @@
 # 0.2 closure review, 2026-10-11
 
+Ticket: [0534](../tickets/0534-python-typed-native-requests.md), [0535](../tickets/0535-r-ruby-javascript-typed-native-requests.md), [0536](../tickets/0536-php-generated-requests.md), [0537](../tickets/0537-remove-remaining-old-names.md), [0538](../tickets/0538-duckdb-remaining-routes-shared-request.md), [0539](../tickets/0539-close-core-edge-cases.md), [0540](../tickets/0540-consolidate-rust-request-helpers.md), [0541](../tickets/0541-shared-installed-consumer-driver.md), [0542](../tickets/0542-final-0-2-code-review.md), [0543](../tickets/0543-qualify-0-2-candidate.md)
+
 The PM sent three fresh read-only reviewers over the tickets the coordinator closed on 2026-10-10. They read tickets, records, landing commits and code. They ran no builds or tests. This record keeps their findings. New tickets 0534 to 0543 own the fixes.
 
 ## Sound closures

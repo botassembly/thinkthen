@@ -427,7 +427,7 @@ fn r4_24_the_engine_base_url_outranks_the_environment_base() {
     assert_eq!((first.count(), second.count()), (0, 1));
 }
 
-#[cfg(unix)] // It names the XDG folders (sdlc/planning/windows.md).
+#[cfg(unix)] // It names the XDG folders (sdlc/planning/archive/windows.md).
 #[test]
 fn a_seeded_engine_equals_one_given_each_value() {
     let matched = ANSWERED.replace("jev-1.13.0", "model-from-config");

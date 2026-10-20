@@ -400,7 +400,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     assert!(budget.reserve(Some(2), None).is_err());
 }
 
-// Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
+// Windows reports a refused loopback port as unreachable (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_connection_that_never_opened_is_retried_once_and_keeps_the_refused_kind() {

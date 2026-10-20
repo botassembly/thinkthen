@@ -1,5 +1,7 @@
 # Confirmation (re-review of the revised branches)
 
+Ticket: [0085](../tickets/0085-build-the-real-engine-facade.md), [0086](../tickets/0086-expose-the-public-rust-api.md), [0093](../tickets/0093-port-the-rust-examples-as-the-first-binding-crate.md), [0094](../tickets/0094-port-the-c-interface.md), [0096](../tickets/0096-recover-after-fork.md), [0098](../tickets/0098-build-the-binding-members.md)
+
 Reviewer: the same read-only Claude session, 2026-09-24. Read 0085 `d5be12cc`, 0096 `0280bddb`, 0086 `84e00a08`, 0093 `6467d4e7` (ADR 0047), 0094 `1e30b97c` (including `probes/c-churn/churn.c`), main `fdb7c535` (port guide and plan), and 0095's rule on relate `fields`. Nothing was built or run.
 
 - 0085 ACCEPT. All three findings are fixed. The sending-thread decision is sound. It keeps the calling thread free of sends that 0078's mask does not cover. It lets 0097's check poll during single sends, and one scoped spawn per live call is cheap. Follow-up edit, not blocking: the SIGUSR1 test must first install a no-op handler through the existing `signal_hook::flag::register`, because SIGUSR1's default action kills the test process.

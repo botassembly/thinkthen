@@ -1,5 +1,7 @@
 # Prepared request and campaign code review
 
+Ticket: [0549](../tickets/0549-fast-valid-release-campaign.md), [0550](../tickets/0550-binding-defects-from-adversarial-review.md), [0551](../tickets/0551-one-named-request-constructor.md), [0552](../tickets/0552-c-library-runs-the-shared-request.md), [0553](../tickets/0553-python-r-host-request-residue.md), [0554](../tickets/0554-engine-methods-build-requests.md), [0555](../tickets/0555-slim-binding-parity-cases.md), [0556](../tickets/0556-blocking-session-read.md), [0558](../tickets/0558-cut-rust-source-below-the-ceiling.md)
+
 Two fresh read-only reviewers searched every Changes item in tickets 0549 through 0556 and all five 0558 amendments. The review used immutable prepared code: `f3ab2eb935b3fbcb8b24301c1f7db4bfdc7c4558` for request, binding, session and cleanup changes; `ad4b49b4aed14b78749a7d22620d64784008114f` for campaign preparation; and `391d562b25cfacb32cc9071db86e7d72cf263874` for parity tiers. Ticket criteria came from `60773e13d`. The reviewers ran no builds or tests and inspected no active campaign logs, output or processes. This evidence concerns prepared source, not a qualified release revision.
 
 The review found a duplicated function-to-input-kind rule in `libraries/php/src/session/operation.php:30`: PHP chooses units for find, entities for relate and records otherwise. Existing installed cases cover behavior, but the handwritten mapping violates the shared-constructor requirement. The structural cause is truth restated outside the core.

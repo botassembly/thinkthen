@@ -20,7 +20,7 @@ Each item names a place where the public API (ticket 0084, `crates/thinkthen/src
 
 ## 6. The engine reuse test and a library warm call
 
-`sdlc/planning/quality-plan.md` has the row "Engine reuse: two calls in one process, module-level and object API both, open one connection on a counting stub; each database extension does the same after a warm call." No such test exists for the library free functions, one engine object, or a database after `thinkthen_warm`. The libraries have no explicit warm call. The product-side reading of 2026-09-22, which Ian can overturn, keeps the test at low priority and says construction never touches the wire.
+`sdlc/planning/archive/quality-plan.md` has the row "Engine reuse: two calls in one process, module-level and object API both, open one connection on a counting stub; each database extension does the same after a warm call." No such test exists for the library free functions, one engine object, or a database after `thinkthen_warm`. The libraries have no explicit warm call. The product-side reading of 2026-09-22, which Ian can overturn, keeps the test at low priority and says construction never touches the wire.
 
 Done when the quality-plan row passes on every surface, and the library contract says whether a library `warm` exists.
 

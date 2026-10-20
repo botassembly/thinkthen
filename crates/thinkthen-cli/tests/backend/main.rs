@@ -35,11 +35,11 @@ mod backoff;
 )]
 mod batching;
 mod blank_lines;
-// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod cache_configuration;
 mod cache_identity;
-// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod cache_partial;
 #[cfg(unix)]
@@ -55,13 +55,13 @@ mod choosing;
     reason = "fixture setup must run the compiled CLI"
 )]
 mod command_namespace;
-// Windows does not tell the command that its output reader closed (sdlc/planning/windows.md).
+// Windows does not tell the command that its output reader closed (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod closed_pipe;
-// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod default_cache;
-// Its cases set Unix folder modes (sdlc/planning/windows.md).
+// Its cases set Unix folder modes (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod default_cache_storage;
 mod distribution_total;

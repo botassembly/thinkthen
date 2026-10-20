@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Every relative link on the README, the documentation plan, and the how-to pages goes somewhere.
+"""Every relative link on the README and the how-to pages goes somewhere.
 
 Usage: pages [ROOT]. ROOT defaults to the repository. With --self-test, it
 runs the check against a small tree with one good link and one dead link.
@@ -34,8 +34,7 @@ def links(path):
 
 def check(root):
     root = root.resolve()
-    pages = [root / "README.md", root / "demos" / "README.md",
-             root / "sdlc" / "planning" / "documentation-plan.md"]
+    pages = [root / "README.md", root / "demos" / "README.md"]
     tracked = set(tracked_files(root))
     pages += [path for path in sorted(tracked)
               if path.parent.parent == root / 'demos' and path.relative_to(root).match('demos/[0-9]*/README.md')]

@@ -59,7 +59,7 @@ pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
     ]
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {

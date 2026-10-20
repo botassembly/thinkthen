@@ -1,5 +1,7 @@
 # Windows
 
+Background, not a plan. The one plan is [milestones.md](../milestones.md).
+
 Status: stage 0 landed through ticket 0373. Ian's 2026-10-05 ruling keeps the command line/Rust crate, C DLL and Python wheel in 0.2; Node, C# and JVM move to 0.3. Each 0.2 target is tested once on a real Windows runner before release, in one combined run. Earlier size estimates remain historical.
 
 This page is the one home of the Windows plan. It holds the stages, the surfaces that stay Unix-only, the verdict for each surface, the decision record, the stage 1 difficulty report and the findings stage 0 leaves open.
@@ -8,7 +10,7 @@ This page is the one home of the Windows plan. It holds the stages, the surfaces
 
 - 2026-10-01, Ian: start Windows stage 0 now. Stage 0 promises users nothing new and must not change Linux or macOS behavior. Stage 1 is assigned to 0.2. Ian may pull stage 1 into 0.1, so stage 0 also measures how hard stage 1 is. Ian can overturn this ruling.
 - 2026-10-01, Ian: keep all Windows work in 0.2. Stage 1 is not pulled into 0.1. This follows the stage 1 report's recommendation below. Ian can overturn this ruling.
-- [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md) item 6: if Ian pulls stage 1 into 0.1, it lands on main before the `release/0.1` cut, and the cut moves later.
+- [ADR 0116](../adr/0116-release-branches-cut-at-the-release-candidate.md) item 6: if Ian pulls stage 1 into 0.1, it lands on main before the `release/0.1` cut, and the cut moves later.
 - ADR 0017 and ticket 0062 chose `%APPDATA%\thinkthen\config.json` for the configuration file and `%LOCALAPPDATA%\thinkthen\cache` for the answer cache. Ticket 0360 chose `%LOCALAPPDATA%\thinkthen\usage` for the usage totals. Stage 0 implements these folders.
 - Coordinator default, which Ian can overturn: the target is `x86_64-pc-windows-msvc`. The GNU target and ARM64 wait for stage 3.
 
@@ -186,11 +188,11 @@ Tickets 0380 to 0382 carry milestone 0.2; 0383 to 0385 carry milestone 0.3. The 
 
 | Ticket | Surface | Slices | Lines | Findings |
 | --- | --- | --- | --- | --- |
-| [0380](../tickets/0380-windows-command-line-and-rust-crate.md) | Command line, Rust crate, shared release work | 3 to 4 | 730 to 1,280 | W1 to W7 |
-| [0381](../tickets/0381-windows-c-dll.md) | C DLL | 2 | 400 to 900 | none |
-| [0382](../tickets/0382-windows-python-wheel.md) | Python wheel | 1 to 2 | 150 to 350 | none |
-| [0383](../tickets/0383-windows-node-addon.md) | Node addon | 1 | 100 to 250 | none |
-| [0384](../tickets/0384-windows-csharp.md) | C# | 1 | 150 to 400 | none |
-| [0385](../tickets/0385-windows-jvm.md) | JVM | 1 | 50 to 200 | none |
+| [0380](../../tickets/0380-windows-command-line-and-rust-crate.md) | Command line, Rust crate, shared release work | 3 to 4 | 730 to 1,280 | W1 to W7 |
+| [0381](../../tickets/0381-windows-c-dll.md) | C DLL | 2 | 400 to 900 | none |
+| [0382](../../tickets/0382-windows-python-wheel.md) | Python wheel | 1 to 2 | 150 to 350 | none |
+| [0383](../../tickets/0383-windows-node-addon.md) | Node addon | 1 | 100 to 250 | none |
+| [0384](../../tickets/0384-windows-csharp.md) | C# | 1 | 150 to 400 | none |
+| [0385](../../tickets/0385-windows-jvm.md) | JVM | 1 | 50 to 200 | none |
 
 W8 stays with stage 3.

@@ -1,5 +1,7 @@
 # Tuning proposals: value and design review
 
+Ticket: [0256](../tickets/0256-audit-tuned-output.md), [0257](../tickets/0257-audit-case-evidence.md)
+
 Fresh independent Sol Medium review examined clean main `a16da4a5`, all seven named issue files, the landed 0256/0257 contracts, current cache/facts paths, and local experiments296/297. Ian asked whether the remaining requests are valuable enough to build. The review used the bounded adversarial-project-review workflow and made no source change, provider call or broad test run. This record preserves the independent conclusions and the coordinator's release ordering; Ian can overturn them.
 
 | Original request | Assessment | Release decision |
