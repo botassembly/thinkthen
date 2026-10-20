@@ -27,7 +27,7 @@ def query() -> str:
 
 
 def verify(rows: str, count: str, capture: str) -> None:
-    assert FIXTURE["schema"] == "thinkthen.portable-batch-records/1"
+    assert FIXTURE["schema"] == "thinkthen.portable-batch-records"
     assert rows.splitlines() == [f"{index}:true" for index in range(5)], rows
     # The content cut is gone (ADR 0111), so the five texts ride one request.
     assert count == "1", count

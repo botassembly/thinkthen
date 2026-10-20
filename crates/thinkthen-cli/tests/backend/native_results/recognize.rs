@@ -4,7 +4,7 @@ use super::*;
 fn recognition_details_replay_original_stages_and_counts_across_source_coordinate_changes() {
     let root = crate::input_sources::folder("complete-command-recognize").unwrap();
     let question = root.join("question.json");
-    std::fs::write(&question, r#"{"recognize":{"kinds":{"person":null,"organization":null}},"name":"names","wording_version":2,"item_schema":{"type":"string"}}"#).unwrap();
+    std::fs::write(&question, r#"{"recognize":{"kinds":{"person":null,"organization":null}},"name":"names","item_schema":{"type":"string"}}"#).unwrap();
     let input = root.join("text.txt");
     std::fs::write(&input, "Ada met Acme.\n\nAda met Acme.\n").unwrap();
     let recording = root.join("recording");
@@ -94,7 +94,7 @@ fn live_sources(live: &[Value], input: &std::path::Path) {
     assert_ne!(live[0]["answer_id"], live[1]["answer_id"]);
     for (row, physical) in live.iter().zip([1, 3]) {
         assert_eq!(row["question"]["name"], "names");
-        assert_eq!(row["question"]["wording_version"], 2);
+
         assert_eq!(row["value"]["entities"][0]["file"], input.to_str().unwrap());
         assert_eq!(row["value"]["entities"][0]["first_line"], physical);
         assert_eq!(row["value"]["entities"][1]["last_line"], physical);

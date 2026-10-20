@@ -647,7 +647,7 @@ fn recognition_text_limits_apply_before_sending_and_belong_to_recognition() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     for limit in [1, 2] {
-        let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"recognize","question":{{"kind":"definition","value":{{"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
+        let request = Request::from_json(&format!(r#"{{"call":{{"function":"recognize","question":{{"kind":"definition","value":{{"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
         let arguments = request.call.arguments().clone();
         let error = engine
             .call("recognize", arguments, RequestEnvironment::default())

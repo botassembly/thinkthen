@@ -4,13 +4,13 @@ import re
 
 def render(facts, roots=None, prefix="Answer"):
     records = facts['records']
-    roots = roots or ('thinkthen_complete_facts_v1', 'thinkthen_complete_immediate_facts_v1', 'thinkthen_complete_error_v1')
+    roots = roots or ('thinkthen_complete_facts', 'thinkthen_complete_immediate_facts', 'thinkthen_complete_error')
     selected, pending = {}, list(roots)
-    special = {'thinkthen_complete_utf8_v1': 'thinkthen_cobol_AnswerText', 'thinkthen_complete_json_v1': 'tt_value'}
+    special = {'thinkthen_complete_utf8': 'thinkthen_cobol_AnswerText', 'thinkthen_complete_json': 'tt_value'}
     def name(native):
         if native in special:
             return special[native]
-        words = native.removeprefix('thinkthen_complete_').removesuffix('_v1').split('_')
+        words = native.removeprefix('thinkthen_complete_').split('_')
         return 'thinkthen_cobol_' + prefix + ''.join(word.title() for word in words)
     def base(kind):
         return re.sub(r'\b(const|struct|union)\b|\*', '', kind).strip()
@@ -18,7 +18,7 @@ def render(facts, roots=None, prefix="Answer"):
         key = pending.pop()
         if key in selected or key in special:
             continue
-        fields = {k: v for k, v in records[key]['fields'].items() if '.' not in k and not (key == 'thinkthen_complete_extension_v1' and k == 'json')}
+        fields = {k: v for k, v in records[key]['fields'].items() if '.' not in k and not (key == 'thinkthen_complete_extension' and k == 'json')}
         for member, field in fields.items():
             if field['type'] == 'union':
                 union = next(name for name, owners in facts['union_owners'].items() if (key, member) in [tuple(owner) for owner in owners])
@@ -47,7 +47,7 @@ def render(facts, roots=None, prefix="Answer"):
         for member, field in fields.items():
             kind = field['type']; nested = base(kind)
             if union:
-                constant = key.removesuffix('_data_v1').upper() + '_' + member.upper() + '_V1'
+                constant = key.removesuffix('_data').upper() + '_' + member.upper()
                 if constant not in facts['constants']:
                     raise ValueError('unknown diagnostic union arm: ' + constant)
                 clone.append('if(kind==' + constant + ') {')
@@ -56,20 +56,20 @@ def render(facts, roots=None, prefix="Answer"):
                 output.append(('const ' + typ + ' *' if '*' in kind else typ + ' ') + member + ';')
                 if member == 'data' and 'len' in fields:
                     output[-1] = 'const ' + typ + ' *data;'
-                    item_type = 'const tt_value *' if nested == 'thinkthen_complete_json_v1' else typ
-                    if nested == 'thinkthen_complete_json_v1': output[-1] = 'const tt_value *const *data;'
+                    item_type = 'const tt_value *' if nested == 'thinkthen_complete_json' else typ
+                    if nested == 'thinkthen_complete_json': output[-1] = 'const tt_value *const *data;'
                     clone += [f'{item_type} *items=allocate(a,input->len,sizeof(*items));', 'out->data=items; out->len=input->len;', 'if(!items) return a->code;', 'for(size_t i=0;i<input->len && !code;i++) {']
                     source = 'input->data[i]' if kind.count('*') == 2 else '&input->data[i]'
-                    if nested == 'thinkthen_complete_utf8_v1':
+                    if nested == 'thinkthen_complete_utf8':
                         clone.append(f'code=answer_text(*({source}),items+i);')
-                    elif nested == 'thinkthen_complete_json_v1':
+                    elif nested == 'thinkthen_complete_json':
                         clone.append(f'items[i]=answer_original(a,{source}); code=a->code;')
                     else:
                         clone.append(f'code=copy_{typ}(a,{source},items+i);')
                     clone.append('}')
-                elif nested == 'thinkthen_complete_utf8_v1':
+                elif nested == 'thinkthen_complete_utf8':
                     clone.append(f'if(!code) code=answer_text(input->{member},&out->{member});')
-                elif nested == 'thinkthen_complete_json_v1':
+                elif nested == 'thinkthen_complete_json':
                     clone.append(f'if(input->{member}) out->{member}=answer_original(a,input->{member});')
                 elif '*' in kind:
                     clone += [f'if(input->{member}) {{', f'{typ} *value=allocate(a,1,sizeof(*value));', 'if(!value) return a->code;', f'if(!code) code=copy_{typ}(a,input->{member},value); out->{member}=value;', '}']

@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.backend-profile-conformance/1",
+  "schema": "thinkthen.backend-profile-conformance",
   "cases": [
     {"id":"evidence-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"name":"edge","max_evidence_bytes":189},"expect":"pass"},
     {"id":"evidence-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"name":"edge","max_evidence_bytes":188},"expect":{"kind":"evidence bytes","limit":188,"actual":189}},

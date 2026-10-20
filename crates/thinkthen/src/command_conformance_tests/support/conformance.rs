@@ -17,7 +17,7 @@ pub(super) struct Document {
 
 impl Document {
     pub(super) fn validate_header(&self, verbs: &[&str], errors: &[&str]) -> Result<(), String> {
-        if self.schema != "thinkthen.conformance/1"
+        if self.schema != "thinkthen.conformance"
             || self.backend_url != "https://api.typesafe.ai/v1/systemone"
             || self.case_count != self.cases.len()
         {

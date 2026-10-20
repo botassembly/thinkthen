@@ -549,7 +549,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSString *> *profile;
 @property(nonatomic, readonly) TTPresence<id> *text;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @end
 @interface TTNameOdds : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, NSNumber *> *> *edges;
@@ -616,7 +615,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTRecognitionStageContext *> *stageContext;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @end
 @interface TTRelateFields : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
@@ -635,7 +633,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRelationRule *> *> *relations;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @end
 @interface TTRelatedEntity : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
@@ -952,7 +949,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSString *> *name;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
 @property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *options;
 @property(nonatomic, readonly) TTPresence<id> *text;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
@@ -966,7 +962,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSString *> *name;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
 @property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @property(nonatomic, readonly) TTPresence<id> *falseValue;
 @property(nonatomic, readonly) TTPresence<id> *text;
 @property(nonatomic, readonly) TTPresence<id> *trueValue;
@@ -981,7 +976,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSString *> *name;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
 @property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *levels;
 @property(nonatomic, readonly) TTPresence<id> *text;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
@@ -995,7 +989,6 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSString *> *name;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
 @property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *labels;
 @property(nonatomic, readonly) TTPresence<id> *text;
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
@@ -1309,7 +1302,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id options;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAnnotateQuestionDecideBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
@@ -1320,7 +1312,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAnnotateQuestionScoreBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
@@ -1329,7 +1320,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAnnotateQuestionTagBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
@@ -1339,7 +1329,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id tag;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredChooseBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1352,7 +1341,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id options;
 @property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredDecideBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1366,7 +1354,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredFindBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
@@ -1376,7 +1363,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredInputDeclarationObjectBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) NSDictionary * properties;
@@ -1401,7 +1387,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) TTRelateQuestionBuilder * relate;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredRelationBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) NSNumber * either;
@@ -1421,7 +1406,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTAuthoredTagBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1434,7 +1418,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id tag;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTSettings : TTRequestObject
 @property(nonatomic, strong, nullable) NSString * backend;
@@ -1495,7 +1478,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) TTRecognizeQuestionBuilder * recognize;
 @property(nonatomic, strong, nullable) id relationThreshold;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTRecognizeQuestionBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id entityDefinition;

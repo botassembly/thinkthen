@@ -24,7 +24,7 @@ try {
  if(args[0]=="plan") {
   using var doc=JsonDocument.Parse(args[1]);var root=doc.RootElement;
   using var planned=Engine.Open(root.GetProperty("settings").TryGetProperty("batch",out var batch)?new EngineSettings {Batch=new RequestBatchInteger {Value=batch.GetUInt64()}}:new EngineSettings());
-  var plan=planned.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=new RequestFunctionDecide(),Question=new RequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new RequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new RequestItem {Original=new RequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
+  var plan=planned.Plan(new Request {Call=new RequestCall {Function=new RequestFunctionDecide(),Question=new RequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new RequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new RequestItem {Original=new RequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
   Console.WriteLine(JsonSerializer.Serialize(new { records=plan.Records, requests=plan.Requests, estimated_bytes=plan.EstimatedBytes, upper_bound=plan.UpperBound, token_estimate_method=plan.TokenEstimateMethod, largest_request_bytes=plan.LargestRequestBytes, largest_request_estimated_input_tokens=plan.LargestRequestEstimatedInputTokens, estimated_input_tokens=new {lower=plan.EstimatedInputTokens.Lower,upper=plan.EstimatedInputTokens.Upper}, first_body_utf8=plan.FirstBodyUtf8.State==ThinkThen.Results.PresenceState.Value?plan.FirstBodyUtf8.Value:null }));return;
  }
  // Shared J1 fixtures are test data. Authored definitions go through the native parser;

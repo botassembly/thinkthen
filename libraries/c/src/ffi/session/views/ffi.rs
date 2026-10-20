@@ -10,7 +10,7 @@ use super::*;
 mod extension_values;
 use crate::complete_session_views as generated;
 
-fn text(value: thinkthen_complete_utf8_v1) -> String {
+fn text(value: thinkthen_complete_utf8) -> String {
     if value.len == 0 {
         return String::new();
     }
@@ -30,36 +30,36 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
         let packet = &*projection.root;
         assert_eq!(
             packet.kind,
-            generated::THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1
+            generated::THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL
         );
         &*packet.data.terminal
     };
     assert_eq!(
         terminal.answer.presence,
-        generated::THINKTHEN_COMPLETE_PRESENCE_NULL_V1
+        generated::THINKTHEN_COMPLETE_PRESENCE_NULL
     );
     // SAFETY: the terminal owns its required resolution view.
     assert_eq!(
         unsafe { (*terminal.resolution).kind },
-        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1
+        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED
     );
     assert_eq!(
         terminal.facts.presence,
-        generated::THINKTHEN_COMPLETE_PRESENCE_NULL_V1
+        generated::THINKTHEN_COMPLETE_PRESENCE_NULL
     );
     assert_eq!(
         terminal.failure.presence,
-        generated::THINKTHEN_COMPLETE_PRESENCE_VALUE_V1
+        generated::THINKTHEN_COMPLETE_PRESENCE_VALUE
     );
     // SAFETY: selected failure arm and all nested buffers share projection lifetime.
     let failure = unsafe { &*terminal.failure.value };
     assert_eq!(
         failure.facts.presence,
-        generated::THINKTHEN_COMPLETE_PRESENCE_MISSING_V1
+        generated::THINKTHEN_COMPLETE_PRESENCE_MISSING
     );
     assert_eq!(
         unsafe { (*failure.resolution).kind },
-        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1
+        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED
     );
     let error = unsafe { &*failure.error };
     let stopped = unsafe { &*error.stopped };
@@ -86,13 +86,13 @@ fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views()
             r#"{"z":1e400,"a":-0,"later":[null,true,"x",{"outer":{"inner":{"leaf":"kept"}}}]}"#,
         );
         let node = Node::parse(&input).expect("authored JSON");
-        generated::read_thinkthen_complete_decide_value_v1(&node, &mut store)
+        generated::read_thinkthen_complete_decide_value(&node, &mut store)
             .expect("arbitrary value")
             .value
     };
     // SAFETY: input node is gone; storage still owns every copied nested view.
     let object = unsafe {
-        assert_eq!((*view).kind, THINKTHEN_COMPLETE_JSON_OBJECT_V1);
+        assert_eq!((*view).kind, THINKTHEN_COMPLETE_JSON_OBJECT);
         (*view).data.object
     };
     let entries = unsafe { std::slice::from_raw_parts(object.data, object.len) };
@@ -105,7 +105,7 @@ fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views()
     );
     for (entry, expected) in entries.iter().take(2).zip(["1e400", "-0"]) {
         let number = unsafe { &*entry.value };
-        assert_eq!(number.kind, THINKTHEN_COMPLETE_JSON_NUMBER_V1);
+        assert_eq!(number.kind, THINKTHEN_COMPLETE_JSON_NUMBER);
         assert_eq!(text(unsafe { number.data.number }), expected);
     }
     let array = unsafe { (*entries[2].value).data.array };
@@ -116,10 +116,10 @@ fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views()
             .map(|value| unsafe { (**value).kind })
             .collect::<Vec<_>>(),
         [
-            THINKTHEN_COMPLETE_JSON_NULL_V1,
-            THINKTHEN_COMPLETE_JSON_BOOLEAN_V1,
-            THINKTHEN_COMPLETE_JSON_STRING_V1,
-            THINKTHEN_COMPLETE_JSON_OBJECT_V1
+            THINKTHEN_COMPLETE_JSON_NULL,
+            THINKTHEN_COMPLETE_JSON_BOOLEAN,
+            THINKTHEN_COMPLETE_JSON_STRING,
+            THINKTHEN_COMPLETE_JSON_OBJECT
         ]
     );
     let mut nested = values[3];
@@ -129,6 +129,6 @@ fn arbitrary_authored_json_keeps_order_and_exact_numeric_tokens_in_owned_views()
         assert_eq!(text(entry.name), key);
         nested = entry.value;
     }
-    assert_eq!(unsafe { (*nested).kind }, THINKTHEN_COMPLETE_JSON_STRING_V1);
+    assert_eq!(unsafe { (*nested).kind }, THINKTHEN_COMPLETE_JSON_STRING);
     assert_eq!(text(unsafe { (*nested).data.string }), "kept");
 }

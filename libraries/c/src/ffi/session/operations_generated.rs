@@ -7,54 +7,54 @@
 use crate::failures;
 use thinkthen::ErrorKind;
 /// Push transferred one descriptor to the session.
-pub const THINKTHEN_SESSION_ACCEPTED_V1: u32 = 0;
+pub const THINKTHEN_SESSION_ACCEPTED: u32 = 0;
 /// Push retained nothing; retry the same descriptor.
-pub const THINKTHEN_SESSION_FULL_V1: u32 = 1;
+pub const THINKTHEN_SESSION_FULL: u32 = 1;
 /// Intake closed; stop advancing the producer.
-pub const THINKTHEN_SESSION_CLOSED_V1: u32 = 2;
+pub const THINKTHEN_SESSION_CLOSED: u32 = 2;
 /// Read transferred one independent packet owner.
-pub const THINKTHEN_SESSION_RESULT_V1: u32 = 0;
+pub const THINKTHEN_SESSION_RESULT: u32 = 0;
 /// Work has not settled and no packet is ready.
-pub const THINKTHEN_SESSION_PENDING_V1: u32 = 1;
+pub const THINKTHEN_SESSION_PENDING: u32 = 1;
 /// Terminal was read and no more output will arrive.
-pub const THINKTHEN_SESSION_END_V1: u32 = 2;
+pub const THINKTHEN_SESSION_END: u32 = 2;
 /// Wait only for results, end or cancel; input room cannot wake this wait.
-pub const THINKTHEN_SESSION_WAIT_RESULT_V1: u32 = 0;
+pub const THINKTHEN_SESSION_WAIT_RESULT: u32 = 0;
 /// Wait for result, input room/closure, end or cancel.
-pub const THINKTHEN_SESSION_WAIT_INPUT_V1: u32 = 1;
+pub const THINKTHEN_SESSION_WAIT_INPUT: u32 = 1;
 /// Drain output after cancel without waking repeatedly for cancellation.
-pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1: u32 = 2;
+pub const THINKTHEN_SESSION_WAIT_SETTLEMENT: u32 = 2;
 /// Arm one exclusive settlement reader and check readiness immediately; timeout must be zero.
-pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1: u32 = 3;
+pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM: u32 = 3;
 /// Wait for final output or cancellation requested since this reader armed.
-pub const THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1: u32 = 4;
+pub const THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT: u32 = 4;
 /// A result or terminal packet is ready; no packet has been consumed.
-pub const THINKTHEN_SESSION_READY_RESULT_V1: u32 = 0;
+pub const THINKTHEN_SESSION_READY_RESULT: u32 = 0;
 /// Caller-supplied input has room.
-pub const THINKTHEN_SESSION_READY_INPUT_V1: u32 = 1;
+pub const THINKTHEN_SESSION_READY_INPUT: u32 = 1;
 /// Caller-supplied input has closed.
-pub const THINKTHEN_SESSION_READY_CLOSED_V1: u32 = 2;
+pub const THINKTHEN_SESSION_READY_CLOSED: u32 = 2;
 /// Every output packet has been consumed.
-pub const THINKTHEN_SESSION_READY_END_V1: u32 = 3;
+pub const THINKTHEN_SESSION_READY_END: u32 = 3;
 /// Intake was cancelled; settlement can still be pending.
-pub const THINKTHEN_SESSION_READY_CANCELLED_V1: u32 = 4;
+pub const THINKTHEN_SESSION_READY_CANCELLED: u32 = 4;
 /// The caller-given timeout passed.
-pub const THINKTHEN_SESSION_READY_TIMEOUT_V1: u32 = 5;
+pub const THINKTHEN_SESSION_READY_TIMEOUT: u32 = 5;
 pub(crate) fn push_status(value: thinkthen::RequestSessionPushStatus) -> u32 {
     match value {
-        thinkthen::RequestSessionPushStatus::Accepted => THINKTHEN_SESSION_ACCEPTED_V1,
-        thinkthen::RequestSessionPushStatus::Full => THINKTHEN_SESSION_FULL_V1,
-        thinkthen::RequestSessionPushStatus::Closed => THINKTHEN_SESSION_CLOSED_V1,
+        thinkthen::RequestSessionPushStatus::Accepted => THINKTHEN_SESSION_ACCEPTED,
+        thinkthen::RequestSessionPushStatus::Full => THINKTHEN_SESSION_FULL,
+        thinkthen::RequestSessionPushStatus::Closed => THINKTHEN_SESSION_CLOSED,
     }
 }
 pub(crate) fn ready_status(value: thinkthen::RequestSessionReady) -> u32 {
     match value {
-        thinkthen::RequestSessionReady::Result => THINKTHEN_SESSION_READY_RESULT_V1,
-        thinkthen::RequestSessionReady::Input => THINKTHEN_SESSION_READY_INPUT_V1,
-        thinkthen::RequestSessionReady::Closed => THINKTHEN_SESSION_READY_CLOSED_V1,
-        thinkthen::RequestSessionReady::End => THINKTHEN_SESSION_READY_END_V1,
-        thinkthen::RequestSessionReady::Cancelled => THINKTHEN_SESSION_READY_CANCELLED_V1,
-        thinkthen::RequestSessionReady::Timeout => THINKTHEN_SESSION_READY_TIMEOUT_V1,
+        thinkthen::RequestSessionReady::Result => THINKTHEN_SESSION_READY_RESULT,
+        thinkthen::RequestSessionReady::Input => THINKTHEN_SESSION_READY_INPUT,
+        thinkthen::RequestSessionReady::Closed => THINKTHEN_SESSION_READY_CLOSED,
+        thinkthen::RequestSessionReady::End => THINKTHEN_SESSION_READY_END,
+        thinkthen::RequestSessionReady::Cancelled => THINKTHEN_SESSION_READY_CANCELLED,
+        thinkthen::RequestSessionReady::Timeout => THINKTHEN_SESSION_READY_TIMEOUT,
     }
 }
 pub(crate) fn failure_code(value: thinkthen::ErrorKind) -> i32 {
@@ -83,7 +83,7 @@ pub(crate) fn failure_message(value: thinkthen::ErrorKind) -> &'static str {
 /// immediate session failure on this thread or thread exit.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_session_error_view()
--> *const crate::session::views::thinkthen_error_view_v1 {
+-> *const crate::session::views::thinkthen_error_details {
     failures::session_guard(std::ptr::null(), failures::session_view)
 }
 
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn thinkthen_session_result_json(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_result_view(
     result: *const crate::session::SessionResultHandle,
-    out: *mut *const crate::session::views_generated::thinkthen_complete_session_packet_v1,
+    out: *mut *const crate::session::views_generated::thinkthen_complete_session_packet,
 ) -> std::ffi::c_int {
     failures::session_call(|| {
         if out.is_null() {
@@ -264,10 +264,10 @@ pub unsafe extern "C" fn thinkthen_session_result_view(
 /// engine is live for the call. Both outputs are nonnull, aligned, writable,
 /// nonoverlapping slots. Destruction waits for concurrent callers to return.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_usage_persistence_v1(
+pub unsafe extern "C" fn thinkthen_engine_usage_persistence(
     engine: *const crate::EngineHandle,
-    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
-    out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
+    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence,
+    out_advice: *mut crate::session::views::thinkthen_complete_utf8,
 ) -> std::ffi::c_int {
     failures::session_call(|| {
         if out_state.is_null() {
@@ -298,12 +298,12 @@ pub unsafe extern "C" fn thinkthen_engine_usage_persistence_v1(
 /// Failed carries static native safe advice readable after engine destruction
 /// while the library remains loaded. Every nonzero return preserves outputs.
 /// # Safety
-/// The engine and output obligations of usage_persistence_v1 apply.
+/// The engine and output obligations of usage_persistence apply.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_finish_usage_status_v1(
+pub unsafe extern "C" fn thinkthen_engine_finish_usage_status(
     engine: *const crate::EngineHandle,
-    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
-    out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
+    out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence,
+    out_advice: *mut crate::session::views::thinkthen_complete_utf8,
 ) -> std::ffi::c_int {
     failures::session_call(|| {
         if out_state.is_null() {
@@ -488,8 +488,8 @@ pub unsafe extern "C" fn thinkthen_session_new_with_surface(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
     engine: *const crate::EngineHandle,
-    request: *const crate::ffi::session::NamedRequestV1,
-    surface: crate::session::views::thinkthen_complete_utf8_v1,
+    request: *const crate::ffi::session::NamedRequest,
+    surface: crate::session::views::thinkthen_complete_utf8,
     out: *mut *mut crate::session::SessionHandle,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {

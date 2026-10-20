@@ -20,7 +20,7 @@ pub struct SessionResultHandle {
 impl SessionResultHandle {
     pub(crate) fn view(
         &self,
-    ) -> Result<*const views_generated::thinkthen_complete_session_packet_v1, thinkthen::ErrorKind>
+    ) -> Result<*const views_generated::thinkthen_complete_session_packet, thinkthen::ErrorKind>
     {
         let mut cached = self.view.lock().map_err(|_| thinkthen::ErrorKind::Defect)?;
         if cached.is_none() {

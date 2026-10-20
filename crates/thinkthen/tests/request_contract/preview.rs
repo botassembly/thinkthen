@@ -284,7 +284,6 @@ fn preview_retains_json_context_shortlists_and_matches_execution() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     let request = Request::from_json(r#"{
-      "schema":"thinkthen.request/1",
       "call":{"function":"choose","question":{"kind":"definition","value":{"choose":"Which?","options":["fallback","other"]}},
         "input":{"kind":"records","items":[
           {"original":{"kind":"json","value":{"body":"Alpha.","private":"unsent"}},"context":"policy","options":[{"name":"OUT","description":null},{"name":"other"}]},

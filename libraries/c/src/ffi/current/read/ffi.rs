@@ -5,7 +5,7 @@
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures::Failure;
-use crate::ffi::carriers::StringV1;
+use crate::ffi::carriers::CountedString;
 pub(crate) fn required<T>(ptr: *const T) -> Result<(), Failure> {
     if ptr.is_null() {
         Err(Failure::usage("a null required pointer"))
@@ -27,7 +27,7 @@ pub(crate) unsafe fn slice<'a, T>(ptr: *const T, len: usize) -> Result<&'a [T], 
     // SAFETY: checked nonnull pointer and addressable extent; caller supplies readable storage.
     Ok(unsafe { std::slice::from_raw_parts(ptr, len) })
 }
-pub(crate) unsafe fn string<'a>(value: StringV1) -> Result<&'a str, Failure> {
+pub(crate) unsafe fn string<'a>(value: CountedString) -> Result<&'a str, Failure> {
     // SAFETY: the host promises exactly len readable bytes.
     let bytes = unsafe { slice(value.data.cast::<u8>(), value.len) }?;
     std::str::from_utf8(bytes).map_err(|_| Failure::usage("counted text is not UTF-8"))

@@ -10,11 +10,11 @@ public sealed partial class Engine
     public UsagePersistenceStatus FinishUsageStatus() => Persistence(true);
     private UsagePersistenceStatus Persistence(bool finish) => Live(_ =>
     {
-        CompleteUsagePersistenceV1 state;
-        CompleteUtf8V1 advice;
+        CompleteUsagePersistence state;
+        CompleteUtf8 advice;
         int code = finish
-            ? NativeUsage.thinkthen_engine_finish_usage_status_v1(ownedEngine, out state, out advice)
-            : NativeUsage.thinkthen_engine_usage_persistence_v1(ownedEngine, out state, out advice);
+            ? NativeUsage.thinkthen_engine_finish_usage_status(ownedEngine, out state, out advice)
+            : NativeUsage.thinkthen_engine_usage_persistence(ownedEngine, out state, out advice);
         NativeSession.Check(code);
         var kind = (UsagePersistenceState)state.kind;
         if (!Enum.IsDefined(kind)) throw new InvalidOperationException("Invalid native persistence state.");

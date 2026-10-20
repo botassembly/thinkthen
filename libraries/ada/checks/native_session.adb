@@ -37,7 +37,7 @@ procedure Native_Session is
    begin
       if not Condition then raise Program_Error with Message; end if;
    end Require;
-   procedure Metadata (M : access constant thinkthen_complete_meta_v1) is
+   procedure Metadata (M : access constant thinkthen_complete_meta) is
    begin
       Require (M /= null and then Text (M.model)'Length > 0 and then
         Text (M.tool)'Length > 0 and then Text (M.url)'Length > 0 and then
@@ -59,9 +59,9 @@ procedure Native_Session is
             when Finished => exit;
             when Result =>
                declare
-                  P : constant access constant thinkthen_complete_session_packet_v1 := View (Value);
+                  P : constant access constant thinkthen_complete_session_packet := View (Value);
                begin
-                  if P.kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
+                  if P.kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL then
                      Terminal := True;
                      Close (Owner);
                      if Thinkthen.Sessions.Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
@@ -87,13 +87,13 @@ procedure Native_Session is
                      exit;
                   end if;
                   case P.kind is
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW =>
                         Seen := Text (P.data.decide_row.value.answer_id.value)'Length > 0 and then P.data.decide_row.value.meta /= null;
                         if Decision = 0 then
                            if State (P.data.decide_row.value.value.presence) /= Present or else
                               P.data.decide_row.value.value.value = null or else
                               P.data.decide_row.value.value.value.value = null or else
-                              P.data.decide_row.value.value.value.value.kind /= K_THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 or else
+                              P.data.decide_row.value.value.value.value.kind /= K_THINKTHEN_COMPLETE_JSON_BOOLEAN or else
                               P.data.decide_row.value.value.value.value.data.boolean /= 0 then
                               raise Program_Error with "false decision lost";
                            end if;
@@ -104,7 +104,7 @@ procedure Native_Session is
                            end if;
                         end if;
                         Metadata (P.data.decide_row.value.meta);
-                        Require (P.data.decide_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_YES_NO_V1 and then
+                        Require (P.data.decide_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_YES_NO and then
                           P.data.decide_row.value.answer.data.yes_no.probability = Odds, "decision odds changed");
                         if Located then
                            Require (State (P.data.decide_row.value.source.presence) = Present and then
@@ -112,40 +112,40 @@ procedure Native_Session is
                         end if;
                         if Images then Require (State (P.data.decide_row.value.images.presence) = Present and then
                           Index (P.data.decide_row.value.images.value.len) = 2, "ordered images missing"); end if;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW =>
                         Seen := Text (P.data.choose_row.value.answer_id.value)'Length > 0;
                         Metadata (P.data.choose_row.value.meta);
                         Require (State (P.data.choose_row.value.value.presence) = Present and then
                           Text (P.data.choose_row.value.value.value) = "billing" and then
-                          P.data.choose_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_CHOICE_V1 and then
+                          P.data.choose_row.value.answer.kind = K_THINKTHEN_COMPLETE_ANSWER_CHOICE and then
                           Index (P.data.choose_row.value.answer.data.choice.probabilities.len) = 3, "choice changed");
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW =>
                         Seen := Text (P.data.tag_row.value.answer_id.value)'Length > 0;
                         Metadata (P.data.tag_row.value.meta);
                         Require (Index (P.data.tag_row.value.value.len) = 2, "tags changed");
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW =>
                         Seen := Text (P.data.score_row.value.answer_id.value)'Length > 0;
                         Metadata (P.data.score_row.value.meta);
                         Require (abs (P.data.score_row.value.value - 1.0) < 0.00001, "score changed");
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW =>
                         Seen := Text (P.data.filter_row.value.answer_id.value)'Length > 0;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE =>
                         Seen := Index (P.data.rank_aggregate.value.len) > 0;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE =>
                         Seen := Text (P.data.find_aggregate.value.answer_id.value)'Length > 0;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW =>
                         Seen := Text (P.data.annotate_row.value.answer_id.value)'Length > 0;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE =>
                         declare
-                           type Recognition_Access is access constant thinkthen_complete_recognition_v1;
+                           type Recognition_Access is access constant thinkthen_complete_recognition;
                            Rows : array (1 .. Index (P.data.recognize_aggregate.value.len)) of Recognition_Access
                              with Import, Address => P.data.recognize_aggregate.value.data;
                         begin
                            for Row of Rows loop
                               Metadata (Row.meta);
-                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1, "recognition kind changed");
+                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES, "recognition kind changed");
                               declare
-                                 type Entity_Access is access constant thinkthen_complete_entity_v1;
+                                 type Entity_Access is access constant thinkthen_complete_entity;
                                  Entities : array (1 .. Index (Row.value.data.entities.entities.len)) of Entity_Access
                                    with Import, Address => Row.value.data.entities.entities.data;
                               begin
@@ -159,7 +159,7 @@ procedure Native_Session is
                            end loop;
                            Seen := Seen or else Entity_Count > 0;
                         end;
-                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1 =>
+                     when K_THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE =>
                         Seen := Text (P.data.relate_aggregate.value.answer_id.value)'Length > 0;
                      when others => null;
                   end case;

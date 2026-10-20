@@ -51,7 +51,7 @@ struct MismatchCase {
 fn shared_profile_cases_cross_the_facade_preparation() {
     let source: Document = serde_json::from_str(CASES).expect("main cases");
     let profiles: ProfileDocument = serde_json::from_str(PROFILES).expect("profile cases");
-    assert_eq!(profiles.schema, "thinkthen.backend-profile-conformance/1");
+    assert_eq!(profiles.schema, "thinkthen.backend-profile-conformance");
     let backend = Backend::resolve(None, None, DEFAULT_MODEL).expect("backend");
     for profile_case in profiles.cases {
         let case = source

@@ -1,22 +1,12 @@
 //! Validated author declaration constructors use the ordinary six error kinds.
 use super::Error;
-use crate::core::declaration::{
-    InputProperty, InputPropertyType, ObjectDeclaration, QuestionName, WordingVersion,
-};
+use crate::core::declaration::{InputProperty, InputPropertyType, ObjectDeclaration, QuestionName};
 
 impl QuestionName {
     /// Validate a case-sensitive lowercase ASCII author name of at most 64 bytes.
     /// # Errors
     /// Returns Usage for an invalid name, without reading any file.
     pub fn new(value: &str) -> Result<Self, Error> {
-        Self::validated(value).map_err(Error::refused)
-    }
-}
-impl WordingVersion {
-    /// Validate a wording version from 1 through 2147483647.
-    /// # Errors
-    /// Returns Usage outside the admitted range.
-    pub fn new(value: u32) -> Result<Self, Error> {
         Self::validated(value).map_err(Error::refused)
     }
 }

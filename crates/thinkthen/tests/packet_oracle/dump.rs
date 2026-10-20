@@ -48,7 +48,7 @@ pub(crate) fn request(document: &Document) -> Result<Request, Error> {
     };
     let function = serde_json::to_string(&document.verb).map_err(|_| usage("invalid function"))?;
     Request::from_json(&format!(
-        r#"{{"schema":"thinkthen.request/1","call":{{"function":{function},"question":{question},"input":{},"options":{}}}}}"#,
+        r#"{{"call":{{"function":{function},"question":{question},"input":{},"options":{}}}}}"#,
         document.input.get(),
         document.options.get()
     ))

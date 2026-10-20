@@ -8,9 +8,9 @@ def abi_type(value):
                'SessionHandle': 'crate::session::SessionHandle',
                'SessionResultHandle': 'crate::session::SessionResultHandle',
                'c_char': 'std::ffi::c_char',
-               'NamedRequestV1': 'crate::ffi::session::NamedRequestV1',
-               'thinkthen_complete_utf8_v1': 'crate::session::views::thinkthen_complete_utf8_v1'}
-    value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequestV1|thinkthen_complete_utf8_v1)\b', lambda match: aliases[match[0]], value)
+               'NamedRequest': 'crate::ffi::session::NamedRequest',
+               'thinkthen_complete_utf8': 'crate::session::views::thinkthen_complete_utf8'}
+    value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequest|thinkthen_complete_utf8)\b', lambda match: aliases[match[0]], value)
     return re.sub(r'(?<!:)\bcarriers::', 'super::carriers::', value)
 
 
@@ -42,11 +42,9 @@ def render(operations, statuses=(), projections=()):
             if operation.outputs or operation.result != '*mut EngineHandle' or not operation.native_unsafe:
                 raise ValueError('constructor must build one owned engine from borrowed input')
             inputs = ', '.join(operation.inputs)
-            lines.extend(['    failures::guard(None, std::ptr::null_mut(), || {',
-                '        // SAFETY: the caller retains all constructor input until admission returns.',
-                '        failures::built(|| unsafe { super::' + operation.native + '(' + inputs + ') })',
-                '            .map_or(std::ptr::null_mut(), |engine| Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine)))))',
-                '    })', '}', ''])
+            lines.extend(['    // SAFETY: caller retains input and nullable writable error storage.',
+                '    unsafe { crate::ffi::owned_constructor(error, || super::' + operation.native + '(' + inputs + ')) }',
+                '}', ''])
             continue
         if operation.diagnostic == 'engine_guard':
             if operation.fallback not in ('NO_MESSAGE.as_ptr()', 'std::ptr::null()', '0', 'DEFECT'):

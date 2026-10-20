@@ -82,22 +82,22 @@ procedure division.
        display "ADMISSION " status-code
        move 0 to return-code goback
     end-if
-    perform until read-status = tt-n-session-end-v1-k
+    perform until read-status = tt-n-session-end-k
        call "TT_SESSION_NEXT" using by value session-owner
           by reference read-status packet-owner returning status-code
        if status-code not = 0 move 2 to return-code goback end-if
-       if read-status = tt-n-session-result-v1-k
+       if read-status = tt-n-session-result-k
           call "thinkthen_session_result_view" using by value packet-owner
              by reference packet-view returning status-code
           if status-code not = 0 move 3 to return-code goback end-if
-          set address of tt-n-complete-session-packet-v1 to packet-view
-          if v-kind of tt-n-complete-session-packet-v1 =
-             tt-n-complete-session-packet-terminal-v1-k
+          set address of tt-n-complete-session-packet to packet-view
+          if v-kind of tt-n-complete-session-packet =
+             tt-n-complete-session-packet-terminal-k
              move packet-owner to terminal-owner
           else
              if value-owner = null and
-                v-kind of tt-n-complete-session-packet-v1 not =
-                tt-n-complete-session-packet-observation-v1-k
+                v-kind of tt-n-complete-session-packet not =
+                tt-n-complete-session-packet-observation-k
                 move packet-owner to value-owner
              else
              call "thinkthen_session_result_free" using by value packet-owner
@@ -113,133 +113,133 @@ procedure division.
     if terminal-owner = null move 4 to return-code goback end-if
     call "thinkthen_session_result_view" using by value terminal-owner
        by reference packet-view returning status-code
-    set address of tt-n-complete-session-packet-v1 to packet-view
-    set address of tt-n-complete-session-packet-terminal-v1
-       to v-data-terminal of tt-n-complete-session-packet-v1
-    evaluate v-facts-presence of tt-n-complete-session-packet-terminal-v1
-       when tt-n-complete-presence-value-v1-k
-          set address of tt-n-complete-facts-v1
-             to v-facts-value of tt-n-complete-session-packet-terminal-v1
-          display "REQUESTS " v-requests-sent of tt-n-complete-facts-v1
-       when tt-n-complete-presence-missing-v1-k
+    set address of tt-n-complete-session-packet to packet-view
+    set address of tt-n-complete-session-packet-terminal
+       to v-data-terminal of tt-n-complete-session-packet
+    evaluate v-facts-presence of tt-n-complete-session-packet-terminal
+       when tt-n-complete-presence-value-k
+          set address of tt-n-complete-facts
+             to v-facts-value of tt-n-complete-session-packet-terminal
+          display "REQUESTS " v-requests-sent of tt-n-complete-facts
+       when tt-n-complete-presence-missing-k
           display "FACTS_ABSENT"
-       when tt-n-complete-presence-null-v1-k
+       when tt-n-complete-presence-null-k
           display "FACTS_NULL"
        when other move 5 to return-code goback
     end-evaluate
     if expected-failure = "Y"
-       if v-failure-presence of tt-n-complete-session-packet-terminal-v1
-          not = tt-n-complete-presence-value-v1-k
+       if v-failure-presence of tt-n-complete-session-packet-terminal
+          not = tt-n-complete-presence-value-k
           move 6 to return-code goback end-if
-       set address of tt-n-complete-call-error-v1
-          to v-failure-value of tt-n-complete-session-packet-terminal-v1
-       if v-facts-presence of tt-n-complete-call-error-v1 =
-          tt-n-complete-presence-value-v1-k
-          set address of tt-n-complete-facts-v1
-             to v-facts-value of tt-n-complete-call-error-v1
-          display "FAILURE_REQUESTS " v-requests-sent of tt-n-complete-facts-v1
+       set address of tt-n-complete-call-error
+          to v-failure-value of tt-n-complete-session-packet-terminal
+       if v-facts-presence of tt-n-complete-call-error =
+          tt-n-complete-presence-value-k
+          set address of tt-n-complete-facts
+             to v-facts-value of tt-n-complete-call-error
+          display "FAILURE_REQUESTS " v-requests-sent of tt-n-complete-facts
        else
           display "FAILURE_FACTS_ABSENT"
        end-if
-       set address of tt-n-complete-error-v1
-          to v-error of tt-n-complete-call-error-v1
-       set address of tt-n-complete-failure-kind-v1
-          to v-kind of tt-n-complete-error-v1
-       display "ERROR_KIND " v-kind of tt-n-complete-failure-kind-v1
+       set address of tt-n-complete-error
+          to v-error of tt-n-complete-call-error
+       set address of tt-n-complete-failure-kind
+          to v-kind of tt-n-complete-error
+       display "ERROR_KIND " v-kind of tt-n-complete-failure-kind
        call "TT_SESSION_TEXT" using
-          by reference v-message of tt-n-complete-error-v1 output-text written
+          by reference v-message of tt-n-complete-error output-text written
           returning status-code
        if status-code not = 0 or written = 0
           move 7 to return-code goback end-if
        display "FAILURE " function trim(output-text trailing)
     else
-       if v-failure-presence of tt-n-complete-session-packet-terminal-v1
-          not = tt-n-complete-presence-missing-v1-k
+       if v-failure-presence of tt-n-complete-session-packet-terminal
+          not = tt-n-complete-presence-missing-k
           move 8 to return-code goback end-if
     end-if
     if value-owner not = null
        call "thinkthen_session_result_view" using by value value-owner
           by reference packet-view returning status-code
-       set address of tt-n-complete-session-packet-v1 to packet-view
-       if v-kind of tt-n-complete-session-packet-v1 =
-          tt-n-complete-session-packet-decide-aggregate-v1-k or
-          tt-n-complete-session-packet-decide-row-v1-k
-          if v-kind of tt-n-complete-session-packet-v1 =
-             tt-n-complete-session-packet-decide-row-v1-k
-             set address of tt-n-complete-session-packet-decide-row-v1
-                to v-data-decide-row of tt-n-complete-session-packet-v1
-             set address of tt-n-complete-atomic-decide-value-v1
-                to v-value of tt-n-complete-session-packet-decide-row-v1
+       set address of tt-n-complete-session-packet to packet-view
+       if v-kind of tt-n-complete-session-packet =
+          tt-n-complete-session-packet-decide-aggregate-k or
+          tt-n-complete-session-packet-decide-row-k
+          if v-kind of tt-n-complete-session-packet =
+             tt-n-complete-session-packet-decide-row-k
+             set address of tt-n-complete-session-packet-decide-row
+                to v-data-decide-row of tt-n-complete-session-packet
+             set address of tt-n-complete-atomic-decide-value
+                to v-value of tt-n-complete-session-packet-decide-row
           else
-          set address of tt-n-complete-session-packet-decide-aggregate-v1
-             to v-data-decide-aggregate of tt-n-complete-session-packet-v1
-          if v-value-len of tt-n-complete-session-packet-decide-aggregate-v1 not = 1
+          set address of tt-n-complete-session-packet-decide-aggregate
+             to v-data-decide-aggregate of tt-n-complete-session-packet
+          if v-value-len of tt-n-complete-session-packet-decide-aggregate not = 1
              move 13 to return-code goback end-if
           set address of first-value
-             to v-value-data of tt-n-complete-session-packet-decide-aggregate-v1
-          set address of tt-n-complete-atomic-decide-value-v1 to first-value
+             to v-value-data of tt-n-complete-session-packet-decide-aggregate
+          set address of tt-n-complete-atomic-decide-value to first-value
           end-if
-          evaluate v-value-presence of tt-n-complete-atomic-decide-value-v1
-             when tt-n-complete-presence-null-v1-k
+          evaluate v-value-presence of tt-n-complete-atomic-decide-value
+             when tt-n-complete-presence-null-k
                 display "VALUE_NULL"
-             when tt-n-complete-presence-value-v1-k
-                set address of tt-n-complete-decide-value-v1
-                   to v-value-value of tt-n-complete-atomic-decide-value-v1
-                set address of tt-n-complete-json-v1
-                   to v-value of tt-n-complete-decide-value-v1
-                if v-kind of tt-n-complete-json-v1 not =
-                   tt-n-complete-json-boolean-v1-k
+             when tt-n-complete-presence-value-k
+                set address of tt-n-complete-decide-value
+                   to v-value-value of tt-n-complete-atomic-decide-value
+                set address of tt-n-complete-json
+                   to v-value of tt-n-complete-decide-value
+                if v-kind of tt-n-complete-json not =
+                   tt-n-complete-json-boolean-k
                    move 10 to return-code goback end-if
-                display "VALUE " v-data-boolean of tt-n-complete-json-v1
+                display "VALUE " v-data-boolean of tt-n-complete-json
              when other move 9 to return-code goback
           end-evaluate
        end-if
-       if v-kind of tt-n-complete-session-packet-v1 =
-          tt-n-complete-session-packet-choose-aggregate-v1-k or
-          tt-n-complete-session-packet-choose-row-v1-k
-          if v-kind of tt-n-complete-session-packet-v1 =
-             tt-n-complete-session-packet-choose-row-v1-k
-             set address of tt-n-complete-session-packet-choose-row-v1
-                to v-data-choose-row of tt-n-complete-session-packet-v1
-             set address of tt-n-complete-atomic-nullable-string-v1
-                to v-value of tt-n-complete-session-packet-choose-row-v1
+       if v-kind of tt-n-complete-session-packet =
+          tt-n-complete-session-packet-choose-aggregate-k or
+          tt-n-complete-session-packet-choose-row-k
+          if v-kind of tt-n-complete-session-packet =
+             tt-n-complete-session-packet-choose-row-k
+             set address of tt-n-complete-session-packet-choose-row
+                to v-data-choose-row of tt-n-complete-session-packet
+             set address of tt-n-complete-atomic-nullable-string
+                to v-value of tt-n-complete-session-packet-choose-row
           else
-          set address of tt-n-complete-session-packet-choose-aggregate-v1
-             to v-data-choose-aggregate of tt-n-complete-session-packet-v1
-          if v-value-len of tt-n-complete-session-packet-choose-aggregate-v1 not = 1
+          set address of tt-n-complete-session-packet-choose-aggregate
+             to v-data-choose-aggregate of tt-n-complete-session-packet
+          if v-value-len of tt-n-complete-session-packet-choose-aggregate not = 1
              move 13 to return-code goback end-if
           set address of first-value
-             to v-value-data of tt-n-complete-session-packet-choose-aggregate-v1
-          set address of tt-n-complete-atomic-nullable-string-v1 to first-value
+             to v-value-data of tt-n-complete-session-packet-choose-aggregate
+          set address of tt-n-complete-atomic-nullable-string to first-value
           end-if
-          if v-value-presence of tt-n-complete-atomic-nullable-string-v1
-             not = tt-n-complete-presence-value-v1-k
+          if v-value-presence of tt-n-complete-atomic-nullable-string
+             not = tt-n-complete-presence-value-k
              move 11 to return-code goback end-if
           call "TT_SESSION_TEXT" using
-             by reference v-value-value of tt-n-complete-atomic-nullable-string-v1
+             by reference v-value-value of tt-n-complete-atomic-nullable-string
              output-text written returning status-code
           if status-code not = 0 move 12 to return-code goback end-if
           display "CHOICE " function trim(output-text trailing)
        end-if
-       if v-kind of tt-n-complete-session-packet-v1 =
-          tt-n-complete-session-packet-score-aggregate-v1-k or
-          tt-n-complete-session-packet-score-row-v1-k
-          if v-kind of tt-n-complete-session-packet-v1 =
-             tt-n-complete-session-packet-score-row-v1-k
-             set address of tt-n-complete-session-packet-score-row-v1
-                to v-data-score-row of tt-n-complete-session-packet-v1
-             set address of tt-n-complete-atomic-double-v1
-                to v-value of tt-n-complete-session-packet-score-row-v1
+       if v-kind of tt-n-complete-session-packet =
+          tt-n-complete-session-packet-score-aggregate-k or
+          tt-n-complete-session-packet-score-row-k
+          if v-kind of tt-n-complete-session-packet =
+             tt-n-complete-session-packet-score-row-k
+             set address of tt-n-complete-session-packet-score-row
+                to v-data-score-row of tt-n-complete-session-packet
+             set address of tt-n-complete-atomic-double
+                to v-value of tt-n-complete-session-packet-score-row
           else
-          set address of tt-n-complete-session-packet-score-aggregate-v1
-             to v-data-score-aggregate of tt-n-complete-session-packet-v1
-          if v-value-len of tt-n-complete-session-packet-score-aggregate-v1 not = 1
+          set address of tt-n-complete-session-packet-score-aggregate
+             to v-data-score-aggregate of tt-n-complete-session-packet
+          if v-value-len of tt-n-complete-session-packet-score-aggregate not = 1
              move 13 to return-code goback end-if
           set address of first-value
-             to v-value-data of tt-n-complete-session-packet-score-aggregate-v1
-          set address of tt-n-complete-atomic-double-v1 to first-value
+             to v-value-data of tt-n-complete-session-packet-score-aggregate
+          set address of tt-n-complete-atomic-double to first-value
           end-if
-          display "SCORE " v-value of tt-n-complete-atomic-double-v1
+          display "SCORE " v-value of tt-n-complete-atomic-double
        end-if
        call "thinkthen_session_result_free" using by value value-owner
           returning omitted

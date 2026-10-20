@@ -94,12 +94,10 @@ def native_parity(consumer, command):
                     for original in value.get("steps", [value]):
                         step = dict(original)
                         definition = step.get("question", {})
-                        wording_version = definition.get("wording_version")
                         file_authored = not step.get("loader") and step.get("question_form") != "file" and (
                             any(key in definition and not isinstance(definition[key], dict)
                                 for key in ("item_schema", "context_schema")) or
-                            "wording_version" in definition and not (type(wording_version) is int and
-                                -(1 << 63) <= wording_version < (1 << 63)))
+                            "wording_version" in definition)
                         if file_authored:
                             # Typed carriers cannot hold these authored shapes. Keep the
                             # original bytes on the existing public question-file path.

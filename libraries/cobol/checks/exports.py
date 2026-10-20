@@ -26,7 +26,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-generated-abi-') as tem
     cobol = ['identification division.','program-id. GeneratedAbi.','data division.','working-storage section.','copy "tt-native-generated.cpy".','01 measured usage binary-double signed.','procedure division.']
     counted = 0
     for name, record in facts['records'].items():
-        if not name.startswith(('thinkthen_complete_', 'thinkthen_cobol_')) or name.endswith('_data_v1'): continue
+        if not name.startswith(('thinkthen_complete_', 'thinkthen_cobol_')) or name.endswith('_data'): continue
         group = template.identifier(name)
         assert '01 ' + group + ' based.' in copybook, name
         body = re.search(r'01 ' + re.escape(group) + r' based\.(.*?)(?=\n01 |\n78 |\Z)',copybook,re.S)[1]

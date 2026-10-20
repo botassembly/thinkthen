@@ -1384,10 +1384,6 @@ type Verb struct{ ownedJSON }
 
 func (v Verb) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type WordingVersion struct{ ownedJSON }
-
-func (v WordingVersion) Value() (json.Number, error) { return ownedDecode[json.Number](v.raw) }
-
 type AnnotatedField struct{ ownedJSON }
 
 func (v AnnotatedField) Value() (any, error) { return v.jsonValue() }
@@ -1553,9 +1549,6 @@ func (v FindQuestionDocument) Profile() Presence[string] {
 }
 func (v FindQuestionDocument) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
 func (v FindQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v FindQuestionDocument) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 
 type NameOdds struct{ ownedJSON }
 
@@ -1664,9 +1657,6 @@ func (v QuestionDocumentChoose) On() Presence[[]string] { return ownedMember[[]s
 func (v QuestionDocumentChoose) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v QuestionDocumentChoose) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 func (v QuestionDocumentChoose) Options() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "options")
 }
@@ -1693,9 +1683,6 @@ func (v QuestionDocumentDecide) On() Presence[[]string] { return ownedMember[[]s
 func (v QuestionDocumentDecide) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v QuestionDocumentDecide) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 func (v QuestionDocumentDecide) False() Presence[any]   { return ownedMember[any](v.raw, "false") }
 func (v QuestionDocumentDecide) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
 func (v QuestionDocumentDecide) True() Presence[any]    { return ownedMember[any](v.raw, "true") }
@@ -1721,9 +1708,6 @@ func (v QuestionDocumentScore) On() Presence[[]string] { return ownedMember[[]st
 func (v QuestionDocumentScore) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v QuestionDocumentScore) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 func (v QuestionDocumentScore) Levels() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "levels")
 }
@@ -1748,9 +1732,6 @@ func (v QuestionDocumentTag) Name() Presence[QuestionName] {
 }
 func (v QuestionDocumentTag) On() Presence[[]string]    { return ownedMember[[]string](v.raw, "on") }
 func (v QuestionDocumentTag) Profile() Presence[string] { return ownedMember[string](v.raw, "profile") }
-func (v QuestionDocumentTag) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 func (v QuestionDocumentTag) Labels() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "labels")
 }
@@ -1833,9 +1814,6 @@ func (v RecognizeQuestionDocument) Threshold() Presence[Threshold] {
 	return ownedMember[Threshold](v.raw, "threshold")
 }
 func (v RecognizeQuestionDocument) Verb() Presence[Verb] { return ownedMember[Verb](v.raw, "verb") }
-func (v RecognizeQuestionDocument) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 
 type RecognizeEntities struct{ ownedJSON }
 
@@ -1890,9 +1868,6 @@ func (v RelateQuestionDocument) Threshold() Presence[Threshold] {
 	return ownedMember[Threshold](v.raw, "threshold")
 }
 func (v RelateQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v RelateQuestionDocument) WordingVersion() Presence[WordingVersion] {
-	return ownedMember[WordingVersion](v.raw, "wording_version")
-}
 
 type RelatedEntity struct{ ownedJSON }
 
@@ -3498,13 +3473,12 @@ func (AnnotateQuestionTag) isAnnotateQuestion()    {}
 func (AnnotateQuestionScore) isAnnotateQuestion()  {}
 
 type AnnotateQuestionScore struct {
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Levels         *AuthoredLevels           `json:"levels,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Score          AuthoredQuestionText      `json:"score"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Levels        *AuthoredLevels           `json:"levels,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Score         AuthoredQuestionText      `json:"score"`
 }
 
 func (v AnnotateQuestionScore) marshalJSON() ([]byte, error) {
@@ -3536,11 +3510,6 @@ func (v AnnotateQuestionScore) marshalJSON() ([]byte, error) {
 	}
 	if err := transportMember(object, "score", v.Score); err != nil {
 		return nil, err
-	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
 	}
 	return json.Marshal(object)
 }
@@ -3704,14 +3673,13 @@ func (v AuthoredInputDeclarationString) marshalJSON() ([]byte, error) {
 }
 
 type AnnotateQuestionTag struct {
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Labels         *AuthoredLabels           `json:"labels,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Tag            AuthoredQuestionText      `json:"tag"`
-	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Labels        *AuthoredLabels           `json:"labels,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Tag           AuthoredQuestionText      `json:"tag"`
+	Threshold     *AuthoredCut              `json:"threshold,omitempty"`
 }
 
 func (v AnnotateQuestionTag) marshalJSON() ([]byte, error) {
@@ -3746,11 +3714,6 @@ func (v AnnotateQuestionTag) marshalJSON() ([]byte, error) {
 	}
 	if v.Threshold != nil {
 		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
-			return nil, err
-		}
-	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
 			return nil, err
 		}
 	}
@@ -3804,14 +3767,13 @@ func (v AuthoredLabelsArray) marshalJSON() ([]byte, error) {
 }
 
 type AnnotateQuestionChoose struct {
-	Choose         AuthoredQuestionText      `json:"choose"`
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Options        *AuthoredOptions          `json:"options,omitempty"`
-	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	Choose        AuthoredQuestionText      `json:"choose"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Options       *AuthoredOptions          `json:"options,omitempty"`
+	Threshold     *AuthoredCut              `json:"threshold,omitempty"`
 }
 
 func (v AnnotateQuestionChoose) marshalJSON() ([]byte, error) {
@@ -3849,11 +3811,6 @@ func (v AnnotateQuestionChoose) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
@@ -3878,15 +3835,14 @@ func (v AuthoredOptionsArray) marshalJSON() ([]byte, error) {
 }
 
 type AnnotateQuestionDecide struct {
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	Decide         AuthoredQuestionText      `json:"decide"`
-	False          *AuthoredCriterion        `json:"false,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Threshold      *AuthoredThreshold        `json:"threshold,omitempty"`
-	True           *AuthoredCriterion        `json:"true,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Decide        AuthoredQuestionText      `json:"decide"`
+	False         *AuthoredCriterion        `json:"false,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Threshold     *AuthoredThreshold        `json:"threshold,omitempty"`
+	True          *AuthoredCriterion        `json:"true,omitempty"`
 }
 
 func (v AnnotateQuestionDecide) marshalJSON() ([]byte, error) {
@@ -3929,11 +3885,6 @@ func (v AnnotateQuestionDecide) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
@@ -3948,7 +3899,6 @@ type RequestDefinitionRecognizeDefinition struct {
 	Recognize         RecognizeQuestion         `json:"recognize"`
 	RelationThreshold *AuthoredCut              `json:"relation_threshold,omitempty"`
 	Threshold         *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion    *int64                    `json:"wording_version,omitempty"`
 }
 
 func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
@@ -3993,11 +3943,6 @@ func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
 	}
 	if v.Threshold != nil {
 		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
-			return nil, err
-		}
-	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
 			return nil, err
 		}
 	}
@@ -4130,14 +4075,13 @@ const (
 )
 
 type RequestDefinitionAuthoredFind struct {
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	Find           AuthoredQuestionText      `json:"find"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Find          AuthoredQuestionText      `json:"find"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredFind) marshalJSON() ([]byte, error) {
@@ -4175,23 +4119,17 @@ func (v RequestDefinitionAuthoredFind) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
 type RequestDefinitionAuthoredRelate struct {
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	Relate         RelateQuestion            `json:"relate"`
-	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
+	Relate        RelateQuestion            `json:"relate"`
+	Threshold     *AuthoredCut              `json:"threshold,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
@@ -4226,11 +4164,6 @@ func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
 	}
 	if v.Threshold != nil {
 		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
-			return nil, err
-		}
-	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
 			return nil, err
 		}
 	}
@@ -4272,16 +4205,15 @@ func (v RelateFields) marshalJSON() ([]byte, error) {
 }
 
 type RequestDefinitionAuthoredScore struct {
-	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Levels         *AuthoredLevels           `json:"levels,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	Score          AuthoredQuestionText      `json:"score"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	Batch         *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Levels        *AuthoredLevels           `json:"levels,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
+	Score         AuthoredQuestionText      `json:"score"`
 }
 
 func (v RequestDefinitionAuthoredScore) marshalJSON() ([]byte, error) {
@@ -4329,11 +4261,6 @@ func (v RequestDefinitionAuthoredScore) marshalJSON() ([]byte, error) {
 	if err := transportMember(object, "score", v.Score); err != nil {
 		return nil, err
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
@@ -4345,17 +4272,16 @@ func (AuthoredQuestionBatchInteger) isAuthoredQuestionBatch() {}
 type AuthoredQuestionBatchInteger int64
 type AuthoredQuestionBatchValue string
 type RequestDefinitionAuthoredTag struct {
-	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Labels         *AuthoredLabels           `json:"labels,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	Tag            AuthoredQuestionText      `json:"tag"`
-	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	Batch         *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Labels        *AuthoredLabels           `json:"labels,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
+	Tag           AuthoredQuestionText      `json:"tag"`
+	Threshold     *AuthoredCut              `json:"threshold,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredTag) marshalJSON() ([]byte, error) {
@@ -4408,26 +4334,20 @@ func (v RequestDefinitionAuthoredTag) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
 type RequestDefinitionAuthoredChoose struct {
-	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
-	Choose         AuthoredQuestionText      `json:"choose"`
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Options        *AuthoredOptions          `json:"options,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	Batch         *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	Choose        AuthoredQuestionText      `json:"choose"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Options       *AuthoredOptions          `json:"options,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold     *AuthoredCut              `json:"threshold,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredChoose) marshalJSON() ([]byte, error) {
@@ -4480,27 +4400,21 @@ func (v RequestDefinitionAuthoredChoose) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
-			return nil, err
-		}
-	}
 	return json.Marshal(object)
 }
 
 type RequestDefinitionAuthoredDecide struct {
-	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
-	Decide         AuthoredQuestionText      `json:"decide"`
-	False          *AuthoredCriterion        `json:"false,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
-	Model          *AuthoredName             `json:"model,omitempty"`
-	Name           *string                   `json:"name,omitempty"`
-	On             *AuthoredPointers         `json:"on,omitempty"`
-	Profile        *AuthoredProfile          `json:"profile,omitempty"`
-	Threshold      *AuthoredThreshold        `json:"threshold,omitempty"`
-	True           *AuthoredCriterion        `json:"true,omitempty"`
-	WordingVersion *int64                    `json:"wording_version,omitempty"`
+	Batch         *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Decide        AuthoredQuestionText      `json:"decide"`
+	False         *AuthoredCriterion        `json:"false,omitempty"`
+	ItemSchema    *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model         *AuthoredName             `json:"model,omitempty"`
+	Name          *string                   `json:"name,omitempty"`
+	On            *AuthoredPointers         `json:"on,omitempty"`
+	Profile       *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold     *AuthoredThreshold        `json:"threshold,omitempty"`
+	True          *AuthoredCriterion        `json:"true,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredDecide) marshalJSON() ([]byte, error) {
@@ -4555,11 +4469,6 @@ func (v RequestDefinitionAuthoredDecide) marshalJSON() ([]byte, error) {
 	}
 	if v.True != nil {
 		if err := transportMember(object, "true", *v.True); err != nil {
-			return nil, err
-		}
-	}
-	if v.WordingVersion != nil {
-		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
 			return nil, err
 		}
 	}
@@ -4930,7 +4839,6 @@ type Request struct {
 
 func (v Request) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["schema"] = json.RawMessage("\"thinkthen.request/1\"")
 	if err := transportMember(object, "call", v.Call); err != nil {
 		return nil, err
 	}
@@ -5411,8 +5319,6 @@ func (v *Call) settle(function string, input RequestInput) error {
 	}
 	return nil
 }
-
-const OwnedRequestVersion = "thinkthen.request/1"
 
 // Generated from the compiler-derived C header; do not edit.
 type UsagePersistenceState uint32

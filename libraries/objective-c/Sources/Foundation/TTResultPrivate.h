@@ -35,7 +35,6 @@ FOUNDATION_EXPORT BOOL TTCallSingleInput(TTInput *input);
 @property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;
 @end
 
-FOUNDATION_EXPORT NSString * const TTRequestVersion;
 
 FOUNDATION_EXPORT TTFailureError *TTFailureForCall(TTCallError *failure, id call);
 NS_ASSUME_NONNULL_END

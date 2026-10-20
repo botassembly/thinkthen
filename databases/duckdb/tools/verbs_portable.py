@@ -14,7 +14,7 @@ def portable_batch_identity() -> None:
     folder = Path(__file__).resolve().parents[3] / "specification" / "fixtures" / "batching"
     fixture = json.loads((folder / "portable-records.json").read_text())
     bodies = [(folder / f"portable-{number}.request.json").read_text().removesuffix("\n") for number in range(1, 4)]
-    assert fixture["schema"] == "thinkthen.portable-batch-records/1"
+    assert fixture["schema"] == "thinkthen.portable-batch-records"
     quote = lambda value: "'" + value.replace("'", "''") + "'"
     values = ",".join(f"({index},{quote(value)})" for index, value in enumerate(fixture["texts"]))
     query = (f"SELECT thinkthen_decide_details({quote(fixture['question'])}, x) "

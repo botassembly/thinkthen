@@ -6,9 +6,6 @@ pub const THINKTHEN_VERSION_MAJOR: i32 = 0;
 pub const THINKTHEN_VERSION_MINOR: i32 = 2;
 /// C value `THINKTHEN_VERSION_PATCH`.
 pub const THINKTHEN_VERSION_PATCH: i32 = 0;
-/// Exact C interface compatibility number. Compare with thinkthen_version at load.
-/// Change this number whenever the C contract becomes incompatible.
-pub const THINKTHEN_INTERFACE_NUMBER: u32 = 1;
 /// Zero means success; codes 1..6 identify failures, never answers.
 /// On failure every output stays unchanged; error_code, error_message,
 /// error_retryable and error_facts_json describe the calling thread's failure.
@@ -45,13 +42,13 @@ pub const THINKTHEN_UNSURE: i32 = 2;
     non_camel_case_types,
     reason = "preserve the public C enumerator names"
 )]
-pub enum InputDeclarationKindV1 {
-    /// C grammar value `THINKTHEN_DECLARATION_ABSENT_V1`.
-    THINKTHEN_DECLARATION_ABSENT_V1 = 0,
-    /// C grammar value `THINKTHEN_DECLARATION_STRING_V1`.
-    THINKTHEN_DECLARATION_STRING_V1 = 1,
-    /// C grammar value `THINKTHEN_DECLARATION_OBJECT_V1`.
-    THINKTHEN_DECLARATION_OBJECT_V1 = 2,
+pub enum InputDeclarationKind {
+    /// C grammar value `THINKTHEN_DECLARATION_ABSENT`.
+    THINKTHEN_DECLARATION_ABSENT = 0,
+    /// C grammar value `THINKTHEN_DECLARATION_STRING`.
+    THINKTHEN_DECLARATION_STRING = 1,
+    /// C grammar value `THINKTHEN_DECLARATION_OBJECT`.
+    THINKTHEN_DECLARATION_OBJECT = 2,
 }
 /// Admitted native grammar values; descriptor storage remains uint32_t.
 #[repr(C)]
@@ -60,15 +57,15 @@ pub enum InputDeclarationKindV1 {
     non_camel_case_types,
     reason = "preserve the public C enumerator names"
 )]
-pub enum InputPropertyKindV1 {
-    /// C grammar value `THINKTHEN_PROPERTY_STRING_V1`.
-    THINKTHEN_PROPERTY_STRING_V1 = 1,
-    /// C grammar value `THINKTHEN_PROPERTY_NUMBER_V1`.
-    THINKTHEN_PROPERTY_NUMBER_V1 = 2,
-    /// C grammar value `THINKTHEN_PROPERTY_BOOLEAN_V1`.
-    THINKTHEN_PROPERTY_BOOLEAN_V1 = 3,
-    /// C grammar value `THINKTHEN_PROPERTY_STRING_LIST_V1`.
-    THINKTHEN_PROPERTY_STRING_LIST_V1 = 4,
+pub enum InputPropertyKind {
+    /// C grammar value `THINKTHEN_PROPERTY_STRING`.
+    THINKTHEN_PROPERTY_STRING = 1,
+    /// C grammar value `THINKTHEN_PROPERTY_NUMBER`.
+    THINKTHEN_PROPERTY_NUMBER = 2,
+    /// C grammar value `THINKTHEN_PROPERTY_BOOLEAN`.
+    THINKTHEN_PROPERTY_BOOLEAN = 3,
+    /// C grammar value `THINKTHEN_PROPERTY_STRING_LIST`.
+    THINKTHEN_PROPERTY_STRING_LIST = 4,
 }
 /// Admitted native grammar values; descriptor storage remains uint32_t.
 #[repr(C)]
@@ -77,71 +74,70 @@ pub enum InputPropertyKindV1 {
     non_camel_case_types,
     reason = "preserve the public C enumerator names"
 )]
-pub enum QuestionLoaderRoleV1 {
-    /// C grammar value `THINKTHEN_LOAD_ATOMIC_V1`.
-    THINKTHEN_LOAD_ATOMIC_V1 = 1,
-    /// C grammar value `THINKTHEN_LOAD_SET_V1`.
-    THINKTHEN_LOAD_SET_V1 = 2,
-    /// C grammar value `THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1`.
-    THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1 = 3,
-    /// C grammar value `THINKTHEN_LOAD_RECOGNIZE_V1`.
-    THINKTHEN_LOAD_RECOGNIZE_V1 = 4,
-    /// C grammar value `THINKTHEN_LOAD_RELATE_V1`.
-    THINKTHEN_LOAD_RELATE_V1 = 5,
-    /// C grammar value `THINKTHEN_LOAD_RANK_V1`.
-    THINKTHEN_LOAD_RANK_V1 = 6,
-    /// C grammar value `THINKTHEN_LOAD_RANK_SET_V1`.
-    THINKTHEN_LOAD_RANK_SET_V1 = 7,
-    /// C grammar value `THINKTHEN_LOAD_FIND_V1`.
-    THINKTHEN_LOAD_FIND_V1 = 8,
+pub enum QuestionLoaderRole {
+    /// C grammar value `THINKTHEN_LOAD_ATOMIC`.
+    THINKTHEN_LOAD_ATOMIC = 1,
+    /// C grammar value `THINKTHEN_LOAD_SET`.
+    THINKTHEN_LOAD_SET = 2,
+    /// C grammar value `THINKTHEN_LOAD_DYNAMIC_CHOOSE`.
+    THINKTHEN_LOAD_DYNAMIC_CHOOSE = 3,
+    /// C grammar value `THINKTHEN_LOAD_RECOGNIZE`.
+    THINKTHEN_LOAD_RECOGNIZE = 4,
+    /// C grammar value `THINKTHEN_LOAD_RELATE`.
+    THINKTHEN_LOAD_RELATE = 5,
+    /// C grammar value `THINKTHEN_LOAD_RANK`.
+    THINKTHEN_LOAD_RANK = 6,
+    /// C grammar value `THINKTHEN_LOAD_RANK_SET`.
+    THINKTHEN_LOAD_RANK_SET = 7,
+    /// C grammar value `THINKTHEN_LOAD_FIND`.
+    THINKTHEN_LOAD_FIND = 8,
 }
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_STRING_V1`.
-pub(crate) const DECLARATION_STRING_V1: u32 =
-    InputDeclarationKindV1::THINKTHEN_DECLARATION_STRING_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_STRING`.
+pub(crate) const DECLARATION_STRING: u32 =
+    InputDeclarationKind::THINKTHEN_DECLARATION_STRING as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_OBJECT_V1`.
-pub(crate) const DECLARATION_OBJECT_V1: u32 =
-    InputDeclarationKindV1::THINKTHEN_DECLARATION_OBJECT_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_OBJECT`.
+pub(crate) const DECLARATION_OBJECT: u32 =
+    InputDeclarationKind::THINKTHEN_DECLARATION_OBJECT as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_STRING_V1`.
-pub(crate) const PROPERTY_STRING_V1: u32 = InputPropertyKindV1::THINKTHEN_PROPERTY_STRING_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_STRING`.
+pub(crate) const PROPERTY_STRING: u32 = InputPropertyKind::THINKTHEN_PROPERTY_STRING as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_NUMBER_V1`.
-pub(crate) const PROPERTY_NUMBER_V1: u32 = InputPropertyKindV1::THINKTHEN_PROPERTY_NUMBER_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_NUMBER`.
+pub(crate) const PROPERTY_NUMBER: u32 = InputPropertyKind::THINKTHEN_PROPERTY_NUMBER as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_BOOLEAN_V1`.
-pub(crate) const PROPERTY_BOOLEAN_V1: u32 =
-    InputPropertyKindV1::THINKTHEN_PROPERTY_BOOLEAN_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_BOOLEAN`.
+pub(crate) const PROPERTY_BOOLEAN: u32 = InputPropertyKind::THINKTHEN_PROPERTY_BOOLEAN as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_STRING_LIST_V1`.
-pub(crate) const PROPERTY_STRING_LIST_V1: u32 =
-    InputPropertyKindV1::THINKTHEN_PROPERTY_STRING_LIST_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_STRING_LIST`.
+pub(crate) const PROPERTY_STRING_LIST: u32 =
+    InputPropertyKind::THINKTHEN_PROPERTY_STRING_LIST as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_ATOMIC_V1`.
-pub(crate) const LOAD_ATOMIC_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_ATOMIC_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_ATOMIC`.
+pub(crate) const LOAD_ATOMIC: u32 = QuestionLoaderRole::THINKTHEN_LOAD_ATOMIC as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_SET_V1`.
-pub(crate) const LOAD_SET_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_SET_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_SET`.
+pub(crate) const LOAD_SET: u32 = QuestionLoaderRole::THINKTHEN_LOAD_SET as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1`.
-pub(crate) const LOAD_DYNAMIC_CHOOSE_V1: u32 =
-    QuestionLoaderRoleV1::THINKTHEN_LOAD_DYNAMIC_CHOOSE_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_DYNAMIC_CHOOSE`.
+pub(crate) const LOAD_DYNAMIC_CHOOSE: u32 =
+    QuestionLoaderRole::THINKTHEN_LOAD_DYNAMIC_CHOOSE as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RECOGNIZE_V1`.
-pub(crate) const LOAD_RECOGNIZE_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_RECOGNIZE_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RECOGNIZE`.
+pub(crate) const LOAD_RECOGNIZE: u32 = QuestionLoaderRole::THINKTHEN_LOAD_RECOGNIZE as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RELATE_V1`.
-pub(crate) const LOAD_RELATE_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_RELATE_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RELATE`.
+pub(crate) const LOAD_RELATE: u32 = QuestionLoaderRole::THINKTHEN_LOAD_RELATE as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RANK_V1`.
-pub(crate) const LOAD_RANK_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_RANK_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RANK`.
+pub(crate) const LOAD_RANK: u32 = QuestionLoaderRole::THINKTHEN_LOAD_RANK as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RANK_SET_V1`.
-pub(crate) const LOAD_RANK_SET_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_RANK_SET_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_RANK_SET`.
+pub(crate) const LOAD_RANK_SET: u32 = QuestionLoaderRole::THINKTHEN_LOAD_RANK_SET as u32;
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_FIND_V1`.
-pub(crate) const LOAD_FIND_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_FIND_V1 as u32;
+/// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_FIND`.
+pub(crate) const LOAD_FIND: u32 = QuestionLoaderRole::THINKTHEN_LOAD_FIND as u32;
 
 /// A counted COBOL scalar exceeds its documented representation capacity.
 pub const THINKTHEN_COBOL_OVERFLOW: i32 = 1002;

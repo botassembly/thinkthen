@@ -52,6 +52,7 @@ libraries/cpp/include/thinkthen/results_generated.hpp linguist-generated
 libraries/csharp/src/NamedCalls.g.cs linguist-generated
 libraries/csharp/src/NativeBridge.g.cs linguist-generated
 libraries/csharp/src/RequestInputs.g.cs linguist-generated
+libraries/csharp/tests/source/FixtureQuestions.g.cs linguist-generated
 libraries/dart/lib/src/session/abi_generated.dart linguist-generated
 libraries/dart/lib/src/session/calls_generated.dart linguist-generated
 libraries/dart/lib/src/session/inputs_generated.dart linguist-generated
@@ -68,7 +69,6 @@ libraries/jvm/session/thinkthen/NativeNamed.java linguist-generated
 libraries/jvm/session/thinkthen/NativeResults.java linguist-generated
 libraries/jvm/session/thinkthen/NativeUsageLayouts.java linguist-generated
 libraries/jvm/session/thinkthen/NativeWait.java linguist-generated
-libraries/jvm/session/thinkthen/RequestVersion.java linguist-generated
 libraries/jvm/session/thinkthen/Results.java linguist-generated
 libraries/jvm/session/thinkthen/UsagePersistence.java linguist-generated
 libraries/objective-c/Sources/Foundation/TTResults.g.h linguist-generated

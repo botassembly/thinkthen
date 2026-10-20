@@ -159,7 +159,6 @@ pub use results::{CompleteError, ErrorSnapshot};
 mod declarations;
 pub use crate::core::{
     InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
-    WordingVersion,
 };
 
 mod question_metadata;

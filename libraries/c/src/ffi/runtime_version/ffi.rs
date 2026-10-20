@@ -19,6 +19,6 @@ use std::ffi::c_char;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_version(interface_number: *mut u32) -> *const c_char {
     // SAFETY: the host supplies one aligned writable uint32_t under this contract.
-    unsafe { *interface_number = super::values::THINKTHEN_INTERFACE_NUMBER };
+    unsafe { *interface_number = include!(concat!(env!("OUT_DIR"), "/interface.rs")) };
     concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()
 }

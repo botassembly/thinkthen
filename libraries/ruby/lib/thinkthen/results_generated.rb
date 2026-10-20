@@ -546,7 +546,6 @@ module ThinkThen
       define_method('profile') { self['profile'] }
       define_method('text') { self['text'] }
       define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
     end
     class NativeNameOdds < Native::Result
       define_method('edges') { self['edges'] }
@@ -594,7 +593,6 @@ module ThinkThen
       define_method('name') { self['name'] }
       define_method('on') { self['on'] }
       define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
       define_method('options') { self['options'] }
       define_method('text') { self['text'] }
       define_method('verb') { self['verb'] }
@@ -608,7 +606,6 @@ module ThinkThen
       define_method('name') { self['name'] }
       define_method('on') { self['on'] }
       define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
       define_method('false') { self['false'] }
       define_method('text') { self['text'] }
       define_method('true') { self['true'] }
@@ -623,7 +620,6 @@ module ThinkThen
       define_method('name') { self['name'] }
       define_method('on') { self['on'] }
       define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
       define_method('levels') { self['levels'] }
       define_method('text') { self['text'] }
       define_method('verb') { self['verb'] }
@@ -637,7 +633,6 @@ module ThinkThen
       define_method('name') { self['name'] }
       define_method('on') { self['on'] }
       define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
       define_method('labels') { self['labels'] }
       define_method('text') { self['text'] }
       define_method('verb') { self['verb'] }
@@ -667,7 +662,6 @@ module ThinkThen
       define_method('stage_context') { self['stage_context'] }
       define_method('threshold') { self['threshold'] }
       define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
     end
     class NativeRecognizeEntities < Native::Result
       define_method('entities') { self['entities'] }
@@ -694,7 +688,6 @@ module ThinkThen
       define_method('relations') { self['relations'] }
       define_method('threshold') { self['threshold'] }
       define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
     end
     class NativeRelatedEntity < Native::Result
       define_method('kind') { self['kind'] }
@@ -1029,10 +1022,5 @@ module ThinkThen
       body[:fields] = fields unless fields.nil?
       {relate: body}.freeze
     end
-  end
-end
-module ThinkThen
-  class Client
-    REQUEST_VERSION = 'thinkthen.request/1'.freeze
   end
 end

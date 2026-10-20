@@ -21,7 +21,6 @@ README = ROOT / next(member.attrib["Include"] for member in PROJECT.findall("./I
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 from privacy import check_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
-MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
 NATIVE = Path(os.environ.get("THINKTHEN_NATIVE_ASSET", ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"))
 NUPKG = ROOT / f"target/scratch/managed/Botassembly.ThinkThen.{VERSION}.nupkg"
@@ -33,8 +32,6 @@ def digest(data):
 
 
 def inspect(header, package, native, expected=None):
-    version = re.findall(r"(?m)^#define THINKTHEN_VERSION_(MAJOR|MINOR|PATCH)\s+(\d+)\s*$", header)
-    assert version == [("MAJOR", MAJOR), ("MINOR", MINOR), ("PATCH", PATCH)], "header version mismatch"
     actual = {"header": digest(header.encode()), "package": digest(package), "native": digest(native)}
     if expected is not None:
         assert actual == expected, "artifact SHA-256 mismatch"
@@ -106,12 +103,14 @@ def abi_check(header, package):
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
         subprocess.run([str(dotnet()), 'build', str(scratch / 'Probe.csproj'), '--configfile', str(scratch / 'NuGet.Config'), '-v', 'quiet', '-m:1'], env=env, check=True, stdout=sys.stderr)
         actual = json.loads(subprocess.check_output([str(dotnet()), str(scratch / 'bin/Debug/net8.0/Probe.dll'), str(scratch / 'ThinkThen.dll')], env=env, text=True))
+    expected_number = int(re.search(r'(?m)^#define THINKTHEN_INTERFACE_NUMBER (\d+)u?$', Path(header).read_text())[1])
+    assert actual.pop('interface_number') == expected_number, 'header interface mismatch'
     # Validate every installed SDK import against its generated C declaration.
     required_imports = set(actual['functions'])
     assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
-    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1'}
+    carriers = {'thinkthen_string', 'thinkthen_complete_usage_persistence', 'thinkthen_complete_utf8', 'thinkthen_named_request'}
     assert set(actual['records']) == carriers, 'unused native layouts retained'
-    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_',)) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
+    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_',)) or name.startswith('THINKTHEN_E')}
     expected = abi.represented_abi(native, carriers, required_imports, constant_names)
     for name, prototype in actual['functions'].items():
         pointees = prototype.pop('argument_pointees')
@@ -159,7 +158,8 @@ def abi_plants(header):
         for original in (ROOT / 'src').glob('*.cs'):
             (source / original.name).write_bytes(original.read_bytes())
         project = scratch / 'ThinkThen.csproj'
-        project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
+        (scratch / 'thinkthen.h').write_bytes(Path(header).read_bytes())
+        project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><EmbeddedResource Include="thinkthen.h" LogicalName="ThinkThen.Interface.h" /></ItemGroup></Project>')
         generated = ROOT.parents[1] / 'build-tools/results/csharp/CompleteFacts.g.cs'
         (source / generated.name).write_bytes(generated.read_bytes())
         config = scratch / 'NuGet.Config'
@@ -203,7 +203,7 @@ class Probe {
   if(t.IsByRef||t.IsArray||typeof(SafeHandle).IsAssignableFrom(t)||t==typeof(IntPtr))return "pointer";
   if(t==typeof(UIntPtr))return "unsigned"+(IntPtr.Size*8);
   if(t==typeof(void))return "void";
-  if(t.Name.EndsWith("V1Data"))return "union";
+  if(t.IsExplicitLayout)return "union";
   if(t==typeof(float)||t==typeof(double))return "float"+(Width(t)*8);
   if(t.IsPrimitive)return (t==typeof(byte)||t==typeof(ushort)||t==typeof(uint)||t==typeof(ulong)?"unsigned":"signed")+(Width(t)*8);
   return Name(t);
@@ -213,7 +213,7 @@ class Probe {
   foreach(var f in t.GetFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)) {
    string n=prefix+f.Name.ToLowerInvariant();long offset=baseOffset+Marshal.OffsetOf(t,f.Name).ToInt64();
    output.Add(n,new {type=Kind(f.FieldType),offset,width=Width(f.FieldType)});
-   if(f.FieldType.Name.EndsWith("V1Data"))foreach(var nested in Fields(f.FieldType,n+".",offset))output.Add(nested.Key,nested.Value);
+   if(f.FieldType.IsExplicitLayout)foreach(var nested in Fields(f.FieldType,n+".",offset))output.Add(nested.Key,nested.Value);
   }return output;
  }
  static void Main(string[] args) {
@@ -225,7 +225,7 @@ class Probe {
   dynamicAssembly.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[]{typeof(string)})!,new object[]{assembly.GetName().Name!}));
   var module=dynamicAssembly.DefineDynamicModule("align");
   foreach(var t in assembly.GetTypes()) {
-   if(t.Namespace=="ThinkThen"&&t.IsValueType&&!t.IsEnum&&(t.Name.EndsWith("V1")||t.Name=="Answer")) {
+   if(t.Namespace=="ThinkThen"&&t.IsValueType&&!t.IsEnum&&!t.IsPublic&&(t.IsLayoutSequential||t.IsExplicitLayout)&&!t.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute),false)) {
     var holder=module.DefineType("Align"+t.Name,TypeAttributes.Public|TypeAttributes.SequentialLayout|TypeAttributes.Sealed,typeof(ValueType));
     holder.DefineField("prefix",typeof(byte),FieldAttributes.Public);holder.DefineField("value",t,FieldAttributes.Public);
     var aligned=holder.CreateType()!;
@@ -244,8 +244,11 @@ class Probe {
   var failure=assembly.GetType("ThinkThen.FailureKind",true)!;
   foreach(var value in Enum.GetValues(failure))constants.Add("THINKTHEN_E"+Enum.GetName(failure,value)!.ToUpperInvariant(),Convert.ToInt32(value));
   var persistence=assembly.GetType("ThinkThen.UsagePersistenceState",true)!;
-  foreach(var value in Enum.GetValues(persistence))constants.Add("THINKTHEN_COMPLETE_USAGE_PERSISTENCE_"+Enum.GetName(persistence,value)!.ToUpperInvariant()+"_V1",Convert.ToInt32(value));
-  Console.WriteLine(JsonSerializer.Serialize(new {records,functions,constants}));
+  foreach(var value in Enum.GetValues(persistence))constants.Add("THINKTHEN_COMPLETE_USAGE_PERSISTENCE_"+Enum.GetName(persistence,value)!.ToUpperInvariant()+"",Convert.ToInt32(value));
+  using var reader=new StreamReader(assembly.GetManifestResourceStream("ThinkThen.Interface.h")!);
+  string header=reader.ReadToEnd();
+  uint interface_number=uint.Parse(System.Text.RegularExpressions.Regex.Match(header,@"(?m)^#define THINKTHEN_INTERFACE_NUMBER (\d+)u?$").Groups[1].Value);
+  Console.WriteLine(JsonSerializer.Serialize(new {records,functions,constants,interface_number}));
  }
 }
 
@@ -261,7 +264,6 @@ def main():
     header, package, native = HEADER.read_text(), NUPKG.read_bytes(), ARCHIVE.read_bytes()
     receipt = inspect(header, package, native)
     (ROOT / "target/artifacts/manifest.json").write_text(json.dumps(receipt, indent=2) + "\n")
-    fail("header-version", lambda: inspect(header.replace(f"#define THINKTHEN_VERSION_PATCH {PATCH}", f"#define THINKTHEN_VERSION_PATCH {int(PATCH) + 1}"), package, native))
     stale = rewrite_zip(package, "README.md", b"\nstale\n")
     fail("stale-package-member", lambda: inspect(header, stale, native))
     fail("stale-package-hash", lambda: inspect(header, stale, native, receipt))
@@ -273,7 +275,7 @@ def main():
     fail("private-byte", lambda: check_bytes("plant", b"/home/private/file"))
     secret_zip = rewrite_zip(package, "README.md", b"tt-canary-290")
     fail("compressed-private-byte", lambda: inspect(header, secret_zip, native))
-    print("C# local packages: source members, hash receipt, header version, managed secrecy and planted negatives PASS")
+    print("C# local packages: source members, hash receipt, managed secrecy and planted negatives PASS")
 
     abi_check(HEADER, NUPKG)
 

@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.settings-cases/1",
+  "schema": "thinkthen.settings-cases",
   "question": "Is this a refund?",
   "cases": [
     {

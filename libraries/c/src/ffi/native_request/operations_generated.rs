@@ -17,9 +17,9 @@ use thinkthen::ErrorKind;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_request_plan_typed_value(
     engine: *const crate::EngineHandle,
-    function: crate::session::views::thinkthen_complete_utf8_v1,
-    arguments: *const super::carriers::thinkthen_request_arguments_v1,
-    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    function: crate::session::views::thinkthen_complete_utf8,
+    arguments: *const super::carriers::thinkthen_request_arguments,
+    surface_name: crate::session::views::thinkthen_complete_utf8,
     out: *mut *mut crate::session::views::ValueHandle,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {
@@ -48,20 +48,19 @@ pub unsafe extern "C" fn thinkthen_request_plan_typed_value(
 
 /// Build from environment plus canonical typed settings. NULL uses environment alone.
 /// Copies the finite aligned carrier tree; no foreign pointer survives return.
-/// Construction sends nothing. Failure returns NULL in the calling thread constructor slot.
+/// Construction sends nothing. Failure returns NULL and publishes an independent owned error.
+/// Success writes NULL to error. NULL error discards diagnostics; free an owned error once
+/// with thinkthen_call_error_free after all readers finish. No thread-local slot changes.
 /// # Safety
 /// settings is NULL or a live aligned settings carrier tree with counted UTF-8 extents.
+/// error is NULL or aligned writable pointer storage, separate from the input tree.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_new_typed(
-    settings: *const super::carriers::thinkthen_request_engine_settings_v1,
+    settings: *const super::carriers::thinkthen_request_engine_settings,
+    error: *mut *mut crate::ffi::run_call::CallErrorHandle,
 ) -> *mut crate::EngineHandle {
-    failures::guard(None, std::ptr::null_mut(), || {
-        // SAFETY: the caller retains all constructor input until admission returns.
-        failures::built(|| unsafe { super::settings_typed(settings) })
-            .map_or(std::ptr::null_mut(), |engine| {
-                Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine))))
-            })
-    })
+    // SAFETY: caller retains input and nullable writable error storage.
+    unsafe { crate::ffi::owned_constructor(error, || super::settings_typed(settings)) }
 }
 
 /// Push a counted typed feed descriptor. Rust owns framing and admission.
@@ -72,7 +71,7 @@ pub unsafe extern "C" fn thinkthen_engine_new_typed(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_try_push_typed(
     session: *const crate::session::SessionHandle,
-    descriptor: *const super::carriers::thinkthen_request_session_descriptor_v1,
+    descriptor: *const super::carriers::thinkthen_request_session_descriptor,
     status: *mut u32,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {
@@ -101,7 +100,7 @@ pub unsafe extern "C" fn thinkthen_session_try_push_typed(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_push_typed(
     session: *const crate::session::SessionHandle,
-    descriptor: *const super::carriers::thinkthen_request_session_descriptor_v1,
+    descriptor: *const super::carriers::thinkthen_request_session_descriptor,
     status: *mut u32,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {
@@ -131,9 +130,9 @@ pub unsafe extern "C" fn thinkthen_session_push_typed(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_request_plan_typed_json(
     engine: *const crate::EngineHandle,
-    function: crate::session::views::thinkthen_complete_utf8_v1,
-    arguments: *const super::carriers::thinkthen_request_arguments_v1,
-    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    function: crate::session::views::thinkthen_complete_utf8,
+    arguments: *const super::carriers::thinkthen_request_arguments,
+    surface_name: crate::session::views::thinkthen_complete_utf8,
     out: *mut *mut std::ffi::c_char,
     out_len: *mut usize,
 ) -> std::ffi::c_int {
@@ -183,9 +182,9 @@ pub unsafe extern "C" fn thinkthen_request_plan_typed_json(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_new_typed_with_surface(
     engine: *const crate::EngineHandle,
-    function: crate::session::views::thinkthen_complete_utf8_v1,
-    arguments: *const super::carriers::thinkthen_request_arguments_v1,
-    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    function: crate::session::views::thinkthen_complete_utf8,
+    arguments: *const super::carriers::thinkthen_request_arguments,
+    surface_name: crate::session::views::thinkthen_complete_utf8,
     out: *mut *mut crate::session::SessionHandle,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {

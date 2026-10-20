@@ -43,7 +43,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
     {
         // One root holds the prices and a usage folder the writer cannot make.
         let blocked = configuration("facts-priced-usage-unwritable", prices);
-        crate::facts::block_usage(&blocked);
+        let _restore_write = crate::facts::block_usage(&blocked);
         let (config, state) = (
             Folder::Config.variable(&blocked),
             Folder::Usage.variable(&blocked),

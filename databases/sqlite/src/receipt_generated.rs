@@ -953,10 +953,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
                 name: "verb",
                 shape: Shape::Scalar(Scalar::Text),
             },
-            Field {
-                name: "wording_version",
-                shape: Shape::Scalar(Scalar::Integer),
-            },
         ],
     },
     Projection {
@@ -1599,10 +1595,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
                 name: "verb",
                 shape: Shape::Scalar(Scalar::Text),
             },
-            Field {
-                name: "wording_version",
-                shape: Shape::Scalar(Scalar::Integer),
-            },
         ],
     },
     Projection {
@@ -1991,10 +1983,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
                 name: "verb",
                 shape: Shape::Scalar(Scalar::Text),
             },
-            Field {
-                name: "wording_version",
-                shape: Shape::Scalar(Scalar::Integer),
-            },
         ],
     },
     Projection {
@@ -2302,10 +2290,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
             Field {
                 name: "verb",
                 shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "wording_version",
-                shape: Shape::Scalar(Scalar::Integer),
             },
         ],
     },
@@ -2750,4 +2734,4 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         ],
     },
 ];
-pub(crate) const COLUMN_COUNT: usize = 1287;
+pub(crate) const COLUMN_COUNT: usize = 1279;

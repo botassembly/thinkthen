@@ -8,9 +8,6 @@ package thinkthen
 #cgo linux,!amd64 pkg-config: thinkthen
 #include <stdlib.h>
 #include "thinkthen.h"
-#if THINKTHEN_VERSION_MAJOR != 0 || THINKTHEN_VERSION_MINOR != 2 || THINKTHEN_VERSION_PATCH != 0
-#error header does not match package ABI
-#endif
 */
 import "C"
 
@@ -23,6 +20,15 @@ import (
 	"sync"
 	"unsafe"
 )
+
+func init() {
+	var loaded C.uint32_t
+	version := C.thinkthen_version(&loaded)
+	if loaded != C.THINKTHEN_INTERFACE_NUMBER {
+		panic(fmt.Sprintf("ThinkThen C interface mismatch: header requires %d, loaded library %s provides %d",
+			uint32(C.THINKTHEN_INTERFACE_NUMBER), C.GoString(version), uint32(loaded)))
+	}
+}
 
 var ErrClosed = errors.New("ThinkThen engine is closed")
 

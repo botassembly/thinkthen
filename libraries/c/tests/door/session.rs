@@ -73,7 +73,6 @@ fn assert_schema_admission_refusals(backend: &Backend) {
         ),
     ] {
         let json = serde_json::json!({
-            "schema":"thinkthen.request/1",
             "call":{"function":"decide","question":{"kind":"definition","value":{
                 "decide":"Does it pass?",schema:{"type":"object","required":["body"],"properties":{"body":{"type":"string"}}}
             }},"input":{"kind":"records","items":[item]}}
@@ -98,7 +97,7 @@ fn assert_schema_admission_refusals(backend: &Backend) {
 fn assert_definition_admission_refusals(backend: &Backend) {
     let canonical = |question: &str, item: &str| {
         format!(
-            "{{\"schema\":\"thinkthen.request/1\",\"call\":{{\"function\":\"decide\",\"question\":{{\"kind\":\"definition\",\"value\":{question}}},\"input\":{{\"kind\":\"records\",\"items\":[{item}]}}}}}}"
+            "{{\"call\":{{\"function\":\"decide\",\"question\":{{\"kind\":\"definition\",\"value\":{question}}},\"input\":{{\"kind\":\"records\",\"items\":[{item}]}}}}}}"
         )
     };
     for (question, item, message) in [
@@ -110,7 +109,7 @@ fn assert_definition_admission_refusals(backend: &Backend) {
         (
             r#"{"decide":"private-wording","wording_version":2e0}"#,
             r#"{"original":{"kind":"text","text":"private-evidence"}}"#,
-            "the question declaration uses an unsupported feature",
+            "delete the `wording_version` field.",
         ),
         (
             r#"{"decide":"private-wording","context_schema":{"type":"string"}}"#,

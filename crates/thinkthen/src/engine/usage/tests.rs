@@ -23,16 +23,6 @@ fn update(path: &std::path::Path, month: &str, delta: Counts) -> std::io::Result
 }
 
 #[test]
-fn an_old_usage_row_without_retries_reads_as_zero() {
-    let row: Counts = serde_json::from_str(
-        r#"{"schema":"thinkthen.usage/1","requests_sent":3,"input_tokens":1,"output_tokens":2,"cache_answers":0}"#,
-    )
-    .expect("old usage schema");
-    assert_eq!(row.requests_sent, 3);
-    assert_eq!(row.retries, 0);
-}
-
-#[test]
 fn an_uncountable_attempt_is_refused_before_transport() {
     let counts = Counters::new(None);
     counts.add(Counts {
@@ -213,7 +203,7 @@ fn an_invalid_older_month_refuses_the_update_before_any_write() {
     update(&folder, "2026-08", Counts::default()).expect("baseline");
     fs::write(
         folder.join("2026-08.json"),
-        b"{\"schema\":\"thinkthen.usage/2\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n",
+        b"{\"schema\":\"retired\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n",
     )
     .expect("future schema");
     assert!(update(&folder, "2026-09", Counts::default()).is_err());
@@ -374,25 +364,13 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
     }
 }
 
-/// QA's case on main: an older build's month file holds `retries` beside a
-/// `retries-` file with another value, and main refused to choose. One file
-/// now holds all five counts, and any `retries-` file is not a month.
 #[cfg(unix)]
 #[test]
-fn one_month_file_holds_every_count_and_an_old_retries_file_is_ignored() {
-    use std::os::unix::fs::PermissionsExt as _;
-
+fn one_month_file_holds_every_count() {
     let folder = folder("one-file");
     update(&folder, "2026-09", Counts::default()).expect("private folder and lock");
     let month = folder.join("2026-09.json");
-    fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":1}\n").expect("month");
-    let old = folder.join("retries-2026-09.json");
-    fs::write(
-        &old,
-        b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n",
-    )
-    .expect("old");
-    fs::set_permissions(&old, fs::Permissions::from_mode(0o600)).expect("private");
+    fs::write(&month, b"{\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":1}\n").expect("month");
     let totals = read(&folder, "2026-09").expect("the month file alone");
     assert_eq!((totals.month.requests_sent, totals.month.retries), (4, 2));
     let retry = Counts {
@@ -403,9 +381,8 @@ fn one_month_file_holds_every_count_and_an_old_retries_file_is_ignored() {
     update(&folder, "2026-10", retry).expect("a new month");
     assert_eq!(
         fs::read_to_string(folder.join("2026-10.json")).expect("written"),
-        "{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n"
+        "{\"requests_sent\":1,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n"
     );
-    assert!(!folder.join("retries-2026-10.json").exists());
     let total = read(&folder, "2026-10").expect("both months").total;
     assert_eq!((total.requests_sent, total.retries), (5, 3));
 }

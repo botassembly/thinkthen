@@ -70,7 +70,7 @@ def copybook(facts):
             output.append(f' {level:02} filler pic x({record["size"]-cursor}).')
         return output
     for name, record in facts['records'].items():
-        if not name.startswith(('thinkthen_complete_', 'thinkthen_cobol_')) or name.endswith('_data_v1'):
+        if not name.startswith(('thinkthen_complete_', 'thinkthen_cobol_')) or name.endswith('_data'):
             # Union roots are represented in their owning structs.
             continue
         lines.append('01 ' + identifier(name) + ' based.')
@@ -141,9 +141,9 @@ def requests(definitions, native_facts, root):
         elif source.get('type') == 'string':
             fields = [('const char *', 'data'), ('uint64_t', 'len')]
         else:
-            if tuple(metadata['fields']['JsonValue']) != (('value', '*const thinkthen_complete_json_v1'),):
+            if tuple(metadata['fields']['JsonValue']) != (('value', '*const thinkthen_complete_json'),):
                 raise ValueError('unsupported canonical arbitrary-value carrier')
-            fields = [('const struct thinkthen_complete_json_v1 *', 'value')]
+            fields = [('const struct thinkthen_complete_json *', 'value')]
         layouts[key] = fields
     header = ['/* Generated from the canonical Request graph; do not edit. */', '#ifndef TT_COBOL_REQUESTS_GENERATED_H', '#define TT_COBOL_REQUESTS_GENERATED_H', '#include <stdint.h>', '#define THINKTHEN_COBOL_REPRESENTATION 1001', '#define THINKTHEN_COBOL_OVERFLOW 1002', '#define THINKTHEN_COBOL_TEXT_CAPACITY 8192', 'typedef struct thinkthen_cobol_text {const char *data; uint64_t len;} thinkthen_cobol_text;']
     for key, source in nodes.items():
@@ -163,7 +163,7 @@ def requests(definitions, native_facts, root):
     from templates.csharp import enum_values
     for function in enum_values(definitions['RequestFunction']):
         header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_RequestCall *,void **);')
-    header += [f'#define TT_VALUE_{kind}_KIND {constants["THINKTHEN_COMPLETE_JSON_" + kind + "_V1"]}' for kind in ('NULL','BOOLEAN','NUMBER','STRING','ARRAY','OBJECT')]
+    header += [f'#define TT_VALUE_{kind}_KIND {constants["THINKTHEN_COMPLETE_JSON_" + kind]}' for kind in ('NULL','BOOLEAN','NUMBER','STRING','ARRAY','OBJECT')]
     header.append('typedef struct tt_value tt_value;')
     header.append('int TT_ENGINE_NEW(const thinkthen_cobol_EngineSettings *,void **);')
     header += ['int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,tt_value **);', 'int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']

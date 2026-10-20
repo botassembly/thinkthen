@@ -140,18 +140,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Annotate_Question_choose) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_choose; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Annotate_Question_choose is
-Result : Thinkthen.Inputs.Annotate_Question_choose := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_choose) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_choose) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Annotate_Question_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Annotate_Question_decide is ((Data => (T_decide => Native.Unwrap (Decide), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Annotate_Question_decide; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Annotate_Question_decide is
 Result : Thinkthen.Inputs.Annotate_Question_decide := Item;
@@ -247,18 +235,6 @@ if not Item.Data.T_true.Present then raise Constraint_Error with "missing input 
 return Native.Wrap (Item.Data.T_true.Value);
 end Get_True;
 function Has_True (Item : Thinkthen.Inputs.Annotate_Question_decide) return Boolean is (Item.Data.T_true.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_decide; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Annotate_Question_decide is
-Result : Thinkthen.Inputs.Annotate_Question_decide := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_decide) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_decide) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Annotate_Question_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Annotate_Question_score is ((Data => (T_score => Native.Unwrap (Score), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Annotate_Question_score; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Annotate_Question_score is
 Result : Thinkthen.Inputs.Annotate_Question_score := Item;
@@ -330,18 +306,6 @@ function Get_Score (Item : Thinkthen.Inputs.Annotate_Question_score) return Thin
 begin
 return Native.Wrap (Item.Data.T_score);
 end Get_Score;
-function With_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_score; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Annotate_Question_score is
-Result : Thinkthen.Inputs.Annotate_Question_score := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_score) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_score) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Annotate_Question_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Annotate_Question_tag is ((Data => (T_tag => Native.Unwrap (Tag), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Annotate_Question_tag; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Annotate_Question_tag is
 Result : Thinkthen.Inputs.Annotate_Question_tag := Item;
@@ -425,18 +389,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Annotate_Question_tag) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Annotate_Question_tag is
-Result : Thinkthen.Inputs.Annotate_Question_tag := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.choose is ((Data => (T_choose => Native.Unwrap (Choose), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.choose is
 Result : Thinkthen.Inputs.choose := Item;
@@ -556,18 +508,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.choose) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.choose is
-Result : Thinkthen.Inputs.choose := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.choose) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.criterion) return criterion_Kind is (criterion_Kind'Val (Requests.T_Authored_criterion_Kind'Pos (Item.Data.Kind)));
 function criterion_From_String (Item : String) return Thinkthen.Inputs.criterion is ((Data => (Kind => Requests.T_Authored_criterion_Text_Case, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.criterion) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -712,18 +652,6 @@ if not Item.Data.T_true.Present then raise Constraint_Error with "missing input 
 return Native.Wrap (Item.Data.T_true.Value);
 end Get_True;
 function Has_True (Item : Thinkthen.Inputs.decide) return Boolean is (Item.Data.T_true.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.decide is
-Result : Thinkthen.Inputs.decide := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.decide) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.description) return description_Kind is (description_Kind'Val (Requests.T_Authored_description_Kind'Pos (Item.Data.Kind)));
 function description_From_String (Item : String) return Thinkthen.Inputs.description is ((Data => (Kind => Requests.T_Authored_description_Text_Case, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.description) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -815,18 +743,6 @@ if not Item.Data.T_profile.Present then raise Constraint_Error with "missing inp
 return Native.Wrap (Item.Data.T_profile.Value);
 end Get_Profile;
 function Has_Profile (Item : Thinkthen.Inputs.find) return Boolean is (Item.Data.T_profile.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.find; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.find is
-Result : Thinkthen.Inputs.find := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.find) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.find) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.input_Declaration) return input_Declaration_Kind is (input_Declaration_Kind'Val (Requests.T_Authored_inputDeclaration_Kind'Pos (Item.Data.Kind)));
 function input_Declaration_From_string (Item : Thinkthen.Inputs.input_Declaration_string) return Thinkthen.Inputs.input_Declaration is ((Data => (Kind => Requests.T_Authored_inputDeclaration_string_Case, V_0 => Native.Unwrap (Item))));
 function As_string (Item : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.input_Declaration_string is (Native.Wrap (Item.Data.V_0));
@@ -994,18 +910,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.relate) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.relate; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.relate is
-Result : Thinkthen.Inputs.relate := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.relate) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.relate) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_relation (Name : String) return Thinkthen.Inputs.relation is ((Data => (T_name => Requests.T_Authored_name (Ada.Strings.Unbounded.To_Unbounded_String (Name)), others => <>)));
 function With_Either (Item : Thinkthen.Inputs.relation; Field : Thinkthen.Inputs.Boolean_Value) return Thinkthen.Inputs.relation is
 Result : Thinkthen.Inputs.relation := Item;
@@ -1184,18 +1088,6 @@ function Get_Score (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Quest
 begin
 return Native.Wrap (Item.Data.T_score);
 end Get_Score;
-function With_Wording_Version (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.score is
-Result : Thinkthen.Inputs.score := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.score) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.tag is ((Data => (T_tag => Native.Unwrap (Tag), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.tag is
 Result : Thinkthen.Inputs.tag := Item;
@@ -1315,18 +1207,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.tag) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.tag is
-Result : Thinkthen.Inputs.tag := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.tag) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.Probability_Band) return Probability_Band_Kind is (Probability_Band_Kind'Val (Requests.T_Authored_threshold_Kind'Pos (Item.Data.Kind)));
 function Probability_Band_From_Number (Item : Thinkthen.Inputs.Number) return Thinkthen.Inputs.Probability_Band is ((Data => (Kind => Requests.T_Authored_threshold_Number_Case, V_0 => Native.Unwrap (Item))));
 function As_Number (Item : Thinkthen.Inputs.Probability_Band) return Thinkthen.Inputs.Number is (Native.Wrap (Item.Data.V_0));
@@ -1874,18 +1754,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Recognize_Definition) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Recognize_Definition; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Recognize_Definition is
-Result : Thinkthen.Inputs.Recognize_Definition := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Recognize_Definition) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Recognize_Definition) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Recognition_Rules return Thinkthen.Inputs.Recognition_Rules is ((Data => (others => <>)));
 function With_Entity_Definition (Item : Thinkthen.Inputs.Recognition_Rules; Field : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Recognition_Rules is
 Result : Thinkthen.Inputs.Recognition_Rules := Item;
@@ -2203,18 +2071,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_choose) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_choose is
-Result : Thinkthen.Inputs.Definition_choose := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_choose) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_decide is ((Data => (T_decide => Native.Unwrap (Decide), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_decide is
 Result : Thinkthen.Inputs.Definition_decide := Item;
@@ -2346,18 +2202,6 @@ if not Item.Data.T_true.Present then raise Constraint_Error with "missing input 
 return Native.Wrap (Item.Data.T_true.Value);
 end Get_True;
 function Has_True (Item : Thinkthen.Inputs.Definition_decide) return Boolean is (Item.Data.T_true.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_decide is
-Result : Thinkthen.Inputs.Definition_decide := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_decide) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_find (Find : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_find is ((Data => (T_find => Native.Unwrap (Find), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_find; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_find is
 Result : Thinkthen.Inputs.Definition_find := Item;
@@ -2441,18 +2285,6 @@ if not Item.Data.T_profile.Present then raise Constraint_Error with "missing inp
 return Native.Wrap (Item.Data.T_profile.Value);
 end Get_Profile;
 function Has_Profile (Item : Thinkthen.Inputs.Definition_find) return Boolean is (Item.Data.T_profile.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_find; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_find is
-Result : Thinkthen.Inputs.Definition_find := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_find) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_find) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_relate (Relate : Thinkthen.Inputs.Relation_Rules) return Thinkthen.Inputs.Definition_relate is ((Data => (T_relate => Native.Unwrap (Relate), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_relate; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_relate is
 Result : Thinkthen.Inputs.Definition_relate := Item;
@@ -2536,18 +2368,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_relate) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_relate; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_relate is
-Result : Thinkthen.Inputs.Definition_relate := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_relate) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_relate) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_score is ((Data => (T_score => Native.Unwrap (Score), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_score is
 Result : Thinkthen.Inputs.Definition_score := Item;
@@ -2655,18 +2475,6 @@ function Get_Score (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.I
 begin
 return Native.Wrap (Item.Data.T_score);
 end Get_Score;
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_score is
-Result : Thinkthen.Inputs.Definition_score := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_score) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_tag is ((Data => (T_tag => Native.Unwrap (Tag), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_tag is
 Result : Thinkthen.Inputs.Definition_tag := Item;
@@ -2786,18 +2594,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_tag) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_tag is
-Result : Thinkthen.Inputs.Definition_tag := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_tag) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_Recognize_Definition (Recognize : Thinkthen.Inputs.Recognition_Rules) return Thinkthen.Inputs.Definition_Recognize_Definition is ((Data => (T_recognize => Native.Unwrap (Recognize), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_Recognize_Definition; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_Recognize_Definition is
 Result : Thinkthen.Inputs.Definition_Recognize_Definition := Item;
@@ -2905,18 +2701,6 @@ if not Item.Data.T_threshold.Present then raise Constraint_Error with "missing i
 return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Boolean is (Item.Data.T_threshold.Present);
-function With_Wording_Version (Item : Thinkthen.Inputs.Definition_Recognize_Definition; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_Recognize_Definition is
-Result : Thinkthen.Inputs.Definition_Recognize_Definition := Item;
-begin
-Result.Data.T_wording_version := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Wording_Version;
-function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Thinkthen.Inputs.Integer_Value is
-begin
-if not Item.Data.T_wording_version.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_wording_version.Value);
-end Get_Wording_Version;
-function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.Image) return Image_Kind is (Image_Kind'Val (Requests.T_RequestImage_Kind'Pos (Item.Data.Kind)));
 function Image_From_file (Item : Thinkthen.Inputs.Image_file) return Thinkthen.Inputs.Image is ((Data => (Kind => Requests.T_RequestImage_file_Case, V_0 => Native.Unwrap (Item))));
 function As_file (Item : Thinkthen.Inputs.Image) return Thinkthen.Inputs.Image_file is (Native.Wrap (Item.Data.V_0));

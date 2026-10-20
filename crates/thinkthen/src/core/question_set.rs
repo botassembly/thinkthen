@@ -23,7 +23,7 @@ pub(crate) enum PartError {
     /// The group's pointers could not form a reading; a parsed set checked them.
     Reading(ReadingError),
     /// A declaration refused the actual selected typed item.
-    Declaration(crate::core::declaration::DeclarationError),
+    Declaration(()),
     /// The record's selection is text, or holds nothing at a pointer.
     Record(RecordError),
 }
@@ -275,9 +275,7 @@ impl QuestionSet {
             if let Some(schema) = &named.metadata.item_schema
                 && !schema.accepts(&selected)
             {
-                return Err(PartError::Declaration(
-                    crate::core::declaration::DeclarationError,
-                ));
+                return Err(PartError::Declaration(()));
             }
         }
         if reads_root(on) {

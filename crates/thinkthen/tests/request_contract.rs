@@ -620,7 +620,8 @@ mod api;
 fn request_calls_require_objects_before_native_execution() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let text = r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
+    let text =
+        r#"{"call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
     let error = Request::from_json(text)
         .and_then(Request::admit)
         .and_then(|request| {
@@ -635,4 +636,107 @@ fn request_calls_require_objects_before_native_execution() {
         Some(RequestDecodeCause::Malformed)
     );
     assert_eq!(listener.count(), 0, "a sequence call sends nothing");
+}
+
+#[test]
+fn request_contract_has_no_schema_member() {
+    let request = r#"{"call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
+    assert!(
+        thinkthen::Request::from_json(request)
+            .unwrap()
+            .admit()
+            .is_ok()
+    );
+    for value in [r#""thinkthen.request/1""#, "null", "false", "1", "{}"] {
+        let text = request.replacen("{", &format!("{{\"schema\":{value},"), 1);
+        let error = thinkthen::Request::from_json(&text).unwrap_err();
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+        assert_eq!(error.detail().message(), "delete the `schema` field.");
+    }
+}
+
+#[test]
+fn request_contract_refuses_retired_metadata_in_every_declaration_before_sends() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("request-retired-metadata-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let path = folder.join("question.json");
+    for (function, definition) in [
+        ("decide", json!({"decide":"Fits?"})),
+        ("choose", json!({"choose":"Which?","options":["a","b"]})),
+        ("choose", json!({"choose":"Which?"})),
+        ("tag", json!({"tag":"Which?","labels":["a","b"]})),
+        (
+            "score",
+            json!({"score":"How much?","levels":["low","high"]}),
+        ),
+        ("rank", json!({"decide":"Fits?"})),
+        ("find", json!({"find":"Which?"})),
+        ("recognize", json!({"recognize":{}})),
+        (
+            "relate",
+            json!({"relate":{"relations":[{"name":"met","source":"*","target":"*"}]}}),
+        ),
+        (
+            "annotate",
+            json!({"questions":{"first":{"decide":"Fits?"}}}),
+        ),
+        ("rank", json!({"questions":{"first":{"decide":"Fits?"}}})),
+    ] {
+        for value in [
+            Value::Null,
+            json!(false),
+            json!(0),
+            json!(2),
+            json!(2.0),
+            json!("private-version"),
+        ] {
+            let mut definition = definition.clone();
+            if definition.get("questions").is_some() {
+                definition["questions"]["first"]["wording_version"] = value;
+            } else {
+                definition["wording_version"] = value;
+            }
+            let text = definition.to_string();
+            for decode in [
+                RequestDefinition::from_authored_json,
+                RequestDefinition::from_request_json,
+            ] {
+                let error = decode(&text).unwrap_err();
+                assert_eq!(error.kind(), ErrorKind::Usage);
+                assert_eq!(
+                    error.detail().message(),
+                    "delete the `wording_version` field."
+                );
+                assert!(!format!("{error:?}").contains("private-version"));
+            }
+            std::fs::write(&path, &text).unwrap();
+            let request = Request::named(
+                function,
+                RequestArguments {
+                    question: RequestQuestion::File { path: path.clone() },
+                    input: RequestInput::Records {
+                        items: vec![item("private-evidence")],
+                    },
+                    options: RequestOptions::default(),
+                },
+            )
+            .unwrap()
+            .admit()
+            .unwrap();
+            let error = engine
+                .execute_request(&request, RequestEnvironment::default())
+                .unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::Local);
+            assert_eq!(
+                error.detail().message(),
+                "delete the `wording_version` field."
+            );
+            assert!(!format!("{error:?}").contains("private-evidence"));
+        }
+    }
+    assert_eq!(listener.requests().len(), 0);
+    std::fs::remove_dir_all(folder).unwrap();
 }

@@ -59,10 +59,10 @@ def render():
             for member,shape in source['properties'].items():
                 access='v.'+('true_' if member=='true' else 'false_' if member=='false' else member)
                 optional=member not in source.get('required',[]) or c.nullable(shape,definitions)
-                if optional:body.append('if (%s.presence != THINKTHEN_COMPLETE_PRESENCE_MISSING_V1) {' % access)
+                if optional:body.append('if (%s.presence != THINKTHEN_COMPLETE_PRESENCE_MISSING) {' % access)
                 body += ['if(comma++) { putchar(44); } fputs(%s, stdout);' % json.dumps(json.dumps(member)+':')]
                 if optional:
-                    body += ['if(%s.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) fputs("null", stdout); else {' % access,value(shape,path+'_field_'+member,access+'.value'),'}','}']
+                    body += ['if(%s.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) fputs("null", stdout); else {' % access,value(shape,path+'_field_'+member,access+'.value'),'}','}']
                 else:body.append(value(shape,path+'_field_'+member,access))
             body += ['for(size_t i=0;i<v.extensions.len;++i) { if(comma++) { putchar(44); } quoted(v.extensions.data[i].name); putchar(58); fwrite(v.extensions.data[i].json.data,1,v.extensions.data[i].json.len,stdout); }','putchar(125);']
         elif not direct:
@@ -75,8 +75,8 @@ def render():
         functions[name] = 'static void emit_' + name + '(' + name + ' v) {\n' + '\n'.join(body) + '\n}'
     emit('completesessionPacket', definitions['completesessionPacket'])
     output += ['#include <thinkthen.h>', '#include <stdio.h>', '#include <stdlib.h>', '#include <inttypes.h>',
-               'static void quoted(thinkthen_complete_utf8_v1 s) { putchar(34); for(size_t i=0;i<s.len;++i) { unsigned char b=s.data[i]; if(b==34||b==92) {putchar(92);putchar(b);} else if(b<32) printf("\\\\u%04x",b); else putchar(b); } putchar(34); }',
-               'static void emit_json(const thinkthen_complete_json_v1 *v) { switch(v->kind) { case 1:fputs("null",stdout);break;case 2:fputs(v->data.boolean?"true":"false",stdout);break;case 3:fwrite(v->data.number.data,1,v->data.number.len,stdout);break;case 4:quoted(v->data.string);break;case 5:putchar(91);for(size_t i=0;i<v->data.array.len;++i){if(i)putchar(44);emit_json(v->data.array.data[i]);}putchar(93);break;case 6:putchar(123);for(size_t i=0;i<v->data.object.len;++i){if(i)putchar(44);quoted(v->data.object.data[i].name);putchar(58);emit_json(v->data.object.data[i].value);}putchar(125);break;default:abort();} }']
+               'static void quoted(thinkthen_complete_utf8 s) { putchar(34); for(size_t i=0;i<s.len;++i) { unsigned char b=s.data[i]; if(b==34||b==92) {putchar(92);putchar(b);} else if(b<32) printf("\\\\u%04x",b); else putchar(b); } putchar(34); }',
+               'static void emit_json(const thinkthen_complete_json *v) { switch(v->kind) { case 1:fputs("null",stdout);break;case 2:fputs(v->data.boolean?"true":"false",stdout);break;case 3:fwrite(v->data.number.data,1,v->data.number.len,stdout);break;case 4:quoted(v->data.string);break;case 5:putchar(91);for(size_t i=0;i<v->data.array.len;++i){if(i)putchar(44);emit_json(v->data.array.data[i]);}putchar(93);break;case 6:putchar(123);for(size_t i=0;i<v->data.object.len;++i){if(i)putchar(44);quoted(v->data.object.data[i].name);putchar(58);emit_json(v->data.object.data[i].value);}putchar(125);break;default:abort();} }']
     text='\n'.join(functions.values())
     return '\n'.join(output + ['static void emit_'+name+'('+name+' v);' for name in functions] + [text])+'\n'
 if __name__ == '__main__':print(render(),end='')

@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.portable-structured-batch/1",
+  "schema": "thinkthen.portable-structured-batch",
   "compact": [
     "{\"z\":{\"é\":\"line\\n\\\"\\\\\",\"a\":[-0.0,1e+20]},\"n\":1.0}",
     "{\"n\":1,\"tag\":\"cut-1530\"}",

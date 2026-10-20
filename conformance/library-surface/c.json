@@ -8,10 +8,10 @@
         "libraries/c/include/thinkthen.h"
       ],
       "option_containers": [
-        "thinkthen_request_call_options_v1"
+        "thinkthen_request_call_options"
       ],
       "setting_containers": [
-        "thinkthen_request_engine_settings_v1"
+        "thinkthen_request_engine_settings"
       ],
       "function_prefix": "thinkthen_",
       "test_folders": [
@@ -19,14 +19,14 @@
         "examples"
       ],
       "helper_names": {
-        "usage_persistence": "thinkthen_engine_usage_persistence_v1",
-        "finish_usage_status": "thinkthen_engine_finish_usage_status_v1",
+        "usage_persistence": "thinkthen_engine_usage_persistence",
+        "finish_usage_status": "thinkthen_engine_finish_usage_status",
         "plan": "thinkthen_request_plan_json",
-        "question_file": "thinkthen_request_question_selector_file_v1",
-        "question_name": "thinkthen_request_question_selector_name_v1",
-        "question_reference": "thinkthen_request_question_selector_reference_v1",
-        "item": "thinkthen_request_item_v1",
-        "files": "thinkthen_request_source_v1"
+        "question_file": "thinkthen_request_question_selector_file",
+        "question_name": "thinkthen_request_question_selector_name",
+        "question_reference": "thinkthen_request_question_selector_reference",
+        "item": "thinkthen_request_item",
+        "files": "thinkthen_request_source"
       },
       "function_containers": [
         ""

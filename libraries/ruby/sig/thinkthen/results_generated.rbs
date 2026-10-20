@@ -546,7 +546,6 @@ module ThinkThen
       def profile: () -> (String)
       def text: () -> (request_authored_question_text)
       def verb: () -> (untyped)
-      def wording_version: () -> (Integer)
     end
     class NativeNameOdds < Native::Result
       def edges: () -> (Hash[String, Integer | Float] | nil)
@@ -594,7 +593,6 @@ module ThinkThen
       def name: () -> (String)
       def on: () -> (Array[String])
       def profile: () -> (String)
-      def wording_version: () -> (Integer)
       def options: () -> (Array[String])
       def text: () -> (request_authored_question_text)
       def verb: () -> (String)
@@ -608,7 +606,6 @@ module ThinkThen
       def name: () -> (String)
       def on: () -> (Array[String])
       def profile: () -> (String)
-      def wording_version: () -> (Integer)
       def false: () -> (request_authored_criterion)
       def text: () -> (request_authored_question_text)
       def true: () -> (request_authored_criterion)
@@ -623,7 +620,6 @@ module ThinkThen
       def name: () -> (String)
       def on: () -> (Array[String])
       def profile: () -> (String)
-      def wording_version: () -> (Integer)
       def levels: () -> (Array[String])
       def text: () -> (request_authored_question_text)
       def verb: () -> (String)
@@ -637,7 +633,6 @@ module ThinkThen
       def name: () -> (String)
       def on: () -> (Array[String])
       def profile: () -> (String)
-      def wording_version: () -> (Integer)
       def labels: () -> (Array[String])
       def text: () -> (request_authored_question_text)
       def verb: () -> (String)
@@ -667,7 +662,6 @@ module ThinkThen
       def stage_context: () -> (NativeRecognitionStageContext)
       def threshold: () -> (Integer | Float | String)
       def verb: () -> (String)
-      def wording_version: () -> (Integer)
     end
     class NativeRecognizeEntities < Native::Result
       def entities: () -> (Array[NativeEntity])
@@ -694,7 +688,6 @@ module ThinkThen
       def relations: () -> (Array[NativeRelationRule])
       def threshold: () -> (Integer | Float | String)
       def verb: () -> (untyped)
-      def wording_version: () -> (Integer)
     end
     class NativeRelatedEntity < Native::Result
       def kind: () -> (String)
@@ -1035,9 +1028,9 @@ module ThinkThen
     def self.choose_question: (request_authored_question_text text, options: request_authored_options) -> request_authored_choose
     def self.relation: (String name, ?either: bool, ?reads: request_authored_name, ?single: bool, ?source: request_authored_name, ?target: request_authored_name) -> request_authored_relation
     def self.relate_question: (relations: Array[request_authored_relation], ?fields: { name: String, kind: String }?) -> request_authored_relate
-    def self.recognize_question: (kinds: Hash[Symbol | String, request_authored_description], ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context) -> ({ ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?profile: request_authored_profile, recognize: { ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?kinds: Hash[Symbol | String, request_authored_description], ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context }, ?relation_threshold: request_authored_cut, ?threshold: request_authored_cut, ?wording_version: Integer })
+    def self.recognize_question: (kinds: Hash[Symbol | String, request_authored_description], ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context) -> ({ ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?profile: request_authored_profile, recognize: { ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?kinds: Hash[Symbol | String, request_authored_description], ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context }, ?relation_threshold: request_authored_cut, ?threshold: request_authored_cut })
   end
-  type request_authored_choose = { ?batch: request_authored_question_batch, choose: request_authored_question_text, ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?options: request_authored_options, ?profile: request_authored_profile, ?threshold: request_authored_cut, ?wording_version: Integer }
+  type request_authored_choose = { ?batch: request_authored_question_batch, choose: request_authored_question_text, ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?options: request_authored_options, ?profile: request_authored_profile, ?threshold: request_authored_cut }
   type request_authored_criterion = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
   type request_authored_cut = Integer | Float | String
   type request_authored_description = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
@@ -1049,7 +1042,7 @@ module ThinkThen
   type request_authored_profile = String
   type request_authored_question_batch = untyped
   type request_authored_question_text = String | Hash[Symbol | String, untyped] | Array[untyped]
-  type request_authored_relate = { ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?profile: request_authored_profile, relate: { ?fields: { kind: String, name: String }, relations: Array[request_authored_relation] }, ?threshold: request_authored_cut, ?wording_version: Integer }
+  type request_authored_relate = { ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?profile: request_authored_profile, relate: { ?fields: { kind: String, name: String }, relations: Array[request_authored_relation] }, ?threshold: request_authored_cut }
   type request_authored_relation = { ?either: bool, name: request_authored_name, ?reads: request_authored_name, ?single: bool, ?source: request_authored_name, ?target: request_authored_name }
   type request_cache_document = String | request_disabled_cache
   type request_context_schema = String | Hash[Symbol | String, untyped]

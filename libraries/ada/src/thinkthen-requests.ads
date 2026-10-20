@@ -141,9 +141,6 @@ end case;
 end record;
 package T_Authored_threshold_Options is new Optional_Values (T_Authored_threshold);
 subtype T_Authored_threshold_Optional is T_Authored_threshold_Options.Optional;
-type T_Integer is new Interfaces.Integer_64;
-package T_Integer_Options is new Optional_Values (T_Integer);
-subtype T_Integer_Optional is T_Integer_Options.Optional;
 type T_AnnotateQuestion_decide is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_decide : T_Authored_questionText;
@@ -153,7 +150,6 @@ T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_name is new Unbounded_String;
 package T_Authored_name_List_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_name);
@@ -204,7 +200,6 @@ T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_options : T_Authored_options_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_labels_Kind is (T_Authored_labels_Array_Case,
 T_Authored_labels_Object_Case);
@@ -224,7 +219,6 @@ T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_criterion_Map_Entry is record
 Key : Unbounded_String;
@@ -249,7 +243,6 @@ T_levels : T_Authored_levels_Optional;
 T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_score : T_Authored_questionText;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_AnnotateQuestion_Kind is (T_AnnotateQuestion_decide_Case,
 T_AnnotateQuestion_choose_Case,
@@ -276,6 +269,7 @@ T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
 end record;
 type T_Literal_max is null record;
+type T_Integer is new Interfaces.Integer_64;
 type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_max_Case,
 T_Authored_questionBatch_Integer_Case);
 type T_Authored_questionBatch (Kind : T_Authored_questionBatch_Kind := T_Authored_questionBatch_max_Case) is record
@@ -299,7 +293,6 @@ T_on : T_Authored_pointers_Optional;
 T_options : T_Authored_options_Optional;
 T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_decide is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -313,7 +306,6 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_find is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
@@ -323,7 +315,6 @@ T_model : T_Authored_name_Optional;
 T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RelateFields is record
 T_kind : T_Text;
@@ -356,7 +347,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_score is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -368,7 +358,6 @@ T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_score : T_Authored_questionText;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_tag is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -381,7 +370,6 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_DisabledCache is null record;
 type T_CacheDocument_Kind is (T_CacheDocument_Text_Case,
@@ -539,7 +527,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestFunction is (T_RequestFunction_decide,
 T_RequestFunction_choose,
@@ -703,6 +690,8 @@ when T_RequestInput_source_Case => V_5 : T_RequestInput_source;
 when T_RequestInput_feed_Case => V_6 : T_RequestInput_feed;
 end case;
 end record;
+package T_Integer_Options is new Optional_Values (T_Integer);
+subtype T_Integer_Optional is T_Integer_Options.Optional;
 package T_OptionSchema2_List_Vectors is new Ada.Containers.Vectors (Positive, T_OptionSchema2);
 subtype T_OptionSchema2_List is T_OptionSchema2_List_Vectors.Vector;
 package T_OptionSchema2_List_Options is new Optional_Values (T_OptionSchema2_List);
@@ -766,7 +755,6 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_choose is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -779,7 +767,6 @@ T_on : T_Authored_pointers_Optional;
 T_options : T_Authored_options_Optional;
 T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_tag is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -792,7 +779,6 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_score is record
 T_batch : T_Authored_questionBatch_Optional;
@@ -804,7 +790,6 @@ T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_score : T_Authored_questionText;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_relate is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
@@ -814,7 +799,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_find is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
@@ -824,7 +808,6 @@ T_model : T_Authored_name_Optional;
 T_name : T_Text_Optional;
 T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_RecognizeDefinition is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
@@ -836,7 +819,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_AnnotateDefinition is record
 T_batch : T_JSON_Optional;
@@ -902,10 +884,8 @@ T_input : T_RequestInput;
 T_options : T_RequestOptions_Optional;
 T_question : T_RequestQuestion;
 end record;
-type T_RequestVersion is (T_RequestVersion_thinkthen_request_1);
 type T_Request is record
 T_call : T_RequestCall;
-T_schema : T_RequestVersion;
 end record;
 type T_Literal_producer is null record;
 type T_RequestReaderFailure_producer is record

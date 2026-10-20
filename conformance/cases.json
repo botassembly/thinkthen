@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.conformance/1",
+  "schema": "thinkthen.conformance",
   "backend_url": "https://api.typesafe.ai/v1/systemone",
   "case_count": 56,
   "error_kinds": [
@@ -10381,7 +10381,7 @@
     }
   ],
   "parity": {
-    "schema": "thinkthen.parity-cases/1",
+    "schema": "thinkthen.parity-cases",
     "pending_consumers": [],
     "functions": [
       "decide",

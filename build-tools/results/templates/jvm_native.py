@@ -40,26 +40,26 @@ def render(root, abi):
                 'u64': f'new java.math.BigDecimal(Long.toUnsignedString({expr}.get(ValueLayout.JAVA_LONG, 0)))',
                 'i64': f'java.math.BigDecimal.valueOf({expr}.get(ValueLayout.JAVA_LONG, 0))',
                 'f64': f'java.math.BigDecimal.valueOf({expr}.get(ValueLayout.JAVA_DOUBLE, 0))',
-                'thinkthen_complete_utf8_v1': f'text({expr})',
-                'thinkthen_complete_json_v1': f'json({expr})'}.get(typ, f'{typ}({expr})')
+                'thinkthen_complete_utf8': f'text({expr})',
+                'thinkthen_complete_json': f'json({expr})'}.get(typ, f'{typ}({expr})')
     lines = ['// Generated from the canonical result graph and compiler-measured C ABI. Do not edit.',
              'package thinkthen;', 'import java.lang.foreign.*;', 'import java.util.*;',
              'final class NativeResults {', 'private NativeResults() {}',
              '@SuppressWarnings("restricted") static MemorySegment pointer(MemorySegment p) { return p.get(ValueLayout.ADDRESS, 0).reinterpret(Long.MAX_VALUE); }',
-             'static String text(MemorySegment p) { long length = p.get(NativeSession.SIZE, ' + str(offset('thinkthen_complete_utf8_v1', 'len')) + '); if (length < 0 || length > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native string length"); return new String(pointer(p).asSlice(0, length).toArray(ValueLayout.JAVA_BYTE), java.nio.charset.StandardCharsets.UTF_8); }',
+             'static String text(MemorySegment p) { long length = p.get(NativeSession.SIZE, ' + str(offset('thinkthen_complete_utf8', 'len')) + '); if (length < 0 || length > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native string length"); return new String(pointer(p).asSlice(0, length).toArray(ValueLayout.JAVA_BYTE), java.nio.charset.StandardCharsets.UTF_8); }',
              'static Object packet(MemorySegment owner) { try (Arena arena = Arena.ofConfined()) { var out = arena.allocate(ValueLayout.ADDRESS); NativeSession.check((int)NativeSession.call("thinkthen_session_result_view", ValueLayout.JAVA_INT, new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS}, owner, out)); return ' + ident('completesessionPacket') + '(pointer(out)); } }',
              'static Object value(MemorySegment owner) { try (Arena arena = Arena.ofConfined()) { var out = arena.allocate(ValueLayout.ADDRESS); NativeSession.check((int)NativeSession.call("thinkthen_value_view", ValueLayout.JAVA_INT, new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS}, owner, out)); return json(pointer(out)); } }',
-             'static Object json(MemorySegment p) { var data = p.asSlice(' + str(offset('thinkthen_complete_json_v1', 'data')) + '); switch (p.get(ValueLayout.JAVA_INT, 0)) {']
+             'static Object json(MemorySegment p) { var data = p.asSlice(' + str(offset('thinkthen_complete_json', 'data')) + '); switch (p.get(ValueLayout.JAVA_INT, 0)) {']
     kinds = abi['constants']
     for kind in ('null', 'boolean', 'number', 'string', 'array', 'object'):
-        expression = {'null': 'null', 'boolean': 'data.get(ValueLayout.JAVA_INT, 0) != 0', 'number': 'new java.math.BigDecimal(text(data))', 'string': 'text(data)', 'array': 'thinkthen_complete_json_array_v1(data)', 'object': 'thinkthen_complete_json_object_v1(data)'}[kind]
-        lines.append(f'case {kinds["THINKTHEN_COMPLETE_JSON_" + kind.upper() + "_V1"]}: return {expression};')
+        expression = {'null': 'null', 'boolean': 'data.get(ValueLayout.JAVA_INT, 0) != 0', 'number': 'new java.math.BigDecimal(text(data))', 'string': 'text(data)', 'array': 'thinkthen_complete_json_array(data)', 'object': 'thinkthen_complete_json_object(data)'}[kind]
+        lines.append(f'case {kinds["THINKTHEN_COMPLETE_JSON_" + kind.upper()]}: return {expression};')
     lines += ['default: throw new IllegalStateException("Unknown native JSON kind"); } }']
-    lines += ['static NativeFailure failure(MemorySegment view) {', '@SuppressWarnings("restricted") var p = view.reinterpret(' + str(size('thinkthen_error_view_v1')) + ');', 'var facts = p.get(ValueLayout.ADDRESS, ' + str(offset('thinkthen_error_view_v1', 'facts')) + ');', 'return new NativeFailure(p.get(ValueLayout.JAVA_INT, ' + str(offset('thinkthen_error_view_v1', 'code')) + '), p.get(ValueLayout.JAVA_INT, ' + str(offset('thinkthen_error_view_v1', 'retryable')) + ') != 0, text(p.asSlice(' + str(offset('thinkthen_error_view_v1', 'message')) + ')), facts.equals(MemorySegment.NULL) ? null : new Results.ImmediateFacts(thinkthen_complete_immediate_facts_v1(pointer(p.asSlice(' + str(offset('thinkthen_error_view_v1', 'facts')) + ')))));', '}']
+    lines += ['static NativeFailure failure(MemorySegment view) {', '@SuppressWarnings("restricted") var p = view.reinterpret(' + str(size('thinkthen_error_details')) + ');', 'var facts = p.get(ValueLayout.ADDRESS, ' + str(offset('thinkthen_error_details', 'facts')) + ');', 'return new NativeFailure(p.get(ValueLayout.JAVA_INT, ' + str(offset('thinkthen_error_details', 'code')) + '), p.get(ValueLayout.JAVA_INT, ' + str(offset('thinkthen_error_details', 'retryable')) + ') != 0, text(p.asSlice(' + str(offset('thinkthen_error_details', 'message')) + ')), facts.equals(MemorySegment.NULL) ? null : new Results.ImmediateFacts(thinkthen_complete_immediate_facts(pointer(p.asSlice(' + str(offset('thinkthen_error_details', 'facts')) + ')))));', '}']
     fields = dict(target.fields)
-    fields['thinkthen_complete_json_array_v1'] = [('data', '*const *const thinkthen_complete_json_v1'), ('len', 'usize')]
-    fields['thinkthen_complete_json_object_v1'] = [('data', '*const thinkthen_complete_json_entry_v1'), ('len', 'usize')]
-    fields['thinkthen_complete_extensions_v1'] = fields['thinkthen_complete_json_object_v1']
+    fields['thinkthen_complete_json_array'] = [('data', '*const *const thinkthen_complete_json'), ('len', 'usize')]
+    fields['thinkthen_complete_json_object'] = [('data', '*const thinkthen_complete_json_entry'), ('len', 'usize')]
+    fields['thinkthen_complete_extensions'] = fields['thinkthen_complete_json_object']
     for typ, members in fields.items():
         source = target.schemas.get(typ, {})
         lines.append(f'static Object {typ}(MemorySegment p) {{')
@@ -76,7 +76,7 @@ def render(root, abi):
             lines += ['default: throw new IllegalStateException("Unknown native enum kind"); };']
         elif members[0][0] == 'data' and members[-1][0] == 'len':
             child = members[0][1][7:]
-            mapping = child.endswith('_entry_v1')
+            mapping = child.endswith('_entry')
             stride = 8 if child.startswith('*const ') else size(child) if child in records else {'u32': 4, 'u64': 8, 'i64': 8, 'f64': 8}[child]
             lines += [f'long count = p.get(NativeSession.SIZE, {offset(typ, "len")}); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");', 'var data = pointer(p);', 'var copy = new LinkedHashMap<String,Object>();' if mapping else 'var copy = new ArrayList<Object>();', f'for (long i = 0; i < count; i++) {{ var item = data.asSlice(i * {stride});']
             if mapping:
@@ -96,7 +96,7 @@ def render(root, abi):
                 expr = f'p.asSlice({offset(typ, member)})'
                 if member == 'extensions':
                     lines.append(f'copy.putAll(Values.object({read(child, expr)}));')
-                elif child.endswith('_presence_v1'):
+                elif child.endswith('_presence'):
                     inner = target.fields[child][1][1]
                     expression = read(inner, member + 'Slot.asSlice(' + str(offset(child, 'value')) + ')')
                     if normalized(source['properties'][member]).get('type') == 'boolean': expression = f'{member}Slot.get(ValueLayout.JAVA_INT, {offset(child, "value")}) != 0'

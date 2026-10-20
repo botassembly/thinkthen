@@ -109,7 +109,7 @@ final class OwnedSession implements Finalizable {
     _pushing = true;
     try {
       return await _nativeRequest(true, _encodeNative(descriptor)) ==
-          THINKTHEN_SESSION_ACCEPTED_V1;
+          THINKTHEN_SESSION_ACCEPTED;
     } finally {
       _pushing = false;
     }

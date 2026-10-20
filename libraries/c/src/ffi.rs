@@ -91,16 +91,43 @@ unsafe fn text<'a>(text: *const c_char, len: usize) -> Result<&'a str, Failure> 
     std::str::from_utf8(bytes).map_err(|_| Failure::usage("a text is not UTF-8"))
 }
 
-/// Build an engine from the environment; null when it cannot be built, and
-/// the error functions then answer with a null engine for the failure.
-/// Build from the command's environment, including address/key/cache and
-/// XDG configuration/cache defaults. Building sends nothing. Invalid settings
-/// return NULL/EUSAGE; unreadable cache/configuration returns NULL/ELOCAL.
-/// The NULL-engine error accessors retain the calling thread's failed build.
+/// Build from the environment without sending. Failure returns NULL and an
+/// independent owned error; success writes NULL to error. NULL error discards
+/// diagnostics. Free returned errors once with thinkthen_call_error_free.
+/// No thread-local diagnostic slot changes.
+/// # Safety
+/// error is NULL or aligned writable pointer storage for the call.
 #[unsafe(no_mangle)]
-pub extern "C" fn thinkthen_engine_new() -> *mut EngineHandle {
-    // SAFETY: the constructor accepts null as the empty settings object.
-    unsafe { thinkthen_engine_new_with(std::ptr::null()) }
+pub unsafe extern "C" fn thinkthen_engine_new(
+    error: *mut *mut run_call::CallErrorHandle,
+) -> *mut EngineHandle {
+    // SAFETY: the constructor accepts null settings and the same error storage.
+    unsafe { thinkthen_engine_new_with(std::ptr::null(), error) }
+}
+
+/// Publish an engine or the existing independent failure owner without TLS.
+/// # Safety
+/// error is NULL or aligned writable pointer storage separate from build inputs.
+unsafe fn owned_constructor(
+    error: *mut *mut run_call::CallErrorHandle,
+    build: impl FnOnce() -> Result<thinkthen::Engine, Failure>,
+) -> *mut EngineHandle {
+    let outcome = crate::failures::owned_call(|| {
+        build().map(|engine| Box::into_raw(Box::new(EngineHandle(Held::new(engine)))))
+    });
+    let (engine, failure) = match outcome {
+        Ok(engine) => (engine, None),
+        Err(failure) => (std::ptr::null_mut(), Some(failure)),
+    };
+    if !error.is_null() {
+        // SAFETY: the caller retains writable storage; each error transfers once.
+        unsafe {
+            *error = failure.map_or(std::ptr::null_mut(), |failure| {
+                Box::into_raw(Box::new(run_call::CallErrorHandle::from(failure)))
+            });
+        }
+    }
+    engine
 }
 
 unsafe fn settings_json(settings_json: *const c_char) -> Result<thinkthen::Engine, Failure> {

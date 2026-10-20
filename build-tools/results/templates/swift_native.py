@@ -14,8 +14,8 @@ def render(definitions):
         pending.extend(references(source))
         pending.extend(child for child, _ in source.get('variants', []))
     definitions = selected
-    lines = ['import CThinkThen', '\nfunc nativeElements<T>(_ pointer: UnsafePointer<T>?, _ count: Int) throws -> [T] {\n    if count == 0 { return [] }\n    guard let pointer else { throw ValueConversionError("Missing native collection") }\n    return Array(UnsafeBufferPointer(start: pointer, count: count))\n}\nfunc copyNativeLeaf(_ pointer: UnsafePointer<thinkthen_complete_json_v1>?) throws -> DataValue {\n    guard let pointer else { throw ValueConversionError("Missing native leaf") }\n    return try DataValue.copyNative(pointer)\n}\nfunc copyNativeExtensions(_ value: thinkthen_complete_extensions_v1) throws -> [ValueMember] {\n    try nativeElements(value.data, value.len).map {\n        ValueMember(nativeString($0.name), try copyNativeLeaf($0.value))\n    }\n}\n']
-    lines += ['func nativeValue(_ owner: OpaquePointer) throws -> DataValue {\n    var view: UnsafePointer<thinkthen_complete_json_v1>?\n    try sessionCheck(thinkthen_value_view(owner, &view))\n    guard let view else { throw ValueConversionError("Missing native value view") }\n    return try DataValue.copyNative(view)\n}\n']
+    lines = ['import CThinkThen', '\nfunc nativeElements<T>(_ pointer: UnsafePointer<T>?, _ count: Int) throws -> [T] {\n    if count == 0 { return [] }\n    guard let pointer else { throw ValueConversionError("Missing native collection") }\n    return Array(UnsafeBufferPointer(start: pointer, count: count))\n}\nfunc copyNativeLeaf(_ pointer: UnsafePointer<thinkthen_complete_json>?) throws -> DataValue {\n    guard let pointer else { throw ValueConversionError("Missing native leaf") }\n    return try DataValue.copyNative(pointer)\n}\nfunc copyNativeExtensions(_ value: thinkthen_complete_extensions) throws -> [ValueMember] {\n    try nativeElements(value.data, value.len).map {\n        ValueMember(nativeString($0.name), try copyNativeLeaf($0.value))\n    }\n}\n']
+    lines += ['func nativeValue(_ owner: OpaquePointer) throws -> DataValue {\n    var view: UnsafePointer<thinkthen_complete_json>?\n    try sessionCheck(thinkthen_value_view(owner, &view))\n    guard let view else { throw ValueConversionError("Missing native value view") }\n    return try DataValue.copyNative(view)\n}\n']
     emitted = set()
 
     def shape(source, path, value):
@@ -73,7 +73,7 @@ def render(definitions):
                 presence = field not in source.get('required', []) or nullable(schema, definitions)
                 expression = shape(schema, key + '_field_' + field, access + ('.value' if presence else ''))
                 if presence:
-                    body += [f'    switch {access}.presence {{', '    case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break', f'    case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember({json.dumps(field)}, .null))', f'    case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1): members.append(ValueMember({json.dumps(field)}, {expression}))', '    default: throw ValueConversionError("Unknown native presence")', '    }']
+                    body += [f'    switch {access}.presence {{', '    case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break', f'    case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember({json.dumps(field)}, .null))', f'    case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE): members.append(ValueMember({json.dumps(field)}, {expression}))', '    default: throw ValueConversionError("Unknown native presence")', '    }']
                 else:
                     body += [f'    members.append(ValueMember({json.dumps(field)}, {expression}))']
             body += ['    return .orderedObject(members)']
@@ -84,5 +84,5 @@ def render(definitions):
     for key, source in definitions.items():
         define(key, source)
     # Only this entry is visible to the handwritten session owner.
-    lines += ['func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_v1>) throws -> DataValue {', '    try copyNativeGraph(Optional(pointer))', '}']
+    lines += ['func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet>) throws -> DataValue {', '    try copyNativeGraph(Optional(pointer))', '}']
     return '\n'.join(lines)

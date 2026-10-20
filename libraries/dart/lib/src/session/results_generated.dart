@@ -2448,9 +2448,6 @@ final class FindQuestionDocument extends _NativeValue {
       : const Presence.absent();
   Object? get text => _fields["text"];
   String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (![
@@ -2464,8 +2461,7 @@ final class FindQuestionDocument extends _NativeValue {
             "on",
             "profile",
             "text",
-            "verb",
-            "wording_version"
+            "verb"
           ].contains(entry.key))
             entry.key: entry.value
       });
@@ -2624,9 +2620,6 @@ final class QuestionDocumentChoose extends QuestionDocument {
   Presence<String> get profile => _fields.containsKey("profile")
       ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   List<String> get options => (_fields["options"] as List)
       .map((v) => v as String)
       .toList(growable: false);
@@ -2643,7 +2636,6 @@ final class QuestionDocumentChoose extends QuestionDocument {
             "name",
             "on",
             "profile",
-            "wording_version",
             "options",
             "text",
             "verb"
@@ -2686,9 +2678,6 @@ final class QuestionDocumentDecide extends QuestionDocument {
   Presence<String> get profile => _fields.containsKey("profile")
       ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   Presence<Object?> get falseValue => _fields.containsKey("false")
       ? Presence.present(_fields["false"])
       : const Presence.absent();
@@ -2708,7 +2697,6 @@ final class QuestionDocumentDecide extends QuestionDocument {
             "name",
             "on",
             "profile",
-            "wording_version",
             "false",
             "text",
             "true",
@@ -2752,9 +2740,6 @@ final class QuestionDocumentScore extends QuestionDocument {
   Presence<String> get profile => _fields.containsKey("profile")
       ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   List<String> get levels => (_fields["levels"] as List)
       .map((v) => v as String)
       .toList(growable: false);
@@ -2771,7 +2756,6 @@ final class QuestionDocumentScore extends QuestionDocument {
             "name",
             "on",
             "profile",
-            "wording_version",
             "levels",
             "text",
             "verb"
@@ -2814,9 +2798,6 @@ final class QuestionDocumentTag extends QuestionDocument {
   Presence<String> get profile => _fields.containsKey("profile")
       ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   List<String> get labels => (_fields["labels"] as List)
       .map((v) => v as String)
       .toList(growable: false);
@@ -2833,7 +2814,6 @@ final class QuestionDocumentTag extends QuestionDocument {
             "name",
             "on",
             "profile",
-            "wording_version",
             "labels",
             "text",
             "verb"
@@ -2943,9 +2923,6 @@ final class RecognizeQuestionDocument extends _NativeValue {
       : const Presence.absent();
   Object? get threshold => _fields["threshold"];
   String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (![
@@ -2966,8 +2943,7 @@ final class RecognizeQuestionDocument extends _NativeValue {
             "snippet_pieces",
             "stage_context",
             "threshold",
-            "verb",
-            "wording_version"
+            "verb"
           ].contains(entry.key))
             entry.key: entry.value
       });
@@ -3059,9 +3035,6 @@ final class RelateQuestionDocument extends _NativeValue {
       .toList(growable: false);
   Object? get threshold => _fields["threshold"];
   String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (![
@@ -3076,8 +3049,7 @@ final class RelateQuestionDocument extends _NativeValue {
             "profile",
             "relations",
             "threshold",
-            "verb",
-            "wording_version"
+            "verb"
           ].contains(entry.key))
             entry.key: entry.value
       });

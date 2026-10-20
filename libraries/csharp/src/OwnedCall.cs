@@ -91,8 +91,8 @@ public sealed partial class Engine
         try
         {
             for (int i = 0; i < values.Length; i++) pinned[i] = GCHandle.Alloc(values[i], GCHandleType.Pinned);
-            CompleteUtf8V1 View(int index) => new() { data = pinned[index].AddrOfPinnedObject(), len = (nuint)values[index].Length };
-            var request = new NamedRequestV1 { function = View(0), question_json = View(1), input_json = View(2), options_json = View(3) };
+            CompleteUtf8 View(int index) => new() { data = pinned[index].AddrOfPinnedObject(), len = (nuint)values[index].Length };
+            var request = new NamedRequest { function = View(0), question_json = View(1), input_json = View(2), options_json = View(3) };
             return Live(_ => {
                 NativeSession.Check(NativeNamed.thinkthen_session_new_named_with_surface(ownedEngine, in request, View(4), out var pointer));
                 return new OwnedSession(pointer);

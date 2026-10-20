@@ -404,8 +404,6 @@ def valid_decision_presentation:
                  else . == "max" end))
   and ((has("name") | not) or
        (.name | type == "string" and test("^[a-z][a-z0-9_-]{0,63}$")))
-  and ((has("wording_version") | not) or
-       (.wording_version | type == "number" and . >= 1 and . <= 4294967295 and floor == .))
   and ((has("item_schema") | not) or (.item_schema | type) == "object")
   and ((has("context_schema") | not) or (.context_schema | type) == "object");
 
@@ -414,7 +412,7 @@ def valid_decision_question:
   and .verb == "decide"
   and (.text | valid_question_content)
   and ((keys - ["false","text","true","verb","model","profile","on","batch",
-                "name","wording_version","item_schema","context_schema"]) | length) == 0
+                "name","item_schema","context_schema"]) | length) == 0
   and valid_decision_presentation
   and ((has("true") | not) or (.true == null or (.true | valid_question_content)))
   and ((has("false") | not) or (.false == null or (.false | valid_question_content)));

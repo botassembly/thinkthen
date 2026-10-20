@@ -109,7 +109,7 @@ fn same_replay_reading(cut: &[Value], uncut: &[Value]) {
 fn set_rank_top_preserves_all_member_observations_and_positions_outside_member_top() {
     let root = crate::input_sources::folder("complete-command-set-rank").unwrap();
     let question = root.join("questions.json");
-    std::fs::write(&question, r#"{"questions":{"first":{"decide":"First?","name":"alpha","wording_version":2},"second":{"decide":"Second?","name":"beta","wording_version":3}}}"#).unwrap();
+    std::fs::write(&question, r#"{"questions":{"first":{"decide":"First?","name":"alpha"},"second":{"decide":"Second?","name":"beta"}}}"#).unwrap();
     let reference = format!("@{}", question.display());
     let recording = root.join("recording");
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":1},"q3":{"type":"noul","noul":0.6},"q4":{"type":"noul","noul":0.98},"q5":{"type":"noul","noul":0.5},"q6":{"type":"noul","noul":0.99}},"usage":{"input_tokens":887}}"#)).unwrap();
@@ -159,7 +159,7 @@ fn set_rank_top_preserves_all_member_observations_and_positions_outside_member_t
         assert!(row["meta"]["usage"].get("output_tokens").is_none());
     }
     assert_eq!(live[1]["question"]["name"], "alpha");
-    assert_eq!(live[2]["question"]["wording_version"], 3);
+
     let replay = rows(&run("--replay", "1", &["--top", "2"]));
     assert_eq!(replay.len(), 2);
     for (actual, original) in replay.iter().zip(&live) {

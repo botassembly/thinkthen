@@ -108,7 +108,7 @@ def test_recording_counter_excludes_lock_files() -> None:
 def test_shared_settings_corpus() -> None:
     """The retained nine-case corpus crosses SQLite's one-object converter."""
     corpus = json.loads(CORPUS.read_text())
-    expect(corpus["schema"], "thinkthen.settings-cases/1", "settings corpus version")
+    expect(corpus["schema"], "thinkthen.settings-cases", "settings corpus version")
     for shared in corpus["cases"]:
         backend = Backend()
         with tempfile.TemporaryDirectory() as folder:

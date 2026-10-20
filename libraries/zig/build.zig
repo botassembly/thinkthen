@@ -2,43 +2,7 @@ const std = @import("std");
 
 pub const LinkMode = enum { shared, static };
 
-fn headerVersionMatches(header: []const u8) bool {
-    const names = [_][]const u8{ "THINKTHEN_VERSION_MAJOR", "THINKTHEN_VERSION_MINOR", "THINKTHEN_VERSION_PATCH" };
-    const expected = [_]u32{ 0, 2, 0 };
-    var seen = [_]bool{ false, false, false };
-    var in_comment = false;
-    var lines = std.mem.splitScalar(u8, header, '\n');
-    while (lines.next()) |line| {
-        const trimmed = std.mem.trim(u8, line, " \t\r");
-        if (in_comment) {
-            if (std.mem.indexOf(u8, trimmed, "*/") != null) in_comment = false;
-            continue;
-        }
-        if (std.mem.startsWith(u8, trimmed, "/*")) {
-            in_comment = std.mem.indexOf(u8, trimmed, "*/") == null;
-            continue;
-        }
-        if (std.mem.startsWith(u8, trimmed, "//")) continue;
-        var words = std.mem.tokenizeAny(u8, trimmed, " \t\r");
-        if (!std.mem.eql(u8, words.next() orelse continue, "#define")) continue;
-        const name = words.next() orelse continue;
-        for (names, expected, 0..) |version_name, value, i| {
-            if (!std.mem.eql(u8, name, version_name)) continue;
-            if (seen[i]) return false;
-            const written = std.fmt.parseInt(u32, words.next() orelse return false, 10) catch return false;
-            if (written != value) return false;
-            if (words.next()) |extra| {
-                if (!std.mem.startsWith(u8, extra, "//") and !std.mem.startsWith(u8, extra, "/*")) return false;
-            }
-            seen[i] = true;
-        }
-    }
-    for (seen) |found| if (!found) return false;
-    return true;
-}
-
 /// Packaged callers use the bundled native root; source builders may override it.
-/// This checks the header and layout; it cannot prove an opaque library's runtime ABI identity.
 pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Build.Module, native_override: ?[]const u8, mode: LinkMode) void {
     const target = exe.root_module.resolved_target.?.result;
     if (target.os.tag != .linux or target.cpu.arch != .x86_64 or target.abi != .gnu)
@@ -46,11 +10,7 @@ pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Buil
     const archive = native_override orelse module.root_source_file.?.dirname().path(b, "../native/x86_64-unknown-linux-gnu").getPath(b);
     if (!std.fs.path.isAbsolute(archive)) @panic("-Dnative must name an absolute unpacked C archive directory");
     const header = b.pathJoin(&.{ archive, "include/thinkthen.h" });
-    const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, std.math.maxInt(usize)) catch @panic("thinkthen C header missing or unreadable");
-    if (!headerVersionMatches(bytes)) @panic("thinkthen C header does not match package ABI 0.2.0");
-    for ([_][]const u8{ "thinkthen_session_new", "thinkthen_session_result_view", "thinkthen_request_plan_json" }) |needle| {
-        if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.2.0");
-    }
+    std.fs.cwd().access(header, .{}) catch @panic("thinkthen C header missing or unreadable");
     const lib = b.pathJoin(&.{ archive, "lib", if (mode == .shared) "libthinkthen.so" else "libthinkthen.a" });
     std.fs.cwd().access(lib, .{}) catch @panic("thinkthen selected native library missing");
     if (mode == .shared) {

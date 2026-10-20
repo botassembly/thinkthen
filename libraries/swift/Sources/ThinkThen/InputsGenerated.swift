@@ -114,13 +114,12 @@ public struct AnnotateQuestionChoose: ValueRepresentable {
   public let `on`: Presence<AuthoredPointers>
   public let `options`: Presence<AuthoredOptions>
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:], `choose`: AuthoredQuestionText,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `options`: Presence<AuthoredOptions> = .absent,
-    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`choose` = `choose`
@@ -130,13 +129,11 @@ public struct AnnotateQuestionChoose: ValueRepresentable {
     self.`on` = `on`
     self.`options` = `options`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AnnotateQuestionChoose {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "choose", "context_schema", "item_schema", "name", "on", "options", "threshold",
-      "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -146,8 +143,7 @@ public struct AnnotateQuestionChoose: ValueRepresentable {
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
       options: try readPresence(object, "options", AuthoredOptions.self),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -155,7 +151,6 @@ public struct AnnotateQuestionChoose: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "choose", "context_schema", "item_schema", "name", "on", "options", "threshold",
-      "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     object["choose"] = `choose`.json
@@ -165,7 +160,6 @@ public struct AnnotateQuestionChoose: ValueRepresentable {
     writePresence(`on`, "on", &object)
     writePresence(`options`, "options", &object)
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -180,14 +174,13 @@ public struct AnnotateQuestionDecide: ValueRepresentable {
   public let `on`: Presence<AuthoredPointers>
   public let `threshold`: Presence<AuthoredThreshold>
   public let `true`: Presence<AuthoredCriterion>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `decide`: AuthoredQuestionText,
     `false`: Presence<AuthoredCriterion> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `threshold`: Presence<AuthoredThreshold> = .absent,
-    `true`: Presence<AuthoredCriterion> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `true`: Presence<AuthoredCriterion> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -198,13 +191,11 @@ public struct AnnotateQuestionDecide: ValueRepresentable {
     self.`on` = `on`
     self.`threshold` = `threshold`
     self.`true` = `true`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AnnotateQuestionDecide {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "decide", "false", "item_schema", "name", "on", "threshold", "true",
-      "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -215,8 +206,7 @@ public struct AnnotateQuestionDecide: ValueRepresentable {
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
       threshold: try readPresence(object, "threshold", AuthoredThreshold.self),
-      true: try readPresence(object, "true", AuthoredCriterion.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      true: try readPresence(object, "true", AuthoredCriterion.self))
     value._sourceJSON = json
     return value
   }
@@ -224,7 +214,6 @@ public struct AnnotateQuestionDecide: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "decide", "false", "item_schema", "name", "on", "threshold", "true",
-      "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -235,7 +224,6 @@ public struct AnnotateQuestionDecide: ValueRepresentable {
     writePresence(`on`, "on", &object)
     writePresence(`threshold`, "threshold", &object)
     writePresence(`true`, "true", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -248,14 +236,12 @@ public struct AnnotateQuestionScore: ValueRepresentable {
   public let `name`: Presence<String>
   public let `on`: Presence<AuthoredPointers>
   public let `score`: AuthoredQuestionText
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `levels`: Presence<AuthoredLevels> = .absent, `name`: Presence<String> = .absent,
-    `on`: Presence<AuthoredPointers> = .absent, `score`: AuthoredQuestionText,
-    `wordingVersion`: Presence<Int64> = .absent
+    `on`: Presence<AuthoredPointers> = .absent, `score`: AuthoredQuestionText
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -264,13 +250,10 @@ public struct AnnotateQuestionScore: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`score` = `score`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AnnotateQuestionScore {
     let object = try jsonObject(json)
-    let known: Set<String> = [
-      "context_schema", "item_schema", "levels", "name", "on", "score", "wording_version",
-    ]
+    let known: Set<String> = ["context_schema", "item_schema", "levels", "name", "on", "score"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       contextSchema: try readPresence(object, "context_schema", AuthoredInputDeclaration.self),
@@ -278,16 +261,13 @@ public struct AnnotateQuestionScore: ValueRepresentable {
       levels: try readPresence(object, "levels", AuthoredLevels.self),
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
-      score: try AuthoredQuestionText.read(jsonRequired(object, "score")),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      score: try AuthoredQuestionText.read(jsonRequired(object, "score")))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "context_schema", "item_schema", "levels", "name", "on", "score", "wording_version",
-    ]
+    let known: Set<String> = ["context_schema", "item_schema", "levels", "name", "on", "score"]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
     writePresence(`itemSchema`, "item_schema", &object)
@@ -295,7 +275,6 @@ public struct AnnotateQuestionScore: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     object["score"] = `score`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -309,14 +288,13 @@ public struct AnnotateQuestionTag: ValueRepresentable {
   public let `on`: Presence<AuthoredPointers>
   public let `tag`: AuthoredQuestionText
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `labels`: Presence<AuthoredLabels> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `tag`: AuthoredQuestionText,
-    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -326,13 +304,11 @@ public struct AnnotateQuestionTag: ValueRepresentable {
     self.`on` = `on`
     self.`tag` = `tag`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AnnotateQuestionTag {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "labels", "name", "on", "tag", "threshold",
-      "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -342,8 +318,7 @@ public struct AnnotateQuestionTag: ValueRepresentable {
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
       tag: try AuthoredQuestionText.read(jsonRequired(object, "tag")),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -351,7 +326,6 @@ public struct AnnotateQuestionTag: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "labels", "name", "on", "tag", "threshold",
-      "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -361,7 +335,6 @@ public struct AnnotateQuestionTag: ValueRepresentable {
     writePresence(`on`, "on", &object)
     object["tag"] = `tag`.json
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -378,15 +351,13 @@ public struct AuthoredChoose: ValueRepresentable {
   public let `options`: Presence<AuthoredOptions>
   public let `profile`: Presence<AuthoredProfile>
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `choose`: AuthoredQuestionText, `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `options`: Presence<AuthoredOptions> = .absent,
-    `profile`: Presence<AuthoredProfile> = .absent, `threshold`: Presence<AuthoredCut> = .absent,
-    `wordingVersion`: Presence<Int64> = .absent
+    `profile`: Presence<AuthoredProfile> = .absent, `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -399,13 +370,12 @@ public struct AuthoredChoose: ValueRepresentable {
     self.`options` = `options`
     self.`profile` = `profile`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredChoose {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "choose", "context_schema", "item_schema", "model", "name", "on", "options",
-      "profile", "threshold", "wording_version",
+      "profile", "threshold",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -418,8 +388,7 @@ public struct AuthoredChoose: ValueRepresentable {
       on: try readPresence(object, "on", AuthoredPointers.self),
       options: try readPresence(object, "options", AuthoredOptions.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -427,7 +396,7 @@ public struct AuthoredChoose: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "choose", "context_schema", "item_schema", "model", "name", "on", "options",
-      "profile", "threshold", "wording_version",
+      "profile", "threshold",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -440,7 +409,6 @@ public struct AuthoredChoose: ValueRepresentable {
     writePresence(`options`, "options", &object)
     writePresence(`profile`, "profile", &object)
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -494,7 +462,6 @@ public struct AuthoredDecide: ValueRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `threshold`: Presence<AuthoredThreshold>
   public let `true`: Presence<AuthoredCriterion>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `decide`: AuthoredQuestionText,
@@ -503,7 +470,7 @@ public struct AuthoredDecide: ValueRepresentable {
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `profile`: Presence<AuthoredProfile> = .absent,
     `threshold`: Presence<AuthoredThreshold> = .absent,
-    `true`: Presence<AuthoredCriterion> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `true`: Presence<AuthoredCriterion> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -517,13 +484,12 @@ public struct AuthoredDecide: ValueRepresentable {
     self.`profile` = `profile`
     self.`threshold` = `threshold`
     self.`true` = `true`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredDecide {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "decide", "false", "item_schema", "model", "name", "on", "profile",
-      "threshold", "true", "wording_version",
+      "threshold", "true",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -537,8 +503,7 @@ public struct AuthoredDecide: ValueRepresentable {
       on: try readPresence(object, "on", AuthoredPointers.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       threshold: try readPresence(object, "threshold", AuthoredThreshold.self),
-      true: try readPresence(object, "true", AuthoredCriterion.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      true: try readPresence(object, "true", AuthoredCriterion.self))
     value._sourceJSON = json
     return value
   }
@@ -546,7 +511,7 @@ public struct AuthoredDecide: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "decide", "false", "item_schema", "model", "name", "on", "profile",
-      "threshold", "true", "wording_version",
+      "threshold", "true",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -560,7 +525,6 @@ public struct AuthoredDecide: ValueRepresentable {
     writePresence(`profile`, "profile", &object)
     writePresence(`threshold`, "threshold", &object)
     writePresence(`true`, "true", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -595,14 +559,12 @@ public struct AuthoredFind: ValueRepresentable {
   public let `name`: Presence<String>
   public let `on`: Presence<AuthoredPointers>
   public let `profile`: Presence<AuthoredProfile>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `find`: AuthoredQuestionText,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
-    `on`: Presence<AuthoredPointers> = .absent, `profile`: Presence<AuthoredProfile> = .absent,
-    `wordingVersion`: Presence<Int64> = .absent
+    `on`: Presence<AuthoredPointers> = .absent, `profile`: Presence<AuthoredProfile> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -612,12 +574,11 @@ public struct AuthoredFind: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredFind {
     let object = try jsonObject(json)
     let known: Set<String> = [
-      "context_schema", "find", "item_schema", "model", "name", "on", "profile", "wording_version",
+      "context_schema", "find", "item_schema", "model", "name", "on", "profile",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -627,15 +588,14 @@ public struct AuthoredFind: ValueRepresentable {
       model: try readPresence(object, "model", AuthoredName.self),
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
-      profile: try readPresence(object, "profile", AuthoredProfile.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      profile: try readPresence(object, "profile", AuthoredProfile.self))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
-      "context_schema", "find", "item_schema", "model", "name", "on", "profile", "wording_version",
+      "context_schema", "find", "item_schema", "model", "name", "on", "profile",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -645,7 +605,6 @@ public struct AuthoredFind: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -997,14 +956,13 @@ public struct AuthoredRelate: ValueRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `relate`: RelateQuestion
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `profile`: Presence<AuthoredProfile> = .absent, `relate`: RelateQuestion,
-    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -1014,13 +972,11 @@ public struct AuthoredRelate: ValueRepresentable {
     self.`profile` = `profile`
     self.`relate` = `relate`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredRelate {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold",
-      "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -1030,8 +986,7 @@ public struct AuthoredRelate: ValueRepresentable {
       name: try readPresence(object, "name", String.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       relate: try RelateQuestion.read(jsonRequired(object, "relate")),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -1039,7 +994,6 @@ public struct AuthoredRelate: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold",
-      "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -1049,7 +1003,6 @@ public struct AuthoredRelate: ValueRepresentable {
     writePresence(`profile`, "profile", &object)
     object["relate"] = `relate`.json
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -1114,15 +1067,13 @@ public struct AuthoredScore: ValueRepresentable {
   public let `on`: Presence<AuthoredPointers>
   public let `profile`: Presence<AuthoredProfile>
   public let `score`: AuthoredQuestionText
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `levels`: Presence<AuthoredLevels> = .absent, `model`: Presence<AuthoredName> = .absent,
     `name`: Presence<String> = .absent, `on`: Presence<AuthoredPointers> = .absent,
-    `profile`: Presence<AuthoredProfile> = .absent, `score`: AuthoredQuestionText,
-    `wordingVersion`: Presence<Int64> = .absent
+    `profile`: Presence<AuthoredProfile> = .absent, `score`: AuthoredQuestionText
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -1134,13 +1085,11 @@ public struct AuthoredScore: ValueRepresentable {
     self.`on` = `on`
     self.`profile` = `profile`
     self.`score` = `score`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredScore {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "levels", "model", "name", "on", "profile", "score",
-      "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -1152,8 +1101,7 @@ public struct AuthoredScore: ValueRepresentable {
       name: try readPresence(object, "name", String.self),
       on: try readPresence(object, "on", AuthoredPointers.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
-      score: try AuthoredQuestionText.read(jsonRequired(object, "score")),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      score: try AuthoredQuestionText.read(jsonRequired(object, "score")))
     value._sourceJSON = json
     return value
   }
@@ -1161,7 +1109,6 @@ public struct AuthoredScore: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "levels", "model", "name", "on", "profile", "score",
-      "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -1173,7 +1120,6 @@ public struct AuthoredScore: ValueRepresentable {
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
     object["score"] = `score`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -1190,7 +1136,6 @@ public struct AuthoredTag: ValueRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `tag`: AuthoredQuestionText
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
@@ -1198,7 +1143,7 @@ public struct AuthoredTag: ValueRepresentable {
     `labels`: Presence<AuthoredLabels> = .absent, `model`: Presence<AuthoredName> = .absent,
     `name`: Presence<String> = .absent, `on`: Presence<AuthoredPointers> = .absent,
     `profile`: Presence<AuthoredProfile> = .absent, `tag`: AuthoredQuestionText,
-    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -1211,13 +1156,12 @@ public struct AuthoredTag: ValueRepresentable {
     self.`profile` = `profile`
     self.`tag` = `tag`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredTag {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "labels", "model", "name", "on", "profile", "tag",
-      "threshold", "wording_version",
+      "threshold",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -1230,8 +1174,7 @@ public struct AuthoredTag: ValueRepresentable {
       on: try readPresence(object, "on", AuthoredPointers.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       tag: try AuthoredQuestionText.read(jsonRequired(object, "tag")),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -1239,7 +1182,7 @@ public struct AuthoredTag: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "labels", "model", "name", "on", "profile", "tag",
-      "threshold", "wording_version",
+      "threshold",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -1252,7 +1195,6 @@ public struct AuthoredTag: ValueRepresentable {
     writePresence(`profile`, "profile", &object)
     object["tag"] = `tag`.json
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -1712,7 +1654,6 @@ public struct RecognizeDefinition: ValueRepresentable {
   public let `recognize`: RecognizeQuestion
   public let `relationThreshold`: Presence<AuthoredCut>
   public let `threshold`: Presence<AuthoredCut>
-  public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
@@ -1720,7 +1661,7 @@ public struct RecognizeDefinition: ValueRepresentable {
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `profile`: Presence<AuthoredProfile> = .absent,
     `recognize`: RecognizeQuestion, `relationThreshold`: Presence<AuthoredCut> = .absent,
-    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -1732,13 +1673,12 @@ public struct RecognizeDefinition: ValueRepresentable {
     self.`recognize` = `recognize`
     self.`relationThreshold` = `relationThreshold`
     self.`threshold` = `threshold`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> RecognizeDefinition {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
-      "relation_threshold", "threshold", "wording_version",
+      "relation_threshold", "threshold",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -1750,8 +1690,7 @@ public struct RecognizeDefinition: ValueRepresentable {
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       recognize: try RecognizeQuestion.read(jsonRequired(object, "recognize")),
       relationThreshold: try readPresence(object, "relation_threshold", AuthoredCut.self),
-      threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      wordingVersion: try readPresence(object, "wording_version", Int64.self))
+      threshold: try readPresence(object, "threshold", AuthoredCut.self))
     value._sourceJSON = json
     return value
   }
@@ -1759,7 +1698,7 @@ public struct RecognizeDefinition: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
-      "relation_threshold", "threshold", "wording_version",
+      "relation_threshold", "threshold",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -1771,7 +1710,6 @@ public struct RecognizeDefinition: ValueRepresentable {
     object["recognize"] = `recognize`.json
     writePresence(`relationThreshold`, "relation_threshold", &object)
     writePresence(`threshold`, "threshold", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -1904,28 +1842,24 @@ public struct Request: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
   public let `call`: CallRequest
-  public let `schema`: Version
-  public init(extensions: [String: DataValue] = [:], `call`: CallRequest, `schema`: Version) {
+  public init(extensions: [String: DataValue] = [:], `call`: CallRequest) {
     self.extensions = extensions
     self.`call` = `call`
-    self.`schema` = `schema`
   }
   static func read(_ json: DataValue) throws -> Request {
     let object = try jsonObject(json)
-    let known: Set<String> = ["call", "schema"]
+    let known: Set<String> = ["call"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      call: try CallRequest.read(jsonRequired(object, "call")),
-      schema: try Version.read(jsonRequired(object, "schema")))
+      call: try CallRequest.read(jsonRequired(object, "call")))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = ["call", "schema"]
+    let known: Set<String> = ["call"]
     var object = extensions.filter { !known.contains($0.key) }
     object["call"] = `call`.json
-    object["schema"] = `schema`.json
     return .object(object)
   }
 }
@@ -3211,21 +3145,6 @@ public indirect enum Threshold: ValueRepresentable {
     }
   }
 }
-public enum Version: ValueRepresentable {
-  case `thinkthenRequest_1`
-  static func read(_ json: DataValue) throws -> Version {
-    let value = try String.read(json)
-    switch value {
-    case "thinkthen.request/1": return .`thinkthenRequest_1`
-    default: throw ValueConversionError("Unknown Version value")
-    }
-  }
-  var json: DataValue {
-    switch self {
-    case .`thinkthenRequest_1`: return .string("thinkthen.request/1")
-    }
-  }
-}
 public struct SessionSourceLocation: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
@@ -3290,8 +3209,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`text`(input), options: options, question: question)))
     return try call.decideResultScalar()
   }
   public func decide(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3305,8 +3223,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`json`(input), options: options, question: question)))
     return try call.decideResultScalar()
   }
   public func decide(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
@@ -3320,8 +3237,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`records`(input), options: options, question: question)))
     return try call.decideResultList()
   }
   public func decide(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
@@ -3330,8 +3246,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`units`(input), options: options, question: question)))
     return try call.decideResultList()
   }
   public func decide(
@@ -3340,8 +3255,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`entities`(input), options: options, question: question)))
     return try call.decideResultList()
   }
   public func decide(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
@@ -3350,8 +3264,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`decide`, input: .`source`(input), options: options, question: question)))
     return try call.decideResultList()
   }
   public func decide(
@@ -3361,8 +3274,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`decide`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`decide`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.decideResultList()
   }
   public func choose(_ question: Question, input: InputText, options: Presence<Options> = .absent)
@@ -3371,8 +3284,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`text`(input), options: options, question: question)))
     return try call.chooseResultScalar()
   }
   public func choose(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3386,8 +3298,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`json`(input), options: options, question: question)))
     return try call.chooseResultScalar()
   }
   public func choose(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
@@ -3401,8 +3312,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`records`(input), options: options, question: question)))
     return try call.chooseResultList()
   }
   public func choose(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
@@ -3411,8 +3321,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`units`(input), options: options, question: question)))
     return try call.chooseResultList()
   }
   public func choose(
@@ -3421,8 +3330,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`entities`(input), options: options, question: question)))
     return try call.chooseResultList()
   }
   public func choose(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
@@ -3431,8 +3339,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`choose`, input: .`source`(input), options: options, question: question)))
     return try call.chooseResultList()
   }
   public func choose(
@@ -3442,8 +3349,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`choose`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`choose`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.chooseResultList()
   }
   public func tag(_ question: Question, input: InputText, options: Presence<Options> = .absent)
@@ -3452,8 +3359,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`text`(input), options: options, question: question)))
     return try call.tagResultScalar()
   }
   public func tag(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3467,8 +3373,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`json`(input), options: options, question: question)))
     return try call.tagResultScalar()
   }
   public func tag(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
@@ -3482,8 +3387,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`records`(input), options: options, question: question)))
     return try call.tagResultList()
   }
   public func tag(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
@@ -3492,8 +3396,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`units`(input), options: options, question: question)))
     return try call.tagResultList()
   }
   public func tag(_ question: Question, input: InputEntities, options: Presence<Options> = .absent)
@@ -3502,8 +3405,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`entities`(input), options: options, question: question)))
     return try call.tagResultList()
   }
   public func tag(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
@@ -3512,8 +3414,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`tag`, input: .`source`(input), options: options, question: question)))
     return try call.tagResultList()
   }
   public func tag(
@@ -3523,8 +3424,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`tag`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`tag`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.tagResultList()
   }
   public func score(_ question: Question, input: InputText, options: Presence<Options> = .absent)
@@ -3533,8 +3434,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`text`(input), options: options, question: question)))
     return try call.scoreResultScalar()
   }
   public func score(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3548,8 +3448,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`json`(input), options: options, question: question)))
     return try call.scoreResultScalar()
   }
   public func score(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
@@ -3563,8 +3462,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`records`(input), options: options, question: question)))
     return try call.scoreResultList()
   }
   public func score(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
@@ -3573,8 +3471,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`units`(input), options: options, question: question)))
     return try call.scoreResultList()
   }
   public func score(
@@ -3583,8 +3480,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`entities`(input), options: options, question: question)))
     return try call.scoreResultList()
   }
   public func score(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
@@ -3593,8 +3489,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`score`, input: .`source`(input), options: options, question: question)))
     return try call.scoreResultList()
   }
   public func score(
@@ -3604,8 +3499,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`score`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`score`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.scoreResultList()
   }
   public func filter(_ question: Question, input: Input, options: Presence<Options> = .absent)
@@ -3613,8 +3508,7 @@ extension Client {
   {
     let call = try await execute(
       Request(
-        call: CallRequest(function: .`filter`, input: input, options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+        call: CallRequest(function: .`filter`, input: input, options: options, question: question)))
     return try call.filterResult()
   }
   public func rank(_ question: Question, input: Input, options: Presence<Options> = .absent)
@@ -3622,8 +3516,7 @@ extension Client {
   {
     let call = try await execute(
       Request(
-        call: CallRequest(function: .`rank`, input: input, options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+        call: CallRequest(function: .`rank`, input: input, options: options, question: question)))
     return try call.rankResult()
   }
   public func find(_ question: Question, input: Input, options: Presence<Options> = .absent)
@@ -3631,8 +3524,7 @@ extension Client {
   {
     let call = try await execute(
       Request(
-        call: CallRequest(function: .`find`, input: input, options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+        call: CallRequest(function: .`find`, input: input, options: options, question: question)))
     return try call.findResult()
   }
   public func annotate(_ question: Question, input: InputText, options: Presence<Options> = .absent)
@@ -3641,8 +3533,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`text`(input), options: options, question: question)))
     return try call.annotateResultScalar()
   }
   public func annotate(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3656,8 +3547,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`json`(input), options: options, question: question)))
     return try call.annotateResultScalar()
   }
   public func annotate(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
@@ -3671,8 +3561,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`records`(input), options: options, question: question)))
     return try call.annotateResultList()
   }
   public func annotate(
@@ -3681,8 +3570,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`units`(input), options: options, question: question)))
     return try call.annotateResultList()
   }
   public func annotate(
@@ -3691,8 +3579,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`entities`(input), options: options, question: question)))
     return try call.annotateResultList()
   }
   public func annotate(
@@ -3701,8 +3588,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`annotate`, input: .`source`(input), options: options, question: question)))
     return try call.annotateResultList()
   }
   public func annotate(
@@ -3712,8 +3598,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`annotate`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.annotateResultList()
   }
   public func recognize(
@@ -3722,8 +3608,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`text`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`text`(input), options: options, question: question)))
     return try call.recognizeResultScalar()
   }
   public func recognize(_ question: Question, input: String, options: Presence<Options> = .absent)
@@ -3737,8 +3622,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`json`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`json`(input), options: options, question: question)))
     return try call.recognizeResultScalar()
   }
   public func recognize(
@@ -3752,8 +3636,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`records`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`records`(input), options: options, question: question)))
     return try call.recognizeResultList()
   }
   public func recognize(
@@ -3762,8 +3645,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`units`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`units`(input), options: options, question: question)))
     return try call.recognizeResultList()
   }
   public func recognize(
@@ -3772,8 +3654,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`entities`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`entities`(input), options: options, question: question)))
     return try call.recognizeResultList()
   }
   public func recognize(
@@ -3782,8 +3663,7 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`source`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+          function: .`recognize`, input: .`source`(input), options: options, question: question)))
     return try call.recognizeResultList()
   }
   public func recognize(
@@ -3793,8 +3673,8 @@ extension Client {
     let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: .`feed`(input), options: options, question: question),
-        schema: .`thinkthenRequest_1`), feed: feed)
+          function: .`recognize`, input: .`feed`(input), options: options, question: question)),
+      feed: feed)
     return try call.recognizeResultList()
   }
   public func relate(_ question: Question, input: Input, options: Presence<Options> = .absent)
@@ -3802,9 +3682,7 @@ extension Client {
   {
     let call = try await execute(
       Request(
-        call: CallRequest(function: .`relate`, input: input, options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+        call: CallRequest(function: .`relate`, input: input, options: options, question: question)))
     return try call.relateResult()
   }
 }
-public let ownedRequestVersion = "thinkthen.request/1"

@@ -338,7 +338,7 @@ class PackageText(unittest.TestCase):
                               '"' + decoy.replace('"', '\\"') + '"') if family == 'c' else (
                                   '*> ' + decoy, 'DISPLAY \'CALL "TT_CHOOSE" USING q input.\'.'):
                     cases.append((family, current + '\n' + prose, False))
-            named = 'thinkthen_named_request_v1 chosen = {.function = {"choose",6}};'
+            named = 'thinkthen_named_request chosen = {.function = {"choose",6}};'
             called = 'thinkthen_run_call(engine,&chosen,0,0,0,&result,&error);'
             cases.append(('c', 'thinkthen_decide(q,input);' + named + called, True))
             for decoy in (named, named + '/* ' + called + ' */', named + '// ' + called,

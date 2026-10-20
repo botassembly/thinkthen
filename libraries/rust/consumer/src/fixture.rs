@@ -51,7 +51,7 @@ impl Fixture {
         let options =
             serde_json::to_string(&self.options).map_err(|_| usage("invalid fixture options"))?;
         let text = format!(
-            r#"{{"schema":"thinkthen.request/1","call":{{"function":{verb},"question":{question},"input":{input},"options":{options}}}}}"#
+            r#"{{"call":{{"function":{verb},"question":{question},"input":{input},"options":{options}}}}}"#
         );
         Request::from_json(&text).map(|request| Request::new(request.call))
     }

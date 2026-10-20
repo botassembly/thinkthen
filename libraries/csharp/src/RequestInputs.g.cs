@@ -133,10 +133,6 @@ public sealed class AnnotateQuestionChoose : AnnotateQuestion {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static AnnotateQuestionChoose Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Choose = AuthoredQuestionText.Read(value.GetProperty("choose")),
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
@@ -144,8 +140,7 @@ public sealed class AnnotateQuestionChoose : AnnotateQuestion {
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Options = value.TryGetProperty("options", out _) ? (AuthoredPresence<AuthoredOptions>)(AuthoredOptions.Read(value.GetProperty("options"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -179,9 +174,6 @@ public sealed class AnnotateQuestionChoose : AnnotateQuestion {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -218,10 +210,6 @@ public sealed class AnnotateQuestionDecide : AnnotateQuestion {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static AnnotateQuestionDecide Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         Decide = AuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
@@ -230,8 +218,7 @@ public sealed class AnnotateQuestionDecide : AnnotateQuestion {
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredThreshold>)(AuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
-        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -269,9 +256,6 @@ public sealed class AnnotateQuestionDecide : AnnotateQuestion {
             writer.WritePropertyName("true");
             if (True.Value is null) writer.WriteNullValue();
             else True.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -300,18 +284,13 @@ public sealed class AnnotateQuestionScore : AnnotateQuestion {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static AnnotateQuestionScore Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
         Levels = value.TryGetProperty("levels", out _) ? (AuthoredPresence<AuthoredLevels>)(AuthoredLevels.Read(value.GetProperty("levels"))) : default,
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Score = AuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
-        out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Score = AuthoredQuestionText.Read(value.GetProperty("score"))
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -341,10 +320,7 @@ public sealed class AnnotateQuestionScore : AnnotateQuestion {
         } writer.WritePropertyName("score");
         if (Score is null) writer.WriteNullValue();
         else Score.Write(writer);
-        if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
-        } writer.WriteEndObject();
+        writer.WriteEndObject();
     }
 }
 public sealed class AnnotateQuestionTag : AnnotateQuestion {
@@ -376,10 +352,6 @@ public sealed class AnnotateQuestionTag : AnnotateQuestion {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static AnnotateQuestionTag Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
@@ -387,8 +359,7 @@ public sealed class AnnotateQuestionTag : AnnotateQuestion {
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Tag = AuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -422,9 +393,6 @@ public sealed class AnnotateQuestionTag : AnnotateQuestion {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -466,10 +434,6 @@ public sealed class AuthoredChoose : AuthoredDocument {
         init;
     }
     public AuthoredPresence<AuthoredCut> Threshold {
-        get;
-        init;
-    }
-    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
@@ -517,9 +481,6 @@ public sealed class AuthoredChoose : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -681,10 +642,6 @@ public sealed class AuthoredDecide : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -733,9 +690,6 @@ public sealed class AuthoredDecide : AuthoredDocument {
             writer.WritePropertyName("true");
             if (True.Value is null) writer.WriteNullValue();
             else True.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -858,10 +812,6 @@ public sealed class AuthoredFind : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -894,9 +844,6 @@ public sealed class AuthoredFind : AuthoredDocument {
             writer.WritePropertyName("profile");
             if (Profile.Value is null) writer.WriteNullValue();
             else Profile.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -1409,10 +1356,6 @@ public sealed class AuthoredRelate : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -1445,9 +1388,6 @@ public sealed class AuthoredRelate : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -1551,10 +1491,6 @@ public sealed class AuthoredScore : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -1595,10 +1531,7 @@ public sealed class AuthoredScore : AuthoredDocument {
         } writer.WritePropertyName("score");
         if (Score is null) writer.WriteNullValue();
         else Score.Write(writer);
-        if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
-        } writer.WriteEndObject();
+        writer.WriteEndObject();
     }
 }
 public sealed class AuthoredTag : AuthoredDocument {
@@ -1639,10 +1572,6 @@ public sealed class AuthoredTag : AuthoredDocument {
         init;
     }
     public AuthoredPresence<AuthoredCut> Threshold {
-        get;
-        init;
-    }
-    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
@@ -1690,9 +1619,6 @@ public sealed class AuthoredTag : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -2351,10 +2277,6 @@ public sealed class RecognizeDefinition : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2395,9 +2317,6 @@ public sealed class RecognizeDefinition : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -2547,10 +2466,6 @@ public sealed class Request : AuthoredDocument {
         get;
         init;
     }
-    public required RequestVersion Schema {
-        get;
-        init;
-    }
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2560,9 +2475,6 @@ public sealed class Request : AuthoredDocument {
         writer.WritePropertyName("call");
         if (Call is null) writer.WriteNullValue();
         else Call.Write(writer);
-        writer.WritePropertyName("schema");
-        if (Schema is null) writer.WriteNullValue();
-        else Schema.Write(writer);
         writer.WriteEndObject();
     }
 }
@@ -2749,10 +2661,6 @@ public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredChoose Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         Choose = AuthoredQuestionText.Read(value.GetProperty("choose")), ContextSchema = value.TryGetProperty("context_schema",
@@ -2763,8 +2671,7 @@ public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Options = value.TryGetProperty("options", out _) ? (AuthoredPresence<AuthoredOptions>)(AuthoredOptions.Read(value.GetProperty("options"))) : default,
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -2810,9 +2717,6 @@ public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -2861,10 +2765,6 @@ public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredDecide Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
@@ -2876,8 +2776,7 @@ public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
         Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredThreshold>)(AuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
-        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -2927,9 +2826,6 @@ public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
             writer.WritePropertyName("true");
             if (True.Value is null) writer.WriteNullValue();
             else True.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -2962,10 +2858,6 @@ public sealed class RequestDefinitionAuthoredFind : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredFind Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         Find = AuthoredQuestionText.Read(value.GetProperty("find")), ItemSchema = value.TryGetProperty("item_schema",
@@ -2973,8 +2865,7 @@ public sealed class RequestDefinitionAuthoredFind : RequestDefinition {
         Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -3008,9 +2899,6 @@ public sealed class RequestDefinitionAuthoredFind : RequestDefinition {
             writer.WritePropertyName("profile");
             if (Profile.Value is null) writer.WriteNullValue();
             else Profile.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -3043,10 +2931,6 @@ public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredRelate Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
@@ -3054,8 +2938,7 @@ public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
         Relate = RelateQuestion.Read(value.GetProperty("relate")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -3089,9 +2972,6 @@ public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -3132,10 +3012,6 @@ public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredScore Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
@@ -3145,8 +3021,7 @@ public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
         Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Score = AuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
-        out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Score = AuthoredQuestionText.Read(value.GetProperty("score"))
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -3188,10 +3063,7 @@ public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
         } writer.WritePropertyName("score");
         if (Score is null) writer.WriteNullValue();
         else Score.Write(writer);
-        if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
-        } writer.WriteEndObject();
+        writer.WriteEndObject();
     }
 }
 public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
@@ -3235,10 +3107,6 @@ public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionAuthoredTag Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
@@ -3249,8 +3117,7 @@ public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
         On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
         Tag = AuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -3296,9 +3163,6 @@ public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -3339,10 +3203,6 @@ public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {
         get;
         init;
     }
-    public AuthoredPresence<long> WordingVersion {
-        get;
-        init;
-    }
     internal new static RequestDefinitionRecognizeDefinition Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
@@ -3352,8 +3212,7 @@ public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {
         Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
         Recognize = RecognizeQuestion.Read(value.GetProperty("recognize")), RelationThreshold = value.TryGetProperty("relation_threshold",
         out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("relation_threshold"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default
     };
     internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
@@ -3395,9 +3254,6 @@ public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } if (WordingVersion.IsPresent) {
-            writer.WritePropertyName("wording_version");
-            writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
     }
 }
@@ -4423,19 +4279,6 @@ public sealed class RequestThresholdString : RequestThreshold {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } WriteText(writer, Value);
-    }
-}
-public abstract class RequestVersion : AuthoredDocument {
-    private protected RequestVersion() {
-    }
-}
-public sealed class RequestVersionThinkthenRequest1 : RequestVersion {
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "thinkthen.request/1");
     }
 }
 public sealed class SessionSourceLocation : AuthoredDocument {

@@ -12,12 +12,12 @@ int main(void) {
     if (_setmode(_fileno(stdout), _O_BINARY) == -1) return 1;
 #endif
     struct thinkthen_value *owner = NULL;
-    const struct thinkthen_complete_json_v1 *value = NULL;
+    const struct thinkthen_complete_json *value = NULL;
     if (thinkthen_value_parse(json, sizeof(json) - 1, &owner) != THINKTHEN_OK) return 1;
     int status = 1;
     if (thinkthen_value_view(owner, &value) == THINKTHEN_OK &&
-        value->kind == THINKTHEN_COMPLETE_JSON_STRING_V1) {
-        const struct thinkthen_complete_utf8_v1 text = value->data.string;
+        value->kind == THINKTHEN_COMPLETE_JSON_STRING) {
+        const struct thinkthen_complete_utf8 text = value->data.string;
         status = fwrite(text.data, 1, text.len, stdout) == text.len ? 0 : 1;
     }
     thinkthen_value_free(owner);
