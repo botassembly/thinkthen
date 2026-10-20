@@ -1,5 +1,7 @@
 # Spine contract review: 0084, 0095, ADR 0047
 
+Ticket: [0084](../tickets/0084-freeze-the-public-rust-contract.md), [0093](../tickets/0093-port-the-rust-examples-as-the-first-binding-crate.md), [0095](../tickets/0095-add-the-binding-members-to-the-rust-contract.md)
+
 Reviewer: fresh read-only session, 2026-09-24. Read: workspace `CLAUDE.md` Tickets section, repo `CLAUDE.md`, main `ab72203c` (one-line plan, port guide, ADR 0017, ADR 0037, `Cargo.toml`, `sdlc/scripts/policy.py`, `crates/thinkthen/src/engine`, `cli/args.rs`, `specification/relate.md`, `specification/result.md`), 0084 at `91680e62`, 0095 at `259e5684`, 0093 with ADR 0047 at `4444dc68`, and for cross-checks 0085 `1463c404`, 0086 `4c0c4c8f`, 0092 `788d3758`, `origin/ticket/0077-process-width-cap`, branch ADRs 0041 and 0043 at `surfaces-wave7-final`, and the earlier accepted 0084 at `007a9b14`. Nothing was built or run.
 
 - 0084 (amended, with its ADR 0017 amendment): **REJECT**. One small fix (B1). The design is sound.

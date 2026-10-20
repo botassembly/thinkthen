@@ -1,5 +1,7 @@
 # Spine design review: 0085, 0086, 0093, 0094
 
+Ticket: [0085](../tickets/0085-build-the-real-engine-facade.md), [0086](../tickets/0086-expose-the-public-rust-api.md), [0093](../tickets/0093-port-the-rust-examples-as-the-first-binding-crate.md), [0094](../tickets/0094-port-the-c-interface.md)
+
 Reviewer: fresh read-only Claude session, 2026-09-24. Read: workspace `CLAUDE.md` (Tickets), repo `CLAUDE.md`, `one-line-plan-2026-09-24.md` and `surfaces-port-guide.md` on main (`ab72203c`), ADR 0017, ADR 0037, ticket branches 0085 `1463c404`, 0086 `4c0c4c8f`, 0093 `4444dc68` (with draft ADR 0047), 0094 `eeb65f32`. I read 0084 `91680e62`, 0095 `259e5684`, 0089, 0091, and 0092 only as input. I also read tag `surfaces-wave7-final`: `contract/include/thinkthen.h`, `libraries/c/DESIGN.md`, `libraries/c/Cargo.toml`, and the churn issue. I checked main's `Cargo.toml`, `sdlc/ratchet.json`, `ratchet.mjs`, `engine/mod.rs`, `prepared_request.rs`, and the error index. Nothing was built or run.
 
 ## Verdicts

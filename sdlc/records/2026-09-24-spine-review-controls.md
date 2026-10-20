@@ -1,5 +1,7 @@
 # Spine review: engine controls and test infrastructure
 
+Ticket: [0076](../tickets/0076-enforce-whole-call-deadlines.md), [0077](../tickets/0077-share-one-process-width-cap.md), [0078](../tickets/0078-release-host-signals.md), [0089](../tickets/0089-never-send-a-request-again-after-a-transport-failure.md), [0091](../tickets/0091-merge-the-branch-conformance-cases.md), [0092](../tickets/0092-serve-the-shared-cases-from-a-loopback-backend.md), [0093](../tickets/0093-port-the-rust-examples-as-the-first-binding-crate.md), [0095](../tickets/0095-add-the-binding-members-to-the-rust-contract.md)
+
 Reviewer: fresh read-only Claude session, 2026-09-24. Read on main at `ab72203c`: workspace `CLAUDE.md` Tickets section, repo `CLAUDE.md`, `one-line-plan-2026-09-24.md`, `surfaces-port-guide.md`, `specification/{find,result,question-file,recognize}.md`, ADR 0017 section 6, `conformance/cases.json` and its README, the conformance runner under `src/cli/conformance_tests`, `tests/backend/harness/mod.rs`, `engine/{mod,http,request}.rs`, and the ticket branches for 0076, 0077, 0078, 0089, 0091, 0092, 0093 (ADR 0047), and 0095. Branch source: tag `surfaces-wave7-final` `conformance/conformance.json` and `standin/`. Nothing was built, run, or edited.
 
 ## Verdicts

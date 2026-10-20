@@ -1,5 +1,7 @@
 # 0.2 quality review, 2026-10-18
 
+Ticket: [0687](../tickets/0687-qualify-the-0-2-1-candidate.md)
+
 Ian asked for an adversarial review of 0.2 across every language, surface and binding, with grades, the root causes of the thrashing, and long-term stability. Four read-only reviewers read main at 393f4bec1: the Rust core and binding contract, two halves of the language libraries, and the database extensions with the release machinery. The PM checked the main claims against the code.
 
 ## Grades
