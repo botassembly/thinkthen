@@ -336,7 +336,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                                         if packet_transform is not None:
                                             while ready and not ready.endswith('ready\n'):
                                                 ready = read_process_line(child.stdout)
-                                        assert ready.endswith('ready\n')
+                                        assert (ready.endswith('ready\n') if packet_transform is not None else ready == 'ready\n')
                                         assert int(backend.read('count'))==before,'batch sent before its first pull'
                                         child.stdin.write('continue\n');child.stdin.close();child.stdin=None
                                         stdout,stderr=child.communicate(timeout=120)

@@ -30,7 +30,6 @@ fn shared_packet_oracle_is_current() {
 fn packet_dumper_worker() {
     let mut input = String::new();
     io::stdin().read_line(&mut input).expect("fixture input");
-    let document = serde_json::from_str(&input).expect("fixture JSON");
-    let value = dump::run(&document).expect("native packet dump");
+    let value = dump::run(&input).expect("native packet dump");
     writeln!(io::stdout().lock(), "packet_dump: {value}").expect("fixture output");
 }
