@@ -259,7 +259,7 @@ impl<'a> Cancel<'a> {
     /// call's stop. A panic fires it too, then resumes unchanged, so every
     /// worker stops before the unwinding scope joins it.
     fn checked(&self) -> bool {
-        let check = if let Some(check) = &self.owned_check {
+        let check: &(dyn Fn() -> bool + Sync) = if let Some(check) = &self.owned_check {
             check.0.as_ref()
         } else if let Some(check) = self
             .check
