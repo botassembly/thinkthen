@@ -5,7 +5,7 @@ use magnus::{
 };
 mod native_result;
 mod request;
-mod results_generated;
+mod tree;
 #[path = "ffi/session_wait/ffi.rs"]
 mod session_wait;
 #[magnus::wrap(class = "ThinkThen::Cancel", free_immediately, size)]
@@ -26,7 +26,7 @@ struct EngineValue {
 }
 impl EngineValue {
     fn usage(ruby: &Ruby, this: &Self) -> Result<Value, Error> {
-        let value = serde_json::to_value(this.engine.usage()).map_err(|_| {
+        let value = tree::tree(&this.engine.usage()).map_err(|_| {
             Error::new(
                 ruby.exception_runtime_error(),
                 "native usage could not be read",
@@ -42,13 +42,11 @@ impl EngineValue {
     }
 }
 fn status(ruby: &Ruby, state: thinkthen::UsagePersistence) -> Result<Value, Error> {
-    let name = serde_json::to_value(state).map_err(|_| {
-        Error::new(
-            ruby.exception_runtime_error(),
-            "native usage state could not be read",
-        )
-    })?;
-    Ok(ruby.into_value((name.as_str().unwrap_or("failed"), state.advice())))
+    let name = tree::tree(&state).map_err(|_| Error::new(ruby.exception_runtime_error(), "native usage state could not be read"))?;
+    let array = ruby.ary_new();
+    array.push(native_result::plain(ruby, &name)?)?;
+    array.push(state.advice())?;
+    Ok(array.as_value())
 }
 fn checked<T>(ruby: &Ruby, value: Result<T, Fault>) -> Result<T, Error> {
     value.map_err(|fault| raise(ruby, fault))
@@ -71,8 +69,9 @@ fn raise(ruby: &Ruby, fault: Fault) -> Error {
             "new",
             (fault.message.as_str(), fault.kind.name(), fault.retryable),
         )?;
+        error.funcall::<_, _, Value>("instance_variable_set", ("@position", fault.position))?;
         if let Some(facts) = fault.facts {
-            let json = serde_json::to_value(facts).map_err(|_| {
+            let json = tree::tree(&facts).map_err(|_| {
                 Error::new(
                     ruby.exception_runtime_error(),
                     "native facts could not be read",
@@ -115,6 +114,5 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
         "finish_usage_status",
         method!(EngineValue::finish_usage_status, 0),
     )?;
-    native_result::register(ruby, native)?;
     request::register(ruby, native, engine)
 }

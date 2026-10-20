@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+require_relative "native_result"
 require_relative "results_generated"
 module ThinkThen
   Plan = Results::NativePlan
@@ -13,57 +14,17 @@ module ThinkThen
     # Ruby treats every object as true, including a result whose value is false.
     class Completed
       attr_reader :results, :terminal, :observations
-      def initialize(results, terminal, scalar, verb, observations)
-        @results, @terminal, @scalar, @verb, @observations = results.freeze, terminal, scalar, verb, observations.freeze
+      def initialize(tree, verb)
+        @results = Results.field(Results::CALL_TYPES.fetch(verb).fetch("results"), tree.fetch("results"))
+        @results = [@results].freeze unless @results.is_a?(Array)
+        @facts = Results.convert("completeFacts", tree.fetch("facts"))
+        @value = Results.field(Results::CALL_TYPES.fetch(verb).fetch("value"), tree["value"])
+        @probability = tree["probability"]
+        @observations = (tree["observations"] || []).map { |packet| Results.convert("completesessionPacket", packet) }.freeze
+        @terminal = Results.convert("completesessionPacket", {"kind" => "terminal", "facts" => tree.fetch("facts")}.freeze)
         freeze
       end
-      def facts = terminal.facts
-      def value
-        spec = CALL_RESULTS.fetch(@verb)
-        values = results.map { |row| row.public_send(spec.fetch("value_projection")) }
-        project(values, spec)
-      end
-      def probability
-        spec = CALL_RESULTS.fetch(@verb)
-        mode = spec.fetch("probability_mode")
-        return nil if mode == "null"
-        resolved = {}
-        if spec["resolution"]
-          route = spec.fetch("resolution")
-          observations.each do |packet|
-            next unless packet.function == @verb && route.fetch("guards").all? { |path, literal| read_path(packet, path) == literal }
-            resolved[read_path(packet, route.fetch("index_path"))] = !read_path(packet, route.fetch("path")).nil?
-          end
-        end
-        values = results.each_with_index.map do |row, ordinal|
-          next nil if spec["selection_path"] && read_path(row, spec.fetch("selection_path")).nil?
-          next nil if spec["resolution"] && !resolved[row.respond_to?(:index) && row.index || ordinal]
-          case mode
-          when "yes" then read_path(row, spec.fetch("probability_path"))
-          when "picked"
-            read_path(row, spec.fetch("probability_path"))[read_path(row, spec.fetch("pick_path"))]
-          when "items" then item_probabilities(row)
-          end
-        end
-        project(values, spec)
-      end
-      private def project(values, spec)
-        return values.freeze if spec.fetch("call_shape") == "collection"
-        @scalar ? values.first : values.freeze
-      end
-      private def read_path(row, path)
-        path.reduce(row) { |value, member| value&.public_send(member) }
-      end
-      private def item_probabilities(row)
-        return row.answer.probability if row.answer.respond_to?(:probability)
-        return nil if CALL_RESULTS.fetch(@verb).fetch("call_shape") == "collection"
-        return row.value.map(&:probability).freeze if row.value.is_a?(Array)
-        return row.value.proposals.map(&:probability).freeze if row.value.key?("proposals")
-        proposals = row.answer.proposals.select(&:kept).to_h do |proposal|
-          [[proposal.selected.start, proposal.selected.end, proposal.kind], proposal.span_probability]
-        end
-        row.value.entities.map { |entity| proposals.fetch([entity.start, entity.end, entity.kind]) }.freeze
-      end
+      attr_reader :value, :probability, :facts
       def inspect = "<ThinkThen::Results::Completed: content withheld>"
     end
   end
@@ -134,6 +95,26 @@ module ThinkThen
     private_class_method def self.descriptor(value)
       value.is_a?(Item) ? value.send(:descriptor) : {original: original(value)}
     end
+    private_class_method def self.producer?(input)
+      input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source) && !input.is_a?(Item)
+    end
+    private_class_method def self.components(question, input, options)
+      selector = if question.is_a?(Question)
+        question.send(:selector)
+      elsif question.is_a?(String)
+        {kind: "text", text: question}
+      else
+        {kind: "definition", value: question}
+      end
+      evidence = if producer?(input)
+        {kind: "feed", name: "ruby"}
+      elsif input.is_a?(Source)
+        {kind: "source", source: input.send(:source)}
+      else
+        {kind: "records", items: (input.is_a?(Array) ? input : [input]).map { |value| descriptor(value) }}
+      end
+      [dump(selector), dump(evidence), dump(options)]
+    end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed
       @native.plan(verb, question, input, [options, false])
@@ -186,115 +167,32 @@ module ThinkThen
     class Operation
       attr_reader :terminal
       def initialize(engine, verb, question, input, token, options, &remove)
-        @remove, @token, @verb = remove, token, verb
-        @rows = []
-        @observations = []
-        @closed = false
-        if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source) && !input.is_a?(Item)
-          @producer = input.to_enum
-          @owner = input
-        end
-        if token&.cancelled?
-          raise CancelledError.new("the call was cancelled", "cancelled")
-        end
-        @session = engine.request_session(verb, question, input, [options, !@producer.nil?])
-        @scalar = Results::CALL_RESULTS.fetch(verb).fetch("call_shape") == "aggregate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
-      rescue Exception => error
-        begin
-          close_producer
-        rescue Exception
-          # Cleanup cannot replace the failed admission.
-        end
-        raise error
+        @engine, @verb, @question, @input, @options = engine, verb, question, input, options
+        @remove, @token = remove, token || Cancel.new
       end
       def result
-        loop do
-          raise cancelled if @closed
-          raise cancelled if @token&.cancelled?
-          packet = @session.poll
-          if packet
-            return Results::Completed.new(@rows, @terminal, @scalar, @verb, @observations) if packet == "end"
-            case packet.kind
-            when "row" then @rows << packet.value
-            when "observation" then @observations << packet
-            when "aggregate"
-              values = packet.value.is_a?(Array) ? packet.value : [packet.value]
-              @rows.concat(values)
-            when "terminal"
-              @terminal = packet
-              if packet.key?("failure")
-                failure = packet.failure
-                detail = failure.error
-                error = ThinkThen.const_get(detail.kind.capitalize + "Error").new(detail.message, detail.kind, detail.retryable)
-                error.instance_variable_set(:@facts, failure.key?("facts") ? failure.facts : nil)
-                error.instance_variable_set(:@complete, failure)
-                error.instance_variable_set(:@results, @rows.freeze)
-                error.instance_variable_set(:@terminal, packet)
-                error.instance_variable_set(:@observations, @observations.freeze)
-                raise error, cause: @producer_error
-              end
-              return Results::Completed.new(@rows, packet, @scalar, @verb, @observations)
-            end
-          end
-          feed if @producer
-          input = !@producer.nil?
-          if Fiber.scheduler && !Fiber.current.blocking?
-            # Thread#value lets the fiber scheduler run while native wait releases the GVL.
-            Thread.new { @session.wait(input) }.value
-          else
-            @session.wait(input)
-          end
-        end
+        work = -> { Results::Completed.new(@engine.call(@verb, [@question, @input, @options], @token, producer? ? self : nil), @verb) }
+        answer = Fiber.scheduler && !Fiber.current.blocking? ? Thread.new(&work).value : work.call
+        @terminal = answer.terminal
+        answer
       ensure
         Client.send(:cleanup, self)
       end
-      private def cancelled
-        error = CancelledError.new("the call was cancelled", "cancelled")
-        error.instance_variable_set(:@results, @rows.dup.freeze)
-        error.instance_variable_set(:@terminal, @terminal)
-        error.instance_variable_set(:@facts, @terminal&.facts)
-        error
-      end
-      private def feed
-        unless @pending
-          begin
-            @pending = @session.item(Client.send(:descriptor, @producer.next))
-          rescue StopIteration
-            @session.finish(nil)
-            close_producer
-            return
-          rescue StandardError => error
-            @producer_error = error
-            @session.finish(true)
-            close_producer
-            return
-          end
-        end
-        case @session.push(@pending)
-        when "accepted" then @pending = nil
-        when "closed" then @pending = nil; close_producer
-        end
-      end
-      def cancel
-        @session&.cancel
-        close
-      end
+      def cancel = @token.cancel
       def close
-        return if @closed
-        @closed = true
-        begin
-          close_producer
-        ensure
-          @session&.close
-          @remove&.call(self)
-        end
+        cancel
+        @input.close if producer? && @input.respond_to?(:close)
+      ensure
+        @remove&.call(self)
+        @remove = nil
       end
-      private def close_producer
-        owner, @owner, @producer = @owner, nil, nil
-        owner.close if owner.respond_to?(:close)
-      rescue StandardError
-        raise unless @producer_error
+      def native_next
+        @enumerator ||= @input.to_enum
+        Client.send(:dump, Client.send(:descriptor, @enumerator.next))
+      rescue StopIteration
+        nil
       end
+      private def producer? = Client.send(:producer?, @input)
       def inspect = "<ThinkThen::Client::Operation>"
     end
   end

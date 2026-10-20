@@ -811,7 +811,6 @@ def main():
         import ruby
         definitions = prepare(graph(json.loads(args.schema.read_text()), ruby.ROOTS))
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions),
-                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions),
                    output_path(ROOT, 'ruby', 'results_generated.rbs'): ruby.rbs(definitions)}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))

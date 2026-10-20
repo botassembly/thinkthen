@@ -1,3 +1,0 @@
-build-tools/results/templates/ruby.py
-build-tools/results/templates/ruby_rbs.py
-libraries/ruby/lib/thinkthen/session.rb

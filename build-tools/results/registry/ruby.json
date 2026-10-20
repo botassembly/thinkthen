@@ -6,11 +6,6 @@
   },
   {
     "mode": "results",
-    "path": "libraries/ruby/src/ffi/results_generated.rs",
-    "producer": "results"
-  },
-  {
-    "mode": "results",
     "path": "libraries/ruby/sig/thinkthen/results_generated.rbs",
     "producer": "results"
   }

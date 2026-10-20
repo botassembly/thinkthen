@@ -2,7 +2,6 @@
 import json
 from pathlib import Path
 import re
-from host_answers import call_results
 
 HEADER = '# Generated from the shared Rust result and request graphs; do not edit.'
 
@@ -116,20 +115,12 @@ def render(definitions, name):
         if key == 'completeDecideValue': return union(['bool', request_type('Authored_criterion')])
         return schema_type(source, public_type)
 
-    for function, spec in call_results(definitions).items():
-        payload = spec['receipt_payload']
+    from templates.ruby import calls
+    for function, spec in calls(definitions).items():
+        payload = spec['results']
         receipt = schema_type(payload.get('items', payload), public_type)
-        value_schema = spec['aggregate_value']
-        if spec['call_shape'] == 'input':
-            value_schema = value_schema['items']
-        value = schema_type(value_schema, public_type)
-        mode = spec['probability_mode']
-        probability = 'nil' if mode == 'null' else ('Array[Integer | Float]' if mode == 'items' and spec['value_projection'] == 'value' else 'Integer | Float | nil')
-        if spec['call_shape'] == 'collection':
-            if mode != 'null': probability = f'Array[{probability}]'
-        elif spec['call_shape'] == 'input':
-            value = f'{value} | Array[{value}]'
-            if mode != 'null': probability = f'{probability} | Array[{probability}]'
+        value = schema_type(spec['value'], public_type)
+        probability = schema_type(spec['probability'], public_type)
         lines.append(f'    def {function}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{value}, {probability}, {receipt}]')
     lines += [f'    def initialize: ({settings}) -> void',
               f'    def self.open: ({settings}) {{ (Client client) -> untyped }} -> untyped',

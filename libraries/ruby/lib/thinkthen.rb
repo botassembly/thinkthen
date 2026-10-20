@@ -3,7 +3,7 @@ require "json"
 require_relative "thinkthen/version"
 module ThinkThen
   class Error < StandardError
-    attr_reader :kind, :retryable, :facts, :complete, :results, :terminal, :observations
+    attr_reader :kind, :retryable, :facts, :complete, :results, :terminal, :observations, :position
     def initialize(message = nil, kind = nil, retryable = false)
       super(message)
       @kind, @retryable = kind, retryable
