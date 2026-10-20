@@ -137,6 +137,69 @@ def compile_consumer(native, scratch, source, binary, env):
                    cwd=scratch, env=env, check=True)
 
 
+def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
+    """Set up one shared case and retain all of its owned-call observations."""
+    with tempfile.TemporaryDirectory(prefix='blocking-c-', dir=scratch) as folder:
+        home = Path(folder)
+        (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
+        isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_USAGE='off')
+        backend = shared.Backend(backend_binary, isolated)
+        try:
+            shared.prepare(home, value)
+            dumps = []
+            for index, step in enumerate(value.get('steps', [value])):
+                if step.get('copy_store'):
+                    (home / 'refreshed').mkdir()
+                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as old:
+                        with sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as new:
+                            old.backup(new)
+                if step.get('damage_store'):
+                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as saved:
+                        saved.execute("UPDATE answers SET answer='damaged fixture answer'")
+                if value.get('image_variants'):
+                    backend.close()
+                    backend = shared.Backend(backend_binary, isolated)
+                    shared.prepare(home, step)
+                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{step["arm"]}',
+                                THINKTHEN_API_KEY='sk-conformance-loopback')
+                settings = {'cache': False, 'batch': 1, 'throttle': 1, 'max_retries': 0,
+                            'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0',
+                            **step.get('settings', {}), 'base_url': isolated['THINKTHEN_BASE_URL']}
+                replacements = {'$FOLDER': str(home / 'saved'), '$REFRESH': str(home / 'refreshed'),
+                                '$PROFILE': str(home / 'profile.json')}
+                settings = {key: replacements.get(item, item) if isinstance(item, str) else item
+                            for key, item in settings.items()}
+                if row['kind'] in ('images', 'image-location'):
+                    settings['record'] = str(home / 'recorded')
+                before = int(backend.read('count'))
+                mode = 'fed' if step.get('incremental') else 'plain'
+                payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
+                count = int(backend.read('count'))
+                check_owned(row, step, payload, dumps[-1],
+                            count - before if step.get('count_delta') else count,
+                            count - before, expected_dumps[index], home, backend)
+                if step.get('stored_answers') == 0:
+                    database = home / 'saved/thinkthen.sqlite'
+                    if database.exists():
+                        with sqlite3.connect(database) as saved:
+                            assert saved.execute('SELECT count(*) FROM answers').fetchone()[0] == 0
+                if value.get('image_variants'):
+                    assert_images(step, project(payload, step), json.loads(backend.read('capture'))['bodies'])
+                if row['kind'] in ('images', 'image-location') and not payload.get('code'):
+                    replay = {key: item for key, item in settings.items() if key != 'record'}
+                    replay['replay'] = str(home / 'recorded')
+                    repeated = invoke(binary, step, replay, isolated, home, backend, mode)
+                    assert repeated['facts']['requests_sent'] == 0
+                    assert int(backend.read('count')) == count
+                    first = project(payload, step)['rows']
+                    second = project(repeated, step)['rows']
+                    assert [r['answer_id'] for r in second] == [r['answer_id'] for r in first]
+            print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
+                  'checks': row.get('checks', ['named', 'runtime']), 'status': 'pass'}), flush=True)
+        finally:
+            backend.close()
+
+
 def run(native, scratch):
     binary = scratch / 'blocking-call'
     env = child_env(home=scratch / 'home')
@@ -156,67 +219,17 @@ def run(native, scratch):
         rows = {name: row for name, row in rows.items() if name in wanted}
     oracle = {case['id']: case['dumps'] for case in expanded(json.loads(
         (ROOT / 'conformance/fixtures/packets.json').read_text()))['cases']}
+    failures = []
     for name, row in rows.items():
-        value = shared.document(row, cases, named)
-        with tempfile.TemporaryDirectory(prefix='blocking-c-', dir=scratch) as folder:
-            home = Path(folder)
-            (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
-            isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_USAGE='off')
-            backend = shared.Backend(backend_binary, isolated)
-            try:
-                shared.prepare(home, value)
-                dumps = []
-                for index, step in enumerate(value.get('steps', [value])):
-                    if step.get('copy_store'):
-                        (home / 'refreshed').mkdir()
-                        with sqlite3.connect(home / 'saved/thinkthen.sqlite') as old:
-                            with sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as new:
-                                old.backup(new)
-                    if step.get('damage_store'):
-                        with sqlite3.connect(home / 'saved/thinkthen.sqlite') as saved:
-                            saved.execute("UPDATE answers SET answer='damaged fixture answer'")
-                    if value.get('image_variants'):
-                        backend.close()
-                        backend = shared.Backend(backend_binary, isolated)
-                        shared.prepare(home, step)
-                    isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{step["arm"]}',
-                                    THINKTHEN_API_KEY='sk-conformance-loopback')
-                    settings = {'cache': False, 'batch': 1, 'throttle': 1, 'max_retries': 0,
-                                'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0',
-                                **step.get('settings', {}), 'base_url': isolated['THINKTHEN_BASE_URL']}
-                    replacements = {'$FOLDER': str(home / 'saved'), '$REFRESH': str(home / 'refreshed'),
-                                    '$PROFILE': str(home / 'profile.json')}
-                    settings = {key: replacements.get(item, item) if isinstance(item, str) else item
-                                for key, item in settings.items()}
-                    if row['kind'] in ('images', 'image-location'):
-                        settings['record'] = str(home / 'recorded')
-                    before = int(backend.read('count'))
-                    mode = 'fed' if step.get('incremental') else 'plain'
-                    payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
-                    count = int(backend.read('count'))
-                    check_owned(row, step, payload, dumps[-1],
-                                count - before if step.get('count_delta') else count,
-                                count - before, oracle[name][index], home, backend)
-                    if step.get('stored_answers') == 0:
-                        database = home / 'saved/thinkthen.sqlite'
-                        if database.exists():
-                            with sqlite3.connect(database) as saved:
-                                assert saved.execute('SELECT count(*) FROM answers').fetchone()[0] == 0
-                    if value.get('image_variants'):
-                        assert_images(step, project(payload, step), json.loads(backend.read('capture'))['bodies'])
-                    if row['kind'] in ('images', 'image-location') and not payload.get('code'):
-                        replay = {key: item for key, item in settings.items() if key != 'record'}
-                        replay['replay'] = str(home / 'recorded')
-                        repeated = invoke(binary, step, replay, isolated, home, backend, mode)
-                        assert repeated['facts']['requests_sent'] == 0
-                        assert int(backend.read('count')) == count
-                        first = project(payload, step)['rows']
-                        second = project(repeated, step)['rows']
-                        assert [r['answer_id'] for r in second] == [r['answer_id'] for r in first]
-                print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
-                      'checks': row.get('checks', ['named', 'runtime']), 'status': 'pass'}), flush=True)
-            finally:
-                backend.close()
+        try:
+            value = shared.document(row, cases, named)
+            run_case(binary, name, row, value, backend_binary, scratch, oracle[name])
+        except (AssertionError, ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
+            failures.append(name)
+            print(name + ': ' + str(error)[:2200], file=sys.stderr, flush=True)
+            print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
+                  'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail'}), flush=True)
+    assert not failures, 'installed blocking C failed cases: ' + ', '.join(failures)
     # One shared behavior table drives the installed C and Rust callers.
     for probe in corpus['call_behaviors']:
         with tempfile.TemporaryDirectory(prefix='blocking-c-stop-', dir=scratch) as folder:
