@@ -24,3 +24,7 @@ Milestone: 0.2.1
 ## Evidence
 
 M5 job 1792487935214-21502 failed before tests with `gcc: version differs from tools.json`. The entry selects Darwin and Linux but has no provider, so native lint probes an ambient compiler against the Linux GCC pin. The Ada and COBOL fragments declare only Linux support. The PM approved this exact platform correction in the shared inbox on 2026-10-20 and requested this small ticket. No product result was established by that failed job.
+
+## Progress
+
+- 2026-10-20 started
