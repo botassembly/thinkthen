@@ -196,23 +196,45 @@ fn recovered_kind(
 fn owned_interrupt_cancels_or_contains_panics_before_any_send() {
     for panics in [false, true] {
         let listener = Listener::answering(response).unwrap();
+        let options = || RequestSessionFeedOptions {
+            interrupt: Some(Arc::new(move || {
+                assert!(!panics, "owned interrupt panic");
+                true
+            })),
+            ..Default::default()
+        };
         let session = engine(&listener)
             .request_session_with_feed_options(
                 ranked_request().unwrap(),
                 Surface::Rust,
-                RequestSessionFeedOptions {
-                    interrupt: Some(Arc::new(move || {
-                        assert!(!panics, "owned interrupt panic");
-                        true
-                    })),
-                    ..Default::default()
-                },
+                options(),
             )
             .unwrap();
         let packets = drain(&session);
         assert_eq!(packets.len(), 1);
         let RequestSessionResult::Terminal(terminal) = &packets[0] else {
             panic!("terminal")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            if panics { ErrorKind::Defect } else { ErrorKind::Cancelled }
+        );
+        assert_eq!(listener.count(), 0);
+        let recovering = engine(&listener)
+            .request_recovering_session_with_feed_options(
+                ranked_request().unwrap(),
+                Surface::Rust,
+                options(),
+            )
+            .unwrap();
+        assert_eq!(
+            recovering.wait(RequestSessionWaitInterest::Result, Duration::from_secs(5)),
+            RequestSessionReady::Result
+        );
+        let RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(terminal)) =
+            recovering.try_read()
+        else {
+            panic!("recovering terminal")
         };
         assert_eq!(
             terminal.error.as_ref().unwrap().kind(),
