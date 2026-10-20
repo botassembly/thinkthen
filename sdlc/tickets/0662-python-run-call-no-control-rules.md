@@ -18,6 +18,7 @@ Depends on: 0629, 0660, 0688, 0689, 0727, 0728
 - Label normalization for Enum, Literal and Pydantic in `_labels.py` stays as host-type conversion only.
 - `_calls.py`, `_pandas_calls.py` and `templates/python.py` leave this language's exception file `build-tools/results/legacy/python.txt`.
 - This changes no public Rust API in `crates/thinkthen`, so `specification/rust-api-0.2.md` is untouched. If the work needs a new public Rust declaration, it updates that file's Authority entry and Added block in the same change.
+- A raised Python error keeps the native failing record position as an attribute on the existing error type, `None` when the failure has none (`libraries/python/src/lib.rs` drops it today). The name follows `libraries/BINDING-AUTHOR.md`.
 
 ### Proof
 

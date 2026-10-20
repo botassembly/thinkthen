@@ -19,6 +19,71 @@ spec.loader.exec_module(tools)
 SHA = "a" * 40
 
 
+def hosted_manifest_pins():
+    """The hosted setup installs the manifest's packages at the command boundary."""
+    from tools import load_manifest
+    manifest = load_manifest()
+    with tempfile.TemporaryDirectory(prefix="thinkthen-hosted-pins-") as temporary:
+        root = Path(temporary).resolve()
+        log = root / "commands"
+        binary = root / "bin"
+        binary.mkdir()
+        uv_home = root / "installed"
+        uv_home.mkdir()
+        (uv_home / "uv").write_text('#!/bin/sh\necho "uv $PIN_UV"\n')
+        (uv_home / "uv").chmod(0o755)
+        handoff = root / "github-path"
+        handoff.touch()
+        sysroot = root / "rustup/toolchains/fixture"
+        sysroot.mkdir(parents=True)
+        programs = {
+            "rustc": 'case $1 in -vV) echo "host: x86_64-pc-windows-msvc" ;; '
+                     '--version) echo "rustc $PIN_RUST (fixture)" ;; '
+                     '--print) echo "$PIN_SYSROOT" ;; *) exit 91 ;; esac',
+            "rustup": 'printf "rustup %s\\n" "$*" >> "$PIN_LOG"',
+            "cargo": 'printf "cargo %s\\n" "$*" >> "$PIN_LOG"',
+            "uv": 'echo "uv 0.0.0"',
+            "python3": 'if [ "$1" = -m ] && [ "$2" = pip ]; then '
+                       'printf "pip %s\\n" "$*" >> "$PIN_LOG"; '
+                       'elif [ "$1" = -c ]; then echo "$PIN_INSTALLED/uv"; '
+                       'else exec "$PIN_PYTHON" "$@"; fi',
+        }
+        for name, body in programs.items():
+            path = binary / name
+            path.write_text("#!/bin/sh\n" + body + "\n")
+            path.chmod(0o755)
+        env = dict(os.environ, PATH=fixture_path(binary), PIN_LOG=str(log),
+                   PIN_PYTHON=sys.executable, PIN_RUST=manifest['tools']['rust']['version'],
+                   PIN_SYSROOT=str(sysroot), RUSTUP_HOME=str(root / "rustup"),
+                   PIN_INSTALLED=str(uv_home), PIN_UV=manifest['tools']['uv']['version'],
+                   GITHUB_PATH=str(handoff))
+        for resolved, version, wanted in (("", manifest['tools']['rust']['version'], 0),
+                                           ("common", manifest['tools']['rust']['version'], 0),
+                                           ("common", "0.0.0", 1)):
+            log.write_text("")
+            handoff.write_text("")
+            selected = dict(env, THINKTHEN_RESOLVED_TOOLS=resolved, PIN_RUST=version)
+            result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "setup-stage", "host",
+                                     "x86_64-pc-windows-msvc"], env=selected, text=True, capture_output=True)
+            assert result.returncode == wanted, result.stderr
+            calls = log.read_text().splitlines()
+            if wanted:
+                assert "Rust version differs from tools.json" in result.stderr and not calls, (result, calls)
+                continue
+            assert handoff.read_text().splitlines() == [str(uv_home)], handoff.read_text()
+            packages = [line for line in calls if line.startswith("pip ")]
+            assert len(packages) == 1, calls
+            for name in ("maturin", "uv"):
+                assert name + "==" + manifest['tools'][name]['version'] in packages[0].split(), packages
+            assert "jsonschema==" + manifest['python_packages']['jsonschema'] in packages[0].split(), packages
+            installed = [line for line in calls if line.startswith("rustup toolchain install ")]
+            if resolved:
+                assert not installed, calls
+            else:
+                assert len(installed) == 1 and manifest['tools']['rust']['version'] in installed[0].split(), calls
+
+
+
 def executable(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("#!/bin/sh\nexit 88\n")
@@ -499,4 +564,5 @@ def fetch_retries():
 
 
 if __name__ == "__main__":
+    hosted_manifest_pins()
     main()
