@@ -1,12 +1,14 @@
 # 0724: Usage files, image tags, ID salts and internal manifests carry no version
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Reviews: revision fe6c0fd, accept
+
+Landed: 3236f1f
 
 ## Outcome
 

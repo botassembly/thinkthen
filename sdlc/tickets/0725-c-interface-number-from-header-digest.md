@@ -1,6 +1,6 @@
 # 0725: The C interface number is a digest of the header
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -9,6 +9,8 @@ Phase: 2
 Depends on: 0709
 
 Reviews: revision d7b0f06, accept
+
+Landed: 3236f1f
 
 ## Outcome
 

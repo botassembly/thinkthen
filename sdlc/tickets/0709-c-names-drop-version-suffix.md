@@ -1,12 +1,14 @@
 # 0709: C names drop the version suffix
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Reviews: revision 708c98e, accept
+
+Landed: 3236f1f
 
 ## Outcome
 
