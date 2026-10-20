@@ -8,7 +8,7 @@ At library load, call `thinkthen_version` once with a writable `uint32_t`. Compa
 
 C call input uses counted canonical JSON. The [input decision](../../sdlc/decisions/2026-10-19-c-input-json.md) records the choice and the migration boundary for existing typed and component-based entry points.
 
-Use `thinkthen_run_call` for all ten judgments. Supply a `thinkthen_named_request_v1` containing counted canonical function name, question, input and options JSON. The [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The call blocks until Rust settles execution and transfers an independent result or error owner. The [result decision](../../sdlc/decisions/2026-10-19-c-call-owned-json.md) records the representation and its cost.
+Use `thinkthen_run_call` for all ten judgments. Supply a `thinkthen_named_request` containing counted canonical function name, question, input and options JSON. The [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The call blocks until Rust settles execution and transfers an independent result or error owner. The [result decision](../../sdlc/decisions/2026-10-19-c-call-owned-json.md) records the representation and its cost.
 
 Read the complete canonical Call JSON through `thinkthen_call_result_json`, then release it with `thinkthen_call_result_free`. Its bytes survive engine destruction and the original calling thread. They remain valid until the result is freed.
 

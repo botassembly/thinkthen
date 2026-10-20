@@ -2,7 +2,7 @@
 use crate::session::views::*;
 use crate::session::views_generated::*;
 use std::ffi::{CStr, c_char};
-fn text(value: thinkthen_complete_utf8_v1) -> String {
+fn text(value: thinkthen_complete_utf8) -> String {
     if value.len == 0 {
         return String::new();
     }
@@ -10,12 +10,12 @@ fn text(value: thinkthen_complete_utf8_v1) -> String {
     String::from_utf8(unsafe { std::slice::from_raw_parts(value.data.cast(), value.len) }.to_vec())
         .expect("view UTF-8")
 }
-fn optional_text(value: thinkthen_complete_utf8_presence_v1) -> Option<String> {
-    (value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1).then(|| text(value.value))
+fn optional_text(value: thinkthen_complete_utf8_presence) -> Option<String> {
+    (value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE).then(|| text(value.value))
 }
 pub(super) fn check(
     expected: &thinkthen::Facts,
-    pointer: *const thinkthen_error_view_v1,
+    pointer: *const thinkthen_error_details,
     legacy: *const c_char,
 ) {
     assert!(!pointer.is_null(), "last typed error is present");
@@ -42,7 +42,7 @@ pub(super) fn check(
         (view.output_tokens, expected.output_tokens()),
     ] {
         assert_eq!(
-            (value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1).then_some(value.value),
+            (value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE).then_some(value.value),
             expected
         );
     }
@@ -54,7 +54,7 @@ pub(super) fn check(
     );
     assert_eq!(
         (view.largest_request_estimated_input_tokens.presence
-            == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1)
+            == THINKTHEN_COMPLETE_PRESENCE_VALUE)
             .then_some(view.largest_request_estimated_input_tokens.value),
         raw["largest_request_estimated_input_tokens"].as_u64()
     );
@@ -65,14 +65,14 @@ pub(super) fn check(
             .expect("estimate method")
     );
     assert_eq!(
-        view.call_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
+        view.call_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE,
         expected.call_id().is_some()
     );
     if let Some(id) = expected.call_id() {
         assert_eq!(text(unsafe { &*view.call_id.value }.value), id.to_string());
     }
     assert_eq!(
-        view.attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
+        view.attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE,
         expected.attempts().is_some()
     );
     if let Some(attempts) = expected.attempts() {
@@ -80,7 +80,7 @@ pub(super) fn check(
         assert_eq!(observed.len, attempts.len());
     }
     assert_eq!(
-        view.usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
+        view.usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE,
         expected.usage_persistence().is_some()
     );
     assert!(view.extensions.len == 0);

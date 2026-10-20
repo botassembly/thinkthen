@@ -1,9 +1,9 @@
 #import "ThinkThenFoundation.h"
 #import <thinkthen.h>
 #import "TTResultPrivate.h"
-extern id TTNative_thinkthen_complete_session_packet_v1(const struct thinkthen_complete_session_packet_v1 *value);
-extern id TTNative_thinkthen_complete_immediate_facts_v1(const struct thinkthen_complete_immediate_facts_v1 *value);
-extern id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value);
+extern id TTNative_thinkthen_complete_session_packet(const struct thinkthen_complete_session_packet *value);
+extern id TTNative_thinkthen_complete_immediate_facts(const struct thinkthen_complete_immediate_facts *value);
+extern id TTNative_thinkthen_complete_json(const struct thinkthen_complete_json *value);
 NSErrorDomain const TTErrorDomain = @"io.github.botassembly.thinkthen";
 NSString * const TTFailureDetailsKey = @"ThinkThenFailureDetails";
 TTByteImage *TTImageBytes(NSData *bytes, NSString *media) {
@@ -24,11 +24,11 @@ TTFailureError *TTFailureForCall(TTCallError *failure, id call) {
     if (failure.facts.state == TTPresenceValue) error.facts = [TTImmediateFacts read:failure.facts.value.rawFields];
     return error;
 }
-static NSError *TTNativeFailure(const struct thinkthen_error_view_v1 *view, int code, NSString *fallback) {
+static NSError *TTNativeFailure(const struct thinkthen_error_details *view, int code, NSString *fallback) {
     NSString *message = view ? [[NSString alloc] initWithBytes:view->message.data length:view->message.len encoding:NSUTF8StringEncoding] : fallback;
     TTFailureError *error = [[TTFailureError alloc] initWithDomain:TTErrorDomain code:code userInfo:@{NSLocalizedDescriptionKey:message ?: fallback}];
     error.retryable = view && view->retryable;
-    if (view && view->facts) error.facts = [TTImmediateFacts read:TTNative_thinkthen_complete_immediate_facts_v1(view->facts)];
+    if (view && view->facts) error.facts = [TTImmediateFacts read:TTNative_thinkthen_complete_immediate_facts(view->facts)];
     return error;
 }
 static NSError *TTImmediate(int code) {
@@ -75,8 +75,8 @@ static NSData *TTEncode(id object, NSError **error) {
         if (![self live:error]) return NO;
         uint32_t status = 0;
         if (!TTCheck(thinkthen_session_try_push(_native, data.bytes, data.length, &status), error)) return NO;
-        *accepted = status == THINKTHEN_SESSION_ACCEPTED_V1;
-        *closed = status == THINKTHEN_SESSION_CLOSED_V1;
+        *accepted = status == THINKTHEN_SESSION_ACCEPTED;
+        *closed = status == THINKTHEN_SESSION_CLOSED;
         return YES;
     } @finally { [_lock unlock]; }
 }
@@ -95,16 +95,16 @@ static NSData *TTEncode(id object, NSError **error) {
         if (![self live:error]) return nil;
         uint32_t status = 0;
         if (!TTCheck(thinkthen_session_try_read(_native, &status, &packet), error)) return nil;
-        *ended = status == THINKTHEN_SESSION_END_V1;
+        *ended = status == THINKTHEN_SESSION_END;
         if (!packet) return nil;
-        const struct thinkthen_complete_session_packet_v1 *view = NULL;
+        const struct thinkthen_complete_session_packet *view = NULL;
         if (!TTCheck(thinkthen_session_result_view(packet, &view), error)) return nil;
-        return [TTSessionPacket read:TTNative_thinkthen_complete_session_packet_v1(view)];
+        return [TTSessionPacket read:TTNative_thinkthen_complete_session_packet(view)];
     } @finally { thinkthen_session_result_free(packet); [_lock unlock]; }
 }
 - (void)cancel { [_lock lock]; thinkthen_session_cancel(_native); [_lock unlock]; }
 - (BOOL)waitInput:(BOOL)input error:(NSError **)error {
-    return [self waitInterest:input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 error:error];
+    return [self waitInterest:input ? THINKTHEN_SESSION_WAIT_INPUT : THINKTHEN_SESSION_WAIT_SETTLEMENT error:error];
 }
 - (BOOL)waitInterest:(uint32_t)interest error:(NSError **)error {
     [_lock lock];
@@ -171,7 +171,7 @@ static NSData *TTEncode(id object, NSError **error) {
         if (_finished) break;
         if (_feed && !_pending) continue;
         NSError *error = nil;
-        if (![_session waitInterest:_pending ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_RESULT_V1 error:&error]) [self settle:error call:nil];
+        if (![_session waitInterest:_pending ? THINKTHEN_SESSION_WAIT_INPUT : THINKTHEN_SESSION_WAIT_RESULT error:&error]) [self settle:error call:nil];
     }
 }
 - (void)settle:(NSError *)error call:(TTCall *)call {
@@ -249,10 +249,10 @@ static NSData *TTEncode(id object, NSError **error) {
 }
 - (void)dealloc { thinkthen_engine_free(_native); }
 - (TTUsagePersistenceStatus *)usageStatus:(BOOL)finish error:(NSError **)error {
-    struct thinkthen_complete_usage_persistence_v1 state;
-    struct thinkthen_complete_utf8_v1 advice;
-    int code = finish ? thinkthen_engine_finish_usage_status_v1(_native, &state, &advice)
-                      : thinkthen_engine_usage_persistence_v1(_native, &state, &advice);
+    struct thinkthen_complete_usage_persistence state;
+    struct thinkthen_complete_utf8 advice;
+    int code = finish ? thinkthen_engine_finish_usage_status(_native, &state, &advice)
+                      : thinkthen_engine_usage_persistence(_native, &state, &advice);
     if (!TTCheck(code, error)) return nil;
     NSString *copy = advice.data ? [[NSString alloc] initWithBytes:advice.data length:advice.len encoding:NSUTF8StringEncoding] : nil;
     return [[TTUsagePersistenceStatus alloc] initWithState:(TTUsagePersistenceState)state.kind advice:copy];
@@ -264,9 +264,9 @@ static NSData *TTEncode(id object, NSError **error) {
     struct thinkthen_value *owner = NULL;
     if (!TTCheck(thinkthen_request_plan_value(_native, data.bytes, data.length, &owner), error)) return nil;
     @try {
-        const struct thinkthen_complete_json_v1 *view = NULL;
+        const struct thinkthen_complete_json *view = NULL;
         if (!TTCheck(thinkthen_value_view(owner, &view), error)) return nil;
-        return [TTPlan read:TTNative_thinkthen_complete_json_v1(view)];
+        return [TTPlan read:TTNative_thinkthen_complete_json(view)];
     } @finally { thinkthen_value_free(owner); }
 }
 - (TTSession *)startRequest:(TTRequest *)request error:(NSError **)error {
@@ -284,11 +284,11 @@ static NSData *TTEncode(id object, NSError **error) {
     NSData *inputBytes = TTEncode(input, error); if (!inputBytes) return nil;
     NSData *optionBytes = TTEncode(options ?: @{}, error); if (!optionBytes) return nil;
     NSData *functionBytes = [verb dataUsingEncoding:NSUTF8StringEncoding];
-    struct thinkthen_named_request_v1 request = {
+    struct thinkthen_named_request request = {
         {functionBytes.bytes, functionBytes.length}, {questionBytes.bytes, questionBytes.length},
         {inputBytes.bytes, inputBytes.length}, {optionBytes.bytes, optionBytes.length}};
     struct thinkthen_session *native = NULL;
-    if (!TTCheck(thinkthen_session_new_named_with_surface(_native, &request, (struct thinkthen_complete_utf8_v1){"objective-c", 11}, &native), error)) return nil;
+    if (!TTCheck(thinkthen_session_new_named_with_surface(_native, &request, (struct thinkthen_complete_utf8){"objective-c", 11}, &native), error)) return nil;
     TTSession *session = [[TTSession alloc] initWithNative:native];
     if (!feed && ![session finish:nil error:error]) { [session close]; return nil; }
     return session;

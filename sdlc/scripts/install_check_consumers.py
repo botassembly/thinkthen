@@ -68,23 +68,23 @@ int main(int argc, char **argv) {
     for (;;) {
         uint32_t status; thinkthen_session_result *owner = NULL;
         if (thinkthen_session_try_read(session, &status, &owner) != THINKTHEN_OK) { failed = 1; break; }
-        if (status == THINKTHEN_SESSION_END_V1) break;
-        if (status == THINKTHEN_SESSION_PENDING_V1) {
+        if (status == THINKTHEN_SESSION_END) break;
+        if (status == THINKTHEN_SESSION_PENDING) {
             uint32_t ready;
-            if (thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) != THINKTHEN_OK) { failed = 1; break; }
+            if (thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT, 50, &ready) != THINKTHEN_OK) { failed = 1; break; }
             continue;
         }
-        const thinkthen_complete_session_packet_v1 *packet = NULL;
+        const thinkthen_complete_session_packet *packet = NULL;
         if (thinkthen_session_result_view(owner, &packet) != THINKTHEN_OK) {
             thinkthen_session_result_free(owner); failed = 1; break;
         }
-        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1)
-            answer = packet->data.decide_row->value->value.value->value->kind == THINKTHEN_COMPLETE_JSON_BOOLEAN_V1
+        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW)
+            answer = packet->data.decide_row->value->value.value->value->kind == THINKTHEN_COMPLETE_JSON_BOOLEAN
                 ? (int)packet->data.decide_row->value->value.value->value->data.boolean : -1;
-        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
-            const thinkthen_complete_session_packet_terminal_v1 *terminal = packet->data.terminal;
-            failed = terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
-            if (terminal->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1)
+        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL) {
+            const thinkthen_complete_session_packet_terminal *terminal = packet->data.terminal;
+            failed = terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE;
+            if (terminal->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE)
                 requests = (unsigned long long)terminal->facts.value->requests_sent;
         }
         thinkthen_session_result_free(owner);

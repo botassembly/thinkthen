@@ -158,13 +158,13 @@ end program BLOCK_PLAN.
             constants = Records(PACKAGE).constants
             def decode(address):
                 value = JsonValue.from_address(address)
-                if value.kind == constants['THINKTHEN_COMPLETE_JSON_NULL_V1']: return None
-                if value.kind == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN_V1']: return bool(value.data.boolean)
-                if value.kind in (constants['THINKTHEN_COMPLETE_JSON_STRING_V1'], constants['THINKTHEN_COMPLETE_JSON_NUMBER_V1']):
-                    text = value.data.string if value.kind == constants['THINKTHEN_COMPLETE_JSON_STRING_V1'] else value.data.number
+                if value.kind == constants['THINKTHEN_COMPLETE_JSON_NULL']: return None
+                if value.kind == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN']: return bool(value.data.boolean)
+                if value.kind in (constants['THINKTHEN_COMPLETE_JSON_STRING'], constants['THINKTHEN_COMPLETE_JSON_NUMBER']):
+                    text = value.data.string if value.kind == constants['THINKTHEN_COMPLETE_JSON_STRING'] else value.data.number
                     text = ct.string_at(text.data, text.len).decode()
-                    return text if value.kind == constants['THINKTHEN_COMPLETE_JSON_STRING_V1'] else json.loads(text)
-                assert value.kind == constants['THINKTHEN_COMPLETE_JSON_OBJECT_V1']
+                    return text if value.kind == constants['THINKTHEN_COMPLETE_JSON_STRING'] else json.loads(text)
+                assert value.kind == constants['THINKTHEN_COMPLETE_JSON_OBJECT']
                 entries = (JsonEntry * value.data.object.len).from_address(value.data.object.data)
                 return {ct.string_at(e.name.data, e.name.len).decode(): decode(e.value) for e in entries}
             result = decode(view.value); native.thinkthen_value_free(owner)
@@ -405,7 +405,7 @@ end program BLOCK_PLAN.
                 for index in range(answer.value.count):
                     row = Annotation.from_address(answer.value.rows + index * ct.sizeof(Annotation))
                     want = expected[row.name.text[:row.name.length].decode()]
-                    if want is None: assert row.kind == constants['THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1']
+                    if want is None: assert row.kind == constants['THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL']
                     elif type(want) is bool: assert row.boolean == want
                     elif isinstance(want, str): assert row.text.text[:row.text.length].decode() == want
                     elif isinstance(want, (float, int)): assert abs(row.number - want) < 1e-12
@@ -414,8 +414,8 @@ end program BLOCK_PLAN.
                         assert [Text.from_address(row.tags + i * ct.sizeof(Text)).text[:Text.from_address(row.tags + i * ct.sizeof(Text)).length].decode() for i in range(row.tag_count)] == want
                     else:
                         failure = want['failed']
-                        assert row.failure_kind == constants['THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_' + failure['kind'].upper() + '_V1']
-                        assert row.failure_cause == constants['THINKTHEN_COMPLETE_FAILURE_CAUSE_' + failure['cause'].upper() + '_V1']
+                        assert row.failure_kind == constants['THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_' + failure['kind'].upper()]
+                        assert row.failure_cause == constants['THINKTHEN_COMPLETE_FAILURE_CAUSE_' + failure['cause'].upper()]
                 bridge.TT_ANSWER_FREE(answer.owner)
         finally:
             fixture_backend.close()

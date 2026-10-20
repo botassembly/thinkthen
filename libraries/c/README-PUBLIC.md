@@ -9,19 +9,19 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 #include <thinkthen.h>
 #include <stdio.h>
 #include <string.h>
-static thinkthen_complete_utf8_v1 text(const char *s) { return (thinkthen_complete_utf8_v1){s,strlen(s)}; }
+static thinkthen_complete_utf8 text(const char *s) { return (thinkthen_complete_utf8){s,strlen(s)}; }
 int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new(); if (!engine) return 1;
-    thinkthen_named_request_v1 refund = {.function = {"decide",6},
+    thinkthen_named_request refund = {.function = {"decide",6},
         .question_json = text("{\"kind\":\"text\",\"text\":\"Does the customer ask for a refund?\"}"),
         .input_json = text("{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"Please refund my order. It arrived broken.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Thanks for the quick help yesterday!\"}},{\"original\":{\"kind\":\"text\",\"text\":\"I want to send this back.\"}}]}"), .options_json = text("{}")};
-    thinkthen_named_request_v1 team = {.function = {"choose",6},
+    thinkthen_named_request team = {.function = {"choose",6},
         .question_json = text("{\"kind\":\"definition\",\"value\":{\"choose\":\"Which team owns this?\",\"options\":{\"billing\":\"Invoices, fees, and refunds.\",\"shipping\":\"Parcels and delivery.\",\"account\":\"Logins and passwords.\"}}}"),
         .input_json = text("{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"Please refund the extra fee on my invoice.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"My parcel went to the wrong address.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"I cannot reset my password.\"}}]}"), .options_json = text("{}")};
     thinkthen_call_result *refund_call = NULL; thinkthen_call_error *error = NULL;
     int code = thinkthen_run_call(engine, &refund, NULL, NULL, NULL, &refund_call, &error);
     if (code) { thinkthen_call_error_free(error); thinkthen_engine_free(engine); return 1; }
-    thinkthen_complete_utf8_v1 json = thinkthen_call_result_json(refund_call);
+    thinkthen_complete_utf8 json = thinkthen_call_result_json(refund_call);
     fwrite(json.data,1,json.len,stdout); putchar('\n'); thinkthen_call_result_free(refund_call);
     thinkthen_call_result *team_call = NULL;
     code = thinkthen_run_call(engine, &team, NULL, NULL, NULL, &team_call, &error);

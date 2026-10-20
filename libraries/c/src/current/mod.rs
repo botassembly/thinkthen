@@ -1,7 +1,7 @@
 //! Owned native author snapshots for parsed questions.
 pub(crate) mod author;
 pub(crate) mod question;
-use crate::ffi::carriers::{OptionalStringV1, StringV1, StringsV1};
+use crate::ffi::carriers::{OptionalString, CountedString, Strings};
 use std::fmt;
 
 /// Immutable question metadata, independent of every constructor buffer.
@@ -17,22 +17,22 @@ impl fmt::Debug for QuestionHandle {
 
 pub(crate) use crate::session::views::Storage;
 impl Storage {
-    pub(crate) fn string(&mut self, value: &str) -> StringV1 {
+    pub(crate) fn string(&mut self, value: &str) -> CountedString {
         let value = self.text(value);
-        StringV1 {
+        CountedString {
             data: value.data,
             len: value.len,
         }
     }
-    pub(crate) fn optional_string(&mut self, value: Option<&str>) -> OptionalStringV1 {
-        value.map_or_else(OptionalStringV1::default, |value| OptionalStringV1 {
+    pub(crate) fn optional_string(&mut self, value: Option<&str>) -> OptionalString {
+        value.map_or_else(OptionalString::default, |value| OptionalString {
             present: 1,
             value: self.string(value),
         })
     }
-    pub(crate) fn strings(&mut self, strings: &[String]) -> StringsV1 {
+    pub(crate) fn strings(&mut self, strings: &[String]) -> Strings {
         let strings = strings.iter().map(|string| self.string(string)).collect();
         let (data, len) = self.slice(strings);
-        StringsV1 { data, len }
+        Strings { data, len }
     }
 }

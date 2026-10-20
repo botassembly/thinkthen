@@ -9,7 +9,7 @@ ROOTS = ('completesessionPacket', 'completeplan')
 
 
 def name(key):
-    native = 'TT' + ''.join(part[0].upper() + part[1:] for part in re.findall(
+    native = 'TT'.join(part[0].upper() + part[1:] for part in re.findall(
         r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
     return {'TTAtomicNonZeroUsize':'TTRankedRecord', 'TTAtomicDecideValue':'TTDecisionRecord',
             'TTAtomicBoolean':'TTFilteredRecord', 'TTAtomicArrayOfString':'TTTagRecord',
@@ -171,8 +171,8 @@ def outputs(definitions, version, input_definitions=None, abi=None):
         header += ['TTError' + name(kind)[2:] + ' = ' + str(abi['constants']['THINKTHEN_E' + kind.upper()]) + ',']
     header += ['};']
     header += ['typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {']
-    header += ['TTUsagePersistence' + word.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').title() + ' = ' + str(value) + ','
-               for word, value in abi['constants'].items() if word.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_') and word.endswith('_V1')]
+    header += ['TTUsagePersistence' + word.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').title() + ' = ' + str(value) + ','
+               for word, value in abi['constants'].items() if word.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')]
     header += ['};']
     private_macros = [line for line in header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
     header = [line for line in header if line not in private_macros]
@@ -339,24 +339,24 @@ def native_values():
         # A Boolean-named object arm still uses its native structure reader.
         if boolean and typ == 'u32': return '@((BOOL)' + expression + ')'
         if typ in ('u32', 'u64', 'usize', 'f64', 'i64'): return '@(' + expression + ')'
-        if typ == 'thinkthen_complete_utf8_v1': return 'TTNativeString(' + expression + ')'
+        if typ == 'thinkthen_complete_utf8': return 'TTNativeString(' + expression + ')'
         pointer = typ.startswith('*const ')
         typ = typ.removeprefix('*const ')
         return 'TTNative_' + typ + '(' + (expression if pointer else '&(' + expression + ')') + ')'
     lines = ['// Generated from the shared Rust result graph; do not edit.',
              '#import "TTResultPrivate.h"', '#import <thinkthen.h>', '#include <math.h>']
     lines += ['id TTNative_' + key + '(const struct ' + key + ' *value);' for key in target.members]
-    lines += [r'''static NSString *TTNativeString(struct thinkthen_complete_utf8_v1 value) {
+    lines += [r'''static NSString *TTNativeString(struct thinkthen_complete_utf8 value) {
     NSString *text = [[NSString alloc] initWithBytes:value.data ?: "" length:value.len encoding:NSUTF8StringEncoding];
     if (!text) TTInvalidResult(); return text;
 }
-id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value) {
+id TTNative_thinkthen_complete_json(const struct thinkthen_complete_json *value) {
     if (!value) TTInvalidResult();
     switch (value->kind) {
-    case THINKTHEN_COMPLETE_JSON_NULL_V1: return NSNull.null;
-    case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return @((BOOL)value->data.boolean);
-    case THINKTHEN_COMPLETE_JSON_STRING_V1: return TTNativeString(value->data.string);
-    case THINKTHEN_COMPLETE_JSON_NUMBER_V1: {
+    case THINKTHEN_COMPLETE_JSON_NULL: return NSNull.null;
+    case THINKTHEN_COMPLETE_JSON_BOOLEAN: return @((BOOL)value->data.boolean);
+    case THINKTHEN_COMPLETE_JSON_STRING: return TTNativeString(value->data.string);
+    case THINKTHEN_COMPLETE_JSON_NUMBER: {
         NSString *text = TTNativeString(value->data.number);
         NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:text locale:@{NSLocaleDecimalSeparator:@"."}];
         double floating = text.doubleValue;
@@ -364,16 +364,16 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
             !([number isEqual:NSDecimalNumber.zero] && floating != 0)) return number;
         if (!isfinite(floating)) TTInvalidResult(); return @(floating);
     }
-    case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {
+    case THINKTHEN_COMPLETE_JSON_ARRAY: {
         NSMutableArray *items = [NSMutableArray array];
-        for (size_t i = 0; i < value->data.array.len; i++) [items addObject:TTNative_thinkthen_complete_json_v1(value->data.array.data[i])];
+        for (size_t i = 0; i < value->data.array.len; i++) [items addObject:TTNative_thinkthen_complete_json(value->data.array.data[i])];
         return [items copy];
     }
-    case THINKTHEN_COMPLETE_JSON_OBJECT_V1: {
+    case THINKTHEN_COMPLETE_JSON_OBJECT: {
         NSMutableDictionary *items = [NSMutableDictionary dictionary];
         for (size_t i = 0; i < value->data.object.len; i++) {
-            const struct thinkthen_complete_json_entry_v1 *item = &value->data.object.data[i];
-            items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+            const struct thinkthen_complete_json_entry *item = &value->data.object.data[i];
+            items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
         }
         return [items copy];
     }
@@ -386,7 +386,7 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
         if key in target.arms:
             body += ['switch(value->kind) {']
             for arm, _, arm_type, _ in target.arms[key]:
-                symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                symbol = key.upper() + '_' + arm.upper()
                 field = arm + '_' if arm in ('true', 'false') else arm
                 expression = 'NSNull.null' if arm == 'null' else decode(arm_type, 'value->data.' + field, arm == 'boolean')
                 body += [f'case {symbol}: return {expression};']
@@ -394,7 +394,7 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
         elif 'enum' in schema:
             body += ['switch(value->kind) {']
             for value in schema['enum']:
-                symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                symbol = key.upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper()
                 body += [f'case {symbol}: return {literal(value)};']
             body += ['default: TTInvalidResult(); }']
         elif 'properties' in schema:
@@ -403,19 +403,19 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
                 if field == 'extensions': continue
                 expression = 'value->' + (field + '_' if field in ('true', 'false') else field)
                 boolean = c.normalized(schema['properties'][field]).get('type') == 'boolean'
-                if field_type.endswith('_presence_v1'):
+                if field_type.endswith('_presence'):
                     contained = dict(target.members[field_type])['value']
                     decoded = decode(contained, expression + '.value', boolean)
-                    body += [f'if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[{literal(field)}] = NSNull.null;',
-                             f'else if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[{literal(field)}] = {decoded};']
+                    body += [f'if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[{literal(field)}] = NSNull.null;',
+                             f'else if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[{literal(field)}] = {decoded};']
                 else: body += [f'items[{literal(field)}] = {decode(field_type, expression, boolean)};']
             body += ['for (size_t i = 0; i < value->extensions.len; i++) {',
-                     'const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];',
-                     'items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);', '}', 'return [items copy];']
+                     'const struct thinkthen_complete_extension *item = &value->extensions.data[i];',
+                     'items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);', '}', 'return [items copy];']
         elif members[0][0] == 'presence':
-            body += ['return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? ' + decode(dict(members)['value'], 'value->value') + ' : NSNull.null;']
+            body += ['return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? ' + decode(dict(members)['value'], 'value->value') + ' : NSNull.null;']
         elif members[0][0] == 'data':
-            mapping = key.endswith('_map_v1')
+            mapping = key.endswith('_map')
             body += ['NSMutableDictionary *items = [NSMutableDictionary dictionary];' if mapping else 'NSMutableArray *items = [NSMutableArray array];', 'for (size_t i = 0; i < value->len; i++) {']
             element = dict(members)['data'].removeprefix('*const ')
             if mapping:

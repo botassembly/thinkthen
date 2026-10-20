@@ -5,7 +5,7 @@ import re
 def outputs(header):
     constants = {key: int(value) for key, value in re.findall(r'^#define (THINKTHEN_\w+) (\d+)$', header, re.M)}
     errors = sorted((value, key.removeprefix('THINKTHEN_E').title(), key) for key, value in constants.items() if key.startswith('THINKTHEN_E'))
-    persistence = sorted((value, key.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').title(), key) for key, value in constants.items() if key.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_'))
+    persistence = sorted((value, key.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').title(), key) for key, value in constants.items() if key.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_'))
     error_names = ['None'] + [name for _, name, _ in errors]
     kinds_spec = '''-- Generated native kinds and diagnostics; do not edit.
 with Interfaces;
@@ -31,7 +31,7 @@ if Code = 0 then return; end if;
 declare Message : constant String := Interfaces.C.Strings.Value (thinkthen_session_error_message);
 begin case Code is
 ''' + '\n'.join('when K_' + symbol + ' => raise ' + name + '_Error with Message;' for _, name, symbol in errors) + '\nwhen others => raise Native_Error with Message;\nend case; end; end Check;\n'
-    kinds_body += 'function Failure_Kind_For (Kind : Interfaces.Unsigned_32) return Error_Status is\n(case Kind is\n' + ',\n'.join('when K_THINKTHEN_COMPLETE_FAILURE_KIND_' + name.upper() + '_V1 => ' + name for _, name, _ in errors) + ',\nwhen others => Defect);\n'
+    kinds_body += 'function Failure_Kind_For (Kind : Interfaces.Unsigned_32) return Error_Status is\n(case Kind is\n' + ',\n'.join('when K_THINKTHEN_COMPLETE_FAILURE_KIND_' + name.upper() + ' => ' + name for _, name, _ in errors) + ',\nwhen others => Defect);\n'
     kinds_body += 'function Persistence_State_For (Kind : Interfaces.Unsigned_32) return Persistence_State is\n(case Kind is\n' + ',\n'.join('when K_' + symbol + ' => ' + name for _, name, symbol in persistence) + ',\nwhen others => raise Program_Error with "unknown native persistence state");\nend Thinkthen_Kinds;\n'
     for symbol, value in constants.items():
         kinds_body = re.sub(r'\bK_' + symbol + r'\b', str(value), kinds_body)
@@ -54,14 +54,14 @@ with Thinkthen.Native_Sessions;
 with Thinkthen.Session_C; use Thinkthen.Session_C;
 package body Thinkthen.Persistence is
 function Observe (Client : Engine; Finish : Boolean) return Observation is
-State : aliased thinkthen_complete_usage_persistence_v1;
-Advice : aliased thinkthen_complete_utf8_v1;
+State : aliased thinkthen_complete_usage_persistence;
+Advice : aliased thinkthen_complete_utf8;
 Code : Interfaces.C.int;
 begin
 if Finish then
-Code := thinkthen_engine_finish_usage_status_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
+Code := thinkthen_engine_finish_usage_status (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 else
-Code := thinkthen_engine_usage_persistence_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
+Code := thinkthen_engine_usage_persistence (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 end if;
 Thinkthen_Kinds.Check (Code);
 return (State => Persistence_State (Thinkthen_Kinds.Persistence_State_For (State.kind)),

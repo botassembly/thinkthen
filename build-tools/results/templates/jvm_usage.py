@@ -12,15 +12,15 @@ def outputs(root):
     spec.loader.exec_module(abi)
     native = abi.header_abi(root / 'libraries/c/include/thinkthen.h')
     prefix = 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_'
-    states = [(key.removeprefix(prefix).removesuffix('_V1').title(), value)
-              for key, value in native['constants'].items() if key.startswith(prefix) and key.endswith('_V1')]
-    state = native['records']['thinkthen_complete_usage_persistence_v1']
-    advice = native['records']['thinkthen_complete_utf8_v1']
-    for function in ('thinkthen_engine_usage_persistence_v1', 'thinkthen_engine_finish_usage_status_v1'):
+    states = [(key.removeprefix(prefix).title(), value)
+              for key, value in native['constants'].items() if key.startswith(prefix)]
+    state = native['records']['thinkthen_complete_usage_persistence']
+    advice = native['records']['thinkthen_complete_utf8']
+    for function in ('thinkthen_engine_usage_persistence', 'thinkthen_engine_finish_usage_status'):
         signature = native['functions'][function]
         if signature['return'] != 'int' or signature['arguments'] != [
-                'const thinkthen_engine *', 'thinkthen_complete_usage_persistence_v1 *',
-                'thinkthen_complete_utf8_v1 *']:
+                'const thinkthen_engine *', 'thinkthen_complete_usage_persistence *',
+                'thinkthen_complete_utf8 *']:
             raise ValueError('JVM usage query signature changed: ' + function)
     if state['fields']['kind']['type'] != 'uint32_t' or state['fields']['kind']['width'] != 4:
         raise ValueError('JVM usage kind requires a uint32_t carrier')
@@ -59,9 +59,9 @@ def outputs(root):
              'package thinkthen;', 'import java.lang.foreign.*;', 'final class NativeWait {', 'private NativeWait() {}']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1') + ' = ' + str(value) + ';']
+            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_WAIT_') + ' = ' + str(value) + ';']
         if name.startswith('THINKTHEN_SESSION_READY_'):
-            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_').removesuffix('_V1') + ' = ' + str(value) + ';']
+            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_') + ' = ' + str(value) + ';']
     layouts_by_type = {'const thinkthen_session *': 'ValueLayout.ADDRESS', 'uint32_t': 'ValueLayout.JAVA_INT', 'uint32_t *': 'ValueLayout.ADDRESS'}
     prototype = native['functions']['thinkthen_session_wait']
     carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
@@ -69,8 +69,8 @@ def outputs(root):
               'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}']
     for prefix in ('THINKTHEN_SESSION_RESULT_', 'THINKTHEN_SESSION_PENDING_', 'THINKTHEN_SESSION_END_'):
         for name, value in native['constants'].items():
-            if name == prefix + 'V1':
-                waits += ['static final int READ_' + name.removeprefix('THINKTHEN_SESSION_').removesuffix('_V1') + ' = ' + str(value) + ';']
+            if name == prefix:
+                waits += ['static final int READ_' + name.removeprefix('THINKTHEN_SESSION_') + ' = ' + str(value) + ';']
     for method, function, arguments in [
         ('nextPacket', 'thinkthen_session_next_packet', 'MemorySegment session, int interest, MemorySegment status, MemorySegment result'),
         ('push', 'thinkthen_session_push', 'MemorySegment session, MemorySegment descriptor, long length, MemorySegment status')]:
@@ -93,15 +93,15 @@ def outputs(root):
               'throw new IllegalStateException("Unknown native error kind"); }', '}']
     signature = native['functions']['thinkthen_session_new_named_with_surface']
     if signature['return'] != 'int' or signature['arguments'] != [
-            'const thinkthen_engine *', 'const thinkthen_named_request_v1 *',
-            'thinkthen_complete_utf8_v1', 'thinkthen_session **']:
+            'const thinkthen_engine *', 'const thinkthen_named_request *',
+            'thinkthen_complete_utf8', 'thinkthen_session **']:
         raise ValueError('JVM named constructor signature changed')
     request_schema = json.loads((root / 'specification/request.schema.json').read_text())
     from generate import graph, prepare
     from jvm import ROOTS
     request_definitions = prepare(graph(request_schema, ('RequestInput', 'RequestFunction')))
     result_definitions = prepare(graph(json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text()), ROOTS))
-    named = native['records']['thinkthen_named_request_v1']
+    named = native['records']['thinkthen_named_request']
     named_lines = ['// Generated from compiler-derived C carriers. Do not edit.',
                    'package thinkthen;', 'import java.lang.foreign.*;',
                    'final class NativeNamed {', 'private NativeNamed() {}',

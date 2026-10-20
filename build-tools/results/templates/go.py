@@ -55,7 +55,7 @@ def render(definitions, input_definitions):
 
 
 def usage(header):
-    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
+    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)) (\d+)\s*$', header, re.M)
     lines = ['// Generated from the compiler-derived C header; do not edit.', 'package thinkthen', 'type UsagePersistenceState uint32', 'const (']
     lines += ['Usage' + word.title() + ' UsagePersistenceState = ' + value for _, word, value in members]
     lines += [')', 'type ErrorKind int', 'const (']

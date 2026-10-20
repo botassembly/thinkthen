@@ -55,17 +55,17 @@ class Reader:
     def json_value(self, address):
         kind = ct.c_uint32(); assert self.bridge.TT_VALUE_KIND(address, ct.byref(kind)) == 0
         constants = self.constants
-        if kind.value == constants['THINKTHEN_COMPLETE_JSON_NULL_V1']: return None
-        if kind.value == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN_V1']:
+        if kind.value == constants['THINKTHEN_COMPLETE_JSON_NULL']: return None
+        if kind.value == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN']:
             boolean = ct.c_uint32(); assert self.bridge.TT_VALUE_BOOLEAN(address, ct.byref(boolean)) == 0
             return bool(boolean.value)
         output, length = ct.create_string_buffer(8192), ct.c_uint64()
-        if kind.value in (constants['THINKTHEN_COMPLETE_JSON_STRING_V1'], constants['THINKTHEN_COMPLETE_JSON_NUMBER_V1']):
+        if kind.value in (constants['THINKTHEN_COMPLETE_JSON_STRING'], constants['THINKTHEN_COMPLETE_JSON_NUMBER']):
             assert self.bridge.TT_VALUE_TEXT(address, output, ct.byref(length)) == 0
             text = output.raw[:length.value].decode()
-            return text if kind.value == constants['THINKTHEN_COMPLETE_JSON_STRING_V1'] else json.loads(text)
+            return text if kind.value == constants['THINKTHEN_COMPLETE_JSON_STRING'] else json.loads(text)
         assert self.bridge.TT_VALUE_LENGTH(address, ct.byref(length)) == 0
-        result = [] if kind.value == constants['THINKTHEN_COMPLETE_JSON_ARRAY_V1'] else {}
+        result = [] if kind.value == constants['THINKTHEN_COMPLETE_JSON_ARRAY'] else {}
         for index in range(1, length.value + 1):
             child = ct.c_void_p(); assert self.bridge.TT_VALUE_ELEMENT(address, index, ct.byref(child)) == 0
             projected = self.json_value(child.value); self.bridge.TT_VALUE_FREE(child)
@@ -76,9 +76,9 @@ class Reader:
         return result
 
     def name(self, native):
-        if native == 'thinkthen_complete_utf8_v1': return 'thinkthen_cobol_AnswerText'
-        if native == 'thinkthen_complete_json_v1': return None
-        return 'thinkthen_cobol_' + self.prefix + ''.join(word.title() for word in native.removeprefix('thinkthen_complete_').removesuffix('_v1').split('_'))
+        if native == 'thinkthen_complete_utf8': return 'thinkthen_cobol_AnswerText'
+        if native == 'thinkthen_complete_json': return None
+        return 'thinkthen_cobol_' + self.prefix.join(word.title() for word in native.removeprefix('thinkthen_complete_').split('_'))
 
     def shape(self, schema, path):
         schema = normalized(schema)

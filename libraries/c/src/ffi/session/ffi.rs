@@ -16,25 +16,25 @@ use thinkthen::{ErrorKind, Request, RequestReaderFailure, RequestSessionRead, Su
 /// Existing canonical components for one named request. Every view is counted
 /// UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
 #[repr(C)]
-pub struct NamedRequestV1 {
+pub struct NamedRequest {
     /// Exact lower-case public function name.
-    pub function: crate::session::views::thinkthen_complete_utf8_v1,
+    pub function: crate::session::views::thinkthen_complete_utf8,
     /// Existing canonical question selector JSON.
-    pub question_json: crate::session::views::thinkthen_complete_utf8_v1,
+    pub question_json: crate::session::views::thinkthen_complete_utf8,
     /// Existing canonical input selector JSON.
-    pub input_json: crate::session::views::thinkthen_complete_utf8_v1,
+    pub input_json: crate::session::views::thinkthen_complete_utf8,
     /// Existing canonical options JSON; pass {} for omitted controls.
-    pub options_json: crate::session::views::thinkthen_complete_utf8_v1,
+    pub options_json: crate::session::views::thinkthen_complete_utf8,
 }
 
-impl std::fmt::Debug for NamedRequestV1 {
+impl std::fmt::Debug for NamedRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("NamedRequestV1(<withheld>)")
+        f.write_str("NamedRequest(<withheld>)")
     }
 }
 
 unsafe fn named_text<'a>(
-    view: crate::session::views::thinkthen_complete_utf8_v1,
+    view: crate::session::views::thinkthen_complete_utf8,
 ) -> Result<&'a str, ErrorKind> {
     // SAFETY: the caller retains the readable extent for this shared borrow.
     unsafe { super::text(view.data.cast(), view.len) }.map_err(|_| ErrorKind::Usage)
@@ -83,11 +83,11 @@ fn read_packet(
 ) -> Result<(u32, *mut SessionResultHandle), ErrorKind> {
     let packet = match interest {
         None => session.0.try_read(),
-        Some(THINKTHEN_SESSION_WAIT_RESULT_V1) => session
+        Some(THINKTHEN_SESSION_WAIT_RESULT) => session
             .0
             .next_packet(thinkthen::RequestSessionWaitInterest::Result)
             .map_err(|error| error.kind())?,
-        Some(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) => session
+        Some(THINKTHEN_SESSION_WAIT_SETTLEMENT) => session
             .0
             .next_packet(thinkthen::RequestSessionWaitInterest::Settlement)
             .map_err(|error| error.kind())?,
@@ -95,15 +95,15 @@ fn read_packet(
     };
     let (state, owner) = match packet {
         RequestSessionRead::Result(packet) => (
-            THINKTHEN_SESSION_RESULT_V1,
+            THINKTHEN_SESSION_RESULT,
             Box::into_raw(Box::new(SessionResultHandle {
                 packet,
                 json: std::sync::Mutex::new(None),
                 view: std::sync::Mutex::new(None),
             })),
         ),
-        RequestSessionRead::Pending => (THINKTHEN_SESSION_PENDING_V1, std::ptr::null_mut()),
-        RequestSessionRead::End => (THINKTHEN_SESSION_END_V1, std::ptr::null_mut()),
+        RequestSessionRead::Pending => (THINKTHEN_SESSION_PENDING, std::ptr::null_mut()),
+        RequestSessionRead::End => (THINKTHEN_SESSION_END, std::ptr::null_mut()),
     };
     Ok((state, owner))
 }
@@ -113,8 +113,8 @@ fn usage_status(
     observe: fn(&thinkthen::Engine) -> thinkthen::UsagePersistence,
 ) -> Result<
     (
-        crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
-        crate::session::views::thinkthen_complete_utf8_v1,
+        crate::session::views_generated::thinkthen_complete_usage_persistence,
+        crate::session::views::thinkthen_complete_utf8,
     ),
     ErrorKind,
 > {
@@ -122,23 +122,23 @@ fn usage_status(
     use thinkthen::UsagePersistence;
     let observed = observe(&engine.0.engine);
     let kind = match observed {
-        UsagePersistence::Disabled => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
-        UsagePersistence::Pending => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
-        UsagePersistence::Written => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
-        UsagePersistence::Failed => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
+        UsagePersistence::Disabled => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED,
+        UsagePersistence::Pending => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING,
+        UsagePersistence::Written => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN,
+        UsagePersistence::Failed => view::THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED,
     };
     let advice = observed.advice().map_or(
-        crate::session::views::thinkthen_complete_utf8_v1 {
+        crate::session::views::thinkthen_complete_utf8 {
             data: std::ptr::null(),
             len: 0,
         },
-        |text| crate::session::views::thinkthen_complete_utf8_v1 {
+        |text| crate::session::views::thinkthen_complete_utf8 {
             data: text.as_ptr().cast(),
             len: text.len(),
         },
     );
     Ok((
-        view::thinkthen_complete_usage_persistence_v1 { kind },
+        view::thinkthen_complete_usage_persistence { kind },
         advice,
     ))
 }
@@ -150,11 +150,11 @@ mod tests;
 fn wait_ready(session: &SessionHandle, interest: u32, timeout_ms: u32) -> Result<u32, ErrorKind> {
     use thinkthen::RequestSessionWaitInterest as Interest;
     let interest = match interest {
-        THINKTHEN_SESSION_WAIT_RESULT_V1 => Interest::Result,
-        THINKTHEN_SESSION_WAIT_INPUT_V1 => Interest::Input,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 => Interest::Settlement,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1 if timeout_ms == 0 => Interest::SettlementArm,
-        THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1 => Interest::InterruptibleSettlement,
+        THINKTHEN_SESSION_WAIT_RESULT => Interest::Result,
+        THINKTHEN_SESSION_WAIT_INPUT => Interest::Input,
+        THINKTHEN_SESSION_WAIT_SETTLEMENT => Interest::Settlement,
+        THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM if timeout_ms == 0 => Interest::SettlementArm,
+        THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT => Interest::InterruptibleSettlement,
         _ => return Err(ErrorKind::Usage),
     };
     let ready = session.0.wait(
@@ -169,7 +169,7 @@ fn packet_json(result: &SessionResultHandle) -> Result<(*const c_char, usize), E
 }
 fn packet_view(
     result: &SessionResultHandle,
-) -> Result<*const crate::session::views_generated::thinkthen_complete_session_packet_v1, ErrorKind>
+) -> Result<*const crate::session::views_generated::thinkthen_complete_session_packet, ErrorKind>
 {
     result.view()
 }
@@ -250,8 +250,8 @@ unsafe fn json_surface_session(
 
 unsafe fn named_session(
     engine: &EngineHandle,
-    request: *const NamedRequestV1,
-    surface: crate::session::views::thinkthen_complete_utf8_v1,
+    request: *const NamedRequest,
+    surface: crate::session::views::thinkthen_complete_utf8,
 ) -> Result<*mut SessionHandle, failures::Failure> {
     // SAFETY: every component and the output obey the caller's counted contract.
     unsafe {
@@ -271,7 +271,7 @@ unsafe fn cancel_session(session: *mut SessionHandle) {
 }
 
 pub(super) unsafe fn named_request(
-    request: *const NamedRequestV1,
+    request: *const NamedRequest,
 ) -> Result<Request, failures::Failure> {
     // SAFETY: each named view inherits the caller's counted lifetime contract.
     unsafe {

@@ -58,10 +58,10 @@ def render(definitions, old_nodes):
                     f'if(items) for(uint64_t i=0;i<p->len && !a->code;i++) items[i]={call}(a,p->data[i]);']
         elif source.get('type') == 'object':
             call = child(source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}, native + '_value', old + '_entry')
-            entry = typ.removesuffix('_v1') + '_entry_v1'
+            entry = typ + '_entry'
             body = ['if(p->len && (!p->keys || !p->values)) {a->code=THINKTHEN_COBOL_REPRESENTATION; return out;}',
                     f'{entry} *items=allocate(a,p->len,sizeof(*items));', 'out->data=items; out->len=p->len;',
-                    f'if(items) for(uint64_t i=0;i<p->len && !a->code;i++) {{items[i].key=(thinkthen_complete_utf8_v1){{p->keys[i].data,p->keys[i].len}}; items[i].value={call}(a,p->values[i]);}}']
+                    f'if(items) for(uint64_t i=0;i<p->len && !a->code;i++) {{items[i].key=(thinkthen_complete_utf8){{p->keys[i].data,p->keys[i].len}}; items[i].value={call}(a,p->values[i]);}}']
         elif 'const' in source or source.get('type') == 'null':
             body = ['(void)p;']
         elif source.get('type') in ('integer','number','boolean'):
@@ -69,12 +69,12 @@ def render(definitions, old_nodes):
                 body = ['if(p->value>1) a->code=THINKTHEN_COBOL_REPRESENTATION;', 'out->value=(uint32_t)p->value;']
             else:
                 body = ['out->value=p->value;']
-        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json_v1'),):
+        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json'),):
             body = ['out->value=p->value;']
         else:
-            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8_v1'),):
+            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8'),):
                 raise ValueError('unsupported COBOL native scalar fields: ' + native)
-            body = ['out->text=(thinkthen_complete_utf8_v1){p->data,p->len};']
+            body = ['out->text=(thinkthen_complete_utf8){p->data,p->len};']
         const = 'const' in source or source.get('type') == 'null'
         function = 'convert_' + old + '_' + native
         prefix = [f'static void *{function}(arena *a,const void *input) {{', f'const thinkthen_cobol_{old} *p=input;', f'{typ} *out=allocate(a,1,sizeof(*out));', 'if(!out) return NULL;']
@@ -86,8 +86,8 @@ def render(definitions, old_nodes):
     code.extend(body for _, body in bodies)
     code += ['static int start(const void *engine,const thinkthen_cobol_RequestCall *input,void **out,const char *function,size_t length) {',
              'if(!input) return THINKTHEN_COBOL_REPRESENTATION;', 'arena a={0};',
-             'const thinkthen_request_arguments_v1 *arguments=convert_RequestCall_RequestArguments(&a,input);',
-             'int code=a.code ? a.code : thinkthen_session_new_typed_with_surface(engine,(thinkthen_complete_utf8_v1){function,length},arguments,(thinkthen_complete_utf8_v1){"cobol",5},(thinkthen_session **)out);',
+             'const thinkthen_request_arguments *arguments=convert_RequestCall_RequestArguments(&a,input);',
+             'int code=a.code ? a.code : thinkthen_session_new_typed_with_surface(engine,(thinkthen_complete_utf8){function,length},arguments,(thinkthen_complete_utf8){"cobol",5},(thinkthen_session **)out);',
              'release(&a); return code;', '}',
              'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out) {',
              'if(!request || !request->m_call) return THINKTHEN_COBOL_REPRESENTATION;',
@@ -99,7 +99,7 @@ def render(definitions, old_nodes):
         code.append(f'case {index}: return start(engine,call,out,"{function}",{len(function)});')
     code += ['default: return THINKTHEN_COBOL_REPRESENTATION;', '}', '}',
              'int TT_SESSION_PUSH(const void *session,const thinkthen_cobol_RequestSessionDescriptor *input,uint32_t *status) {',
-             'arena a={0}; const thinkthen_request_session_descriptor_v1 *descriptor=convert_RequestSessionDescriptor_RequestSessionDescriptor(&a,input);',
+             'arena a={0}; const thinkthen_request_session_descriptor *descriptor=convert_RequestSessionDescriptor_RequestSessionDescriptor(&a,input);',
              'int code=a.code ? a.code : thinkthen_session_push_typed(session,descriptor,status);',
              'release(&a); return code;', '}']
     for function in functions:
@@ -129,23 +129,23 @@ static void release(arena *a) {
 }
 '''
 
-NEXT_PACKET = 'int TT_SESSION_NEXT(thinkthen_session *session,uint32_t *status,thinkthen_session_result **out) {\n    return thinkthen_session_next_packet(session,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,status,out);\n}\n'
+NEXT_PACKET = 'int TT_SESSION_NEXT(thinkthen_session *session,uint32_t *status,thinkthen_session_result **out) {\n    return thinkthen_session_next_packet(session,THINKTHEN_SESSION_WAIT_SETTLEMENT,status,out);\n}\n'
 
-USAGE_STATUS = 'static int usage_status(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                        char *advice,uint64_t *written,int finish) {\n    if(!state || !advice || !written) return THINKTHEN_COBOL_REPRESENTATION;\n    thinkthen_complete_usage_persistence_v1 observed;\n    thinkthen_complete_utf8_v1 text;\n    int code=finish ? thinkthen_engine_finish_usage_status_v1(engine,&observed,&text)\n                    : thinkthen_engine_usage_persistence_v1(engine,&observed,&text);\n    if(code) return code;\n    code=TT_SESSION_TEXT(&text,advice,written);\n    if(code) return code;\n    *state=observed;\n    return 0;\n}\nint TT_ENGINE_USAGE_PERSISTENCE(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                              char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,0);\n}\nint TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                                char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,1);\n}\n'
+USAGE_STATUS = 'static int usage_status(const thinkthen_engine *engine,thinkthen_complete_usage_persistence *state,\n                        char *advice,uint64_t *written,int finish) {\n    if(!state || !advice || !written) return THINKTHEN_COBOL_REPRESENTATION;\n    thinkthen_complete_usage_persistence observed;\n    thinkthen_complete_utf8 text;\n    int code=finish ? thinkthen_engine_finish_usage_status(engine,&observed,&text)\n                    : thinkthen_engine_usage_persistence(engine,&observed,&text);\n    if(code) return code;\n    code=TT_SESSION_TEXT(&text,advice,written);\n    if(code) return code;\n    *state=observed;\n    return 0;\n}\nint TT_ENGINE_USAGE_PERSISTENCE(const thinkthen_engine *engine,thinkthen_complete_usage_persistence *state,\n                              char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,0);\n}\nint TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence *state,\n                                char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,1);\n}\n'
 
 
 PLAN = r"""int TT_PLAN(const void *engine,const char *function,uint64_t length,
             const thinkthen_cobol_RequestCall *input,tt_value **out) {
     if(!out) return THINKTHEN_COBOL_REPRESENTATION;
     arena a={0};
-    const thinkthen_request_arguments_v1 *arguments=convert_RequestCall_RequestArguments(&a,input);
+    const thinkthen_request_arguments *arguments=convert_RequestCall_RequestArguments(&a,input);
     thinkthen_value *owner=NULL;
     int code=a.code ? a.code : thinkthen_request_plan_typed_value(engine,
-        (thinkthen_complete_utf8_v1){function,length},arguments,
-        (thinkthen_complete_utf8_v1){"cobol",5},&owner);
+        (thinkthen_complete_utf8){function,length},arguments,
+        (thinkthen_complete_utf8){"cobol",5},&owner);
     release(&a);
     if(!code) {
-        const thinkthen_complete_json_v1 *view=NULL;
+        const thinkthen_complete_json *view=NULL;
         code=thinkthen_value_view(owner,&view);
         if(!code) code=own_value(view,out);
     }
@@ -210,7 +210,7 @@ def builders(definitions):
 ENGINE_NEW = r"""int TT_ENGINE_NEW(const thinkthen_cobol_EngineSettings *input,void **out) {
     if(!input || !out) return THINKTHEN_COBOL_REPRESENTATION;
     arena a={0};
-    const thinkthen_request_engine_settings_v1 *settings=convert_EngineSettings_EngineSettings(&a,input);
+    const thinkthen_request_engine_settings *settings=convert_EngineSettings_EngineSettings(&a,input);
     thinkthen_engine *engine=a.code ? NULL : thinkthen_engine_new_typed(settings);
     int code=a.code ? a.code : engine ? 0 : thinkthen_error_code(NULL);
     release(&a); if(!code) *out=engine; return code;

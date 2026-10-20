@@ -455,10 +455,10 @@ def bridge():
     abi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(abi)
     native = abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
-    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint', 'thinkthen_complete_utf8_v1': 'CompleteUtf8V1'}
+    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint', 'thinkthen_complete_utf8': 'CompleteUtf8'}
     lines = ['// Generated from the compiler-derived C header ABI; do not edit.',
              'using System.Runtime.InteropServices;', 'namespace ThinkThen;']
-    carriers = ('thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1')
+    carriers = ('thinkthen_string', 'thinkthen_complete_usage_persistence', 'thinkthen_complete_utf8', 'thinkthen_named_request')
     def host(name):
         return ''.join(word.title() for word in name.removeprefix('thinkthen_').split('_'))
     for carrier in carriers:
@@ -466,23 +466,23 @@ def bridge():
         lines += [' public ' + types[field['type']] + ' ' + name + ';'
                   for name, field in native['records'][carrier]['fields'].items()]
         lines += ['}']
-    for enum, prefix, suffix, underlying in [('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
-        members = [(name.removeprefix(prefix).removesuffix(suffix), value) for name, value in native['constants'].items()
-                   if name.startswith(prefix) and (name.endswith(suffix) if suffix else not name.endswith('_V1'))]
+    for enum, prefix, underlying in [('FailureKind', 'THINKTHEN_E', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', 'uint')]:
+        members = [(name.removeprefix(prefix), value) for name, value in native['constants'].items()
+                   if name.startswith(prefix)]
         lines += ['public enum ' + enum + ' : ' + underlying + ' { ' + ', '.join(''.join(word.title() for word in name.split('_')) + ' = ' + str(value) for name, value in members) + ' }']
     parameters = {'const thinkthen_engine *': 'EngineHandle engine',
                   **{carrier + ' *': 'out ' + host(carrier) + ' output' + str(index)
                      for index, carrier in enumerate(carriers)}}
     lines += ['internal static class NativeUsage {']
-    for name in ('thinkthen_engine_usage_persistence_v1', 'thinkthen_engine_finish_usage_status_v1'):
+    for name in ('thinkthen_engine_usage_persistence', 'thinkthen_engine_finish_usage_status'):
         prototype = native['functions'][name]
         lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern '
                   + {'int': 'int'}[prototype['return']] + ' ' + name + '('
                   + ', '.join(parameters[argument] for argument in prototype['arguments']) + ');']
     prototype = native['functions']['thinkthen_session_new_named_with_surface']
     named_parameters = {'const thinkthen_engine *': 'EngineHandle engine',
-                        'const thinkthen_named_request_v1 *': 'in NamedRequestV1 request',
-                        'thinkthen_complete_utf8_v1': 'CompleteUtf8V1 surface',
+                        'const thinkthen_named_request *': 'in NamedRequest request',
+                        'thinkthen_complete_utf8': 'CompleteUtf8 surface',
                         'thinkthen_session **': 'out IntPtr session'}
     lines += ['}', 'internal static class NativeNamed {',
               ' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new_named_with_surface('
@@ -490,10 +490,10 @@ def bridge():
               '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            lines += [' internal const uint ' + ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').split('_')) + ' = ' + str(value) + ';']
+            lines += [' internal const uint '.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').split('_')) + ' = ' + str(value) + ';']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_READY_'):
-            suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').removesuffix('_V1').split('_'))
+            suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').split('_'))
             lines += [' internal const uint Ready' + suffix + ' = ' + str(value) + ';']
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
@@ -510,7 +510,7 @@ def bridge():
     lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_push('
               + ', '.join(push_parameters[argument] for argument in prototype['arguments']) + ');']
     for state in ('RESULT', 'PENDING', 'END'):
-        lines += [' internal const uint Read' + state.title() + ' = ' + str(native['constants']['THINKTHEN_SESSION_' + state + '_V1']) + ';']
+        lines += [' internal const uint Read' + state.title() + ' = ' + str(native['constants']['THINKTHEN_SESSION_' + state]) + ';']
     lines += ['}']
     return '\n'.join(lines) + '\n'
 

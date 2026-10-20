@@ -199,8 +199,8 @@ def render(definitions, inputs=False):
 
 def bridge(abi, definitions):
     def types(value):
-        carriers = {'const thinkthen_named_request_v1 *': '_NativeNamedRequest', 'thinkthen_complete_usage_persistence_v1 *': '_NativeUsageState', 'thinkthen_complete_utf8_v1 *': '_NativeUsageAdvice'}
-        if value == 'thinkthen_complete_utf8_v1':
+        carriers = {'const thinkthen_named_request *': '_NativeNamedRequest', 'thinkthen_complete_usage_persistence *': '_NativeUsageState', 'thinkthen_complete_utf8 *': '_NativeUsageAdvice'}
+        if value == 'thinkthen_complete_utf8':
             return ('_NativeUsageAdvice',) * 2
         if value in carriers:
             return (f'Pointer<{carriers[value]}>',) * 2
@@ -221,20 +221,20 @@ def bridge(abi, definitions):
                'thinkthen_session_new_named_with_surface', 'thinkthen_session_push',
                'thinkthen_session_next_packet', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_view',
-               'thinkthen_session_error_view', 'thinkthen_engine_usage_persistence_v1',
-               'thinkthen_engine_finish_usage_status_v1')
+               'thinkthen_session_error_view', 'thinkthen_engine_usage_persistence',
+               'thinkthen_engine_finish_usage_status')
     lines = ['// Generated from the canonical C header ABI. Do not edit.', 'part of thinkthen_session;']
-    for carrier, host in [('thinkthen_complete_usage_persistence_v1', '_NativeUsageState'), ('thinkthen_complete_utf8_v1', '_NativeUsageAdvice')]:
+    for carrier, host in [('thinkthen_complete_usage_persistence', '_NativeUsageState'), ('thinkthen_complete_utf8', '_NativeUsageAdvice')]:
         lines += [f'final class {host} extends Struct {{']
         for name, field in abi['records'][carrier]['fields'].items():
             annotation, typ = {'uint32_t': ('@Uint32()', 'int'), 'size_t': ('@Size()', 'int'), 'const char *': ('', 'Pointer<Uint8>')}[field['type']]
             lines += ([f'  {annotation}'] if annotation else []) + [f'  external {typ} {name};']
         lines += ['}']
     lines += ['final class _NativeNamedRequest extends Struct {']
-    lines += ['  external _NativeUsageAdvice ' + member + ';' for member in abi['records']['thinkthen_named_request_v1']['fields']]
+    lines += ['  external _NativeUsageAdvice ' + member + ';' for member in abi['records']['thinkthen_named_request']['fields']]
     lines += ['}']
     states = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')]
-    lines += ['enum UsagePersistenceState { ' + ', '.join(key.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').lower() + '(' + str(value) + ')' for key, value in states) + '; final int code; const UsagePersistenceState(this.code); }']
+    lines += ['enum UsagePersistenceState { ' + ', '.join(key.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').lower() + '(' + str(value) + ')' for key, value in states) + '; final int code; const UsagePersistenceState(this.code); }']
     members = []
     for symbol in symbols:
         fn = abi['functions'][symbol]
@@ -248,12 +248,12 @@ def bridge(abi, definitions):
         if symbol in ('thinkthen_engine_free', 'thinkthen_session_free'):
             members += [f'  final {symbol}Pointer = Native.addressOf<NativeFunction<{native}>>(_{symbol});']
     lines += ['final class _NativeAbi {', *members, *abi_helpers(abi), '}']
-    errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E') and not key.endswith('_V1')]
+    errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E') and not key.endswith('')]
     lines += ['enum ErrorKind { ' + ', '.join(key.removeprefix('THINKTHEN_E').lower() + '(' + str(value) + ')' for key, value in errors) + '; final int code; const ErrorKind(this.code); }']
-    constants = ('THINKTHEN_SESSION_ACCEPTED_V1', 'THINKTHEN_SESSION_CLOSED_V1',
-                 'THINKTHEN_SESSION_END_V1', 'THINKTHEN_SESSION_FULL_V1',
-                 'THINKTHEN_SESSION_PENDING_V1', 'THINKTHEN_SESSION_RESULT_V1',
-                 'THINKTHEN_SESSION_WAIT_INPUT_V1', 'THINKTHEN_SESSION_WAIT_SETTLEMENT_V1')
+    constants = ('THINKTHEN_SESSION_ACCEPTED', 'THINKTHEN_SESSION_CLOSED',
+                 'THINKTHEN_SESSION_END', 'THINKTHEN_SESSION_FULL',
+                 'THINKTHEN_SESSION_PENDING', 'THINKTHEN_SESSION_RESULT',
+                 'THINKTHEN_SESSION_WAIT_INPUT', 'THINKTHEN_SESSION_WAIT_SETTLEMENT')
     lines += [f'const {key} = {abi["constants"][key]};' for key in constants]
     return '\n'.join(lines) + '\n' + native_readers(abi, definitions)
 
@@ -261,7 +261,7 @@ def bridge(abi, definitions):
 def abi_helpers(abi):
     """Generate allocations and counted-field copies from the selected native ABI."""
     from host_answers import usage_operations
-    fields = abi['records']['thinkthen_named_request_v1']['fields']
+    fields = abi['records']['thinkthen_named_request']['fields']
     arguments = {'function': 'function', 'question_json': '_encodeNative(question)',
                  'input_json': '_encodeNative(input)', 'options_json': '_encodeNative(options ?? Options())'}
     if set(fields) != set(arguments): raise ValueError('named request ABI changed')
@@ -279,7 +279,7 @@ def abi_helpers(abi):
         '      final view = calloc<_NativeUsageAdvice>();',
         '      views.add(view);',
     ]
-    for field in abi['records']['thinkthen_complete_utf8_v1']['fields']:
+    for field in abi['records']['thinkthen_complete_utf8']['fields']:
         value = {'data': 'data', 'len': 'encoded.length'}[field]
         lines += [f'      view.ref.{field} = {value};']
     lines += ['      return view.ref;', '    }', '    try {']
@@ -314,8 +314,8 @@ def abi_helpers(abi):
                   '      return UsagePersistenceStatus(UsagePersistenceState.values.firstWhere((value) => value.code == state.ref.kind), advice.ref.data == nullptr ? null : utf8.decode(advice.ref.data.asTypedList(advice.ref.len)));',
                   '    } finally { calloc.free(state); calloc.free(advice); }', '  }']
     operations = [
-        ('waitPacket', 'thinkthen_session_next_packet', 'THINKTHEN_SESSION_END_V1', 'THINKTHEN_SESSION_RESULT_V1', True),
-        ('pushItem', 'thinkthen_session_push', 'THINKTHEN_SESSION_CLOSED_V1', 'THINKTHEN_SESSION_ACCEPTED_V1', False),
+        ('waitPacket', 'thinkthen_session_next_packet', 'THINKTHEN_SESSION_END', 'THINKTHEN_SESSION_RESULT', True),
+        ('pushItem', 'thinkthen_session_push', 'THINKTHEN_SESSION_CLOSED', 'THINKTHEN_SESSION_ACCEPTED', False),
     ]
     for host, native, terminal, accepted, output in operations:
         assert native in abi['functions'] and terminal in abi['constants'] and accepted in abi['constants']
@@ -324,7 +324,7 @@ def abi_helpers(abi):
         if output: lines += ['    final value = calloc<Pointer<Void>>();']
         lines += ['    try {']
         if output:
-            lines += [f'      _checkSession(this, {native}(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, status, value));']
+            lines += [f'      _checkSession(this, {native}(session, THINKTHEN_SESSION_WAIT_SETTLEMENT, status, value));']
         else:
             lines += [f'      _withText(item, (bytes, length) => _checkSession(this, {native}(session, bytes, length, status)));']
         lines += [f'      if (status.value == {terminal}) return ' + ('0;' if output else 'status.value;'),
@@ -440,12 +440,12 @@ def native_readers(abi, definitions):
     def carrier_type(source, path):
         source = normalized(source)
         if '$ref' in source: return ident(source['$ref'].split('/')[-1]) + ' *'
-        if source == {} or source.get('type') == 'null': return 'thinkthen_complete_json_v1 *'
+        if source == {} or source.get('type') == 'null': return 'thinkthen_complete_json *'
         if any(key in source for key in ('properties', 'enum', 'variants', 'primitive_variants')):
             nodes.setdefault(path, source)
             return ident(path) + ' *'
         kind = source.get('type')
-        if kind == 'string' or isinstance(source.get('const'), str): return 'thinkthen_complete_utf8_v1'
+        if kind == 'string' or isinstance(source.get('const'), str): return 'thinkthen_complete_utf8'
         if kind == 'boolean': return 'uint32_t'
         if kind == 'number': return 'double'
         if kind == 'integer': return 'uint64_t' if source.get('minimum', -1) >= 0 or source.get('format', '').startswith('uint') else 'int64_t'
@@ -459,7 +459,7 @@ def native_readers(abi, definitions):
         if '$ref' in source: return f'read{name(source["$ref"].split("/")[-1])}(_pointer({pointer}))'
         if source == {} or source.get('type') == 'null': return f'_value(_pointer({pointer}))'
         if any(key in source for key in ('properties', 'enum', 'variants', 'primitive_variants')): return f'read{name(path)}(_pointer({pointer}))'
-        if typ == 'thinkthen_complete_utf8_v1': return f'_text({pointer})'
+        if typ == 'thinkthen_complete_utf8': return f'_text({pointer})'
         if typ == 'uint32_t': return f'_u32({pointer}) != 0'
         if typ == 'uint64_t': return f'_unsigned({pointer})'
         if typ == 'int64_t': return f'BigInt.from({pointer}.cast<Int64>().value)'
@@ -470,7 +470,7 @@ def native_readers(abi, definitions):
         if kind == 'array':
             stride = width(carrier_type(item, path))
             return f'_list({pointer}, {stride}, (p) => {decode(item, path, "p")})'
-        entry = typ.removesuffix('_v1') + '_entry_v1'
+        entry = typ + '_entry'
         return f'_map({pointer}, {records[entry]["size"]}, {records[entry]["fields"]["value"]["offset"]}, (p) => {decode(item, path, "p")})'
     emitted = set()
     while len(emitted) < len(nodes):
@@ -508,12 +508,12 @@ def native_readers(abi, definitions):
         else:
             lines += [f'    return {decode(source, key + "_value", field("p", carrier, "value"))};']
         lines += ['  }']
-    json_view = records['thinkthen_complete_json_v1']
+    json_view = records['thinkthen_complete_json']
     value_field = lambda arm: slot('p', json_view['fields']['data.' + arm]['offset'])
-    extension = records['thinkthen_complete_extension_v1']
+    extension = records['thinkthen_complete_extension']
     lines += [f'  static Map<String, Object?> _extensions(Pointer<Void> p) => _map(p, {extension["size"]}, {extension["fields"]["value"]["offset"]}, (v) => _value(_pointer(v)));',
-              '  static Object? _value(Pointer<Void> p) => switch (_u32(p)) {', '    1 => null,', f'    2 => _u32({value_field("boolean")}) != 0,', f'    3 => _number(_text({value_field("number")})),', f'    4 => _text({value_field("string")}),', f'    5 => _list({value_field("array")}, {abi["platform"]["pointer"]}, (v) => _value(_pointer(v))),', f'    6 => _map({value_field("object")}, {records["thinkthen_complete_json_entry_v1"]["size"]}, {records["thinkthen_complete_json_entry_v1"]["fields"]["value"]["offset"]}, (v) => _value(_pointer(v))),', "    _ => throw StateError('Invalid native value'),", '  };']
-    error = records['thinkthen_error_view_v1']['fields']
+              '  static Object? _value(Pointer<Void> p) => switch (_u32(p)) {', '    1 => null,', f'    2 => _u32({value_field("boolean")}) != 0,', f'    3 => _number(_text({value_field("number")})),', f'    4 => _text({value_field("string")}),', f'    5 => _list({value_field("array")}, {abi["platform"]["pointer"]}, (v) => _value(_pointer(v))),', f'    6 => _map({value_field("object")}, {records["thinkthen_complete_json_entry"]["size"]}, {records["thinkthen_complete_json_entry"]["fields"]["value"]["offset"]}, (v) => _value(_pointer(v))),', "    _ => throw StateError('Invalid native value'),", '  };']
+    error = records['thinkthen_error_details']['fields']
     lines += ['  static CallFailure failure(Pointer<Void> p, int fallback) {', "    if (p == nullptr) return CallFailure._native(fallback, false, 'Native operation failed', null);", f'    final facts = _pointer(_at(p, {error["facts"]["offset"]}));', f'    return CallFailure._native(_at(p, {error["code"]["offset"]}).cast<Int32>().value, _at(p, {error["retryable"]["offset"]}).cast<Int32>().value != 0, _text(_at(p, {error["message"]["offset"]})), facts == nullptr ? null : FailureFacts.read(readFailureFacts(facts)));', '  }']
     lines += [NATIVE_READER_SUPPORT, '}']
     return '\n'.join(lines) + '\n'

@@ -3,8 +3,8 @@
 //! behind.
 
 use crate::ffi::values as abi;
-use crate::session::views::{Node, Storage, thinkthen_complete_utf8_v1, thinkthen_error_view_v1};
-use crate::session::views_generated::read_thinkthen_complete_immediate_facts_v1;
+use crate::session::views::{Node, Storage, thinkthen_complete_utf8, thinkthen_error_details};
+use crate::session::views_generated::read_thinkthen_complete_immediate_facts;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString, c_char};
@@ -105,7 +105,7 @@ pub(crate) struct Last {
     retryable: bool,
     message: CString,
     facts: Option<CString>,
-    view: Box<thinkthen_error_view_v1>,
+    view: Box<thinkthen_error_details>,
     _storage: Storage,
 }
 
@@ -120,14 +120,14 @@ impl Last {
             .and_then(|facts| {
                 let text = complete_facts_json(facts)?;
                 let node = Node::parse(&text).ok()?;
-                let facts = read_thinkthen_complete_immediate_facts_v1(&node, &mut storage).ok()?;
+                let facts = read_thinkthen_complete_immediate_facts(&node, &mut storage).ok()?;
                 Some(storage.hold(facts))
             })
             .unwrap_or(std::ptr::null());
-        let view = Box::new(thinkthen_error_view_v1 {
+        let view = Box::new(thinkthen_error_details {
             code: failure.code,
             retryable: i32::from(failure.retryable),
-            message: thinkthen_complete_utf8_v1 {
+            message: thinkthen_complete_utf8 {
                 data: message.as_ptr(),
                 len: message.as_bytes().len(),
             },
@@ -145,7 +145,7 @@ impl Last {
                 .and_then(|facts| CString::new(facts_json(facts)).ok()),
         }
     }
-    pub(crate) fn view(&self) -> *const thinkthen_error_view_v1 {
+    pub(crate) fn view(&self) -> *const thinkthen_error_details {
         std::ptr::from_ref(self.view.as_ref())
     }
     pub(crate) fn message(&self) -> *const c_char {
@@ -395,11 +395,11 @@ pub(crate) const NO_MESSAGE: &CStr = c"the interface panicked, so no message cam
 mod tests;
 
 /// Borrow the immutable last failure; NULL means this slot holds no failure.
-pub(crate) fn view(held: Option<&Held>) -> *const thinkthen_error_view_v1 {
+pub(crate) fn view(held: Option<&Held>) -> *const thinkthen_error_details {
     last(held, Last::view).unwrap_or(std::ptr::null())
 }
 /// Borrow the independent immediate session failure, or NULL before a failure.
-pub(crate) fn session_view() -> *const thinkthen_error_view_v1 {
+pub(crate) fn session_view() -> *const thinkthen_error_details {
     session_last(std::ptr::null(), Last::view)
 }
 

@@ -124,11 +124,11 @@ public final class Engine extends NamedCalls implements AutoCloseable {
     }
     /** Observe persistence without waiting for the usage writer. */
     public synchronized UsagePersistence usagePersistence() {
-        live(); return NativeSession.usage(pointer, "thinkthen_engine_usage_persistence_v1");
+        live(); return NativeSession.usage(pointer, "thinkthen_engine_usage_persistence");
     }
     /** Drain current deltas; only usage-lock acquisition has a deadline. */
     public synchronized UsagePersistence finishUsageStatus() {
-        live(); return NativeSession.usage(pointer, "thinkthen_engine_finish_usage_status_v1");
+        live(); return NativeSession.usage(pointer, "thinkthen_engine_finish_usage_status");
     }
     @Override public synchronized void close() {
         if (!pointer.equals(MemorySegment.NULL)) { NativeSession.free("thinkthen_engine_free", pointer); pointer = MemorySegment.NULL; workers.close(); }

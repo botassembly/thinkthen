@@ -9,7 +9,7 @@ def ident(value):
     semantic = '_'.join(word.lower() for word in words)
     semantic = semantic.replace('recognition_edge_document', 'recognition_edge')
     semantic = semantic.replace('estimated_input_denial', 'input_denial').replace('send_budget_denial', 'send_denial')
-    return 'thinkthen_complete_' + semantic + '_v1'
+    return 'thinkthen_complete_' + semantic
 
 
 def container_key(schema, path):
@@ -132,14 +132,14 @@ class Target:
             name = ident(schema['$ref'].removeprefix('#/$defs/'))
             return '*const ' + name, 'read_' + name + '(' + node + ', store).map(|value| store.hold(value))?' 
         if schema == {} or schema.get('type') == 'null':
-            return '*const thinkthen_complete_json_v1', 'read_json(' + node + ', store)?'
+            return '*const thinkthen_complete_json', 'read_json(' + node + ', store)?'
         if 'enum' in schema or 'variants' in schema or 'primitive_variants' in schema or 'properties' in schema:
             name = ident(path)
             self.definition(path, schema)
             return '*const ' + name, 'read_' + name + '(' + node + ', store).map(|value| store.hold(value))?' 
         kind = schema.get('type')
         if kind == 'string' or isinstance(schema.get('const'), str):
-            return 'thinkthen_complete_utf8_v1', 'read_text(' + node + ', store)?'
+            return 'thinkthen_complete_utf8', 'read_text(' + node + ', store)?'
         if kind == 'boolean':
             return 'u32', 'read_boolean(' + node + ', store)?'
         if kind in ('integer', 'number'):
@@ -156,7 +156,7 @@ class Target:
         elif kind == 'object' and 'additionalProperties' in schema:
             typ, read = self.shape(schema['additionalProperties'], path + '_entry_value', 'item')
             entry = ident(path + '_entry')
-            self.structure(entry, [('name', 'thinkthen_complete_utf8_v1'), ('value', typ)])
+            self.structure(entry, [('name', 'thinkthen_complete_utf8'), ('value', typ)])
             self.structure(name, [('data', '*const ' + entry), ('len', 'usize')])
             self.read(name, '    let mut values = Vec::new();\n    for (key, item) in node.object()? {\n        values.push(' + entry + ' { name: store.text(key), value: ' + read + ' });\n    }\n    let (data, len) = store.slice(values);\n    Ok(' + name + ' { data, len })')
         else:
@@ -169,7 +169,7 @@ class Target:
         arms = []
         reads = []
         for index, (arm, predicate, typ, read) in enumerate(alternatives, 1):
-            tag = name.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+            tag = name.upper() + '_' + arm.upper()
             self.output.append('pub const ' + tag + ': u32 = ' + str(index) + ';')
             arms.append('    pub ' + field(arm) + ': ' + typ + ',')
             reads.append('    if ' + predicate + ' {\n        let value = ' + read + ';\n        return Ok(' + name + ' { kind: ' + tag + ', data: ' + union + ' { ' + field(arm) + ': value } });\n    }')
@@ -217,7 +217,7 @@ class Target:
             self.structure(name, [('kind', 'u32')])
             lines = ['    let kind = match node.text()? {']
             for index, value in enumerate(source['enum'], 1):
-                tag = name.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                tag = name.upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper()
                 self.output.append('pub const ' + tag + ': u32 = ' + str(index) + ';')
                 lines.append('        ' + literal(value) + ' => ' + tag + ',')
             lines += ['        _ => return Err(ErrorKind::Defect),', '    };', '    Ok(' + name + ' { kind })']
@@ -231,9 +231,9 @@ class Target:
                 optional = member not in required
                 null = optional or nullable(schema, self.definitions)
                 if optional or null:
-                    presence = (typ.removeprefix('*const ').removesuffix('_v1') + '_presence_v1'
+                    presence = (typ.removeprefix('*const ') + '_presence'
                                 if typ.startswith(('thinkthen_', '*const thinkthen_')) else
-                                'thinkthen_complete_' + typ + '_presence_v1')
+                                'thinkthen_complete_' + typ + '_presence')
                     if presence not in self.names:
                         self.structure(presence, [('presence', 'u32'), ('value', typ)])
                     members.append((member, presence))
@@ -246,7 +246,7 @@ class Target:
                 else:
                     members.append((member, typ))
                     lines.append('        ' + field(member) + ': { let value = node.required(' + literal(member) + ')?; ' + read + ' },')
-            members.append(('extensions', 'thinkthen_complete_extensions_v1'))
+            members.append(('extensions', 'thinkthen_complete_extensions'))
             self.structure(name, members)
             known = '&[' + ', '.join(literal(k) for k in source['properties']) + ']'
             self.read(name, '    Ok(' + name + ' {\n' + '\n'.join(lines) + '\n        extensions: store.extensions(node, ' + known + ')?,\n    })')
@@ -263,10 +263,10 @@ def render(definitions):
     return '''// Generated from Rust-derived complete result schema; do not edit.
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned C schema objects and tagged alternatives")]
 use super::views::{Node, Storage, read_json, read_presence, read_text, read_boolean, read_number};
-use super::views::{thinkthen_complete_utf8_v1, thinkthen_complete_json_v1, thinkthen_complete_extensions_v1};
+use super::views::{thinkthen_complete_utf8, thinkthen_complete_json, thinkthen_complete_extensions};
 use thinkthen::ErrorKind;
-pub const THINKTHEN_COMPLETE_PRESENCE_MISSING_V1: u32 = 0;
-pub const THINKTHEN_COMPLETE_PRESENCE_NULL_V1: u32 = 1;
-pub const THINKTHEN_COMPLETE_PRESENCE_VALUE_V1: u32 = 2;
+pub const THINKTHEN_COMPLETE_PRESENCE_MISSING: u32 = 0;
+pub const THINKTHEN_COMPLETE_PRESENCE_NULL: u32 = 1;
+pub const THINKTHEN_COMPLETE_PRESENCE_VALUE: u32 = 2;
 
 ''' + '\n\n'.join(target.output) + '\n'

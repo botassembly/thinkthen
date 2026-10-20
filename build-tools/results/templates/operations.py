@@ -8,9 +8,9 @@ def abi_type(value):
                'SessionHandle': 'crate::session::SessionHandle',
                'SessionResultHandle': 'crate::session::SessionResultHandle',
                'c_char': 'std::ffi::c_char',
-               'NamedRequestV1': 'crate::ffi::session::NamedRequestV1',
-               'thinkthen_complete_utf8_v1': 'crate::session::views::thinkthen_complete_utf8_v1'}
-    value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequestV1|thinkthen_complete_utf8_v1)\b', lambda match: aliases[match[0]], value)
+               'NamedRequest': 'crate::ffi::session::NamedRequest',
+               'thinkthen_complete_utf8': 'crate::session::views::thinkthen_complete_utf8'}
+    value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequest|thinkthen_complete_utf8)\b', lambda match: aliases[match[0]], value)
     return re.sub(r'(?<!:)\bcarriers::', 'super::carriers::', value)
 
 

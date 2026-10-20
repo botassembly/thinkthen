@@ -6,10 +6,10 @@
 static void check(int condition, const char *message) {
     if (!condition) { fputs(message, stderr); fputc('\n', stderr); exit(1); }
 }
-static thinkthen_complete_utf8_v1 text(const char *value) {
-    return (thinkthen_complete_utf8_v1){value, strlen(value)};
+static thinkthen_complete_utf8 text(const char *value) {
+    return (thinkthen_complete_utf8){value, strlen(value)};
 }
-static void quoted(thinkthen_complete_utf8_v1 value) {
+static void quoted(thinkthen_complete_utf8 value) {
     putchar('"');
     for (size_t i = 0; i < value.len; i++) {
         unsigned char c = (unsigned char)value.data[i];
@@ -20,7 +20,7 @@ static void quoted(thinkthen_complete_utf8_v1 value) {
     putchar('"');
 }
 static thinkthen_call_error *failed_call(thinkthen_engine *engine,
-                                        const thinkthen_named_request_v1 *request) {
+                                        const thinkthen_named_request *request) {
     thinkthen_call_result *result = NULL;
     thinkthen_call_error *error = NULL;
     int code = thinkthen_run_call(engine, request, NULL, NULL, NULL, &result, &error);
@@ -36,7 +36,7 @@ static THREAD_RESULT print_error(void *argument) {
            *position, thinkthen_call_error_code(error),
            thinkthen_call_error_retryable(error) ? "true" : "false");
     quoted(thinkthen_call_error_message(error));
-    thinkthen_complete_utf8_v1 facts = thinkthen_call_error_facts_json(error);
+    thinkthen_complete_utf8 facts = thinkthen_call_error_facts_json(error);
     fputs(",\"facts\":", stdout);
     if (facts.len) fwrite(facts.data, 1, facts.len, stdout); else fputs("null", stdout);
     puts("}");
@@ -48,7 +48,7 @@ static THREAD_RESULT create_errors(void *argument) {
     char **argv = produced->argv;
     thinkthen_engine *engine = thinkthen_engine_new_with(argv[1]);
     check(engine != NULL, "engine construction failed");
-    thinkthen_named_request_v1 request = {text(argv[2]), text(argv[3]), text(argv[4]), text(argv[5])};
+    thinkthen_named_request request = {text(argv[2]), text(argv[3]), text(argv[4]), text(argv[5])};
     thinkthen_call_error *first = failed_call(engine, &request);
     const size_t *saved = thinkthen_call_error_position(first);
     check(saved != NULL, "native failure position is missing");

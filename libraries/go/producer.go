@@ -100,5 +100,5 @@ func pushDescriptor(session *C.thinkthen_session, data []byte) (bool, error) {
 	defer runtime.UnlockOSThread()
 	var status C.uint32_t
 	err := sessionFailure(C.thinkthen_session_push(session, (*C.char)(bytes), C.size_t(len(data)), &status))
-	return status == C.THINKTHEN_SESSION_ACCEPTED_V1, err
+	return status == C.THINKTHEN_SESSION_ACCEPTED, err
 }

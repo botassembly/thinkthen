@@ -178,10 +178,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check(array_map(fn($r) => $r->value, $feed->results) === [true, false], 'bounded producer order');
  } elseif ($mode === 'native-values') {
     $ffi = FFI::cdef(file_get_contents(dirname((new ReflectionClass(Client::class))->getFileName()).'/ffi_generated.h'));
-    $view = $ffi->new('thinkthen_complete_immediate_facts_v1');
+    $view = $ffi->new('thinkthen_complete_immediate_facts');
     $view->records = 1; $view->requests_sent = -1;
     $owned = ThinkThen\Internal\Decoder::failureFacts(FFI::addr($view));
-    $number = $ffi->new('thinkthen_complete_json_v1');
+    $number = $ffi->new('thinkthen_complete_json');
     $decimal = '0.12345678901234567890123456789';
     $bytes = $ffi->new('char['.(strlen($decimal) + 1).']');
     FFI::memcpy($bytes, $decimal, strlen($decimal));

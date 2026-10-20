@@ -138,7 +138,7 @@ def input_render(definitions):
 
 
 def usage(header):
-    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
+    members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)) (\d+)\s*$', header, re.M)
     lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <cstdint>', '#include <string>', '#ifndef THINKTHEN_CPP_ENUMS', '#define THINKTHEN_CPP_ENUMS', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
     lines += [word.lower() + ' = ' + value + ',' for _, word, value in members]
     lines += ['};', 'enum class NativeFailureKind {']
@@ -217,20 +217,20 @@ def native_values(definitions):
         target.definition(key, schema)
     lines = ['#ifdef THINKTHEN_CPP_IMPLEMENTATION', '#include <thinkthen/thinkthen.h>', 'namespace tt::results::detail {']
     lines += [f'inline Data native_value(const {key}& value);' for key in target.members]
-    lines += ['inline Data native_value(const thinkthen_complete_json_v1& value);',
-              'inline Data native_value(const thinkthen_complete_utf8_v1& value) { return Data(std::string(value.data ? value.data : "", value.len)); }',
+    lines += ['inline Data native_value(const thinkthen_complete_json& value);',
+              'inline Data native_value(const thinkthen_complete_utf8& value) { return Data(std::string(value.data ? value.data : "", value.len)); }',
               'template<class T> Data native_value(const T* value) { if(!value) throw std::invalid_argument("missing native value"); return native_value(*value); }',
               'template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Data native_value(T value) { return Data(value); }',
-              'inline Data native_value(const thinkthen_complete_json_v1& value) {',
+              'inline Data native_value(const thinkthen_complete_json& value) {',
               'switch(value.kind) {',
-              'case THINKTHEN_COMPLETE_JSON_NULL_V1: return Data(nullptr);',
-              'case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Data(bool(value.data.boolean));',
-              'case THINKTHEN_COMPLETE_JSON_STRING_V1: return native_value(value.data.string);',
-              'case THINKTHEN_COMPLETE_JSON_NUMBER_V1: { auto text=native_value(value.data.number).get<std::string>();',
+              'case THINKTHEN_COMPLETE_JSON_NULL: return Data(nullptr);',
+              'case THINKTHEN_COMPLETE_JSON_BOOLEAN: return Data(bool(value.data.boolean));',
+              'case THINKTHEN_COMPLETE_JSON_STRING: return native_value(value.data.string);',
+              'case THINKTHEN_COMPLETE_JSON_NUMBER: { auto text=native_value(value.data.number).get<std::string>();',
               'if(text.find_first_of(".eE")==std::string::npos) { if(!text.empty() && text[0]==\'-\') { int64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } else { uint64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } throw std::invalid_argument("native integer is outside the C++ range"); }',
               'std::istringstream stream(text); stream.imbue(std::locale::classic()); double number{}; stream >> number; if(stream.fail() || !stream.eof() || !std::isfinite(number)) throw std::invalid_argument("invalid native number"); return Data(number); }',
-              'case THINKTHEN_COMPLETE_JSON_ARRAY_V1: { Data::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Data(std::move(items)); }',
-              'case THINKTHEN_COMPLETE_JSON_OBJECT_V1: { Data::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; auto name=native_value(item.name).get<std::string>(); for(const auto& prior:items) if(prior.first==name) throw std::invalid_argument("duplicate original member"); items.emplace_back(std::move(name),native_value(item.value)); } return Data(std::move(items)); }',
+              'case THINKTHEN_COMPLETE_JSON_ARRAY: { Data::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Data(std::move(items)); }',
+              'case THINKTHEN_COMPLETE_JSON_OBJECT: { Data::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; auto name=native_value(item.name).get<std::string>(); for(const auto& prior:items) if(prior.first==name) throw std::invalid_argument("duplicate original member"); items.emplace_back(std::move(name),native_value(item.value)); } return Data(std::move(items)); }',
               'default: throw std::invalid_argument("invalid native value kind"); } }']
     for key, members in target.members.items():
         schema = target.schemas.get(key, {})
@@ -238,7 +238,7 @@ def native_values(definitions):
         if key in target.arms:
             body += ['switch(value.kind) {']
             for arm, _, field_type, _ in target.arms[key]:
-                symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                symbol = key.upper() + '_' + arm.upper()
                 field = arm + '_' if arm in ('true', 'false') else arm
                 expression = 'Data(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
                 if field_type == 'u32' and arm != 'null': expression = f'Data(bool(value.data.{field}))'
@@ -247,7 +247,7 @@ def native_values(definitions):
         elif 'enum' in schema:
             body += ['switch(value.kind) {']
             for value in schema['enum']:
-                symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                symbol = key.upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper()
                 body += [f'case {symbol}: return Data({json.dumps(value)});']
             body += ['default: throw std::invalid_argument("invalid native enum"); }']
         elif 'properties' in schema:
@@ -255,21 +255,21 @@ def native_values(definitions):
             for member, field_type in members:
                 if member == 'extensions': continue
                 expression = f'value.{member + "_" if member in ("true", "false") else member}'
-                if field_type.endswith('_presence_v1'):
+                if field_type.endswith('_presence'):
                     decoded = f'native_value({expression}.value)'
                     if c.normalized(schema['properties'][member]).get('type') == 'boolean':
                         decoded = f'Data(bool({expression}.value))'
-                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back({json.dumps(member)},Data(nullptr));',
-                             f'else if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back({json.dumps(member)},{decoded});']
+                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL) items.emplace_back({json.dumps(member)},Data(nullptr));',
+                             f'else if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE) items.emplace_back({json.dumps(member)},{decoded});']
                 else:
                     decoded = f'native_value({expression})'
                     if c.normalized(schema['properties'][member]).get('type') == 'boolean': decoded = f'Data(bool({expression}))'
                     body += [f'items.emplace_back({json.dumps(member)},{decoded});']
             body += ['for(size_t i=0;i<value.extensions.len;++i) { auto& item=value.extensions.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); }', 'return Data(std::move(items));']
         elif members[0][0] == 'presence':
-            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);']
+            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE ? native_value(value.value) : Data(nullptr);']
         elif members[0][0] == 'data':
-            mapping = key.endswith('_map_v1')
+            mapping = key.endswith('_map')
             body += ['Data::Object items;' if mapping else 'Data::Array items;', 'for(size_t i=0;i<value.len;++i) {']
             body += ['auto& item=value.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));' if mapping else 'items.push_back(native_value(value.data[i]));']
             body += ['}', 'return Data(std::move(items));']

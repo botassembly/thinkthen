@@ -25,30 +25,30 @@ def optional(name, value):
 
 
 PRIMITIVES = (
-    Layout('thinkthen_error_view_v1', (('code', 'std::ffi::c_int'), ('retryable', 'std::ffi::c_int'),
-        ('message', 'thinkthen_complete_utf8_v1'), ('facts', '*const crate::session::views_generated::thinkthen_complete_immediate_facts_v1'))),
-    counted('thinkthen_complete_utf8_v1', 'std::ffi::c_char'),
-    Layout('thinkthen_complete_extension_v1', (('name', 'thinkthen_complete_utf8_v1'), ('json', 'thinkthen_complete_utf8_v1'), ('value', '*const thinkthen_complete_json_v1'))),
-    counted('thinkthen_complete_extensions_v1', 'thinkthen_complete_extension_v1'),
-    Layout('thinkthen_complete_json_entry_v1', (('name', 'thinkthen_complete_utf8_v1'), ('value', '*const thinkthen_complete_json_v1'))),
-    counted('thinkthen_complete_json_array_v1', '*const thinkthen_complete_json_v1'),
-    counted('thinkthen_complete_json_object_v1', 'thinkthen_complete_json_entry_v1'),
-    Layout('thinkthen_complete_json_data_v1', (
-        ('boolean', 'u32'), ('number', 'thinkthen_complete_utf8_v1'), ('string', 'thinkthen_complete_utf8_v1'),
-        ('array', 'thinkthen_complete_json_array_v1'), ('object', 'thinkthen_complete_json_object_v1')),
+    Layout('thinkthen_error_details', (('code', 'std::ffi::c_int'), ('retryable', 'std::ffi::c_int'),
+        ('message', 'thinkthen_complete_utf8'), ('facts', '*const crate::session::views_generated::thinkthen_complete_immediate_facts'))),
+    counted('thinkthen_complete_utf8', 'std::ffi::c_char'),
+    Layout('thinkthen_complete_extension', (('name', 'thinkthen_complete_utf8'), ('json', 'thinkthen_complete_utf8'), ('value', '*const thinkthen_complete_json'))),
+    counted('thinkthen_complete_extensions', 'thinkthen_complete_extension'),
+    Layout('thinkthen_complete_json_entry', (('name', 'thinkthen_complete_utf8'), ('value', '*const thinkthen_complete_json'))),
+    counted('thinkthen_complete_json_array', '*const thinkthen_complete_json'),
+    counted('thinkthen_complete_json_object', 'thinkthen_complete_json_entry'),
+    Layout('thinkthen_complete_json_data', (
+        ('boolean', 'u32'), ('number', 'thinkthen_complete_utf8'), ('string', 'thinkthen_complete_utf8'),
+        ('array', 'thinkthen_complete_json_array'), ('object', 'thinkthen_complete_json_object')),
         union=True, debug_label='JSON payload'),
-    Layout('thinkthen_complete_json_v1', (('kind', 'u32'), ('data', 'thinkthen_complete_json_data_v1'))),
+    Layout('thinkthen_complete_json', (('kind', 'u32'), ('data', 'thinkthen_complete_json_data'))),
 )
 # Numbers are fixed ABI assignments; JSON kinds follow the native schema grammar.
 JSON_KINDS = ('null', 'boolean', 'number', 'string', 'array', 'object')
 AUTHOR = (
-    Layout('StringV1', counted('StringV1', 'std::ffi::c_char').fields, default=True),
-    Layout('StringsV1', counted('StringsV1', 'StringV1').fields, default=True),
-    optional('OptionalStringV1', 'StringV1'),
-    optional('OptionalU64V1', 'u64'),
-    Layout('InputPropertyV1', (('name', 'StringV1'), ('kind', 'u32')), default=True),
-    Layout('InputPropertiesV1', counted('InputPropertiesV1', 'InputPropertyV1').fields, default=True),
-    Layout('InputDeclarationV1', (('kind', 'u32'), ('properties', 'InputPropertiesV1'), ('required', 'StringsV1')), default=True),
-    Layout('QuestionAuthorV1', (('name', 'OptionalStringV1'), ('wording_version', 'OptionalU64V1'),
-        ('item_schema', 'InputDeclarationV1'), ('context_schema', 'InputDeclarationV1')), default=True),
+    Layout('CountedString', counted('CountedString', 'std::ffi::c_char').fields, default=True),
+    Layout('Strings', counted('Strings', 'CountedString').fields, default=True),
+    optional('OptionalString', 'CountedString'),
+    optional('OptionalU64', 'u64'),
+    Layout('InputPropertyView', (('name', 'CountedString'), ('kind', 'u32')), default=True),
+    Layout('InputProperties', counted('InputProperties', 'InputPropertyView').fields, default=True),
+    Layout('InputDeclarationView', (('kind', 'u32'), ('properties', 'InputProperties'), ('required', 'Strings')), default=True),
+    Layout('QuestionAuthorInfo', (('name', 'OptionalString'), ('wording_version', 'OptionalU64'),
+        ('item_schema', 'InputDeclarationView'), ('context_schema', 'InputDeclarationView')), default=True),
 )

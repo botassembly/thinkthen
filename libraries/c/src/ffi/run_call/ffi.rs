@@ -3,7 +3,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::EngineHandle;
 use crate::failures::{self, Failure};
-use crate::session::views::thinkthen_complete_utf8_v1;
+use crate::session::views::thinkthen_complete_utf8;
 use std::ffi::c_void;
 use thinkthen::{CallOptions, RequestEnvironment, RequestFeed, RequestInput, RequestItem, Surface};
 
@@ -23,22 +23,22 @@ pub struct CallCancelHandle(thinkthen::CancelToken);
 /// Bytes remain readable until the next invocation or until run_call returns.
 /// It runs synchronously on the run_call caller, and may reenter independent C operations.
 /// Never unwind or throw across this callback; retain private host exceptions locally.
-pub type CallProducerV1 =
-    Option<unsafe extern "C" fn(*mut c_void, *mut thinkthen_complete_utf8_v1) -> u32>;
+pub type CallProducer =
+    Option<unsafe extern "C" fn(*mut c_void, *mut thinkthen_complete_utf8) -> u32>;
 /// Producer published one canonical RequestItem JSON value.
-pub const THINKTHEN_CALL_PRODUCER_ITEM_V1: u32 = 0;
+pub const THINKTHEN_CALL_PRODUCER_ITEM: u32 = 0;
 /// Producer ended normally; the output is ignored.
-pub const THINKTHEN_CALL_PRODUCER_END_V1: u32 = 1;
+pub const THINKTHEN_CALL_PRODUCER_END: u32 = 1;
 /// Producer failed; no host exception text crosses this boundary.
-pub const THINKTHEN_CALL_PRODUCER_FAILURE_V1: u32 = 2;
+pub const THINKTHEN_CALL_PRODUCER_FAILURE: u32 = 2;
 
-fn view(text: &str) -> thinkthen_complete_utf8_v1 {
-    thinkthen_complete_utf8_v1 {
+fn view(text: &str) -> thinkthen_complete_utf8 {
+    thinkthen_complete_utf8 {
         data: text.as_ptr().cast(),
         len: text.len(),
     }
 }
-unsafe fn read<'a>(text: thinkthen_complete_utf8_v1) -> Result<&'a str, Failure> {
+unsafe fn read<'a>(text: thinkthen_complete_utf8) -> Result<&'a str, Failure> {
     // SAFETY: the foreign caller retains the counted readable extent.
     unsafe { super::text(text.data, text.len) }
 }
@@ -46,7 +46,7 @@ fn producer_utf8_error(_: Failure) -> thinkthen::Error {
     thinkthen::Error::new(thinkthen::ErrorKind::Usage, "invalid producer UTF-8")
 }
 unsafe fn feed<'a>(
-    producer: CallProducerV1,
+    producer: CallProducer,
     context: *mut c_void,
     input: &RequestInput,
 ) -> Option<RequestFeed<'a>> {
@@ -62,17 +62,17 @@ unsafe fn feed<'a>(
                 if finished {
                     return None;
                 }
-                let mut item = thinkthen_complete_utf8_v1 {
+                let mut item = thinkthen_complete_utf8 {
                     data: std::ptr::null(),
                     len: 0,
                 };
                 // SAFETY: callback and context belong to this caller and live through run_call.
                 match unsafe { callback(context, &mut item) } {
-                    THINKTHEN_CALL_PRODUCER_END_V1 => {
+                    THINKTHEN_CALL_PRODUCER_END => {
                         finished = true;
                         None
                     }
-                    THINKTHEN_CALL_PRODUCER_ITEM_V1 => {
+                    THINKTHEN_CALL_PRODUCER_ITEM => {
                         // SAFETY: the producer retains these bytes until its next invocation.
                         Some(
                             unsafe { read(item) }
@@ -95,8 +95,8 @@ unsafe fn feed<'a>(
 
 unsafe fn execute(
     engine: *const EngineHandle,
-    request: *const super::session::NamedRequestV1,
-    producer: CallProducerV1,
+    request: *const super::session::NamedRequest,
+    producer: CallProducer,
     context: *mut c_void,
     cancel: *const CallCancelHandle,
 ) -> Result<CallResultHandle, Failure> {
@@ -143,12 +143,12 @@ unsafe fn execute(
 /// # Safety
 /// engine and optional cancel are live for the whole call. request and its counted
 /// UTF-8 components remain readable until return. Output slots are aligned writable
-/// distinct storage. producer/context obey CallProducerV1 and outlive the call.
+/// distinct storage. producer/context obey CallProducer and outlive the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_run_call(
     engine: *const EngineHandle,
-    request: *const super::session::NamedRequestV1,
-    producer: CallProducerV1,
+    request: *const super::session::NamedRequest,
+    producer: CallProducer,
     context: *mut c_void,
     cancel: *const CallCancelHandle,
     result: *mut *mut CallResultHandle,
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn thinkthen_call_cancel_fire(token: *const CallCancelHand
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_result_json(
     owner: *const CallResultHandle,
-) -> thinkthen_complete_utf8_v1 {
+) -> thinkthen_complete_utf8 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }.map_or(view(""), |owner| view(&owner.0))
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn thinkthen_call_error_position(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_error_message(
     owner: *const CallErrorHandle,
-) -> thinkthen_complete_utf8_v1 {
+) -> thinkthen_complete_utf8 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }.map_or(view(""), |owner| view(owner.failure.message_text()))
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn thinkthen_call_error_message(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_error_facts_json(
     owner: *const CallErrorHandle,
-) -> thinkthen_complete_utf8_v1 {
+) -> thinkthen_complete_utf8 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }
