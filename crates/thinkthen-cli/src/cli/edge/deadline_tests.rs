@@ -187,7 +187,7 @@ fn a_spent_deadline_on_every_direct_path_sends_nothing() {
     let split = file(
         "split-profile",
         "profile.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+        r#"{"name":"one","max_questions":1}"#,
     );
     let entities = br#"[{"name":"gateway","kind":"service"},{"name":"billing","kind":"service"}]"#;
     let cases: [Case<'_>; 7] = [

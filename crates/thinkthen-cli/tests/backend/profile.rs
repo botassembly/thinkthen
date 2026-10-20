@@ -46,7 +46,7 @@ fn profile(name: &str, body: &str) -> PathBuf {
         .collect();
     file(
         &format!("{name}-{limits}.json"),
-        &format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{body}}}"#),
+        &format!(r#"{{"name":"{name}",{body}}}"#),
     )
 }
 
@@ -362,5 +362,45 @@ fn over_limit_precedes_replay_and_cache_answers() {
             "{option}"
         );
         assert!(output.stdout.is_empty(), "{option}");
+    }
+}
+
+#[test]
+fn any_schema_member_refuses_with_delete_advice_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    for (index, schema) in [
+        r#""thinkthen.backend-profile/1""#,
+        r#""thinkthen.backend-profile/2""#,
+        r#""private-schema-marker""#,
+        "null",
+        "false",
+        "1",
+        "[]",
+        "{}",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let path = file(
+            &format!("schema-refused-{index}.json"),
+            &format!(r#"{{"schema":{schema},"name":"safe","max_questions":1}}"#),
+        );
+        let output = spawn_local(
+            &["decide", "Ready?", "--profile", &path.to_string_lossy()],
+            listener.base(),
+            &[("THINKTHEN_API_KEY", "private-key-marker")],
+            b"private-evidence-marker",
+        )
+        .expect("command");
+        assert_eq!(output.status.code(), Some(5), "{schema}");
+        stderr_is(
+            &output,
+            format!(
+                "thinkthen: the profile file `{}` must delete the `schema` member\n",
+                path.display()
+            ),
+        );
+        assert!(output.stdout.is_empty());
+        assert_eq!(listener.connections(), 0, "schema refusal sends nothing");
     }
 }

@@ -41,7 +41,7 @@ fn file(name: &str, text: &str) -> String {
 fn one_question() -> String {
     file(
         "one-question.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one-question","max_questions":1}"#,
+        r#"{"name":"one-question","max_questions":1}"#,
     )
 }
 

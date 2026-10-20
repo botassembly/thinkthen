@@ -339,19 +339,15 @@ fn a_context_size_refusal_names_the_binding_limit_and_never_sends_that_record() 
     let small_context = format!("{place}/small-context.json");
     let small_request = format!("{place}/small-request.json");
     fs::write(&context, b"Shared evidence\n").expect("context file");
-    fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":500}"#,
-    )
-    .expect("profile");
+    fs::write(&profile, r#"{"name":"small","max_request_bytes":500}"#).expect("profile");
     fs::write(
         &small_context,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"context","max_evidence_bytes":10}"#,
+        r#"{"name":"context","max_evidence_bytes":10}"#,
     )
     .expect("context profile");
     fs::write(
         &small_request,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"request","max_request_bytes":50}"#,
+        r#"{"name":"request","max_request_bytes":50}"#,
     )
     .expect("request profile");
     let long = format!("record 1 marker {}\n", "x".repeat(600));

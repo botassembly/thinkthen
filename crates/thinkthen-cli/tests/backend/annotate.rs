@@ -32,7 +32,7 @@ fn set(name: &str, text: &str) -> PathBuf {
 fn one_question() -> PathBuf {
     set(
         "one-question-profile",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one-question","max_questions":1}"#,
+        r#"{"name":"one-question","max_questions":1}"#,
     )
 }
 
