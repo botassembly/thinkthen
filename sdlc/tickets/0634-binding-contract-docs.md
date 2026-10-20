@@ -28,3 +28,7 @@ Depends on: 0635, 0637, 0638, 0642, 0692
 - Current main already has the new path: `thinkthen_run_call`, `thinkthen_call_result_json`, `thinkthen_call_error_*` and `thinkthen_call_cancel_*` in `libraries/c/include/thinkthen.h` (0638), the canonical C input path (0635), declarations-only generation (0637), `thinkthen_version` with its interface number (0692), and `Engine::call` (0629) declared in `specification/rust-api-0.2.md`.
 - `libraries/files.md` repeats per-language file rules for Python and C and ends with the COBOL scalar limit.
 - Readers of the guide: `specification/README.md`, `specification/settings.md`, `libraries/r/NOTES.md` and several decisions link to it; the file keeps its name.
+
+## Progress
+
+- 2026-10-20 started
