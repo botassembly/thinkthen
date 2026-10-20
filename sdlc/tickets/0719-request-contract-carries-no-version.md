@@ -1,6 +1,6 @@
 # 0719: The request contract and results carry no version or wording version
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -9,6 +9,8 @@ Phase: 2
 Depends on: 0704
 
 Reviews: revision 289ba2c, accept
+
+Landed: 3236f1f
 
 ## Outcome
 
