@@ -8,7 +8,7 @@ Phase: 1
 
 ## Outcome
 
-- Changes: `sdlc/scripts/tools-self-test.py`, `sdlc/tools.json`, `sdlc/tools/*.json`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`.
+- Changes: `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/tools-self-test.py`, `sdlc/tools.json`, `sdlc/tools/*.json`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`.
 - The Dockerfile installs each toolchain in its own layer, one `COPY` of `sdlc/tools/NAME.json` followed by one `RUN` of `install.py` for that tool, in a fixed order. Editing one tool's file rebuilds that layer and the ones after it, and the build reuses every earlier layer from the cache.
 - Scripts that are not toolchains (`sdlc/scripts/tools.py`, `conformance/children/children.py`) leave the image and its tag hash. `linux-check` mounts them from the checkout at run time. The tag hash covers only the pinned base, `rust-toolchain.toml`, `sdlc/tools.json`, `sdlc/tools/*.json`, the Dockerfile and `install.py`.
 - After a successful `prepare`, `linux-check` removes that architecture's older `thinkthen-check` images, keeping the new one and any image a running container uses.
