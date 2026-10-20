@@ -10,7 +10,7 @@ Depends on: 0639
 
 ## Outcome
 
-- Changes: `crates/thinkthen/src/public/pull.rs`, `crates/thinkthen/src/public/pull/`, `crates/thinkthen/src/public/request/`, `crates/thinkthen/tests/request_session.rs`, `crates/thinkthen/tests/request_session/`, `crates/thinkthen/tests/public_batches.rs`, `crates/thinkthen/tests/public_batches/`.
+- Changes: `crates/thinkthen/src/public/pull.rs`, `crates/thinkthen/src/public/pull/`, `crates/thinkthen/src/public/options/readiness.rs`, `crates/thinkthen/src/public/request/`, `crates/thinkthen/tests/request_session.rs`, `crates/thinkthen/tests/request_session/`, `crates/thinkthen/tests/public_batches.rs`, `crates/thinkthen/tests/public_batches/`. Private readiness carries the pacing distinction so session construction preserves the command-line parallel path without changing public controls.
 - Restore the documented batch-one session behavior: finish each row before requesting the next native input. Supplying readiness must not silently enable speculative batch-one input pulls.
 - Keep the command-line tool's deliberate readiness-based parallel path and the existing batch-max behavior. Keep readiness, cancellation wakeups, parked unread answers, scheduler limits, public signatures and packet formats.
 - Keep the existing Go `feed-full` assertion and cancellation checks unchanged. Fix the private pacing/readiness distinction, not the fixture's expected intake count.
