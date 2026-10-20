@@ -20,7 +20,9 @@ Depends on: 0645, 0688, 0693, 0740
 - Done once by hand and not committed: a wrong expected answer in the oracle fails the replay. Before the change the same edit passes, because today's replay checks request digests from `cases.json` and never reads the oracle.
 - On the M5 in the Linux container: `pm job run --machine m5 0694 SHA --memory 16 -- sdlc/scripts/linux-check lint` passes with the deleted suites gone from `sdlc/scripts/children`.
 
-## Amendment, 2026-10-19 (core cut)
+## Amendment, 2026-10-19
+
+Amendment topic: core cut.
 
 - 0720's DuckDB backend setup suite runs here.
 
