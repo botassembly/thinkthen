@@ -417,6 +417,47 @@ class GateRouting(unittest.TestCase):
 
 
 class SurfaceToolGroups(unittest.TestCase):
+    @unittest.skipUnless(platform.system() == 'Linux' and Path('/usr/bin/pkg-config').is_file(),
+                         'Linux system pkg-config provider')
+    def test_installed_pkg_config_defaults_to_system_paths_and_preserves_overrides(self):
+        with tempfile.TemporaryDirectory(prefix='image-pkg-config-') as folder:
+            root = Path(folder)
+            prefix = root / 'image'
+            (prefix / 'bin').mkdir(parents=True)
+            scripts = root / 'scripts'
+            scripts.mkdir()
+            for command in ('pkgconf', 'pkg-config'):
+                executable = scripts / command
+                executable.write_text('#!/bin/sh\nprintf "%s\\n" "${PKG_CONFIG_LIBDIR-unset}"\n')
+                executable.chmod(0o755)
+            python = prefix / 'bin/python3'
+            python.write_text('#!' + sys.executable + '\nimport sys\n'
+                              'if sys.argv[1:4] == ["-m", "pip", "install"]: sys.exit(0)\n'
+                              'print(' + repr(str(scripts)) + ')\n')
+            python.chmod(0o755)
+            source = root / 'tools.json'
+            source.write_text(json.dumps({
+                'linux_prefix': str(prefix), 'linux': {'tool_groups': ['test']},
+                'python_packages': {}, 'tools': {'pkgconf': {
+                    'commands': ['pkgconf', 'pkg-config'], 'platforms': ['linux'],
+                    'groups': ['test'], 'provider': 'python-package', 'version': '1'}}}))
+            env = child_env(home=root / 'home', PATH='/usr/bin:/bin')
+            prepared = subprocess.run([sys.executable, str(ROOT / 'sdlc/linux/install.py'),
+                                       str(source), str(source)], env=env, capture_output=True, text=True)
+            self.assertEqual(prepared.returncode, 0, prepared.stderr)
+            default = subprocess.check_output(['/usr/bin/pkg-config', '--variable', 'pc_path', 'pkg-config'],
+                                              env=env, text=True).strip()
+            for command in ('pkgconf', 'pkg-config'):
+                for override in (None, '/caller/pkgconfig', ''):
+                    with self.subTest(command=command, override=override):
+                        selected_env = dict(env)
+                        selected_env.pop('PKG_CONFIG_LIBDIR', None)
+                        if override is not None:
+                            selected_env['PKG_CONFIG_LIBDIR'] = override
+                        shown = subprocess.check_output([str(prefix / 'bin' / command)],
+                                                        env=selected_env, text=True)
+                        self.assertEqual(shown, (default if override is None else override) + '\n')
+
     @unittest.skipUnless(platform.system() == 'Linux', 'Linux image selection')
     def test_declared_surface_is_selected_and_missing_tool_refuses_execution(self):
         with tempfile.TemporaryDirectory(prefix='image-surface-') as folder:
