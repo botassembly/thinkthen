@@ -50,6 +50,9 @@ pub const Engine = struct {
         return initWithSettings(allocator, .{});
     }
     pub fn initWithSettings(allocator: std.mem.Allocator, settings: inputs.EngineSettings) !Result(Engine) {
+        var loaded: u32 = 0;
+        _ = c.thinkthen_version(&loaded);
+        if (loaded != c.THINKTHEN_INTERFACE_NUMBER) return error.InterfaceMismatch;
         const encoded = try codec.encode(allocator, settings);
         defer allocator.free(encoded);
         const terminated = try allocator.dupeZ(u8, encoded);
