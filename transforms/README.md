@@ -12,11 +12,11 @@ These folders are the development sources. The agent's evidence-based verdict de
 
 `rows/` holds the run these transforms were written against. `cases.jsonl` is forty made-up support messages with a stable `id`, a `body`, and a trusted `label` a person gave. One case carries no label on purpose, because a real case file has one.
 
-`record.sh` judged every case twice through `sdlc/scripts/live`, once with the question in `question.txt` and once with the reworded question in `question-b.txt`, and wrote `runs/run-a.jsonl` and `runs/run-b.jsonl`. Record mode arrived with ticket 0012, after these rows were written, so the loop is the shell's. Each row is the result object of `decide --details` with `input` holding the whole case, which is the record row of `specification/result.md`. The transforms therefore read a record-mode run unchanged.
+`record.sh` can judge every case twice through `sdlc/scripts/live`, once with the question in `question.txt` and once with the reworded question in `question-b.txt`. Each row is the result object of `decide --details` with `input` holding the whole case, which is the record row of `specification/result.md`. The transforms therefore read a record-mode run unchanged.
 
-The saved rows use complete synthetic packets rebuilt through the existing local test backend from the retained probabilities. The null-urgency policy fixture uses an unresolved choose question to exercise the null guard independently of the question kind; score answers remain numeric.
+The saved `runs/run-a.jsonl` and `runs/run-b.jsonl` rows are synthetic packets serialized by the current command against the existing loopback test backend. Its replies preserve each retained exchange's probability and reported token counts. These uncached local requests model charged rows for the pricing lesson; they incurred no provider charge. Their model name and loopback address identify the synthetic source. The null-urgency policy fixture uses an unresolved choose question to exercise the null guard independently of the question kind; score answers remain numeric.
 
-`recording/` holds the eighty exchanges. A recording holds request bodies and never headers, so no key reaches it.
+`recording/` holds the eighty retained provider exchanges separately from the synthetic runs. A recording holds request bodies and never headers, so no key reaches it.
 
 ## The transforms
 

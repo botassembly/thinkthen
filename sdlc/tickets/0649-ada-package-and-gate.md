@@ -6,22 +6,23 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
 - Changes: `libraries/ada/check.sh`, `libraries/ada/thinkthen.gpr`, `libraries/ada/checks/native_session.py`, `libraries/ada/checks/full_case.py`, `libraries/ada/README.md`, `libraries/ada/README-PUBLIC.md`, `sdlc/tools/ada.json`, `sdlc/scripts/release-pack.d/ada`, `site/src/data/catalog/ada.mjs`.
 - The gate builds into a folder from the shared scratch helper, not `/tmp/thinkthen-target-ada`, and finds the native library by the platform's file name, not `libthinkthen_c.so`.
-- Ada adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools.json`, beside linux-x86_64.
+- Ada adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools/ada.json`, beside linux-x86_64.
 - `thinkthen.gpr` selects linker options by target through a scenario variable. The release archive for each supported target carries that target's native library.
 - The supported GNAT range is stated in the README. Its lowest and newest versions are both in the tool manifest, and both are tested.
 - The existing fixture consumers stay; 0648 replaces them with the packet dumper when it deletes the session family they use.
 - Version fields: the package release number stays. No format version is added.
+- Ada's Linux tools, including GNAT, are declared in `sdlc/tools/ada.json` and join the Linux image through 0740; a missing tool fails the check, never skips.
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0649 SHA --memory 8 -- sh libraries/ada/check.sh`, the gate passes on darwin-arm64. Before the change the same command exits 77 because the manifest lists Ada as unsupported there.
-- At the 0619 container checkpoint, the release suite passes the Ada gate in the arm64 container on the M5 and in the x86_64 container on Yellow, with both GNAT versions.
+- On the M5 through `pm job run --machine m5 0649 SHA --memory 8 -- sh libraries/ada/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing GNAT tool, because the manifest declares GNAT for Linux only.
+- Linux arm64: `pm job run --machine m5 0649 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/ada`; Linux x86_64: the same command with `--machine gator --memory 7`. The Ada gate passes there with both GNAT versions.
 
 ## Evidence
 

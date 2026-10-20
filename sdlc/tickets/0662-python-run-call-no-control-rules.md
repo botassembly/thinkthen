@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0629, 0660, 0688, 0689, 0727, 0728
+Depends on: 0660, 0688
 
 ## Outcome
 
@@ -22,7 +22,7 @@ Depends on: 0629, 0660, 0688, 0689, 0727, 0728
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0662 SHA --memory 8 -- sh libraries/python/check.sh` passes, and the installed wheel's dump from 0660 matches the 0642 oracle, including a recognize case whose entity has no kept proposal. Before the change that case raises `KeyError` in `Result.probability`.
+- On the M5 natively: `pm job run --machine m5 0662 SHA --memory 8 -- sh libraries/python/check.sh` passes, and the installed consumer from 0660 passes its comparison against `conformance/fixtures/packets.json`, including a recognize case whose entity has no kept proposal. Before the change that case raises `KeyError` in `Result.probability`.
 - `python3 build-tools/results/answer_rules.py` passes with the three Python entries removed from `LEGACY_FILES`; before the change it reports the host answer rules in `_calls.py`.
 - Each removed control rule has a case where Rust returns the same typed usage error that Python used to produce.
 - An async call cancelled while the loopback provider is held returns promptly.

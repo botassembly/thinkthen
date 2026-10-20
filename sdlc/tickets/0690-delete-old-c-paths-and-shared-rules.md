@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 0678, 0679, 0682, 0683, 0686, 0693
+Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 0678, 0682, 0683, 0686, 0693, 0740
 
 ## Outcome
 
@@ -23,7 +23,7 @@ Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 06
 
 - On the M5: `pm job run --machine m5 0690 SHA --memory 16 -- sh -c 'python3 build-tools/results/generate.py --check && sdlc/scripts/lint && sdlc/scripts/test'` passes, and `python3 sdlc/scripts/check-c-exports.py` reports a header with none of the deleted symbols. Before the change the header lists `thinkthen_session_new` and `THINKTHEN_COBOL_OVERFLOW`.
 - On the M5: `pm job run --machine m5 0690 SHA --memory 16 -- sdlc/scripts/surfaces` passes every library gate.
-- The Linux library gates run at the 0619 container checkpoint, and the 0691 checkpoint run passes on the revision that lands this ticket.
+- Linux arm64: `pm job run --machine m5 0690 SHA --memory 16 -- sdlc/scripts/linux-check surface PATH` for each library surface; Linux x86_64: the same commands with `--machine gator --memory 7`. The 0691 checkpoint run passes on the revision that lands this ticket.
 
 ## Evidence
 

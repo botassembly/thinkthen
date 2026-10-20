@@ -6,13 +6,13 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0619, 0641, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
 - Changes: `libraries/go/thinkthen.go`, `libraries/go/link_*.go`, `libraries/go/fixtures/package_owned.py`, `libraries/go/check.sh`, `libraries/go/README.md`, `libraries/go/README-DEVELOPMENT.md`, `sdlc/scripts/release-pack.d/go`, `sdlc/tools/go.json`.
 - A chosen and documented distribution: either a tagged module that carries per-platform static archives, or a small separate module per platform selected by build tags. It covers linux/amd64, linux/arm64 and darwin/arm64, plus windows/amd64 if the 0615 manifest lists it for Go. New per-platform link files sit beside `link_linux_amd64.go`.
-- Go's `check_platforms` in `sdlc/tools.json` adds darwin-arm64 and linux-arm64, so the Go gate runs there.
+- Go's `check_platforms` in `sdlc/tools/go.json` adds darwin-arm64 and linux-arm64, so the Go gate runs there.
 - `release-pack` packs the Go module for every target the manifest lists, not only `x86_64-unknown-linux-gnu`.
 - `go get` of the release version builds an example with no pkg-config and no manual paths on each supported platform.
 - The pkg-config fallback in `thinkthen.go` is deleted, or kept only for platforms the design lists as source-only.
@@ -20,8 +20,8 @@ Depends on: 0619, 0641, 0688, 0728
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0657 SHA --memory 8 -- sh -c 'sdlc/scripts/release-pack aarch64-apple-darwin OUT c go && THINKTHEN_ARTIFACT=OUT/thinkthen-go-VERSION-aarch64-apple-darwin.tar.gz THINKTHEN_C_ARTIFACT=OUT/thinkthen-c-VERSION-aarch64-apple-darwin.tar.gz sh libraries/go/check.sh'`, the installed-mode check serves the packed module from a `GOPROXY=file://` directory, fetches it into a clean module cache, and builds and runs the example with no pkg-config. Before the change `release-pack` refuses Go on this target.
-- linux-arm64 runs at the 0619 container checkpoint on the M5, and linux-x86_64 in the 0619 x86_64 container on Yellow.
+- On the M5 through `pm job run --machine m5 0657 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sdlc/scripts/release-pack aarch64-apple-darwin "$out" c go && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-go-*-aarch64-apple-darwin.tar.gz)" THINKTHEN_C_ARTIFACT="$(ls "$out"/thinkthen-c-*-aarch64-apple-darwin.tar.gz)" sh libraries/go/check.sh'`, the installed-mode check serves the packed module from a `GOPROXY=file://` directory, fetches it into a clean module cache, and builds and runs the example with no pkg-config. Before the change `release-pack` refuses Go on this target.
+- Linux arm64: `pm job run --machine m5 0657 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/go`; Linux x86_64: the same command with `--machine gator --memory 7`.
 - windows/amd64, if supported, is proven on the candidate in 0687.
 
 ## Evidence
