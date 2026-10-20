@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 43ba298, accept
+
 ## Outcome
 
 - Changes: `sdlc/tools.json`.
