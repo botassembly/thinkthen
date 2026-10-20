@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0633
 
+Reviews: revision a30dd15, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/release-smoke`, `sdlc/scripts/installer-test`.
