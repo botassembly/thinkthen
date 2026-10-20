@@ -30,3 +30,4 @@ Phase: 2
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: PM approved the existing owned-error pattern: thinkthen_call_error_position returns a borrowed const size_t pointer, NULL for absent position or null owner, valid until owned error free; implement and prove native positions without message inference.
