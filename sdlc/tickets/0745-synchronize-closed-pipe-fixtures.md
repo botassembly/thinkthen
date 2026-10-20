@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 8ea59d5, accept
+
 ## Outcome
 
 The closed-pipe checks establish when the reader closes before asserting bounded request counts, independently of process scheduling, while preserving the product cancellation contract.
