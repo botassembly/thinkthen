@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def inspect(name, data):
     # This exact canonical native wait-event arm is ABI, not a schema path.
-    identifiers = re.sub(rb"(?<![A-Za-z0-9_-])(?:K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM|tt-n-session-wait-settlement-arm-v1-k)(?![A-Za-z0-9_-])", b"", data)
+    identifiers = re.sub(rb"(?<![A-Za-z0-9_-])(?:K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM|tt-n-session-wait-settlement-arm-k)(?![A-Za-z0-9_-])", b"", data)
     if re.search(rb"(?i:arm[_-])|Arm[A-Z0-9]|Alternative", identifiers):
         raise ValueError(f"schema alternative marker in {name}")
 
