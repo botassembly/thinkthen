@@ -154,14 +154,15 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
         rust_components(manifest, env, install=True)
     if name == 'flutter':
         sdk = (root / 'bin/flutter').resolve().parent.parent
+        # Downloaded archives can retain their producer's numeric ownership.
+        # Protect the SDK before Git probes or an unprivileged check uses it.
+        subprocess.run(['chown', '-R', 'root:root', str(sdk)], env=env, check=True)
+        subprocess.run(['git', 'config', '--system', '--add', 'safe.directory', str(sdk)],
+                       env=env, check=True)
         revision = subprocess.check_output(['git', '-C', str(sdk), 'rev-parse', 'HEAD'],
                                            env=env, text=True).strip()
         if revision != tool['source_commit']:
             raise SystemExit('Flutter framework differs from tools.json')
-        # The SDK stays root-owned. Its launcher reads Git metadata even when
-        # the checked image later runs as the host's unprivileged user.
-        subprocess.run(['git', 'config', '--system', '--add', 'safe.directory', str(sdk)],
-                       env=env, check=True)
         subprocess.run([str(root / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
         # The launcher atomically replaces engine.stamp and writes engine.realm;
         # the tool opens lockfile for writing and refreshes flutter.version.json.
