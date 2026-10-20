@@ -400,10 +400,7 @@ fn the_plan_shows_each_request() {
         .map(|place| format!(r#""q{place}":{{"decide":"Question {place}?"}}"#))
         .collect::<Vec<_>>()
         .join(",");
-    let many = set(
-        "plan-many",
-        &format!(r#"{{"questions":{{{questions}}}}}"#),
-    );
+    let many = set("plan-many", &format!(r#"{{"questions":{{{questions}}}}}"#));
     let hundred = profile("hundred", r#""max_questions":100"#);
     let (line, code) = dry_run(
         &many,

@@ -175,7 +175,10 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let objects = thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?","name":"authored-name","wording_version":4,"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
-    let text = thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#).unwrap();
+    let text = thinkthen::QuestionSet::from_json(
+        r#"{"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#,
+    )
+    .unwrap();
     let document = r#"{"ready":false,"body":"Refund me."}"#;
     let error = crate::api::annotate(
         &engine,

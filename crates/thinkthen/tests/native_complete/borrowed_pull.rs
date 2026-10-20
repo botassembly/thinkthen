@@ -19,8 +19,7 @@ fn seven_native_batches_refuse_recognition_controls_when_pulled_without_sending(
         panic!("score")
     };
     let dynamic = Question::choose_records("Which?").unwrap();
-    let set =
-        QuestionSet::from_json(r#"{"questions":{"a":{"decide":"Fits?"}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"a":{"decide":"Fits?"}}}"#).unwrap();
     let pulled = Cell::new(0);
     let records = || {
         std::iter::once_with(|| {

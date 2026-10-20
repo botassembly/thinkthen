@@ -254,9 +254,7 @@ fn set_json(set: &crate::core::QuestionSet) -> Result<crate::core::Json, Error> 
             crate::core::Json::parse(&q.to_json()?).map_err(Error::refused)?,
         ));
     }
-    let mut fields = vec![
-        ("questions".to_owned(), crate::core::Json::Object(questions)),
-    ];
+    let mut fields = vec![("questions".to_owned(), crate::core::Json::Object(questions))];
     if let Some(profile) = set.profile() {
         fields.push((
             "profile".to_owned(),

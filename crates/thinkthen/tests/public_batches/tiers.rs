@@ -15,14 +15,11 @@ fn saved_annotate_batch_tiers() {
         .map(|builder| builder.batch(BatchSetting::Max))
         .and_then(EngineBuilder::build)
         .expect("max engine");
-    let saved = QuestionSet::from_json(
-        r#"{"batch":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
-    )
-    .expect("saved batch one");
-    let invalid = QuestionSet::from_json(
-        r#"{"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
-    )
-    .expect("invalid saved tier is retained until selected");
+    let saved = QuestionSet::from_json(r#"{"batch":1,"questions":{"ready":{"decide":"Ready?"}}}"#)
+        .expect("saved batch one");
+    let invalid =
+        QuestionSet::from_json(r#"{"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#)
+            .expect("invalid saved tier is retained until selected");
     let records = ["one", "two", "three"];
     let run = |engine: &Engine, set: &QuestionSet, options| {
         let mut batch = crate::api::annotation_rows(crate::api::rows(

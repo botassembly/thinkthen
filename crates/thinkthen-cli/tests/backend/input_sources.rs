@@ -56,10 +56,7 @@ fn seven_commands_read_files_in_order_and_restart_positions() -> io::Result<()> 
     let one = one.to_str().expect("path");
     let two = two.to_str().expect("path");
     let set = place.join("set.json");
-    fs::write(
-        &set,
-        r#"{"questions":{"ok":{"decide":"Is it clear?"}}}"#,
-    )?;
+    fs::write(&set, r#"{"questions":{"ok":{"decide":"Is it clear?"}}}"#)?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",
     ] {
@@ -196,10 +193,7 @@ fn windows_preserve_blanks_final_lines_and_file_edges() -> io::Result<()> {
     let one = one.to_str().expect("path");
     let two = two.to_str().expect("path");
     let set = place.join("set.json");
-    fs::write(
-        &set,
-        r#"{"questions":{"ok":{"decide":"Clear?"}}}"#,
-    )?;
+    fs::write(&set, r#"{"questions":{"ok":{"decide":"Clear?"}}}"#)?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",
     ] {

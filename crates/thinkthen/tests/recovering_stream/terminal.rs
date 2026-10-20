@@ -69,11 +69,9 @@ fn eager_recovery_counts_completed_rows_when_the_observer_cancels() {
         ),
         (
             RequestFunction::Annotate,
-            thinkthen::QuestionSet::from_json(
-                r#"{"questions":{"pass":{"decide":"Pass?"}}}"#,
-            )
-            .unwrap()
-            .into(),
+            thinkthen::QuestionSet::from_json(r#"{"questions":{"pass":{"decide":"Pass?"}}}"#)
+                .unwrap()
+                .into(),
             2,
             2,
         ),

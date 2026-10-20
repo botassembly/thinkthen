@@ -309,8 +309,8 @@ fn polars_columns_keep_final_call_facts() {
     assert_ne!(context_request[0].body, first[0].body);
     assert!(String::from_utf8_lossy(&context_request[0].body).contains("review this claim"));
 
-    let set = QuestionSet::from_json(r#"{"questions":{"answer":{"decide":"Ready?"}}}"#)
-        .expect("set");
+    let set =
+        QuestionSet::from_json(r#"{"questions":{"answer":{"decide":"Ready?"}}}"#).expect("set");
     let before = listener.count();
     let annotated = engine
         .annotate_frame(

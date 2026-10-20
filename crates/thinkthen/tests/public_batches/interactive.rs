@@ -271,8 +271,8 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         &pulls,
         |row| assert!(row.result().value()),
     );
-    let set = QuestionSet::from_json(r#"{"questions":{"first":{"decide":"First?"}}}"#)
-        .expect("set");
+    let set =
+        QuestionSet::from_json(r#"{"questions":{"first":{"decide":"First?"}}}"#).expect("set");
     let pulls = AtomicUsize::new(0);
     reader_failure(
         crate::api::annotation_rows(

@@ -6,8 +6,7 @@ use std::path::PathBuf;
 use crate::harness::{Canned, Listener, spawn};
 
 const PART: &str = r#"{"questions":{"unresolved":{"decide":"Still open?","on":"/x"}}}"#;
-const BODY: &str =
-    r#"{"questions":{"unresolved":{"decide":"Still open?","on":"/body"}}}"#;
+const BODY: &str = r#"{"questions":{"unresolved":{"decide":"Still open?","on":"/body"}}}"#;
 const WHOLE: &str = r#"{"questions":{"unresolved":{"decide":"Still open?"}}}"#;
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.95}}}"#;
 const STREAM: &str = concat!(

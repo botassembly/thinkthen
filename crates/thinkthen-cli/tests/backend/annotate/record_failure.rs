@@ -11,8 +11,7 @@ mod field_failure;
 
 const INPUT: &[u8] =
     b"{\"id\":\"a\",\"body\":\"first\"}\n{\"id\":\"b\"}\n{\"id\":\"c\",\"body\":\"third\"}\n";
-const SET: &str =
-    r#"{"questions":{"urgent":{"decide":"Is this urgent?","on":"/body"}}}"#;
+const SET: &str = r#"{"questions":{"urgent":{"decide":"Is this urgent?","on":"/body"}}}"#;
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":4,"output_tokens":1}}"#;
 const FIRST_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Is this urgent?"}}}"#;
 const THIRD_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"third\". Is this urgent?"}}}"#;

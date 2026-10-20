@@ -196,7 +196,10 @@ fn all_filter_results_refuses_incompatible_feed_without_advancing() {
 fn annotation_declarations_use_each_members_selected_evidence() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let set=QuestionSet::from_json(r#"{"questions":{"body":{"decide":"Fits?","on":"/body","item_schema":{"type":"string"}}}}"#).unwrap();
+    let set = QuestionSet::from_json(
+        r#"{"questions":{"body":{"decide":"Fits?","on":"/body","item_schema":{"type":"string"}}}}"#,
+    )
+    .unwrap();
     for invalid in [false, true] {
         let values = if invalid {
             vec![r#"{"body":"Alpha."}"#, r#"{"body":42}"#]

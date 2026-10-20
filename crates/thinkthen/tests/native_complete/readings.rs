@@ -240,7 +240,8 @@ fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
         .unwrap();
         let recognition = thinkthen::RecognizeQuestionFile::from_json(&format!(
             r#"{{"recognize":{{"kinds":{{"person":null}}}},"model":"fixed","on":"/body"{extra}}}"#
-        )).unwrap();
+        ))
+        .unwrap();
         let relation = thinkthen::Relate::from_json(&format!(
             r#"{{"relate":{{"relations":[{{"name":"knows","source":"person","target":"person","reads":"knows"}}]}},"model":"fixed"{extra}}}"#
         ))

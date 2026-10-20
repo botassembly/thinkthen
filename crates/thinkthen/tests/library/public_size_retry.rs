@@ -91,7 +91,10 @@ fn priced_relate_failure_keeps_complete_started_facts() {
         .no_cache()
         .build()
         .expect("engine");
-    let ask = Relate::from_json(r#"{"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}}"#).expect("relation");
+    let ask = Relate::from_json(
+        r#"{"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}}"#,
+    )
+    .expect("relation");
     let records = [
         Entity::new("Ada", "person").expect("entity"),
         Entity::new("Bea", "person").expect("entity"),

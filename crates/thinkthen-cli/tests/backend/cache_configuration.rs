@@ -118,11 +118,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
         r#"{"url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#,
     );
     let set = root.join("questions.json");
-    fs::write(
-        &set,
-        r#"{"questions":{"answer":{"decide":"asks?"}}}"#,
-    )
-    .expect("question set");
+    fs::write(&set, r#"{"questions":{"answer":{"decide":"asks?"}}}"#).expect("question set");
     let families = families(&set);
     let moved = Folder::Config.variable(&root);
     let environment = [

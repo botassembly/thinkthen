@@ -31,10 +31,7 @@ fn native_closed_grammars_refuse_duplicate_unknown_and_wrong_kind_without_sends(
             "rank",
             r#"{"questions":{"a":{"decide":"q","threshold":0.5}}}"#,
         ),
-        (
-            "rank",
-            r#"{"questions":{"a":{"decide":"q","on":""}}}"#,
-        ),
+        ("rank", r#"{"questions":{"a":{"decide":"q","on":""}}}"#),
         (
             "recognize",
             r#"{"recognize":{"kinds":{"person":null}},"extra":true}"#,

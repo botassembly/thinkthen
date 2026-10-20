@@ -20,10 +20,8 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
             relations: Some(Vec::new()),
         },
         input: None,
-        question: RecognizeSpec::parse(
-            r#"{"recognize":{"kinds":{"person":"A person."}}}"#,
-        )
-        .unwrap(),
+        question: RecognizeSpec::parse(r#"{"recognize":{"kinds":{"person":"A person."}}}"#)
+            .unwrap(),
         answer: RecognitionOdds::Whole(crate::core::WholeRecognitionOdds {
             proposals: Vec::new(),
             pieces: vec![PieceOdds {
@@ -169,10 +167,14 @@ fn relation_members_emit_success_or_failure_with_no_fabricated_success_fields() 
 fn empty_complete_relation_is_a_zero_observation_aggregate() {
     let base = super::atomic(Vec::new(), Vec::new());
     let canonical = Relation {
-        identity: base.identity, value: Vec::new(), members: Vec::new(), lines: false,
+        identity: base.identity,
+        value: Vec::new(),
+        members: Vec::new(),
+        lines: false,
         question: RelateSpec::parse(
             r#"{"relate":{"relations":[{"name":"link","source":"*","target":"*","single":true}]}}"#,
-        ).unwrap(),
+        )
+        .unwrap(),
         meta: base.meta,
     };
     let document: serde_json::Value =

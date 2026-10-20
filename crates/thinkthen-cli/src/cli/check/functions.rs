@@ -179,7 +179,8 @@ pub(super) fn run(
     }
 }
 
-const RELATE: &str = r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+const RELATE: &str =
+    r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
 
 fn decision() -> Result<Question, Error> {
     Ok(Question::decide("Did the parcel arrive undamaged?")?.cut())

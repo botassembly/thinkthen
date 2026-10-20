@@ -508,13 +508,11 @@ mod tests {
 
     #[test]
     fn file_defaults_and_canonical_identity_are_stable_across_whitespace() {
-        let compact =
-            RecognizeSpec::parse(r#"{"recognize":{"kinds":{"person":"A person."}}}"#)
+        let compact = RecognizeSpec::parse(r#"{"recognize":{"kinds":{"person":"A person."}}}"#)
+            .expect("file");
+        let spaced =
+            RecognizeSpec::parse("{ \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }")
                 .expect("file");
-        let spaced = RecognizeSpec::parse(
-            "{ \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }",
-        )
-        .expect("file");
         assert_eq!(compact, spaced);
         assert_eq!(compact.threshold.to_string(), "0.5");
         assert_eq!(compact.relation_threshold.to_string(), "0.5");

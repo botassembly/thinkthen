@@ -215,10 +215,9 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
         String::from_utf8(listener.requests()[0].body.clone()).unwrap(),
         r#"{"state":{"context":{"guide":"Private guide.","ready":false,"extra":[null,12]},"evidence":"Each question quotes the text it asks about."},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}}"#
     );
-    let text_set = thinkthen::QuestionSet::from_json(
-        r#"{"questions":{"refund":{"decide":"Refund?"}}}"#,
-    )
-    .unwrap();
+    let text_set =
+        thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?"}}}"#)
+            .unwrap();
     for (context, expected) in [
         (
             Some("Explicit guide.".into()),

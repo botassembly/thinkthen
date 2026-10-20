@@ -253,8 +253,7 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
         r#"{"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
-    let only =
-        QuestionSet::from_json(r#"{"questions":{"second":{"decide":"B?"}}}"#).unwrap();
+    let only = QuestionSet::from_json(r#"{"questions":{"second":{"decide":"B?"}}}"#).unwrap();
     let engine = builder(&listener).record(&place).unwrap().build().unwrap();
     let first = annotate(&engine, &set).unwrap();
     let cached = builder(&listener)

@@ -225,9 +225,8 @@ fn blank_later_record_and_record_limit_fail_before_counted_sends() {
 
 #[test]
 fn invalid_authored_rank_settings_and_debug_names_do_not_escape() {
-    let valid =
-        RankSet::from_json(r#"{"questions":{"private_name":{"decide":"First?"}}}"#)
-            .expect("valid set");
+    let valid = RankSet::from_json(r#"{"questions":{"private_name":{"decide":"First?"}}}"#)
+        .expect("valid set");
     assert!(!format!("{valid:?}").contains("private_name"));
     for (json, message) in [
         (

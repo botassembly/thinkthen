@@ -4,10 +4,9 @@ use proptest::prelude::*;
 
 #[test]
 fn pinned_set_has_the_contract_digest() {
-    let set = QuestionSet::parse(
-        r#"{"questions":{"refund":{"decide":"Does this ask for a refund?"}}}"#,
-    )
-    .expect("valid set");
+    let set =
+        QuestionSet::parse(r#"{"questions":{"refund":{"decide":"Does this ask for a refund?"}}}"#)
+            .expect("valid set");
     assert_eq!(
         set.sha256().expect("digest"),
         "4318689ccd64c08b788ea48c5f72b8dca279cf3d482173ed280f3fe243158b62"
@@ -16,35 +15,27 @@ fn pinned_set_has_the_contract_digest() {
 
 #[test]
 fn one_top_level_profile_changes_the_set_digest_and_nested_profiles_are_refused() {
-    let plain = QuestionSet::parse(r#"{"questions":{"refund":{"decide":"Refund?"}}}"#)
-        .expect("plain set");
-    let named = QuestionSet::parse(
-        r#"{"profile":"jev","questions":{"refund":{"decide":"Refund?"}}}"#,
-    )
-    .expect("profiled set");
+    let plain =
+        QuestionSet::parse(r#"{"questions":{"refund":{"decide":"Refund?"}}}"#).expect("plain set");
+    let named =
+        QuestionSet::parse(r#"{"profile":"jev","questions":{"refund":{"decide":"Refund?"}}}"#)
+            .expect("profiled set");
     assert_eq!(named.profile().expect("profile").as_str(), "jev");
     assert_ne!(
         plain.sha256().expect("digest"),
         named.sha256().expect("digest")
     );
-    let nested = QuestionSet::parse(
-        r#"{"questions":{"refund":{"decide":"Refund?","profile":"jev"}}}"#,
-    )
-    .expect_err("nested profile");
+    let nested =
+        QuestionSet::parse(r#"{"questions":{"refund":{"decide":"Refund?","profile":"jev"}}}"#)
+            .expect_err("nested profile");
     assert!(nested.to_string().contains("questions.refund.profile"));
 }
 
 #[test]
 fn grammar_errors_name_the_full_path() {
     let cases = [
-        (
-            r#"{"questions":{}}"#,
-            "`questions` holds at least",
-        ),
-        (
-            r#"{"questions":{"Bad":{"decide":"x"}}}"#,
-            "questions.Bad",
-        ),
+        (r#"{"questions":{}}"#, "`questions` holds at least"),
+        (r#"{"questions":{"Bad":{"decide":"x"}}}"#, "questions.Bad"),
         (
             r#"{"questions":{"ok":{"decide":"x","model":"jev-latest"}}}"#,
             "questions.ok.model",
@@ -133,7 +124,12 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
     )
     .expect("valid set");
     let resolved = set.resolved_json().expect("resolved set renders");
-    assert!(crate::core::Json::parse(&resolved).expect("JSON").member("version").is_none());
+    assert!(
+        crate::core::Json::parse(&resolved)
+            .expect("JSON")
+            .member("version")
+            .is_none()
+    );
     assert!(
         resolved.contains(r#""tag":["Which topics?"]"#),
         "{resolved}"
@@ -158,10 +154,9 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
         set.sha256().expect("digest"),
         changed.sha256().expect("digest")
     );
-    let refused = QuestionSet::parse(
-        r#"{"questions":{"bad":{"tag":"x","labels":{"a":3,"b":"y"}}}}"#,
-    )
-    .expect_err("a structured refusal names its path");
+    let refused =
+        QuestionSet::parse(r#"{"questions":{"bad":{"tag":"x","labels":{"a":3,"b":"y"}}}}"#)
+            .expect_err("a structured refusal names its path");
     assert!(
         refused.to_string().contains("questions.bad.labels"),
         "{refused}"
@@ -176,15 +171,13 @@ fn groups_keep_first_question_order() {
 
 #[test]
 fn absent_and_explicit_root_are_one_behavior_and_one_group() {
-    let absent = QuestionSet::parse(
-        r#"{"questions":{"a":{"decide":"a"},"b":{"decide":"b","on":""}}}"#,
-    )
-    .expect("valid set");
+    let absent =
+        QuestionSet::parse(r#"{"questions":{"a":{"decide":"a"},"b":{"decide":"b","on":""}}}"#)
+            .expect("valid set");
     assert_eq!(absent.groups(), vec![vec![0, 1]]);
-    let explicit = QuestionSet::parse(
-        r#"{"questions":{"a":{"decide":"a","on":""},"b":{"decide":"b"}}}"#,
-    )
-    .expect("valid set");
+    let explicit =
+        QuestionSet::parse(r#"{"questions":{"a":{"decide":"a","on":""},"b":{"decide":"b"}}}"#)
+            .expect("valid set");
     assert_eq!(
         absent.sha256().expect("digest"),
         explicit.sha256().expect("digest")

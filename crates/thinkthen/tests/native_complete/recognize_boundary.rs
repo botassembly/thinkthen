@@ -247,10 +247,7 @@ fn skipped_stage_controls_refuse_before_native_record_enumeration() {
             .build()
             .unwrap()
             .with_mode(RecognitionMode::BoundaryOnly),
-        Recognize::from_json(
-            r#"{"recognize":{"mode":"boundary_only","relations":[]}}"#,
-        )
-        .unwrap(),
+        Recognize::from_json(r#"{"recognize":{"mode":"boundary_only","relations":[]}}"#).unwrap(),
     ] {
         let rows = std::iter::from_fn(|| {
             advanced.fetch_add(1, Ordering::SeqCst);

@@ -225,15 +225,27 @@ fn native_relation_admission_keeps_the_cli_complete_set_count_sentence() {
 fn version_members_are_refused_before_any_backend_connection() {
     let listener = crate::harness::Listener::serving(Vec::new()).expect("listener");
     for (verb, body, evidence) in [
-        ("annotate", r#""questions":{"q":{"decide":"Ready?"}}"#, "text"),
+        (
+            "annotate",
+            r#""questions":{"q":{"decide":"Ready?"}}"#,
+            "text",
+        ),
         ("recognize", r#""recognize":{}"#, "text"),
-        ("relate", r#""relate":{"relations":[{"name":"linked"}]}"#, r#"[{"name":"Ada","kind":"person"}]"#),
+        (
+            "relate",
+            r#""relate":{"relations":[{"name":"linked"}]}"#,
+            r#"[{"name":"Ada","kind":"person"}]"#,
+        ),
     ] {
-        let file = written(&format!("version-{verb}"), &format!("{{\"version\":1,{body}}}"));
+        let file = written(
+            &format!("version-{verb}"),
+            &format!("{{\"version\":1,{body}}}"),
+        );
         let output = run(
             &[verb, &file, "--url", listener.base(), "--no-cache"],
             evidence.as_bytes(),
-        ).expect("command");
+        )
+        .expect("command");
         crate::harness::refuses(&output, 5, "thinkthen: delete the `version` field.\n");
     }
     assert_eq!(listener.connections(), 0);
