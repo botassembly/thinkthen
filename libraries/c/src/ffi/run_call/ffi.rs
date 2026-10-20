@@ -16,6 +16,12 @@ pub struct CallErrorHandle {
     failure: Failure,
     facts: Option<String>,
 }
+impl From<Failure> for CallErrorHandle {
+    fn from(failure: Failure) -> Self {
+        let facts = failure.owned_facts();
+        Self { failure, facts }
+    }
+}
 /// A caller-owned cancellation token. Keep alive until the call and all cancels return.
 #[derive(Debug, Default)]
 pub struct CallCancelHandle(thinkthen::CancelToken);
@@ -172,10 +178,9 @@ pub unsafe extern "C" fn thinkthen_run_call(
             }
             Err(failure) => {
                 let code = failure.code();
-                let facts = failure.owned_facts();
                 // SAFETY: the checked slot receives one independent allocation.
                 unsafe {
-                    *error = Box::into_raw(Box::new(CallErrorHandle { failure, facts }));
+                    *error = Box::into_raw(Box::new(CallErrorHandle::from(failure)));
                 }
                 code
             }

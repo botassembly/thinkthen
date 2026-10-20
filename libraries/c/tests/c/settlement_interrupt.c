@@ -18,7 +18,7 @@ static void drain_after_interrupt(thinkthen_session *session) {
     check(state == THINKTHEN_SESSION_END_V1, "terminal exhausts the interrupted drain");
 }
 int main(void) {
-    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
+    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}", NULL);
     check(engine != NULL, "engine builds");
     if (!engine) return 1;
     thinkthen_session *session = open_session(engine, direct);

@@ -28,7 +28,7 @@ int main(void) {
         return 1;
     }
 #endif
-    thinkthen_engine *engine=thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
+    thinkthen_engine *engine=thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}", NULL);
     if(!engine)return 1;
     thinkthen_named_request_v1 request={text("decide"),text("{\"kind\":\"text\",\"text\":\"Does it pass?\"}"),
         text("{\"kind\":\"text\",\"text\":\"Evidence.\"}"),text("{}")};

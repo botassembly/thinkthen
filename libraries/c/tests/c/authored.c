@@ -10,7 +10,7 @@ static void same(thinkthen_string_v1 text, const char *expected) {
     assert(memcmp(text.data, expected, text.len) == 0);
 }
 int main(void) {
-    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false}");
+    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false}", NULL);
     assert(engine);
     char json[] = "{\"decide\":\"Private question?\",\"name\":\"refund\",\"wording_version\":2,\"item_schema\":{\"type\":\"object\",\"properties\":{\"body\":{\"type\":\"string\"}},\"required\":[\"body\"]},\"context_schema\":{\"type\":\"string\"}}";
     char *source=malloc(sizeof(json));assert(source);memcpy(source,json,sizeof(json));

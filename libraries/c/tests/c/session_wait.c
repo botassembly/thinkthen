@@ -15,7 +15,7 @@ static THREAD_RESULT wait_result(void *argument) {
 }
 int main(int argc, char **argv) {
     check(argc == 2);
-    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0,\"batch\":1,\"throttle\":1}");
+    thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0,\"batch\":1,\"throttle\":1}", NULL);
     check(engine != NULL);
     thinkthen_session *session = NULL;
     check(thinkthen_session_new(engine, request, strlen(request), &session) == THINKTHEN_OK);

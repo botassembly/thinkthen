@@ -17,15 +17,16 @@ int main(int argc, char **argv) {
     char *bytes=malloc((size_t)size+1); if(!bytes) return 2;
     if(fread(bytes,1,(size_t)size,input)!=(size_t)size) return 2;
     fclose(input);
-    thinkthen_engine *engine=thinkthen_engine_new_with(argv[2]);
+    thinkthen_call_error *error=NULL;
+    thinkthen_engine *engine=thinkthen_engine_new_with(argv[2], &error);
     thinkthen_session *session=NULL;
-    int code=engine?thinkthen_session_new(engine,bytes,(size_t)size,&session):thinkthen_error_code(NULL);
+    int code=engine?thinkthen_session_new(engine,bytes,(size_t)size,&session):thinkthen_call_error_code(error);
     free(bytes);
     if(code) {
-        const char *message=engine?thinkthen_session_error_message():thinkthen_error_message(NULL);
+        thinkthen_complete_utf8_v1 message=engine?(thinkthen_complete_utf8_v1){thinkthen_session_error_message(),strlen(thinkthen_session_error_message())}:thinkthen_call_error_message(error);
         printf("{\"admission\":{\"code\":%d,\"message\":",code);
-        quoted((thinkthen_complete_utf8_v1){message,strlen(message)});fputs("}}\n",stdout);
-        thinkthen_engine_free(engine);return 0;
+        quoted(message);fputs("}}\n",stdout);
+        thinkthen_engine_free(engine);thinkthen_call_error_free(error);return 0;
     }
     if(strcmp(argv[3],"cancel")==0) thinkthen_session_cancel(session);
     thinkthen_session_result **results=NULL;size_t count=0;
