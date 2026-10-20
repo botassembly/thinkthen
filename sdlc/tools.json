@@ -392,7 +392,6 @@
         "gcc"
       ],
       "platforms": [
-        "darwin",
         "linux"
       ],
       "groups": [
