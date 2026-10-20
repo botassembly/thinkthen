@@ -8902,7 +8902,29 @@
         {
           "packets": [
             {
-              "answer": null,
+              "answer": {
+                "function": "decide",
+                "index": [],
+                "pick": [],
+                "probability": [],
+                "resolution": [],
+                "value": []
+              },
+              "facts": {
+                "attempts": [],
+                "cache_answers": "0",
+                "call_id": "call_id:1",
+                "largest_request_bytes": "0",
+                "largest_request_estimated_input_tokens": "0",
+                "records": "0",
+                "requests_sent": "0",
+                "seconds": "0",
+                "token_estimate_method": "encoded-body-bytes-908-v1",
+                "usage_persistence": {
+                  "observed_at": "facts_snapshot",
+                  "state": "disabled"
+                }
+              },
               "failure": {
                 "error": {
                   "kind": "cancelled",
@@ -8911,6 +8933,21 @@
                   "stopped": {
                     "cause": "cancelled",
                     "retryable": false
+                  }
+                },
+                "facts": {
+                  "attempts": [],
+                  "cache_answers": "0",
+                  "call_id": "call_id:1",
+                  "largest_request_bytes": "0",
+                  "largest_request_estimated_input_tokens": "0",
+                  "records": "0",
+                  "requests_sent": "0",
+                  "seconds": "0",
+                  "token_estimate_method": "encoded-body-bytes-908-v1",
+                  "usage_persistence": {
+                    "observed_at": "facts_snapshot",
+                    "state": "disabled"
                   }
                 },
                 "resolution": "failed"
@@ -175111,7 +175148,29 @@
         {
           "packets": [
             {
-              "answer": null,
+              "answer": {
+                "function": "decide",
+                "index": [],
+                "pick": [],
+                "probability": [],
+                "resolution": [],
+                "value": []
+              },
+              "facts": {
+                "attempts": [],
+                "cache_answers": "0",
+                "call_id": "call_id:1",
+                "largest_request_bytes": "0",
+                "largest_request_estimated_input_tokens": "0",
+                "records": "0",
+                "requests_sent": "0",
+                "seconds": "0",
+                "token_estimate_method": "encoded-body-bytes-908-v1",
+                "usage_persistence": {
+                  "observed_at": "facts_snapshot",
+                  "state": "disabled"
+                }
+              },
               "failure": {
                 "error": {
                   "kind": "cancelled",
@@ -175120,6 +175179,21 @@
                   "stopped": {
                     "cause": "cancelled",
                     "retryable": false
+                  }
+                },
+                "facts": {
+                  "attempts": [],
+                  "cache_answers": "0",
+                  "call_id": "call_id:1",
+                  "largest_request_bytes": "0",
+                  "largest_request_estimated_input_tokens": "0",
+                  "records": "0",
+                  "requests_sent": "0",
+                  "seconds": "0",
+                  "token_estimate_method": "encoded-body-bytes-908-v1",
+                  "usage_persistence": {
+                    "observed_at": "facts_snapshot",
+                    "state": "disabled"
                   }
                 },
                 "resolution": "failed"
