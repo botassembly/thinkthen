@@ -46,6 +46,7 @@ Collides with 0719 and 0709 on generated wrappers and the C header, and with 064
 
 - 2026-10-20 started
 - 2026-10-20 next: The combined 0707 and 0735 gate stopped in the installed MCP smoke at candidate fee0216; receipt gate-runs/thinkthen/0707/m5/7333c30d4257ed0ceae2d54655e6e8a31edfec03 is retained, and a fresh developer is diagnosing initialization or tool execution before repair and review.
+- 2026-10-20 next: The combined gate at 9151bbd passed the repaired MCP smoke but stopped at transforms/trials/test.sh:195 with thinkthen not found; receipt gate-runs/thinkthen/0707/m5/924cb003847d240c85945cf3a121a14b49b430b1 is retained, and a fresh developer is fixing command selection without weakening the real-output regression.
 
 ## Current implementation paths, 2026-10-20
 
