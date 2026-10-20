@@ -103,7 +103,6 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     fs::write(&evidence, format!("{EVIDENCE}\n")).unwrap();
     let configure = |command: &mut Command| {
         command
-            .clear_environment()
             .isolated_home(&home)
             .env(cache.0, &cache.1)
             .env(state.0, &state.1)
@@ -111,6 +110,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
             .env("THINKTHEN_BASE_URL", listener.base());
     };
     let mut command = Command::new(crate::command::binary());
+    command.clear_environment();
     configure(&mut command);
     command
         .args(["decide", "asks for a refund"])
@@ -125,6 +125,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     );
     let report = home.join("report");
     let mut seeded = Command::new(std::env::current_exe().unwrap());
+    seeded.clear_environment();
     configure(&mut seeded);
     seeded
         .args(["--exact", "usage_child", "--ignored", "--nocapture"])
@@ -141,6 +142,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     );
     assert_eq!(listener.count(), 3);
     let mut status = Command::new(crate::command::binary());
+    status.clear_environment();
     configure(&mut status);
     status.args(["status", "--json"]);
     let output = child::run::output(&mut status).unwrap();
