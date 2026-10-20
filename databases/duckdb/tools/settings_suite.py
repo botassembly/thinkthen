@@ -419,7 +419,7 @@ def a_negative_request_total_refuses_before_the_map():
 def an_annotate_set_packs_compatible_texts():
     """Three compatible records fit one packed request under a total of two."""
     with Backend() as backend:
-        both = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
+        both = '{"questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
         got = run(["SET thinkthen_max_requests_total = 2", f"SELECT thinkthen_annotate('{both}', x) FROM (VALUES ('one'), ('two'), ('three')) t(x)"], backend.base())
         expect([json.loads(line) for (line,) in rows(got[1])],
                [{"refund": True, "area": "billing"}] * 3, "all three records answered")
@@ -431,7 +431,7 @@ def an_annotate_row_missing_its_part_stops_before_any_send():
     """Shared Request admission preserves the bad-row error before any send.
     Valid neighbours are asked only when the next statement omits that row."""
     with Backend() as backend:
-        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        parted = '{"questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         records = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(2, 7)])
         table = f"""(VALUES (1, '{{"note": "one"}}'), {records}) t(i, x)"""
         ask = f"""thinkthen_annotate('{parted}', x, '{{"batch": 1}}')"""
@@ -448,7 +448,7 @@ def an_annotate_row_missing_its_part_stops_before_any_send():
 def annotate_keeps_the_engines_record_limit():
     """Three texts over a limit of two are refused before any send, as rank refuses."""
     with Backend() as backend:
-        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        parted = '{"questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         table = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(1, 4)])
         got = run(["SET thinkthen_max_requests = 2",
                    f"""SELECT thinkthen_annotate('{parted}', x, '{{"batch": 1}}') FROM (VALUES {table}) t(i, x)"""],
@@ -547,7 +547,7 @@ def access_cases_match_duckdb():
         paths = folders(root)
         for place in ("ok", "out"):
             (root / place / "q.json").write_text('{"decide": "Is it a refund?"}')
-            (root / place / "r.json").write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+            (root / place / "r.json").write_text('{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         wrong = []
         for setting, setup in settings(root).items():
             for name, path in paths.items():
@@ -632,8 +632,8 @@ def prepared_file_arguments_recheck_current_permissions():
         root = Path(folder)
         question, names, rules = (root / name for name in ("q.json", "names.json", "rules.json"))
         question.write_text('{"decide":"Is it a refund?"}')
-        names.write_text('{"version":1,"recognize":{"kinds":{"person":"A person."}}}')
-        rules.write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+        names.write_text('{"recognize":{"kinds":{"person":"A person."}}}')
+        rules.write_text('{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         statements = [
             "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
             f"PREPARE scalar AS SELECT thinkthen_decide('@{question}', 'refund now')",

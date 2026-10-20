@@ -208,7 +208,7 @@ fn thinkthen_relate(
 crate::descriptions::describe! {
 ["Run the supplied SQL query through SPI and relate its id/name[/kind] rows using authored JSON rules or a privileged/confined @file. Return relation, both retained ids, probability and direction. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors. Evidence files must be read by the client."].concat();
 [name = "thinkthen_relate", parallel_restricted];
-/// A version-one relate file, as `'@file.json'` or JSON text.
+/// A relate file, as `'@file.json'` or JSON text.
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"

@@ -118,7 +118,7 @@ try:
 except Exception as error:
     mutation = str(error).split("\\n")[0]
 rules = sys.argv[2] + "/r.json"
-open(rules, "w").write('{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
+open(rules, "w").write('{"relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
 file_edges = a.execute(f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')").fetchone()[0]
 a.execute("SET enable_external_access = false")
 try:
@@ -170,7 +170,7 @@ a = db(path); staff(a, 4); a.close()
 freed = subprocess.run([sys.executable, "-c", f"import duckdb; duckdb.connect({path!r}).close()"]).returncode
 b = db(); staff(b, 11)
 a = db(path)
-open(sys.argv[2] + "/r.json", "w").write('{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
+open(sys.argv[2] + "/r.json", "w").write('{"relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
 a.execute("SET enable_external_access = false")
 try:
     a.execute(f"SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{sys.argv[2]}/r.json')"); refused = "read"

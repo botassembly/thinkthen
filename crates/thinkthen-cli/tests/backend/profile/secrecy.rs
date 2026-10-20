@@ -13,7 +13,7 @@ fn every_command_family_keeps_profile_failures_free_of_keys_and_evidence() {
     const EVIDENCE: &str = "PROFILE-EVIDENCE-MARKER";
     let set = file(
         "profile-secrecy-set.json",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let invalid = file(
         "profile-secrecy-invalid.json",

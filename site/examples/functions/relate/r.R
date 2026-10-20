@@ -15,7 +15,7 @@ makes <- list(
   target = "product"
 )
 who_makes <- tt_relate(
-  list(version = 1, relate = list(relations = list(makes))),
+  list(relate = list(relations = list(makes))),
   entities
 )$value
 companies <- vapply(who_makes, \(edge) edge$source$name, "")

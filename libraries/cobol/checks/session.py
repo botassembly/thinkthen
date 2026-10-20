@@ -24,9 +24,9 @@ questions = {
     'filter': {'decide': 'Refund?'},
     'rank': {'decide': 'Relevant?'},
     'find': {'find': 'Which?'},
-    'annotate': {'version': 1, 'questions': {'refund': {'decide': 'Refund?'}}},
-    'recognize': {'version': 1, 'recognize': {'kinds': {'person': 'A name.'}}},
-    'relate': {'version': 1, 'relate': {'relations': [{'name': 'linked', 'source': 'person', 'target': 'person'}]}},
+    'annotate': {'questions': {'refund': {'decide': 'Refund?'}}},
+    'recognize': {'recognize': {'kinds': {'person': 'A name.'}}},
+    'relate': {'relate': {'relations': [{'name': 'linked', 'source': 'person', 'target': 'person'}]}},
 }
 with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/cobol/checks/target') as temporary:
     root = Path(temporary)

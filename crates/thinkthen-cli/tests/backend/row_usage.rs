@@ -131,7 +131,7 @@ fn an_annotate_tag_question_whose_label_shares_overflow_fails() {
     let listener = overflowing();
     let set = file(
         "tag-set.json",
-        r#"{"version":1,"questions":{"topics":{"tag":"Topics?","labels":["a","b"]}}}"#,
+        r#"{"questions":{"topics":{"tag":"Topics?","labels":["a","b"]}}}"#,
     );
     let profile = one_question();
     let output = run(
@@ -162,7 +162,7 @@ fn a_missing_share_outranks_an_earlier_overflow() {
     let set = file(
         "three-set.json",
         concat!(
-            r#"{"version":1,"questions":{"one":{"decide":"First?"},"#,
+            r#"{"questions":{"one":{"decide":"First?"},"#,
             r#""two":{"decide":"Second?"},"three":{"decide":"Third?"}}}"#,
         ),
     );

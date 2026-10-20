@@ -23,7 +23,7 @@ fn catalog_help_command_explains_native_arguments_and_links_full_grammar() {
         "question_file, question_name, or question_reference",
         "options holds applicable native controls",
         "native admission validates the full grammar",
-        "Annotate uses a versioned questions object",
+        "Annotate uses a questions object",
         "rank accepts a decide/score question or an ordered question set",
         "https://github.com/botassembly/thinkthen/blob/main/specification/mcp.md",
         "https://github.com/botassembly/thinkthen/blob/main/libraries/mcp/README.md",

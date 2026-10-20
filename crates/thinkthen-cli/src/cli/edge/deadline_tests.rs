@@ -163,7 +163,7 @@ fn questions(label: &str) -> String {
     file(
         label,
         "questions.json",
-        r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"kind":{"choose":"What kind?","options":["bug","other"]}}}"#,
+        r#"{"questions":{"risky":{"decide":"Is this risky?"},"kind":{"choose":"What kind?","options":["bug","other"]}}}"#,
     )
 }
 

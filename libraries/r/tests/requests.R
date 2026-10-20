@@ -53,9 +53,9 @@ questions <- list(
   tag = list(tag = "Tag Q?", labels = c("first", "second")),
   score = list(score = "Score Q?", levels = c("low", "high")),
   filter = "Filter Q?", rank = "Rank Q?", find = "Find Q?",
-  annotate = list(version = 1L, questions = list(yes = list(decide = "Annotation Q?"))),
-  recognize = list(version = 1L, recognize = list(kinds = list(person = NULL, organization = NULL))),
-  relate = list(version = 1L, relate = list(relations = list(list(name = "knows", source = "person", target = "person"))))
+  annotate = list(questions = list(yes = list(decide = "Annotation Q?"))),
+  recognize = list(recognize = list(kinds = list(person = NULL, organization = NULL))),
+  relate = list(relate = list(relations = list(list(name = "knows", source = "person", target = "person"))))
 )
 mixed <- tt_decide("Missing columns?", c("alpha", NA_character_, "beta"))
 check("missing columns retain separate native and presentation indexes",

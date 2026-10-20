@@ -139,10 +139,10 @@ def test_row_model_file_uses_native_validation_and_local_errors(tmp_path):
     from thinkthen.pydantic import row_model
 
     valid = tmp_path / "questions.json"
-    valid.write_text('{"version":1,"questions":{"open":{"decide":"Open?"}}}')
+    valid.write_text('{"questions":{"open":{"decide":"Open?"}}}')
     assert row_model(valid).model_validate({"open": None}).open is None
-    valid.write_text('{"version":1,"questions":{"open":{"decide":" "}}}')
+    valid.write_text('{"questions":{"open":{"decide":" "}}}')
     with pytest.raises(tt.LocalError):
         row_model(valid)
     with pytest.raises(tt.UsageError):
-        row_model({"version": 1, "questions": {"open": {"decide": " "}}})
+        row_model({"questions": {"open": {"decide": " "}}})

@@ -44,7 +44,7 @@ fn stop_during_overlap(count: usize) -> usize {
     let backend = Backend::start().expect("backend");
     let held = engine_at(&format!("{}/arm/held/v1", backend.origin()), Some(4), 30);
     let ask = Relate::from_json(
-        r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
     )
     .expect("relate file");
     let runs = Runs::default();

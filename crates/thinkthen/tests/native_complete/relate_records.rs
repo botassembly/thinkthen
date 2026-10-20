@@ -10,7 +10,7 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"actual-model","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();
     let path = folder.join("relate.json");
-    std::fs::write(&path, r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]},"model":"saved-model","profile":"calibrated"}"#).unwrap();
+    std::fs::write(&path, r#"{"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]},"model":"saved-model","profile":"calibrated"}"#).unwrap();
     let ask = Relate::load_records(&path).unwrap();
     assert_eq!(Relate::load(&path).unwrap_err().kind(), ErrorKind::Local);
     let original = b"{\"private\":false,\"person\":{\"name\":\"Ada\",\"kind\":\"person\"}}\n{\"private\":null,\"person\":{\"name\":\"Grace\",\"kind\":\"person\"}}\n";

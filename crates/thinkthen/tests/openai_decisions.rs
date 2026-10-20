@@ -174,7 +174,7 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
         CallOptions::new(),
     )
     .unwrap();
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Good?"},"second":{"choose":"Team?","options":["billing","shipping"]}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"first":{"decide":"Good?"},"second":{"choose":"Team?","options":["billing","shipping"]}}}"#).unwrap();
     crate::api::annotate(
         &engine,
         &set,
@@ -250,11 +250,10 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
         )
     };
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
+        r#"{"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
-    let only =
-        QuestionSet::from_json(r#"{"version":1,"questions":{"second":{"decide":"B?"}}}"#).unwrap();
+    let only = QuestionSet::from_json(r#"{"questions":{"second":{"decide":"B?"}}}"#).unwrap();
     let engine = builder(&listener).record(&place).unwrap().build().unwrap();
     let first = annotate(&engine, &set).unwrap();
     let cached = builder(&listener)
@@ -269,7 +268,7 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
     assert_eq!(a.observations(), b.observations());
     assert_eq!(listener.count(), 1);
     let changed = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"Different A?"},"second":{"decide":"B?"}}}"#,
+        r#"{"questions":{"first":{"decide":"Different A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
     let repacked = annotate(&cached, &changed).unwrap();

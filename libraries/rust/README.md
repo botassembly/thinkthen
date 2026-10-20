@@ -51,7 +51,7 @@ The call value contains original input indexes. Its results retain each original
 
 ```rust
 let set = thinkthen::RankSet::from_json(
-    r#"{"version":1,"questions":{"billing":{"decide":"Billing issue?"},"recovery":{"decide":"Recovery steps?"}}}"#,
+    r#"{"questions":{"billing":{"decide":"Billing issue?"},"recovery":{"decide":"Recovery steps?"}}}"#,
 )?;
 let ranked = engine.rank_set(&set, ["First passage", "Second passage"])?;
 for index in ranked.value().iter().take(5) {

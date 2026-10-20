@@ -13,7 +13,7 @@ digests <- function(locale) {
     'cat("decide", d$meta$question_sha256, unlist(d$meta$requests), "\\n")',
     'c <- tt_choose(list(choose = "Which?", options = c(word, "tea")), "a drink")$results[[1]]',
     'cat("choose", c$meta$question_sha256, unlist(c$meta$requests), "\\n")',
-    'e <- tt_relate(list(version = 1, relate = list(relations = list(list(name = word, source = "x", target = "x")))), data.frame(name = c("a1", "b1"), kind = "x"))$results[[1]]$value',
+    'e <- tt_relate(list(relate = list(relations = list(list(name = word, source = "x", target = "x")))), data.frame(name = c("a1", "b1"), kind = "x"))$results[[1]]$value',
     'cat("relate", sapply(lapply(e, `[[`, "relation"), function(x) paste(charToRaw(enc2utf8(x)), collapse = "")), "\\n")'
   ), env = paste0("LC_ALL=", locale))$text
 }

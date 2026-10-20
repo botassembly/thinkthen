@@ -91,7 +91,7 @@ const SAID: [&str; 21] = [
     "a question file holds one question, and this one holds `decide` and `choose`",
     "a question file holds one of `decide`, `choose`, `tag`, or `score`",
     "a question file takes no key `nope`",
-    "a question file takes no key `version`; `version` belongs in a question set, a recognize file, or a relate file",
+    "a question file takes no key `version`; delete the `version` field.",
     "a `choose` question file takes no key `true`",
     "the question file's `threshold`: `choose` takes a single cut and never a band",
     "the question file's `threshold`: a single cut is above zero and at most one",

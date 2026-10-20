@@ -5784,11 +5784,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
 }
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
-}
 @end
 @implementation TTAnnotateQuestionChooseBuilder
 - (id)choose {
@@ -6365,11 +6360,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"wording_version"] = value;
     else [self.requestFields removeObjectForKey:@"wording_version"];
 }
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
-}
 @end
 @implementation TTAuthoredRelationBuilder
 - (NSNumber *)either {
@@ -6895,11 +6885,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setWordingVersion:(NSNumber *)value {
     if (value) self.requestFields[@"wording_version"] = value;
     else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
 }
 @end
 @implementation TTRecognizeQuestionBuilder

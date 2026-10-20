@@ -149,7 +149,7 @@ fn packed_annotate_counts_one_exchange_and_one_usage_object() {
     fs::create_dir_all(&root).expect("root");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"a":{"decide":"First?"},"b":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"a":{"decide":"First?"},"b":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let answer = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}},"usage":{"input_tokens":20,"output_tokens":4}}"#;

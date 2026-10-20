@@ -44,7 +44,7 @@
       "expected": "t"
     },
     "annotate": {
-      "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
+      "sql": "SELECT thinkthen_annotate('{\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
       "expected": "{\"band\": true, \"spam\": true}"
     },
     "details": {

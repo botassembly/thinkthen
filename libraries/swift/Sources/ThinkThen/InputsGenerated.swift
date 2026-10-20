@@ -32,41 +32,37 @@ public struct AnnotateDefinition: ValueRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `questions`: OrderedMap<AnnotateQuestion>
   public let `threshold`: Presence<AuthoredThreshold>
-  public let `version`: Int64
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<DataValue> = .absent,
     `profile`: Presence<AuthoredProfile> = .absent, `questions`: OrderedMap<AnnotateQuestion>,
-    `threshold`: Presence<AuthoredThreshold> = .absent, `version`: Int64 = 1
+    `threshold`: Presence<AuthoredThreshold> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
     self.`profile` = `profile`
     self.`questions` = `questions`
     self.`threshold` = `threshold`
-    self.`version` = `version`
   }
   static func read(_ json: DataValue) throws -> AnnotateDefinition {
     let object = try jsonObject(json)
-    let known: Set<String> = ["batch", "profile", "questions", "threshold", "version"]
+    let known: Set<String> = ["batch", "profile", "questions", "threshold"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       batch: try readPresence(object, "batch", DataValue.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       questions: try OrderedMap<AnnotateQuestion>.read(jsonRequired(object, "questions")),
-      threshold: try readPresence(object, "threshold", AuthoredThreshold.self),
-      version: try Int64.read(jsonRequired(object, "version")))
+      threshold: try readPresence(object, "threshold", AuthoredThreshold.self))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = ["batch", "profile", "questions", "threshold", "version"]
+    let known: Set<String> = ["batch", "profile", "questions", "threshold"]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
     writePresence(`profile`, "profile", &object)
     object["questions"] = `questions`.json
     writePresence(`threshold`, "threshold", &object)
-    object["version"] = `version`.json
     return .object(object)
   }
 }
@@ -1001,7 +997,6 @@ public struct AuthoredRelate: ValueRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `relate`: RelateQuestion
   public let `threshold`: Presence<AuthoredCut>
-  public let `version`: Int64
   public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
@@ -1009,8 +1004,7 @@ public struct AuthoredRelate: ValueRepresentable {
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `profile`: Presence<AuthoredProfile> = .absent, `relate`: RelateQuestion,
-    `threshold`: Presence<AuthoredCut> = .absent, `version`: Int64 = 1,
-    `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -1020,13 +1014,12 @@ public struct AuthoredRelate: ValueRepresentable {
     self.`profile` = `profile`
     self.`relate` = `relate`
     self.`threshold` = `threshold`
-    self.`version` = `version`
     self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> AuthoredRelate {
     let object = try jsonObject(json)
     let known: Set<String> = [
-      "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold", "version",
+      "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold",
       "wording_version",
     ]
     var value = Self(
@@ -1038,7 +1031,6 @@ public struct AuthoredRelate: ValueRepresentable {
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       relate: try RelateQuestion.read(jsonRequired(object, "relate")),
       threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      version: try Int64.read(jsonRequired(object, "version")),
       wordingVersion: try readPresence(object, "wording_version", Int64.self))
     value._sourceJSON = json
     return value
@@ -1046,7 +1038,7 @@ public struct AuthoredRelate: ValueRepresentable {
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
-      "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold", "version",
+      "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold",
       "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1057,7 +1049,6 @@ public struct AuthoredRelate: ValueRepresentable {
     writePresence(`profile`, "profile", &object)
     object["relate"] = `relate`.json
     writePresence(`threshold`, "threshold", &object)
-    object["version"] = `version`.json
     writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
@@ -1721,7 +1712,6 @@ public struct RecognizeDefinition: ValueRepresentable {
   public let `recognize`: RecognizeQuestion
   public let `relationThreshold`: Presence<AuthoredCut>
   public let `threshold`: Presence<AuthoredCut>
-  public let `version`: Int64
   public let `wordingVersion`: Presence<Int64>
   public init(
     extensions: [String: DataValue] = [:],
@@ -1730,8 +1720,7 @@ public struct RecognizeDefinition: ValueRepresentable {
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `profile`: Presence<AuthoredProfile> = .absent,
     `recognize`: RecognizeQuestion, `relationThreshold`: Presence<AuthoredCut> = .absent,
-    `threshold`: Presence<AuthoredCut> = .absent, `version`: Int64 = 1,
-    `wordingVersion`: Presence<Int64> = .absent
+    `threshold`: Presence<AuthoredCut> = .absent, `wordingVersion`: Presence<Int64> = .absent
   ) {
     self.extensions = extensions
     self.`contextSchema` = `contextSchema`
@@ -1743,14 +1732,13 @@ public struct RecognizeDefinition: ValueRepresentable {
     self.`recognize` = `recognize`
     self.`relationThreshold` = `relationThreshold`
     self.`threshold` = `threshold`
-    self.`version` = `version`
     self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> RecognizeDefinition {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
-      "relation_threshold", "threshold", "version", "wording_version",
+      "relation_threshold", "threshold", "wording_version",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -1763,7 +1751,6 @@ public struct RecognizeDefinition: ValueRepresentable {
       recognize: try RecognizeQuestion.read(jsonRequired(object, "recognize")),
       relationThreshold: try readPresence(object, "relation_threshold", AuthoredCut.self),
       threshold: try readPresence(object, "threshold", AuthoredCut.self),
-      version: try Int64.read(jsonRequired(object, "version")),
       wordingVersion: try readPresence(object, "wording_version", Int64.self))
     value._sourceJSON = json
     return value
@@ -1772,7 +1759,7 @@ public struct RecognizeDefinition: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
-      "relation_threshold", "threshold", "version", "wording_version",
+      "relation_threshold", "threshold", "wording_version",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`contextSchema`, "context_schema", &object)
@@ -1784,7 +1771,6 @@ public struct RecognizeDefinition: ValueRepresentable {
     object["recognize"] = `recognize`.json
     writePresence(`relationThreshold`, "relation_threshold", &object)
     writePresence(`threshold`, "threshold", &object)
-    object["version"] = `version`.json
     writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
@@ -2011,49 +1997,49 @@ public indirect enum Definition: ValueRepresentable {
     let object = try jsonObject(json)
     if object["decide"] != nil && object["choose"] == nil && object["find"] == nil
       && object["questions"] == nil && object["recognize"] == nil && object["relate"] == nil
-      && object["score"] == nil && object["tag"] == nil && object["version"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`decide`(try AuthoredDecide.read(json))
     }
     if object["choose"] != nil && object["decide"] == nil && object["find"] == nil
       && object["questions"] == nil && object["recognize"] == nil && object["relate"] == nil
-      && object["score"] == nil && object["tag"] == nil && object["version"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`choose`(try AuthoredChoose.read(json))
     }
     if object["tag"] != nil && object["choose"] == nil && object["decide"] == nil
       && object["find"] == nil && object["questions"] == nil && object["recognize"] == nil
-      && object["relate"] == nil && object["score"] == nil && object["version"] == nil
+      && object["relate"] == nil && object["score"] == nil
     {
       return .`tag`(try AuthoredTag.read(json))
     }
     if object["score"] != nil && object["choose"] == nil && object["decide"] == nil
       && object["find"] == nil && object["questions"] == nil && object["recognize"] == nil
-      && object["relate"] == nil && object["tag"] == nil && object["version"] == nil
+      && object["relate"] == nil && object["tag"] == nil
     {
       return .`score`(try AuthoredScore.read(json))
     }
-    if object["relate"] != nil && object["version"] != nil && object["choose"] == nil
-      && object["decide"] == nil && object["find"] == nil && object["questions"] == nil
-      && object["recognize"] == nil && object["score"] == nil && object["tag"] == nil
+    if object["relate"] != nil && object["choose"] == nil && object["decide"] == nil
+      && object["find"] == nil && object["questions"] == nil && object["recognize"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`relate`(try AuthoredRelate.read(json))
     }
     if object["find"] != nil && object["choose"] == nil && object["decide"] == nil
       && object["questions"] == nil && object["recognize"] == nil && object["relate"] == nil
-      && object["score"] == nil && object["tag"] == nil && object["version"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`find`(try AuthoredFind.read(json))
     }
-    if object["recognize"] != nil && object["version"] != nil && object["choose"] == nil
-      && object["decide"] == nil && object["find"] == nil && object["questions"] == nil
-      && object["relate"] == nil && object["score"] == nil && object["tag"] == nil
+    if object["recognize"] != nil && object["choose"] == nil && object["decide"] == nil
+      && object["find"] == nil && object["questions"] == nil && object["relate"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`recognize`(try RecognizeDefinition.read(json))
     }
-    if object["questions"] != nil && object["version"] != nil && object["choose"] == nil
-      && object["decide"] == nil && object["find"] == nil && object["recognize"] == nil
-      && object["relate"] == nil && object["score"] == nil && object["tag"] == nil
+    if object["questions"] != nil && object["choose"] == nil && object["decide"] == nil
+      && object["find"] == nil && object["recognize"] == nil && object["relate"] == nil
+      && object["score"] == nil && object["tag"] == nil
     {
       return .`questions`(try AnnotateDefinition.read(json))
     }

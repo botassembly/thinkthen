@@ -336,7 +336,7 @@ fn too_large_remedies_fit_each_commands_request_shape() {
     let set = folder.join("questions.json");
     std::fs::write(
         &set,
-        r#"{"version":1,"questions":{"yes":{"decide":"Is this useful?"}}}"#,
+        r#"{"questions":{"yes":{"decide":"Is this useful?"}}}"#,
     )
     .unwrap();
     let set = set.to_str().unwrap();

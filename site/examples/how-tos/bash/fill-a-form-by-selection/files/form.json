@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "questions": {
     "plan": {
       "choose": "Which plan is the sender on?",

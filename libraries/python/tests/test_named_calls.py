@@ -16,9 +16,9 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 ('filter', 'Late?', ['first', 'second'], {}),
                 ('rank', 'Late?', ['first', 'second'], {}),
                 ('find', 'Best?', ['first', 'second'], {}),
-                ('annotate', {'version': 1, 'questions': {'late': {'decide': 'Late?'}}}, ['note'], {}),
-                ('recognize', {'version': 1, 'recognize': {'kinds': {'person': 'A person name.'}}}, 'one name', {}),
-                ('relate', {'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}, [('A', 'person'), ('B', 'person')], {}),
+                ('annotate', {'questions': {'late': {'decide': 'Late?'}}}, ['note'], {}),
+                ('recognize', {'recognize': {'kinds': {'person': 'A person name.'}}}, 'one name', {}),
+                ('relate', {'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}, [('A', 'person'), ('B', 'person')], {}),
             ]
             for verb, question, evidence, options in calls:
                 if verb == 'recognize': done = engine.recognize(evidence, question, **options)
@@ -86,7 +86,7 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
         assert edges[0].relation == 'knows'
         assert pickle.loads(pickle.dumps(related)).value == edges
         failure_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
-        failed = failure_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, ['note'])
+        failed = failure_engine.annotate({'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, ['note'])
         embedded = failed.value[0]['bad']
         assert embedded.failed.kind == 'backend'
         assert embedded.failed.cause == 'missing_answer'

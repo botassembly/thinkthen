@@ -326,7 +326,7 @@ def rank_and_details_share_one_portable_request():
 
 @case
 def annotate_accepts_call_settings_and_refuses_question_only_keys():
-    question_set = '{"version":1,"questions":{"refund":{"decide":"Is it a refund?"}}}'
+    question_set = '{"questions":{"refund":{"decide":"Is it a refund?"}}}'
     with Backend() as backend:
         got = run([
             f"SELECT thinkthen_annotate('{question_set}', 'refund now', '{{\"batch\":\"max\"}}')",
@@ -351,7 +351,7 @@ def recognize_named_settings_and_old_deadline_boundary():
         got = run([
             "SELECT r.text, r.start FROM (SELECT unnest(thinkthen_recognize(settings := '{\"model\":\"jev-1.13.0\"}', kinds := ['person'], input := 'Le café 😀 Maria Chen arrived.')) AS r)",
             "SELECT thinkthen_recognize('Maria Chen arrived.', ['person'], '{\"none\":true}')",
-            "SELECT thinkthen_relations('Maria Chen arrived.', '{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A name of a person.\"}}}', 0)",
+            "SELECT thinkthen_relations('Maria Chen arrived.', '{\"recognize\":{\"kinds\":{\"person\":\"A name of a person.\"}}}', 0)",
         ], backend.base())
         expect(rows(got[0]), [["arrived.", 21]], "named recognize model and code-point start")
         expect(said(got[1]).startswith("thinkthen usage:"), True, "none belongs only to find")
@@ -397,7 +397,7 @@ print(json.dumps({"answers": answers, "before": before, "after": after, "failure
 
 @case
 def staged_replay_answers_with_zero_or_spent_total_and_no_key():
-    rules = ('{"version":1,"recognize":{"kinds":{"person":null},'
+    rules = ('{"recognize":{"kinds":{"person":null},'
              '"relations":[{"name":"near","source":"person","target":"person"}]}}')
     queries = [
         "SELECT thinkthen_recognize('Maria Chen arrived.', ['person'])",

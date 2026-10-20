@@ -19,6 +19,9 @@ use crate::core::question::LabelsError;
 use crate::core::text::{BlankTextError, Description, Meaning, ModelName, QuestionText};
 use crate::core::threshold::{Threshold, ThresholdError};
 
+/// Refusal shared by the three declaration-file forms.
+pub(crate) const VERSION_FIELD_ERROR: &str = "delete the `version` field.";
+
 /// Which question type a file holds or a command asks.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Verb {
@@ -228,10 +231,10 @@ pub(crate) enum QuestionFileError {
     },
 }
 
-/// Where `version` belongs, for a user who copied it from another file.
+/// Explain how to remove a retired format member.
 fn elsewhere(key: &str) -> &'static str {
     if key == "version" {
-        "; `version` belongs in a question set, a recognize file, or a relate file"
+        "; delete the `version` field."
     } else {
         ""
     }

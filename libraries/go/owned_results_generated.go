@@ -3452,7 +3452,6 @@ type RequestDefinitionAnnotateDefinition struct {
 
 func (v RequestDefinitionAnnotateDefinition) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.Batch != nil {
 		raw, err := authoredMarshal(*v.Batch)
 		if err != nil {
@@ -3946,7 +3945,6 @@ type RequestDefinitionRecognizeDefinition struct {
 
 func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.ContextSchema != nil {
 		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
 			return nil, err
@@ -4190,7 +4188,6 @@ type RequestDefinitionAuthoredRelate struct {
 
 func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.ContextSchema != nil {
 		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
 			return nil, err
