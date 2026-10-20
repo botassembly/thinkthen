@@ -40,3 +40,4 @@ Rule 6 of the 0.2.1 ruling says candidates are main revisions and the release su
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-20 next: Fresh fixing review accepted 63cc2ab41 with current-main integration and corrected checkpoint instructions; PM ruled that existing container package and configured C checks plus lint and test satisfy the amendment, named Rust and C smokes run natively on M5, and no linux-check extension is added, while the unchanged checkpoint regression runs in the pending integrated closing gate.
