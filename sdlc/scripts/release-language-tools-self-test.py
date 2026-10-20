@@ -19,6 +19,46 @@ spec.loader.exec_module(tools)
 SHA = "a" * 40
 
 
+def hosted_manifest_pins():
+    """The hosted setup installs the manifest's packages at the command boundary."""
+    from tools import load_manifest
+    manifest = load_manifest()
+    with tempfile.TemporaryDirectory(prefix="thinkthen-hosted-pins-") as temporary:
+        root = Path(temporary).resolve()
+        log = root / "commands"
+        binary = root / "bin"
+        binary.mkdir()
+        sysroot = root / "rustup/toolchains/fixture"
+        sysroot.mkdir(parents=True)
+        programs = {
+            "rustc": 'case $1 in -vV) echo "host: x86_64-pc-windows-msvc" ;; '
+                     '--version) echo "rustc $PIN_RUST (fixture)" ;; '
+                     '--print) echo "$PIN_SYSROOT" ;; *) exit 91 ;; esac',
+            "rustup": 'printf "rustup %s\\n" "$*" >> "$PIN_LOG"',
+            "cargo": 'printf "cargo %s\\n" "$*" >> "$PIN_LOG"',
+            "python3": 'if [ "$1" = -m ] && [ "$2" = pip ]; then '
+                       'printf "pip %s\\n" "$*" >> "$PIN_LOG"; '
+                       'else exec "$PIN_PYTHON" "$@"; fi',
+        }
+        for name, body in programs.items():
+            path = binary / name
+            path.write_text("#!/bin/sh\n" + body + "\n")
+            path.chmod(0o755)
+        env = dict(os.environ, PATH=fixture_path(binary), PIN_LOG=str(log),
+                   PIN_PYTHON=sys.executable, PIN_RUST=manifest['tools']['rust']['version'],
+                   PIN_SYSROOT=str(sysroot), RUSTUP_HOME=str(root / "rustup"))
+        result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "host-setup",
+                                 "x86_64-pc-windows-msvc"], env=env, text=True, capture_output=True)
+        assert result.returncode == 0, result.stderr
+        calls = log.read_text().splitlines()
+        packages = [line for line in calls if line.startswith("pip ")]
+        assert len(packages) == 1, calls
+        for name in ("maturin", "uv"):
+            assert name + "==" + manifest['tools'][name]['version'] in packages[0].split(), packages
+        assert "jsonschema==" + manifest['python_packages']['jsonschema'] in packages[0].split(), packages
+        assert "rustup toolchain install " + manifest['tools']['rust']['version'] in "\n".join(calls), calls
+
+
 def executable(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("#!/bin/sh\nexit 88\n")
@@ -499,4 +539,5 @@ def fetch_retries():
 
 
 if __name__ == "__main__":
+    hosted_manifest_pins()
     main()
