@@ -1,40 +1,28 @@
 //! The one ordered declaration parser, used by every question-file role.
 use super::{
     DeclarationError, InputDeclaration, InputProperty, InputPropertyType, ObjectDeclaration,
-    QuestionMetadata, QuestionName, WordingVersion,
+    QuestionMetadata, QuestionName,
 };
 use crate::core::Json;
 
-pub(crate) const KEYS: [&str; 4] = ["name", "wording_version", "item_schema", "context_schema"];
+pub(crate) const KEYS: [&str; 3] = ["name", "item_schema", "context_schema"];
 
 impl QuestionMetadata {
     pub(crate) fn parse(value: &Json) -> Result<Self, DeclarationError> {
+        if value.member("wording_version").is_some() {
+            return Err(DeclarationError::RetiredWording);
+        }
         let name = value
             .member("name")
             .map(|v| {
                 v.as_str()
-                    .ok_or(DeclarationError)
+                    .ok_or(DeclarationError::Unsupported)
                     .and_then(QuestionName::validated)
-            })
-            .transpose()?;
-        let wording_version = value
-            .member("wording_version")
-            .map(|v| {
-                let Json::Number(number) = v else {
-                    return Err(DeclarationError);
-                };
-                // serde preserves integer versus floating/exponent number categories.
-                number
-                    .as_u64()
-                    .and_then(|n| u32::try_from(n).ok())
-                    .ok_or(DeclarationError)
-                    .and_then(WordingVersion::validated)
             })
             .transpose()?;
         Ok(Self {
             reading: super::AuthoredReading::of(value),
             name,
-            wording_version,
             item_schema: value
                 .member("item_schema")
                 .map(InputDeclaration::parse)
@@ -46,19 +34,19 @@ impl QuestionMetadata {
         })
     }
     pub(crate) fn is_key(key: &str) -> bool {
-        KEYS.contains(&key)
+        key == "wording_version" || KEYS.contains(&key)
     }
 }
 
 fn closed(value: &Json, allowed: &[&str]) -> Result<(), DeclarationError> {
     let Json::Object(members) = value else {
-        return Err(DeclarationError);
+        return Err(DeclarationError::Unsupported);
     };
     if members
         .iter()
         .any(|(key, _)| !allowed.contains(&key.as_str()))
     {
-        return Err(DeclarationError);
+        return Err(DeclarationError::Unsupported);
     }
     Ok(())
 }
@@ -73,7 +61,7 @@ impl InputDeclaration {
             Some("object") => {
                 closed(value, &["type", "properties", "required"])?;
                 let Some(Json::Object(properties)) = value.member("properties") else {
-                    return Err(DeclarationError);
+                    return Err(DeclarationError::Unsupported);
                 };
                 let properties = properties
                     .iter()
@@ -83,13 +71,13 @@ impl InputDeclaration {
                     None => Vec::new(),
                     Some(Json::Array(names)) => names
                         .iter()
-                        .map(|v| v.as_str().map(str::to_owned).ok_or(DeclarationError))
+                        .map(|v| v.as_str().map(str::to_owned).ok_or(DeclarationError::Unsupported))
                         .collect::<Result<Vec<_>, _>>()?,
-                    _ => return Err(DeclarationError),
+                    _ => return Err(DeclarationError::Unsupported),
                 };
                 ObjectDeclaration::validated(properties, required).map(Self::Object)
             }
-            _ => Err(DeclarationError),
+            _ => Err(DeclarationError::Unsupported),
         }
     }
 }
@@ -97,10 +85,10 @@ impl InputDeclaration {
 fn property_type(value: &Json) -> Result<InputPropertyType, DeclarationError> {
     if value.member("type").and_then(Json::as_str) == Some("array") {
         closed(value, &["type", "items"])?;
-        if InputDeclaration::parse(value.member("items").ok_or(DeclarationError)?)?
+        if InputDeclaration::parse(value.member("items").ok_or(DeclarationError::Unsupported)?)?
             != InputDeclaration::String
         {
-            return Err(DeclarationError);
+            return Err(DeclarationError::Unsupported);
         }
         return Ok(InputPropertyType::StringList);
     }
@@ -109,6 +97,6 @@ fn property_type(value: &Json) -> Result<InputPropertyType, DeclarationError> {
         Some("string") => Ok(InputPropertyType::String),
         Some("number") => Ok(InputPropertyType::Number),
         Some("boolean") => Ok(InputPropertyType::Boolean),
-        _ => Err(DeclarationError),
+        _ => Err(DeclarationError::Unsupported),
     }
 }

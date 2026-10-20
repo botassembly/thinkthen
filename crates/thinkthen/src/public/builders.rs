@@ -1,7 +1,7 @@
 //! The question builders: each step checks its value and the last step
 //! closes the question.
 
-use super::{InputDeclaration, QuestionName, WordingVersion};
+use super::{InputDeclaration, QuestionName};
 use std::fmt;
 use std::marker::PhantomData;
 

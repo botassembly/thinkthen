@@ -1,27 +1,24 @@
 //! Immutable author snapshots copied exclusively from native metadata getters.
 use super::Storage;
 use crate::ffi::carriers::{
-    InputDeclarationV1, InputPropertiesV1, InputPropertyV1, OptionalU64V1, QuestionAuthorV1,
+    InputDeclarationV1, InputPropertiesV1, InputPropertyV1, QuestionAuthorV1,
 };
 use crate::ffi::values as abi;
-use thinkthen::{InputDeclaration, InputPropertyType, QuestionName, WordingVersion};
+use thinkthen::{InputDeclaration, InputPropertyType, QuestionName};
 #[derive(Default)]
 pub(crate) struct Author {
     pub(crate) name: Option<QuestionName>,
-    pub(crate) version: Option<WordingVersion>,
     pub(crate) item: Option<InputDeclaration>,
     pub(crate) context: Option<InputDeclaration>,
 }
 impl Author {
     pub(crate) fn of(
         name: Option<&QuestionName>,
-        version: Option<WordingVersion>,
         item: Option<&InputDeclaration>,
         context: Option<&InputDeclaration>,
     ) -> Self {
         Self {
             name: name.cloned(),
-            version,
             item: item.cloned(),
             context: context.cloned(),
         }
@@ -32,7 +29,6 @@ macro_rules! native_author {
         let q = &$q;
         $crate::current::author::Author::of(
             q.name(),
-            q.wording_version(),
             q.item_schema(),
             q.context_schema(),
         )
@@ -87,10 +83,6 @@ impl Storage {
     pub(crate) fn author(&mut self, data: &Author) -> QuestionAuthorV1 {
         QuestionAuthorV1 {
             name: self.optional_string(data.name.as_ref().map(QuestionName::as_str)),
-            wording_version: OptionalU64V1 {
-                present: i32::from(data.version.is_some()),
-                value: data.version.map_or(0, |v| u64::from(v.get())),
-            },
             item_schema: self.declaration(data.item.as_ref()),
             context_schema: self.declaration(data.context.as_ref()),
         }

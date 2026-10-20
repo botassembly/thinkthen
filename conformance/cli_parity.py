@@ -179,8 +179,8 @@ def project_row(result, value, at):
     answer = result.get("answer", {})
     row.update({k: answer[k] for k in ("probability", "probabilities") if k in answer})
     question = result.get("question", {})
-    row.update({k: question[k] for k in ("name", "wording_version") if k in question})
-    row["member_authors"] = [{k: child["question"][k] for k in ("name", "wording_version")
+    row.update({k: question[k] for k in ("name",) if k in question})
+    row["member_authors"] = [{k: child["question"][k] for k in ("name",)
                               if k in child["question"]}
                              for child in result.get("answers", {}).values() if "question" in child]
     row["detail_inputs"] = []
@@ -216,7 +216,6 @@ def project_row(result, value, at):
                          "context_digest": cm.get("context_sha256"),
                          "source_batch_sizes": [s["batch_size"] for s in cm["question_sources"]],
                          "observations": len(cm["observations"]), "sources": len(cm["question_sources"])}
-            projected.update({k: cq[k] for k in ("wording_version",) if k in cq})
             if "source" in child:
                 projected["source"] = child["source"]
             row["members"].append(projected)
@@ -354,7 +353,7 @@ def metadata_steps(value):
 
     def unadorned(question):
         return {k: {n: unadorned(q) for n, q in v.items()} if k == "questions" else v
-                for k, v in question.items() if k not in ("name", "wording_version")}
+                for k, v in question.items() if k not in ("name",)}
 
     baseline = {**value, "question": unadorned(value["question"]),
                 "count_delta": True, "metadata_only": True, "expect": {},
@@ -441,7 +440,7 @@ def run_case(binary, row, value, home):
                     assert detail["question"][key] == wanted, (key, detail)
                 if step["expect"].get("no_inferred_metadata"):
                     wanted = step["expect"]["resolved_metadata"]
-                    assert not (set(detail["question"]) & {"name", "wording_version"}) - set(wanted)
+                    assert not (set(detail["question"]) & {"name"}) - set(wanted)
                 for key, member in (("ordered_properties", "properties"), ("required_properties", "required")):
                     if key in step["expect"]:
                         actual = detail["question"]["item_schema"][member]

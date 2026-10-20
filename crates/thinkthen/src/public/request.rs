@@ -1,4 +1,4 @@
-//! One versioned edge contract for native and serialized requests.
+//! One edge contract for native and serialized requests.
 
 mod admission;
 mod call;
@@ -68,22 +68,11 @@ pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSession
 use std::path::PathBuf;
 pub use transport::RequestDescriptor;
 
-/// The admitted wire version; other versions are refused.
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-pub enum RequestVersion {
-    /// The first canonical request grammar.
-    #[serde(rename = "thinkthen.request/1")]
-    V1,
-}
-
 /// One closed request object. Native construction requires no JSON conversion.
 #[derive(Clone, Deserialize, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Request {
-    /// The explicit wire version.
-    pub schema: RequestVersion,
     /// The requested judging function and its arguments.
     pub call: RequestCall,
 }
@@ -105,10 +94,7 @@ impl Request {
     pub fn new(mut call: RequestCall) -> Self {
         let function = call.function();
         native_controls(call.arguments_mut(), function);
-        Self {
-            schema: RequestVersion::V1,
-            call,
-        }
+        Self { call }
     }
     /// Construct a named call and select the collection kind for its function.
     /// # Errors
@@ -177,6 +163,11 @@ impl Request {
     /// Refuses malformed, unknown, duplicate or null request controls.
     pub fn from_json(text: &str) -> Result<Self, Error> {
         decoding::decode(text, |text| {
+            if crate::core::Json::parse(text).ok().is_some_and(|value| value.member("schema").is_some()) {
+                return Err(Error::usage("delete the `schema` field.").with_diagnostic(
+                    crate::public::error::diagnostic::Diagnostic::RequestDecode(RequestDecodeCause::Malformed),
+                ));
+            }
             definition::validate_wire_definition(text)
                 .and_then(|()| decoding::validate_request_contexts(text))
         })

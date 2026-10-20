@@ -69,7 +69,7 @@ def condition(tag):
                        [f'object[{literal(k)}] == nil' for k in value['excluded']])
 
 
-def outputs(definitions, version, input_definitions=None, abi=None):
+def outputs(definitions, input_definitions=None, abi=None):
     if input_definitions is None or abi is None:
         import importlib.util
         from generate import ROOT, graph, prepare
@@ -86,8 +86,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
               '#import "TTResult.h"', 'NS_ASSUME_NONNULL_BEGIN',
               '' , 'FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);']
     implementation = ['// Generated from the shared Rust result graph; do not edit.',
-                      '#import "TTResults.g.h"', '#import "TTResultPrivate.h"',
-                      'NSString * const TTRequestVersion = ' + literal(version) + ';']
+                      '#import "TTResults.g.h"', '#import "TTResultPrivate.h"']
     typed = {key: shape(source) for key, source in definitions.items()
              if any(k in shape(source) for k in ('properties', 'variants', 'primitive_variants'))}
     header += ['@class ' + ', '.join(name(key) for key in typed) + ';']
@@ -263,7 +262,6 @@ def inputs(definitions):
     implementation = ['@implementation TTQuestion', '@end', '@implementation TTInput', '@end', '@interface TTRequestObject ()', '@property(nonatomic, strong) NSMutableDictionary<NSString *, id> *requestFields;', '@end', '@implementation TTRequestObject',
                       '- (instancetype)init { if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary]; return self; }', '- (instancetype)initWithFields:(NSDictionary *)fields { if ((self = [self init])) [_requestFields addEntriesFromDictionary:fields]; return self; }', '@end']
     for key, values in enums.items():
-        if key == 'RequestVersion': continue
         cls = 'TTInput' + name(key)[2:]
         header += [f'typedef NSString *{cls} NS_TYPED_ENUM;']
         for value in values:
@@ -276,9 +274,8 @@ def inputs(definitions):
         parent = 'TTQuestion' if key.startswith('RequestQuestion') else 'TTInput' if key.startswith('RequestInput') else 'TTRequestObject'
         header += [f'@interface {cls} : {parent}']
         implementation += [f'@implementation {cls}']
-        constants = {'schema': enum_values(definitions['RequestVersion'])[0]} if key == 'Request' else {}
+        constants = {}
         for prop, field in source['properties'].items():
-            if key == 'Request' and prop == 'schema': continue
             if isinstance(field, dict) and 'const' in field:
                 constants[prop] = field['const']; continue
             accessor, quoted = member(prop), literal(prop)

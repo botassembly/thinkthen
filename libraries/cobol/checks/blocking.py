@@ -147,7 +147,7 @@ end program BLOCK_PLAN.
         reader = Reader(bridge, record_type)
         value_json = reader.json_value
         def native_plan(function):
-            request = {'schema': 'thinkthen.request/1', 'call': {'function': function, 'question': {'kind': 'definition', 'value': questions[function]}, 'input': {'kind': 'records', 'items': [{'original': {'kind': 'text', 'text': 'yes'}}]}, 'options': {}}}
+            request = {'call': {'function': function, 'question': {'kind': 'definition', 'value': questions[function]}, 'input': {'kind': 'records', 'items': [{'original': {'kind': 'text', 'text': 'yes'}}]}, 'options': {}}}
             data = json.dumps(request).encode()
             native.thinkthen_request_plan_value.argtypes = [ct.c_void_p, ct.c_char_p, ct.c_size_t, ct.c_void_p]
             native.thinkthen_value_view.argtypes = [ct.c_void_p, ct.c_void_p]

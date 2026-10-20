@@ -276,7 +276,7 @@ def assertions(row, value, got, count):
         assert answer['origin'] in (1, 2, 3) and answer['answered_by'], answer
         if value.get('metadata'):
             for name, field in value['metadata'].items():
-                if name in ('name', 'wording_version'):
+                if name in ('name',):
                     if value['verb'] == 'annotate':
                         assert all(author.get(name) == field for author in answer['member_authors']), answer
                     else:
@@ -314,7 +314,6 @@ def assertions(row, value, got, count):
             members = actual['members']
             assert [m['name'] for m in members] == expect['member_names'], actual
             assert [m['author'] for m in members] == expect['member_authors'], actual
-            assert members[0]['wording_version'] == 4 and 'wording_version' not in members[1], actual
             assert [m['value'] for m in members] == wanted['member_positions'], actual
             assert equivalent([m['probability'] for m in members], wanted['member_probabilities']), actual
             assert len({m['answer_id'] for m in members}) == len(members), actual

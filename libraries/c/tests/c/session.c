@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "check.c"
-static const char feed[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
-static const char direct[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"text\",\"text\":\"Evidence.\"}}}";
+static const char feed[] = "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
+static const char direct[] = "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"text\",\"text\":\"Evidence.\"}}}";
 static thinkthen_complete_utf8_v1 counted(const char *text) {
     thinkthen_complete_utf8_v1 view = {text, strlen(text)};
     return view;
@@ -221,7 +221,7 @@ static int collection_sessions(thinkthen_engine *engine) {
         strcpy(question, i ? "{\"kind\":\"definition\",\"value\":{\"relate\":{\"relations\":[{\"name\":\"follows\",\"source\":\"*\",\"target\":\"*\",\"reads\":\"follows\"}]}}}" : "{\"kind\":\"text\",\"text\":\"Which?\"}");
         strcpy(input, i ? "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"First\",\"kind\":\"alert\"}}},{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"Second\",\"kind\":\"alert\"}}}]}" : "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"First unit.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Second unit.\"}}]}");
         int length = snprintf(request, sizeof request,
-            "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"%s\",\"question\":%s,\"input\":%s,\"options\":{}}}",
+            "{\"call\":{\"function\":\"%s\",\"question\":%s,\"input\":%s,\"options\":{}}}",
             function, question, input);
         check(length > 0 && (size_t)length < sizeof request, "collection request fits buffer");
         int code = thinkthen_session_new(engine, request, (size_t)length, &sessions[i]);
@@ -385,7 +385,7 @@ int main(void) {
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "usage refusal owns session error slot");
     check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "saved failed constructor");
     const char *old_error = thinkthen_error_message(NULL);
-    const char *bad_requests[] = {"", "{}", "{\"schema\":\"thinkthen.request/1\",\"schema\":\"thinkthen.request/1\"}", "{\"unknown\":0}"};
+    const char *bad_requests[] = {"", "{}", "{\"schema\":\"thinkthen.request/1\"}", "{\"unknown\":0}"};
     for (size_t i = 0; i < sizeof bad_requests / sizeof bad_requests[0]; ++i) {
         thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
         check(thinkthen_session_new(engine, bad_requests[i], strlen(bad_requests[i]), &out) == THINKTHEN_EUSAGE, "bad request refuses");

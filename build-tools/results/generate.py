@@ -606,8 +606,6 @@ def main():
         if args.inputs:
             schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
         result = swift.render(prepare(graph(schema, swift.INPUT_ROOTS if args.inputs else swift.ROOTS)), args.inputs)
-        if args.inputs:
-            result += 'public let ownedRequestVersion = ' + json.dumps(schema['$defs']['RequestVersion']['oneOf'][0]['const']) + '\n'
         output = output_path(ROOT, 'swift', 'InputsGenerated.swift' if args.inputs else 'ResultsGenerated.swift')
         if args.bridge:
             path = ROOT / 'sdlc/scripts/check-c-exports.py'
@@ -638,7 +636,6 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import objc
         definitions = prepare(graph(json.loads(args.schema.read_text()), objc.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
         input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
@@ -646,7 +643,7 @@ def main():
         abi_module = importlib.util.module_from_spec(abi_spec)
         abi_spec.loader.exec_module(abi_module)
         abi = abi_module.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
-        for filename, result in objc.outputs(definitions, version, input_definitions, abi).items():
+        for filename, result in objc.outputs(definitions, input_definitions, abi).items():
             output = output_path(ROOT, 'objc', filename)
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
@@ -691,8 +688,6 @@ def main():
             abi = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(abi)
             result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"), prepare(graph(schema, dart.ROOTS)))
-        if args.inputs:
-            result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
         filename = 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart'
         outputs = {filename: result}
         if args.inputs:
@@ -716,7 +711,6 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import cpp
         definitions = prepare(graph(json.loads(args.schema.read_text()), cpp.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         if args.inputs:
             from csharp import enum_values
             schema = json.loads((ROOT / "specification/request.schema.json").read_text())
@@ -730,7 +724,7 @@ def main():
                 'calls_generated.hpp': cpp.named_calls(enum_values(schema['$defs']['RequestFunction']), functions),
             }
         else:
-            outputs = {'results_generated.hpp': cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")}
+            outputs = {'results_generated.hpp': cpp.render(definitions) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")}
         for filename, result in outputs.items():
             output = output_path(ROOT, 'cpp', filename)
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
@@ -770,11 +764,10 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import go
         definitions = prepare(graph(json.loads(args.schema.read_text()), go.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
         request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
         input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
-        result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
+        result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'go', 'owned_results_generated.go')
         result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
@@ -791,12 +784,11 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import typescript
         definitions = prepare(graph(json.loads(args.schema.read_text()), typescript.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         input_roots = getattr(typescript, 'INPUT_ROOTS', ())
         input_definitions = prepare(graph(request_schema, input_roots))
-        runtime = (typescript.runtime(definitions, version, input_definitions) if input_roots
-                   else typescript.runtime(definitions, version))
+        runtime = (typescript.runtime(definitions, input_definitions) if input_roots
+                   else typescript.runtime(definitions))
         declarations = (typescript.declarations(definitions, input_definitions) if input_roots
                         else typescript.declarations(definitions))
         outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): runtime,
@@ -816,8 +808,7 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import ruby
         definitions = prepare(graph(json.loads(args.schema.read_text()), ruby.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
+        outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions),
                    output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions),
                    output_path(ROOT, 'ruby', 'results_generated.rbs'): ruby.rbs(definitions)}
         for output, result in outputs.items():
@@ -866,16 +857,6 @@ def main():
         result = format_source("Results.java", jvm.render(definitions), child_env())
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'jvm', 'Results.java')
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        version_source = ('// Generated from request.schema.json. Do not edit.\npackage thinkthen;\n'
-                          'final class RequestVersion { static final String VALUE = ' + json.dumps(version) + '; private RequestVersion() {} }\n')
-        version_output = output_path(ROOT, 'jvm', 'RequestVersion.java')
-        if args.check and (not version_output.exists() or version_output.read_text() != version_source):
-            print("generated JVM request version differs", file=sys.stderr)
-            return 1
-        if not args.check:
-            version_output.parent.mkdir(parents=True, exist_ok=True)
-            version_output.write_text(version_source)
         if args.check:
             if not args.output.exists() or args.output.read_text() != result:
                 print("generated JVM results differ", file=sys.stderr)

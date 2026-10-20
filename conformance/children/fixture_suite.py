@@ -121,8 +121,8 @@ def project(packet,verb):
         if 'probabilities' in answer:row['probabilities']=answer['probabilities']
         for key in ['file','first_line','last_line']: 
             if key in r:row[key]=r[key]
-        row.update({k:r.get('question',{}).get(k) for k in ['name','wording_version'] if k in r.get('question',{})})
-        row['member_authors']=[{k:a['question'][k] for k in ['name','wording_version'] if k in a['question']} for a in r.get('answers',{}).values()]
+        row.update({k:r.get('question',{}).get(k) for k in ['name'] if k in r.get('question',{})})
+        row['member_authors']=[{k:a['question'][k] for k in ['name'] if k in a['question']} for a in r.get('answers',{}).values()]
         inputs=native_inputs(r,verb) if packet.get('native') else packet['inputs'] if verb in ('find','relate') else [packet['inputs'][row['index']]]
         row['detail_inputs']=[{'input':i['original'],**i.get('location',{})} for i in inputs]
         images=[im for i in inputs for im in i['images']]
@@ -139,7 +139,6 @@ def project(packet,verb):
                     'model':cm['model'],'context_digest':cm.get('context_sha256'),
                     'source_batch_sizes':[s['batch_size'] for s in cm['question_sources']],
                     'observations':len(cm['observations']),'sources':len(cm['question_sources'])}
-                if 'wording_version' in cq:projected['wording_version']=cq['wording_version']
                 if 'source' in child:projected['source']=child['source']
                 row['members'].append(projected)
         out['rows'].append(row)
@@ -171,7 +170,7 @@ def assert_required(packet,row,value,bodies,root):
         assert len(result['answer_id'])==64 and len(packet['facts']['call_id'])==64
         questions=[a['question'] for a in result.get('answers',{}).values() if 'question' in a] or [result['question']]
         for question in questions:
-            if value.get('unadorned'):assert 'name' not in question and 'wording_version' not in question
+            if value.get('unadorned'):assert 'name' not in question
             for key,want in expect.get('resolved_metadata',{}).items():assert question[key]==want,(key,question,want)
             if 'ordered_properties' in expect:assert list(question['item_schema']['properties'])==expect['ordered_properties']
             if 'required_properties' in expect:assert question['item_schema']['required']==expect['required_properties']
@@ -303,7 +302,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             'incremental':True,'batch_probe':True,'count_delta':True})
                     if value.get('metadata'):
                         def bare(question):
-                            return {k:({n:bare(q) for n,q in v.items()} if k=='questions' else v) for k,v in question.items() if k not in ('name','wording_version')}
+                            return {k:({n:bare(q) for n,q in v.items()} if k=='questions' else v) for k,v in question.items() if k not in ('name',)}
                         baseline={**value,'question':bare(value['question']),'unadorned':True,'count_delta':True,'settings':{**value.get('settings',{}),'record':'$FOLDER'},'arm':'arm/full/capture/v1','override_arm':'arm/full/capture/v1','metadata_only':True,'expect':{}}
                         baseline.pop('metadata',None)
                         steps=[*[{**step,'count_delta':True} for step in steps],baseline,{**value,'count_delta':True,'settings':{**value.get('settings',{}),'cache':'$FOLDER'},'arm':'arm/full/capture/v1','override_arm':'arm/full/capture/v1','metadata_only':True,'expect':{'requests_sent':0}}]

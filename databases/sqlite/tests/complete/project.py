@@ -27,7 +27,7 @@ def projected(row,verb,index,events):
         out['image_properties']=[[1 if i['media'] in ('jpeg','image/jpeg') else 2,i['width'],i['height']] for i in images]
         if isinstance(out['input'],dict) and 'images' in out['input']:out['input']=out['input'].get('text')
     if verb=='decide' and isinstance(out['value'],bool):out['value']=row['question'].get('true' if out['value'] else 'false',out['value'])
-    for key in ('name','wording_version'):
+    for key in ('name',):
         if key in row.get('question',{}):out[key]=row['question'][key]
     answer=row.get('answer',{})
     for key in ('probability','probabilities'):
@@ -45,7 +45,6 @@ def projected(row,verb,index,events):
                    'usage':details['usage'],'model':details['model'],'context_digest':details['context_sha256'],
                    'source_batch_sizes':[s['batch_size'] for s in details['question_sources']],
                    'observations':len(details['observations']),'sources':len(details['question_sources'])}
-            if 'wording_version' in result['question']:child['wording_version']=result['question']['wording_version']
             out['members'].append(child)
     if verb=='find':out['index']=row.get('answer',{}).get('selected')
     return out

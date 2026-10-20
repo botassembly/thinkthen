@@ -68,7 +68,7 @@ fn canonical_source_framing_admits_before_opening_and_plans_table_rows() {
     let path = folder.join("records.csv");
     std::fs::write(&path, "body\n\"Alpha.\nBeta.\"\nGamma.\n").unwrap();
     let request = |source: Value| {
-        Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"source","source":source},"options":{"field":["/body"]}}}).to_string()).unwrap().admit()
+        Request::from_json(&json!({"call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"source","source":source},"options":{"field":["/body"]}}}).to_string()).unwrap().admit()
     };
     let source = json!({"paths":[path,path],"framing":"csv"});
     let admitted = request(source).unwrap();

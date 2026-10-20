@@ -213,7 +213,7 @@ def model_for(schema):
         question[field] = detail[field]
     question['inputs'] = {'type': 'array', 'items': {'$ref': '#/$defs/duckdbObservedInput'}}
     question['author'] = {'type': 'object', 'properties': {
-        'name': {'type': 'string'}, 'wording_version': {'type': 'string'}}}
+        'name': {'type': 'string'}}}
     return Composite(definitions)
 
 

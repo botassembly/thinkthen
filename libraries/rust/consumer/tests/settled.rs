@@ -107,7 +107,7 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
         raw.get().to_owned()
     };
     let verb = serde_json::to_string(&case.verb).map_err(failure)?;
-    Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":{verb},"question":{{"kind":"definition","value":{question}}},"input":{input},"options":{options}}}}}"#)).map_err(failure)
+    Request::from_json(&format!(r#"{{"call":{{"function":{verb},"question":{{"kind":"definition","value":{question}}},"input":{input},"options":{options}}}}}"#)).map_err(failure)
 }
 fn terminal(engine: &Engine, request: Request) -> Result<Value, String> {
     let session = engine.request_session(request).map_err(failure)?;
@@ -261,7 +261,7 @@ fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), Str
             .map(|builder| builder.no_cache().max_retries(0))
             .and_then(thinkthen::EngineBuilder::build)
             .map_err(failure)?;
-        let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":question},"input":{"kind":"json","value":null}}}).to_string()).map_err(failure)?;
+        let request = Request::from_json(&json!({"call":{"function":"decide","question":{"kind":"definition","value":question},"input":{"kind":"json","value":null}}}).to_string()).map_err(failure)?;
         let packet = terminal(&engine, request)?;
         assert_eq!(packet["resolution"], terminal_resolution);
         if resolution == "failed" {
@@ -293,7 +293,7 @@ fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> 
         })
         .and_then(thinkthen::EngineBuilder::build)
         .map_err(failure)?;
-    let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Fits?","threshold":"0.1:0.9"}},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"failed row"}},{"original":{"kind":"text","text":"uncertain row"}},{"original":{"kind":"text","text":"resolved row"}}]}}}).to_string()).map_err(failure)?;
+    let request = Request::from_json(&json!({"call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Fits?","threshold":"0.1:0.9"}},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"failed row"}},{"original":{"kind":"text","text":"uncertain row"}},{"original":{"kind":"text","text":"resolved row"}}]}}}).to_string()).map_err(failure)?;
     let expected = json!({"function":"decide","value":[null,null,true],"probability":[null,null,0.9],"pick":[null,null,null],"index":[null,null,null],"resolution":["failed","unresolved","resolved"]});
     let admitted = request.clone().admit().map_err(failure)?;
     let call = engine

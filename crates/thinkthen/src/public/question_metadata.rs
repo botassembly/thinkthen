@@ -1,7 +1,7 @@
 //! Author metadata is carried separately from the behavioral question.
 use super::{
     BandedQuestion, Choice, ChooseQuestion, Error, InputDeclaration, Question, QuestionName,
-    TagQuestion, WordingVersion,
+    TagQuestion,
 };
 use crate::core::declaration::QuestionMetadata;
 
@@ -10,9 +10,6 @@ macro_rules! accessors {
         /// Optional exact author name; never inferred from wording or a path.
         #[must_use]
         pub fn name(&self) -> Option<&QuestionName> { self.$($field)+.name.as_ref() }
-        /// Optional author wording version, with no default.
-        #[must_use]
-        pub const fn wording_version(&self) -> Option<WordingVersion> { self.$($field)+.wording_version }
         /// Optional declaration of the selected typed item.
         #[must_use]
         pub fn item_schema(&self) -> Option<&InputDeclaration> { self.$($field)+.item_schema.as_ref() }
@@ -50,11 +47,6 @@ macro_rules! wrappers {
         #[must_use]
         pub fn name(&self) -> Option<&QuestionName> {
             self.0.name()
-        }
-        /// Optional author wording version.
-        #[must_use]
-        pub fn wording_version(&self) -> Option<WordingVersion> {
-            self.0.wording_version()
         }
         /// Optional typed item declaration.
         #[must_use]
@@ -151,11 +143,6 @@ impl super::LoadedQuestion {
     #[must_use]
     pub fn name(&self) -> Option<&QuestionName> {
         self.declared().name.as_ref()
-    }
-    /// Optional author wording version.
-    #[must_use]
-    pub fn wording_version(&self) -> Option<WordingVersion> {
-        self.declared().wording_version
     }
     /// Optional item declaration.
     #[must_use]

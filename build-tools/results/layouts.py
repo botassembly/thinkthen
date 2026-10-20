@@ -49,6 +49,6 @@ AUTHOR = (
     Layout('InputPropertyV1', (('name', 'StringV1'), ('kind', 'u32')), default=True),
     Layout('InputPropertiesV1', counted('InputPropertiesV1', 'InputPropertyV1').fields, default=True),
     Layout('InputDeclarationV1', (('kind', 'u32'), ('properties', 'InputPropertiesV1'), ('required', 'StringsV1')), default=True),
-    Layout('QuestionAuthorV1', (('name', 'OptionalStringV1'), ('wording_version', 'OptionalU64V1'),
+    Layout('QuestionAuthorV1', (('name', 'OptionalStringV1'),
         ('item_schema', 'InputDeclarationV1'), ('context_schema', 'InputDeclarationV1')), default=True),
 )

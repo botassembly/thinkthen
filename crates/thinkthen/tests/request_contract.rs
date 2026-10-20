@@ -620,7 +620,7 @@ mod api;
 fn request_calls_require_objects_before_native_execution() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let text = r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
+    let text = r#"{"call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
     let error = Request::from_json(text)
         .and_then(Request::admit)
         .and_then(|request| {
@@ -635,4 +635,16 @@ fn request_calls_require_objects_before_native_execution() {
         Some(RequestDecodeCause::Malformed)
     );
     assert_eq!(listener.count(), 0, "a sequence call sends nothing");
+}
+
+#[test]
+fn request_contract_has_no_schema_member() {
+    let request = r#"{"call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
+    assert!(thinkthen::Request::from_json(request).unwrap().admit().is_ok());
+    for value in [r#""thinkthen.request/1""#, "null", "false", "1", "{}"] {
+        let text = request.replacen("{", &format!("{{\"schema\":{value},"), 1);
+        let error = thinkthen::Request::from_json(&text).unwrap_err();
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+        assert_eq!(error.detail().message(), "delete the `schema` field.");
+    }
 }

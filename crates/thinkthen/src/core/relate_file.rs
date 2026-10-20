@@ -110,8 +110,6 @@ pub(crate) enum EntitySetError {
 struct FileShape {
     #[serde(rename = "name")]
     _name: Option<IgnoredAny>,
-    #[serde(rename = "wording_version")]
-    _wording_version: Option<IgnoredAny>,
     #[serde(rename = "item_schema")]
     _item_schema: Option<IgnoredAny>,
     #[serde(rename = "context_schema")]
@@ -172,6 +170,7 @@ impl RelateSpec {
         {
             return Err(RelateConfigError::WrongVerb);
         }
+        let metadata = crate::core::declaration::QuestionMetadata::parse(&value)?;
         let parsed: FileShape = serde_json::from_str(text).map_err(|_| RelateConfigError::Shape)?;
         let fields = parsed
             .relate
@@ -205,7 +204,7 @@ impl RelateSpec {
             .transpose()
             .map_err(|_| RelateConfigError::Shape)?;
         Ok(Self {
-            metadata: crate::core::declaration::QuestionMetadata::parse(&value)?,
+            metadata,
             fields,
             relations,
             threshold,

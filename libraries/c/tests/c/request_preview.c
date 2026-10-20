@@ -8,7 +8,7 @@
 static void check(int holds, const char *what) {
     if (!holds) { fprintf(stderr, "FAIL %s\n", what); exit(1); }
 }
-static const char p1[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"text\",\"text\":\"Refund me please.\"},\"options\":{\"max_requests_total\":0}}}";
+static const char p1[] = "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"text\",\"text\":\"Refund me please.\"},\"options\":{\"max_requests_total\":0}}}";
 
 static void refused(thinkthen_engine *engine, const char *input, int expected) {
     char *sentinel = (char *)(uintptr_t)7;
@@ -190,7 +190,7 @@ static void typed_json_preview(thinkthen_engine *engine) {
     char *typed=NULL, *baseline=NULL; size_t typed_len=0, baseline_len=0;
     check(thinkthen_request_plan_typed_json(engine,text("decide"),&arguments,text("c"),&typed,&typed_len)==THINKTHEN_OK,
           "typed JSON preserves arbitrary values");
-    const char request[]="{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":{\"z\":1.2500e+1,\"a\":-0,\"other\":[null,true,\"kept\"]}},\"options\":{\"max_requests_total\":0}}}";
+    const char request[]="{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":{\"z\":1.2500e+1,\"a\":-0,\"other\":[null,true,\"kept\"]}},\"options\":{\"max_requests_total\":0}}}";
     check(thinkthen_request_plan_json(engine,request,sizeof(request)-1,&baseline,&baseline_len)==THINKTHEN_OK,
           "existing native JSON semantic reference");
     memset(wide,'?',sizeof(wide)-1); memset(negative,'?',sizeof(negative)-1); memset(original,'?',sizeof(original)-1);
@@ -202,13 +202,13 @@ static void typed_json_preview(thinkthen_engine *engine) {
     json_refusal(engine,&arguments,"c",THINKTHEN_EUSAGE);
     bad.kind=THINKTHEN_COMPLETE_JSON_NUMBER_V1; bad.data.number=text("1e400");
     json_refusal(engine,&arguments,"c",THINKTHEN_EUSAGE);
-    const char wide_request[]="{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":1e400}}}";
+    const char wide_request[]="{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":1e400}}}";
     refused(engine,wide_request,THINKTHEN_EUSAGE);
     object.data.object=(thinkthen_complete_json_object_v1){members,3};
     number.data.number=text("1");zero.data.number=text("-0");string.data.string=text("kept");
     members[1].name=text("z");value.value=&object;
     json_refusal(engine,&arguments,"c",THINKTHEN_EUSAGE);
-    const char duplicate_request[]="{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":{\"z\":1,\"z\":-0}}}}";
+    const char duplicate_request[]="{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"asks for a refund\"},\"input\":{\"kind\":\"json\",\"value\":{\"z\":1,\"z\":-0}}}}";
     refused(engine,duplicate_request,THINKTHEN_EUSAGE);
     members[1].name=text("a");value.value=&bad;
     bad.kind=THINKTHEN_COMPLETE_JSON_NUMBER_V1; bad.data.number=text("false");
@@ -271,7 +271,7 @@ static thinkthen_value *full_plan(thinkthen_engine *engine) {
     const unsigned char bad_utf8[]={0xff};
     struct {const char *bytes;size_t len;} bad[]={
         {NULL,0},{NULL,1},{p1,SIZE_MAX},{(const char *)bad_utf8,sizeof(bad_utf8)},
-        {"{}",2},{"{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}",sizeof("{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}")-1}};
+        {"{}",2},{"{\"PRIVATE\":false}",sizeof("{\"PRIVATE\":false}")-1}};
     for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
         check(thinkthen_request_plan_value(engine,bad[i].bytes,bad[i].len,&owner)==THINKTHEN_EUSAGE,"full Plan refuses invalid input");
         check(owner==(thinkthen_value *)(uintptr_t)7,"full Plan refusal preserves output");
@@ -354,9 +354,9 @@ int main(void) {
           "unrepresentable input extent");
     check(thinkthen_request_plan_json(engine, NULL, 0, &out, &len) == THINKTHEN_EUSAGE,
           "empty request");
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"schema\":\"thinkthen.request/1\",\"PRIVATE\":true}", THINKTHEN_EUSAGE);
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}", THINKTHEN_EUSAGE);
-    refused(engine, "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}", THINKTHEN_ELOCAL);
+    refused(engine, "{\"PRIVATE\":true}", THINKTHEN_EUSAGE);
+    refused(engine, "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}", THINKTHEN_EUSAGE);
+    refused(engine, "{\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}", THINKTHEN_ELOCAL);
     /* Counted input deliberately omits the trailing NUL. */
     char *request = malloc(sizeof(p1)-1);
     check(request != NULL, "request storage");

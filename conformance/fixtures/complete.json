@@ -1620,8 +1620,7 @@
           ""
         ],
         "text": "Refund?",
-        "verb": "decide",
-        "wording_version": 7
+        "verb": "decide"
       }
     ],
     "endpoints": [

@@ -47,7 +47,7 @@ static class SessionChecks
     public static void ImmediateDiagnostics(Engine engine)
     {
         try {
-            using var refused = engine.StartSession(new Request { Schema = new RequestVersionThinkthenRequest1(), Call = new RequestCall { Function = new RequestFunctionDecide(), Question = new RequestQuestionText { Text = "" }, Input = new RequestInputText { Text = "unreachable" } } });
+            using var refused = engine.StartSession(new Request { Call = new RequestCall { Function = new RequestFunctionDecide(), Question = new RequestQuestionText { Text = "" }, Input = new RequestInputText { Text = "unreachable" } } });
             throw new Exception("empty question admitted");
         }
         catch (ThinkThen.Failure error) {
@@ -56,7 +56,7 @@ static class SessionChecks
         Console.WriteLine("INSTALLED_CSHARP_IMMEDIATE_DIAGNOSTICS_PASS");
     }
     static RequestQuestionText Question => new() { Text = "Is it?" };
-    static Request Request(RequestInput input) => new() { Schema = new RequestVersionThinkthenRequest1(), Call = new RequestCall { Function = new RequestFunctionDecide(), Question = Question, Input = input, Options = new RequestOptions { Batch = new RequestBatchInteger { Value = 1 } } } };
+    static Request Request(RequestInput input) => new() { Call = new RequestCall { Function = new RequestFunctionDecide(), Question = Question, Input = input, Options = new RequestOptions { Batch = new RequestBatchInteger { Value = 1 } } } };
     static RequestSessionDescriptor Item(string text) => new() { Item = new RequestItem { Original = new RequestOriginalText { Text = text } } };
     static async Task Arrived(string name)
     {
@@ -70,7 +70,7 @@ static class SessionChecks
     }
     static Plan AuthoredPlan(Engine engine, RequestQuestionDefinition question, string original)
     {
-        return engine.Plan(new Request { Schema = new RequestVersionThinkthenRequest1(), Call = new RequestCall { Function = new RequestFunctionDecide(), Question = question, Input = new RequestInputText { Text = "owned" } } });
+        return engine.Plan(new Request { Call = new RequestCall { Function = new RequestFunctionDecide(), Question = question, Input = new RequestInputText { Text = "owned" } } });
     }
     sealed class ManagedThreads : System.Diagnostics.Tracing.EventListener {
         private int starts;
@@ -157,7 +157,7 @@ static class SessionChecks
         if (!choices.Select(entry => entry.Key).SequenceEqual(new[] { "first", "second" })) throw new Exception("native authored order");
         try { ((IList<KeyValuePair<string,AuthoredDescription>>)choices).Clear(); throw new Exception("parsed authored map changed"); }
         catch (NotSupportedException) { }
-        var authoredPlan = engine.Plan(new Request { Schema = new RequestVersionThinkthenRequest1(), Call = new RequestCall { Function = new RequestFunctionChoose(), Question = authored, Input = new RequestInputText { Text = "owned" } } });
+        var authoredPlan = engine.Plan(new Request { Call = new RequestCall { Function = new RequestFunctionChoose(), Question = authored, Input = new RequestInputText { Text = "owned" } } });
         if (authoredPlan.Requests != 1 || authoredPlan.FirstBodyUtf8.State != PresenceState.Value || !authoredPlan.FirstBodyUtf8.Value.Contains("First.")) throw new Exception("owned authored definition");
         foreach (var (batch, schema) in new[] { ("max", "string"), (@"\u006dax", "string"), ("max", @"\u0073tring"), (@"\u006dax", @"\u0073tring") })
         {

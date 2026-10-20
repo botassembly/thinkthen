@@ -3,7 +3,6 @@
   "true": "The writer asks for money back.",
   "false": "The writer asks for something else.",
   "name": "refund",
-  "wording_version": 1,
   "item_schema": {"type": "string"},
   "context_schema": {"type": "string"}
 }

@@ -215,7 +215,7 @@ Native `RecognizeQuestionFile::from_json` and `load` retain the ordinary saved r
 
 ## Author names and input declarations
 
-The optional `name`, `wording_version`, `item_schema` and `context_schema` fields follow [0456](../sdlc/tickets/0456-named-questions-and-input-declarations.md). Names match `[a-z][a-z0-9_-]{0,63}`; wording versions are integer spellings from 1 through 2147483647. Absence stays absent. These fields do not enter question/set digests, wire state, cache keys, observation IDs or answer reading identity. A cached result describes this caller's resolved metadata and keeps the actual original observation.
+The optional `name`, `item_schema` and `context_schema` fields follow [0456](../sdlc/tickets/0456-named-questions-and-input-declarations.md). Names match `[a-z][a-z0-9_-]{0,63}`. Absence stays absent. These fields do not enter question/set digests, wire state, cache keys, observation IDs or answer reading identity. A cached result describes this caller's resolved metadata and keeps the actual original observation.
 
 Declarations admit only a root string or a root object with ordered literal properties of string, finite number, boolean or string-list type, plus distinct required property names. Unknown features refuse. Null is a value that fails a declared property; false is a boolean. Extra input properties stay present. Selection precedes validation; validation neither projects nor coerces values. Per-item context declarations apply only to explicitly supplied per-item context; shared context is separate plain text. The item refusal is `the item does not match item_schema`; declaration faults use `the question declaration uses an unsupported feature` without authored keys or values.
 

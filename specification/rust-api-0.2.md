@@ -4,6 +4,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 ## Authority
 
+[0719](../sdlc/tickets/0719-request-contract-carries-no-version.md) retires the request schema field, its version type and every author wording-version constructor and reading accessor. Native requests and declarations retain all other admission rules and behavior.
+
 [0689](../sdlc/tickets/0689-settled-call-value-tree.md) adds `Call<RequestValue>::value_tree` and `RequestValueTree` beside the named call owner. The tree exposes the native host call fields `value`, `probability`, `pick`, `index`, `resolution`, `results` and `facts`. Its bare value and metadata derive only from the retained `SettledAnswer`; `results` retains the complete `RequestValue`, and `facts` retains native call facts. Adapters map variants without selecting fields by function. Maps, lists, strings, exact JSON number tokens, booleans and null use existing native serialization. Missing optional answer fields and failed named annotation members carry `Absent`; authored null remains `Null`. Caller objects are opaque and their keys never control absence or resolution. A number token is a string so adapters never narrow an integer or decimal through floating point conversion. The tree adds no duplicate answer alias and changes no existing Call or wire serialization. The tree has no wire schema or serializer; host adapters map its variants directly. Debug withholds caller content. Missing settlement or native serialization failure returns a safe Local error. These reviewed API details fall within the approved outcome; Ian can overturn them.
 
 - [0550](../sdlc/tickets/0550-binding-defects-from-adversarial-review.md) adds `RequestReaderFailure::Producer`, `RequestDecodeCause` and `Error::request_decode_cause` for typed producer and admission failures. Its usage-counter change retires `Engine::finish_usage` and retains `finish_usage_status`.
@@ -103,16 +105,12 @@ fn AnnotatedRecord::input(&self) -> &T
 fn AnnotatedRecord::into_input(self) -> T
 fn AnnotatedRecord::value_json(&self) -> String
 fn AnnotatedRecord::values(&self) -> &[NamedAnnotation]
-fn BandedQuestion::with_wording_version(self, WordingVersion) -> Result<BandedQuestion, Error>
 fn Call::complete(&self) -> Option<CompleteCall<'_, T>>
-fn ChooseBuilder::with_wording_version(self, WordingVersion) -> Result<ChooseBuilder<C>, Error>
-fn ChooseQuestion::with_wording_version(self, WordingVersion) -> Result<ChooseQuestion<C>, Error>
 fn CompleteChoice::legacy_details(&self) -> Result<Details, Error>
 fn CompleteDecision::legacy_details(&self) -> Result<Details, Error>
 fn CompleteRecord::legacy_details(&self) -> Result<Details, Error>
 fn CompleteScore::legacy_details(&self) -> Result<Details, Error>
 fn CompleteTags::legacy_details(&self) -> Result<Details, Error>
-fn DecideBuilder::with_wording_version(self, WordingVersion) -> Result<DecideBuilder, Error>
 fn DoorReply::new(String, Facts, Option<Vec<AttemptObservation>>) -> Result<DoorReply, Error>
 fn Engine::annotate<'a, I>(&'a self, &'a QuestionSet, I) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence
 fn Engine::annotate_complete_with<I, T>(&self, &QuestionSet, I, CallOptions<'_>) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error> where I: IntoIterator<Item = T>, T: InputEvidence
@@ -218,24 +216,16 @@ fn Engine::try_relate_records_complete_with<I, T>(&self, &Relate, I, CallOptions
 fn Engine::try_score_input_many_with<'a, I, R: InputEvidence + 'a>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, Row<R, f64>> where I: IntoIterator<Item = Result<R, Error>> + 'a
 fn Engine::try_score_records_complete_with<'a, I, T>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteScore>> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
 fn Engine::try_tag_records_complete_with<'a, Q, I, T>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, CompleteRecord<T, CompleteTags>> where Q: DetailQuestion + ?Sized, I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
-fn LabelBuilder::with_wording_version(self, WordingVersion) -> Result<LabelBuilder, Error>
-fn Question::with_wording_version(self, WordingVersion) -> Result<Question, Error>
 fn Ranked::index(&self) -> usize
 fn Ranked::input(&self) -> &T
 fn Ranked::into_input(self) -> T
 fn Ranked::probability(&self) -> f64
 fn Ranked::row(&self) -> RankedRow<'_>
-fn Recognize::with_wording_version(self, WordingVersion) -> Result<Recognize, Error>
-fn RecordChooseQuestion::with_wording_version(self, WordingVersion) -> Result<RecordChooseQuestion, Error>
-fn Relate::with_wording_version(self, WordingVersion) -> Result<Relate, Error>
-fn ScoreBuilder::with_wording_version(self, WordingVersion) -> Result<ScoreBuilder, Error>
 fn SetRanked::index(&self) -> usize
 fn SetRanked::input(&self) -> &T
 fn SetRanked::into_input(self) -> T
 fn SetRanked::probability(&self) -> f64
 fn SetRanked::question_name(&self) -> &str
-fn TagBuilder::with_wording_version(self, WordingVersion) -> Result<TagBuilder<C>, Error>
-fn TagQuestion::with_wording_version(self, WordingVersion) -> Result<TagQuestion<C>, Error>
 fn Tally::run<T>(&self, impl FnOnce() -> Result<Call<T>, Error>) -> Result<Call<T>, Error>
 impl Serialize for CompleteCall
 impl Serialize for DoorReply
@@ -247,6 +237,44 @@ struct DoorReply
 struct Ranked<T>
 struct RankedRow<'a>
 struct SetRanked<T>
+Request::schema: RequestVersion
+RequestVersion::V1
+const fn ChooseBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn DecideBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn LabelBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn Question::wording_version(&self) -> Option<WordingVersion>
+const fn Recognize::wording_version(&self) -> Option<WordingVersion>
+const fn RecordChooseQuestion::wording_version(&self) -> Option<WordingVersion>
+const fn Relate::wording_version(&self) -> Option<WordingVersion>
+const fn ScoreBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn TagBuilder::wording_version(&self) -> Option<WordingVersion>
+const fn WordingVersion::get(self) -> u32
+enum RequestVersion
+fn BandedQuestion::with_wording_version(self, WordingVersion) -> Result<BandedQuestion, Error>
+fn BandedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn ChooseBuilder::with_wording_version(self, WordingVersion) -> Result<ChooseBuilder<C>, Error>
+fn ChooseQuestion::with_wording_version(self, WordingVersion) -> Result<ChooseQuestion<C>, Error>
+fn ChooseQuestion::wording_version(&self) -> Option<WordingVersion>
+fn DecideBuilder::with_wording_version(self, WordingVersion) -> Result<DecideBuilder, Error>
+fn FindReading::wording_version(&self) -> Option<WordingVersion>
+fn LabelBuilder::with_wording_version(self, WordingVersion) -> Result<LabelBuilder, Error>
+fn LoadedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn Question::with_wording_version(self, WordingVersion) -> Result<Question, Error>
+fn RecognitionReading::wording_version(&self) -> Option<WordingVersion>
+fn Recognize::with_wording_version(self, WordingVersion) -> Result<Recognize, Error>
+fn RecordChooseQuestion::with_wording_version(self, WordingVersion) -> Result<RecordChooseQuestion, Error>
+fn Relate::with_wording_version(self, WordingVersion) -> Result<Relate, Error>
+fn RelationReading::wording_version(&self) -> Option<WordingVersion>
+fn ResolvedQuestion::wording_version(&self) -> Option<WordingVersion>
+fn ScoreBuilder::with_wording_version(self, WordingVersion) -> Result<ScoreBuilder, Error>
+fn TagBuilder::with_wording_version(self, WordingVersion) -> Result<TagBuilder<C>, Error>
+fn TagQuestion::with_wording_version(self, WordingVersion) -> Result<TagQuestion<C>, Error>
+fn TagQuestion::wording_version(&self) -> Option<WordingVersion>
+fn WordingVersion::new(u32) -> Result<WordingVersion, Error>
+impl Deserialize<'de> for RequestVersion
+impl Serialize for RequestVersion
+impl Serialize for WordingVersion
+struct WordingVersion
 ```
 
 ### Added public declarations

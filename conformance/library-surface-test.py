@@ -637,7 +637,6 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             (root / 'build-tools').symlink_to(ROOT / 'build-tools', target_is_directory=True)
             write('libraries/c/include/thinkthen.h', '')
             definitions = {
-                'RequestVersion': {'oneOf': [{'const': 'fixture'}]},
                 'RequestFunction': {'oneOf': [{'const': 'decide'}]},
                 'RequestCall': {'type': 'object', 'properties': {'function': {'$ref': '#/$defs/RequestFunction'}, 'options': {'$ref': '#/$defs/RequestOptions'}}},
                 'RequestOptions': {'type': 'object', 'properties': {'context': {'type': 'string'}}},

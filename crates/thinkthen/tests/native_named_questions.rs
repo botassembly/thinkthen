@@ -50,7 +50,7 @@ fn named_native_loaders_preserve_path_collisions_and_confine_symlinks_without_co
     let root = Folder::new().unwrap();
     fs::create_dir_all(config(root.path()).join("questions")).unwrap();
     fs::create_dir(root.path().join("directory")).unwrap();
-    let authored = r#"{"name":"refund","decide":"Refund?","wording_version":2}"#;
+    let authored = r#"{"name":"refund","decide":"Refund?"}"#;
     fs::write(config(root.path()).join("questions/refund.json"), authored).unwrap();
     fs::write(
         config(root.path()).join("questions/directory.json"),
@@ -173,9 +173,9 @@ fn check_named(root: &Path) {
 #[cfg(test)]
 fn check_roles(root: &Path) {
     for (name, body) in [
-        ("finder", r#"{"find":"Which?","wording_version":2}"#),
+        ("finder", r#"{"find":"Which?"}"#),
         ("recognizer", r#"{"recognize":{}}"#),
-        ("ranker", r#"{"decide":"Ready?","wording_version":2}"#),
+        ("ranker", r#"{"decide":"Ready?"}"#),
         (
             "connections",
             r#"{"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#,

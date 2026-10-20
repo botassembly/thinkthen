@@ -40,13 +40,10 @@ fn committed_request_schema_is_derived_from_deserialization_types() {
 }
 #[test]
 fn canonical_objects_refuse_duplicate_unknown_and_null_controls() {
-    let valid = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Does it fit?"},"input":{"kind":"text","text":"yes"}}}"#;
+    let valid = r#"{"call":{"function":"decide","question":{"kind":"text","text":"Does it fit?"},"input":{"kind":"text","text":"yes"}}}"#;
     assert!(Request::from_json(valid).unwrap().admit().is_ok());
     for text in [
-        valid.replace(
-            "\"schema\":\"thinkthen.request/1\"",
-            "\"schema\":\"thinkthen.request/2\"",
-        ),
+        valid.replacen("{", "{\"schema\":null,", 1),
         valid.replace(
             "\"function\":\"decide\"",
             "\"function\":\"decide\",\"function\":\"decide\"",
@@ -69,7 +66,7 @@ fn canonical_objects_refuse_duplicate_unknown_and_null_controls() {
 fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
     use std::io::Write as _;
     use std::process::Stdio;
-    let valid = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
+    let valid = r#"{"call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
     let definition = |value: serde_json::Value| {
         valid.replace(
             r#"{"kind":"text","text":"Fits?"}"#,
@@ -81,7 +78,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         .collect();
     let texts = [
         valid.to_owned(),
-        r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#.to_owned(),
+        r#"{"call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#.to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
         definition(serde_json::json!({"choose":"Which?"})),
         definition(serde_json::json!({"choose":"Which?","options":["a","b"]})),
@@ -113,7 +110,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
             serde_json::json!({"questions":{"fits":{"decide":"Fits?","model":"fixed"}}}),
         ),
         valid.replace("\"input\":", "\"options\":{\"context\":\"\"},\"input\":"),
-        valid.replace("thinkthen.request/1", "thinkthen.request/2"),
+        valid.replacen("{", "{\"schema\":null,", 1),
         valid.replace("\"input\":", "\"options\":{\"context\":null},\"input\":"),
         valid.replace("\"input\":", "\"options\":{\"examples\":null},\"input\":"),
         valid.replace("\"input\":", "\"options\":{\"unexpected\":true},\"input\":"),
@@ -151,7 +148,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
 
 #[test]
 fn stage_context_is_closed_strict_and_recognition_only() {
-    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"stage_context":CONTROL}}}"#;
+    let request = r#"{"call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"stage_context":CONTROL}}}"#;
     for control in [
         r#"{"boundary":"","kind_edge":"two\nlines","relation":"r"}"#,
         "{}",
@@ -197,7 +194,7 @@ fn stage_context_is_closed_strict_and_recognition_only() {
 
 #[test]
 fn recognition_mode_resolves_before_source_reads_and_refuses_skipped_controls() {
-    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":DECL}},"input":{"kind":"source","source":{"paths":["missing-evidence"]}},"options":OPTIONS}}"#;
+    let request = r#"{"call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":DECL}},"input":{"kind":"source","source":{"paths":["missing-evidence"]}},"options":OPTIONS}}"#;
     for mode in ["whole", "boundary_only"] {
         let text = request
             .replace("DECL", "{}")
@@ -274,7 +271,7 @@ fn recognition_authored_controls_survive_native_wire_round_trips_without_adding_
 
 #[test]
 fn recognition_mode_and_cuts_have_closed_safe_admission() {
-    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":CONTROL}}"#;
+    let request = r#"{"call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":CONTROL}}"#;
     for controls in [
         r#"{"mode":null}"#,
         r#"{"mode":"secret-invalid"}"#,
@@ -305,7 +302,7 @@ fn recognition_mode_and_cuts_have_closed_safe_admission() {
 
 #[test]
 fn snippet_width_is_unsigned_strict_and_recognition_only() {
-    let request = r#"{"schema":"thinkthen.request/1","call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":WIDTH}}}"#;
+    let request = r#"{"call":{"function":"recognize","question":{"kind":"definition","value":{"recognize":{}}},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":WIDTH}}}"#;
     for width in ["0", "6", "4294967295"] {
         Request::from_json(&request.replace("WIDTH", width))
             .unwrap()
@@ -331,7 +328,7 @@ fn snippet_width_is_unsigned_strict_and_recognition_only() {
         .build()
         .unwrap();
     assert_eq!(default, six);
-    let decide = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":0}}}"#;
+    let decide = r#"{"call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Ada"},"options":{"snippet_pieces":0}}}"#;
     assert!(Request::from_json(decide).unwrap().admit().is_err());
 }
 
@@ -422,12 +419,12 @@ fn typed_decode_causes_preserve_native_admission_messages() {
             "invalid canonical request",
         ),
         (
-            r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Is it?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"never"},"context":42}]}}}"#,
+            r#"{"call":{"function":"decide","question":{"kind":"text","text":"Is it?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"never"},"context":42}]}}}"#,
             RequestDecodeCause::PerItemContext,
             "the per-item context does not match context_schema",
         ),
         (
-            r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Is it?","item_schema":{"type":"array"}}},"input":{"kind":"text","text":"never"}}}"#,
+            r#"{"call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Is it?","item_schema":{"type":"array"}}},"input":{"kind":"text","text":"never"}}}"#,
             RequestDecodeCause::UnsupportedDeclaration,
             "the question declaration uses an unsupported feature",
         ),

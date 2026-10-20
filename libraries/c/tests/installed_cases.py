@@ -57,7 +57,7 @@ def run(native, scratch, *, header=None, library=None):
         source['call'] = {key: source[key] for key in ('question', 'input', 'options')}
         source['call']['function'] = source['verb']
         path = home / 'session-request.json'
-        path.write_text(json.dumps({'schema': 'thinkthen.request/1', 'call': source['call']}))
+        path.write_text(json.dumps({'call': source['call']}))
         args = [str(binary), str(path), json.dumps(settings), 'cancel' if source['cancel'] else '-', 'held' if source['held_cancel'] else '-'] + feed
         if not source['held_cancel']:
             return checked(subprocess.run(args, env=env, cwd=home, capture_output=True, text=True, timeout=120))
@@ -104,7 +104,7 @@ def smoke(native, scratch):
                     '-L', str(native / 'lib'), '-lthinkthen',
                     '-Wl,-rpath,' + str(native / 'lib'), '-o', str(binary)],
                    env=child_env(home=scratch / 'home'), check=True)
-    request = {'schema': 'thinkthen.request/1', 'call': {'function': 'decide',
+    request = {'call': {'function': 'decide',
                'question': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_QUESTION']},
                'input': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_TEXT']}}}
     path = scratch / 'request.json'

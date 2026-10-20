@@ -220,7 +220,7 @@ public final class SessionCases {
     }
     public static Request request(Map<String,Object> data,RequestQuestion question,RequestInput input,RequestOptions options) {
         var call=new LinkedHashMap<String,Object>();call.put("function",data.get("verb"));call.put("question",Values.json(question));call.put("input",Values.json(input));call.put("options",options.json());
-        return Request.fromJson(Map.of("schema",RequestVersion.VALUE,"call",call));
+        return Request.fromJson(Map.of("call",call));
     }
     public static boolean manual(Map<String,Object> data) { return yes(data,"incremental") || yes(data,"held_cancel") || text(map(data.get("operation")),"injection").equals("cancel_token"); }
     public static RequestInput sessionInput(Map<String,Object> data,RequestInput input) {return yes(data,"incremental")?new RequestInputFeed().name("input"):input;}

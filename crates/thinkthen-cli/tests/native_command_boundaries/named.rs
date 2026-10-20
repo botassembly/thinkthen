@@ -41,7 +41,7 @@ fn child_environment(command: &mut Command, root: &Path) {
 fn cli_named_selected_input_is_admitted_before_lookup_or_send_with_safe_fixed_errors() {
     let root = Folder::new().unwrap();
     fs::create_dir_all(config(root.path()).join("questions")).unwrap();
-    fs::write(config(root.path()).join("questions/refund.json"), r#"{"name":"refund","wording_version":2,"decide":"Refund?","on":"/message","item_schema":{"type":"object","properties":{"body":{"type":"string"},"ready":{"type":"boolean"}},"required":["body"]}}"#).unwrap();
+    fs::write(config(root.path()).join("questions/refund.json"), r#"{"name":"refund","decide":"Refund?","on":"/message","item_schema":{"type":"object","properties":{"body":{"type":"string"},"ready":{"type":"boolean"}},"required":["body"]}}"#).unwrap();
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
     })
