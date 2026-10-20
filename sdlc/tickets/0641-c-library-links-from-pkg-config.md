@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0619
 
+Reviews: revision f8a4d0d, accept
+
 ## Outcome
 
 - Changes: `libraries/c/tests/door/main.rs`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
