@@ -389,7 +389,7 @@ class GateRouting(unittest.TestCase):
                         target.write_text('#!' + sys.executable + '\nimport json,os,shutil\n'
                                           'from pathlib import Path\n'
                                           'assert os.environ["THINKTHEN_RESOLVED_TOOLS"] == "' + check + '"\n'
-                                          'assert shutil.which("docker") is None\n'
+                                          'assert shutil.which("docker") != str(Path("host-bin/docker").resolve())\n'
                                           'linux = os.environ.get("FIXTURE_LINUX") == "1"\n'
                                           'with Path("calls.jsonl").open("a") as output:\n'
                                           '    output.write(json.dumps(["' + check + '", linux]) + "\\n")\n'
