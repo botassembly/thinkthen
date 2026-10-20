@@ -33,3 +33,7 @@ Reviews: revision a8f08b2, accept
 - `sdlc/scripts/release-pack` `part_command`, for a `*-linux-musl` target, checks `CC_<target>`, then `<arch>-linux-musl-gcc`, then `musl-gcc` for x86_64 only. When none is present it exports `CC_<target>=clang` and adds `-DSQLITE_DISABLE_LFS` to `CFLAGS_<target>`, because clang then compiles the bundled SQLite against glibc's headers, which name `open64` and `stat64`; musl 1.2.4 and later no longer export them. The shipped command's build therefore depends on which compiler the machine happens to have.
 - 0619's image definition `sdlc/linux/Dockerfile` (on its branch) installs Ubuntu's `musl-tools`, which provides `musl-gcc` for the image's own architecture. `release-pack` does not accept `musl-gcc` for aarch64 today.
 - The hosted `.github/workflows/gate.yml` also installs `musl-tools`; 0620 owns the hosted workflow steps.
+
+## Progress
+
+- 2026-10-20 started
