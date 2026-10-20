@@ -22,8 +22,8 @@ args = parser.parse_args()
 if 'prepare' in args.checks and args.checks != ['prepare']:
     parser.error('prepare runs separately from checks')
 job = os.environ.get('PM_JOB', '').split()
-job_ticket = job[0] if job else os.environ.get('PM_TICKET')
-ticket = job_ticket or '0619'
+job_ticket = job[0] if job else None
+ticket = job_ticket or os.environ.get('PM_TICKET', '0619')
 if len(ticket) != 4 or not ticket.isdigit():
     parser.error('container label requires a four-digit ticket')
 policy = runpy.run_path(str(ROOT / 'sdlc/scripts/dependency-check.py'))
