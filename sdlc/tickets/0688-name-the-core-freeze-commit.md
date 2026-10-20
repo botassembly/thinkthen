@@ -18,7 +18,9 @@ Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 06
 
 ### Proof
 
-- The decision record names the commit, and that commit passes the configured landing gate and native Rust/C smoke and package on the M5 (`pm job run --machine m5 0688 SHA --memory 16 -- sdlc/scripts/job sdlc/scripts/package` and the existing `smoke libraries/rust libraries/c` selection), each through pm job with one log.
+- The decision record names the commit, and that commit passes the configured landing gate and native Rust/C smoke and package on the M5, each through pm job with one log.
+- Exact native smoke command: `pm job run --machine m5 0688 SHA --disk 20 --memory 16 -- sdlc/scripts/job python3 sdlc/scripts/tools.py rust,c -- sh sdlc/scripts/smoke libraries/rust libraries/c`.
+- Exact native package command: `pm job run --machine m5 0688 SHA --disk 20 --memory 16 -- sdlc/scripts/job python3 sdlc/scripts/tools.py rust -- sh sdlc/scripts/package`.
 - The full 0691 checkpoint run on both containers continues alongside language work and gates 0687, per [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md).
 - `pm next --milestone 0.2.1` shows no phase 3 ticket started before this ticket closed.
 
