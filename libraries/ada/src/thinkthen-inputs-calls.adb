@@ -1875,7 +1875,7 @@ procedure Configure (Client : in out Engine; Settings : Engine_Settings; Error :
 use Thinkthen.Session_C;
 use Interfaces.C;
 Storage : Thinkthen.Requests.Native.Arena;
-type Settings_Access is access constant thinkthen_request_engine_settings_v1;
+type Settings_Access is access constant thinkthen_request_engine_settings;
 function Pointer is new Ada.Unchecked_Conversion (System.Address, Settings_Access);
 Tree : constant Settings_Access := Pointer (Thinkthen.Requests.Native.Convert (Native.Unwrap (Settings), Storage));
 Replacement : constant Engine_Access := Engine_Access (thinkthen_engine_new_typed (Tree));

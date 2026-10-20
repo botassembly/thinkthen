@@ -6,18 +6,18 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
 use thinkthen::ErrorKind;
-/// Borrow the immutable last engine/thread failure, or constructor failure for NULL.
+/// Borrow the immutable last engine/thread failure; NULL engine returns NULL.
 /// NULL means that slot holds no failure. Getters and successful engine calls preserve
 /// the view, including code, safe message, retryability and typed optional facts.
 /// Root and every nested value remain stable until this thread next fails on this
-/// engine, engine_free or thread exit. A NULL-engine view ends at the next constructor.
+/// engine, engine_free or thread exit. Construction errors have their own owner.
 /// Other threads cannot replace or move this thread slot.
 /// # Safety
 /// engine is NULL or live for the call and every borrowed engine view.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_view(
     engine: *const crate::EngineHandle,
-) -> *const crate::session::views::thinkthen_error_view_v1 {
+) -> *const crate::session::views::thinkthen_error_details {
     // SAFETY: the caller retains its nullable engine owner.
     let held = unsafe { super::held(engine) };
     super::guard(held, std::ptr::null(), || failures::view(held))
@@ -31,7 +31,7 @@ pub unsafe extern "C" fn thinkthen_error_view(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_view(
     owner: *const crate::session::views::ValueHandle,
-    out: *mut *const crate::session::views::thinkthen_complete_json_v1,
+    out: *mut *const crate::session::views::thinkthen_complete_json,
 ) -> std::ffi::c_int {
     failures::session_call(|| {
         if out.is_null() {
@@ -81,7 +81,7 @@ pub unsafe extern "C" fn thinkthen_value_parse(
 /// Sends nothing and reads no key or cache. Unknown fields and unsupported previews refuse.
 /// Success transfers an immutable independent owner; free once with value_free.
 /// Source bytes and engine may be freed on return. Failures preserve out and occupy
-/// only the calling thread immediate session diagnostic, independently of engine/constructor slots.
+/// only the calling thread immediate session diagnostic, independently of engine diagnostics and owned construction errors.
 /// # Safety
 /// engine is live; request_json has request_len readable UTF-8 bytes. NULL requires
 /// zero, which is invalid Request JSON. Extents fit Rust slices; out is nonnull
@@ -93,9 +93,9 @@ pub unsafe extern "C" fn thinkthen_request_plan_value(
     request_len: usize,
     out: *mut *mut crate::session::views::ValueHandle,
 ) -> std::ffi::c_int {
-    failures::session_call(|| {
+    failures::session_native_call(|| {
         if out.is_null() {
-            return Err(ErrorKind::Usage);
+            return Err(ErrorKind::Usage.into());
         }
         // SAFETY: the caller retains this live owner throughout the operation.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
@@ -141,7 +141,7 @@ pub unsafe extern "C" fn thinkthen_value_free(owner: *mut crate::session::views:
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_request_plan_named_value(
     engine: *const crate::EngineHandle,
-    request: *const crate::ffi::session::NamedRequestV1,
+    request: *const crate::ffi::session::NamedRequest,
     out: *mut *mut crate::session::views::ValueHandle,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {
@@ -161,20 +161,19 @@ pub unsafe extern "C" fn thinkthen_request_plan_named_value(
 }
 
 /// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.
-/// Construction sends nothing; failures return NULL and occupy the constructor slot.
+/// Construction sends nothing. Failure returns NULL and publishes an independent owned error.
+/// Success writes NULL to error. NULL error discards diagnostics; free an owned error once
+/// with thinkthen_call_error_free after all readers finish. No thread-local slot changes.
 /// # Safety
 /// settings_json is NULL or live NUL-terminated UTF-8 for the call.
+/// error is NULL or aligned writable pointer storage, separate from the input.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_new_with(
     settings_json: *const std::ffi::c_char,
+    error: *mut *mut crate::ffi::run_call::CallErrorHandle,
 ) -> *mut crate::EngineHandle {
-    failures::guard(None, std::ptr::null_mut(), || {
-        // SAFETY: the caller retains all constructor input until admission returns.
-        failures::built(|| unsafe { super::settings_json(settings_json) })
-            .map_or(std::ptr::null_mut(), |engine| {
-                Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine))))
-            })
-    })
+    // SAFETY: caller retains input and nullable writable error storage.
+    unsafe { crate::ffi::owned_constructor(error, || super::settings_json(settings_json)) }
 }
 
 /// The calling thread's last message on this engine; never null.
@@ -187,10 +186,9 @@ pub unsafe extern "C" fn thinkthen_engine_new_with(
 /// next failure on this engine, the engine is freed, or the thread exits.
 /// Another thread's calls never replace it. Never free the pointer.
 /// A deadline's message names the limit and its value. Never NULL: before
-/// any failure it names that nothing failed yet. With a null engine it is
-/// the calling thread's last failed build's message in a distinct slot, valid
-/// until that thread's next thinkthen_engine_new or thinkthen_engine_new_with
-/// call, or its exit. Otherwise it names that no engine came.
+/// any failure it names that nothing failed yet. With a null engine it names
+/// that no engine came. Read construction failures from the independent
+/// thinkthen_call_error returned by the constructor.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_message(
     engine: *const crate::EngineHandle,
@@ -225,8 +223,8 @@ pub unsafe extern "C" fn thinkthen_error_facts_json(
 /// Whether the same call could pass later: 1 for a backend status the
 /// engine retries, such as busy or failing; 0 for a transport failure,
 /// which may already have reached the backend, for a refused key, and for
-/// every kind but the backend kind. Zero when nothing failed. With a null
-/// engine it follows the calling thread's last failed build, else zero.
+/// every kind but the backend kind. Zero when nothing failed or engine is null.
+/// Read construction retryability from the constructor's owned error.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_retryable(
     engine: *const crate::EngineHandle,
@@ -236,8 +234,7 @@ pub unsafe extern "C" fn thinkthen_error_retryable(
     super::guard(held, 0, || failures::retryable(held))
 }
 
-/// The calling thread's last code here; with a null engine, its last failed
-/// build's code, else the usage code.
+/// The calling thread's last code here; with a null engine, the usage code.
 ///
 /// # Safety
 ///
@@ -245,8 +242,8 @@ pub unsafe extern "C" fn thinkthen_error_retryable(
 /// The code of the calling thread's last failure on this engine: the value
 /// the failing call returned, THINKTHEN_OK when nothing failed yet. Success
 /// does not clear it, so read it when a call fails. With a null engine it
-/// is the calling thread's last failed build's code, else THINKTHEN_EUSAGE,
-/// because no engine holds a failure.
+/// is THINKTHEN_EUSAGE because no engine holds a failure. Read construction
+/// failures from the constructor's independent thinkthen_call_error.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_code(
     engine: *const crate::EngineHandle,
@@ -271,15 +268,15 @@ pub unsafe extern "C" fn thinkthen_request_plan_json(
     out: *mut *mut std::ffi::c_char,
     out_len: *mut usize,
 ) -> std::ffi::c_int {
-    failures::session_call(|| {
+    failures::session_native_call(|| {
         if out.is_null() {
-            return Err(ErrorKind::Usage);
+            return Err(ErrorKind::Usage.into());
         }
         if out_len.is_null() {
-            return Err(ErrorKind::Usage);
+            return Err(ErrorKind::Usage.into());
         }
         if out.cast::<()>() == out_len.cast::<()>() {
-            return Err(ErrorKind::Usage);
+            return Err(ErrorKind::Usage.into());
         }
         // SAFETY: the caller retains this live owner throughout the operation.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;

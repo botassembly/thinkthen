@@ -20,7 +20,7 @@ CREATE TYPE thinkthen_property_declaration AS ("items" thinkthen_string_declarat
 CREATE TYPE thinkthen_declared_property AS ("name" text, "value" thinkthen_property_declaration);
 CREATE TYPE thinkthen_input_declaration AS ("properties" thinkthen_declared_property[], "required" text[], "type" text);
 CREATE TYPE thinkthen_label AS ("description" jsonb, "description_present" boolean, "name" text);
-CREATE TYPE thinkthen_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "false" jsonb, "false_present" boolean, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "labels" text[], "levels" text[], "model" text, "name" text, "on" text[], "options" text[], "profile" text, "text" jsonb, "text_present" boolean, "true" jsonb, "true_present" boolean, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "false" jsonb, "false_present" boolean, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "labels" text[], "levels" text[], "model" text, "name" text, "on" text[], "options" text[], "profile" text, "text" jsonb, "text_present" boolean, "true" jsonb, "true_present" boolean, "verb" text);
 CREATE TYPE thinkthen_source_location AS ("file" text, "first_line" numeric, "last_line" numeric);
 CREATE TYPE thinkthen_threshold AS ("number_value" double precision, "string_value" text);
 CREATE TYPE thinkthen_decision AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" thinkthen_threshold, "value" jsonb, "value_present" boolean);
@@ -49,7 +49,7 @@ CREATE TYPE thinkthen_recognition_probabilities AS ("names" thinkthen_entity_pro
 CREATE TYPE thinkthen_kind_description AS ("name" text, "value" jsonb, "value_present" boolean);
 CREATE TYPE thinkthen_relation_rule AS ("either" boolean, "name" text, "reads" text, "single" boolean, "source" text, "target" text);
 CREATE TYPE thinkthen_recognition_stage_context AS ("boundary" text, "kind_edge" text, "relation" text);
-CREATE TYPE thinkthen_recognition_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "entity_definition" jsonb, "entity_definition_present" boolean, "instructions" jsonb, "instructions_present" boolean, "item_schema" thinkthen_input_declaration, "kinds" thinkthen_kind_description[], "label_details" thinkthen_label[], "mode" text, "model" text, "name" text, "on" text[], "profile" text, "relation_threshold" thinkthen_threshold, "relations" thinkthen_relation_rule[], "snippet_pieces" bigint, "stage_context" thinkthen_recognition_stage_context, "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_recognition_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "entity_definition" jsonb, "entity_definition_present" boolean, "instructions" jsonb, "instructions_present" boolean, "item_schema" thinkthen_input_declaration, "kinds" thinkthen_kind_description[], "label_details" thinkthen_label[], "mode" text, "model" text, "name" text, "on" text[], "profile" text, "relation_threshold" thinkthen_threshold, "relations" thinkthen_relation_rule[], "snippet_pieces" bigint, "stage_context" thinkthen_recognition_stage_context, "threshold" thinkthen_threshold, "verb" text);
 CREATE TYPE thinkthen_entity AS ("end" numeric, "file" text, "first_line" numeric, "kind" text, "last_line" numeric, "length" numeric, "start" numeric, "strength" double precision, "text" text);
 CREATE TYPE thinkthen_boundary_proposal AS ("end" numeric, "file" text, "first_line" numeric, "last_line" numeric, "length" numeric, "probability" double precision, "start" numeric, "text" text);
 CREATE TYPE thinkthen_entity_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_entity, "target" thinkthen_entity);
@@ -58,7 +58,7 @@ CREATE TYPE thinkthen_recognized AS ("answer" thinkthen_recognition_probabilitie
 CREATE TYPE thinkthen_candidate_probability AS ("name" text, "value" double precision);
 CREATE TYPE thinkthen_find_answer AS ("confidence" double precision, "kind" text, "pick" text, "probabilities" thinkthen_candidate_probability[]);
 CREATE TYPE thinkthen_find_candidate AS ("index" numeric, "input" jsonb, "input_present" boolean, "probability" double precision, "source" thinkthen_source_location);
-CREATE TYPE thinkthen_find_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "none" boolean, "on" text[], "profile" text, "text" jsonb, "text_present" boolean, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_find_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "none" boolean, "on" text[], "profile" text, "text" jsonb, "text_present" boolean, "verb" text);
 CREATE TYPE thinkthen_found AS ("answer" thinkthen_find_answer, "answer_id" text, "candidates" thinkthen_find_candidate[], "file" text, "first_line" numeric, "index" numeric, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_find_question, "schema" text, "threshold" jsonb, "threshold_present" boolean, "value" jsonb, "value_present" boolean);
 CREATE TYPE thinkthen_related_entity AS ("kind" text, "name" text);
 CREATE TYPE thinkthen_relation_endpoint AS ("kind" text, "name" text);
@@ -66,7 +66,7 @@ CREATE TYPE thinkthen_relation_reading AS ("accepted" boolean, "answer" thinkthe
 CREATE TYPE thinkthen_relation_answers AS ("questions" thinkthen_relation_reading[]);
 CREATE TYPE thinkthen_indexed_source AS ("index" numeric, "source" thinkthen_source_location);
 CREATE TYPE thinkthen_relation_fields AS ("kind" text, "name" text);
-CREATE TYPE thinkthen_relation_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "fields" thinkthen_relation_fields, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "on" text[], "profile" text, "relations" thinkthen_relation_rule[], "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_relation_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "fields" thinkthen_relation_fields, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "on" text[], "profile" text, "relations" thinkthen_relation_rule[], "threshold" thinkthen_threshold, "verb" text);
 CREATE TYPE thinkthen_located_endpoint AS ("file" text, "first_line" numeric, "kind" text, "last_line" numeric, "name" text, "ordinal" numeric, "record" jsonb, "record_present" boolean);
 CREATE TYPE thinkthen_located_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_located_endpoint, "target" thinkthen_located_endpoint);
 CREATE TYPE thinkthen_related AS ("answer" thinkthen_relation_answers, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "input_sources" thinkthen_indexed_source[], "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_relation_question, "schema" text, "value" thinkthen_located_edge[]);
@@ -940,13 +940,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("verb", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("wording_version");
-            let converted: Option<i64> = held.and_then(Value::as_i64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("wording_version", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -3240,13 +3233,6 @@ pub(super) fn convert(
                     .set_by_name("verb", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
-            let held = value.get("wording_version");
-            let converted: Option<i64> = held.and_then(Value::as_i64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("wording_version", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
             Ok(tuple)
         }
         "thinkthen_entity" => {
@@ -3851,13 +3837,6 @@ pub(super) fn convert(
                     .set_by_name("verb", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
-            let held = value.get("wording_version");
-            let converted: Option<i64> = held.and_then(Value::as_i64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("wording_version", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
             Ok(tuple)
         }
         "thinkthen_found" => {
@@ -4419,13 +4398,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("verb", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("wording_version");
-            let converted: Option<i64> = held.and_then(Value::as_i64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("wording_version", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)

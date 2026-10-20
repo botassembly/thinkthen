@@ -5,8 +5,8 @@ enum QuestionGrammar: UInt32, Sendable {
   case `atomic` = 1
   case `dynamicChoose` = 3
   case `find` = 8
-  case `rankSet` = 7
   case `rank` = 6
+  case `rankSet` = 7
   case `recognize` = 4
   case `relate` = 5
   case `set` = 2
@@ -30,9 +30,9 @@ func nativeFailureKind(_ code: Int32) -> FailureKind {
 }
 extension Client {
   public func finishUsageStatus() throws -> UsagePersistenceStatus {
-    try usage(thinkthen_engine_finish_usage_status_v1)
+    try usage(thinkthen_engine_finish_usage_status)
   }
   public func usagePersistence() throws -> UsagePersistenceStatus {
-    try usage(thinkthen_engine_usage_persistence_v1)
+    try usage(thinkthen_engine_usage_persistence)
   }
 }

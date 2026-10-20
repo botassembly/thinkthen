@@ -3,7 +3,6 @@
 #import "TTResultPrivate.h"
 #import "ThinkThenFoundation.h"
 #define TT_GENERATED_NAMED_IMPLEMENTATIONS - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"decide" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"choose" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"tag" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"score" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"filter" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"rank" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"find" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"annotate" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"recognize" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"relate" question:question input:input options:options feed:feed error:error]; }
-NSString * const TTRequestVersion = @"thinkthen.request/1";
 @implementation TTAnnotation
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
@@ -2556,11 +2555,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
 @end
 @implementation TTNameOdds
 + (instancetype)read:(id)value {
@@ -2873,11 +2867,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
 @end
 @implementation TTRelateFields
 + (instancetype)read:(id)value {
@@ -2962,11 +2951,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSString *> *)verb {
     return [self presence:@"verb" required:YES convert:^id(id value) {
         return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
     }];
 }
 @end
@@ -4416,11 +4400,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
 - (TTPresence<NSArray<NSString *> *> *)options {
     return [self presence:@"options" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
@@ -4485,11 +4464,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSString *> *)profile {
     return [self presence:@"profile" required:NO convert:^id(id value) {
         return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
     }];
 }
 - (TTPresence<id> *)falseValue {
@@ -4561,11 +4535,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
 - (TTPresence<NSArray<NSString *> *> *)levels {
     return [self presence:@"levels" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
@@ -4630,11 +4599,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSString *> *)profile {
     return [self presence:@"profile" required:NO convert:^id(id value) {
         return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
     }];
 }
 - (TTPresence<NSArray<NSString *> *> *)labels {
@@ -5835,13 +5799,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTAnnotateQuestionDecideBuilder
 - (id)contextSchema {
@@ -5900,13 +5857,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"true"] = value;
     else [self.requestFields removeObjectForKey:@"true"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTAnnotateQuestionScoreBuilder
 - (id)contextSchema {
@@ -5950,13 +5900,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setScore:(id)value {
     if (value) self.requestFields[@"score"] = value;
     else [self.requestFields removeObjectForKey:@"score"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
 }
 @end
 @implementation TTAnnotateQuestionTagBuilder
@@ -6008,13 +5951,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setThreshold:(id)value {
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
 }
 @end
 @implementation TTAuthoredChooseBuilder
@@ -6087,13 +6023,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setThreshold:(id)value {
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
 }
 @end
 @implementation TTAuthoredDecideBuilder
@@ -6174,13 +6103,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"true"] = value;
     else [self.requestFields removeObjectForKey:@"true"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTAuthoredFindBuilder
 - (id)contextSchema {
@@ -6231,13 +6153,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setProfile:(NSString *)value {
     if (value) self.requestFields[@"profile"] = value;
     else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
 }
 @end
 @implementation TTAuthoredInputDeclarationObjectBuilder
@@ -6353,13 +6268,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTAuthoredRelationBuilder
 - (NSNumber *)either {
@@ -6469,13 +6377,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"score"] = value;
     else [self.requestFields removeObjectForKey:@"score"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTAuthoredTagBuilder
 - (id)batch {
@@ -6547,13 +6448,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setThreshold:(id)value {
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
 }
 @end
 @implementation TTSettings
@@ -6879,13 +6773,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"threshold"] = value;
     else [self.requestFields removeObjectForKey:@"threshold"];
 }
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
 @end
 @implementation TTRecognizeQuestionBuilder
 - (id)entityDefinition {
@@ -6977,11 +6864,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setCall:(TTCallArguments *)value {
     if (value) self.requestFields[@"call"] = value;
     else [self.requestFields removeObjectForKey:@"call"];
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"schema"] = @"thinkthen.request/1";
-    } return self;
 }
 @end
 @implementation TTCallArguments
@@ -8001,360 +7883,358 @@ TT_GENERATED_NAMED_IMPLEMENTATIONS
 #import "TTResultPrivate.h"
 #import <thinkthen.h>
 #include <math.h>
-id TTNative_thinkthen_complete_attempt_list_v1(const struct thinkthen_complete_attempt_list_v1 *value);
-id TTNative_thinkthen_complete_attempt_list_presence_v1(const struct thinkthen_complete_attempt_list_presence_v1 *value);
-id TTNative_thinkthen_complete_call_id_presence_v1(const struct thinkthen_complete_call_id_presence_v1 *value);
-id TTNative_thinkthen_complete_utf8_presence_v1(const struct thinkthen_complete_utf8_presence_v1 *value);
-id TTNative_thinkthen_complete_u32_presence_v1(const struct thinkthen_complete_u32_presence_v1 *value);
-id TTNative_thinkthen_complete_u64_presence_v1(const struct thinkthen_complete_u64_presence_v1 *value);
-id TTNative_thinkthen_complete_persistence_observation_presence_v1(const struct thinkthen_complete_persistence_observation_presence_v1 *value);
-id TTNative_thinkthen_complete_immediate_facts_v1(const struct thinkthen_complete_immediate_facts_v1 *value);
-id TTNative_thinkthen_complete_persistence_observation_v1(const struct thinkthen_complete_persistence_observation_v1 *value);
-id TTNative_thinkthen_complete_usage_persistence_v1(const struct thinkthen_complete_usage_persistence_v1 *value);
-id TTNative_thinkthen_complete_call_id_v1(const struct thinkthen_complete_call_id_v1 *value);
-id TTNative_thinkthen_complete_attempt_v1(const struct thinkthen_complete_attempt_v1 *value);
-id TTNative_thinkthen_complete_sdk_request_id_v1(const struct thinkthen_complete_sdk_request_id_v1 *value);
-id TTNative_thinkthen_complete_attempt_outcome_v1(const struct thinkthen_complete_attempt_outcome_v1 *value);
-id TTNative_thinkthen_complete_session_packet_v1(const struct thinkthen_complete_session_packet_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_presence_v1(const struct thinkthen_complete_settled_answer_presence_v1 *value);
-id TTNative_thinkthen_complete_facts_presence_v1(const struct thinkthen_complete_facts_presence_v1 *value);
-id TTNative_thinkthen_complete_call_error_presence_v1(const struct thinkthen_complete_call_error_presence_v1 *value);
-id TTNative_thinkthen_complete_session_packet_terminal_v1(const struct thinkthen_complete_session_packet_terminal_v1 *value);
-id TTNative_thinkthen_complete_answer_resolution_v1(const struct thinkthen_complete_answer_resolution_v1 *value);
-id TTNative_thinkthen_complete_call_error_v1(const struct thinkthen_complete_call_error_v1 *value);
-id TTNative_thinkthen_complete_facts_v1(const struct thinkthen_complete_facts_v1 *value);
-id TTNative_thinkthen_complete_input_denial_presence_v1(const struct thinkthen_complete_input_denial_presence_v1 *value);
-id TTNative_thinkthen_complete_send_denial_presence_v1(const struct thinkthen_complete_send_denial_presence_v1 *value);
-id TTNative_thinkthen_complete_error_v1(const struct thinkthen_complete_error_v1 *value);
-id TTNative_thinkthen_complete_stopped_v1(const struct thinkthen_complete_stopped_v1 *value);
-id TTNative_thinkthen_complete_stop_cause_v1(const struct thinkthen_complete_stop_cause_v1 *value);
-id TTNative_thinkthen_complete_send_denial_v1(const struct thinkthen_complete_send_denial_v1 *value);
-id TTNative_thinkthen_complete_send_denial_before_retry_v1(const struct thinkthen_complete_send_denial_before_retry_v1 *value);
-id TTNative_thinkthen_complete_send_denial_before_additional_send_v1(const struct thinkthen_complete_send_denial_before_additional_send_v1 *value);
-id TTNative_thinkthen_complete_send_denial_before_first_send_v1(const struct thinkthen_complete_send_denial_before_first_send_v1 *value);
-id TTNative_thinkthen_complete_failure_kind_v1(const struct thinkthen_complete_failure_kind_v1 *value);
-id TTNative_thinkthen_complete_input_denial_v1(const struct thinkthen_complete_input_denial_v1 *value);
-id TTNative_thinkthen_complete_input_denial_retry_v1(const struct thinkthen_complete_input_denial_retry_v1 *value);
-id TTNative_thinkthen_complete_input_denial_additional_request_v1(const struct thinkthen_complete_input_denial_additional_request_v1 *value);
-id TTNative_thinkthen_complete_input_denial_initial_request_v1(const struct thinkthen_complete_input_denial_initial_request_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_v1(const struct thinkthen_complete_settled_answer_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_4_presence_v1(const struct thinkthen_complete_answer_shape_4_presence_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_3_presence_v1(const struct thinkthen_complete_answer_shape_3_presence_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_2_presence_v1(const struct thinkthen_complete_answer_shape_2_presence_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_15_presence_v1(const struct thinkthen_complete_answer_shape_15_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_annotate_v1(const struct thinkthen_complete_settled_answer_annotate_v1 *value);
-id TTNative_thinkthen_complete_settled_judgment_map_entry_v1(const struct thinkthen_complete_settled_judgment_map_entry_v1 *value);
-id TTNative_thinkthen_complete_settled_judgment_map_v1(const struct thinkthen_complete_settled_judgment_map_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_15_v1(const struct thinkthen_complete_answer_shape_15_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_15_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_string_list_v1(const struct thinkthen_complete_string_list_v1 *value);
-id TTNative_thinkthen_complete_settled_judgment_v1(const struct thinkthen_complete_settled_judgment_v1 *value);
-id TTNative_thinkthen_complete_answer_resolution_map_entry_v1(const struct thinkthen_complete_answer_resolution_map_entry_v1 *value);
-id TTNative_thinkthen_complete_answer_resolution_map_v1(const struct thinkthen_complete_answer_resolution_map_v1 *value);
-id TTNative_thinkthen_complete_answer_resolutions_list_v1(const struct thinkthen_complete_answer_resolutions_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_5_v1(const struct thinkthen_complete_answer_shape_5_v1 *value);
-id TTNative_thinkthen_complete_answer_resolutions_v1(const struct thinkthen_complete_answer_resolutions_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_2_v1(const struct thinkthen_complete_answer_shape_2_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_8_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_3_v1(const struct thinkthen_complete_answer_shape_3_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_6_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_4_v1(const struct thinkthen_complete_answer_shape_4_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_4_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_10_presence_v1(const struct thinkthen_complete_answer_shape_10_presence_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_14_presence_v1(const struct thinkthen_complete_answer_shape_14_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_relate_v1(const struct thinkthen_complete_settled_answer_relate_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_14_v1(const struct thinkthen_complete_answer_shape_14_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_14_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_related_entity_edge_list_v1(const struct thinkthen_complete_related_entity_edge_list_v1 *value);
-id TTNative_thinkthen_complete_settled_relations_v1(const struct thinkthen_complete_settled_relations_v1 *value);
-id TTNative_thinkthen_complete_related_entity_edge_v1(const struct thinkthen_complete_related_entity_edge_v1 *value);
-id TTNative_thinkthen_complete_relation_endpoint_v1(const struct thinkthen_complete_relation_endpoint_v1 *value);
-id TTNative_thinkthen_complete_json_presence_v1(const struct thinkthen_complete_json_presence_v1 *value);
-id TTNative_thinkthen_complete_relation_endpoint_source_v1(const struct thinkthen_complete_relation_endpoint_source_v1 *value);
-id TTNative_thinkthen_complete_relation_endpoint_related_entity_v1(const struct thinkthen_complete_relation_endpoint_related_entity_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_10_v1(const struct thinkthen_complete_answer_shape_10_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_10_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_13_presence_v1(const struct thinkthen_complete_answer_shape_13_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_recognize_v1(const struct thinkthen_complete_settled_answer_recognize_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_13_v1(const struct thinkthen_complete_answer_shape_13_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_13_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_settled_recognition_v1(const struct thinkthen_complete_settled_recognition_v1 *value);
-id TTNative_thinkthen_complete_boundary_proposal_list_v1(const struct thinkthen_complete_boundary_proposal_list_v1 *value);
-id TTNative_thinkthen_complete_settled_recognition_mode_proposals_v1(const struct thinkthen_complete_settled_recognition_mode_proposals_v1 *value);
-id TTNative_thinkthen_complete_boundary_proposal_v1(const struct thinkthen_complete_boundary_proposal_v1 *value);
-id TTNative_thinkthen_complete_boundary_mode_v1(const struct thinkthen_complete_boundary_mode_v1 *value);
-id TTNative_thinkthen_complete_entity_list_v1(const struct thinkthen_complete_entity_list_v1 *value);
-id TTNative_thinkthen_complete_entity_edge_list_v1(const struct thinkthen_complete_entity_edge_list_v1 *value);
-id TTNative_thinkthen_complete_entity_edge_list_presence_v1(const struct thinkthen_complete_entity_edge_list_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_recognition_entities_v1(const struct thinkthen_complete_settled_recognition_entities_v1 *value);
-id TTNative_thinkthen_complete_entity_edge_v1(const struct thinkthen_complete_entity_edge_v1 *value);
-id TTNative_thinkthen_complete_entity_v1(const struct thinkthen_complete_entity_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_12_presence_v1(const struct thinkthen_complete_answer_shape_12_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_find_v1(const struct thinkthen_complete_settled_answer_find_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_12_v1(const struct thinkthen_complete_answer_shape_12_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_11_presence_v1(const struct thinkthen_complete_answer_shape_11_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_rank_v1(const struct thinkthen_complete_settled_answer_rank_v1 *value);
-id TTNative_thinkthen_complete_integer_list_v1(const struct thinkthen_complete_integer_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_11_v1(const struct thinkthen_complete_answer_shape_11_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_11_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_9_presence_v1(const struct thinkthen_complete_answer_shape_9_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_filter_v1(const struct thinkthen_complete_settled_answer_filter_v1 *value);
-id TTNative_thinkthen_complete_settled_original_list_v1(const struct thinkthen_complete_settled_original_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_9_v1(const struct thinkthen_complete_answer_shape_9_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_9_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_settled_original_v1(const struct thinkthen_complete_settled_original_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_8_presence_v1(const struct thinkthen_complete_answer_shape_8_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_score_v1(const struct thinkthen_complete_settled_answer_score_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_8_v1(const struct thinkthen_complete_answer_shape_8_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_7_presence_v1(const struct thinkthen_complete_answer_shape_7_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_tag_v1(const struct thinkthen_complete_settled_answer_tag_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_7_v1(const struct thinkthen_complete_answer_shape_7_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_7_any_of_1_items_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_6_presence_v1(const struct thinkthen_complete_answer_shape_6_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_choose_v1(const struct thinkthen_complete_settled_answer_choose_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_6_v1(const struct thinkthen_complete_answer_shape_6_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_presence_v1(const struct thinkthen_complete_answer_shape_presence_v1 *value);
-id TTNative_thinkthen_complete_settled_answer_decide_v1(const struct thinkthen_complete_settled_answer_decide_v1 *value);
-id TTNative_thinkthen_complete_answer_shape_v1(const struct thinkthen_complete_answer_shape_v1 *value);
-id TTNative_thinkthen_complete_session_packet_observation_v1(const struct thinkthen_complete_session_packet_observation_v1 *value);
-id TTNative_thinkthen_complete_session_observation_v1(const struct thinkthen_complete_session_observation_v1 *value);
-id TTNative_thinkthen_complete_session_observation_row_v1(const struct thinkthen_complete_session_observation_row_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_v1(const struct thinkthen_complete_session_observed_row_v1 *value);
-id TTNative_thinkthen_complete_session_relation_edge_list_v1(const struct thinkthen_complete_session_relation_edge_list_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_relations_v1(const struct thinkthen_complete_session_observed_row_relations_v1 *value);
-id TTNative_thinkthen_complete_session_relation_edge_v1(const struct thinkthen_complete_session_relation_edge_v1 *value);
-id TTNative_thinkthen_complete_entity_document_v1(const struct thinkthen_complete_entity_document_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_find_v1(const struct thinkthen_complete_session_observed_row_find_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_recognized_v1(const struct thinkthen_complete_session_observed_row_recognized_v1 *value);
-id TTNative_thinkthen_complete_boundary_proposal_list_presence_v1(const struct thinkthen_complete_boundary_proposal_list_presence_v1 *value);
-id TTNative_thinkthen_complete_recognition_edge_list_v1(const struct thinkthen_complete_recognition_edge_list_v1 *value);
-id TTNative_thinkthen_complete_recognition_edge_list_presence_v1(const struct thinkthen_complete_recognition_edge_list_presence_v1 *value);
-id TTNative_thinkthen_complete_session_recognition_v1(const struct thinkthen_complete_session_recognition_v1 *value);
-id TTNative_thinkthen_complete_recognition_edge_v1(const struct thinkthen_complete_recognition_edge_v1 *value);
-id TTNative_thinkthen_complete_recognition_mode_v1(const struct thinkthen_complete_recognition_mode_v1 *value);
-id TTNative_thinkthen_complete_session_annotation_list_v1(const struct thinkthen_complete_session_annotation_list_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_annotated_v1(const struct thinkthen_complete_session_observed_row_annotated_v1 *value);
-id TTNative_thinkthen_complete_session_annotation_v1(const struct thinkthen_complete_session_annotation_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_v1(const struct thinkthen_complete_annotation_value_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_failed_v1(const struct thinkthen_complete_annotation_value_failed_v1 *value);
-id TTNative_thinkthen_complete_failure_field_kind_v1(const struct thinkthen_complete_failure_field_kind_v1 *value);
-id TTNative_thinkthen_complete_failure_v1(const struct thinkthen_complete_failure_v1 *value);
-id TTNative_thinkthen_complete_failure_cause_v1(const struct thinkthen_complete_failure_cause_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_tags_v1(const struct thinkthen_complete_annotation_value_tags_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_score_v1(const struct thinkthen_complete_annotation_value_score_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_choice_v1(const struct thinkthen_complete_annotation_value_choice_v1 *value);
-id TTNative_thinkthen_complete_annotation_value_decision_v1(const struct thinkthen_complete_annotation_value_decision_v1 *value);
-id TTNative_thinkthen_complete_session_observed_row_judgment_v1(const struct thinkthen_complete_session_observed_row_judgment_v1 *value);
-id TTNative_thinkthen_complete_session_judgment_v1(const struct thinkthen_complete_session_judgment_v1 *value);
-id TTNative_thinkthen_complete_session_judgment_tags_v1(const struct thinkthen_complete_session_judgment_tags_v1 *value);
-id TTNative_thinkthen_complete_session_judgment_score_v1(const struct thinkthen_complete_session_judgment_score_v1 *value);
-id TTNative_thinkthen_complete_session_judgment_choice_v1(const struct thinkthen_complete_session_judgment_choice_v1 *value);
-id TTNative_thinkthen_complete_session_judgment_decision_v1(const struct thinkthen_complete_session_judgment_decision_v1 *value);
-id TTNative_thinkthen_complete_session_observation_question_v1(const struct thinkthen_complete_session_observation_question_v1 *value);
-id TTNative_thinkthen_complete_answer_id_presence_v1(const struct thinkthen_complete_answer_id_presence_v1 *value);
-id TTNative_thinkthen_complete_f64_presence_v1(const struct thinkthen_complete_f64_presence_v1 *value);
-id TTNative_thinkthen_complete_failure_presence_v1(const struct thinkthen_complete_failure_presence_v1 *value);
-id TTNative_thinkthen_complete_failure_id_presence_v1(const struct thinkthen_complete_failure_id_presence_v1 *value);
-id TTNative_thinkthen_complete_physical_source_presence_v1(const struct thinkthen_complete_physical_source_presence_v1 *value);
-id TTNative_thinkthen_complete_session_input_source_list_v1(const struct thinkthen_complete_session_input_source_list_v1 *value);
-id TTNative_thinkthen_complete_json_list_v1(const struct thinkthen_complete_json_list_v1 *value);
-id TTNative_thinkthen_complete_observation_list_v1(const struct thinkthen_complete_observation_list_v1 *value);
-id TTNative_thinkthen_complete_session_probabilities_presence_v1(const struct thinkthen_complete_session_probabilities_presence_v1 *value);
-id TTNative_thinkthen_complete_question_source_list_v1(const struct thinkthen_complete_question_source_list_v1 *value);
-id TTNative_thinkthen_complete_usage_presence_v1(const struct thinkthen_complete_usage_presence_v1 *value);
-id TTNative_thinkthen_complete_threshold_presence_v1(const struct thinkthen_complete_threshold_presence_v1 *value);
-id TTNative_thinkthen_complete_token_usage_presence_v1(const struct thinkthen_complete_token_usage_presence_v1 *value);
-id TTNative_thinkthen_complete_value_presence_v1(const struct thinkthen_complete_value_presence_v1 *value);
-id TTNative_thinkthen_complete_session_question_detail_v1(const struct thinkthen_complete_session_question_detail_v1 *value);
-id TTNative_thinkthen_complete_value_v1(const struct thinkthen_complete_value_v1 *value);
-id TTNative_thinkthen_complete_token_usage_v1(const struct thinkthen_complete_token_usage_v1 *value);
-id TTNative_thinkthen_complete_threshold_v1(const struct thinkthen_complete_threshold_v1 *value);
-id TTNative_thinkthen_complete_usage_v1(const struct thinkthen_complete_usage_v1 *value);
-id TTNative_thinkthen_complete_question_source_v1(const struct thinkthen_complete_question_source_v1 *value);
-id TTNative_thinkthen_complete_origin_v1(const struct thinkthen_complete_origin_v1 *value);
-id TTNative_thinkthen_complete_question_document_v1(const struct thinkthen_complete_question_document_v1 *value);
-id TTNative_thinkthen_complete_batch_presence_v1(const struct thinkthen_complete_batch_presence_v1 *value);
-id TTNative_thinkthen_complete_input_declaration_presence_v1(const struct thinkthen_complete_input_declaration_presence_v1 *value);
-id TTNative_thinkthen_complete_label_list_v1(const struct thinkthen_complete_label_list_v1 *value);
-id TTNative_thinkthen_complete_label_list_presence_v1(const struct thinkthen_complete_label_list_presence_v1 *value);
-id TTNative_thinkthen_complete_question_name_presence_v1(const struct thinkthen_complete_question_name_presence_v1 *value);
-id TTNative_thinkthen_complete_string_list_presence_v1(const struct thinkthen_complete_string_list_presence_v1 *value);
-id TTNative_thinkthen_complete_wording_version_presence_v1(const struct thinkthen_complete_wording_version_presence_v1 *value);
-id TTNative_thinkthen_complete_question_document_score_v1(const struct thinkthen_complete_question_document_score_v1 *value);
-id TTNative_thinkthen_complete_wording_version_v1(const struct thinkthen_complete_wording_version_v1 *value);
-id TTNative_thinkthen_complete_question_name_v1(const struct thinkthen_complete_question_name_v1 *value);
-id TTNative_thinkthen_complete_label_v1(const struct thinkthen_complete_label_v1 *value);
-id TTNative_thinkthen_complete_input_declaration_v1(const struct thinkthen_complete_input_declaration_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_map_entry_v1(const struct thinkthen_complete_input_property_type_map_entry_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_map_v1(const struct thinkthen_complete_input_property_type_map_v1 *value);
-id TTNative_thinkthen_complete_input_declaration_object_root_v1(const struct thinkthen_complete_input_declaration_object_root_v1 *value);
-id TTNative_thinkthen_complete_object_type_v1(const struct thinkthen_complete_object_type_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_v1(const struct thinkthen_complete_input_property_type_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_array_v1(const struct thinkthen_complete_input_property_type_array_v1 *value);
-id TTNative_thinkthen_complete_string_root_v1(const struct thinkthen_complete_string_root_v1 *value);
-id TTNative_thinkthen_complete_string_type_v1(const struct thinkthen_complete_string_type_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_boolean_v1(const struct thinkthen_complete_input_property_type_boolean_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_number_v1(const struct thinkthen_complete_input_property_type_number_v1 *value);
-id TTNative_thinkthen_complete_input_property_type_string_v1(const struct thinkthen_complete_input_property_type_string_v1 *value);
-id TTNative_thinkthen_complete_input_declaration_string_root_v1(const struct thinkthen_complete_input_declaration_string_root_v1 *value);
-id TTNative_thinkthen_complete_batch_string_v1(const struct thinkthen_complete_batch_string_v1 *value);
-id TTNative_thinkthen_complete_batch_v1(const struct thinkthen_complete_batch_v1 *value);
-id TTNative_thinkthen_complete_question_document_tag_v1(const struct thinkthen_complete_question_document_tag_v1 *value);
-id TTNative_thinkthen_complete_question_document_choose_v1(const struct thinkthen_complete_question_document_choose_v1 *value);
-id TTNative_thinkthen_complete_question_document_decide_v1(const struct thinkthen_complete_question_document_decide_v1 *value);
-id TTNative_thinkthen_complete_session_probabilities_v1(const struct thinkthen_complete_session_probabilities_v1 *value);
-id TTNative_thinkthen_complete_session_named_probability_list_v1(const struct thinkthen_complete_session_named_probability_list_v1 *value);
-id TTNative_thinkthen_complete_session_probabilities_named_v1(const struct thinkthen_complete_session_probabilities_named_v1 *value);
-id TTNative_thinkthen_complete_session_named_probability_v1(const struct thinkthen_complete_session_named_probability_v1 *value);
-id TTNative_thinkthen_complete_session_probabilities_yes_no_v1(const struct thinkthen_complete_session_probabilities_yes_no_v1 *value);
-id TTNative_thinkthen_complete_observation_v1(const struct thinkthen_complete_observation_v1 *value);
-id TTNative_thinkthen_complete_observation_failure_id_v1(const struct thinkthen_complete_observation_failure_id_v1 *value);
-id TTNative_thinkthen_complete_failure_id_v1(const struct thinkthen_complete_failure_id_v1 *value);
-id TTNative_thinkthen_complete_observation_observation_id_v1(const struct thinkthen_complete_observation_observation_id_v1 *value);
-id TTNative_thinkthen_complete_observation_id_v1(const struct thinkthen_complete_observation_id_v1 *value);
-id TTNative_thinkthen_complete_session_input_source_v1(const struct thinkthen_complete_session_input_source_v1 *value);
-id TTNative_thinkthen_complete_physical_source_v1(const struct thinkthen_complete_physical_source_v1 *value);
-id TTNative_thinkthen_complete_answer_id_v1(const struct thinkthen_complete_answer_id_v1 *value);
-id TTNative_thinkthen_complete_request_function_v1(const struct thinkthen_complete_request_function_v1 *value);
-id TTNative_thinkthen_complete_session_packet_relate_aggregate_v1(const struct thinkthen_complete_session_packet_relate_aggregate_v1 *value);
-id TTNative_thinkthen_complete_session_input_source_list_presence_v1(const struct thinkthen_complete_session_input_source_list_presence_v1 *value);
-id TTNative_thinkthen_complete_position_presence_v1(const struct thinkthen_complete_position_presence_v1 *value);
-id TTNative_thinkthen_complete_relation_v1(const struct thinkthen_complete_relation_v1 *value);
-id TTNative_thinkthen_complete_result_tag_v1(const struct thinkthen_complete_result_tag_v1 *value);
-id TTNative_thinkthen_complete_relate_fields_presence_v1(const struct thinkthen_complete_relate_fields_presence_v1 *value);
-id TTNative_thinkthen_complete_relation_rule_list_v1(const struct thinkthen_complete_relation_rule_list_v1 *value);
-id TTNative_thinkthen_complete_relate_question_document_v1(const struct thinkthen_complete_relate_question_document_v1 *value);
-id TTNative_thinkthen_complete_relation_rule_v1(const struct thinkthen_complete_relation_rule_v1 *value);
-id TTNative_thinkthen_complete_relate_fields_v1(const struct thinkthen_complete_relate_fields_v1 *value);
-id TTNative_thinkthen_complete_position_v1(const struct thinkthen_complete_position_v1 *value);
-id TTNative_thinkthen_complete_batch_setting_presence_v1(const struct thinkthen_complete_batch_setting_presence_v1 *value);
-id TTNative_thinkthen_complete_batch_warning_presence_v1(const struct thinkthen_complete_batch_warning_presence_v1 *value);
-id TTNative_thinkthen_complete_origin_presence_v1(const struct thinkthen_complete_origin_presence_v1 *value);
-id TTNative_thinkthen_complete_profile_warning_presence_v1(const struct thinkthen_complete_profile_warning_presence_v1 *value);
-id TTNative_thinkthen_complete_meta_v1(const struct thinkthen_complete_meta_v1 *value);
-id TTNative_thinkthen_complete_profile_warning_v1(const struct thinkthen_complete_profile_warning_v1 *value);
-id TTNative_thinkthen_complete_batch_warning_v1(const struct thinkthen_complete_batch_warning_v1 *value);
-id TTNative_thinkthen_complete_batch_setting_v1(const struct thinkthen_complete_batch_setting_v1 *value);
-id TTNative_thinkthen_complete_relation_member_list_v1(const struct thinkthen_complete_relation_member_list_v1 *value);
-id TTNative_thinkthen_complete_answers_v1(const struct thinkthen_complete_answers_v1 *value);
-id TTNative_thinkthen_complete_relation_member_v1(const struct thinkthen_complete_relation_member_v1 *value);
-id TTNative_thinkthen_complete_related_entity_presence_v1(const struct thinkthen_complete_related_entity_presence_v1 *value);
-id TTNative_thinkthen_complete_relation_member_failure_id_v1(const struct thinkthen_complete_relation_member_failure_id_v1 *value);
-id TTNative_thinkthen_complete_related_entity_v1(const struct thinkthen_complete_related_entity_v1 *value);
-id TTNative_thinkthen_complete_relation_method_v1(const struct thinkthen_complete_relation_method_v1 *value);
-id TTNative_thinkthen_complete_relation_direction_v1(const struct thinkthen_complete_relation_direction_v1 *value);
-id TTNative_thinkthen_complete_relation_member_answer_id_v1(const struct thinkthen_complete_relation_member_answer_id_v1 *value);
-id TTNative_thinkthen_complete_answer_v1(const struct thinkthen_complete_answer_v1 *value);
-id TTNative_thinkthen_complete_number_map_entry_v1(const struct thinkthen_complete_number_map_entry_v1 *value);
-id TTNative_thinkthen_complete_number_map_v1(const struct thinkthen_complete_number_map_v1 *value);
-id TTNative_thinkthen_complete_answer_score_v1(const struct thinkthen_complete_answer_score_v1 *value);
-id TTNative_thinkthen_complete_answer_tag_v1(const struct thinkthen_complete_answer_tag_v1 *value);
-id TTNative_thinkthen_complete_answer_choice_v1(const struct thinkthen_complete_answer_choice_v1 *value);
-id TTNative_thinkthen_complete_answer_yes_no_v1(const struct thinkthen_complete_answer_yes_no_v1 *value);
-id TTNative_thinkthen_complete_recognition_list_v1(const struct thinkthen_complete_recognition_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_recognize_aggregate_v1(const struct thinkthen_complete_session_packet_recognize_aggregate_v1 *value);
-id TTNative_thinkthen_complete_recognition_v1(const struct thinkthen_complete_recognition_v1 *value);
-id TTNative_thinkthen_complete_recognize_v1(const struct thinkthen_complete_recognize_v1 *value);
-id TTNative_thinkthen_complete_recognize_mode_proposals_v1(const struct thinkthen_complete_recognize_mode_proposals_v1 *value);
-id TTNative_thinkthen_complete_recognize_entities_v1(const struct thinkthen_complete_recognize_entities_v1 *value);
-id TTNative_thinkthen_complete_json_map_entry_v1(const struct thinkthen_complete_json_map_entry_v1 *value);
-id TTNative_thinkthen_complete_json_map_v1(const struct thinkthen_complete_json_map_v1 *value);
-id TTNative_thinkthen_complete_recognition_mode_presence_v1(const struct thinkthen_complete_recognition_mode_presence_v1 *value);
-id TTNative_thinkthen_complete_relation_rule_list_presence_v1(const struct thinkthen_complete_relation_rule_list_presence_v1 *value);
-id TTNative_thinkthen_complete_recognition_stage_context_presence_v1(const struct thinkthen_complete_recognition_stage_context_presence_v1 *value);
-id TTNative_thinkthen_complete_recognize_question_document_v1(const struct thinkthen_complete_recognize_question_document_v1 *value);
-id TTNative_thinkthen_complete_verb_v1(const struct thinkthen_complete_verb_v1 *value);
-id TTNative_thinkthen_complete_recognition_stage_context_v1(const struct thinkthen_complete_recognition_stage_context_v1 *value);
-id TTNative_thinkthen_complete_recognition_odds_v1(const struct thinkthen_complete_recognition_odds_v1 *value);
-id TTNative_thinkthen_complete_piece_odds_list_v1(const struct thinkthen_complete_piece_odds_list_v1 *value);
-id TTNative_thinkthen_complete_recognition_odds_boundary_odds_v1(const struct thinkthen_complete_recognition_odds_boundary_odds_v1 *value);
-id TTNative_thinkthen_complete_piece_odds_v1(const struct thinkthen_complete_piece_odds_v1 *value);
-id TTNative_thinkthen_complete_name_odds_list_v1(const struct thinkthen_complete_name_odds_list_v1 *value);
-id TTNative_thinkthen_complete_pair_odds_list_v1(const struct thinkthen_complete_pair_odds_list_v1 *value);
-id TTNative_thinkthen_complete_recognition_proposal_list_v1(const struct thinkthen_complete_recognition_proposal_list_v1 *value);
-id TTNative_thinkthen_complete_recognition_odds_recognize_answer_v1(const struct thinkthen_complete_recognition_odds_recognize_answer_v1 *value);
-id TTNative_thinkthen_complete_place_presence_v1(const struct thinkthen_complete_place_presence_v1 *value);
-id TTNative_thinkthen_complete_recognition_proposal_v1(const struct thinkthen_complete_recognition_proposal_v1 *value);
-id TTNative_thinkthen_complete_place_v1(const struct thinkthen_complete_place_v1 *value);
-id TTNative_thinkthen_complete_pair_odds_v1(const struct thinkthen_complete_pair_odds_v1 *value);
-id TTNative_thinkthen_complete_number_map_presence_v1(const struct thinkthen_complete_number_map_presence_v1 *value);
-id TTNative_thinkthen_complete_name_odds_v1(const struct thinkthen_complete_name_odds_v1 *value);
-id TTNative_thinkthen_complete_annotation_list_v1(const struct thinkthen_complete_annotation_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_annotate_aggregate_v1(const struct thinkthen_complete_session_packet_annotate_aggregate_v1 *value);
-id TTNative_thinkthen_complete_annotation_member_map_entry_v1(const struct thinkthen_complete_annotation_member_map_entry_v1 *value);
-id TTNative_thinkthen_complete_annotation_member_map_v1(const struct thinkthen_complete_annotation_member_map_v1 *value);
-id TTNative_thinkthen_complete_annotation_v1(const struct thinkthen_complete_annotation_v1 *value);
-id TTNative_thinkthen_complete_annotated_field_map_entry_v1(const struct thinkthen_complete_annotated_field_map_entry_v1 *value);
-id TTNative_thinkthen_complete_annotated_field_map_v1(const struct thinkthen_complete_annotated_field_map_v1 *value);
-id TTNative_thinkthen_complete_annotated_row_v1(const struct thinkthen_complete_annotated_row_v1 *value);
-id TTNative_thinkthen_complete_annotated_field_v1(const struct thinkthen_complete_annotated_field_v1 *value);
-id TTNative_thinkthen_complete_failed_v1(const struct thinkthen_complete_failed_v1 *value);
-id TTNative_thinkthen_complete_annotation_member_v1(const struct thinkthen_complete_annotation_member_v1 *value);
-id TTNative_thinkthen_complete_annotation_member_failure_id_v1(const struct thinkthen_complete_annotation_member_failure_id_v1 *value);
-id TTNative_thinkthen_complete_annotation_member_answer_id_v1(const struct thinkthen_complete_annotation_member_answer_id_v1 *value);
-id TTNative_thinkthen_complete_session_packet_find_aggregate_v1(const struct thinkthen_complete_session_packet_find_aggregate_v1 *value);
-id TTNative_thinkthen_complete_find_candidate_list_v1(const struct thinkthen_complete_find_candidate_list_v1 *value);
-id TTNative_thinkthen_complete_find_candidate_list_presence_v1(const struct thinkthen_complete_find_candidate_list_presence_v1 *value);
-id TTNative_thinkthen_complete_find_v1(const struct thinkthen_complete_find_v1 *value);
-id TTNative_thinkthen_complete_find_question_document_v1(const struct thinkthen_complete_find_question_document_v1 *value);
-id TTNative_thinkthen_complete_find_candidate_v1(const struct thinkthen_complete_find_candidate_v1 *value);
-id TTNative_thinkthen_complete_find_answer_v1(const struct thinkthen_complete_find_answer_v1 *value);
-id TTNative_thinkthen_complete_atomic_non_zero_usize_list_v1(const struct thinkthen_complete_atomic_non_zero_usize_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_rank_aggregate_v1(const struct thinkthen_complete_session_packet_rank_aggregate_v1 *value);
-id TTNative_thinkthen_complete_image_list_v1(const struct thinkthen_complete_image_list_v1 *value);
-id TTNative_thinkthen_complete_image_list_presence_v1(const struct thinkthen_complete_image_list_presence_v1 *value);
-id TTNative_thinkthen_complete_rank_member_list_v1(const struct thinkthen_complete_rank_member_list_v1 *value);
-id TTNative_thinkthen_complete_rank_member_list_presence_v1(const struct thinkthen_complete_rank_member_list_presence_v1 *value);
-id TTNative_thinkthen_complete_atomic_non_zero_usize_v1(const struct thinkthen_complete_atomic_non_zero_usize_v1 *value);
-id TTNative_thinkthen_complete_rank_member_v1(const struct thinkthen_complete_rank_member_v1 *value);
-id TTNative_thinkthen_complete_rank_member_result_v1(const struct thinkthen_complete_rank_member_result_v1 *value);
-id TTNative_thinkthen_complete_image_v1(const struct thinkthen_complete_image_v1 *value);
-id TTNative_thinkthen_complete_image_media_v1(const struct thinkthen_complete_image_media_v1 *value);
-id TTNative_thinkthen_complete_atomic_boolean_list_v1(const struct thinkthen_complete_atomic_boolean_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_filter_aggregate_v1(const struct thinkthen_complete_session_packet_filter_aggregate_v1 *value);
-id TTNative_thinkthen_complete_atomic_boolean_v1(const struct thinkthen_complete_atomic_boolean_v1 *value);
-id TTNative_thinkthen_complete_atomic_double_list_v1(const struct thinkthen_complete_atomic_double_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_score_aggregate_v1(const struct thinkthen_complete_session_packet_score_aggregate_v1 *value);
-id TTNative_thinkthen_complete_atomic_double_v1(const struct thinkthen_complete_atomic_double_v1 *value);
-id TTNative_thinkthen_complete_atomic_array_of_string_list_v1(const struct thinkthen_complete_atomic_array_of_string_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_tag_aggregate_v1(const struct thinkthen_complete_session_packet_tag_aggregate_v1 *value);
-id TTNative_thinkthen_complete_atomic_array_of_string_v1(const struct thinkthen_complete_atomic_array_of_string_v1 *value);
-id TTNative_thinkthen_complete_atomic_nullable_string_list_v1(const struct thinkthen_complete_atomic_nullable_string_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_choose_aggregate_v1(const struct thinkthen_complete_session_packet_choose_aggregate_v1 *value);
-id TTNative_thinkthen_complete_atomic_nullable_string_v1(const struct thinkthen_complete_atomic_nullable_string_v1 *value);
-id TTNative_thinkthen_complete_atomic_decide_value_list_v1(const struct thinkthen_complete_atomic_decide_value_list_v1 *value);
-id TTNative_thinkthen_complete_session_packet_decide_aggregate_v1(const struct thinkthen_complete_session_packet_decide_aggregate_v1 *value);
-id TTNative_thinkthen_complete_decide_value_presence_v1(const struct thinkthen_complete_decide_value_presence_v1 *value);
-id TTNative_thinkthen_complete_atomic_decide_value_v1(const struct thinkthen_complete_atomic_decide_value_v1 *value);
-id TTNative_thinkthen_complete_decide_value_v1(const struct thinkthen_complete_decide_value_v1 *value);
-id TTNative_thinkthen_complete_session_packet_annotate_row_v1(const struct thinkthen_complete_session_packet_annotate_row_v1 *value);
-id TTNative_thinkthen_complete_session_packet_filter_row_v1(const struct thinkthen_complete_session_packet_filter_row_v1 *value);
-id TTNative_thinkthen_complete_session_packet_score_row_v1(const struct thinkthen_complete_session_packet_score_row_v1 *value);
-id TTNative_thinkthen_complete_session_packet_tag_row_v1(const struct thinkthen_complete_session_packet_tag_row_v1 *value);
-id TTNative_thinkthen_complete_session_packet_choose_row_v1(const struct thinkthen_complete_session_packet_choose_row_v1 *value);
-id TTNative_thinkthen_complete_session_packet_decide_row_v1(const struct thinkthen_complete_session_packet_decide_row_v1 *value);
-static NSString *TTNativeString(struct thinkthen_complete_utf8_v1 value) {
+id TTNative_thinkthen_complete_attempt_list(const struct thinkthen_complete_attempt_list *value);
+id TTNative_thinkthen_complete_attempt_list_presence(const struct thinkthen_complete_attempt_list_presence *value);
+id TTNative_thinkthen_complete_call_id_presence(const struct thinkthen_complete_call_id_presence *value);
+id TTNative_thinkthen_complete_utf8_presence(const struct thinkthen_complete_utf8_presence *value);
+id TTNative_thinkthen_complete_u32_presence(const struct thinkthen_complete_u32_presence *value);
+id TTNative_thinkthen_complete_u64_presence(const struct thinkthen_complete_u64_presence *value);
+id TTNative_thinkthen_complete_persistence_observation_presence(const struct thinkthen_complete_persistence_observation_presence *value);
+id TTNative_thinkthen_complete_immediate_facts(const struct thinkthen_complete_immediate_facts *value);
+id TTNative_thinkthen_complete_persistence_observation(const struct thinkthen_complete_persistence_observation *value);
+id TTNative_thinkthen_complete_usage_persistence(const struct thinkthen_complete_usage_persistence *value);
+id TTNative_thinkthen_complete_call_id(const struct thinkthen_complete_call_id *value);
+id TTNative_thinkthen_complete_attempt(const struct thinkthen_complete_attempt *value);
+id TTNative_thinkthen_complete_sdk_request_id(const struct thinkthen_complete_sdk_request_id *value);
+id TTNative_thinkthen_complete_attempt_outcome(const struct thinkthen_complete_attempt_outcome *value);
+id TTNative_thinkthen_complete_session_packet(const struct thinkthen_complete_session_packet *value);
+id TTNative_thinkthen_complete_settled_answer_presence(const struct thinkthen_complete_settled_answer_presence *value);
+id TTNative_thinkthen_complete_facts_presence(const struct thinkthen_complete_facts_presence *value);
+id TTNative_thinkthen_complete_call_error_presence(const struct thinkthen_complete_call_error_presence *value);
+id TTNative_thinkthen_complete_session_packet_terminal(const struct thinkthen_complete_session_packet_terminal *value);
+id TTNative_thinkthen_complete_answer_resolution(const struct thinkthen_complete_answer_resolution *value);
+id TTNative_thinkthen_complete_call_error(const struct thinkthen_complete_call_error *value);
+id TTNative_thinkthen_complete_facts(const struct thinkthen_complete_facts *value);
+id TTNative_thinkthen_complete_input_denial_presence(const struct thinkthen_complete_input_denial_presence *value);
+id TTNative_thinkthen_complete_send_denial_presence(const struct thinkthen_complete_send_denial_presence *value);
+id TTNative_thinkthen_complete_error(const struct thinkthen_complete_error *value);
+id TTNative_thinkthen_complete_stopped(const struct thinkthen_complete_stopped *value);
+id TTNative_thinkthen_complete_stop_cause(const struct thinkthen_complete_stop_cause *value);
+id TTNative_thinkthen_complete_send_denial(const struct thinkthen_complete_send_denial *value);
+id TTNative_thinkthen_complete_send_denial_before_retry(const struct thinkthen_complete_send_denial_before_retry *value);
+id TTNative_thinkthen_complete_send_denial_before_additional_send(const struct thinkthen_complete_send_denial_before_additional_send *value);
+id TTNative_thinkthen_complete_send_denial_before_first_send(const struct thinkthen_complete_send_denial_before_first_send *value);
+id TTNative_thinkthen_complete_failure_kind(const struct thinkthen_complete_failure_kind *value);
+id TTNative_thinkthen_complete_input_denial(const struct thinkthen_complete_input_denial *value);
+id TTNative_thinkthen_complete_input_denial_retry(const struct thinkthen_complete_input_denial_retry *value);
+id TTNative_thinkthen_complete_input_denial_additional_request(const struct thinkthen_complete_input_denial_additional_request *value);
+id TTNative_thinkthen_complete_input_denial_initial_request(const struct thinkthen_complete_input_denial_initial_request *value);
+id TTNative_thinkthen_complete_settled_answer(const struct thinkthen_complete_settled_answer *value);
+id TTNative_thinkthen_complete_answer_shape_4_presence(const struct thinkthen_complete_answer_shape_4_presence *value);
+id TTNative_thinkthen_complete_answer_shape_3_presence(const struct thinkthen_complete_answer_shape_3_presence *value);
+id TTNative_thinkthen_complete_answer_shape_2_presence(const struct thinkthen_complete_answer_shape_2_presence *value);
+id TTNative_thinkthen_complete_answer_shape_15_presence(const struct thinkthen_complete_answer_shape_15_presence *value);
+id TTNative_thinkthen_complete_settled_answer_annotate(const struct thinkthen_complete_settled_answer_annotate *value);
+id TTNative_thinkthen_complete_settled_judgment_map_entry(const struct thinkthen_complete_settled_judgment_map_entry *value);
+id TTNative_thinkthen_complete_settled_judgment_map(const struct thinkthen_complete_settled_judgment_map *value);
+id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list(const struct thinkthen_complete_answer_shape_15_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_15(const struct thinkthen_complete_answer_shape_15 *value);
+id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items(const struct thinkthen_complete_answer_shape_15_any_of_1_items *value);
+id TTNative_thinkthen_complete_string_list(const struct thinkthen_complete_string_list *value);
+id TTNative_thinkthen_complete_settled_judgment(const struct thinkthen_complete_settled_judgment *value);
+id TTNative_thinkthen_complete_answer_resolution_map_entry(const struct thinkthen_complete_answer_resolution_map_entry *value);
+id TTNative_thinkthen_complete_answer_resolution_map(const struct thinkthen_complete_answer_resolution_map *value);
+id TTNative_thinkthen_complete_answer_resolutions_list(const struct thinkthen_complete_answer_resolutions_list *value);
+id TTNative_thinkthen_complete_answer_shape_5(const struct thinkthen_complete_answer_shape_5 *value);
+id TTNative_thinkthen_complete_answer_resolutions(const struct thinkthen_complete_answer_resolutions *value);
+id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(const struct thinkthen_complete_answer_shape_8_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_2(const struct thinkthen_complete_answer_shape_2 *value);
+id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items(const struct thinkthen_complete_answer_shape_8_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list(const struct thinkthen_complete_answer_shape_6_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_3(const struct thinkthen_complete_answer_shape_3 *value);
+id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items(const struct thinkthen_complete_answer_shape_6_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list(const struct thinkthen_complete_answer_shape_4_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_4(const struct thinkthen_complete_answer_shape_4 *value);
+id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items(const struct thinkthen_complete_answer_shape_4_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_10_presence(const struct thinkthen_complete_answer_shape_10_presence *value);
+id TTNative_thinkthen_complete_answer_shape_14_presence(const struct thinkthen_complete_answer_shape_14_presence *value);
+id TTNative_thinkthen_complete_settled_answer_relate(const struct thinkthen_complete_settled_answer_relate *value);
+id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list(const struct thinkthen_complete_answer_shape_14_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_14(const struct thinkthen_complete_answer_shape_14 *value);
+id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items(const struct thinkthen_complete_answer_shape_14_any_of_1_items *value);
+id TTNative_thinkthen_complete_related_entity_edge_list(const struct thinkthen_complete_related_entity_edge_list *value);
+id TTNative_thinkthen_complete_settled_relations(const struct thinkthen_complete_settled_relations *value);
+id TTNative_thinkthen_complete_related_entity_edge(const struct thinkthen_complete_related_entity_edge *value);
+id TTNative_thinkthen_complete_relation_endpoint(const struct thinkthen_complete_relation_endpoint *value);
+id TTNative_thinkthen_complete_json_presence(const struct thinkthen_complete_json_presence *value);
+id TTNative_thinkthen_complete_relation_endpoint_source(const struct thinkthen_complete_relation_endpoint_source *value);
+id TTNative_thinkthen_complete_relation_endpoint_related_entity(const struct thinkthen_complete_relation_endpoint_related_entity *value);
+id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list(const struct thinkthen_complete_answer_shape_10_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_10(const struct thinkthen_complete_answer_shape_10 *value);
+id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items(const struct thinkthen_complete_answer_shape_10_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_13_presence(const struct thinkthen_complete_answer_shape_13_presence *value);
+id TTNative_thinkthen_complete_settled_answer_recognize(const struct thinkthen_complete_settled_answer_recognize *value);
+id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list(const struct thinkthen_complete_answer_shape_13_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_13(const struct thinkthen_complete_answer_shape_13 *value);
+id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items(const struct thinkthen_complete_answer_shape_13_any_of_1_items *value);
+id TTNative_thinkthen_complete_settled_recognition(const struct thinkthen_complete_settled_recognition *value);
+id TTNative_thinkthen_complete_boundary_proposal_list(const struct thinkthen_complete_boundary_proposal_list *value);
+id TTNative_thinkthen_complete_settled_recognition_mode_proposals(const struct thinkthen_complete_settled_recognition_mode_proposals *value);
+id TTNative_thinkthen_complete_boundary_proposal(const struct thinkthen_complete_boundary_proposal *value);
+id TTNative_thinkthen_complete_boundary_mode(const struct thinkthen_complete_boundary_mode *value);
+id TTNative_thinkthen_complete_entity_list(const struct thinkthen_complete_entity_list *value);
+id TTNative_thinkthen_complete_entity_edge_list(const struct thinkthen_complete_entity_edge_list *value);
+id TTNative_thinkthen_complete_entity_edge_list_presence(const struct thinkthen_complete_entity_edge_list_presence *value);
+id TTNative_thinkthen_complete_settled_recognition_entities(const struct thinkthen_complete_settled_recognition_entities *value);
+id TTNative_thinkthen_complete_entity_edge(const struct thinkthen_complete_entity_edge *value);
+id TTNative_thinkthen_complete_entity(const struct thinkthen_complete_entity *value);
+id TTNative_thinkthen_complete_answer_shape_12_presence(const struct thinkthen_complete_answer_shape_12_presence *value);
+id TTNative_thinkthen_complete_settled_answer_find(const struct thinkthen_complete_settled_answer_find *value);
+id TTNative_thinkthen_complete_answer_shape_12(const struct thinkthen_complete_answer_shape_12 *value);
+id TTNative_thinkthen_complete_answer_shape_11_presence(const struct thinkthen_complete_answer_shape_11_presence *value);
+id TTNative_thinkthen_complete_settled_answer_rank(const struct thinkthen_complete_settled_answer_rank *value);
+id TTNative_thinkthen_complete_integer_list(const struct thinkthen_complete_integer_list *value);
+id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list(const struct thinkthen_complete_answer_shape_11_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_11(const struct thinkthen_complete_answer_shape_11 *value);
+id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items(const struct thinkthen_complete_answer_shape_11_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_9_presence(const struct thinkthen_complete_answer_shape_9_presence *value);
+id TTNative_thinkthen_complete_settled_answer_filter(const struct thinkthen_complete_settled_answer_filter *value);
+id TTNative_thinkthen_complete_settled_original_list(const struct thinkthen_complete_settled_original_list *value);
+id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list(const struct thinkthen_complete_answer_shape_9_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_9(const struct thinkthen_complete_answer_shape_9 *value);
+id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items(const struct thinkthen_complete_answer_shape_9_any_of_1_items *value);
+id TTNative_thinkthen_complete_settled_original(const struct thinkthen_complete_settled_original *value);
+id TTNative_thinkthen_complete_answer_shape_8_presence(const struct thinkthen_complete_answer_shape_8_presence *value);
+id TTNative_thinkthen_complete_settled_answer_score(const struct thinkthen_complete_settled_answer_score *value);
+id TTNative_thinkthen_complete_answer_shape_8(const struct thinkthen_complete_answer_shape_8 *value);
+id TTNative_thinkthen_complete_answer_shape_7_presence(const struct thinkthen_complete_answer_shape_7_presence *value);
+id TTNative_thinkthen_complete_settled_answer_tag(const struct thinkthen_complete_settled_answer_tag *value);
+id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list(const struct thinkthen_complete_answer_shape_7_any_of_1_items_list *value);
+id TTNative_thinkthen_complete_answer_shape_7(const struct thinkthen_complete_answer_shape_7 *value);
+id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items(const struct thinkthen_complete_answer_shape_7_any_of_1_items *value);
+id TTNative_thinkthen_complete_answer_shape_6_presence(const struct thinkthen_complete_answer_shape_6_presence *value);
+id TTNative_thinkthen_complete_settled_answer_choose(const struct thinkthen_complete_settled_answer_choose *value);
+id TTNative_thinkthen_complete_answer_shape_6(const struct thinkthen_complete_answer_shape_6 *value);
+id TTNative_thinkthen_complete_answer_shape_presence(const struct thinkthen_complete_answer_shape_presence *value);
+id TTNative_thinkthen_complete_settled_answer_decide(const struct thinkthen_complete_settled_answer_decide *value);
+id TTNative_thinkthen_complete_answer_shape(const struct thinkthen_complete_answer_shape *value);
+id TTNative_thinkthen_complete_session_packet_observation(const struct thinkthen_complete_session_packet_observation *value);
+id TTNative_thinkthen_complete_session_observation(const struct thinkthen_complete_session_observation *value);
+id TTNative_thinkthen_complete_session_observation_row(const struct thinkthen_complete_session_observation_row *value);
+id TTNative_thinkthen_complete_session_observed_row(const struct thinkthen_complete_session_observed_row *value);
+id TTNative_thinkthen_complete_session_relation_edge_list(const struct thinkthen_complete_session_relation_edge_list *value);
+id TTNative_thinkthen_complete_session_observed_row_relations(const struct thinkthen_complete_session_observed_row_relations *value);
+id TTNative_thinkthen_complete_session_relation_edge(const struct thinkthen_complete_session_relation_edge *value);
+id TTNative_thinkthen_complete_entity_document(const struct thinkthen_complete_entity_document *value);
+id TTNative_thinkthen_complete_session_observed_row_find(const struct thinkthen_complete_session_observed_row_find *value);
+id TTNative_thinkthen_complete_session_observed_row_recognized(const struct thinkthen_complete_session_observed_row_recognized *value);
+id TTNative_thinkthen_complete_boundary_proposal_list_presence(const struct thinkthen_complete_boundary_proposal_list_presence *value);
+id TTNative_thinkthen_complete_recognition_edge_list(const struct thinkthen_complete_recognition_edge_list *value);
+id TTNative_thinkthen_complete_recognition_edge_list_presence(const struct thinkthen_complete_recognition_edge_list_presence *value);
+id TTNative_thinkthen_complete_session_recognition(const struct thinkthen_complete_session_recognition *value);
+id TTNative_thinkthen_complete_recognition_edge(const struct thinkthen_complete_recognition_edge *value);
+id TTNative_thinkthen_complete_recognition_mode(const struct thinkthen_complete_recognition_mode *value);
+id TTNative_thinkthen_complete_session_annotation_list(const struct thinkthen_complete_session_annotation_list *value);
+id TTNative_thinkthen_complete_session_observed_row_annotated(const struct thinkthen_complete_session_observed_row_annotated *value);
+id TTNative_thinkthen_complete_session_annotation(const struct thinkthen_complete_session_annotation *value);
+id TTNative_thinkthen_complete_annotation_value(const struct thinkthen_complete_annotation_value *value);
+id TTNative_thinkthen_complete_annotation_value_failed(const struct thinkthen_complete_annotation_value_failed *value);
+id TTNative_thinkthen_complete_failure_field_kind(const struct thinkthen_complete_failure_field_kind *value);
+id TTNative_thinkthen_complete_failure(const struct thinkthen_complete_failure *value);
+id TTNative_thinkthen_complete_failure_cause(const struct thinkthen_complete_failure_cause *value);
+id TTNative_thinkthen_complete_annotation_value_tags(const struct thinkthen_complete_annotation_value_tags *value);
+id TTNative_thinkthen_complete_annotation_value_score(const struct thinkthen_complete_annotation_value_score *value);
+id TTNative_thinkthen_complete_annotation_value_choice(const struct thinkthen_complete_annotation_value_choice *value);
+id TTNative_thinkthen_complete_annotation_value_decision(const struct thinkthen_complete_annotation_value_decision *value);
+id TTNative_thinkthen_complete_session_observed_row_judgment(const struct thinkthen_complete_session_observed_row_judgment *value);
+id TTNative_thinkthen_complete_session_judgment(const struct thinkthen_complete_session_judgment *value);
+id TTNative_thinkthen_complete_session_judgment_tags(const struct thinkthen_complete_session_judgment_tags *value);
+id TTNative_thinkthen_complete_session_judgment_score(const struct thinkthen_complete_session_judgment_score *value);
+id TTNative_thinkthen_complete_session_judgment_choice(const struct thinkthen_complete_session_judgment_choice *value);
+id TTNative_thinkthen_complete_session_judgment_decision(const struct thinkthen_complete_session_judgment_decision *value);
+id TTNative_thinkthen_complete_session_observation_question(const struct thinkthen_complete_session_observation_question *value);
+id TTNative_thinkthen_complete_answer_id_presence(const struct thinkthen_complete_answer_id_presence *value);
+id TTNative_thinkthen_complete_f64_presence(const struct thinkthen_complete_f64_presence *value);
+id TTNative_thinkthen_complete_failure_presence(const struct thinkthen_complete_failure_presence *value);
+id TTNative_thinkthen_complete_failure_id_presence(const struct thinkthen_complete_failure_id_presence *value);
+id TTNative_thinkthen_complete_physical_source_presence(const struct thinkthen_complete_physical_source_presence *value);
+id TTNative_thinkthen_complete_session_input_source_list(const struct thinkthen_complete_session_input_source_list *value);
+id TTNative_thinkthen_complete_json_list(const struct thinkthen_complete_json_list *value);
+id TTNative_thinkthen_complete_observation_list(const struct thinkthen_complete_observation_list *value);
+id TTNative_thinkthen_complete_session_probabilities_presence(const struct thinkthen_complete_session_probabilities_presence *value);
+id TTNative_thinkthen_complete_question_source_list(const struct thinkthen_complete_question_source_list *value);
+id TTNative_thinkthen_complete_usage_presence(const struct thinkthen_complete_usage_presence *value);
+id TTNative_thinkthen_complete_threshold_presence(const struct thinkthen_complete_threshold_presence *value);
+id TTNative_thinkthen_complete_token_usage_presence(const struct thinkthen_complete_token_usage_presence *value);
+id TTNative_thinkthen_complete_value_presence(const struct thinkthen_complete_value_presence *value);
+id TTNative_thinkthen_complete_session_question_detail(const struct thinkthen_complete_session_question_detail *value);
+id TTNative_thinkthen_complete_value(const struct thinkthen_complete_value *value);
+id TTNative_thinkthen_complete_token_usage(const struct thinkthen_complete_token_usage *value);
+id TTNative_thinkthen_complete_threshold(const struct thinkthen_complete_threshold *value);
+id TTNative_thinkthen_complete_usage(const struct thinkthen_complete_usage *value);
+id TTNative_thinkthen_complete_question_source(const struct thinkthen_complete_question_source *value);
+id TTNative_thinkthen_complete_origin(const struct thinkthen_complete_origin *value);
+id TTNative_thinkthen_complete_question_document(const struct thinkthen_complete_question_document *value);
+id TTNative_thinkthen_complete_batch_presence(const struct thinkthen_complete_batch_presence *value);
+id TTNative_thinkthen_complete_input_declaration_presence(const struct thinkthen_complete_input_declaration_presence *value);
+id TTNative_thinkthen_complete_label_list(const struct thinkthen_complete_label_list *value);
+id TTNative_thinkthen_complete_label_list_presence(const struct thinkthen_complete_label_list_presence *value);
+id TTNative_thinkthen_complete_question_name_presence(const struct thinkthen_complete_question_name_presence *value);
+id TTNative_thinkthen_complete_string_list_presence(const struct thinkthen_complete_string_list_presence *value);
+id TTNative_thinkthen_complete_question_document_score(const struct thinkthen_complete_question_document_score *value);
+id TTNative_thinkthen_complete_question_name(const struct thinkthen_complete_question_name *value);
+id TTNative_thinkthen_complete_label(const struct thinkthen_complete_label *value);
+id TTNative_thinkthen_complete_input_declaration(const struct thinkthen_complete_input_declaration *value);
+id TTNative_thinkthen_complete_input_property_type_map_entry(const struct thinkthen_complete_input_property_type_map_entry *value);
+id TTNative_thinkthen_complete_input_property_type_map(const struct thinkthen_complete_input_property_type_map *value);
+id TTNative_thinkthen_complete_input_declaration_object_root(const struct thinkthen_complete_input_declaration_object_root *value);
+id TTNative_thinkthen_complete_object_type(const struct thinkthen_complete_object_type *value);
+id TTNative_thinkthen_complete_input_property_type(const struct thinkthen_complete_input_property_type *value);
+id TTNative_thinkthen_complete_input_property_type_array(const struct thinkthen_complete_input_property_type_array *value);
+id TTNative_thinkthen_complete_string_root(const struct thinkthen_complete_string_root *value);
+id TTNative_thinkthen_complete_string_type(const struct thinkthen_complete_string_type *value);
+id TTNative_thinkthen_complete_input_property_type_boolean(const struct thinkthen_complete_input_property_type_boolean *value);
+id TTNative_thinkthen_complete_input_property_type_number(const struct thinkthen_complete_input_property_type_number *value);
+id TTNative_thinkthen_complete_input_property_type_string(const struct thinkthen_complete_input_property_type_string *value);
+id TTNative_thinkthen_complete_input_declaration_string_root(const struct thinkthen_complete_input_declaration_string_root *value);
+id TTNative_thinkthen_complete_batch_string(const struct thinkthen_complete_batch_string *value);
+id TTNative_thinkthen_complete_batch(const struct thinkthen_complete_batch *value);
+id TTNative_thinkthen_complete_question_document_tag(const struct thinkthen_complete_question_document_tag *value);
+id TTNative_thinkthen_complete_question_document_choose(const struct thinkthen_complete_question_document_choose *value);
+id TTNative_thinkthen_complete_question_document_decide(const struct thinkthen_complete_question_document_decide *value);
+id TTNative_thinkthen_complete_session_probabilities(const struct thinkthen_complete_session_probabilities *value);
+id TTNative_thinkthen_complete_session_named_probability_list(const struct thinkthen_complete_session_named_probability_list *value);
+id TTNative_thinkthen_complete_session_probabilities_named(const struct thinkthen_complete_session_probabilities_named *value);
+id TTNative_thinkthen_complete_session_named_probability(const struct thinkthen_complete_session_named_probability *value);
+id TTNative_thinkthen_complete_session_probabilities_yes_no(const struct thinkthen_complete_session_probabilities_yes_no *value);
+id TTNative_thinkthen_complete_observation(const struct thinkthen_complete_observation *value);
+id TTNative_thinkthen_complete_observation_failure_id(const struct thinkthen_complete_observation_failure_id *value);
+id TTNative_thinkthen_complete_failure_id(const struct thinkthen_complete_failure_id *value);
+id TTNative_thinkthen_complete_observation_observation_id(const struct thinkthen_complete_observation_observation_id *value);
+id TTNative_thinkthen_complete_observation_id(const struct thinkthen_complete_observation_id *value);
+id TTNative_thinkthen_complete_session_input_source(const struct thinkthen_complete_session_input_source *value);
+id TTNative_thinkthen_complete_physical_source(const struct thinkthen_complete_physical_source *value);
+id TTNative_thinkthen_complete_answer_id(const struct thinkthen_complete_answer_id *value);
+id TTNative_thinkthen_complete_request_function(const struct thinkthen_complete_request_function *value);
+id TTNative_thinkthen_complete_session_packet_relate_aggregate(const struct thinkthen_complete_session_packet_relate_aggregate *value);
+id TTNative_thinkthen_complete_session_input_source_list_presence(const struct thinkthen_complete_session_input_source_list_presence *value);
+id TTNative_thinkthen_complete_position_presence(const struct thinkthen_complete_position_presence *value);
+id TTNative_thinkthen_complete_relation(const struct thinkthen_complete_relation *value);
+id TTNative_thinkthen_complete_result_tag(const struct thinkthen_complete_result_tag *value);
+id TTNative_thinkthen_complete_relate_fields_presence(const struct thinkthen_complete_relate_fields_presence *value);
+id TTNative_thinkthen_complete_relation_rule_list(const struct thinkthen_complete_relation_rule_list *value);
+id TTNative_thinkthen_complete_relate_question_document(const struct thinkthen_complete_relate_question_document *value);
+id TTNative_thinkthen_complete_relation_rule(const struct thinkthen_complete_relation_rule *value);
+id TTNative_thinkthen_complete_relate_fields(const struct thinkthen_complete_relate_fields *value);
+id TTNative_thinkthen_complete_position(const struct thinkthen_complete_position *value);
+id TTNative_thinkthen_complete_batch_setting_presence(const struct thinkthen_complete_batch_setting_presence *value);
+id TTNative_thinkthen_complete_batch_warning_presence(const struct thinkthen_complete_batch_warning_presence *value);
+id TTNative_thinkthen_complete_origin_presence(const struct thinkthen_complete_origin_presence *value);
+id TTNative_thinkthen_complete_profile_warning_presence(const struct thinkthen_complete_profile_warning_presence *value);
+id TTNative_thinkthen_complete_meta(const struct thinkthen_complete_meta *value);
+id TTNative_thinkthen_complete_profile_warning(const struct thinkthen_complete_profile_warning *value);
+id TTNative_thinkthen_complete_batch_warning(const struct thinkthen_complete_batch_warning *value);
+id TTNative_thinkthen_complete_batch_setting(const struct thinkthen_complete_batch_setting *value);
+id TTNative_thinkthen_complete_relation_member_list(const struct thinkthen_complete_relation_member_list *value);
+id TTNative_thinkthen_complete_answers(const struct thinkthen_complete_answers *value);
+id TTNative_thinkthen_complete_relation_member(const struct thinkthen_complete_relation_member *value);
+id TTNative_thinkthen_complete_related_entity_presence(const struct thinkthen_complete_related_entity_presence *value);
+id TTNative_thinkthen_complete_relation_member_failure_id(const struct thinkthen_complete_relation_member_failure_id *value);
+id TTNative_thinkthen_complete_related_entity(const struct thinkthen_complete_related_entity *value);
+id TTNative_thinkthen_complete_relation_method(const struct thinkthen_complete_relation_method *value);
+id TTNative_thinkthen_complete_relation_direction(const struct thinkthen_complete_relation_direction *value);
+id TTNative_thinkthen_complete_relation_member_answer_id(const struct thinkthen_complete_relation_member_answer_id *value);
+id TTNative_thinkthen_complete_answer(const struct thinkthen_complete_answer *value);
+id TTNative_thinkthen_complete_number_map_entry(const struct thinkthen_complete_number_map_entry *value);
+id TTNative_thinkthen_complete_number_map(const struct thinkthen_complete_number_map *value);
+id TTNative_thinkthen_complete_answer_score(const struct thinkthen_complete_answer_score *value);
+id TTNative_thinkthen_complete_answer_tag(const struct thinkthen_complete_answer_tag *value);
+id TTNative_thinkthen_complete_answer_choice(const struct thinkthen_complete_answer_choice *value);
+id TTNative_thinkthen_complete_answer_yes_no(const struct thinkthen_complete_answer_yes_no *value);
+id TTNative_thinkthen_complete_recognition_list(const struct thinkthen_complete_recognition_list *value);
+id TTNative_thinkthen_complete_session_packet_recognize_aggregate(const struct thinkthen_complete_session_packet_recognize_aggregate *value);
+id TTNative_thinkthen_complete_recognition(const struct thinkthen_complete_recognition *value);
+id TTNative_thinkthen_complete_recognize(const struct thinkthen_complete_recognize *value);
+id TTNative_thinkthen_complete_recognize_mode_proposals(const struct thinkthen_complete_recognize_mode_proposals *value);
+id TTNative_thinkthen_complete_recognize_entities(const struct thinkthen_complete_recognize_entities *value);
+id TTNative_thinkthen_complete_json_map_entry(const struct thinkthen_complete_json_map_entry *value);
+id TTNative_thinkthen_complete_json_map(const struct thinkthen_complete_json_map *value);
+id TTNative_thinkthen_complete_recognition_mode_presence(const struct thinkthen_complete_recognition_mode_presence *value);
+id TTNative_thinkthen_complete_relation_rule_list_presence(const struct thinkthen_complete_relation_rule_list_presence *value);
+id TTNative_thinkthen_complete_recognition_stage_context_presence(const struct thinkthen_complete_recognition_stage_context_presence *value);
+id TTNative_thinkthen_complete_recognize_question_document(const struct thinkthen_complete_recognize_question_document *value);
+id TTNative_thinkthen_complete_verb(const struct thinkthen_complete_verb *value);
+id TTNative_thinkthen_complete_recognition_stage_context(const struct thinkthen_complete_recognition_stage_context *value);
+id TTNative_thinkthen_complete_recognition_odds(const struct thinkthen_complete_recognition_odds *value);
+id TTNative_thinkthen_complete_piece_odds_list(const struct thinkthen_complete_piece_odds_list *value);
+id TTNative_thinkthen_complete_recognition_odds_boundary_odds(const struct thinkthen_complete_recognition_odds_boundary_odds *value);
+id TTNative_thinkthen_complete_piece_odds(const struct thinkthen_complete_piece_odds *value);
+id TTNative_thinkthen_complete_name_odds_list(const struct thinkthen_complete_name_odds_list *value);
+id TTNative_thinkthen_complete_pair_odds_list(const struct thinkthen_complete_pair_odds_list *value);
+id TTNative_thinkthen_complete_recognition_proposal_list(const struct thinkthen_complete_recognition_proposal_list *value);
+id TTNative_thinkthen_complete_recognition_odds_recognize_answer(const struct thinkthen_complete_recognition_odds_recognize_answer *value);
+id TTNative_thinkthen_complete_place_presence(const struct thinkthen_complete_place_presence *value);
+id TTNative_thinkthen_complete_recognition_proposal(const struct thinkthen_complete_recognition_proposal *value);
+id TTNative_thinkthen_complete_place(const struct thinkthen_complete_place *value);
+id TTNative_thinkthen_complete_pair_odds(const struct thinkthen_complete_pair_odds *value);
+id TTNative_thinkthen_complete_number_map_presence(const struct thinkthen_complete_number_map_presence *value);
+id TTNative_thinkthen_complete_name_odds(const struct thinkthen_complete_name_odds *value);
+id TTNative_thinkthen_complete_annotation_list(const struct thinkthen_complete_annotation_list *value);
+id TTNative_thinkthen_complete_session_packet_annotate_aggregate(const struct thinkthen_complete_session_packet_annotate_aggregate *value);
+id TTNative_thinkthen_complete_annotation_member_map_entry(const struct thinkthen_complete_annotation_member_map_entry *value);
+id TTNative_thinkthen_complete_annotation_member_map(const struct thinkthen_complete_annotation_member_map *value);
+id TTNative_thinkthen_complete_annotation(const struct thinkthen_complete_annotation *value);
+id TTNative_thinkthen_complete_annotated_field_map_entry(const struct thinkthen_complete_annotated_field_map_entry *value);
+id TTNative_thinkthen_complete_annotated_field_map(const struct thinkthen_complete_annotated_field_map *value);
+id TTNative_thinkthen_complete_annotated_row(const struct thinkthen_complete_annotated_row *value);
+id TTNative_thinkthen_complete_annotated_field(const struct thinkthen_complete_annotated_field *value);
+id TTNative_thinkthen_complete_failed(const struct thinkthen_complete_failed *value);
+id TTNative_thinkthen_complete_annotation_member(const struct thinkthen_complete_annotation_member *value);
+id TTNative_thinkthen_complete_annotation_member_failure_id(const struct thinkthen_complete_annotation_member_failure_id *value);
+id TTNative_thinkthen_complete_annotation_member_answer_id(const struct thinkthen_complete_annotation_member_answer_id *value);
+id TTNative_thinkthen_complete_session_packet_find_aggregate(const struct thinkthen_complete_session_packet_find_aggregate *value);
+id TTNative_thinkthen_complete_find_candidate_list(const struct thinkthen_complete_find_candidate_list *value);
+id TTNative_thinkthen_complete_find_candidate_list_presence(const struct thinkthen_complete_find_candidate_list_presence *value);
+id TTNative_thinkthen_complete_find(const struct thinkthen_complete_find *value);
+id TTNative_thinkthen_complete_find_question_document(const struct thinkthen_complete_find_question_document *value);
+id TTNative_thinkthen_complete_find_candidate(const struct thinkthen_complete_find_candidate *value);
+id TTNative_thinkthen_complete_find_answer(const struct thinkthen_complete_find_answer *value);
+id TTNative_thinkthen_complete_atomic_non_zero_usize_list(const struct thinkthen_complete_atomic_non_zero_usize_list *value);
+id TTNative_thinkthen_complete_session_packet_rank_aggregate(const struct thinkthen_complete_session_packet_rank_aggregate *value);
+id TTNative_thinkthen_complete_image_list(const struct thinkthen_complete_image_list *value);
+id TTNative_thinkthen_complete_image_list_presence(const struct thinkthen_complete_image_list_presence *value);
+id TTNative_thinkthen_complete_rank_member_list(const struct thinkthen_complete_rank_member_list *value);
+id TTNative_thinkthen_complete_rank_member_list_presence(const struct thinkthen_complete_rank_member_list_presence *value);
+id TTNative_thinkthen_complete_atomic_non_zero_usize(const struct thinkthen_complete_atomic_non_zero_usize *value);
+id TTNative_thinkthen_complete_rank_member(const struct thinkthen_complete_rank_member *value);
+id TTNative_thinkthen_complete_rank_member_result(const struct thinkthen_complete_rank_member_result *value);
+id TTNative_thinkthen_complete_image(const struct thinkthen_complete_image *value);
+id TTNative_thinkthen_complete_image_media(const struct thinkthen_complete_image_media *value);
+id TTNative_thinkthen_complete_atomic_boolean_list(const struct thinkthen_complete_atomic_boolean_list *value);
+id TTNative_thinkthen_complete_session_packet_filter_aggregate(const struct thinkthen_complete_session_packet_filter_aggregate *value);
+id TTNative_thinkthen_complete_atomic_boolean(const struct thinkthen_complete_atomic_boolean *value);
+id TTNative_thinkthen_complete_atomic_double_list(const struct thinkthen_complete_atomic_double_list *value);
+id TTNative_thinkthen_complete_session_packet_score_aggregate(const struct thinkthen_complete_session_packet_score_aggregate *value);
+id TTNative_thinkthen_complete_atomic_double(const struct thinkthen_complete_atomic_double *value);
+id TTNative_thinkthen_complete_atomic_array_of_string_list(const struct thinkthen_complete_atomic_array_of_string_list *value);
+id TTNative_thinkthen_complete_session_packet_tag_aggregate(const struct thinkthen_complete_session_packet_tag_aggregate *value);
+id TTNative_thinkthen_complete_atomic_array_of_string(const struct thinkthen_complete_atomic_array_of_string *value);
+id TTNative_thinkthen_complete_atomic_nullable_string_list(const struct thinkthen_complete_atomic_nullable_string_list *value);
+id TTNative_thinkthen_complete_session_packet_choose_aggregate(const struct thinkthen_complete_session_packet_choose_aggregate *value);
+id TTNative_thinkthen_complete_atomic_nullable_string(const struct thinkthen_complete_atomic_nullable_string *value);
+id TTNative_thinkthen_complete_atomic_decide_value_list(const struct thinkthen_complete_atomic_decide_value_list *value);
+id TTNative_thinkthen_complete_session_packet_decide_aggregate(const struct thinkthen_complete_session_packet_decide_aggregate *value);
+id TTNative_thinkthen_complete_decide_value_presence(const struct thinkthen_complete_decide_value_presence *value);
+id TTNative_thinkthen_complete_atomic_decide_value(const struct thinkthen_complete_atomic_decide_value *value);
+id TTNative_thinkthen_complete_decide_value(const struct thinkthen_complete_decide_value *value);
+id TTNative_thinkthen_complete_session_packet_annotate_row(const struct thinkthen_complete_session_packet_annotate_row *value);
+id TTNative_thinkthen_complete_session_packet_filter_row(const struct thinkthen_complete_session_packet_filter_row *value);
+id TTNative_thinkthen_complete_session_packet_score_row(const struct thinkthen_complete_session_packet_score_row *value);
+id TTNative_thinkthen_complete_session_packet_tag_row(const struct thinkthen_complete_session_packet_tag_row *value);
+id TTNative_thinkthen_complete_session_packet_choose_row(const struct thinkthen_complete_session_packet_choose_row *value);
+id TTNative_thinkthen_complete_session_packet_decide_row(const struct thinkthen_complete_session_packet_decide_row *value);
+static NSString *TTNativeString(struct thinkthen_complete_utf8 value) {
     NSString *text = [[NSString alloc] initWithBytes:value.data ?: "" length:value.len encoding:NSUTF8StringEncoding];
     if (!text) TTInvalidResult();
     return text;
 }
-id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value) {
+id TTNative_thinkthen_complete_json(const struct thinkthen_complete_json *value) {
     if (!value) TTInvalidResult();
     switch (value->kind) {
-        case THINKTHEN_COMPLETE_JSON_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return @((BOOL)value->data.boolean);
-        case THINKTHEN_COMPLETE_JSON_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_JSON_NUMBER_V1: {
+        case THINKTHEN_COMPLETE_JSON_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_JSON_BOOLEAN: return @((BOOL)value->data.boolean);
+        case THINKTHEN_COMPLETE_JSON_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_JSON_NUMBER: {
             NSString *text = TTNativeString(value->data.number);
             NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:text locale:@{
                 NSLocaleDecimalSeparator:@"."
@@ -8365,343 +8245,343 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
             if (!isfinite(floating)) TTInvalidResult();
             return @(floating);
         }
-        case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {
+        case THINKTHEN_COMPLETE_JSON_ARRAY: {
             NSMutableArray *items = [NSMutableArray array];
             for (size_t i = 0;
             i < value->data.array.len;
-            i++) [items addObject:TTNative_thinkthen_complete_json_v1(value->data.array.data[i])];
+            i++) [items addObject:TTNative_thinkthen_complete_json(value->data.array.data[i])];
             return [items copy];
         }
-        case THINKTHEN_COMPLETE_JSON_OBJECT_V1: {
+        case THINKTHEN_COMPLETE_JSON_OBJECT: {
             NSMutableDictionary *items = [NSMutableDictionary dictionary];
             for (size_t i = 0;
             i < value->data.object.len;
             i++) {
-                const struct thinkthen_complete_json_entry_v1 *item = &value->data.object.data[i];
-                items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+                const struct thinkthen_complete_json_entry *item = &value->data.object.data[i];
+                items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
             }
             return [items copy];
         }
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_attempt_list_v1(const struct thinkthen_complete_attempt_list_v1 *value) {
+id TTNative_thinkthen_complete_attempt_list(const struct thinkthen_complete_attempt_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_attempt_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_attempt(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_attempt_list_presence_v1(const struct thinkthen_complete_attempt_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_attempt_list_presence(const struct thinkthen_complete_attempt_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_attempt_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_attempt_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_call_id_presence_v1(const struct thinkthen_complete_call_id_presence_v1 *value) {
+id TTNative_thinkthen_complete_call_id_presence(const struct thinkthen_complete_call_id_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_call_id_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_call_id(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_utf8_presence_v1(const struct thinkthen_complete_utf8_presence_v1 *value) {
+id TTNative_thinkthen_complete_utf8_presence(const struct thinkthen_complete_utf8_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNativeString(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNativeString(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_u32_presence_v1(const struct thinkthen_complete_u32_presence_v1 *value) {
+id TTNative_thinkthen_complete_u32_presence(const struct thinkthen_complete_u32_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? @(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? @(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_u64_presence_v1(const struct thinkthen_complete_u64_presence_v1 *value) {
+id TTNative_thinkthen_complete_u64_presence(const struct thinkthen_complete_u64_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? @(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? @(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_persistence_observation_presence_v1(const struct thinkthen_complete_persistence_observation_presence_v1 *value) {
+id TTNative_thinkthen_complete_persistence_observation_presence(const struct thinkthen_complete_persistence_observation_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_persistence_observation_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_persistence_observation(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_immediate_facts_v1(const struct thinkthen_complete_immediate_facts_v1 *value) {
+id TTNative_thinkthen_complete_immediate_facts(const struct thinkthen_complete_immediate_facts *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"attempts"] = NSNull.null;
-    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list_v1(&(value->attempts.value));
+    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"attempts"] = NSNull.null;
+    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list(&(value->attempts.value));
     items[@"cache_answers"] = @(value->cache_answers);
-    if (value->call_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"call_id"] = NSNull.null;
-    else if (value->call_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"call_id"] = TTNative_thinkthen_complete_call_id_v1(value->call_id.value);
-    if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"estimated_cost_usd"] = NSNull.null;
-    else if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"estimated_cost_usd"] = TTNativeString(value->estimated_cost_usd.value);
-    if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"held_model_mismatch"] = NSNull.null;
-    else if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"held_model_mismatch"] = @((BOOL)value->held_model_mismatch.value);
-    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input_tokens"] = NSNull.null;
-    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input_tokens"] = @(value->input_tokens.value);
+    if (value->call_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"call_id"] = NSNull.null;
+    else if (value->call_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"call_id"] = TTNative_thinkthen_complete_call_id(value->call_id.value);
+    if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"estimated_cost_usd"] = NSNull.null;
+    else if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"estimated_cost_usd"] = TTNativeString(value->estimated_cost_usd.value);
+    if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"held_model_mismatch"] = NSNull.null;
+    else if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"held_model_mismatch"] = @((BOOL)value->held_model_mismatch.value);
+    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input_tokens"] = NSNull.null;
+    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input_tokens"] = @(value->input_tokens.value);
     items[@"largest_request_bytes"] = @(value->largest_request_bytes);
-    if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"largest_request_estimated_input_tokens"] = NSNull.null;
-    else if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"largest_request_estimated_input_tokens"] = @(value->largest_request_estimated_input_tokens.value);
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"output_tokens"] = NSNull.null;
-    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"output_tokens"] = @(value->output_tokens.value);
+    if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"largest_request_estimated_input_tokens"] = NSNull.null;
+    else if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"largest_request_estimated_input_tokens"] = @(value->largest_request_estimated_input_tokens.value);
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"output_tokens"] = NSNull.null;
+    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"output_tokens"] = @(value->output_tokens.value);
     items[@"records"] = @(value->records);
     items[@"requests_sent"] = @(value->requests_sent);
     items[@"seconds"] = @(value->seconds);
     items[@"token_estimate_method"] = TTNativeString(value->token_estimate_method);
-    if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage_persistence"] = NSNull.null;
-    else if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage_persistence"] = TTNative_thinkthen_complete_persistence_observation_v1(value->usage_persistence.value);
+    if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage_persistence"] = NSNull.null;
+    else if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage_persistence"] = TTNative_thinkthen_complete_persistence_observation(value->usage_persistence.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_persistence_observation_v1(const struct thinkthen_complete_persistence_observation_v1 *value) {
+id TTNative_thinkthen_complete_persistence_observation(const struct thinkthen_complete_persistence_observation *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->advice.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"advice"] = NSNull.null;
-    else if (value->advice.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"advice"] = TTNativeString(value->advice.value);
+    if (value->advice.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"advice"] = NSNull.null;
+    else if (value->advice.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"advice"] = TTNativeString(value->advice.value);
     items[@"observed_at"] = TTNativeString(value->observed_at);
-    items[@"state"] = TTNative_thinkthen_complete_usage_persistence_v1(value->state);
+    items[@"state"] = TTNative_thinkthen_complete_usage_persistence(value->state);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_usage_persistence_v1(const struct thinkthen_complete_usage_persistence_v1 *value) {
+id TTNative_thinkthen_complete_usage_persistence(const struct thinkthen_complete_usage_persistence *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1: return @"disabled";
-        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1: return @"pending";
-        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1: return @"written";
-        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1: return @"failed";
+        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED: return @"disabled";
+        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING: return @"pending";
+        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN: return @"written";
+        case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED: return @"failed";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_call_id_v1(const struct thinkthen_complete_call_id_v1 *value) {
+id TTNative_thinkthen_complete_call_id(const struct thinkthen_complete_call_id *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_attempt_v1(const struct thinkthen_complete_attempt_v1 *value) {
+id TTNative_thinkthen_complete_attempt(const struct thinkthen_complete_attempt *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"ordinal"] = @(value->ordinal);
-    items[@"outcome"] = TTNative_thinkthen_complete_attempt_outcome_v1(value->outcome);
-    if (value->request_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"request_id"] = NSNull.null;
-    else if (value->request_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"request_id"] = TTNativeString(value->request_id.value);
+    items[@"outcome"] = TTNative_thinkthen_complete_attempt_outcome(value->outcome);
+    if (value->request_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"request_id"] = NSNull.null;
+    else if (value->request_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"request_id"] = TTNativeString(value->request_id.value);
     items[@"request_sha256"] = TTNativeString(value->request_sha256);
-    items[@"sdk_request_id"] = TTNative_thinkthen_complete_sdk_request_id_v1(value->sdk_request_id);
-    if (value->server_ms.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"server_ms"] = NSNull.null;
-    else if (value->server_ms.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"server_ms"] = @(value->server_ms.value);
-    if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"status"] = NSNull.null;
-    else if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"status"] = @(value->status.value);
+    items[@"sdk_request_id"] = TTNative_thinkthen_complete_sdk_request_id(value->sdk_request_id);
+    if (value->server_ms.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"server_ms"] = NSNull.null;
+    else if (value->server_ms.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"server_ms"] = @(value->server_ms.value);
+    if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"status"] = NSNull.null;
+    else if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"status"] = @(value->status.value);
     items[@"wall_ms"] = @(value->wall_ms);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_sdk_request_id_v1(const struct thinkthen_complete_sdk_request_id_v1 *value) {
+id TTNative_thinkthen_complete_sdk_request_id(const struct thinkthen_complete_sdk_request_id *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_attempt_outcome_v1(const struct thinkthen_complete_attempt_outcome_v1 *value) {
+id TTNative_thinkthen_complete_attempt_outcome(const struct thinkthen_complete_attempt_outcome *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_OK_V1: return @"ok";
-        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_STATUS_V1: return @"status";
-        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_TRANSPORT_V1: return @"transport";
+        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_OK: return @"ok";
+        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_STATUS: return @"status";
+        case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_TRANSPORT: return @"transport";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_packet_v1(const struct thinkthen_complete_session_packet_v1 *value) {
+id TTNative_thinkthen_complete_session_packet(const struct thinkthen_complete_session_packet *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1: return TTNative_thinkthen_complete_session_packet_decide_row_v1(value->data.decide_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1: return TTNative_thinkthen_complete_session_packet_choose_row_v1(value->data.choose_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW_V1: return TTNative_thinkthen_complete_session_packet_tag_row_v1(value->data.tag_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1: return TTNative_thinkthen_complete_session_packet_score_row_v1(value->data.score_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1: return TTNative_thinkthen_complete_session_packet_filter_row_v1(value->data.filter_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW_V1: return TTNative_thinkthen_complete_session_packet_annotate_row_v1(value->data.annotate_row);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_decide_aggregate_v1(value->data.decide_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_choose_aggregate_v1(value->data.choose_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_TAG_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_tag_aggregate_v1(value->data.tag_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_score_aggregate_v1(value->data.score_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_filter_aggregate_v1(value->data.filter_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_rank_aggregate_v1(value->data.rank_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_find_aggregate_v1(value->data.find_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_annotate_aggregate_v1(value->data.annotate_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_recognize_aggregate_v1(value->data.recognize_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1: return TTNative_thinkthen_complete_session_packet_relate_aggregate_v1(value->data.relate_aggregate);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION_V1: return TTNative_thinkthen_complete_session_packet_observation_v1(value->data.observation);
-        case THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1: return TTNative_thinkthen_complete_session_packet_terminal_v1(value->data.terminal);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW: return TTNative_thinkthen_complete_session_packet_decide_row(value->data.decide_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW: return TTNative_thinkthen_complete_session_packet_choose_row(value->data.choose_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW: return TTNative_thinkthen_complete_session_packet_tag_row(value->data.tag_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW: return TTNative_thinkthen_complete_session_packet_score_row(value->data.score_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW: return TTNative_thinkthen_complete_session_packet_filter_row(value->data.filter_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW: return TTNative_thinkthen_complete_session_packet_annotate_row(value->data.annotate_row);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_decide_aggregate(value->data.decide_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_choose_aggregate(value->data.choose_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_TAG_AGGREGATE: return TTNative_thinkthen_complete_session_packet_tag_aggregate(value->data.tag_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_score_aggregate(value->data.score_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_AGGREGATE: return TTNative_thinkthen_complete_session_packet_filter_aggregate(value->data.filter_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE: return TTNative_thinkthen_complete_session_packet_rank_aggregate(value->data.rank_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE: return TTNative_thinkthen_complete_session_packet_find_aggregate(value->data.find_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_annotate_aggregate(value->data.annotate_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_recognize_aggregate(value->data.recognize_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE: return TTNative_thinkthen_complete_session_packet_relate_aggregate(value->data.relate_aggregate);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION: return TTNative_thinkthen_complete_session_packet_observation(value->data.observation);
+        case THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL: return TTNative_thinkthen_complete_session_packet_terminal(value->data.terminal);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_settled_answer_presence_v1(const struct thinkthen_complete_settled_answer_presence_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_presence(const struct thinkthen_complete_settled_answer_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_settled_answer_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_settled_answer(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_facts_presence_v1(const struct thinkthen_complete_facts_presence_v1 *value) {
+id TTNative_thinkthen_complete_facts_presence(const struct thinkthen_complete_facts_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_facts_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_facts(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_call_error_presence_v1(const struct thinkthen_complete_call_error_presence_v1 *value) {
+id TTNative_thinkthen_complete_call_error_presence(const struct thinkthen_complete_call_error_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_call_error_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_call_error(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_session_packet_terminal_v1(const struct thinkthen_complete_session_packet_terminal_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_terminal(const struct thinkthen_complete_session_packet_terminal *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->answer.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"answer"] = NSNull.null;
-    else if (value->answer.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"answer"] = TTNative_thinkthen_complete_settled_answer_v1(value->answer.value);
-    if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"facts"] = NSNull.null;
-    else if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"facts"] = TTNative_thinkthen_complete_facts_v1(value->facts.value);
-    if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"failure"] = NSNull.null;
-    else if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"failure"] = TTNative_thinkthen_complete_call_error_v1(value->failure.value);
+    if (value->answer.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"answer"] = NSNull.null;
+    else if (value->answer.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"answer"] = TTNative_thinkthen_complete_settled_answer(value->answer.value);
+    if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"facts"] = NSNull.null;
+    else if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"facts"] = TTNative_thinkthen_complete_facts(value->facts.value);
+    if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"failure"] = NSNull.null;
+    else if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"failure"] = TTNative_thinkthen_complete_call_error(value->failure.value);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_resolution_v1(value->resolution);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_resolution(value->resolution);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_resolution_v1(const struct thinkthen_complete_answer_resolution_v1 *value) {
+id TTNative_thinkthen_complete_answer_resolution(const struct thinkthen_complete_answer_resolution *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED_V1: return @"resolved";
-        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED_V1: return @"unresolved";
-        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1: return @"failed";
+        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED: return @"resolved";
+        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED: return @"unresolved";
+        case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED: return @"failed";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_call_error_v1(const struct thinkthen_complete_call_error_v1 *value) {
+id TTNative_thinkthen_complete_call_error(const struct thinkthen_complete_call_error *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"error"] = TTNative_thinkthen_complete_error_v1(value->error);
-    if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"facts"] = NSNull.null;
-    else if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"facts"] = TTNative_thinkthen_complete_facts_v1(value->facts.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_resolution_v1(value->resolution);
+    items[@"error"] = TTNative_thinkthen_complete_error(value->error);
+    if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"facts"] = NSNull.null;
+    else if (value->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"facts"] = TTNative_thinkthen_complete_facts(value->facts.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_resolution(value->resolution);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_facts_v1(const struct thinkthen_complete_facts_v1 *value) {
+id TTNative_thinkthen_complete_facts(const struct thinkthen_complete_facts *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"attempts"] = NSNull.null;
-    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list_v1(&(value->attempts.value));
+    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"attempts"] = NSNull.null;
+    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list(&(value->attempts.value));
     items[@"cache_answers"] = @(value->cache_answers);
-    items[@"call_id"] = TTNative_thinkthen_complete_call_id_v1(value->call_id);
-    if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"estimated_cost_usd"] = NSNull.null;
-    else if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"estimated_cost_usd"] = TTNativeString(value->estimated_cost_usd.value);
-    if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"held_model_mismatch"] = NSNull.null;
-    else if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"held_model_mismatch"] = @((BOOL)value->held_model_mismatch.value);
-    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input_tokens"] = NSNull.null;
-    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input_tokens"] = @(value->input_tokens.value);
+    items[@"call_id"] = TTNative_thinkthen_complete_call_id(value->call_id);
+    if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"estimated_cost_usd"] = NSNull.null;
+    else if (value->estimated_cost_usd.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"estimated_cost_usd"] = TTNativeString(value->estimated_cost_usd.value);
+    if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"held_model_mismatch"] = NSNull.null;
+    else if (value->held_model_mismatch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"held_model_mismatch"] = @((BOOL)value->held_model_mismatch.value);
+    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input_tokens"] = NSNull.null;
+    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input_tokens"] = @(value->input_tokens.value);
     items[@"largest_request_bytes"] = @(value->largest_request_bytes);
-    if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"largest_request_estimated_input_tokens"] = NSNull.null;
-    else if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"largest_request_estimated_input_tokens"] = @(value->largest_request_estimated_input_tokens.value);
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"output_tokens"] = NSNull.null;
-    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"output_tokens"] = @(value->output_tokens.value);
+    if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"largest_request_estimated_input_tokens"] = NSNull.null;
+    else if (value->largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"largest_request_estimated_input_tokens"] = @(value->largest_request_estimated_input_tokens.value);
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"output_tokens"] = NSNull.null;
+    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"output_tokens"] = @(value->output_tokens.value);
     items[@"records"] = @(value->records);
     items[@"requests_sent"] = @(value->requests_sent);
     items[@"seconds"] = @(value->seconds);
     items[@"token_estimate_method"] = TTNativeString(value->token_estimate_method);
-    if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage_persistence"] = NSNull.null;
-    else if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage_persistence"] = TTNative_thinkthen_complete_persistence_observation_v1(value->usage_persistence.value);
+    if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage_persistence"] = NSNull.null;
+    else if (value->usage_persistence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage_persistence"] = TTNative_thinkthen_complete_persistence_observation(value->usage_persistence.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_denial_presence_v1(const struct thinkthen_complete_input_denial_presence_v1 *value) {
+id TTNative_thinkthen_complete_input_denial_presence(const struct thinkthen_complete_input_denial_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_input_denial_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_input_denial(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_send_denial_presence_v1(const struct thinkthen_complete_send_denial_presence_v1 *value) {
+id TTNative_thinkthen_complete_send_denial_presence(const struct thinkthen_complete_send_denial_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_send_denial_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_send_denial(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_error_v1(const struct thinkthen_complete_error_v1 *value) {
+id TTNative_thinkthen_complete_error(const struct thinkthen_complete_error *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->estimated_input_denial.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"estimated_input_denial"] = NSNull.null;
-    else if (value->estimated_input_denial.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"estimated_input_denial"] = TTNative_thinkthen_complete_input_denial_v1(value->estimated_input_denial.value);
-    items[@"kind"] = TTNative_thinkthen_complete_failure_kind_v1(value->kind);
+    if (value->estimated_input_denial.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"estimated_input_denial"] = NSNull.null;
+    else if (value->estimated_input_denial.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"estimated_input_denial"] = TTNative_thinkthen_complete_input_denial(value->estimated_input_denial.value);
+    items[@"kind"] = TTNative_thinkthen_complete_failure_kind(value->kind);
     items[@"message"] = TTNativeString(value->message);
     items[@"retryable"] = @((BOOL)value->retryable);
-    if (value->send_budget_denial.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"send_budget_denial"] = NSNull.null;
-    else if (value->send_budget_denial.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"send_budget_denial"] = TTNative_thinkthen_complete_send_denial_v1(value->send_budget_denial.value);
-    items[@"stopped"] = TTNative_thinkthen_complete_stopped_v1(value->stopped);
+    if (value->send_budget_denial.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"send_budget_denial"] = NSNull.null;
+    else if (value->send_budget_denial.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"send_budget_denial"] = TTNative_thinkthen_complete_send_denial(value->send_budget_denial.value);
+    items[@"stopped"] = TTNative_thinkthen_complete_stopped(value->stopped);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_stopped_v1(const struct thinkthen_complete_stopped_v1 *value) {
+id TTNative_thinkthen_complete_stopped(const struct thinkthen_complete_stopped *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->at.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"at"] = NSNull.null;
-    else if (value->at.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"at"] = @(value->at.value);
-    items[@"cause"] = TTNative_thinkthen_complete_stop_cause_v1(value->cause);
+    if (value->at.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"at"] = NSNull.null;
+    else if (value->at.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"at"] = @(value->at.value);
+    items[@"cause"] = TTNative_thinkthen_complete_stop_cause(value->cause);
     items[@"retryable"] = @((BOOL)value->retryable);
-    if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"status"] = NSNull.null;
-    else if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"status"] = @(value->status.value);
+    if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"status"] = NSNull.null;
+    else if (value->status.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"status"] = @(value->status.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_stop_cause_v1(const struct thinkthen_complete_stop_cause_v1 *value) {
+id TTNative_thinkthen_complete_stop_cause(const struct thinkthen_complete_stop_cause *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_STOP_CAUSE_USAGE_V1: return @"usage";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_LOCAL_V1: return @"local";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_NO_KEY_V1: return @"no_key";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_TRANSPORT_V1: return @"transport";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_STATUS_V1: return @"status";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_TOO_LARGE_V1: return @"too_large";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_REPLY_V1: return @"reply";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_BACKEND_V1: return @"backend";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_CANCELLED_V1: return @"cancelled";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_DEADLINE_V1: return @"deadline";
-        case THINKTHEN_COMPLETE_STOP_CAUSE_DEFECT_V1: return @"defect";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_USAGE: return @"usage";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_LOCAL: return @"local";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_NO_KEY: return @"no_key";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_TRANSPORT: return @"transport";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_STATUS: return @"status";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_TOO_LARGE: return @"too_large";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_REPLY: return @"reply";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_BACKEND: return @"backend";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_CANCELLED: return @"cancelled";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_DEADLINE: return @"deadline";
+        case THINKTHEN_COMPLETE_STOP_CAUSE_DEFECT: return @"defect";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_send_denial_v1(const struct thinkthen_complete_send_denial_v1 *value) {
+id TTNative_thinkthen_complete_send_denial(const struct thinkthen_complete_send_denial *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND_V1: return TTNative_thinkthen_complete_send_denial_before_first_send_v1(value->data.before_first_send);
-        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND_V1: return TTNative_thinkthen_complete_send_denial_before_additional_send_v1(value->data.before_additional_send);
-        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_RETRY_V1: return TTNative_thinkthen_complete_send_denial_before_retry_v1(value->data.before_retry);
+        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND: return TTNative_thinkthen_complete_send_denial_before_first_send(value->data.before_first_send);
+        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND: return TTNative_thinkthen_complete_send_denial_before_additional_send(value->data.before_additional_send);
+        case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_RETRY: return TTNative_thinkthen_complete_send_denial_before_retry(value->data.before_retry);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_send_denial_before_retry_v1(const struct thinkthen_complete_send_denial_before_retry_v1 *value) {
+id TTNative_thinkthen_complete_send_denial_before_retry(const struct thinkthen_complete_send_denial_before_retry *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -8709,57 +8589,57 @@ id TTNative_thinkthen_complete_send_denial_before_retry_v1(const struct thinkthe
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_send_denial_before_additional_send_v1(const struct thinkthen_complete_send_denial_before_additional_send_v1 *value) {
+id TTNative_thinkthen_complete_send_denial_before_additional_send(const struct thinkthen_complete_send_denial_before_additional_send *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_send_denial_before_first_send_v1(const struct thinkthen_complete_send_denial_before_first_send_v1 *value) {
+id TTNative_thinkthen_complete_send_denial_before_first_send(const struct thinkthen_complete_send_denial_before_first_send *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_failure_kind_v1(const struct thinkthen_complete_failure_kind_v1 *value) {
+id TTNative_thinkthen_complete_failure_kind(const struct thinkthen_complete_failure_kind *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_FAILURE_KIND_USAGE_V1: return @"usage";
-        case THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1: return @"backend";
-        case THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1: return @"local";
-        case THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1: return @"cancelled";
-        case THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE_V1: return @"deadline";
-        case THINKTHEN_COMPLETE_FAILURE_KIND_DEFECT_V1: return @"defect";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_USAGE: return @"usage";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND: return @"backend";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL: return @"local";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED: return @"cancelled";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE: return @"deadline";
+        case THINKTHEN_COMPLETE_FAILURE_KIND_DEFECT: return @"defect";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_denial_v1(const struct thinkthen_complete_input_denial_v1 *value) {
+id TTNative_thinkthen_complete_input_denial(const struct thinkthen_complete_input_denial *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_INPUT_DENIAL_INITIAL_REQUEST_V1: return TTNative_thinkthen_complete_input_denial_initial_request_v1(value->data.initial_request);
-        case THINKTHEN_COMPLETE_INPUT_DENIAL_ADDITIONAL_REQUEST_V1: return TTNative_thinkthen_complete_input_denial_additional_request_v1(value->data.additional_request);
-        case THINKTHEN_COMPLETE_INPUT_DENIAL_RETRY_V1: return TTNative_thinkthen_complete_input_denial_retry_v1(value->data.retry);
+        case THINKTHEN_COMPLETE_INPUT_DENIAL_INITIAL_REQUEST: return TTNative_thinkthen_complete_input_denial_initial_request(value->data.initial_request);
+        case THINKTHEN_COMPLETE_INPUT_DENIAL_ADDITIONAL_REQUEST: return TTNative_thinkthen_complete_input_denial_additional_request(value->data.additional_request);
+        case THINKTHEN_COMPLETE_INPUT_DENIAL_RETRY: return TTNative_thinkthen_complete_input_denial_retry(value->data.retry);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_denial_retry_v1(const struct thinkthen_complete_input_denial_retry_v1 *value) {
+id TTNative_thinkthen_complete_input_denial_retry(const struct thinkthen_complete_input_denial_retry *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -8768,12 +8648,12 @@ id TTNative_thinkthen_complete_input_denial_retry_v1(const struct thinkthen_comp
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_denial_additional_request_v1(const struct thinkthen_complete_input_denial_additional_request_v1 *value) {
+id TTNative_thinkthen_complete_input_denial_additional_request(const struct thinkthen_complete_input_denial_additional_request *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -8781,12 +8661,12 @@ id TTNative_thinkthen_complete_input_denial_additional_request_v1(const struct t
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_denial_initial_request_v1(const struct thinkthen_complete_input_denial_initial_request_v1 *value) {
+id TTNative_thinkthen_complete_input_denial_initial_request(const struct thinkthen_complete_input_denial_initial_request *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -8794,106 +8674,106 @@ id TTNative_thinkthen_complete_input_denial_initial_request_v1(const struct thin
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_answer_v1(const struct thinkthen_complete_settled_answer_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer(const struct thinkthen_complete_settled_answer *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE_V1: return TTNative_thinkthen_complete_settled_answer_decide_v1(value->data.decide);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE_V1: return TTNative_thinkthen_complete_settled_answer_choose_v1(value->data.choose);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG_V1: return TTNative_thinkthen_complete_settled_answer_tag_v1(value->data.tag);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE_V1: return TTNative_thinkthen_complete_settled_answer_score_v1(value->data.score);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER_V1: return TTNative_thinkthen_complete_settled_answer_filter_v1(value->data.filter);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK_V1: return TTNative_thinkthen_complete_settled_answer_rank_v1(value->data.rank);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND_V1: return TTNative_thinkthen_complete_settled_answer_find_v1(value->data.find);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE_V1: return TTNative_thinkthen_complete_settled_answer_recognize_v1(value->data.recognize);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE_V1: return TTNative_thinkthen_complete_settled_answer_relate_v1(value->data.relate);
-        case THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE_V1: return TTNative_thinkthen_complete_settled_answer_annotate_v1(value->data.annotate);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE: return TTNative_thinkthen_complete_settled_answer_decide(value->data.decide);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE: return TTNative_thinkthen_complete_settled_answer_choose(value->data.choose);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG: return TTNative_thinkthen_complete_settled_answer_tag(value->data.tag);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE: return TTNative_thinkthen_complete_settled_answer_score(value->data.score);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER: return TTNative_thinkthen_complete_settled_answer_filter(value->data.filter);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK: return TTNative_thinkthen_complete_settled_answer_rank(value->data.rank);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND: return TTNative_thinkthen_complete_settled_answer_find(value->data.find);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE: return TTNative_thinkthen_complete_settled_answer_recognize(value->data.recognize);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE: return TTNative_thinkthen_complete_settled_answer_relate(value->data.relate);
+        case THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE: return TTNative_thinkthen_complete_settled_answer_annotate(value->data.annotate);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_4_presence_v1(const struct thinkthen_complete_answer_shape_4_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_4_presence(const struct thinkthen_complete_answer_shape_4_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_4_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_4(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_answer_shape_3_presence_v1(const struct thinkthen_complete_answer_shape_3_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_3_presence(const struct thinkthen_complete_answer_shape_3_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_3_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_3(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_answer_shape_2_presence_v1(const struct thinkthen_complete_answer_shape_2_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_2_presence(const struct thinkthen_complete_answer_shape_2_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_2_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_2(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_answer_shape_15_presence_v1(const struct thinkthen_complete_answer_shape_15_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_15_presence(const struct thinkthen_complete_answer_shape_15_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_15_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_15(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_annotate_v1(const struct thinkthen_complete_settled_answer_annotate_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_annotate(const struct thinkthen_complete_settled_answer_annotate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_15_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_15(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_judgment_map_entry_v1(const struct thinkthen_complete_settled_judgment_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_settled_judgment_map_entry(const struct thinkthen_complete_settled_judgment_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_settled_judgment_v1(value->value);
+    return TTNative_thinkthen_complete_settled_judgment(value->value);
 }
-id TTNative_thinkthen_complete_settled_judgment_map_v1(const struct thinkthen_complete_settled_judgment_map_v1 *value) {
+id TTNative_thinkthen_complete_settled_judgment_map(const struct thinkthen_complete_settled_judgment_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_settled_judgment_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_settled_judgment(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list(const struct thinkthen_complete_answer_shape_15_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_15_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_15_v1(const struct thinkthen_complete_answer_shape_15_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_15(const struct thinkthen_complete_answer_shape_15 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT_V1: return TTNative_thinkthen_complete_settled_judgment_map_v1(&(value->data.object));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT: return TTNative_thinkthen_complete_settled_judgment_map(&(value->data.object));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY: return TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_15_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_15_any_of_1_items(const struct thinkthen_complete_answer_shape_15_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT_V1: return TTNative_thinkthen_complete_settled_judgment_map_v1(&(value->data.object));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT: return TTNative_thinkthen_complete_settled_judgment_map(&(value->data.object));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_string_list_v1(const struct thinkthen_complete_string_list_v1 *value) {
+id TTNative_thinkthen_complete_string_list(const struct thinkthen_complete_string_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
@@ -8903,261 +8783,261 @@ id TTNative_thinkthen_complete_string_list_v1(const struct thinkthen_complete_st
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_judgment_v1(const struct thinkthen_complete_settled_judgment_v1 *value) {
+id TTNative_thinkthen_complete_settled_judgment(const struct thinkthen_complete_settled_judgment *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN_V1: return @((BOOL)value->data.boolean);
-        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY_V1: return TTNative_thinkthen_complete_string_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN: return @((BOOL)value->data.boolean);
+        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY: return TTNative_thinkthen_complete_string_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_resolution_map_entry_v1(const struct thinkthen_complete_answer_resolution_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_answer_resolution_map_entry(const struct thinkthen_complete_answer_resolution_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_answer_resolution_v1(value->value);
+    return TTNative_thinkthen_complete_answer_resolution(value->value);
 }
-id TTNative_thinkthen_complete_answer_resolution_map_v1(const struct thinkthen_complete_answer_resolution_map_v1 *value) {
+id TTNative_thinkthen_complete_answer_resolution_map(const struct thinkthen_complete_answer_resolution_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_answer_resolution_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_answer_resolution(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_resolutions_list_v1(const struct thinkthen_complete_answer_resolutions_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_resolutions_list(const struct thinkthen_complete_answer_resolutions_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_resolutions_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_resolutions(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_5_v1(const struct thinkthen_complete_answer_shape_5_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_5(const struct thinkthen_complete_answer_shape_5 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING_V1: return TTNative_thinkthen_complete_answer_resolution_v1(value->data.string);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT_V1: return TTNative_thinkthen_complete_answer_resolution_map_v1(&(value->data.object));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY_V1: return TTNative_thinkthen_complete_answer_resolutions_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING: return TTNative_thinkthen_complete_answer_resolution(value->data.string);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT: return TTNative_thinkthen_complete_answer_resolution_map(&(value->data.object));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY: return TTNative_thinkthen_complete_answer_resolutions_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_resolutions_v1(const struct thinkthen_complete_answer_resolutions_v1 *value) {
+id TTNative_thinkthen_complete_answer_resolutions(const struct thinkthen_complete_answer_resolutions *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING_V1: return TTNative_thinkthen_complete_answer_resolution_v1(value->data.string);
-        case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT_V1: return TTNative_thinkthen_complete_answer_resolution_map_v1(&(value->data.object));
+        case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING: return TTNative_thinkthen_complete_answer_resolution(value->data.string);
+        case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT: return TTNative_thinkthen_complete_answer_resolution_map(&(value->data.object));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(const struct thinkthen_complete_answer_shape_8_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_8_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_2_v1(const struct thinkthen_complete_answer_shape_2_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_2(const struct thinkthen_complete_answer_shape_2 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_8_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_8_any_of_1_items(const struct thinkthen_complete_answer_shape_8_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list(const struct thinkthen_complete_answer_shape_6_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_6_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_3_v1(const struct thinkthen_complete_answer_shape_3_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_3(const struct thinkthen_complete_answer_shape_3 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY: return TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_6_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_6_any_of_1_items(const struct thinkthen_complete_answer_shape_6_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list(const struct thinkthen_complete_answer_shape_4_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_4_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_4_v1(const struct thinkthen_complete_answer_shape_4_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_4(const struct thinkthen_complete_answer_shape_4 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER_V1: return @(value->data.integer);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER: return @(value->data.integer);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY: return TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_4_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_4_any_of_1_items(const struct thinkthen_complete_answer_shape_4_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER_V1: return @(value->data.integer);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER: return @(value->data.integer);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_10_presence_v1(const struct thinkthen_complete_answer_shape_10_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_10_presence(const struct thinkthen_complete_answer_shape_10_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_10_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_10(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_answer_shape_14_presence_v1(const struct thinkthen_complete_answer_shape_14_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_14_presence(const struct thinkthen_complete_answer_shape_14_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_14_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_14(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_relate_v1(const struct thinkthen_complete_settled_answer_relate_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_relate(const struct thinkthen_complete_settled_answer_relate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_14_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_14(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list(const struct thinkthen_complete_answer_shape_14_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_14_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_14_v1(const struct thinkthen_complete_answer_shape_14_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_14(const struct thinkthen_complete_answer_shape_14 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY_V1: return TTNative_thinkthen_complete_settled_relations_v1(value->data.array);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2_V1: return TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(&(value->data.array2));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY: return TTNative_thinkthen_complete_settled_relations(value->data.array);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2: return TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_list(&(value->data.array2));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_14_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_14_any_of_1_items(const struct thinkthen_complete_answer_shape_14_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY_V1: return TTNative_thinkthen_complete_settled_relations_v1(value->data.array);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY: return TTNative_thinkthen_complete_settled_relations(value->data.array);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_related_entity_edge_list_v1(const struct thinkthen_complete_related_entity_edge_list_v1 *value) {
+id TTNative_thinkthen_complete_related_entity_edge_list(const struct thinkthen_complete_related_entity_edge_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_related_entity_edge_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_related_entity_edge(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_relations_v1(const struct thinkthen_complete_settled_relations_v1 *value) {
+id TTNative_thinkthen_complete_settled_relations(const struct thinkthen_complete_settled_relations *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_related_entity_edge_list_v1(&(value->value));
+    return TTNative_thinkthen_complete_related_entity_edge_list(&(value->value));
 }
-id TTNative_thinkthen_complete_related_entity_edge_v1(const struct thinkthen_complete_related_entity_edge_v1 *value) {
+id TTNative_thinkthen_complete_related_entity_edge(const struct thinkthen_complete_related_entity_edge *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"either"] = NSNull.null;
-    else if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"either"] = @((BOOL)value->either.value);
+    if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"either"] = NSNull.null;
+    else if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"either"] = @((BOOL)value->either.value);
     items[@"probability"] = @(value->probability);
     items[@"relation"] = TTNativeString(value->relation);
-    items[@"source"] = TTNative_thinkthen_complete_relation_endpoint_v1(value->source);
-    items[@"target"] = TTNative_thinkthen_complete_relation_endpoint_v1(value->target);
+    items[@"source"] = TTNative_thinkthen_complete_relation_endpoint(value->source);
+    items[@"target"] = TTNative_thinkthen_complete_relation_endpoint(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relation_endpoint_v1(const struct thinkthen_complete_relation_endpoint_v1 *value) {
+id TTNative_thinkthen_complete_relation_endpoint(const struct thinkthen_complete_relation_endpoint *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1: return TTNative_thinkthen_complete_relation_endpoint_related_entity_v1(value->data.related_entity);
-        case THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1: return TTNative_thinkthen_complete_relation_endpoint_source_v1(value->data.source);
+        case THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY: return TTNative_thinkthen_complete_relation_endpoint_related_entity(value->data.related_entity);
+        case THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE: return TTNative_thinkthen_complete_relation_endpoint_source(value->data.source);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_json_presence_v1(const struct thinkthen_complete_json_presence_v1 *value) {
+id TTNative_thinkthen_complete_json_presence(const struct thinkthen_complete_json_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_json_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_json(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_relation_endpoint_source_v1(const struct thinkthen_complete_relation_endpoint_source_v1 *value) {
+id TTNative_thinkthen_complete_relation_endpoint_source(const struct thinkthen_complete_relation_endpoint_source *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
     items[@"name"] = TTNativeString(value->name);
     items[@"ordinal"] = @(value->ordinal);
-    if (value->record.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"record"] = NSNull.null;
-    else if (value->record.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"record"] = TTNative_thinkthen_complete_json_v1(value->record.value);
+    if (value->record.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"record"] = NSNull.null;
+    else if (value->record.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"record"] = TTNative_thinkthen_complete_json(value->record.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relation_endpoint_related_entity_v1(const struct thinkthen_complete_relation_endpoint_related_entity_v1 *value) {
+id TTNative_thinkthen_complete_relation_endpoint_related_entity(const struct thinkthen_complete_relation_endpoint_related_entity *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -9165,131 +9045,131 @@ id TTNative_thinkthen_complete_relation_endpoint_related_entity_v1(const struct 
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list(const struct thinkthen_complete_answer_shape_10_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_10_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_10_v1(const struct thinkthen_complete_answer_shape_10_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_10(const struct thinkthen_complete_answer_shape_10 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2_V1: return TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(&(value->data.array2));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2: return TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_list(&(value->data.array2));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_10_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_10_any_of_1_items(const struct thinkthen_complete_answer_shape_10_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_13_presence_v1(const struct thinkthen_complete_answer_shape_13_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_13_presence(const struct thinkthen_complete_answer_shape_13_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_13_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_13(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_recognize_v1(const struct thinkthen_complete_settled_answer_recognize_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_recognize(const struct thinkthen_complete_settled_answer_recognize *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_13_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_13(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list(const struct thinkthen_complete_answer_shape_13_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_13_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_13_v1(const struct thinkthen_complete_answer_shape_13_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_13(const struct thinkthen_complete_answer_shape_13 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT_V1: return TTNative_thinkthen_complete_settled_recognition_v1(value->data.object);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT: return TTNative_thinkthen_complete_settled_recognition(value->data.object);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY: return TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_13_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_13_any_of_1_items(const struct thinkthen_complete_answer_shape_13_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT_V1: return TTNative_thinkthen_complete_settled_recognition_v1(value->data.object);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT: return TTNative_thinkthen_complete_settled_recognition(value->data.object);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_settled_recognition_v1(const struct thinkthen_complete_settled_recognition_v1 *value) {
+id TTNative_thinkthen_complete_settled_recognition(const struct thinkthen_complete_settled_recognition *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES_V1: return TTNative_thinkthen_complete_settled_recognition_entities_v1(value->data.entities);
-        case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS_V1: return TTNative_thinkthen_complete_settled_recognition_mode_proposals_v1(value->data.mode_proposals);
+        case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES: return TTNative_thinkthen_complete_settled_recognition_entities(value->data.entities);
+        case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS: return TTNative_thinkthen_complete_settled_recognition_mode_proposals(value->data.mode_proposals);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_boundary_proposal_list_v1(const struct thinkthen_complete_boundary_proposal_list_v1 *value) {
+id TTNative_thinkthen_complete_boundary_proposal_list(const struct thinkthen_complete_boundary_proposal_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_boundary_proposal_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_boundary_proposal(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_recognition_mode_proposals_v1(const struct thinkthen_complete_settled_recognition_mode_proposals_v1 *value) {
+id TTNative_thinkthen_complete_settled_recognition_mode_proposals(const struct thinkthen_complete_settled_recognition_mode_proposals *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"mode"] = TTNative_thinkthen_complete_boundary_mode_v1(value->mode);
-    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list_v1(&(value->proposals));
+    items[@"mode"] = TTNative_thinkthen_complete_boundary_mode(value->mode);
+    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list(&(value->proposals));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_boundary_proposal_v1(const struct thinkthen_complete_boundary_proposal_v1 *value) {
+id TTNative_thinkthen_complete_boundary_proposal(const struct thinkthen_complete_boundary_proposal *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"end"] = @(value->end);
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
     items[@"length"] = @(value->length);
     items[@"probability"] = @(value->probability);
     items[@"start"] = @(value->start);
@@ -9297,84 +9177,84 @@ id TTNative_thinkthen_complete_boundary_proposal_v1(const struct thinkthen_compl
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_boundary_mode_v1(const struct thinkthen_complete_boundary_mode_v1 *value) {
+id TTNative_thinkthen_complete_boundary_mode(const struct thinkthen_complete_boundary_mode *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1: return @"boundary_only";
+        case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY: return @"boundary_only";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_entity_list_v1(const struct thinkthen_complete_entity_list_v1 *value) {
+id TTNative_thinkthen_complete_entity_list(const struct thinkthen_complete_entity_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_entity_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_entity(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_entity_edge_list_v1(const struct thinkthen_complete_entity_edge_list_v1 *value) {
+id TTNative_thinkthen_complete_entity_edge_list(const struct thinkthen_complete_entity_edge_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_entity_edge_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_entity_edge(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_entity_edge_list_presence_v1(const struct thinkthen_complete_entity_edge_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_entity_edge_list_presence(const struct thinkthen_complete_entity_edge_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_entity_edge_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_entity_edge_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_recognition_entities_v1(const struct thinkthen_complete_settled_recognition_entities_v1 *value) {
+id TTNative_thinkthen_complete_settled_recognition_entities(const struct thinkthen_complete_settled_recognition_entities *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"entities"] = TTNative_thinkthen_complete_entity_list_v1(&(value->entities));
-    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relations"] = NSNull.null;
-    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relations"] = TTNative_thinkthen_complete_entity_edge_list_v1(&(value->relations.value));
+    items[@"entities"] = TTNative_thinkthen_complete_entity_list(&(value->entities));
+    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relations"] = NSNull.null;
+    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relations"] = TTNative_thinkthen_complete_entity_edge_list(&(value->relations.value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_entity_edge_v1(const struct thinkthen_complete_entity_edge_v1 *value) {
+id TTNative_thinkthen_complete_entity_edge(const struct thinkthen_complete_entity_edge *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"either"] = NSNull.null;
-    else if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"either"] = @((BOOL)value->either.value);
+    if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"either"] = NSNull.null;
+    else if (value->either.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"either"] = @((BOOL)value->either.value);
     items[@"probability"] = @(value->probability);
     items[@"relation"] = TTNativeString(value->relation);
-    items[@"source"] = TTNative_thinkthen_complete_entity_v1(value->source);
-    items[@"target"] = TTNative_thinkthen_complete_entity_v1(value->target);
+    items[@"source"] = TTNative_thinkthen_complete_entity(value->source);
+    items[@"target"] = TTNative_thinkthen_complete_entity(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_entity_v1(const struct thinkthen_complete_entity_v1 *value) {
+id TTNative_thinkthen_complete_entity(const struct thinkthen_complete_entity *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"end"] = @(value->end);
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
     items[@"length"] = @(value->length);
     items[@"start"] = @(value->start);
     items[@"strength"] = @(value->strength);
@@ -9382,66 +9262,66 @@ id TTNative_thinkthen_complete_entity_v1(const struct thinkthen_complete_entity_
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_12_presence_v1(const struct thinkthen_complete_answer_shape_12_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_12_presence(const struct thinkthen_complete_answer_shape_12_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_12_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_12(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_find_v1(const struct thinkthen_complete_settled_answer_find_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_find(const struct thinkthen_complete_settled_answer_find *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_12_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_12(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_12_v1(const struct thinkthen_complete_answer_shape_12_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_12(const struct thinkthen_complete_answer_shape_12 *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_json_v1(value->value);
+    return TTNative_thinkthen_complete_json(value->value);
 }
-id TTNative_thinkthen_complete_answer_shape_11_presence_v1(const struct thinkthen_complete_answer_shape_11_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_11_presence(const struct thinkthen_complete_answer_shape_11_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_11_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_11(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_rank_v1(const struct thinkthen_complete_settled_answer_rank_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_rank(const struct thinkthen_complete_settled_answer_rank *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_11_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_11(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_integer_list_v1(const struct thinkthen_complete_integer_list_v1 *value) {
+id TTNative_thinkthen_complete_integer_list(const struct thinkthen_complete_integer_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
@@ -9451,335 +9331,335 @@ id TTNative_thinkthen_complete_integer_list_v1(const struct thinkthen_complete_i
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list(const struct thinkthen_complete_answer_shape_11_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_11_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_11_v1(const struct thinkthen_complete_answer_shape_11_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_11(const struct thinkthen_complete_answer_shape_11 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY_V1: return TTNative_thinkthen_complete_integer_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2_V1: return TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(&(value->data.array2));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY: return TTNative_thinkthen_complete_integer_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2: return TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_list(&(value->data.array2));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_11_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_11_any_of_1_items(const struct thinkthen_complete_answer_shape_11_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY_V1: return TTNative_thinkthen_complete_integer_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY: return TTNative_thinkthen_complete_integer_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_9_presence_v1(const struct thinkthen_complete_answer_shape_9_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_9_presence(const struct thinkthen_complete_answer_shape_9_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_9_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_9(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_filter_v1(const struct thinkthen_complete_settled_answer_filter_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_filter(const struct thinkthen_complete_settled_answer_filter *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_9_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_10(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_9(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_settled_original_list_v1(const struct thinkthen_complete_settled_original_list_v1 *value) {
+id TTNative_thinkthen_complete_settled_original_list(const struct thinkthen_complete_settled_original_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_settled_original_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_settled_original(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list(const struct thinkthen_complete_answer_shape_9_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_9_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_9_v1(const struct thinkthen_complete_answer_shape_9_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_9(const struct thinkthen_complete_answer_shape_9 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY_V1: return TTNative_thinkthen_complete_settled_original_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2_V1: return TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(&(value->data.array2));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY: return TTNative_thinkthen_complete_settled_original_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2: return TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_list(&(value->data.array2));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_9_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_9_any_of_1_items(const struct thinkthen_complete_answer_shape_9_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY_V1: return TTNative_thinkthen_complete_settled_original_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY: return TTNative_thinkthen_complete_settled_original_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_settled_original_v1(const struct thinkthen_complete_settled_original_v1 *value) {
+id TTNative_thinkthen_complete_settled_original(const struct thinkthen_complete_settled_original *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_json_v1(value->value);
+    return TTNative_thinkthen_complete_json(value->value);
 }
-id TTNative_thinkthen_complete_answer_shape_8_presence_v1(const struct thinkthen_complete_answer_shape_8_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_8_presence(const struct thinkthen_complete_answer_shape_8_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_8_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_8(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_score_v1(const struct thinkthen_complete_settled_answer_score_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_score(const struct thinkthen_complete_settled_answer_score *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_8_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_8(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_8_v1(const struct thinkthen_complete_answer_shape_8_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_8(const struct thinkthen_complete_answer_shape_8 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY: return TTNative_thinkthen_complete_answer_shape_8_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_7_presence_v1(const struct thinkthen_complete_answer_shape_7_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_7_presence(const struct thinkthen_complete_answer_shape_7_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_7_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_7(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_tag_v1(const struct thinkthen_complete_settled_answer_tag_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_tag(const struct thinkthen_complete_settled_answer_tag *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_7_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_7(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(const struct thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list(const struct thinkthen_complete_answer_shape_7_any_of_1_items_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_answer_shape_7_any_of_1_items(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_7_v1(const struct thinkthen_complete_answer_shape_7_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_7(const struct thinkthen_complete_answer_shape_7 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY_V1: return TTNative_thinkthen_complete_string_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2_V1: return TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(&(value->data.array2));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY: return TTNative_thinkthen_complete_string_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2: return TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_list(&(value->data.array2));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items_v1(const struct thinkthen_complete_answer_shape_7_any_of_1_items_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_7_any_of_1_items(const struct thinkthen_complete_answer_shape_7_any_of_1_items *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY_V1: return TTNative_thinkthen_complete_string_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL_V1: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY: return TTNative_thinkthen_complete_string_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL: return NSNull.null;
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_6_presence_v1(const struct thinkthen_complete_answer_shape_6_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_6_presence(const struct thinkthen_complete_answer_shape_6_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_6_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape_6(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_choose_v1(const struct thinkthen_complete_settled_answer_choose_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_choose(const struct thinkthen_complete_settled_answer_choose *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_6_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape_6(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_6_v1(const struct thinkthen_complete_answer_shape_6_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_6(const struct thinkthen_complete_answer_shape_6 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY_V1: return TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY: return TTNative_thinkthen_complete_answer_shape_6_any_of_1_items_list(&(value->data.array));
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_answer_shape_presence_v1(const struct thinkthen_complete_answer_shape_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape_presence(const struct thinkthen_complete_answer_shape_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_shape_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_shape(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_settled_answer_decide_v1(const struct thinkthen_complete_settled_answer_decide_v1 *value) {
+id TTNative_thinkthen_complete_settled_answer_decide(const struct thinkthen_complete_settled_answer_decide *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4_v1(value->index.value);
-    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"pick"] = NSNull.null;
-    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3_v1(value->pick.value);
-    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probability"] = NSNull.null;
-    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2_v1(value->probability.value);
-    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5_v1(value->resolution);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_answer_shape_v1(value->value.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = TTNative_thinkthen_complete_answer_shape_4(value->index.value);
+    if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"pick"] = NSNull.null;
+    else if (value->pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"pick"] = TTNative_thinkthen_complete_answer_shape_3(value->pick.value);
+    if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probability"] = NSNull.null;
+    else if (value->probability.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probability"] = TTNative_thinkthen_complete_answer_shape_2(value->probability.value);
+    items[@"resolution"] = TTNative_thinkthen_complete_answer_shape_5(value->resolution);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_answer_shape(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_shape_v1(const struct thinkthen_complete_answer_shape_v1 *value) {
+id TTNative_thinkthen_complete_answer_shape(const struct thinkthen_complete_answer_shape *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_json_v1(value->value);
+    return TTNative_thinkthen_complete_json(value->value);
 }
-id TTNative_thinkthen_complete_session_packet_observation_v1(const struct thinkthen_complete_session_packet_observation_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_observation(const struct thinkthen_complete_session_packet_observation *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"function"] = TTNative_thinkthen_complete_request_function_v1(value->function);
+    items[@"function"] = TTNative_thinkthen_complete_request_function(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_observation_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_session_observation(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observation_v1(const struct thinkthen_complete_session_observation_v1 *value) {
+id TTNative_thinkthen_complete_session_observation(const struct thinkthen_complete_session_observation *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SESSION_OBSERVATION_QUESTION_V1: return TTNative_thinkthen_complete_session_observation_question_v1(value->data.question);
-        case THINKTHEN_COMPLETE_SESSION_OBSERVATION_ROW_V1: return TTNative_thinkthen_complete_session_observation_row_v1(value->data.row);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVATION_QUESTION: return TTNative_thinkthen_complete_session_observation_question(value->data.question);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVATION_ROW: return TTNative_thinkthen_complete_session_observation_row(value->data.row);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_observation_row_v1(const struct thinkthen_complete_session_observation_row_v1 *value) {
+id TTNative_thinkthen_complete_session_observation_row(const struct thinkthen_complete_session_observation_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"index"] = @(value->index);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_observed_row_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_session_observed_row(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_v1(const struct thinkthen_complete_session_observed_row_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row(const struct thinkthen_complete_session_observed_row *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_JUDGMENT_V1: return TTNative_thinkthen_complete_session_observed_row_judgment_v1(value->data.judgment);
-        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_ANNOTATED_V1: return TTNative_thinkthen_complete_session_observed_row_annotated_v1(value->data.annotated);
-        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_RECOGNIZED_V1: return TTNative_thinkthen_complete_session_observed_row_recognized_v1(value->data.recognized);
-        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_FIND_V1: return TTNative_thinkthen_complete_session_observed_row_find_v1(value->data.find);
-        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_RELATIONS_V1: return TTNative_thinkthen_complete_session_observed_row_relations_v1(value->data.relations);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_JUDGMENT: return TTNative_thinkthen_complete_session_observed_row_judgment(value->data.judgment);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_ANNOTATED: return TTNative_thinkthen_complete_session_observed_row_annotated(value->data.annotated);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_RECOGNIZED: return TTNative_thinkthen_complete_session_observed_row_recognized(value->data.recognized);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_FIND: return TTNative_thinkthen_complete_session_observed_row_find(value->data.find);
+        case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_RELATIONS: return TTNative_thinkthen_complete_session_observed_row_relations(value->data.relations);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_relation_edge_list_v1(const struct thinkthen_complete_session_relation_edge_list_v1 *value) {
+id TTNative_thinkthen_complete_session_relation_edge_list(const struct thinkthen_complete_session_relation_edge_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_session_relation_edge_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_session_relation_edge(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_relations_v1(const struct thinkthen_complete_session_observed_row_relations_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row_relations(const struct thinkthen_complete_session_observed_row_relations *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_relation_edge_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_session_relation_edge_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_relation_edge_v1(const struct thinkthen_complete_session_relation_edge_v1 *value) {
+id TTNative_thinkthen_complete_session_relation_edge(const struct thinkthen_complete_session_relation_edge *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"either"] = @((BOOL)value->either);
     items[@"probability"] = @(value->probability);
     items[@"relation"] = TTNativeString(value->relation);
-    items[@"source"] = TTNative_thinkthen_complete_entity_document_v1(value->source);
-    items[@"target"] = TTNative_thinkthen_complete_entity_document_v1(value->target);
+    items[@"source"] = TTNative_thinkthen_complete_entity_document(value->source);
+    items[@"target"] = TTNative_thinkthen_complete_entity_document(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_entity_document_v1(const struct thinkthen_complete_entity_document_v1 *value) {
+id TTNative_thinkthen_complete_entity_document(const struct thinkthen_complete_entity_document *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -9787,203 +9667,203 @@ id TTNative_thinkthen_complete_entity_document_v1(const struct thinkthen_complet
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_find_v1(const struct thinkthen_complete_session_observed_row_find_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row_find(const struct thinkthen_complete_session_observed_row_find *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = @(value->value.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = @(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_recognized_v1(const struct thinkthen_complete_session_observed_row_recognized_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row_recognized(const struct thinkthen_complete_session_observed_row_recognized *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_recognition_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_session_recognition(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_boundary_proposal_list_presence_v1(const struct thinkthen_complete_boundary_proposal_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_boundary_proposal_list_presence(const struct thinkthen_complete_boundary_proposal_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_boundary_proposal_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_boundary_proposal_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_recognition_edge_list_v1(const struct thinkthen_complete_recognition_edge_list_v1 *value) {
+id TTNative_thinkthen_complete_recognition_edge_list(const struct thinkthen_complete_recognition_edge_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_recognition_edge_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_recognition_edge(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_edge_list_presence_v1(const struct thinkthen_complete_recognition_edge_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_recognition_edge_list_presence(const struct thinkthen_complete_recognition_edge_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_recognition_edge_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_recognition_edge_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_session_recognition_v1(const struct thinkthen_complete_session_recognition_v1 *value) {
+id TTNative_thinkthen_complete_session_recognition(const struct thinkthen_complete_session_recognition *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"entities"] = TTNative_thinkthen_complete_entity_list_v1(&(value->entities));
-    items[@"mode"] = TTNative_thinkthen_complete_recognition_mode_v1(value->mode);
-    if (value->proposals.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"proposals"] = NSNull.null;
-    else if (value->proposals.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list_v1(&(value->proposals.value));
-    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relations"] = NSNull.null;
-    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relations"] = TTNative_thinkthen_complete_recognition_edge_list_v1(&(value->relations.value));
+    items[@"entities"] = TTNative_thinkthen_complete_entity_list(&(value->entities));
+    items[@"mode"] = TTNative_thinkthen_complete_recognition_mode(value->mode);
+    if (value->proposals.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"proposals"] = NSNull.null;
+    else if (value->proposals.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list(&(value->proposals.value));
+    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relations"] = NSNull.null;
+    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relations"] = TTNative_thinkthen_complete_recognition_edge_list(&(value->relations.value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_edge_v1(const struct thinkthen_complete_recognition_edge_v1 *value) {
+id TTNative_thinkthen_complete_recognition_edge(const struct thinkthen_complete_recognition_edge *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"either"] = @((BOOL)value->either);
     items[@"probability"] = @(value->probability);
     items[@"relation"] = TTNativeString(value->relation);
-    items[@"source"] = TTNative_thinkthen_complete_entity_v1(value->source);
-    items[@"target"] = TTNative_thinkthen_complete_entity_v1(value->target);
+    items[@"source"] = TTNative_thinkthen_complete_entity(value->source);
+    items[@"target"] = TTNative_thinkthen_complete_entity(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_mode_v1(const struct thinkthen_complete_recognition_mode_v1 *value) {
+id TTNative_thinkthen_complete_recognition_mode(const struct thinkthen_complete_recognition_mode *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE_V1: return @"whole";
-        case THINKTHEN_COMPLETE_RECOGNITION_MODE_BOUNDARY_ONLY_V1: return @"boundary_only";
+        case THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE: return @"whole";
+        case THINKTHEN_COMPLETE_RECOGNITION_MODE_BOUNDARY_ONLY: return @"boundary_only";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_annotation_list_v1(const struct thinkthen_complete_session_annotation_list_v1 *value) {
+id TTNative_thinkthen_complete_session_annotation_list(const struct thinkthen_complete_session_annotation_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_session_annotation_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_session_annotation(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_annotated_v1(const struct thinkthen_complete_session_observed_row_annotated_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row_annotated(const struct thinkthen_complete_session_observed_row_annotated *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_annotation_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_session_annotation_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_annotation_v1(const struct thinkthen_complete_session_annotation_v1 *value) {
+id TTNative_thinkthen_complete_session_annotation(const struct thinkthen_complete_session_annotation *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"name"] = TTNativeString(value->name);
-    items[@"value"] = TTNative_thinkthen_complete_annotation_value_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_annotation_value(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_value_v1(const struct thinkthen_complete_annotation_value_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value(const struct thinkthen_complete_annotation_value *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_DECISION_V1: return TTNative_thinkthen_complete_annotation_value_decision_v1(value->data.decision);
-        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_CHOICE_V1: return TTNative_thinkthen_complete_annotation_value_choice_v1(value->data.choice);
-        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_SCORE_V1: return TTNative_thinkthen_complete_annotation_value_score_v1(value->data.score);
-        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_TAGS_V1: return TTNative_thinkthen_complete_annotation_value_tags_v1(value->data.tags);
-        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_FAILED_V1: return TTNative_thinkthen_complete_annotation_value_failed_v1(value->data.failed);
+        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_DECISION: return TTNative_thinkthen_complete_annotation_value_decision(value->data.decision);
+        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_CHOICE: return TTNative_thinkthen_complete_annotation_value_choice(value->data.choice);
+        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_SCORE: return TTNative_thinkthen_complete_annotation_value_score(value->data.score);
+        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_TAGS: return TTNative_thinkthen_complete_annotation_value_tags(value->data.tags);
+        case THINKTHEN_COMPLETE_ANNOTATION_VALUE_FAILED: return TTNative_thinkthen_complete_annotation_value_failed(value->data.failed);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_annotation_value_failed_v1(const struct thinkthen_complete_annotation_value_failed_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value_failed(const struct thinkthen_complete_annotation_value_failed *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_failure_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_failure(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_failure_field_kind_v1(const struct thinkthen_complete_failure_field_kind_v1 *value) {
+id TTNative_thinkthen_complete_failure_field_kind(const struct thinkthen_complete_failure_field_kind *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_BACKEND_V1: return @"backend";
+        case THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_BACKEND: return @"backend";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_failure_v1(const struct thinkthen_complete_failure_v1 *value) {
+id TTNative_thinkthen_complete_failure(const struct thinkthen_complete_failure *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"cause"] = TTNative_thinkthen_complete_failure_cause_v1(value->cause);
-    items[@"kind"] = TTNative_thinkthen_complete_failure_field_kind_v1(value->kind);
+    items[@"cause"] = TTNative_thinkthen_complete_failure_cause(value->cause);
+    items[@"kind"] = TTNative_thinkthen_complete_failure_field_kind(value->kind);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_failure_cause_v1(const struct thinkthen_complete_failure_cause_v1 *value) {
+id TTNative_thinkthen_complete_failure_cause(const struct thinkthen_complete_failure_cause *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_ANSWER_V1: return @"missing_answer";
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_WRONG_KIND_V1: return @"wrong_kind";
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_PROBABILITY_V1: return @"missing_probability";
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_PROBABILITY_V1: return @"invalid_probability";
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_DISTRIBUTION_V1: return @"invalid_distribution";
-        case THINKTHEN_COMPLETE_FAILURE_CAUSE_UNEXPECTED_PROBABILITY_V1: return @"unexpected_probability";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_ANSWER: return @"missing_answer";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_WRONG_KIND: return @"wrong_kind";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_PROBABILITY: return @"missing_probability";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_PROBABILITY: return @"invalid_probability";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_DISTRIBUTION: return @"invalid_distribution";
+        case THINKTHEN_COMPLETE_FAILURE_CAUSE_UNEXPECTED_PROBABILITY: return @"unexpected_probability";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_annotation_value_tags_v1(const struct thinkthen_complete_annotation_value_tags_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value_tags(const struct thinkthen_complete_annotation_value_tags *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_string_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_string_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_value_score_v1(const struct thinkthen_complete_annotation_value_score_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value_score(const struct thinkthen_complete_annotation_value_score *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -9991,76 +9871,76 @@ id TTNative_thinkthen_complete_annotation_value_score_v1(const struct thinkthen_
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_value_choice_v1(const struct thinkthen_complete_annotation_value_choice_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value_choice(const struct thinkthen_complete_annotation_value_choice *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNativeString(value->value.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNativeString(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_value_decision_v1(const struct thinkthen_complete_annotation_value_decision_v1 *value) {
+id TTNative_thinkthen_complete_annotation_value_decision(const struct thinkthen_complete_annotation_value_decision *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = @((BOOL)value->value.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = @((BOOL)value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observed_row_judgment_v1(const struct thinkthen_complete_session_observed_row_judgment_v1 *value) {
+id TTNative_thinkthen_complete_session_observed_row_judgment(const struct thinkthen_complete_session_observed_row_judgment *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_judgment_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_session_judgment(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_judgment_v1(const struct thinkthen_complete_session_judgment_v1 *value) {
+id TTNative_thinkthen_complete_session_judgment(const struct thinkthen_complete_session_judgment *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_DECISION_V1: return TTNative_thinkthen_complete_session_judgment_decision_v1(value->data.decision);
-        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_CHOICE_V1: return TTNative_thinkthen_complete_session_judgment_choice_v1(value->data.choice);
-        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_SCORE_V1: return TTNative_thinkthen_complete_session_judgment_score_v1(value->data.score);
-        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_TAGS_V1: return TTNative_thinkthen_complete_session_judgment_tags_v1(value->data.tags);
+        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_DECISION: return TTNative_thinkthen_complete_session_judgment_decision(value->data.decision);
+        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_CHOICE: return TTNative_thinkthen_complete_session_judgment_choice(value->data.choice);
+        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_SCORE: return TTNative_thinkthen_complete_session_judgment_score(value->data.score);
+        case THINKTHEN_COMPLETE_SESSION_JUDGMENT_TAGS: return TTNative_thinkthen_complete_session_judgment_tags(value->data.tags);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_judgment_tags_v1(const struct thinkthen_complete_session_judgment_tags_v1 *value) {
+id TTNative_thinkthen_complete_session_judgment_tags(const struct thinkthen_complete_session_judgment_tags *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_string_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_string_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_judgment_score_v1(const struct thinkthen_complete_session_judgment_score_v1 *value) {
+id TTNative_thinkthen_complete_session_judgment_score(const struct thinkthen_complete_session_judgment_score *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -10068,197 +9948,197 @@ id TTNative_thinkthen_complete_session_judgment_score_v1(const struct thinkthen_
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_judgment_choice_v1(const struct thinkthen_complete_session_judgment_choice_v1 *value) {
+id TTNative_thinkthen_complete_session_judgment_choice(const struct thinkthen_complete_session_judgment_choice *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNativeString(value->value.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNativeString(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_judgment_decision_v1(const struct thinkthen_complete_session_judgment_decision_v1 *value) {
+id TTNative_thinkthen_complete_session_judgment_decision(const struct thinkthen_complete_session_judgment_decision *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = @((BOOL)value->value.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = @((BOOL)value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_observation_question_v1(const struct thinkthen_complete_session_observation_question_v1 *value) {
+id TTNative_thinkthen_complete_session_observation_question(const struct thinkthen_complete_session_observation_question *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"detail"] = TTNative_thinkthen_complete_session_question_detail_v1(value->detail);
+    items[@"detail"] = TTNative_thinkthen_complete_session_question_detail(value->detail);
     items[@"index"] = @(value->index);
     items[@"kind"] = TTNativeString(value->kind);
-    if (value->member.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"member"] = NSNull.null;
-    else if (value->member.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"member"] = TTNativeString(value->member.value);
+    if (value->member.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"member"] = NSNull.null;
+    else if (value->member.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"member"] = TTNativeString(value->member.value);
     items[@"position"] = @(value->position);
-    if (value->stage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"stage"] = NSNull.null;
-    else if (value->stage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"stage"] = TTNativeString(value->stage.value);
+    if (value->stage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"stage"] = NSNull.null;
+    else if (value->stage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"stage"] = TTNativeString(value->stage.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_id_presence_v1(const struct thinkthen_complete_answer_id_presence_v1 *value) {
+id TTNative_thinkthen_complete_answer_id_presence(const struct thinkthen_complete_answer_id_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_answer_id_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_answer_id(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_f64_presence_v1(const struct thinkthen_complete_f64_presence_v1 *value) {
+id TTNative_thinkthen_complete_f64_presence(const struct thinkthen_complete_f64_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? @(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? @(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_failure_presence_v1(const struct thinkthen_complete_failure_presence_v1 *value) {
+id TTNative_thinkthen_complete_failure_presence(const struct thinkthen_complete_failure_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_failure_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_failure(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_failure_id_presence_v1(const struct thinkthen_complete_failure_id_presence_v1 *value) {
+id TTNative_thinkthen_complete_failure_id_presence(const struct thinkthen_complete_failure_id_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_failure_id_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_failure_id(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_physical_source_presence_v1(const struct thinkthen_complete_physical_source_presence_v1 *value) {
+id TTNative_thinkthen_complete_physical_source_presence(const struct thinkthen_complete_physical_source_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_physical_source_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_physical_source(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_session_input_source_list_v1(const struct thinkthen_complete_session_input_source_list_v1 *value) {
+id TTNative_thinkthen_complete_session_input_source_list(const struct thinkthen_complete_session_input_source_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_session_input_source_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_session_input_source(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_json_list_v1(const struct thinkthen_complete_json_list_v1 *value) {
+id TTNative_thinkthen_complete_json_list(const struct thinkthen_complete_json_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_json_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_json(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_observation_list_v1(const struct thinkthen_complete_observation_list_v1 *value) {
+id TTNative_thinkthen_complete_observation_list(const struct thinkthen_complete_observation_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_observation_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_observation(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_probabilities_presence_v1(const struct thinkthen_complete_session_probabilities_presence_v1 *value) {
+id TTNative_thinkthen_complete_session_probabilities_presence(const struct thinkthen_complete_session_probabilities_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_session_probabilities_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_session_probabilities(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_question_source_list_v1(const struct thinkthen_complete_question_source_list_v1 *value) {
+id TTNative_thinkthen_complete_question_source_list(const struct thinkthen_complete_question_source_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_question_source_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_question_source(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_usage_presence_v1(const struct thinkthen_complete_usage_presence_v1 *value) {
+id TTNative_thinkthen_complete_usage_presence(const struct thinkthen_complete_usage_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_usage_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_usage(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_threshold_presence_v1(const struct thinkthen_complete_threshold_presence_v1 *value) {
+id TTNative_thinkthen_complete_threshold_presence(const struct thinkthen_complete_threshold_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_threshold_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_threshold(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_token_usage_presence_v1(const struct thinkthen_complete_token_usage_presence_v1 *value) {
+id TTNative_thinkthen_complete_token_usage_presence(const struct thinkthen_complete_token_usage_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_token_usage_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_token_usage(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_value_presence_v1(const struct thinkthen_complete_value_presence_v1 *value) {
+id TTNative_thinkthen_complete_value_presence(const struct thinkthen_complete_value_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_value_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_value(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_session_question_detail_v1(const struct thinkthen_complete_session_question_detail_v1 *value) {
+id TTNative_thinkthen_complete_session_question_detail(const struct thinkthen_complete_session_question_detail *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->answer_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"answer_id"] = NSNull.null;
-    else if (value->answer_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id.value);
+    if (value->answer_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"answer_id"] = NSNull.null;
+    else if (value->answer_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id.value);
     items[@"cached"] = @((BOOL)value->cached);
-    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"confidence"] = NSNull.null;
-    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"confidence"] = @(value->confidence.value);
+    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"confidence"] = NSNull.null;
+    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"confidence"] = @(value->confidence.value);
     items[@"failed_questions"] = @(value->failed_questions);
-    if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"failure"] = NSNull.null;
-    else if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"failure"] = TTNative_thinkthen_complete_failure_v1(value->failure.value);
-    if (value->failure_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"failure_id"] = NSNull.null;
-    else if (value->failure_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"failure_id"] = TTNative_thinkthen_complete_failure_id_v1(value->failure_id.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->input_source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input_source"] = NSNull.null;
-    else if (value->input_source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input_source"] = TTNative_thinkthen_complete_physical_source_v1(value->input_source.value);
-    items[@"input_sources"] = TTNative_thinkthen_complete_session_input_source_list_v1(&(value->input_sources));
-    items[@"inputs"] = TTNative_thinkthen_complete_json_list_v1(&(value->inputs));
+    if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"failure"] = NSNull.null;
+    else if (value->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"failure"] = TTNative_thinkthen_complete_failure(value->failure.value);
+    if (value->failure_id.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"failure_id"] = NSNull.null;
+    else if (value->failure_id.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"failure_id"] = TTNative_thinkthen_complete_failure_id(value->failure_id.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->input_source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input_source"] = NSNull.null;
+    else if (value->input_source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input_source"] = TTNative_thinkthen_complete_physical_source(value->input_source.value);
+    items[@"input_sources"] = TTNative_thinkthen_complete_session_input_source_list(&(value->input_sources));
+    items[@"inputs"] = TTNative_thinkthen_complete_json_list(&(value->inputs));
     items[@"model"] = TTNativeString(value->model);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    if (value->probabilities.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"probabilities"] = NSNull.null;
-    else if (value->probabilities.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"probabilities"] = TTNative_thinkthen_complete_session_probabilities_v1(value->probabilities.value);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    if (value->probabilities.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"probabilities"] = NSNull.null;
+    else if (value->probabilities.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"probabilities"] = TTNative_thinkthen_complete_session_probabilities(value->probabilities.value);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
     items[@"question_sha256"] = TTNativeString(value->question_sha256);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
-    if (value->raw_pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"raw_pick"] = NSNull.null;
-    else if (value->raw_pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"raw_pick"] = TTNativeString(value->raw_pick.value);
-    if (value->reported_usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"reported_usage"] = NSNull.null;
-    else if (value->reported_usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"reported_usage"] = TTNative_thinkthen_complete_usage_v1(value->reported_usage.value);
-    items[@"requests"] = TTNative_thinkthen_complete_string_list_v1(&(value->requests));
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
+    if (value->raw_pick.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"raw_pick"] = NSNull.null;
+    else if (value->raw_pick.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"raw_pick"] = TTNativeString(value->raw_pick.value);
+    if (value->reported_usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"reported_usage"] = NSNull.null;
+    else if (value->reported_usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"reported_usage"] = TTNative_thinkthen_complete_usage(value->reported_usage.value);
+    items[@"requests"] = TTNative_thinkthen_complete_string_list(&(value->requests));
     items[@"requests_sent"] = @(value->requests_sent);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
     items[@"url"] = TTNativeString(value->url);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_token_usage_v1(value->usage.value);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_value_v1(value->value.value);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_token_usage(value->usage.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_value(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_value_v1(const struct thinkthen_complete_value_v1 *value) {
+id TTNative_thinkthen_complete_value(const struct thinkthen_complete_value *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_VALUE_BOOLEAN_V1: return @((BOOL)value->data.boolean);
-        case THINKTHEN_COMPLETE_VALUE_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_VALUE_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_VALUE_ARRAY_V1: return TTNative_thinkthen_complete_string_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_VALUE_NUMBER_V1: return @(value->data.number);
+        case THINKTHEN_COMPLETE_VALUE_BOOLEAN: return @((BOOL)value->data.boolean);
+        case THINKTHEN_COMPLETE_VALUE_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_VALUE_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_VALUE_ARRAY: return TTNative_thinkthen_complete_string_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_VALUE_NUMBER: return @(value->data.number);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_token_usage_v1(const struct thinkthen_complete_token_usage_v1 *value) {
+id TTNative_thinkthen_complete_token_usage(const struct thinkthen_complete_token_usage *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"input_tokens"] = @(value->input_tokens);
@@ -10266,442 +10146,426 @@ id TTNative_thinkthen_complete_token_usage_v1(const struct thinkthen_complete_to
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_threshold_v1(const struct thinkthen_complete_threshold_v1 *value) {
+id TTNative_thinkthen_complete_threshold(const struct thinkthen_complete_threshold *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_THRESHOLD_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_THRESHOLD_STRING_V1: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_THRESHOLD_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_THRESHOLD_STRING: return TTNativeString(value->data.string);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_usage_v1(const struct thinkthen_complete_usage_v1 *value) {
+id TTNative_thinkthen_complete_usage(const struct thinkthen_complete_usage *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input_tokens"] = NSNull.null;
-    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input_tokens"] = @(value->input_tokens.value);
-    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"output_tokens"] = NSNull.null;
-    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"output_tokens"] = @(value->output_tokens.value);
+    if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input_tokens"] = NSNull.null;
+    else if (value->input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input_tokens"] = @(value->input_tokens.value);
+    if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"output_tokens"] = NSNull.null;
+    else if (value->output_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"output_tokens"] = @(value->output_tokens.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_question_source_v1(const struct thinkthen_complete_question_source_v1 *value) {
+id TTNative_thinkthen_complete_question_source(const struct thinkthen_complete_question_source *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"answered_by"] = TTNativeString(value->answered_by);
-    if (value->batch_size.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch_size"] = NSNull.null;
-    else if (value->batch_size.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch_size"] = @(value->batch_size.value);
-    items[@"origin"] = TTNative_thinkthen_complete_origin_v1(value->origin);
+    if (value->batch_size.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch_size"] = NSNull.null;
+    else if (value->batch_size.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch_size"] = @(value->batch_size.value);
+    items[@"origin"] = TTNative_thinkthen_complete_origin(value->origin);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_origin_v1(const struct thinkthen_complete_origin_v1 *value) {
+id TTNative_thinkthen_complete_origin(const struct thinkthen_complete_origin *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ORIGIN_LIVE_V1: return @"live";
-        case THINKTHEN_COMPLETE_ORIGIN_CACHE_V1: return @"cache";
-        case THINKTHEN_COMPLETE_ORIGIN_REPLAY_V1: return @"replay";
-        case THINKTHEN_COMPLETE_ORIGIN_PROXY_V1: return @"proxy";
-        case THINKTHEN_COMPLETE_ORIGIN_MEMORY_V1: return @"memory";
+        case THINKTHEN_COMPLETE_ORIGIN_LIVE: return @"live";
+        case THINKTHEN_COMPLETE_ORIGIN_CACHE: return @"cache";
+        case THINKTHEN_COMPLETE_ORIGIN_REPLAY: return @"replay";
+        case THINKTHEN_COMPLETE_ORIGIN_PROXY: return @"proxy";
+        case THINKTHEN_COMPLETE_ORIGIN_MEMORY: return @"memory";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_question_document_v1(const struct thinkthen_complete_question_document_v1 *value) {
+id TTNative_thinkthen_complete_question_document(const struct thinkthen_complete_question_document *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1: return TTNative_thinkthen_complete_question_document_decide_v1(value->data.decide);
-        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1: return TTNative_thinkthen_complete_question_document_choose_v1(value->data.choose);
-        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG_V1: return TTNative_thinkthen_complete_question_document_tag_v1(value->data.tag);
-        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE_V1: return TTNative_thinkthen_complete_question_document_score_v1(value->data.score);
+        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE: return TTNative_thinkthen_complete_question_document_decide(value->data.decide);
+        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE: return TTNative_thinkthen_complete_question_document_choose(value->data.choose);
+        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG: return TTNative_thinkthen_complete_question_document_tag(value->data.tag);
+        case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE: return TTNative_thinkthen_complete_question_document_score(value->data.score);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_batch_presence_v1(const struct thinkthen_complete_batch_presence_v1 *value) {
+id TTNative_thinkthen_complete_batch_presence(const struct thinkthen_complete_batch_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_batch_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_batch(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_input_declaration_presence_v1(const struct thinkthen_complete_input_declaration_presence_v1 *value) {
+id TTNative_thinkthen_complete_input_declaration_presence(const struct thinkthen_complete_input_declaration_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_input_declaration_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_input_declaration(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_label_list_v1(const struct thinkthen_complete_label_list_v1 *value) {
+id TTNative_thinkthen_complete_label_list(const struct thinkthen_complete_label_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_label_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_label(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_label_list_presence_v1(const struct thinkthen_complete_label_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_label_list_presence(const struct thinkthen_complete_label_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_label_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_label_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_question_name_presence_v1(const struct thinkthen_complete_question_name_presence_v1 *value) {
+id TTNative_thinkthen_complete_question_name_presence(const struct thinkthen_complete_question_name_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_question_name_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_question_name(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_string_list_presence_v1(const struct thinkthen_complete_string_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_string_list_presence(const struct thinkthen_complete_string_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_string_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_string_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_wording_version_presence_v1(const struct thinkthen_complete_wording_version_presence_v1 *value) {
-    if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_wording_version_v1(value->value) : NSNull.null;
-}
-id TTNative_thinkthen_complete_question_document_score_v1(const struct thinkthen_complete_question_document_score_v1 *value) {
+id TTNative_thinkthen_complete_question_document_score(const struct thinkthen_complete_question_document_score *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
-    items[@"levels"] = TTNative_thinkthen_complete_string_list_v1(&(value->levels));
-    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"text"] = NSNull.null;
-    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"text"] = TTNative_thinkthen_complete_json_v1(value->text.value);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    items[@"levels"] = TTNative_thinkthen_complete_string_list(&(value->levels));
+    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"text"] = NSNull.null;
+    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"text"] = TTNative_thinkthen_complete_json(value->text.value);
     items[@"verb"] = TTNativeString(value->verb);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_wording_version_v1(const struct thinkthen_complete_wording_version_v1 *value) {
-    if (!value) TTInvalidResult();
-    return @(value->value);
-}
-id TTNative_thinkthen_complete_question_name_v1(const struct thinkthen_complete_question_name_v1 *value) {
+id TTNative_thinkthen_complete_question_name(const struct thinkthen_complete_question_name *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_label_v1(const struct thinkthen_complete_label_v1 *value) {
+id TTNative_thinkthen_complete_label(const struct thinkthen_complete_label *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->description.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"description"] = NSNull.null;
-    else if (value->description.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"description"] = TTNative_thinkthen_complete_json_v1(value->description.value);
+    if (value->description.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"description"] = NSNull.null;
+    else if (value->description.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"description"] = TTNative_thinkthen_complete_json(value->description.value);
     items[@"name"] = TTNativeString(value->name);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_declaration_v1(const struct thinkthen_complete_input_declaration_v1 *value) {
+id TTNative_thinkthen_complete_input_declaration(const struct thinkthen_complete_input_declaration *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT_V1: return TTNative_thinkthen_complete_input_declaration_string_root_v1(value->data.string_root);
-        case THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT_V1: return TTNative_thinkthen_complete_input_declaration_object_root_v1(value->data.object_root);
+        case THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT: return TTNative_thinkthen_complete_input_declaration_string_root(value->data.string_root);
+        case THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT: return TTNative_thinkthen_complete_input_declaration_object_root(value->data.object_root);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_property_type_map_entry_v1(const struct thinkthen_complete_input_property_type_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_map_entry(const struct thinkthen_complete_input_property_type_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_input_property_type_v1(value->value);
+    return TTNative_thinkthen_complete_input_property_type(value->value);
 }
-id TTNative_thinkthen_complete_input_property_type_map_v1(const struct thinkthen_complete_input_property_type_map_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_map(const struct thinkthen_complete_input_property_type_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_input_property_type_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_input_property_type(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_declaration_object_root_v1(const struct thinkthen_complete_input_declaration_object_root_v1 *value) {
+id TTNative_thinkthen_complete_input_declaration_object_root(const struct thinkthen_complete_input_declaration_object_root *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"properties"] = TTNative_thinkthen_complete_input_property_type_map_v1(&(value->properties));
-    if (value->required.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"required"] = NSNull.null;
-    else if (value->required.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"required"] = TTNative_thinkthen_complete_string_list_v1(&(value->required.value));
-    items[@"type"] = TTNative_thinkthen_complete_object_type_v1(value->type);
+    items[@"properties"] = TTNative_thinkthen_complete_input_property_type_map(&(value->properties));
+    if (value->required.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"required"] = NSNull.null;
+    else if (value->required.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"required"] = TTNative_thinkthen_complete_string_list(&(value->required.value));
+    items[@"type"] = TTNative_thinkthen_complete_object_type(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_object_type_v1(const struct thinkthen_complete_object_type_v1 *value) {
+id TTNative_thinkthen_complete_object_type(const struct thinkthen_complete_object_type *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_OBJECT_TYPE_OBJECT_V1: return @"object";
+        case THINKTHEN_COMPLETE_OBJECT_TYPE_OBJECT: return @"object";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_property_type_v1(const struct thinkthen_complete_input_property_type_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type(const struct thinkthen_complete_input_property_type *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING_V1: return TTNative_thinkthen_complete_input_property_type_string_v1(value->data.string);
-        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER_V1: return TTNative_thinkthen_complete_input_property_type_number_v1(value->data.number);
-        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return TTNative_thinkthen_complete_input_property_type_boolean_v1(value->data.boolean);
-        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1: return TTNative_thinkthen_complete_input_property_type_array_v1(value->data.array);
+        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING: return TTNative_thinkthen_complete_input_property_type_string(value->data.string);
+        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER: return TTNative_thinkthen_complete_input_property_type_number(value->data.number);
+        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN: return TTNative_thinkthen_complete_input_property_type_boolean(value->data.boolean);
+        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY: return TTNative_thinkthen_complete_input_property_type_array(value->data.array);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_property_type_array_v1(const struct thinkthen_complete_input_property_type_array_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_array(const struct thinkthen_complete_input_property_type_array *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"items"] = TTNative_thinkthen_complete_string_root_v1(value->items);
+    items[@"items"] = TTNative_thinkthen_complete_string_root(value->items);
     items[@"type"] = TTNativeString(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_string_root_v1(const struct thinkthen_complete_string_root_v1 *value) {
+id TTNative_thinkthen_complete_string_root(const struct thinkthen_complete_string_root *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"type"] = TTNative_thinkthen_complete_string_type_v1(value->type);
+    items[@"type"] = TTNative_thinkthen_complete_string_type(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_string_type_v1(const struct thinkthen_complete_string_type_v1 *value) {
+id TTNative_thinkthen_complete_string_type(const struct thinkthen_complete_string_type *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_STRING_TYPE_STRING_V1: return @"string";
+        case THINKTHEN_COMPLETE_STRING_TYPE_STRING: return @"string";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_input_property_type_boolean_v1(const struct thinkthen_complete_input_property_type_boolean_v1 *value) {
-    if (!value) TTInvalidResult();
-    NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"type"] = TTNativeString(value->type);
-    for (size_t i = 0;
-    i < value->extensions.len;
-    i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
-    }
-    return [items copy];
-}
-id TTNative_thinkthen_complete_input_property_type_number_v1(const struct thinkthen_complete_input_property_type_number_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_boolean(const struct thinkthen_complete_input_property_type_boolean *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"type"] = TTNativeString(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_property_type_string_v1(const struct thinkthen_complete_input_property_type_string_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_number(const struct thinkthen_complete_input_property_type_number *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"type"] = TTNativeString(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_input_declaration_string_root_v1(const struct thinkthen_complete_input_declaration_string_root_v1 *value) {
+id TTNative_thinkthen_complete_input_property_type_string(const struct thinkthen_complete_input_property_type_string *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"type"] = TTNative_thinkthen_complete_string_type_v1(value->type);
+    items[@"type"] = TTNativeString(value->type);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_batch_string_v1(const struct thinkthen_complete_batch_string_v1 *value) {
-    if (!value) TTInvalidResult();
-    switch(value->kind) {
-        case THINKTHEN_COMPLETE_BATCH_STRING_MAX_V1: return @"max";
-        default: TTInvalidResult();
-    }
-}
-id TTNative_thinkthen_complete_batch_v1(const struct thinkthen_complete_batch_v1 *value) {
-    if (!value) TTInvalidResult();
-    switch(value->kind) {
-        case THINKTHEN_COMPLETE_BATCH_INTEGER_V1: return @(value->data.integer);
-        case THINKTHEN_COMPLETE_BATCH_STRING_V1: return TTNative_thinkthen_complete_batch_string_v1(value->data.string);
-        default: TTInvalidResult();
-    }
-}
-id TTNative_thinkthen_complete_question_document_tag_v1(const struct thinkthen_complete_question_document_tag_v1 *value) {
+id TTNative_thinkthen_complete_input_declaration_string_root(const struct thinkthen_complete_input_declaration_string_root *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
-    items[@"labels"] = TTNative_thinkthen_complete_string_list_v1(&(value->labels));
-    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"text"] = NSNull.null;
-    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"text"] = TTNative_thinkthen_complete_json_v1(value->text.value);
+    items[@"type"] = TTNative_thinkthen_complete_string_type(value->type);
+    for (size_t i = 0;
+    i < value->extensions.len;
+    i++) {
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
+    }
+    return [items copy];
+}
+id TTNative_thinkthen_complete_batch_string(const struct thinkthen_complete_batch_string *value) {
+    if (!value) TTInvalidResult();
+    switch(value->kind) {
+        case THINKTHEN_COMPLETE_BATCH_STRING_MAX: return @"max";
+        default: TTInvalidResult();
+    }
+}
+id TTNative_thinkthen_complete_batch(const struct thinkthen_complete_batch *value) {
+    if (!value) TTInvalidResult();
+    switch(value->kind) {
+        case THINKTHEN_COMPLETE_BATCH_INTEGER: return @(value->data.integer);
+        case THINKTHEN_COMPLETE_BATCH_STRING: return TTNative_thinkthen_complete_batch_string(value->data.string);
+        default: TTInvalidResult();
+    }
+}
+id TTNative_thinkthen_complete_question_document_tag(const struct thinkthen_complete_question_document_tag *value) {
+    if (!value) TTInvalidResult();
+    NSMutableDictionary *items = [NSMutableDictionary dictionary];
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    items[@"labels"] = TTNative_thinkthen_complete_string_list(&(value->labels));
+    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"text"] = NSNull.null;
+    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"text"] = TTNative_thinkthen_complete_json(value->text.value);
     items[@"verb"] = TTNativeString(value->verb);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_question_document_choose_v1(const struct thinkthen_complete_question_document_choose_v1 *value) {
+id TTNative_thinkthen_complete_question_document_choose(const struct thinkthen_complete_question_document_choose *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
-    items[@"options"] = TTNative_thinkthen_complete_string_list_v1(&(value->options));
-    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"text"] = NSNull.null;
-    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"text"] = TTNative_thinkthen_complete_json_v1(value->text.value);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    items[@"options"] = TTNative_thinkthen_complete_string_list(&(value->options));
+    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"text"] = NSNull.null;
+    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"text"] = TTNative_thinkthen_complete_json(value->text.value);
     items[@"verb"] = TTNativeString(value->verb);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_question_document_decide_v1(const struct thinkthen_complete_question_document_decide_v1 *value) {
+id TTNative_thinkthen_complete_question_document_decide(const struct thinkthen_complete_question_document_decide *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
-    if (value->false_.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"false"] = NSNull.null;
-    else if (value->false_.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"false"] = TTNative_thinkthen_complete_json_v1(value->false_.value);
-    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"text"] = NSNull.null;
-    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"text"] = TTNative_thinkthen_complete_json_v1(value->text.value);
-    if (value->true_.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"true"] = NSNull.null;
-    else if (value->true_.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"true"] = TTNative_thinkthen_complete_json_v1(value->true_.value);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    if (value->false_.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"false"] = NSNull.null;
+    else if (value->false_.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"false"] = TTNative_thinkthen_complete_json(value->false_.value);
+    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"text"] = NSNull.null;
+    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"text"] = TTNative_thinkthen_complete_json(value->text.value);
+    if (value->true_.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"true"] = NSNull.null;
+    else if (value->true_.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"true"] = TTNative_thinkthen_complete_json(value->true_.value);
     items[@"verb"] = TTNativeString(value->verb);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_probabilities_v1(const struct thinkthen_complete_session_probabilities_v1 *value) {
+id TTNative_thinkthen_complete_session_probabilities(const struct thinkthen_complete_session_probabilities *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_YES_NO_V1: return TTNative_thinkthen_complete_session_probabilities_yes_no_v1(value->data.yes_no);
-        case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_NAMED_V1: return TTNative_thinkthen_complete_session_probabilities_named_v1(value->data.named);
+        case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_YES_NO: return TTNative_thinkthen_complete_session_probabilities_yes_no(value->data.yes_no);
+        case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_NAMED: return TTNative_thinkthen_complete_session_probabilities_named(value->data.named);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_named_probability_list_v1(const struct thinkthen_complete_session_named_probability_list_v1 *value) {
+id TTNative_thinkthen_complete_session_named_probability_list(const struct thinkthen_complete_session_named_probability_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_session_named_probability_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_session_named_probability(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_probabilities_named_v1(const struct thinkthen_complete_session_probabilities_named_v1 *value) {
+id TTNative_thinkthen_complete_session_probabilities_named(const struct thinkthen_complete_session_probabilities_named *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_session_named_probability_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_session_named_probability_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_named_probability_v1(const struct thinkthen_complete_session_named_probability_v1 *value) {
+id TTNative_thinkthen_complete_session_named_probability(const struct thinkthen_complete_session_named_probability *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"name"] = TTNativeString(value->name);
@@ -10709,12 +10573,12 @@ id TTNative_thinkthen_complete_session_named_probability_v1(const struct thinkth
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_probabilities_yes_no_v1(const struct thinkthen_complete_session_probabilities_yes_no_v1 *value) {
+id TTNative_thinkthen_complete_session_probabilities_yes_no(const struct thinkthen_complete_session_probabilities_yes_no *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -10722,227 +10586,225 @@ id TTNative_thinkthen_complete_session_probabilities_yes_no_v1(const struct thin
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_observation_v1(const struct thinkthen_complete_observation_v1 *value) {
+id TTNative_thinkthen_complete_observation(const struct thinkthen_complete_observation *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_OBSERVATION_OBSERVATION_ID_V1: return TTNative_thinkthen_complete_observation_observation_id_v1(value->data.observation_id);
-        case THINKTHEN_COMPLETE_OBSERVATION_FAILURE_ID_V1: return TTNative_thinkthen_complete_observation_failure_id_v1(value->data.failure_id);
+        case THINKTHEN_COMPLETE_OBSERVATION_OBSERVATION_ID: return TTNative_thinkthen_complete_observation_observation_id(value->data.observation_id);
+        case THINKTHEN_COMPLETE_OBSERVATION_FAILURE_ID: return TTNative_thinkthen_complete_observation_failure_id(value->data.failure_id);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_observation_failure_id_v1(const struct thinkthen_complete_observation_failure_id_v1 *value) {
+id TTNative_thinkthen_complete_observation_failure_id(const struct thinkthen_complete_observation_failure_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id_v1(value->failure_id);
+    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id(value->failure_id);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_failure_id_v1(const struct thinkthen_complete_failure_id_v1 *value) {
+id TTNative_thinkthen_complete_failure_id(const struct thinkthen_complete_failure_id *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_observation_observation_id_v1(const struct thinkthen_complete_observation_observation_id_v1 *value) {
+id TTNative_thinkthen_complete_observation_observation_id(const struct thinkthen_complete_observation_observation_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"observation_id"] = TTNative_thinkthen_complete_observation_id_v1(value->observation_id);
+    items[@"observation_id"] = TTNative_thinkthen_complete_observation_id(value->observation_id);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_observation_id_v1(const struct thinkthen_complete_observation_id_v1 *value) {
+id TTNative_thinkthen_complete_observation_id(const struct thinkthen_complete_observation_id *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_session_input_source_v1(const struct thinkthen_complete_session_input_source_v1 *value) {
+id TTNative_thinkthen_complete_session_input_source(const struct thinkthen_complete_session_input_source *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"index"] = @(value->index);
-    items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source);
+    items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_physical_source_v1(const struct thinkthen_complete_physical_source_v1 *value) {
+id TTNative_thinkthen_complete_physical_source(const struct thinkthen_complete_physical_source *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"file"] = TTNativeString(value->file);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_id_v1(const struct thinkthen_complete_answer_id_v1 *value) {
+id TTNative_thinkthen_complete_answer_id(const struct thinkthen_complete_answer_id *value) {
     if (!value) TTInvalidResult();
     return TTNativeString(value->value);
 }
-id TTNative_thinkthen_complete_request_function_v1(const struct thinkthen_complete_request_function_v1 *value) {
+id TTNative_thinkthen_complete_request_function(const struct thinkthen_complete_request_function *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE_V1: return @"decide";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE_V1: return @"choose";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1: return @"tag";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1: return @"score";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER_V1: return @"filter";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK_V1: return @"rank";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND_V1: return @"find";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1: return @"annotate";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: return @"recognize";
-        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1: return @"relate";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE: return @"decide";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE: return @"choose";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG: return @"tag";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE: return @"score";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER: return @"filter";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK: return @"rank";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND: return @"find";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE: return @"annotate";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE: return @"recognize";
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE: return @"relate";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_session_packet_relate_aggregate_v1(const struct thinkthen_complete_session_packet_relate_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_relate_aggregate(const struct thinkthen_complete_session_packet_relate_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_relation_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_relation(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_input_source_list_presence_v1(const struct thinkthen_complete_session_input_source_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_session_input_source_list_presence(const struct thinkthen_complete_session_input_source_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_session_input_source_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_session_input_source_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_position_presence_v1(const struct thinkthen_complete_position_presence_v1 *value) {
+id TTNative_thinkthen_complete_position_presence(const struct thinkthen_complete_position_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_position_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_position(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_relation_v1(const struct thinkthen_complete_relation_v1 *value) {
+id TTNative_thinkthen_complete_relation(const struct thinkthen_complete_relation *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answers_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->input_sources.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input_sources"] = NSNull.null;
-    else if (value->input_sources.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input_sources"] = TTNative_thinkthen_complete_session_input_source_list_v1(&(value->input_sources.value));
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
-    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
-    items[@"question"] = TTNative_thinkthen_complete_relate_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    items[@"value"] = TTNative_thinkthen_complete_related_entity_edge_list_v1(&(value->value));
+    items[@"answer"] = TTNative_thinkthen_complete_answers(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->input_sources.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input_sources"] = NSNull.null;
+    else if (value->input_sources.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input_sources"] = TTNative_thinkthen_complete_session_input_source_list(&(value->input_sources.value));
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"position"] = NSNull.null;
+    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"position"] = TTNative_thinkthen_complete_position(value->position.value);
+    items[@"question"] = TTNative_thinkthen_complete_relate_question_document(value->question);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    items[@"value"] = TTNative_thinkthen_complete_related_entity_edge_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_result_tag_v1(const struct thinkthen_complete_result_tag_v1 *value) {
+id TTNative_thinkthen_complete_result_tag(const struct thinkthen_complete_result_tag *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1: return @"thinkthen.result";
+        case THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT: return @"thinkthen.result";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_relate_fields_presence_v1(const struct thinkthen_complete_relate_fields_presence_v1 *value) {
+id TTNative_thinkthen_complete_relate_fields_presence(const struct thinkthen_complete_relate_fields_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_relate_fields_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_relate_fields(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_relation_rule_list_v1(const struct thinkthen_complete_relation_rule_list_v1 *value) {
+id TTNative_thinkthen_complete_relation_rule_list(const struct thinkthen_complete_relation_rule_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_relation_rule_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_relation_rule(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relate_question_document_v1(const struct thinkthen_complete_relate_question_document_v1 *value) {
+id TTNative_thinkthen_complete_relate_question_document(const struct thinkthen_complete_relate_question_document *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->fields.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"fields"] = NSNull.null;
-    else if (value->fields.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"fields"] = TTNative_thinkthen_complete_relate_fields_v1(value->fields.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    items[@"relations"] = TTNative_thinkthen_complete_relation_rule_list_v1(&(value->relations));
-    items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->fields.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"fields"] = NSNull.null;
+    else if (value->fields.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"fields"] = TTNative_thinkthen_complete_relate_fields(value->fields.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    items[@"relations"] = TTNative_thinkthen_complete_relation_rule_list(&(value->relations));
+    items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold);
     items[@"verb"] = TTNativeString(value->verb);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relation_rule_v1(const struct thinkthen_complete_relation_rule_v1 *value) {
+id TTNative_thinkthen_complete_relation_rule(const struct thinkthen_complete_relation_rule *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"either"] = @((BOOL)value->either);
     items[@"name"] = TTNativeString(value->name);
     items[@"reads"] = TTNativeString(value->reads);
-    if (value->single.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"single"] = NSNull.null;
-    else if (value->single.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"single"] = @((BOOL)value->single.value);
+    if (value->single.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"single"] = NSNull.null;
+    else if (value->single.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"single"] = @((BOOL)value->single.value);
     items[@"source"] = TTNativeString(value->source);
     items[@"target"] = TTNativeString(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relate_fields_v1(const struct thinkthen_complete_relate_fields_v1 *value) {
+id TTNative_thinkthen_complete_relate_fields(const struct thinkthen_complete_relate_fields *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -10950,87 +10812,87 @@ id TTNative_thinkthen_complete_relate_fields_v1(const struct thinkthen_complete_
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_position_v1(const struct thinkthen_complete_position_v1 *value) {
+id TTNative_thinkthen_complete_position(const struct thinkthen_complete_position *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first"] = NSNull.null;
-    else if (value->first.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first"] = @(value->first.value);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_string_list_v1(&(value->images.value));
-    if (value->last.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last"] = NSNull.null;
-    else if (value->last.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last"] = @(value->last.value);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first"] = NSNull.null;
+    else if (value->first.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first"] = @(value->first.value);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_string_list(&(value->images.value));
+    if (value->last.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last"] = NSNull.null;
+    else if (value->last.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last"] = @(value->last.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_batch_setting_presence_v1(const struct thinkthen_complete_batch_setting_presence_v1 *value) {
+id TTNative_thinkthen_complete_batch_setting_presence(const struct thinkthen_complete_batch_setting_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_batch_setting_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_batch_setting(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_batch_warning_presence_v1(const struct thinkthen_complete_batch_warning_presence_v1 *value) {
+id TTNative_thinkthen_complete_batch_warning_presence(const struct thinkthen_complete_batch_warning_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_batch_warning_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_batch_warning(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_origin_presence_v1(const struct thinkthen_complete_origin_presence_v1 *value) {
+id TTNative_thinkthen_complete_origin_presence(const struct thinkthen_complete_origin_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_origin_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_origin(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_profile_warning_presence_v1(const struct thinkthen_complete_profile_warning_presence_v1 *value) {
+id TTNative_thinkthen_complete_profile_warning_presence(const struct thinkthen_complete_profile_warning_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_profile_warning_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_profile_warning(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_meta_v1(const struct thinkthen_complete_meta_v1 *value) {
+id TTNative_thinkthen_complete_meta(const struct thinkthen_complete_meta *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->answered_by.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"answered_by"] = NSNull.null;
-    else if (value->answered_by.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"answered_by"] = TTNativeString(value->answered_by.value);
-    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"attempts"] = NSNull.null;
-    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list_v1(&(value->attempts.value));
-    if (value->batch_setting.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch_setting"] = NSNull.null;
-    else if (value->batch_setting.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch_setting"] = TTNative_thinkthen_complete_batch_setting_v1(value->batch_setting.value);
-    if (value->batch_warning.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch_warning"] = NSNull.null;
-    else if (value->batch_warning.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch_warning"] = TTNative_thinkthen_complete_batch_warning_v1(value->batch_warning.value);
+    if (value->answered_by.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"answered_by"] = NSNull.null;
+    else if (value->answered_by.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"answered_by"] = TTNativeString(value->answered_by.value);
+    if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"attempts"] = NSNull.null;
+    else if (value->attempts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"attempts"] = TTNative_thinkthen_complete_attempt_list(&(value->attempts.value));
+    if (value->batch_setting.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch_setting"] = NSNull.null;
+    else if (value->batch_setting.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch_setting"] = TTNative_thinkthen_complete_batch_setting(value->batch_setting.value);
+    if (value->batch_warning.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch_warning"] = NSNull.null;
+    else if (value->batch_warning.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch_warning"] = TTNative_thinkthen_complete_batch_warning(value->batch_warning.value);
     items[@"cached"] = @((BOOL)value->cached);
-    if (value->context_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_sha256"] = NSNull.null;
-    else if (value->context_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_sha256"] = TTNativeString(value->context_sha256.value);
+    if (value->context_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_sha256"] = NSNull.null;
+    else if (value->context_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_sha256"] = TTNativeString(value->context_sha256.value);
     items[@"failed_questions"] = @(value->failed_questions);
     items[@"model"] = TTNativeString(value->model);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    if (value->origin.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"origin"] = NSNull.null;
-    else if (value->origin.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"origin"] = TTNative_thinkthen_complete_origin_v1(value->origin.value);
-    if (value->profile_warning.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile_warning"] = NSNull.null;
-    else if (value->profile_warning.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile_warning"] = TTNative_thinkthen_complete_profile_warning_v1(value->profile_warning.value);
-    if (value->question_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_sha256"] = NSNull.null;
-    else if (value->question_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_sha256"] = TTNativeString(value->question_sha256.value);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
-    if (value->questions_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"questions_sha256"] = NSNull.null;
-    else if (value->questions_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"questions_sha256"] = TTNativeString(value->questions_sha256.value);
-    items[@"requests"] = TTNative_thinkthen_complete_string_list_v1(&(value->requests));
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    if (value->origin.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"origin"] = NSNull.null;
+    else if (value->origin.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"origin"] = TTNative_thinkthen_complete_origin(value->origin.value);
+    if (value->profile_warning.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile_warning"] = NSNull.null;
+    else if (value->profile_warning.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile_warning"] = TTNative_thinkthen_complete_profile_warning(value->profile_warning.value);
+    if (value->question_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_sha256"] = NSNull.null;
+    else if (value->question_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_sha256"] = TTNativeString(value->question_sha256.value);
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
+    if (value->questions_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"questions_sha256"] = NSNull.null;
+    else if (value->questions_sha256.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"questions_sha256"] = TTNativeString(value->questions_sha256.value);
+    items[@"requests"] = TTNative_thinkthen_complete_string_list(&(value->requests));
     items[@"requests_sent"] = @(value->requests_sent);
     items[@"tool"] = TTNativeString(value->tool);
     items[@"url"] = TTNativeString(value->url);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_usage_v1(value->usage.value);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_usage(value->usage.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_profile_warning_v1(const struct thinkthen_complete_profile_warning_v1 *value) {
+id TTNative_thinkthen_complete_profile_warning(const struct thinkthen_complete_profile_warning *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"running"] = TTNativeString(value->running);
@@ -11038,94 +10900,94 @@ id TTNative_thinkthen_complete_profile_warning_v1(const struct thinkthen_complet
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_batch_warning_v1(const struct thinkthen_complete_batch_warning_v1 *value) {
+id TTNative_thinkthen_complete_batch_warning(const struct thinkthen_complete_batch_warning *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"running"] = TTNative_thinkthen_complete_batch_setting_v1(value->running);
-    items[@"tuned_for"] = TTNative_thinkthen_complete_batch_setting_v1(value->tuned_for);
+    items[@"running"] = TTNative_thinkthen_complete_batch_setting(value->running);
+    items[@"tuned_for"] = TTNative_thinkthen_complete_batch_setting(value->tuned_for);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_batch_setting_v1(const struct thinkthen_complete_batch_setting_v1 *value) {
+id TTNative_thinkthen_complete_batch_setting(const struct thinkthen_complete_batch_setting *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_BATCH_SETTING_INTEGER_V1: return @(value->data.integer);
-        case THINKTHEN_COMPLETE_BATCH_SETTING_STRING_V1: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_BATCH_SETTING_INTEGER: return @(value->data.integer);
+        case THINKTHEN_COMPLETE_BATCH_SETTING_STRING: return TTNativeString(value->data.string);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_relation_member_list_v1(const struct thinkthen_complete_relation_member_list_v1 *value) {
+id TTNative_thinkthen_complete_relation_member_list(const struct thinkthen_complete_relation_member_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_relation_member_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_relation_member(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answers_v1(const struct thinkthen_complete_answers_v1 *value) {
+id TTNative_thinkthen_complete_answers(const struct thinkthen_complete_answers *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"questions"] = TTNative_thinkthen_complete_relation_member_list_v1(&(value->questions));
+    items[@"questions"] = TTNative_thinkthen_complete_relation_member_list(&(value->questions));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relation_member_v1(const struct thinkthen_complete_relation_member_v1 *value) {
+id TTNative_thinkthen_complete_relation_member(const struct thinkthen_complete_relation_member *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RELATION_MEMBER_ANSWER_ID_V1: return TTNative_thinkthen_complete_relation_member_answer_id_v1(value->data.answer_id);
-        case THINKTHEN_COMPLETE_RELATION_MEMBER_FAILURE_ID_V1: return TTNative_thinkthen_complete_relation_member_failure_id_v1(value->data.failure_id);
+        case THINKTHEN_COMPLETE_RELATION_MEMBER_ANSWER_ID: return TTNative_thinkthen_complete_relation_member_answer_id(value->data.answer_id);
+        case THINKTHEN_COMPLETE_RELATION_MEMBER_FAILURE_ID: return TTNative_thinkthen_complete_relation_member_failure_id(value->data.failure_id);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_related_entity_presence_v1(const struct thinkthen_complete_related_entity_presence_v1 *value) {
+id TTNative_thinkthen_complete_related_entity_presence(const struct thinkthen_complete_related_entity_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_related_entity_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_related_entity(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_relation_member_failure_id_v1(const struct thinkthen_complete_relation_member_failure_id_v1 *value) {
+id TTNative_thinkthen_complete_relation_member_failure_id(const struct thinkthen_complete_relation_member_failure_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"direction"] = TTNative_thinkthen_complete_relation_direction_v1(value->direction);
-    items[@"method"] = TTNative_thinkthen_complete_relation_method_v1(value->method);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
+    items[@"direction"] = TTNative_thinkthen_complete_relation_direction(value->direction);
+    items[@"method"] = TTNative_thinkthen_complete_relation_method(value->method);
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
     items[@"reads"] = TTNativeString(value->reads);
     items[@"relation"] = TTNativeString(value->relation);
     items[@"request"] = TTNativeString(value->request);
-    items[@"source"] = TTNative_thinkthen_complete_related_entity_v1(value->source);
-    if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"target"] = NSNull.null;
-    else if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"target"] = TTNative_thinkthen_complete_related_entity_v1(value->target.value);
-    items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_usage_v1(value->usage.value);
-    items[@"failure"] = TTNative_thinkthen_complete_failure_v1(value->failure);
-    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id_v1(value->failure_id);
+    items[@"source"] = TTNative_thinkthen_complete_related_entity(value->source);
+    if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"target"] = NSNull.null;
+    else if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"target"] = TTNative_thinkthen_complete_related_entity(value->target.value);
+    items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_usage(value->usage.value);
+    items[@"failure"] = TTNative_thinkthen_complete_failure(value->failure);
+    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id(value->failure_id);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_related_entity_v1(const struct thinkthen_complete_related_entity_v1 *value) {
+id TTNative_thinkthen_complete_related_entity(const struct thinkthen_complete_related_entity *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -11133,71 +10995,71 @@ id TTNative_thinkthen_complete_related_entity_v1(const struct thinkthen_complete
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_relation_method_v1(const struct thinkthen_complete_relation_method_v1 *value) {
+id TTNative_thinkthen_complete_relation_method(const struct thinkthen_complete_relation_method *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RELATION_METHOD_YES_NO_V1: return @"yes_no";
-        case THINKTHEN_COMPLETE_RELATION_METHOD_CHOICE_V1: return @"choice";
+        case THINKTHEN_COMPLETE_RELATION_METHOD_YES_NO: return @"yes_no";
+        case THINKTHEN_COMPLETE_RELATION_METHOD_CHOICE: return @"choice";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_relation_direction_v1(const struct thinkthen_complete_relation_direction_v1 *value) {
+id TTNative_thinkthen_complete_relation_direction(const struct thinkthen_complete_relation_direction *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RELATION_DIRECTION_SOURCE_TO_TARGET_V1: return @"source_to_target";
-        case THINKTHEN_COMPLETE_RELATION_DIRECTION_EITHER_V1: return @"either";
+        case THINKTHEN_COMPLETE_RELATION_DIRECTION_SOURCE_TO_TARGET: return @"source_to_target";
+        case THINKTHEN_COMPLETE_RELATION_DIRECTION_EITHER: return @"either";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_relation_member_answer_id_v1(const struct thinkthen_complete_relation_member_answer_id_v1 *value) {
+id TTNative_thinkthen_complete_relation_member_answer_id(const struct thinkthen_complete_relation_member_answer_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"direction"] = TTNative_thinkthen_complete_relation_direction_v1(value->direction);
-    items[@"method"] = TTNative_thinkthen_complete_relation_method_v1(value->method);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
+    items[@"direction"] = TTNative_thinkthen_complete_relation_direction(value->direction);
+    items[@"method"] = TTNative_thinkthen_complete_relation_method(value->method);
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
     items[@"reads"] = TTNativeString(value->reads);
     items[@"relation"] = TTNativeString(value->relation);
     items[@"request"] = TTNativeString(value->request);
-    items[@"source"] = TTNative_thinkthen_complete_related_entity_v1(value->source);
-    if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"target"] = NSNull.null;
-    else if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"target"] = TTNative_thinkthen_complete_related_entity_v1(value->target.value);
-    items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_usage_v1(value->usage.value);
+    items[@"source"] = TTNative_thinkthen_complete_related_entity(value->source);
+    if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"target"] = NSNull.null;
+    else if (value->target.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"target"] = TTNative_thinkthen_complete_related_entity(value->target.value);
+    items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_usage(value->usage.value);
     items[@"accepted"] = @((BOOL)value->accepted);
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
     items[@"probability"] = @(value->probability);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_v1(const struct thinkthen_complete_answer_v1 *value) {
+id TTNative_thinkthen_complete_answer(const struct thinkthen_complete_answer *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANSWER_YES_NO_V1: return TTNative_thinkthen_complete_answer_yes_no_v1(value->data.yes_no);
-        case THINKTHEN_COMPLETE_ANSWER_CHOICE_V1: return TTNative_thinkthen_complete_answer_choice_v1(value->data.choice);
-        case THINKTHEN_COMPLETE_ANSWER_TAG_V1: return TTNative_thinkthen_complete_answer_tag_v1(value->data.tag);
-        case THINKTHEN_COMPLETE_ANSWER_SCORE_V1: return TTNative_thinkthen_complete_answer_score_v1(value->data.score);
+        case THINKTHEN_COMPLETE_ANSWER_YES_NO: return TTNative_thinkthen_complete_answer_yes_no(value->data.yes_no);
+        case THINKTHEN_COMPLETE_ANSWER_CHOICE: return TTNative_thinkthen_complete_answer_choice(value->data.choice);
+        case THINKTHEN_COMPLETE_ANSWER_TAG: return TTNative_thinkthen_complete_answer_tag(value->data.tag);
+        case THINKTHEN_COMPLETE_ANSWER_SCORE: return TTNative_thinkthen_complete_answer_score(value->data.score);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_number_map_entry_v1(const struct thinkthen_complete_number_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_number_map_entry(const struct thinkthen_complete_number_map_entry *value) {
     if (!value) TTInvalidResult();
     return @(value->value);
 }
-id TTNative_thinkthen_complete_number_map_v1(const struct thinkthen_complete_number_map_v1 *value) {
+id TTNative_thinkthen_complete_number_map(const struct thinkthen_complete_number_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
@@ -11207,52 +11069,52 @@ id TTNative_thinkthen_complete_number_map_v1(const struct thinkthen_complete_num
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_score_v1(const struct thinkthen_complete_answer_score_v1 *value) {
+id TTNative_thinkthen_complete_answer_score(const struct thinkthen_complete_answer_score *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"confidence"] = NSNull.null;
-    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"confidence"] = @(value->confidence.value);
+    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"confidence"] = NSNull.null;
+    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"confidence"] = @(value->confidence.value);
     items[@"kind"] = TTNativeString(value->kind);
     items[@"level"] = TTNativeString(value->level);
-    items[@"probabilities"] = TTNative_thinkthen_complete_number_map_v1(&(value->probabilities));
+    items[@"probabilities"] = TTNative_thinkthen_complete_number_map(&(value->probabilities));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_tag_v1(const struct thinkthen_complete_answer_tag_v1 *value) {
+id TTNative_thinkthen_complete_answer_tag(const struct thinkthen_complete_answer_tag *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"probabilities"] = TTNative_thinkthen_complete_number_map_v1(&(value->probabilities));
+    items[@"probabilities"] = TTNative_thinkthen_complete_number_map(&(value->probabilities));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_choice_v1(const struct thinkthen_complete_answer_choice_v1 *value) {
+id TTNative_thinkthen_complete_answer_choice(const struct thinkthen_complete_answer_choice *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"confidence"] = NSNull.null;
-    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"confidence"] = @(value->confidence.value);
+    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"confidence"] = NSNull.null;
+    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"confidence"] = @(value->confidence.value);
     items[@"kind"] = TTNativeString(value->kind);
     items[@"pick"] = TTNativeString(value->pick);
-    items[@"probabilities"] = TTNative_thinkthen_complete_number_map_v1(&(value->probabilities));
+    items[@"probabilities"] = TTNative_thinkthen_complete_number_map(&(value->probabilities));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_answer_yes_no_v1(const struct thinkthen_complete_answer_yes_no_v1 *value) {
+id TTNative_thinkthen_complete_answer_yes_no(const struct thinkthen_complete_answer_yes_no *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"kind"] = TTNativeString(value->kind);
@@ -11260,313 +11122,311 @@ id TTNative_thinkthen_complete_answer_yes_no_v1(const struct thinkthen_complete_
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_list_v1(const struct thinkthen_complete_recognition_list_v1 *value) {
+id TTNative_thinkthen_complete_recognition_list(const struct thinkthen_complete_recognition_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_recognition_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_recognition(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_recognize_aggregate_v1(const struct thinkthen_complete_session_packet_recognize_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_recognize_aggregate(const struct thinkthen_complete_session_packet_recognize_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_recognition_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_recognition_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_v1(const struct thinkthen_complete_recognition_v1 *value) {
+id TTNative_thinkthen_complete_recognition(const struct thinkthen_complete_recognition *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_recognition_odds_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
-    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
-    items[@"question"] = TTNative_thinkthen_complete_recognize_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    items[@"value"] = TTNative_thinkthen_complete_recognize_v1(value->value);
+    items[@"answer"] = TTNative_thinkthen_complete_recognition_odds(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"position"] = NSNull.null;
+    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"position"] = TTNative_thinkthen_complete_position(value->position.value);
+    items[@"question"] = TTNative_thinkthen_complete_recognize_question_document(value->question);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    items[@"value"] = TTNative_thinkthen_complete_recognize(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognize_v1(const struct thinkthen_complete_recognize_v1 *value) {
+id TTNative_thinkthen_complete_recognize(const struct thinkthen_complete_recognize *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1: return TTNative_thinkthen_complete_recognize_entities_v1(value->data.entities);
-        case THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS_V1: return TTNative_thinkthen_complete_recognize_mode_proposals_v1(value->data.mode_proposals);
+        case THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES: return TTNative_thinkthen_complete_recognize_entities(value->data.entities);
+        case THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS: return TTNative_thinkthen_complete_recognize_mode_proposals(value->data.mode_proposals);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_recognize_mode_proposals_v1(const struct thinkthen_complete_recognize_mode_proposals_v1 *value) {
+id TTNative_thinkthen_complete_recognize_mode_proposals(const struct thinkthen_complete_recognize_mode_proposals *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"mode"] = TTNative_thinkthen_complete_boundary_mode_v1(value->mode);
-    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list_v1(&(value->proposals));
+    items[@"mode"] = TTNative_thinkthen_complete_boundary_mode(value->mode);
+    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list(&(value->proposals));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognize_entities_v1(const struct thinkthen_complete_recognize_entities_v1 *value) {
+id TTNative_thinkthen_complete_recognize_entities(const struct thinkthen_complete_recognize_entities *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"entities"] = TTNative_thinkthen_complete_entity_list_v1(&(value->entities));
-    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relations"] = NSNull.null;
-    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relations"] = TTNative_thinkthen_complete_entity_edge_list_v1(&(value->relations.value));
+    items[@"entities"] = TTNative_thinkthen_complete_entity_list(&(value->entities));
+    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relations"] = NSNull.null;
+    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relations"] = TTNative_thinkthen_complete_entity_edge_list(&(value->relations.value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_json_map_entry_v1(const struct thinkthen_complete_json_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_json_map_entry(const struct thinkthen_complete_json_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_json_v1(value->value);
+    return TTNative_thinkthen_complete_json(value->value);
 }
-id TTNative_thinkthen_complete_json_map_v1(const struct thinkthen_complete_json_map_v1 *value) {
+id TTNative_thinkthen_complete_json_map(const struct thinkthen_complete_json_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_json_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_json(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_mode_presence_v1(const struct thinkthen_complete_recognition_mode_presence_v1 *value) {
+id TTNative_thinkthen_complete_recognition_mode_presence(const struct thinkthen_complete_recognition_mode_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_recognition_mode_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_recognition_mode(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_relation_rule_list_presence_v1(const struct thinkthen_complete_relation_rule_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_relation_rule_list_presence(const struct thinkthen_complete_relation_rule_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_relation_rule_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_relation_rule_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_recognition_stage_context_presence_v1(const struct thinkthen_complete_recognition_stage_context_presence_v1 *value) {
+id TTNative_thinkthen_complete_recognition_stage_context_presence(const struct thinkthen_complete_recognition_stage_context_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_recognition_stage_context_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_recognition_stage_context(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_recognize_question_document_v1(const struct thinkthen_complete_recognize_question_document_v1 *value) {
+id TTNative_thinkthen_complete_recognize_question_document(const struct thinkthen_complete_recognize_question_document *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->entity_definition.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"entity_definition"] = NSNull.null;
-    else if (value->entity_definition.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"entity_definition"] = TTNative_thinkthen_complete_json_v1(value->entity_definition.value);
-    if (value->instructions.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"instructions"] = NSNull.null;
-    else if (value->instructions.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"instructions"] = TTNative_thinkthen_complete_json_v1(value->instructions.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    items[@"kinds"] = TTNative_thinkthen_complete_json_map_v1(&(value->kinds));
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->mode.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"mode"] = NSNull.null;
-    else if (value->mode.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"mode"] = TTNative_thinkthen_complete_recognition_mode_v1(value->mode.value);
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->relation_threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relation_threshold"] = NSNull.null;
-    else if (value->relation_threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relation_threshold"] = TTNative_thinkthen_complete_threshold_v1(value->relation_threshold.value);
-    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relations"] = NSNull.null;
-    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relations"] = TTNative_thinkthen_complete_relation_rule_list_v1(&(value->relations.value));
-    if (value->snippet_pieces.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"snippet_pieces"] = NSNull.null;
-    else if (value->snippet_pieces.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"snippet_pieces"] = @(value->snippet_pieces.value);
-    if (value->stage_context.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"stage_context"] = NSNull.null;
-    else if (value->stage_context.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"stage_context"] = TTNative_thinkthen_complete_recognition_stage_context_v1(value->stage_context.value);
-    items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold);
-    items[@"verb"] = TTNative_thinkthen_complete_verb_v1(value->verb);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->entity_definition.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"entity_definition"] = NSNull.null;
+    else if (value->entity_definition.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"entity_definition"] = TTNative_thinkthen_complete_json(value->entity_definition.value);
+    if (value->instructions.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"instructions"] = NSNull.null;
+    else if (value->instructions.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"instructions"] = TTNative_thinkthen_complete_json(value->instructions.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    items[@"kinds"] = TTNative_thinkthen_complete_json_map(&(value->kinds));
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->mode.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"mode"] = NSNull.null;
+    else if (value->mode.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"mode"] = TTNative_thinkthen_complete_recognition_mode(value->mode.value);
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    if (value->relation_threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relation_threshold"] = NSNull.null;
+    else if (value->relation_threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relation_threshold"] = TTNative_thinkthen_complete_threshold(value->relation_threshold.value);
+    if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relations"] = NSNull.null;
+    else if (value->relations.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relations"] = TTNative_thinkthen_complete_relation_rule_list(&(value->relations.value));
+    if (value->snippet_pieces.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"snippet_pieces"] = NSNull.null;
+    else if (value->snippet_pieces.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"snippet_pieces"] = @(value->snippet_pieces.value);
+    if (value->stage_context.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"stage_context"] = NSNull.null;
+    else if (value->stage_context.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"stage_context"] = TTNative_thinkthen_complete_recognition_stage_context(value->stage_context.value);
+    items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold);
+    items[@"verb"] = TTNative_thinkthen_complete_verb(value->verb);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_verb_v1(const struct thinkthen_complete_verb_v1 *value) {
+id TTNative_thinkthen_complete_verb(const struct thinkthen_complete_verb *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_VERB_RECOGNIZE_V1: return @"recognize";
+        case THINKTHEN_COMPLETE_VERB_RECOGNIZE: return @"recognize";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_recognition_stage_context_v1(const struct thinkthen_complete_recognition_stage_context_v1 *value) {
+id TTNative_thinkthen_complete_recognition_stage_context(const struct thinkthen_complete_recognition_stage_context *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->boundary.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"boundary"] = NSNull.null;
-    else if (value->boundary.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"boundary"] = TTNativeString(value->boundary.value);
-    if (value->kind_edge.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"kind_edge"] = NSNull.null;
-    else if (value->kind_edge.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"kind_edge"] = TTNativeString(value->kind_edge.value);
-    if (value->relation.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"relation"] = NSNull.null;
-    else if (value->relation.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"relation"] = TTNativeString(value->relation.value);
+    if (value->boundary.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"boundary"] = NSNull.null;
+    else if (value->boundary.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"boundary"] = TTNativeString(value->boundary.value);
+    if (value->kind_edge.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"kind_edge"] = NSNull.null;
+    else if (value->kind_edge.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"kind_edge"] = TTNativeString(value->kind_edge.value);
+    if (value->relation.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"relation"] = NSNull.null;
+    else if (value->relation.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"relation"] = TTNativeString(value->relation.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_odds_v1(const struct thinkthen_complete_recognition_odds_v1 *value) {
+id TTNative_thinkthen_complete_recognition_odds(const struct thinkthen_complete_recognition_odds *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER_V1: return TTNative_thinkthen_complete_recognition_odds_recognize_answer_v1(value->data.recognize_answer);
-        case THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS_V1: return TTNative_thinkthen_complete_recognition_odds_boundary_odds_v1(value->data.boundary_odds);
+        case THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER: return TTNative_thinkthen_complete_recognition_odds_recognize_answer(value->data.recognize_answer);
+        case THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS: return TTNative_thinkthen_complete_recognition_odds_boundary_odds(value->data.boundary_odds);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_piece_odds_list_v1(const struct thinkthen_complete_piece_odds_list_v1 *value) {
+id TTNative_thinkthen_complete_piece_odds_list(const struct thinkthen_complete_piece_odds_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_piece_odds_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_piece_odds(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_odds_boundary_odds_v1(const struct thinkthen_complete_recognition_odds_boundary_odds_v1 *value) {
+id TTNative_thinkthen_complete_recognition_odds_boundary_odds(const struct thinkthen_complete_recognition_odds_boundary_odds *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"pieces"] = TTNative_thinkthen_complete_piece_odds_list_v1(&(value->pieces));
-    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list_v1(&(value->proposals));
+    items[@"pieces"] = TTNative_thinkthen_complete_piece_odds_list(&(value->pieces));
+    items[@"proposals"] = TTNative_thinkthen_complete_boundary_proposal_list(&(value->proposals));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_piece_odds_v1(const struct thinkthen_complete_piece_odds_v1 *value) {
+id TTNative_thinkthen_complete_piece_odds(const struct thinkthen_complete_piece_odds *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"end"] = @(value->end);
     items[@"start"] = @(value->start);
-    items[@"tags"] = TTNative_thinkthen_complete_number_map_v1(&(value->tags));
+    items[@"tags"] = TTNative_thinkthen_complete_number_map(&(value->tags));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_name_odds_list_v1(const struct thinkthen_complete_name_odds_list_v1 *value) {
+id TTNative_thinkthen_complete_name_odds_list(const struct thinkthen_complete_name_odds_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_name_odds_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_name_odds(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_pair_odds_list_v1(const struct thinkthen_complete_pair_odds_list_v1 *value) {
+id TTNative_thinkthen_complete_pair_odds_list(const struct thinkthen_complete_pair_odds_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_pair_odds_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_pair_odds(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_proposal_list_v1(const struct thinkthen_complete_recognition_proposal_list_v1 *value) {
+id TTNative_thinkthen_complete_recognition_proposal_list(const struct thinkthen_complete_recognition_proposal_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_recognition_proposal_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_recognition_proposal(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_recognition_odds_recognize_answer_v1(const struct thinkthen_complete_recognition_odds_recognize_answer_v1 *value) {
+id TTNative_thinkthen_complete_recognition_odds_recognize_answer(const struct thinkthen_complete_recognition_odds_recognize_answer *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"names"] = TTNative_thinkthen_complete_name_odds_list_v1(&(value->names));
-    items[@"pairs"] = TTNative_thinkthen_complete_pair_odds_list_v1(&(value->pairs));
-    items[@"pieces"] = TTNative_thinkthen_complete_piece_odds_list_v1(&(value->pieces));
-    items[@"proposals"] = TTNative_thinkthen_complete_recognition_proposal_list_v1(&(value->proposals));
+    items[@"names"] = TTNative_thinkthen_complete_name_odds_list(&(value->names));
+    items[@"pairs"] = TTNative_thinkthen_complete_pair_odds_list(&(value->pairs));
+    items[@"pieces"] = TTNative_thinkthen_complete_piece_odds_list(&(value->pieces));
+    items[@"proposals"] = TTNative_thinkthen_complete_recognition_proposal_list(&(value->proposals));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_place_presence_v1(const struct thinkthen_complete_place_presence_v1 *value) {
+id TTNative_thinkthen_complete_place_presence(const struct thinkthen_complete_place_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_place_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_place(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_recognition_proposal_v1(const struct thinkthen_complete_recognition_proposal_v1 *value) {
+id TTNative_thinkthen_complete_recognition_proposal(const struct thinkthen_complete_recognition_proposal *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"end"] = @(value->end);
     items[@"kept"] = @((BOOL)value->kept);
-    if (value->kind.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"kind"] = NSNull.null;
-    else if (value->kind.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"kind"] = TTNativeString(value->kind.value);
-    if (value->selected.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"selected"] = NSNull.null;
-    else if (value->selected.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"selected"] = TTNative_thinkthen_complete_place_v1(value->selected.value);
+    if (value->kind.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"kind"] = NSNull.null;
+    else if (value->kind.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"kind"] = TTNativeString(value->kind.value);
+    if (value->selected.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"selected"] = NSNull.null;
+    else if (value->selected.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"selected"] = TTNative_thinkthen_complete_place(value->selected.value);
     items[@"span_probability"] = @(value->span_probability);
     items[@"start"] = @(value->start);
-    if (value->strength.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"strength"] = NSNull.null;
-    else if (value->strength.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"strength"] = @(value->strength.value);
+    if (value->strength.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"strength"] = NSNull.null;
+    else if (value->strength.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"strength"] = @(value->strength.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_place_v1(const struct thinkthen_complete_place_v1 *value) {
+id TTNative_thinkthen_complete_place(const struct thinkthen_complete_place *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"end"] = @(value->end);
@@ -11574,844 +11434,842 @@ id TTNative_thinkthen_complete_place_v1(const struct thinkthen_complete_place_v1
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_pair_odds_v1(const struct thinkthen_complete_pair_odds_v1 *value) {
+id TTNative_thinkthen_complete_pair_odds(const struct thinkthen_complete_pair_odds *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"probability"] = @(value->probability);
     items[@"relation"] = TTNativeString(value->relation);
-    items[@"source"] = TTNative_thinkthen_complete_place_v1(value->source);
-    items[@"target"] = TTNative_thinkthen_complete_place_v1(value->target);
+    items[@"source"] = TTNative_thinkthen_complete_place(value->source);
+    items[@"target"] = TTNative_thinkthen_complete_place(value->target);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_number_map_presence_v1(const struct thinkthen_complete_number_map_presence_v1 *value) {
+id TTNative_thinkthen_complete_number_map_presence(const struct thinkthen_complete_number_map_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_number_map_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_number_map(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_name_odds_v1(const struct thinkthen_complete_name_odds_v1 *value) {
+id TTNative_thinkthen_complete_name_odds(const struct thinkthen_complete_name_odds *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->edges.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"edges"] = NSNull.null;
-    else if (value->edges.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"edges"] = TTNative_thinkthen_complete_number_map_v1(&(value->edges.value));
+    if (value->edges.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"edges"] = NSNull.null;
+    else if (value->edges.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"edges"] = TTNative_thinkthen_complete_number_map(&(value->edges.value));
     items[@"end"] = @(value->end);
-    if (value->kinds.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"kinds"] = NSNull.null;
-    else if (value->kinds.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"kinds"] = TTNative_thinkthen_complete_number_map_v1(&(value->kinds.value));
+    if (value->kinds.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"kinds"] = NSNull.null;
+    else if (value->kinds.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"kinds"] = TTNative_thinkthen_complete_number_map(&(value->kinds.value));
     items[@"start"] = @(value->start);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_list_v1(const struct thinkthen_complete_annotation_list_v1 *value) {
+id TTNative_thinkthen_complete_annotation_list(const struct thinkthen_complete_annotation_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_annotation_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_annotation(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_annotate_aggregate_v1(const struct thinkthen_complete_session_packet_annotate_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_annotate_aggregate(const struct thinkthen_complete_session_packet_annotate_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_annotation_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_annotation_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_member_map_entry_v1(const struct thinkthen_complete_annotation_member_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_annotation_member_map_entry(const struct thinkthen_complete_annotation_member_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_annotation_member_v1(value->value);
+    return TTNative_thinkthen_complete_annotation_member(value->value);
 }
-id TTNative_thinkthen_complete_annotation_member_map_v1(const struct thinkthen_complete_annotation_member_map_v1 *value) {
+id TTNative_thinkthen_complete_annotation_member_map(const struct thinkthen_complete_annotation_member_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_annotation_member_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_annotation_member(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_v1(const struct thinkthen_complete_annotation_v1 *value) {
+id TTNative_thinkthen_complete_annotation(const struct thinkthen_complete_annotation *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    items[@"answers"] = TTNative_thinkthen_complete_annotation_member_map_v1(&(value->answers));
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
-    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    items[@"value"] = TTNative_thinkthen_complete_annotated_row_v1(value->value);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    items[@"answers"] = TTNative_thinkthen_complete_annotation_member_map(&(value->answers));
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"position"] = NSNull.null;
+    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"position"] = TTNative_thinkthen_complete_position(value->position.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    items[@"value"] = TTNative_thinkthen_complete_annotated_row(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotated_field_map_entry_v1(const struct thinkthen_complete_annotated_field_map_entry_v1 *value) {
+id TTNative_thinkthen_complete_annotated_field_map_entry(const struct thinkthen_complete_annotated_field_map_entry *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_annotated_field_v1(value->value);
+    return TTNative_thinkthen_complete_annotated_field(value->value);
 }
-id TTNative_thinkthen_complete_annotated_field_map_v1(const struct thinkthen_complete_annotated_field_map_v1 *value) {
+id TTNative_thinkthen_complete_annotated_field_map(const struct thinkthen_complete_annotated_field_map *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_annotated_field_v1(value->data[i].value);
+        items[TTNativeString(value->data[i].name)] = TTNative_thinkthen_complete_annotated_field(value->data[i].value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotated_row_v1(const struct thinkthen_complete_annotated_row_v1 *value) {
+id TTNative_thinkthen_complete_annotated_row(const struct thinkthen_complete_annotated_row *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_annotated_field_map_v1(&(value->value));
+    return TTNative_thinkthen_complete_annotated_field_map(&(value->value));
 }
-id TTNative_thinkthen_complete_annotated_field_v1(const struct thinkthen_complete_annotated_field_v1 *value) {
+id TTNative_thinkthen_complete_annotated_field(const struct thinkthen_complete_annotated_field *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1: return @((BOOL)value->data.boolean);
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1: return NSNull.null;
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_STRING_V1: return TTNativeString(value->data.string);
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1: return TTNative_thinkthen_complete_string_list_v1(&(value->data.array));
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NUMBER_V1: return @(value->data.number);
-        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_OBJECT_V1: return TTNative_thinkthen_complete_failed_v1(value->data.object);
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN: return @((BOOL)value->data.boolean);
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL: return NSNull.null;
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_STRING: return TTNativeString(value->data.string);
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY: return TTNative_thinkthen_complete_string_list(&(value->data.array));
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NUMBER: return @(value->data.number);
+        case THINKTHEN_COMPLETE_ANNOTATED_FIELD_OBJECT: return TTNative_thinkthen_complete_failed(value->data.object);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_failed_v1(const struct thinkthen_complete_failed_v1 *value) {
+id TTNative_thinkthen_complete_failed(const struct thinkthen_complete_failed *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"failed"] = TTNative_thinkthen_complete_failure_v1(value->failed);
+    items[@"failed"] = TTNative_thinkthen_complete_failure(value->failed);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_member_v1(const struct thinkthen_complete_annotation_member_v1 *value) {
+id TTNative_thinkthen_complete_annotation_member(const struct thinkthen_complete_annotation_member *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_ANSWER_ID_V1: return TTNative_thinkthen_complete_annotation_member_answer_id_v1(value->data.answer_id);
-        case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_FAILURE_ID_V1: return TTNative_thinkthen_complete_annotation_member_failure_id_v1(value->data.failure_id);
+        case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_ANSWER_ID: return TTNative_thinkthen_complete_annotation_member_answer_id(value->data.answer_id);
+        case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_FAILURE_ID: return TTNative_thinkthen_complete_annotation_member_failure_id(value->data.failure_id);
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_annotation_member_failure_id_v1(const struct thinkthen_complete_annotation_member_failure_id_v1 *value) {
+id TTNative_thinkthen_complete_annotation_member_failure_id(const struct thinkthen_complete_annotation_member_failure_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"failure"] = TTNative_thinkthen_complete_failure_v1(value->failure);
-    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id_v1(value->failure_id);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
+    items[@"failure"] = TTNative_thinkthen_complete_failure(value->failure);
+    items[@"failure_id"] = TTNative_thinkthen_complete_failure_id(value->failure_id);
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
     items[@"request"] = TTNativeString(value->request);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_usage_v1(value->usage.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_usage(value->usage.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_annotation_member_answer_id_v1(const struct thinkthen_complete_annotation_member_answer_id_v1 *value) {
+id TTNative_thinkthen_complete_annotation_member_answer_id(const struct thinkthen_complete_annotation_member_answer_id *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    items[@"observations"] = TTNative_thinkthen_complete_observation_list_v1(&(value->observations));
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list_v1(&(value->question_sources));
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    items[@"observations"] = TTNative_thinkthen_complete_observation_list(&(value->observations));
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    items[@"question_sources"] = TTNative_thinkthen_complete_question_source_list(&(value->question_sources));
     items[@"request"] = TTNativeString(value->request);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
-    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"usage"] = NSNull.null;
-    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"usage"] = TTNative_thinkthen_complete_usage_v1(value->usage.value);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_value_v1(value->value.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
+    if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"usage"] = NSNull.null;
+    else if (value->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"usage"] = TTNative_thinkthen_complete_usage(value->usage.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_value(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_find_aggregate_v1(const struct thinkthen_complete_session_packet_find_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_find_aggregate(const struct thinkthen_complete_session_packet_find_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_find_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_find(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_find_candidate_list_v1(const struct thinkthen_complete_find_candidate_list_v1 *value) {
+id TTNative_thinkthen_complete_find_candidate_list(const struct thinkthen_complete_find_candidate_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_find_candidate_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_find_candidate(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_find_candidate_list_presence_v1(const struct thinkthen_complete_find_candidate_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_find_candidate_list_presence(const struct thinkthen_complete_find_candidate_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_find_candidate_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_find_candidate_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_find_v1(const struct thinkthen_complete_find_v1 *value) {
+id TTNative_thinkthen_complete_find(const struct thinkthen_complete_find *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_find_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->candidates.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"candidates"] = NSNull.null;
-    else if (value->candidates.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"candidates"] = TTNative_thinkthen_complete_find_candidate_list_v1(&(value->candidates.value));
-    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"file"] = NSNull.null;
-    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"file"] = TTNativeString(value->file.value);
-    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"first_line"] = NSNull.null;
-    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"first_line"] = @(value->first_line.value);
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"last_line"] = NSNull.null;
-    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"last_line"] = @(value->last_line.value);
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
-    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
-    items[@"question"] = TTNative_thinkthen_complete_find_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_json_v1(value->threshold.value);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_json_v1(value->value.value);
+    items[@"answer"] = TTNative_thinkthen_complete_find_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->candidates.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"candidates"] = NSNull.null;
+    else if (value->candidates.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"candidates"] = TTNative_thinkthen_complete_find_candidate_list(&(value->candidates.value));
+    if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"file"] = NSNull.null;
+    else if (value->file.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"file"] = TTNativeString(value->file.value);
+    if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"first_line"] = NSNull.null;
+    else if (value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"first_line"] = @(value->first_line.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"last_line"] = NSNull.null;
+    else if (value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"last_line"] = @(value->last_line.value);
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"position"] = NSNull.null;
+    else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"position"] = TTNative_thinkthen_complete_position(value->position.value);
+    items[@"question"] = TTNative_thinkthen_complete_find_question_document(value->question);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_json(value->threshold.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_json(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_find_question_document_v1(const struct thinkthen_complete_find_question_document_v1 *value) {
+id TTNative_thinkthen_complete_find_question_document(const struct thinkthen_complete_find_question_document *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"batch"] = NSNull.null;
-    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"batch"] = TTNative_thinkthen_complete_batch_v1(value->batch.value);
-    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"context_schema"] = NSNull.null;
-    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->context_schema.value);
-    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"item_schema"] = NSNull.null;
-    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration_v1(value->item_schema.value);
-    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"label_details"] = NSNull.null;
-    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"label_details"] = TTNative_thinkthen_complete_label_list_v1(&(value->label_details.value));
-    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"model"] = NSNull.null;
-    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"model"] = TTNativeString(value->model.value);
-    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"name"] = NSNull.null;
-    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"name"] = TTNative_thinkthen_complete_question_name_v1(value->name.value);
+    if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"batch"] = NSNull.null;
+    else if (value->batch.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"batch"] = TTNative_thinkthen_complete_batch(value->batch.value);
+    if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"context_schema"] = NSNull.null;
+    else if (value->context_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"context_schema"] = TTNative_thinkthen_complete_input_declaration(value->context_schema.value);
+    if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"item_schema"] = NSNull.null;
+    else if (value->item_schema.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"item_schema"] = TTNative_thinkthen_complete_input_declaration(value->item_schema.value);
+    if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"label_details"] = NSNull.null;
+    else if (value->label_details.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"label_details"] = TTNative_thinkthen_complete_label_list(&(value->label_details.value));
+    if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"model"] = NSNull.null;
+    else if (value->model.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"model"] = TTNativeString(value->model.value);
+    if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"name"] = NSNull.null;
+    else if (value->name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"name"] = TTNative_thinkthen_complete_question_name(value->name.value);
     items[@"none"] = @((BOOL)value->none);
-    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"on"] = NSNull.null;
-    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"on"] = TTNative_thinkthen_complete_string_list_v1(&(value->on.value));
-    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"profile"] = NSNull.null;
-    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"profile"] = TTNativeString(value->profile.value);
-    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"text"] = NSNull.null;
-    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"text"] = TTNative_thinkthen_complete_json_v1(value->text.value);
+    if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"on"] = NSNull.null;
+    else if (value->on.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"on"] = TTNative_thinkthen_complete_string_list(&(value->on.value));
+    if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"profile"] = NSNull.null;
+    else if (value->profile.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"profile"] = TTNativeString(value->profile.value);
+    if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"text"] = NSNull.null;
+    else if (value->text.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"text"] = TTNative_thinkthen_complete_json(value->text.value);
     items[@"verb"] = TTNativeString(value->verb);
-    if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"wording_version"] = NSNull.null;
-    else if (value->wording_version.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"wording_version"] = TTNative_thinkthen_complete_wording_version_v1(value->wording_version.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_find_candidate_v1(const struct thinkthen_complete_find_candidate_v1 *value) {
+id TTNative_thinkthen_complete_find_candidate(const struct thinkthen_complete_find_candidate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
     items[@"probability"] = @(value->probability);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_find_answer_v1(const struct thinkthen_complete_find_answer_v1 *value) {
+id TTNative_thinkthen_complete_find_answer(const struct thinkthen_complete_find_answer *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"confidence"] = NSNull.null;
-    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"confidence"] = @(value->confidence.value);
+    if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"confidence"] = NSNull.null;
+    else if (value->confidence.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"confidence"] = @(value->confidence.value);
     items[@"kind"] = TTNativeString(value->kind);
     items[@"pick"] = TTNativeString(value->pick);
-    items[@"probabilities"] = TTNative_thinkthen_complete_number_map_v1(&(value->probabilities));
+    items[@"probabilities"] = TTNative_thinkthen_complete_number_map(&(value->probabilities));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_non_zero_usize_list_v1(const struct thinkthen_complete_atomic_non_zero_usize_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_non_zero_usize_list(const struct thinkthen_complete_atomic_non_zero_usize_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_non_zero_usize_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_non_zero_usize(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_rank_aggregate_v1(const struct thinkthen_complete_session_packet_rank_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_rank_aggregate(const struct thinkthen_complete_session_packet_rank_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_non_zero_usize_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_non_zero_usize_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_image_list_v1(const struct thinkthen_complete_image_list_v1 *value) {
+id TTNative_thinkthen_complete_image_list(const struct thinkthen_complete_image_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_image_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_image(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_image_list_presence_v1(const struct thinkthen_complete_image_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_image_list_presence(const struct thinkthen_complete_image_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_image_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_image_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_rank_member_list_v1(const struct thinkthen_complete_rank_member_list_v1 *value) {
+id TTNative_thinkthen_complete_rank_member_list(const struct thinkthen_complete_rank_member_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_rank_member_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_rank_member(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_rank_member_list_presence_v1(const struct thinkthen_complete_rank_member_list_presence_v1 *value) {
+id TTNative_thinkthen_complete_rank_member_list_presence(const struct thinkthen_complete_rank_member_list_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_rank_member_list_v1(&(value->value)) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_rank_member_list(&(value->value)) : NSNull.null;
 }
-id TTNative_thinkthen_complete_atomic_non_zero_usize_v1(const struct thinkthen_complete_atomic_non_zero_usize_v1 *value) {
+id TTNative_thinkthen_complete_atomic_non_zero_usize(const struct thinkthen_complete_atomic_non_zero_usize *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
     items[@"value"] = @(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_rank_member_v1(const struct thinkthen_complete_rank_member_v1 *value) {
+id TTNative_thinkthen_complete_rank_member(const struct thinkthen_complete_rank_member *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"name"] = TTNativeString(value->name);
-    items[@"result"] = TTNative_thinkthen_complete_rank_member_result_v1(value->result);
+    items[@"result"] = TTNative_thinkthen_complete_rank_member_result(value->result);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_rank_member_result_v1(const struct thinkthen_complete_rank_member_result_v1 *value) {
+id TTNative_thinkthen_complete_rank_member_result(const struct thinkthen_complete_rank_member_result *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_json_v1(value->threshold.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_json(value->threshold.value);
     items[@"value"] = @(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_image_v1(const struct thinkthen_complete_image_v1 *value) {
+id TTNative_thinkthen_complete_image(const struct thinkthen_complete_image *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"base64"] = TTNativeString(value->base64);
     items[@"height"] = @(value->height);
-    items[@"media"] = TTNative_thinkthen_complete_image_media_v1(value->media);
+    items[@"media"] = TTNative_thinkthen_complete_image_media(value->media);
     items[@"width"] = @(value->width);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_image_media_v1(const struct thinkthen_complete_image_media_v1 *value) {
+id TTNative_thinkthen_complete_image_media(const struct thinkthen_complete_image_media *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_JPEG_V1: return @"image/jpeg";
-        case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_PNG_V1: return @"image/png";
+        case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_JPEG: return @"image/jpeg";
+        case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_PNG: return @"image/png";
         default: TTInvalidResult();
     }
 }
-id TTNative_thinkthen_complete_atomic_boolean_list_v1(const struct thinkthen_complete_atomic_boolean_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_boolean_list(const struct thinkthen_complete_atomic_boolean_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_boolean_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_boolean(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_filter_aggregate_v1(const struct thinkthen_complete_session_packet_filter_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_filter_aggregate(const struct thinkthen_complete_session_packet_filter_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_boolean_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_boolean_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_boolean_v1(const struct thinkthen_complete_atomic_boolean_v1 *value) {
+id TTNative_thinkthen_complete_atomic_boolean(const struct thinkthen_complete_atomic_boolean *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
     items[@"value"] = @((BOOL)value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_double_list_v1(const struct thinkthen_complete_atomic_double_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_double_list(const struct thinkthen_complete_atomic_double_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_double_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_double(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_score_aggregate_v1(const struct thinkthen_complete_session_packet_score_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_score_aggregate(const struct thinkthen_complete_session_packet_score_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_double_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_double_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_double_v1(const struct thinkthen_complete_atomic_double_v1 *value) {
+id TTNative_thinkthen_complete_atomic_double(const struct thinkthen_complete_atomic_double *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
     items[@"value"] = @(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_array_of_string_list_v1(const struct thinkthen_complete_atomic_array_of_string_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_array_of_string_list(const struct thinkthen_complete_atomic_array_of_string_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_array_of_string_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_array_of_string(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_tag_aggregate_v1(const struct thinkthen_complete_session_packet_tag_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_tag_aggregate(const struct thinkthen_complete_session_packet_tag_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_array_of_string_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_array_of_string_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_array_of_string_v1(const struct thinkthen_complete_atomic_array_of_string_v1 *value) {
+id TTNative_thinkthen_complete_atomic_array_of_string(const struct thinkthen_complete_atomic_array_of_string *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
-    items[@"value"] = TTNative_thinkthen_complete_string_list_v1(&(value->value));
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
+    items[@"value"] = TTNative_thinkthen_complete_string_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_nullable_string_list_v1(const struct thinkthen_complete_atomic_nullable_string_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_nullable_string_list(const struct thinkthen_complete_atomic_nullable_string_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_nullable_string_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_nullable_string(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_choose_aggregate_v1(const struct thinkthen_complete_session_packet_choose_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_choose_aggregate(const struct thinkthen_complete_session_packet_choose_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_nullable_string_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_nullable_string_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_nullable_string_v1(const struct thinkthen_complete_atomic_nullable_string_v1 *value) {
+id TTNative_thinkthen_complete_atomic_nullable_string(const struct thinkthen_complete_atomic_nullable_string *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNativeString(value->value.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNativeString(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_atomic_decide_value_list_v1(const struct thinkthen_complete_atomic_decide_value_list_v1 *value) {
+id TTNative_thinkthen_complete_atomic_decide_value_list(const struct thinkthen_complete_atomic_decide_value_list *value) {
     if (!value) TTInvalidResult();
     NSMutableArray *items = [NSMutableArray array];
     for (size_t i = 0;
     i < value->len;
     i++) {
-        [items addObject:TTNative_thinkthen_complete_atomic_decide_value_v1(value->data[i])];
+        [items addObject:TTNative_thinkthen_complete_atomic_decide_value(value->data[i])];
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_decide_aggregate_v1(const struct thinkthen_complete_session_packet_decide_aggregate_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_decide_aggregate(const struct thinkthen_complete_session_packet_decide_aggregate *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_decide_value_list_v1(&(value->value));
+    items[@"value"] = TTNative_thinkthen_complete_atomic_decide_value_list(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_decide_value_presence_v1(const struct thinkthen_complete_decide_value_presence_v1 *value) {
+id TTNative_thinkthen_complete_decide_value_presence(const struct thinkthen_complete_decide_value_presence *value) {
     if (!value) TTInvalidResult();
-    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? TTNative_thinkthen_complete_decide_value_v1(value->value) : NSNull.null;
+    return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE ? TTNative_thinkthen_complete_decide_value(value->value) : NSNull.null;
 }
-id TTNative_thinkthen_complete_atomic_decide_value_v1(const struct thinkthen_complete_atomic_decide_value_v1 *value) {
+id TTNative_thinkthen_complete_atomic_decide_value(const struct thinkthen_complete_atomic_decide_value *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"answer"] = TTNative_thinkthen_complete_answer_v1(value->answer);
-    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id_v1(value->answer_id);
-    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"images"] = NSNull.null;
-    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
-    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"index"] = NSNull.null;
-    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"index"] = @(value->index.value);
-    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"input"] = NSNull.null;
-    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"input"] = TTNative_thinkthen_complete_json_v1(value->input.value);
-    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"members"] = NSNull.null;
-    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"members"] = TTNative_thinkthen_complete_rank_member_list_v1(&(value->members.value));
-    items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
-    items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
-    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
-    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
-    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
-    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
-    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_threshold_v1(value->threshold.value);
-    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
-    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"value"] = TTNative_thinkthen_complete_decide_value_v1(value->value.value);
+    items[@"answer"] = TTNative_thinkthen_complete_answer(value->answer);
+    items[@"answer_id"] = TTNative_thinkthen_complete_answer_id(value->answer_id);
+    if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"images"] = NSNull.null;
+    else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"images"] = TTNative_thinkthen_complete_image_list(&(value->images.value));
+    if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"index"] = NSNull.null;
+    else if (value->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"index"] = @(value->index.value);
+    if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"input"] = NSNull.null;
+    else if (value->input.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"input"] = TTNative_thinkthen_complete_json(value->input.value);
+    if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"members"] = NSNull.null;
+    else if (value->members.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"members"] = TTNative_thinkthen_complete_rank_member_list(&(value->members.value));
+    items[@"meta"] = TTNative_thinkthen_complete_meta(value->meta);
+    items[@"question"] = TTNative_thinkthen_complete_question_document(value->question);
+    if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"question_name"] = NSNull.null;
+    else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"question_name"] = TTNativeString(value->question_name.value);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag(value->schema);
+    if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"source"] = NSNull.null;
+    else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"source"] = TTNative_thinkthen_complete_physical_source(value->source.value);
+    if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"threshold"] = NSNull.null;
+    else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"threshold"] = TTNative_thinkthen_complete_threshold(value->threshold.value);
+    if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL) items[@"value"] = NSNull.null;
+    else if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE) items[@"value"] = TTNative_thinkthen_complete_decide_value(value->value.value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_decide_value_v1(const struct thinkthen_complete_decide_value_v1 *value) {
+id TTNative_thinkthen_complete_decide_value(const struct thinkthen_complete_decide_value *value) {
     if (!value) TTInvalidResult();
-    return TTNative_thinkthen_complete_json_v1(value->value);
+    return TTNative_thinkthen_complete_json(value->value);
 }
-id TTNative_thinkthen_complete_session_packet_annotate_row_v1(const struct thinkthen_complete_session_packet_annotate_row_v1 *value) {
-    if (!value) TTInvalidResult();
-    NSMutableDictionary *items = [NSMutableDictionary dictionary];
-    items[@"function"] = TTNativeString(value->function);
-    items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_annotation_v1(value->value);
-    for (size_t i = 0;
-    i < value->extensions.len;
-    i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
-    }
-    return [items copy];
-}
-id TTNative_thinkthen_complete_session_packet_filter_row_v1(const struct thinkthen_complete_session_packet_filter_row_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_annotate_row(const struct thinkthen_complete_session_packet_annotate_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_boolean_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_annotation(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_score_row_v1(const struct thinkthen_complete_session_packet_score_row_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_filter_row(const struct thinkthen_complete_session_packet_filter_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_double_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_atomic_boolean(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_tag_row_v1(const struct thinkthen_complete_session_packet_tag_row_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_score_row(const struct thinkthen_complete_session_packet_score_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_array_of_string_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_atomic_double(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_choose_row_v1(const struct thinkthen_complete_session_packet_choose_row_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_tag_row(const struct thinkthen_complete_session_packet_tag_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_nullable_string_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_atomic_array_of_string(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_session_packet_decide_row_v1(const struct thinkthen_complete_session_packet_decide_row_v1 *value) {
+id TTNative_thinkthen_complete_session_packet_choose_row(const struct thinkthen_complete_session_packet_choose_row *value) {
     if (!value) TTInvalidResult();
     NSMutableDictionary *items = [NSMutableDictionary dictionary];
     items[@"function"] = TTNativeString(value->function);
     items[@"kind"] = TTNativeString(value->kind);
-    items[@"value"] = TTNative_thinkthen_complete_atomic_decide_value_v1(value->value);
+    items[@"value"] = TTNative_thinkthen_complete_atomic_nullable_string(value->value);
     for (size_t i = 0;
     i < value->extensions.len;
     i++) {
-        const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];
-        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
+    }
+    return [items copy];
+}
+id TTNative_thinkthen_complete_session_packet_decide_row(const struct thinkthen_complete_session_packet_decide_row *value) {
+    if (!value) TTInvalidResult();
+    NSMutableDictionary *items = [NSMutableDictionary dictionary];
+    items[@"function"] = TTNativeString(value->function);
+    items[@"kind"] = TTNativeString(value->kind);
+    items[@"value"] = TTNative_thinkthen_complete_atomic_decide_value(value->value);
+    for (size_t i = 0;
+    i < value->extensions.len;
+    i++) {
+        const struct thinkthen_complete_extension *item = &value->extensions.data[i];
+        items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json(item->value);
     }
     return [items copy];
 }

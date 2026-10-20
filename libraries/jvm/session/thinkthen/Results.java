@@ -2968,17 +2968,6 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class WordingVersion extends View {
-        public WordingVersion(Object value) {
-            super(value);
-        }
-        static WordingVersion read(Object value) {
-            return new WordingVersion(value);
-        }
-        public BigInteger value() {
-            return Values.integer(json());
-        }
-    }
     public sealed interface AnnotatedField permits AnnotatedFieldBoolean,AnnotatedFieldNull,AnnotatedFieldString,
     AnnotatedFieldArray,AnnotatedFieldNumber,AnnotatedFieldObject {
         static AnnotatedField read(Object value) {
@@ -3372,9 +3361,6 @@ public final class Results {
             Object value = required("verb");
             return (String)value;
         }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
     }
     public static final class NameOdds extends View {
         public NameOdds(Object value) {
@@ -3562,9 +3548,6 @@ public final class Results {
         public Presence<String> profile() {
             return presence("profile", value -> (String)value);
         }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
         public List<String> options() {
             Object value = required("options");
             return Values.list(value, item0 -> (String)item0);
@@ -3608,9 +3591,6 @@ public final class Results {
         }
         public Presence<String> profile() {
             return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
         }
         public Presence<Object> falseValue() {
             return presence("false", value -> Values.freeze(value));
@@ -3658,9 +3638,6 @@ public final class Results {
         public Presence<String> profile() {
             return presence("profile", value -> (String)value);
         }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
         public List<String> levels() {
             Object value = required("levels");
             return Values.list(value, item0 -> (String)item0);
@@ -3704,9 +3681,6 @@ public final class Results {
         }
         public Presence<String> profile() {
             return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
         }
         public List<String> labels() {
             Object value = required("labels");
@@ -3817,9 +3791,6 @@ public final class Results {
             Object value = required("verb");
             return Verb.read(value);
         }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
     }
     public static final class RecognizeEntities extends View implements Recognize {
         public RecognizeEntities(Object value) {
@@ -3914,9 +3885,6 @@ public final class Results {
         public String verb() {
             Object value = required("verb");
             return (String)value;
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
         }
     }
     public static final class RelatedEntity extends View {

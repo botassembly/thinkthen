@@ -29,10 +29,11 @@ enum UsagePersistenceState {
   const UsagePersistenceState(this.code);
 }
 
-@Native<Pointer<Void> Function(Pointer<Uint8>)>(
+@Native<Pointer<Void> Function(Pointer<Uint8>, Pointer<Pointer<Void>>)>(
     symbol: 'thinkthen_engine_new_with',
     assetId: 'package:thinkthen_dart/thinkthen')
-external Pointer<Void> _thinkthen_engine_new_with(Pointer<Uint8> arg0);
+external Pointer<Void> _thinkthen_engine_new_with(
+    Pointer<Uint8> arg0, Pointer<Pointer<Void>> arg1);
 @Native<Void Function(Pointer<Void>)>(
     symbol: 'thinkthen_engine_free',
     assetId: 'package:thinkthen_dart/thinkthen')
@@ -108,16 +109,16 @@ external Pointer<Void> _thinkthen_session_error_view();
 @Native<
         Int32 Function(Pointer<Void>, Pointer<_NativeUsageState>,
             Pointer<_NativeUsageAdvice>)>(
-    symbol: 'thinkthen_engine_usage_persistence_v1',
+    symbol: 'thinkthen_engine_usage_persistence',
     assetId: 'package:thinkthen_dart/thinkthen')
-external int _thinkthen_engine_usage_persistence_v1(Pointer<Void> arg0,
+external int _thinkthen_engine_usage_persistence(Pointer<Void> arg0,
     Pointer<_NativeUsageState> arg1, Pointer<_NativeUsageAdvice> arg2);
 @Native<
         Int32 Function(Pointer<Void>, Pointer<_NativeUsageState>,
             Pointer<_NativeUsageAdvice>)>(
-    symbol: 'thinkthen_engine_finish_usage_status_v1',
+    symbol: 'thinkthen_engine_finish_usage_status',
     assetId: 'package:thinkthen_dart/thinkthen')
-external int _thinkthen_engine_finish_usage_status_v1(Pointer<Void> arg0,
+external int _thinkthen_engine_finish_usage_status(Pointer<Void> arg0,
     Pointer<_NativeUsageState> arg1, Pointer<_NativeUsageAdvice> arg2);
 
 final class _NativeAbi {
@@ -145,10 +146,10 @@ final class _NativeAbi {
   final thinkthen_session_result_free = _thinkthen_session_result_free;
   final thinkthen_session_result_view = _thinkthen_session_result_view;
   final thinkthen_session_error_view = _thinkthen_session_error_view;
-  final thinkthen_engine_usage_persistence_v1 =
-      _thinkthen_engine_usage_persistence_v1;
-  final thinkthen_engine_finish_usage_status_v1 =
-      _thinkthen_engine_finish_usage_status_v1;
+  final thinkthen_engine_usage_persistence =
+      _thinkthen_engine_usage_persistence;
+  final thinkthen_engine_finish_usage_status =
+      _thinkthen_engine_finish_usage_status;
   Pointer<Void> startNamed(Pointer<Void> engine, String function,
       Question question, Input input, Options? options, String surface,
       {bool preview = false}) {
@@ -215,7 +216,7 @@ final class _NativeAbi {
     final advice = calloc<_NativeUsageAdvice>();
     try {
       _checkSession(
-          this, thinkthen_engine_finish_usage_status_v1(engine, state, advice));
+          this, thinkthen_engine_finish_usage_status(engine, state, advice));
       return UsagePersistenceStatus(
           UsagePersistenceState.values
               .firstWhere((value) => value.code == state.ref.kind),
@@ -233,7 +234,7 @@ final class _NativeAbi {
     final advice = calloc<_NativeUsageAdvice>();
     try {
       _checkSession(
-          this, thinkthen_engine_usage_persistence_v1(engine, state, advice));
+          this, thinkthen_engine_usage_persistence(engine, state, advice));
       return UsagePersistenceStatus(
           UsagePersistenceState.values
               .firstWhere((value) => value.code == state.ref.kind),
@@ -253,9 +254,9 @@ final class _NativeAbi {
       _checkSession(
           this,
           thinkthen_session_next_packet(
-              session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, status, value));
-      if (status.value == THINKTHEN_SESSION_END_V1) return 0;
-      if (status.value != THINKTHEN_SESSION_RESULT_V1)
+              session, THINKTHEN_SESSION_WAIT_SETTLEMENT, status, value));
+      if (status.value == THINKTHEN_SESSION_END) return 0;
+      if (status.value != THINKTHEN_SESSION_RESULT)
         throw StateError("Invalid native waitPacket status");
       return value.value.address;
     } finally {
@@ -271,8 +272,8 @@ final class _NativeAbi {
           item,
           (bytes, length) => _checkSession(
               this, thinkthen_session_push(session, bytes, length, status)));
-      if (status.value == THINKTHEN_SESSION_CLOSED_V1) return status.value;
-      if (status.value != THINKTHEN_SESSION_ACCEPTED_V1)
+      if (status.value == THINKTHEN_SESSION_CLOSED) return status.value;
+      if (status.value != THINKTHEN_SESSION_ACCEPTED)
         throw StateError("Invalid native pushItem status");
       return status.value;
     } finally {
@@ -293,14 +294,14 @@ enum ErrorKind {
   const ErrorKind(this.code);
 }
 
-const THINKTHEN_SESSION_ACCEPTED_V1 = 0;
-const THINKTHEN_SESSION_CLOSED_V1 = 2;
-const THINKTHEN_SESSION_END_V1 = 2;
-const THINKTHEN_SESSION_FULL_V1 = 1;
-const THINKTHEN_SESSION_PENDING_V1 = 1;
-const THINKTHEN_SESSION_RESULT_V1 = 0;
-const THINKTHEN_SESSION_WAIT_INPUT_V1 = 1;
-const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 = 2;
+const THINKTHEN_SESSION_ACCEPTED = 0;
+const THINKTHEN_SESSION_CLOSED = 2;
+const THINKTHEN_SESSION_END = 2;
+const THINKTHEN_SESSION_FULL = 1;
+const THINKTHEN_SESSION_PENDING = 1;
+const THINKTHEN_SESSION_RESULT = 0;
+const THINKTHEN_SESSION_WAIT_INPUT = 1;
+const THINKTHEN_SESSION_WAIT_SETTLEMENT = 2;
 
 final class _NativePacketReader {
   static Object? readFailureFacts(Pointer<Void> p) {
@@ -1621,7 +1622,7 @@ final class _NativePacketReader {
   }
 
   static Object? readQuestionDocumentScore(Pointer<Void> p) {
-    final values = _extensions(_at(p, 224));
+    final values = _extensions(_at(p, 208));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
           _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
@@ -1651,20 +1652,12 @@ final class _NativePacketReader {
     if (_u32(_at(p, 136)) != 0)
       values["profile"] =
           _u32(_at(p, 136)) == 1 ? null : _text(_at(_at(p, 136), 8));
-    if (_u32(_at(p, 160)) != 0)
-      values["wording_version"] = _u32(_at(p, 160)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 160), 8)));
-    values["levels"] = _list(_at(p, 176), 16, (p) => _text(p));
-    if (_u32(_at(p, 192)) != 0)
+    values["levels"] = _list(_at(p, 160), 16, (p) => _text(p));
+    if (_u32(_at(p, 176)) != 0)
       values["text"] =
-          _u32(_at(p, 192)) == 1 ? null : _value(_pointer(_at(_at(p, 192), 8)));
-    values["verb"] = _text(_at(p, 208));
+          _u32(_at(p, 176)) == 1 ? null : _value(_pointer(_at(_at(p, 176), 8)));
+    values["verb"] = _text(_at(p, 192));
     return values;
-  }
-
-  static Object? readWordingVersion(Pointer<Void> p) {
-    return _unsigned(_at(p, 0));
   }
 
   static Object? readQuestionName(Pointer<Void> p) {
@@ -1770,7 +1763,7 @@ final class _NativePacketReader {
   }
 
   static Object? readQuestionDocumentTag(Pointer<Void> p) {
-    final values = _extensions(_at(p, 224));
+    final values = _extensions(_at(p, 208));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
           _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
@@ -1800,19 +1793,54 @@ final class _NativePacketReader {
     if (_u32(_at(p, 136)) != 0)
       values["profile"] =
           _u32(_at(p, 136)) == 1 ? null : _text(_at(_at(p, 136), 8));
-    if (_u32(_at(p, 160)) != 0)
-      values["wording_version"] = _u32(_at(p, 160)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 160), 8)));
-    values["labels"] = _list(_at(p, 176), 16, (p) => _text(p));
-    if (_u32(_at(p, 192)) != 0)
+    values["labels"] = _list(_at(p, 160), 16, (p) => _text(p));
+    if (_u32(_at(p, 176)) != 0)
       values["text"] =
-          _u32(_at(p, 192)) == 1 ? null : _value(_pointer(_at(_at(p, 192), 8)));
-    values["verb"] = _text(_at(p, 208));
+          _u32(_at(p, 176)) == 1 ? null : _value(_pointer(_at(_at(p, 176), 8)));
+    values["verb"] = _text(_at(p, 192));
     return values;
   }
 
   static Object? readQuestionDocumentChoose(Pointer<Void> p) {
+    final values = _extensions(_at(p, 208));
+    if (_u32(_at(p, 0)) != 0)
+      values["batch"] =
+          _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
+    if (_u32(_at(p, 16)) != 0)
+      values["context_schema"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readInputDeclaration(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["item_schema"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readInputDeclaration(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["label_details"] = _u32(_at(p, 48)) == 1
+          ? null
+          : _list(_at(_at(p, 48), 8), 8, (p) => readLabel(_pointer(p)));
+    if (_u32(_at(p, 72)) != 0)
+      values["model"] =
+          _u32(_at(p, 72)) == 1 ? null : _text(_at(_at(p, 72), 8));
+    if (_u32(_at(p, 96)) != 0)
+      values["name"] = _u32(_at(p, 96)) == 1
+          ? null
+          : readQuestionName(_pointer(_at(_at(p, 96), 8)));
+    if (_u32(_at(p, 112)) != 0)
+      values["on"] = _u32(_at(p, 112)) == 1
+          ? null
+          : _list(_at(_at(p, 112), 8), 16, (p) => _text(p));
+    if (_u32(_at(p, 136)) != 0)
+      values["profile"] =
+          _u32(_at(p, 136)) == 1 ? null : _text(_at(_at(p, 136), 8));
+    values["options"] = _list(_at(p, 160), 16, (p) => _text(p));
+    if (_u32(_at(p, 176)) != 0)
+      values["text"] =
+          _u32(_at(p, 176)) == 1 ? null : _value(_pointer(_at(_at(p, 176), 8)));
+    values["verb"] = _text(_at(p, 192));
+    return values;
+  }
+
+  static Object? readQuestionDocumentDecide(Pointer<Void> p) {
     final values = _extensions(_at(p, 224));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1844,62 +1872,15 @@ final class _NativePacketReader {
       values["profile"] =
           _u32(_at(p, 136)) == 1 ? null : _text(_at(_at(p, 136), 8));
     if (_u32(_at(p, 160)) != 0)
-      values["wording_version"] = _u32(_at(p, 160)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 160), 8)));
-    values["options"] = _list(_at(p, 176), 16, (p) => _text(p));
-    if (_u32(_at(p, 192)) != 0)
-      values["text"] =
-          _u32(_at(p, 192)) == 1 ? null : _value(_pointer(_at(_at(p, 192), 8)));
-    values["verb"] = _text(_at(p, 208));
-    return values;
-  }
-
-  static Object? readQuestionDocumentDecide(Pointer<Void> p) {
-    final values = _extensions(_at(p, 240));
-    if (_u32(_at(p, 0)) != 0)
-      values["batch"] =
-          _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
-    if (_u32(_at(p, 16)) != 0)
-      values["context_schema"] = _u32(_at(p, 16)) == 1
-          ? null
-          : readInputDeclaration(_pointer(_at(_at(p, 16), 8)));
-    if (_u32(_at(p, 32)) != 0)
-      values["item_schema"] = _u32(_at(p, 32)) == 1
-          ? null
-          : readInputDeclaration(_pointer(_at(_at(p, 32), 8)));
-    if (_u32(_at(p, 48)) != 0)
-      values["label_details"] = _u32(_at(p, 48)) == 1
-          ? null
-          : _list(_at(_at(p, 48), 8), 8, (p) => readLabel(_pointer(p)));
-    if (_u32(_at(p, 72)) != 0)
-      values["model"] =
-          _u32(_at(p, 72)) == 1 ? null : _text(_at(_at(p, 72), 8));
-    if (_u32(_at(p, 96)) != 0)
-      values["name"] = _u32(_at(p, 96)) == 1
-          ? null
-          : readQuestionName(_pointer(_at(_at(p, 96), 8)));
-    if (_u32(_at(p, 112)) != 0)
-      values["on"] = _u32(_at(p, 112)) == 1
-          ? null
-          : _list(_at(_at(p, 112), 8), 16, (p) => _text(p));
-    if (_u32(_at(p, 136)) != 0)
-      values["profile"] =
-          _u32(_at(p, 136)) == 1 ? null : _text(_at(_at(p, 136), 8));
-    if (_u32(_at(p, 160)) != 0)
-      values["wording_version"] = _u32(_at(p, 160)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 160), 8)));
-    if (_u32(_at(p, 176)) != 0)
       values["false"] =
+          _u32(_at(p, 160)) == 1 ? null : _value(_pointer(_at(_at(p, 160), 8)));
+    if (_u32(_at(p, 176)) != 0)
+      values["text"] =
           _u32(_at(p, 176)) == 1 ? null : _value(_pointer(_at(_at(p, 176), 8)));
     if (_u32(_at(p, 192)) != 0)
-      values["text"] =
-          _u32(_at(p, 192)) == 1 ? null : _value(_pointer(_at(_at(p, 192), 8)));
-    if (_u32(_at(p, 208)) != 0)
       values["true"] =
-          _u32(_at(p, 208)) == 1 ? null : _value(_pointer(_at(_at(p, 208), 8)));
-    values["verb"] = _text(_at(p, 224));
+          _u32(_at(p, 192)) == 1 ? null : _value(_pointer(_at(_at(p, 192), 8)));
+    values["verb"] = _text(_at(p, 208));
     return values;
   }
 
@@ -2051,7 +2032,7 @@ final class _NativePacketReader {
   }
 
   static Object? readRelateQuestionDocument(Pointer<Void> p) {
-    final values = _extensions(_at(p, 232));
+    final values = _extensions(_at(p, 216));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
           _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
@@ -2089,10 +2070,6 @@ final class _NativePacketReader {
         _list(_at(p, 176), 8, (p) => readRelationRule(_pointer(p)));
     values["threshold"] = readThreshold(_pointer(_at(p, 192)));
     values["verb"] = _text(_at(p, 200));
-    if (_u32(_at(p, 216)) != 0)
-      values["wording_version"] = _u32(_at(p, 216)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 216), 8)));
     return values;
   }
 
@@ -2418,7 +2395,7 @@ final class _NativePacketReader {
   }
 
   static Object? readRecognizeQuestionDocument(Pointer<Void> p) {
-    final values = _extensions(_at(p, 328));
+    final values = _extensions(_at(p, 312));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
           _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
@@ -2476,10 +2453,6 @@ final class _NativePacketReader {
           : readRecognitionStageContext(_pointer(_at(_at(p, 280), 8)));
     values["threshold"] = readThreshold(_pointer(_at(p, 296)));
     values["verb"] = readVerb(_pointer(_at(p, 304)));
-    if (_u32(_at(p, 312)) != 0)
-      values["wording_version"] = _u32(_at(p, 312)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 312), 8)));
     return values;
   }
 
@@ -2749,7 +2722,7 @@ final class _NativePacketReader {
   }
 
   static Object? readFindQuestionDocument(Pointer<Void> p) {
-    final values = _extensions(_at(p, 216));
+    final values = _extensions(_at(p, 200));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
           _u32(_at(p, 0)) == 1 ? null : readBatch(_pointer(_at(_at(p, 0), 8)));
@@ -2784,10 +2757,6 @@ final class _NativePacketReader {
       values["text"] =
           _u32(_at(p, 168)) == 1 ? null : _value(_pointer(_at(_at(p, 168), 8)));
     values["verb"] = _text(_at(p, 184));
-    if (_u32(_at(p, 200)) != 0)
-      values["wording_version"] = _u32(_at(p, 200)) == 1
-          ? null
-          : readWordingVersion(_pointer(_at(_at(p, 200), 8)));
     return values;
   }
 

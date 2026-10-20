@@ -132,7 +132,6 @@ typedef struct thinkthen_cobol_AnnotateQuestionChoose {
     const void * m_on;
     const void * m_options;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_AnnotateQuestionChoose;
 typedef struct thinkthen_cobol_AnnotateQuestionDecide {
     uint64_t reserved;
@@ -144,7 +143,6 @@ typedef struct thinkthen_cobol_AnnotateQuestionDecide {
     const void * m_on;
     const void * m_threshold;
     const void * m_true;
-    const void * m_wording_version;
 } thinkthen_cobol_AnnotateQuestionDecide;
 typedef struct thinkthen_cobol_AnnotateQuestionScore {
     uint64_t reserved;
@@ -154,7 +152,6 @@ typedef struct thinkthen_cobol_AnnotateQuestionScore {
     const void * m_name;
     const void * m_on;
     const void * m_score;
-    const void * m_wording_version;
 } thinkthen_cobol_AnnotateQuestionScore;
 typedef struct thinkthen_cobol_AnnotateQuestionTag {
     uint64_t reserved;
@@ -165,7 +162,6 @@ typedef struct thinkthen_cobol_AnnotateQuestionTag {
     const void * m_on;
     const void * m_tag;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_AnnotateQuestionTag;
 typedef struct thinkthen_cobol_Choose {
     uint64_t reserved;
@@ -179,7 +175,6 @@ typedef struct thinkthen_cobol_Choose {
     const void * m_options;
     const void * m_profile;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_Choose;
 typedef struct thinkthen_cobol_Criterion {
     uint64_t kind;
@@ -202,7 +197,6 @@ typedef struct thinkthen_cobol_Decide {
     const void * m_profile;
     const void * m_threshold;
     const void * m_true;
-    const void * m_wording_version;
 } thinkthen_cobol_Decide;
 typedef struct thinkthen_cobol_Description {
     uint64_t kind;
@@ -217,7 +211,6 @@ typedef struct thinkthen_cobol_Find {
     const void * m_name;
     const void * m_on;
     const void * m_profile;
-    const void * m_wording_version;
 } thinkthen_cobol_Find;
 typedef struct thinkthen_cobol_InputDeclaration {
     uint64_t kind;
@@ -295,7 +288,6 @@ typedef struct thinkthen_cobol_Relate {
     const void * m_profile;
     const void * m_relate;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_Relate;
 typedef struct thinkthen_cobol_Relation {
     uint64_t reserved;
@@ -317,7 +309,6 @@ typedef struct thinkthen_cobol_Score {
     const void * m_on;
     const void * m_profile;
     const void * m_score;
-    const void * m_wording_version;
 } thinkthen_cobol_Score;
 typedef struct thinkthen_cobol_Tag {
     uint64_t reserved;
@@ -331,7 +322,6 @@ typedef struct thinkthen_cobol_Tag {
     const void * m_profile;
     const void * m_tag;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_Tag;
 typedef struct thinkthen_cobol_Threshold {
     uint64_t kind;
@@ -431,7 +421,6 @@ typedef struct thinkthen_cobol_RecognizeDefinition {
     const void * m_recognize;
     const void * m_relation_threshold;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_RecognizeDefinition;
 typedef struct thinkthen_cobol_RecognizeQuestion {
     uint64_t reserved;
@@ -456,7 +445,6 @@ typedef struct thinkthen_cobol_RelateQuestion {
 typedef struct thinkthen_cobol_Request {
     uint64_t reserved;
     const void * m_call;
-    const void * m_schema;
 } thinkthen_cobol_Request;
 typedef struct thinkthen_cobol_RequestBatch {
     uint64_t kind;
@@ -492,7 +480,6 @@ typedef struct thinkthen_cobol_DefinitionChoose {
     const void * m_options;
     const void * m_profile;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionChoose;
 typedef struct thinkthen_cobol_DefinitionDecide {
     uint64_t reserved;
@@ -507,7 +494,6 @@ typedef struct thinkthen_cobol_DefinitionDecide {
     const void * m_profile;
     const void * m_threshold;
     const void * m_true;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionDecide;
 typedef struct thinkthen_cobol_DefinitionFind {
     uint64_t reserved;
@@ -518,7 +504,6 @@ typedef struct thinkthen_cobol_DefinitionFind {
     const void * m_name;
     const void * m_on;
     const void * m_profile;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionFind;
 typedef struct thinkthen_cobol_DefinitionRelate {
     uint64_t reserved;
@@ -529,7 +514,6 @@ typedef struct thinkthen_cobol_DefinitionRelate {
     const void * m_profile;
     const void * m_relate;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionRelate;
 typedef struct thinkthen_cobol_DefinitionScore {
     uint64_t reserved;
@@ -542,7 +526,6 @@ typedef struct thinkthen_cobol_DefinitionScore {
     const void * m_on;
     const void * m_profile;
     const void * m_score;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionScore;
 typedef struct thinkthen_cobol_DefinitionTag {
     uint64_t reserved;
@@ -556,7 +539,6 @@ typedef struct thinkthen_cobol_DefinitionTag {
     const void * m_profile;
     const void * m_tag;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionTag;
 typedef struct thinkthen_cobol_DefinitionRecognizeDefinition {
     uint64_t reserved;
@@ -569,7 +551,6 @@ typedef struct thinkthen_cobol_DefinitionRecognizeDefinition {
     const void * m_recognize;
     const void * m_relation_threshold;
     const void * m_threshold;
-    const void * m_wording_version;
 } thinkthen_cobol_DefinitionRecognizeDefinition;
 typedef struct thinkthen_cobol_RequestFraming {
     uint64_t kind;
@@ -766,9 +747,6 @@ typedef struct thinkthen_cobol_RequestThreshold {
     uint64_t kind;
     const void * value;
 } thinkthen_cobol_RequestThreshold;
-typedef struct thinkthen_cobol_RequestVersion {
-    uint64_t reserved;
-} thinkthen_cobol_RequestVersion;
 typedef struct thinkthen_cobol_SessionSourceLocation {
     uint64_t reserved;
     const void * m_file;
@@ -780,7 +758,7 @@ typedef struct thinkthen_cobol_SourceUnit {
     const void * value;
 } thinkthen_cobol_SourceUnit;
 typedef struct thinkthen_cobol_AnnotateDefinitionBatch {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_AnnotateDefinitionBatch;
 typedef struct thinkthen_cobol_AnnotateDefinitionQuestions {
     const thinkthen_cobol_text * keys;
@@ -791,37 +769,22 @@ typedef struct thinkthen_cobol_AnnotateQuestionChooseName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_AnnotateQuestionChooseName;
-typedef struct thinkthen_cobol_AnnotateQuestionChooseWordingVersion {
-    int64_t value;
-} thinkthen_cobol_AnnotateQuestionChooseWordingVersion;
 typedef struct thinkthen_cobol_AnnotateQuestionDecideName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_AnnotateQuestionDecideName;
-typedef struct thinkthen_cobol_AnnotateQuestionDecideWordingVersion {
-    int64_t value;
-} thinkthen_cobol_AnnotateQuestionDecideWordingVersion;
 typedef struct thinkthen_cobol_AnnotateQuestionScoreName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_AnnotateQuestionScoreName;
-typedef struct thinkthen_cobol_AnnotateQuestionScoreWordingVersion {
-    int64_t value;
-} thinkthen_cobol_AnnotateQuestionScoreWordingVersion;
 typedef struct thinkthen_cobol_AnnotateQuestionTagName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_AnnotateQuestionTagName;
-typedef struct thinkthen_cobol_AnnotateQuestionTagWordingVersion {
-    int64_t value;
-} thinkthen_cobol_AnnotateQuestionTagWordingVersion;
 typedef struct thinkthen_cobol_ChooseName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_ChooseName;
-typedef struct thinkthen_cobol_ChooseWordingVersion {
-    int64_t value;
-} thinkthen_cobol_ChooseWordingVersion;
 typedef struct thinkthen_cobol_CriterionTextValue {
     const char * data;
     uint64_t len;
@@ -849,9 +812,6 @@ typedef struct thinkthen_cobol_DecideName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DecideName;
-typedef struct thinkthen_cobol_DecideWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DecideWordingVersion;
 typedef struct thinkthen_cobol_DescriptionTextValue {
     const char * data;
     uint64_t len;
@@ -872,9 +832,6 @@ typedef struct thinkthen_cobol_FindName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_FindName;
-typedef struct thinkthen_cobol_FindWordingVersion {
-    int64_t value;
-} thinkthen_cobol_FindWordingVersion;
 typedef struct thinkthen_cobol_InputDeclarationObjectProperties {
     const thinkthen_cobol_text * keys;
     const void *const * values;
@@ -964,9 +921,6 @@ typedef struct thinkthen_cobol_RelateName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_RelateName;
-typedef struct thinkthen_cobol_RelateWordingVersion {
-    int64_t value;
-} thinkthen_cobol_RelateWordingVersion;
 typedef struct thinkthen_cobol_RelationEither {
     uint64_t value;
 } thinkthen_cobol_RelationEither;
@@ -977,16 +931,10 @@ typedef struct thinkthen_cobol_ScoreName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_ScoreName;
-typedef struct thinkthen_cobol_ScoreWordingVersion {
-    int64_t value;
-} thinkthen_cobol_ScoreWordingVersion;
 typedef struct thinkthen_cobol_TagName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_TagName;
-typedef struct thinkthen_cobol_TagWordingVersion {
-    int64_t value;
-} thinkthen_cobol_TagWordingVersion;
 typedef struct thinkthen_cobol_ThresholdNumberValue {
     double value;
 } thinkthen_cobol_ThresholdNumberValue;
@@ -1042,7 +990,7 @@ typedef struct thinkthen_cobol_SettingsProfile {
     uint64_t len;
 } thinkthen_cobol_SettingsProfile;
 typedef struct thinkthen_cobol_SettingsProxy {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_SettingsProxy;
 typedef struct thinkthen_cobol_SettingsRecord {
     const char * data;
@@ -1076,14 +1024,14 @@ typedef struct thinkthen_cobol_ImageMediaImagePngValue {
     uint64_t reserved;
 } thinkthen_cobol_ImageMediaImagePngValue;
 typedef struct thinkthen_cobol_OptionSchemaDescription {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_OptionSchemaDescription;
 typedef struct thinkthen_cobol_OptionSchemaName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_OptionSchemaName;
 typedef struct thinkthen_cobol_OptionSchema2Description {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_OptionSchema2Description;
 typedef struct thinkthen_cobol_OptionSchema2Name {
     const char * data;
@@ -1153,9 +1101,6 @@ typedef struct thinkthen_cobol_RecognizeDefinitionName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_RecognizeDefinitionName;
-typedef struct thinkthen_cobol_RecognizeDefinitionWordingVersion {
-    int64_t value;
-} thinkthen_cobol_RecognizeDefinitionWordingVersion;
 typedef struct thinkthen_cobol_RecognizeQuestionKinds {
     const thinkthen_cobol_text * keys;
     const void *const * values;
@@ -1188,7 +1133,7 @@ typedef struct thinkthen_cobol_RequestBatchTextValue {
     uint64_t len;
 } thinkthen_cobol_RequestBatchTextValue;
 typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionBatch {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_DefinitionAnnotateDefinitionBatch;
 typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionQuestions {
     const thinkthen_cobol_text * keys;
@@ -1199,51 +1144,30 @@ typedef struct thinkthen_cobol_DefinitionChooseName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionChooseName;
-typedef struct thinkthen_cobol_DefinitionChooseWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionChooseWordingVersion;
 typedef struct thinkthen_cobol_DefinitionDecideName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionDecideName;
-typedef struct thinkthen_cobol_DefinitionDecideWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionDecideWordingVersion;
 typedef struct thinkthen_cobol_DefinitionFindName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionFindName;
-typedef struct thinkthen_cobol_DefinitionFindWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionFindWordingVersion;
 typedef struct thinkthen_cobol_DefinitionRelateName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionRelateName;
-typedef struct thinkthen_cobol_DefinitionRelateWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionRelateWordingVersion;
 typedef struct thinkthen_cobol_DefinitionScoreName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionScoreName;
-typedef struct thinkthen_cobol_DefinitionScoreWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionScoreWordingVersion;
 typedef struct thinkthen_cobol_DefinitionTagName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionTagName;
-typedef struct thinkthen_cobol_DefinitionTagWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionTagWordingVersion;
 typedef struct thinkthen_cobol_DefinitionRecognizeDefinitionName {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_DefinitionRecognizeDefinitionName;
-typedef struct thinkthen_cobol_DefinitionRecognizeDefinitionWordingVersion {
-    int64_t value;
-} thinkthen_cobol_DefinitionRecognizeDefinitionWordingVersion;
 typedef struct thinkthen_cobol_RequestFramingDocumentValue {
     uint64_t reserved;
 } thinkthen_cobol_RequestFramingDocumentValue;
@@ -1329,7 +1253,7 @@ typedef struct thinkthen_cobol_RequestInputJsonKind {
     uint64_t reserved;
 } thinkthen_cobol_RequestInputJsonKind;
 typedef struct thinkthen_cobol_RequestInputJsonValue {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_RequestInputJsonValue;
 typedef struct thinkthen_cobol_RequestInputRecordsItems {
     const void *const * data;
@@ -1431,7 +1355,7 @@ typedef struct thinkthen_cobol_RequestOptionsModel {
     uint64_t len;
 } thinkthen_cobol_RequestOptionsModel;
 typedef struct thinkthen_cobol_RequestOptionsNo {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_RequestOptionsNo;
 typedef struct thinkthen_cobol_RequestOptionsNone {
     uint64_t value;
@@ -1455,13 +1379,13 @@ typedef struct thinkthen_cobol_RequestOptionsTop {
     uint64_t value;
 } thinkthen_cobol_RequestOptionsTop;
 typedef struct thinkthen_cobol_RequestOptionsYes {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_RequestOptionsYes;
 typedef struct thinkthen_cobol_RequestOriginalJsonKind {
     uint64_t reserved;
 } thinkthen_cobol_RequestOriginalJsonKind;
 typedef struct thinkthen_cobol_RequestOriginalJsonValue {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_RequestOriginalJsonValue;
 typedef struct thinkthen_cobol_RequestOriginalTextKind {
     uint64_t reserved;
@@ -1547,16 +1471,16 @@ typedef struct thinkthen_cobol_SourceUnitFileValue {
     uint64_t reserved;
 } thinkthen_cobol_SourceUnitFileValue;
 typedef struct thinkthen_cobol_CriterionObjectValueEntry {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_CriterionObjectValueEntry;
 typedef struct thinkthen_cobol_CriterionArrayValueItem {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_CriterionArrayValueItem;
 typedef struct thinkthen_cobol_DescriptionObjectValueEntry {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_DescriptionObjectValueEntry;
 typedef struct thinkthen_cobol_DescriptionArrayValueItem {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_DescriptionArrayValueItem;
 typedef struct thinkthen_cobol_InputDeclarationObjectRequiredItem {
     const char * data;
@@ -1570,13 +1494,13 @@ typedef struct thinkthen_cobol_PointersArrayValueItem {
     uint64_t len;
 } thinkthen_cobol_PointersArrayValueItem;
 typedef struct thinkthen_cobol_QuestionTextObjectValueEntry {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_QuestionTextObjectValueEntry;
 typedef struct thinkthen_cobol_QuestionTextArrayValueItem {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_QuestionTextArrayValueItem;
 typedef struct thinkthen_cobol_ContextSchemaObjectValueEntry {
-    const struct thinkthen_complete_json_v1 * value;
+    const struct thinkthen_complete_json * value;
 } thinkthen_cobol_ContextSchemaObjectValueEntry;
 typedef struct thinkthen_cobol_SettingsInputTokenBudgetIntegerValue {
     uint64_t value;
@@ -1968,8 +1892,6 @@ typedef struct thinkthen_cobol_ReceiptRelationEndpointRelatedEntity thinkthen_co
 typedef struct thinkthen_cobol_ReceiptU32Presence thinkthen_cobol_ReceiptU32Presence;
 typedef struct thinkthen_cobol_ReceiptResultTag thinkthen_cobol_ReceiptResultTag;
 typedef struct thinkthen_cobol_ReceiptRelateQuestionDocument thinkthen_cobol_ReceiptRelateQuestionDocument;
-typedef struct thinkthen_cobol_ReceiptWordingVersionPresence thinkthen_cobol_ReceiptWordingVersionPresence;
-typedef struct thinkthen_cobol_ReceiptWordingVersion thinkthen_cobol_ReceiptWordingVersion;
 typedef struct thinkthen_cobol_ReceiptThreshold thinkthen_cobol_ReceiptThreshold;
 typedef struct thinkthen_cobol_ReceiptThresholdData thinkthen_cobol_ReceiptThresholdData;
 typedef struct thinkthen_cobol_ReceiptRelationRuleList thinkthen_cobol_ReceiptRelationRuleList;
@@ -2188,13 +2110,6 @@ struct thinkthen_cobol_ReceiptU32Presence {
 };
 struct thinkthen_cobol_ReceiptResultTag {
     uint32_t kind;
-};
-struct thinkthen_cobol_ReceiptWordingVersionPresence {
-    uint32_t presence;
-    const thinkthen_cobol_ReceiptWordingVersion *value;
-};
-struct thinkthen_cobol_ReceiptWordingVersion {
-    uint64_t value;
 };
 struct thinkthen_cobol_ReceiptThresholdData {
     double number;
@@ -2900,7 +2815,6 @@ struct thinkthen_cobol_ReceiptQuestionDocumentScore {
     thinkthen_cobol_ReceiptQuestionNamePresence name;
     thinkthen_cobol_ReceiptStringListPresence on;
     thinkthen_cobol_ReceiptUtf8Presence profile;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptStringList levels;
     thinkthen_cobol_ReceiptJsonPresence text;
     thinkthen_cobol_AnswerText verb;
@@ -2915,7 +2829,6 @@ struct thinkthen_cobol_ReceiptQuestionDocumentTag {
     thinkthen_cobol_ReceiptQuestionNamePresence name;
     thinkthen_cobol_ReceiptStringListPresence on;
     thinkthen_cobol_ReceiptUtf8Presence profile;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptStringList labels;
     thinkthen_cobol_ReceiptJsonPresence text;
     thinkthen_cobol_AnswerText verb;
@@ -2930,7 +2843,6 @@ struct thinkthen_cobol_ReceiptQuestionDocumentChoose {
     thinkthen_cobol_ReceiptQuestionNamePresence name;
     thinkthen_cobol_ReceiptStringListPresence on;
     thinkthen_cobol_ReceiptUtf8Presence profile;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptStringList options;
     thinkthen_cobol_ReceiptJsonPresence text;
     thinkthen_cobol_AnswerText verb;
@@ -2945,7 +2857,6 @@ struct thinkthen_cobol_ReceiptQuestionDocumentDecide {
     thinkthen_cobol_ReceiptQuestionNamePresence name;
     thinkthen_cobol_ReceiptStringListPresence on;
     thinkthen_cobol_ReceiptUtf8Presence profile;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptJsonPresence false_;
     thinkthen_cobol_ReceiptJsonPresence text;
     thinkthen_cobol_ReceiptJsonPresence true_;
@@ -3011,7 +2922,6 @@ struct thinkthen_cobol_ReceiptRecognizeQuestionDocument {
     thinkthen_cobol_ReceiptRecognitionStageContextPresence stage_context;
     const thinkthen_cobol_ReceiptThreshold *threshold;
     const thinkthen_cobol_ReceiptVerb *verb;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptExtensions extensions;
 };
 struct thinkthen_cobol_ReceiptRecognitionOdds {
@@ -3101,7 +3011,6 @@ struct thinkthen_cobol_ReceiptFindQuestionDocument {
     thinkthen_cobol_ReceiptUtf8Presence profile;
     thinkthen_cobol_ReceiptJsonPresence text;
     thinkthen_cobol_AnswerText verb;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptExtensions extensions;
 };
 struct thinkthen_cobol_ReceiptFindCandidateListPresence {
@@ -3225,7 +3134,6 @@ struct thinkthen_cobol_ReceiptRelateQuestionDocument {
     thinkthen_cobol_ReceiptRelationRuleList relations;
     const thinkthen_cobol_ReceiptThreshold *threshold;
     thinkthen_cobol_AnswerText verb;
-    thinkthen_cobol_ReceiptWordingVersionPresence wording_version;
     thinkthen_cobol_ReceiptExtensions extensions;
 };
 struct thinkthen_cobol_ReceiptMeta {

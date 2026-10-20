@@ -68,7 +68,6 @@ libraries/jvm/session/thinkthen/NativeNamed.java linguist-generated
 libraries/jvm/session/thinkthen/NativeResults.java linguist-generated
 libraries/jvm/session/thinkthen/NativeUsageLayouts.java linguist-generated
 libraries/jvm/session/thinkthen/NativeWait.java linguist-generated
-libraries/jvm/session/thinkthen/RequestVersion.java linguist-generated
 libraries/jvm/session/thinkthen/Results.java linguist-generated
 libraries/jvm/session/thinkthen/UsagePersistence.java linguist-generated
 libraries/objective-c/Sources/Foundation/TTResults.g.h linguist-generated

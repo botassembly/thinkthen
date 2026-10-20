@@ -202741,7 +202741,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -202761,7 +202761,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -202781,7 +202781,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -202801,7 +202801,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -202821,7 +202821,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -204007,8 +204007,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does the customer ask for money back?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55",
                   "question_sources": [
@@ -204109,8 +204108,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does the customer ask for money back?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -204381,8 +204379,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does the customer ask for money back?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55",
                   "question_sources": [
@@ -204474,8 +204471,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does the customer ask for money back?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -204574,8 +204570,7 @@
                       "other"
                     ],
                     "text": "Which team owns this?",
-                    "verb": "choose",
-                    "wording_version": "2"
+                    "verb": "choose"
                   },
                   "question_sha256": "39c6f9aaef9d3ec73970ec633a2e9523f1284cfa48653d3a471d031ecd6b7272",
                   "question_sources": [
@@ -204688,8 +204683,7 @@
                     "other"
                   ],
                   "text": "Which team owns this?",
-                  "verb": "choose",
-                  "wording_version": "2"
+                  "verb": "choose"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -205010,8 +205004,7 @@
                       "other"
                     ],
                     "text": "Which team owns this?",
-                    "verb": "choose",
-                    "wording_version": "2"
+                    "verb": "choose"
                   },
                   "question_sha256": "39c6f9aaef9d3ec73970ec633a2e9523f1284cfa48653d3a471d031ecd6b7272",
                   "question_sources": [
@@ -205115,8 +205108,7 @@
                     "other"
                   ],
                   "text": "Which team owns this?",
-                  "verb": "choose",
-                  "wording_version": "2"
+                  "verb": "choose"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -205220,8 +205212,7 @@
                     ],
                     "name": "refund",
                     "text": "Which labels apply?",
-                    "verb": "tag",
-                    "wording_version": "2"
+                    "verb": "tag"
                   },
                   "question_sha256": "e324ee002c0e0bc1154b32b6a606f8903852f51b597e743e1512fc883e08c299",
                   "question_sources": [
@@ -205367,8 +205358,7 @@
                   ],
                   "name": "refund",
                   "text": "Which labels apply?",
-                  "verb": "tag",
-                  "wording_version": "2"
+                  "verb": "tag"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -205748,8 +205738,7 @@
                     ],
                     "name": "refund",
                     "text": "Which labels apply?",
-                    "verb": "tag",
-                    "wording_version": "2"
+                    "verb": "tag"
                   },
                   "question_sha256": "e324ee002c0e0bc1154b32b6a606f8903852f51b597e743e1512fc883e08c299",
                   "question_sources": [
@@ -205888,8 +205877,7 @@
                   ],
                   "name": "refund",
                   "text": "Which labels apply?",
-                  "verb": "tag",
-                  "wording_version": "2"
+                  "verb": "tag"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -205996,8 +205984,7 @@
                     ],
                     "name": "refund",
                     "text": "How severe is this?",
-                    "verb": "score",
-                    "wording_version": "2"
+                    "verb": "score"
                   },
                   "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                   "question_sources": [
@@ -206109,8 +206096,7 @@
                   ],
                   "name": "refund",
                   "text": "How severe is this?",
-                  "verb": "score",
-                  "wording_version": "2"
+                  "verb": "score"
                 },
                 "schema": "thinkthen.result",
                 "threshold": null,
@@ -206430,8 +206416,7 @@
                     ],
                     "name": "refund",
                     "text": "How severe is this?",
-                    "verb": "score",
-                    "wording_version": "2"
+                    "verb": "score"
                   },
                   "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                   "question_sources": [
@@ -206534,8 +206519,7 @@
                   ],
                   "name": "refund",
                   "text": "How severe is this?",
-                  "verb": "score",
-                  "wording_version": "2"
+                  "verb": "score"
                 },
                 "schema": "thinkthen.result",
                 "threshold": null,
@@ -206615,8 +206599,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -206717,8 +206700,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -206751,8 +206733,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -206824,8 +206805,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -206926,8 +206906,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -207488,8 +207467,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -207581,8 +207559,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -207615,8 +207592,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -207708,8 +207684,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -207742,8 +207717,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -207835,8 +207809,7 @@
                 "question": {
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -207914,8 +207887,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -207986,8 +207958,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -208058,8 +208029,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -208160,8 +208130,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -208219,8 +208188,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -208278,8 +208246,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -208834,8 +208801,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -208906,8 +208872,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -208978,8 +208943,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "4b3790e9649ed804920f33b6a27c93a71d619ff0d47d3010174432ab4638a025",
                   "question_sources": [
@@ -209071,8 +209035,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -209121,8 +209084,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -209171,8 +209133,7 @@
                   "question": {
                     "name": "refund",
                     "text": "How relevant is this?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "schema": "thinkthen.result",
                   "threshold": null,
@@ -209399,8 +209360,7 @@
                   "name": "refund",
                   "none": true,
                   "text": "Which passage answers the question?",
-                  "verb": "find",
-                  "wording_version": "2"
+                  "verb": "find"
                 },
                 "schema": "thinkthen.result",
                 "threshold": null,
@@ -209842,8 +209802,7 @@
                   "name": "refund",
                   "none": true,
                   "text": "Which passage answers the question?",
-                  "verb": "find",
-                  "wording_version": "2"
+                  "verb": "find"
                 },
                 "schema": "thinkthen.result",
                 "threshold": null,
@@ -209913,8 +209872,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -209985,8 +209943,7 @@
                       "other"
                     ],
                     "text": "Which team owns this?",
-                    "verb": "choose",
-                    "wording_version": "2"
+                    "verb": "choose"
                   },
                   "question_sha256": "2b57330b142981e4f8bf3cb45bb4c16718d34dea40b22bec4353af5e376142da",
                   "question_sources": [
@@ -210063,8 +210020,7 @@
                     ],
                     "name": "refund",
                     "text": "How severe is this?",
-                    "verb": "score",
-                    "wording_version": "2"
+                    "verb": "score"
                   },
                   "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                   "question_sources": [
@@ -210138,8 +210094,7 @@
                     ],
                     "name": "refund",
                     "text": "Which labels apply?",
-                    "verb": "tag",
-                    "wording_version": "2"
+                    "verb": "tag"
                   },
                   "question_sha256": "361888f9cb60704a8c7f1a380d8a51a8515fb7b13120c02d21477956da800dd3",
                   "question_sources": [
@@ -210243,8 +210198,7 @@
                     "question": {
                       "name": "refund",
                       "text": "Does this ask for a refund?",
-                      "verb": "decide",
-                      "wording_version": "2"
+                      "verb": "decide"
                     },
                     "question_sources": [
                       {
@@ -210285,8 +210239,7 @@
                       ],
                       "name": "refund",
                       "text": "How severe is this?",
-                      "verb": "score",
-                      "wording_version": "2"
+                      "verb": "score"
                     },
                     "question_sources": [
                       {
@@ -210325,8 +210278,7 @@
                         "other"
                       ],
                       "text": "Which team owns this?",
-                      "verb": "choose",
-                      "wording_version": "2"
+                      "verb": "choose"
                     },
                     "question_sources": [
                       {
@@ -210367,8 +210319,7 @@
                       ],
                       "name": "refund",
                       "text": "Which labels apply?",
-                      "verb": "tag",
-                      "wording_version": "2"
+                      "verb": "tag"
                     },
                     "question_sources": [
                       {
@@ -211227,8 +211178,7 @@
                   "question": {
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -211300,8 +211250,7 @@
                       "other"
                     ],
                     "text": "Which team owns this?",
-                    "verb": "choose",
-                    "wording_version": "2"
+                    "verb": "choose"
                   },
                   "question_sha256": "2b57330b142981e4f8bf3cb45bb4c16718d34dea40b22bec4353af5e376142da",
                   "question_sources": [
@@ -211379,8 +211328,7 @@
                     ],
                     "name": "refund",
                     "text": "How severe is this?",
-                    "verb": "score",
-                    "wording_version": "2"
+                    "verb": "score"
                   },
                   "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                   "question_sources": [
@@ -211454,8 +211402,7 @@
                     ],
                     "name": "refund",
                     "text": "Which labels apply?",
-                    "verb": "tag",
-                    "wording_version": "2"
+                    "verb": "tag"
                   },
                   "question_sha256": "361888f9cb60704a8c7f1a380d8a51a8515fb7b13120c02d21477956da800dd3",
                   "question_sources": [
@@ -211559,8 +211506,7 @@
                     "question": {
                       "name": "refund",
                       "text": "Does this ask for a refund?",
-                      "verb": "decide",
-                      "wording_version": "2"
+                      "verb": "decide"
                     },
                     "question_sources": [
                       {
@@ -211602,8 +211548,7 @@
                       ],
                       "name": "refund",
                       "text": "How severe is this?",
-                      "verb": "score",
-                      "wording_version": "2"
+                      "verb": "score"
                     },
                     "question_sources": [
                       {
@@ -211643,8 +211588,7 @@
                         "other"
                       ],
                       "text": "Which team owns this?",
-                      "verb": "choose",
-                      "wording_version": "2"
+                      "verb": "choose"
                     },
                     "question_sources": [
                       {
@@ -211685,8 +211629,7 @@
                       ],
                       "name": "refund",
                       "text": "Which labels apply?",
-                      "verb": "tag",
-                      "wording_version": "2"
+                      "verb": "tag"
                     },
                     "question_sources": [
                       {
@@ -212110,8 +212053,7 @@
                     "name": "refund",
                     "relation_threshold": "0.5",
                     "threshold": "0.5",
-                    "verb": "recognize",
-                    "wording_version": "2"
+                    "verb": "recognize"
                   },
                   "schema": "thinkthen.result",
                   "value": {
@@ -213019,8 +212961,7 @@
                     "name": "refund",
                     "relation_threshold": "0.5",
                     "threshold": "0.5",
-                    "verb": "recognize",
-                    "wording_version": "2"
+                    "verb": "recognize"
                   },
                   "schema": "thinkthen.result",
                   "value": {
@@ -215472,8 +215413,7 @@
                     }
                   ],
                   "threshold": "0.5",
-                  "verb": "relate",
-                  "wording_version": "2"
+                  "verb": "relate"
                 },
                 "schema": "thinkthen.result",
                 "value": [
@@ -221242,8 +221182,7 @@
                     }
                   ],
                   "threshold": "0.5",
-                  "verb": "relate",
-                  "wording_version": "2"
+                  "verb": "relate"
                 },
                 "schema": "thinkthen.result",
                 "value": [
@@ -223376,7 +223315,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -223396,7 +223335,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -223416,7 +223355,7 @@
           "error": {
             "error": {
               "kind": "usage",
-              "message": "the question declaration uses an unsupported feature",
+              "message": "delete the `wording_version` field.",
               "retryable": false,
               "stopped": {
                 "cause": "usage",
@@ -223651,8 +223590,7 @@
                   },
                   "question": {
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2147483647"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -223752,8 +223690,7 @@
                 },
                 "question": {
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2147483647"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -223867,8 +223804,7 @@
                     },
                     "name": "refund",
                     "text": "Does this ask for a refund?",
-                    "verb": "decide",
-                    "wording_version": "2"
+                    "verb": "decide"
                   },
                   "question_sha256": "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888",
                   "question_sources": [
@@ -223990,8 +223926,7 @@
                   },
                   "name": "refund",
                   "text": "Does this ask for a refund?",
-                  "verb": "decide",
-                  "wording_version": "2"
+                  "verb": "decide"
                 },
                 "schema": "thinkthen.result",
                 "threshold": "0.5",
@@ -224215,8 +224150,7 @@
                   "question": {
                     "name": "authored_first",
                     "text": "First?",
-                    "verb": "decide",
-                    "wording_version": "4"
+                    "verb": "decide"
                   },
                   "question_sha256": "186b2ed13059af29c63124ab7ad4a4efc7ade70873c826c1c99e9fbe3a1255c6",
                   "question_sources": [
@@ -224335,8 +224269,7 @@
                   "question": {
                     "name": "authored_first",
                     "text": "First?",
-                    "verb": "decide",
-                    "wording_version": "4"
+                    "verb": "decide"
                   },
                   "question_sha256": "186b2ed13059af29c63124ab7ad4a4efc7ade70873c826c1c99e9fbe3a1255c6",
                   "question_sources": [
@@ -224455,8 +224388,7 @@
                   "question": {
                     "name": "authored_first",
                     "text": "First?",
-                    "verb": "decide",
-                    "wording_version": "4"
+                    "verb": "decide"
                   },
                   "question_sha256": "186b2ed13059af29c63124ab7ad4a4efc7ade70873c826c1c99e9fbe3a1255c6",
                   "question_sources": [
@@ -224614,8 +224546,7 @@
                         "question": {
                           "name": "authored_first",
                           "text": "First?",
-                          "verb": "decide",
-                          "wording_version": "4"
+                          "verb": "decide"
                         },
                         "schema": "thinkthen.result",
                         "threshold": null,
@@ -224735,8 +224666,7 @@
                   "question": {
                     "name": "authored_first",
                     "text": "First?",
-                    "verb": "decide",
-                    "wording_version": "4"
+                    "verb": "decide"
                   },
                   "question_name": "first",
                   "schema": "thinkthen.result",
@@ -224804,8 +224734,7 @@
                         "question": {
                           "name": "authored_first",
                           "text": "First?",
-                          "verb": "decide",
-                          "wording_version": "4"
+                          "verb": "decide"
                         },
                         "schema": "thinkthen.result",
                         "threshold": null,
@@ -224925,8 +224854,7 @@
                   "question": {
                     "name": "authored_first",
                     "text": "First?",
-                    "verb": "decide",
-                    "wording_version": "4"
+                    "verb": "decide"
                   },
                   "question_name": "first",
                   "schema": "thinkthen.result",
@@ -224994,8 +224922,7 @@
                         "question": {
                           "name": "authored_first",
                           "text": "First?",
-                          "verb": "decide",
-                          "wording_version": "4"
+                          "verb": "decide"
                         },
                         "schema": "thinkthen.result",
                         "threshold": null,

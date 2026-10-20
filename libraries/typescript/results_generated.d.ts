@@ -798,7 +798,6 @@ export type NativeUsagePersistence =
   | "written"
   | "failed";
 export type NativeVerb = "recognize";
-export type NativeWordingVersion = number | NativeNumber;
 export type NativeAnnotatedField =
   | boolean
   | null
@@ -916,7 +915,6 @@ export class NativeFindQuestionDocument {
   readonly "profile"?: string;
   readonly "text": JsonValue;
   readonly "verb": "find";
-  readonly "wording_version"?: NativeWordingVersion;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -982,7 +980,6 @@ export class NativeQuestionDocumentChoose {
   readonly "name"?: NativeQuestionName;
   readonly "on"?: readonly string[];
   readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
   readonly "options": readonly string[];
   readonly "text": JsonValue;
   readonly "verb": "choose";
@@ -998,7 +995,6 @@ export class NativeQuestionDocumentDecide {
   readonly "name"?: NativeQuestionName;
   readonly "on"?: readonly string[];
   readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
   readonly "false"?: JsonValue;
   readonly "text": JsonValue;
   readonly "true"?: JsonValue;
@@ -1015,7 +1011,6 @@ export class NativeQuestionDocumentScore {
   readonly "name"?: NativeQuestionName;
   readonly "on"?: readonly string[];
   readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
   readonly "levels": readonly string[];
   readonly "text": JsonValue;
   readonly "verb": "score";
@@ -1031,7 +1026,6 @@ export class NativeQuestionDocumentTag {
   readonly "name"?: NativeQuestionName;
   readonly "on"?: readonly string[];
   readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
   readonly "labels": readonly string[];
   readonly "text": JsonValue;
   readonly "verb": "tag";
@@ -1068,7 +1062,6 @@ export class NativeRecognizeQuestionDocument {
   readonly "stage_context"?: NativeRecognitionStageContext;
   readonly "threshold": NativeThreshold;
   readonly "verb": NativeVerb;
-  readonly "wording_version"?: NativeWordingVersion;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -1103,7 +1096,6 @@ export class NativeRelateQuestionDocument {
   readonly "relations": readonly NativeRelationRule[];
   readonly "threshold": NativeThreshold;
   readonly "verb": "relate";
-  readonly "wording_version"?: NativeWordingVersion;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -1782,7 +1774,6 @@ export interface NamedCalls {
     >
   >;
 }
-export const REQUEST_VERSION: string;
 export interface AnnotateDefinition {
   readonly batch?: JsonValue;
   readonly profile?: Profile;
@@ -1802,7 +1793,6 @@ export interface AnnotateQuestionChoose {
   readonly on?: Pointers;
   readonly options?: Options;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly decide?: never;
   readonly score?: never;
   readonly tag?: never;
@@ -1816,7 +1806,6 @@ export interface AnnotateQuestionDecide {
   readonly on?: Pointers;
   readonly threshold?: Threshold;
   readonly true?: Criterion;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly score?: never;
   readonly tag?: never;
@@ -1828,7 +1817,6 @@ export interface AnnotateQuestionScore {
   readonly name?: string;
   readonly on?: Pointers;
   readonly score: QuestionText;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly tag?: never;
@@ -1841,7 +1829,6 @@ export interface AnnotateQuestionTag {
   readonly on?: Pointers;
   readonly tag: QuestionText;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly score?: never;
@@ -1857,7 +1844,6 @@ export interface Choose {
   readonly options?: Options;
   readonly profile?: Profile;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
 }
 export type Criterion =
   | string
@@ -1877,7 +1863,6 @@ export interface Decide {
   readonly profile?: Profile;
   readonly threshold?: Threshold;
   readonly true?: Criterion;
-  readonly wording_version?: number;
 }
 export type Description =
   | string
@@ -1892,7 +1877,6 @@ export interface Find {
   readonly name?: string;
   readonly on?: Pointers;
   readonly profile?: Profile;
-  readonly wording_version?: number;
 }
 export type InputDeclaration = InputDeclarationString | InputDeclarationObject;
 export interface InputDeclarationObject {
@@ -1940,7 +1924,6 @@ export interface Relate {
   readonly profile?: Profile;
   readonly relate: RelateQuestion;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
 }
 export interface Relation {
   readonly either?: boolean;
@@ -1960,7 +1943,6 @@ export interface Score {
   readonly on?: Pointers;
   readonly profile?: Profile;
   readonly score: QuestionText;
-  readonly wording_version?: number;
 }
 export interface Tag {
   readonly batch?: QuestionBatch;
@@ -1973,7 +1955,6 @@ export interface Tag {
   readonly profile?: Profile;
   readonly tag: QuestionText;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
 }
 export type Threshold = number | string;
 export type CacheDocument = string | DisabledCache;
@@ -2035,7 +2016,6 @@ export interface RecognizeDefinition {
   readonly recognize: RecognizeQuestion;
   readonly relation_threshold?: Cut;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
 }
 export interface RecognizeQuestion {
   readonly entity_definition?: QuestionText;
@@ -2088,7 +2068,6 @@ export interface ChooseDefinition {
   readonly options?: Options;
   readonly profile?: Profile;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly decide?: never;
   readonly find?: never;
   readonly questions?: never;
@@ -2109,7 +2088,6 @@ export interface DecideDefinition {
   readonly profile?: Profile;
   readonly threshold?: Threshold;
   readonly true?: Criterion;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly find?: never;
   readonly questions?: never;
@@ -2126,7 +2104,6 @@ export interface FindDefinition {
   readonly name?: string;
   readonly on?: Pointers;
   readonly profile?: Profile;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly questions?: never;
@@ -2143,7 +2120,6 @@ export interface RelateDefinition {
   readonly profile?: Profile;
   readonly relate: RelateQuestion;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly find?: never;
@@ -2162,7 +2138,6 @@ export interface ScoreDefinition {
   readonly on?: Pointers;
   readonly profile?: Profile;
   readonly score: QuestionText;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly find?: never;
@@ -2182,7 +2157,6 @@ export interface TagDefinition {
   readonly profile?: Profile;
   readonly tag: QuestionText;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly find?: never;
@@ -2201,7 +2175,6 @@ export interface RecognizeRequestDefinition {
   readonly recognize: RecognizeQuestion;
   readonly relation_threshold?: Cut;
   readonly threshold?: Cut;
-  readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
   readonly find?: never;

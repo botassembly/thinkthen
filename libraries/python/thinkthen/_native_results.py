@@ -504,7 +504,6 @@ _COLUMN_SCHEMAS = {
     "completeUsage": {"input_tokens": "integer", "output_tokens": "integer"},
     "completeUsagePersistence": "string",
     "completeVerb": "string",
-    "completeWordingVersion": "integer",
     "completeannotatedField": None,
     "completeannotatedRow": None,
     "completeanswer": None,
@@ -568,7 +567,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completenameOdds": {
         "start": "integer",
@@ -609,7 +607,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completequestionDocument_decide": {
         "verb": "string",
@@ -622,7 +619,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
         "false": None,
         "true": None,
     },
@@ -638,7 +634,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completequestionDocument_tag": {
         "verb": "string",
@@ -652,7 +647,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completerecognize": None,
     "completerecognizeAnswer": {
@@ -680,7 +674,6 @@ _COLUMN_SCHEMAS = {
         "relations": [("ref", "completerelationRule")],
         "snippet_pieces": "integer",
         "stage_context": ("ref", "completeRecognitionStageContext"),
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completerecognize_entities": {
         "entities": [("ref", "completeentity")],
@@ -704,7 +697,6 @@ _COLUMN_SCHEMAS = {
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "wording_version": ("ref", "completeWordingVersion"),
     },
     "completerelatedEntity": {"name": "string", "kind": "string"},
     "completerelatedEntityEdge": {
@@ -2450,7 +2442,6 @@ NativeUsagePersistence = Union[
     Literal["disabled"], Literal["pending"], Literal["written"], Literal["failed"]
 ]
 NativeVerb = Literal["recognize"]
-NativeWordingVersion = int
 NativeAnnotatedField = Union[bool, None, str, list[str], float, NativeFailed]
 NativeAnnotatedRow = dict[str, NativeAnnotatedField]
 NativeAnswer = Union[
