@@ -10,6 +10,8 @@ Depends on: 0689
 
 Reviews: revision 45f4ac6, accept
 
+Reviews: revision 0f37836, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/settings`.
