@@ -441,6 +441,48 @@ dart_tools() (
 	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
 )
 case ${1:-} in
+npm-stage)
+	[ "$#" = 1 ] || fail 'npm-stage'
+	sh "$0" npm-assemble platform npm-dist
+	# Keep the publisher's existing npm and archive path for its dry run.
+	npm install --global npm@11.15.0
+	npm stage publish --dry-run "./npm-dist/thinkthen-$version.tgz" --access public
+	;;
+wheels-stage)
+	[ "$#" = 1 ] || fail 'wheels-stage'
+	sh "$0" verify-family platform 'thinkthen-*.whl' 5
+	python3 -m pip install 'twine==6.2.0'
+	python3 -m twine check --strict platform/*/thinkthen-*.whl
+	;;
+registry-stage)
+	[ "$#" = 2 ] || fail 'registry-stage SHA'
+	dart_tools dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
+	# GitHub applies the handoff after this step; this stage needs the SDK now.
+	TT_DART=$RUNNER_TEMP/thinkthen-registry-dart/dart-sdk/bin/dart
+	PUB_CACHE=$RUNNER_TEMP/thinkthen-registry-dart/pub-cache
+	export TT_DART PUB_CACHE
+	python3 sdlc/scripts/release-registry.py pack platform registry "$2"
+	python3 sdlc/scripts/release-registry.py maven-sign registry/maven rehearse
+	python3 sdlc/scripts/release-registry.py dry-run registry/pub/thinkthen_dart
+	;;
+draft-stage)
+	[ "$#" = 4 ] || fail 'draft-stage MODE NAME SHA'
+	MODE=$2 NAME=$3 SHA=$4
+	sh "$0" tap-formula "$version" platform thinkthen.rb
+	ruby -c thinkthen.rb
+for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
+  # Stage 2 bindings and Unix-only families have no Windows release.
+  [ "$target" != x86_64-pc-windows-msvc ] || continue
+  sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
+done
+sdlc/scripts/release-workflow collect platform npm-dist all-files
+cp r-dist/* crate-dist/*.crate all-files/
+sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
+	;;
 crate-stage)
 	[ "$#" = 2 ] || fail 'crate-stage SHA'
 	SHA=$2
