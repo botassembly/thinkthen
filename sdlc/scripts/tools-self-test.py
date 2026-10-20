@@ -348,34 +348,68 @@ class GateRouting(unittest.TestCase):
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True)
-                    shutil.copyfile(ROOT / 'sdlc/scripts/gate', scripts / 'gate')
-                    (scripts / 'gate').chmod(0o755)
+                    for name in ('gate', 'job', 'tools.py'):
+                        shutil.copyfile(ROOT / 'sdlc/scripts' / name, scripts / name)
+                    # Model Linux tool resolution even when this regression runs on macOS.
+                    with (scripts / 'tools.py').open('a') as output:
+                        output.write('\nplatform.system = lambda: "Linux"\n')
+                    prefix = root / 'image-tools'
+                    manifest = {'linux_prefix': str(prefix), 'libraries': {}, 'databases': {},
+                                'tools': {
+                                    'rust': {'version': 'unused', 'commands': [],
+                                             'groups': ['common'], 'platforms': ['linux']},
+                                    'image': {'commands': ['fixture-image-tool'],
+                                              'groups': ['common'], 'platforms': ['linux']}}}
+                    (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
                     binary = root / 'host-bin'
                     binary.mkdir()
+                    (binary / 'python3').symlink_to(sys.executable)
                     for name, body in (('docker', 'exit 0'), ('uname', 'echo ' + host)):
                         executable = binary / name
                         executable.write_text('#!/bin/sh\n' + body + '\n')
                         executable.chmod(0o755)
-                    calls = root / 'calls.jsonl'
-                    job = scripts / 'job'
-                    job.write_text('#!' + sys.executable + '\nimport json,os,sys\n'
-                                   'from pathlib import Path\n'
-                                   'os.environ["PATH"] = "/usr/bin:/bin"\n'
-                                   'with Path("calls.jsonl").open("a") as output:\n'
-                                   '    output.write(json.dumps(sys.argv[1:]) + "\\n")\n'
-                                   'raise SystemExit(' + str(linux_status)
-                                   + ' if sys.argv[1] == "python3" else '
-                                   + str(native_status) + ')\n')
-                    job.chmod(0o755)
+                    # Retain the real job and resolver; no image tool exists until the router starts.
+                    (scripts / 'job').write_text('#!' + sys.executable + '\n'
+                                               + (scripts / 'job').read_text().split('\n', 1)[1])
+                    router = scripts / 'linux-check'
+                    router.write_text('import json,os,subprocess,sys\nfrom pathlib import Path\n'
+                                      'assert not Path("image-tools").exists()\n'
+                                      'with Path("calls.jsonl").open("a") as output:\n'
+                                      '    output.write(json.dumps(sys.argv) + "\\n")\n'
+                                      'tool = Path("image-tools/bin/fixture-image-tool")\n'
+                                      'tool.parent.mkdir(parents=True)\n'
+                                      'tool.write_text("#!/bin/sh\\nexit 0\\n")\n'
+                                      'tool.chmod(0o755)\n'
+                                      'for check in sys.argv[3:]:\n'
+                                      '    result = subprocess.run(["sdlc/scripts/job", "sdlc/scripts/" + check],\n'
+                                      '                            env=dict(os.environ, FIXTURE_LINUX="1"))\n'
+                                      '    if result.returncode: raise SystemExit(result.returncode)\n')
+                    for check in ('lint', 'test'):
+                        target = scripts / check
+                        target.write_text('#!' + sys.executable + '\nimport json,os,shutil\n'
+                                          'from pathlib import Path\n'
+                                          'assert os.environ["THINKTHEN_RESOLVED_TOOLS"] == "' + check + '"\n'
+                                          'assert shutil.which("docker") is None\n'
+                                          'linux = os.environ.get("FIXTURE_LINUX") == "1"\n'
+                                          'with Path("calls.jsonl").open("a") as output:\n'
+                                          '    output.write(json.dumps(["' + check + '", linux]) + "\\n")\n'
+                                          'raise SystemExit(' + str(linux_status) + ' if linux else '
+                                          + str(native_status) + ')\n')
+                        target.chmod(0o755)
+                    for name in ('gate', 'job'):
+                        (scripts / name).chmod(0o755)
                     env = child_env(home=root / 'home', PATH='host-bin:/usr/bin:/bin')
                     result = subprocess.run(shlex.split(gate), cwd=root, env=env,
                                             capture_output=True, text=True)
                     self.assertEqual(result.returncode, linux_status or native_status, result.stderr)
+                    calls = root / 'calls.jsonl'
                     routed = [json.loads(line) for line in calls.read_text().splitlines()]
-                    expected = [['python3', 'sdlc/scripts/linux-check', '--docker',
-                                 str(binary / 'docker'), 'lint', 'test']]
-                    if host == 'Darwin' and linux_status == 0:
-                        expected.append(['sdlc/scripts/test'])
+                    expected = [['sdlc/scripts/linux-check', '--docker', str(binary / 'docker'),
+                                 'lint', 'test'], ['lint', True]]
+                    if linux_status == 0:
+                        expected.append(['test', True])
+                        if host == 'Darwin':
+                            expected.append(['test', False])
                     self.assertEqual(routed, expected)
 
 
