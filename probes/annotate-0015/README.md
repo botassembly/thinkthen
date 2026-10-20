@@ -2,6 +2,8 @@
 
 Saved result rows use complete synthetic packets rebuilt through the existing local test backend from the retained probabilities. The original request and reply files remain the historical evidence.
 
+The current reconstruction rereads B-4 at probability `0.2` under the band `0.2:0.8` as not sure (`null`), as the [threshold contract](../../specification/threshold.md) requires. The original saved row said `false`. The summary files retain the original live job's measurements.
+
 Completed on 2026-09-20 after the local implementation and review passed and Ian authorized the paid work.
 
 ```sh
