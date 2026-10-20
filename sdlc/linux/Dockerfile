@@ -16,18 +16,14 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     > /etc/apt/sources.list && printf 'Package: *\nPin: origin snapshot.ubuntu.com\nPin-Priority: 1001\n' > /etc/apt/preferences.d/snapshot && apt-get update && apt-get install -y --allow-downgrades --no-install-recommends \
     ca-certificates curl git python3 python3-venv build-essential clang libclang-dev \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev pkg-config xz-utils unzip zip \
-    bubblewrap gnat-13 gprbuild gnucobol4 libncurses-dev r-base-dev \
-    php8.3-cli php8.3-common composer postgresql-16 postgresql-server-dev-16 \
-    sqlite3 libsqlite3-dev musl-tools libgtk-3-dev xvfb xauth util-linux perl \
-    libcurl4-openssl-dev libxml2-dev && rm -rf /var/lib/apt/lists/*
-# Keep the existing system-package layer cached when adding Swift prerequisites.
+    libncurses-dev libsqlite3-dev musl-tools util-linux perl && rm -rf /var/lib/apt/lists/*
+# The canonical generator invokes Swift's formatter, so retain its binary SDK.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg libedit2 libpython3.12t64 libcurl4t64 libz3-4 tzdata && rm -rf /var/lib/apt/lists/*
 COPY sdlc/tools.json /tmp/tools.json
 COPY sdlc/tools/ /tmp/tools/
 COPY rust-toolchain.toml /opt/thinkthen-image/rust-toolchain.toml
 COPY sdlc/linux/install.py /opt/thinkthen-image/sdlc/linux/install.py
-COPY databases/duckdb/tools/version.env /tmp/duckdb-version.env
 COPY sdlc/scripts/tools.py /opt/thinkthen-image/sdlc/scripts/tools.py
 COPY conformance/children/children.py /opt/thinkthen-image/conformance/children/children.py
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json

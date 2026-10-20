@@ -422,6 +422,14 @@ class LinuxSourceIdentity(unittest.TestCase):
                        '--docker', str(docker), 'test']
             first = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
+            runs = [json.loads(line) for line in calls.read_text().splitlines()
+                    if json.loads(line)[0] == 'run']
+            script = runs[-1][-1]
+            groups = load_manifest(root / 'sdlc/tools.json')['linux']['tool_groups']
+            self.assertIn('python3 sdlc/scripts/tools.py --check ' + ','.join(groups), script)
+            self.assertNotIn('tools/setup.sh', script)
+            self.assertNotIn('databases/sqlite/setup.sh', script)
+            self.assertNotIn('flutter pub get', script)
             source = next(root.glob('.linux-*/src')).resolve()
             run = next(json.loads(line) for line in calls.read_text().splitlines()
                        if json.loads(line)[0] == 'run')
