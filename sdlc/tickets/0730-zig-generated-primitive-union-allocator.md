@@ -25,3 +25,7 @@ Given the generated Zig library, when its installed smoke builds and decodes the
 - Starting revision: `88cbe872bce804d7e1be3bfa12d7d3913668c869`.
 - Yellow job `1792458135783-426943` at `b7befb48b` reported unused allocator parameters in `readAnswerShape8AnyOf1Items` and `readAnswerShape4AnyOf1Items`. The same generated readers exist at the starting revision.
 - Source regeneration completed successfully and changed only the two affected generated readers. Each gains `_ = a;`. Allocation-bearing primitive-union readers retain their allocator references.
+
+## Progress
+
+- 2026-10-19 started
