@@ -24,3 +24,7 @@ Depends on: 0619, 0726
 ## Evidence
 
 The phase 1 checkpoint on main d81fb759ad230f1070bf5fe56af6110666827e60 failed before Docker construction. Yellow job 1792498503807-704028 exited 2 after 2348 ms: Rust resolution tried the unwritable container prefix and isolated PATH selected the system Node instead of the pinned host tool. Read-only investigation found inherited Rust-root variables unset and no stale image prefix. The host router help runs with host Python. The cycle is gate:8 calling job for the router, job:20-23 selecting common, and tools.py:364 selecting the container prefix on Linux before that router can build the image. Existing GateRouting replaces job with a stub and therefore missed the cycle. This repairs the container routing outcome of 0619 and 0726; 0691 retains the operational checkpoint receipt.
+
+## Progress
+
+- 2026-10-20 started
