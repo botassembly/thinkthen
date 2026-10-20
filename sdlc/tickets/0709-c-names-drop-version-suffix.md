@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision 708c98e, accept
+
 ## Outcome
 
 - Changes: `build-tools/results/generate.py`, `build-tools/results/layouts.py`, `build-tools/results/native.py`, `build-tools/results/operations.py`, `build-tools/results/templates/`, `conformance/library-surface-test.py`, `conformance/library-surface.json`, `conformance/library-surface/c.json`, `libraries/BINDING-AUTHOR.md`, `libraries/ada/checks/`, `libraries/ada/src/`, `libraries/c/README-PUBLIC.md`, `libraries/c/README.md`, `libraries/c/cbindgen.toml`, `libraries/c/examples/session.c`, `libraries/c/src/`, `libraries/c/tests/`, `libraries/cobol/README.md`, `libraries/cobol/checks/`, `libraries/cobol/examples/session.cob`, `libraries/cobol/src/`, `libraries/cpp/include/thinkthen/native_implementation.hpp`, `libraries/csharp/src/OwnedCall.cs`, `libraries/csharp/src/OwnedUsage.cs`, `libraries/csharp/tests/package_check.py`, `libraries/dart/lib/src/session/client.dart`, `libraries/go/producer.go`, `libraries/go/session.go`, `libraries/jvm/session/thinkthen/Engine.java`, `libraries/objective-c/Sources/Foundation/ThinkThen.m`, `libraries/php/fixtures/constructor_error.c`, `libraries/php/fixtures/session_consumer.php`, `libraries/php/src/`, `libraries/swift/Sources/`, `libraries/zig/src/`, `sdlc/scripts/check-c-exports.py`, `sdlc/scripts/generate-c-header.py`, `sdlc/scripts/install_check_consumers.py`, `sdlc/scripts/registry-readmes-self-test.py`, `sdlc/scripts/registry-readmes.py`, `site/examples/functions/*/c.c`, `specification/recognize.md`, `specification/settings.md`, `specification/types.md`.
