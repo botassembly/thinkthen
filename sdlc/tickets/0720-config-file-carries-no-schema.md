@@ -26,3 +26,7 @@ Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbe
 Starts from `crates/thinkthen/src/config.rs`: the `SCHEMA` and `UNKNOWN` messages, the `schema` field of `Config`, `Config::parse`, `Config::validate`, and the field check that requires `schema`. Backend setups in `crates/thinkthen/src/config/backends.rs` write the member. About 20 Rust test files under `crates/thinkthen/tests/backend/` write config files with it.
 
 Shares `specification/settings.md` and `specification/backends.md` with 0706, 0721 and 0723; any order lands.
+
+## Progress
+
+- 2026-10-19 started
