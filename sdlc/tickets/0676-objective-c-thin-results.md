@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0688, 0727
+Depends on: 0688
 
 ## Outcome
 
@@ -17,12 +17,14 @@ Depends on: 0688, 0727
 - `TTSession`, the `TTTask` tick loop and their private closed, reader and producer error text are deleted. Async calls run the call on one dispatch queue worker and cancel through a `thinkthen_call_cancel` token.
 - `build-tools/results/templates/objc.py` and `build-tools/results/templates/objc_calls.py` leave this language's exception file `build-tools/results/legacy/objc.txt`.
 - The public surface change updates the `objc` entry in `conformance/library-surface/objc.json` (`TTSession`, `TTTask`, `TTCall`) in the same change. Both READMEs and the ten site function samples change with the result accessors.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0676 SHA --memory 8 -- sh libraries/objective-c/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route (`release-pack` for the C archives, `libraries/swift/build-xcframework.sh`, then `release-pack --apple-wrappers aarch64-apple-darwin OUT objective-c`), the installed consumers run all ten named calls against a recorded backend, and `FoundationResultsConsumer` matches `conformance/fixtures/complete.json`, including absence, null, false and failure.
+- The M5 builds both macOS C packages, cross-compiling `x86_64-apple-darwin` with the pinned Rust toolchain; `release-pack` takes the target and `THINKTHEN_RELEASE_EXPECTED_SHA` as the Swift and Objective-C wrappers require.
 - `python3 build-tools/results/answer_rules.py` passes with the two Objective-C exceptions removed. Before the change it fails on those files.
-- The Objective-C packet dumper and the 0642 oracle comparison belong to 0717.
+- The installed Objective-C consumer and its comparison against `conformance/fixtures/packets.json` belong to 0717.
 
 ## Evidence
 

@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
-Depends on: 0688
+Depends on: 0687
 
 Reviews: revision f825e1e, reject
 
@@ -49,6 +49,7 @@ The ThinkThen DuckDB extension builds in DuckDB's community CI on Linux x86-64 a
 ## Progress
 
 - 2026-10-13 started
+- 2026-10-20 next: The 0.2 release branch is retired; this listing work runs after 0.2.1 qualification (0687).
 
 PM amendment, 2026-10-13. The fresh-reader test of the DuckDB README page, the descriptor's `extended_description` and the PR description runs under 0575, and each opens with the site README's pitch word for word, as 0578 says.
 

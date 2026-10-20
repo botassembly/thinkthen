@@ -6,8 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0666
-Depends on: 0688, 0727
+Depends on: 0666, 0688, 0740
 
 ## Outcome
 
@@ -18,13 +17,14 @@ Depends on: 0688, 0727
 - Errors are a Zig error set plus a retained failure record, as the contract table describes.
 - `build-tools/results/templates/zig.py` leaves this language's exception file `build-tools/results/legacy/zig.txt`.
 - The public surface change updates the Zig entry in `conformance/library-surface/zig.json` (`CallResult`, `Result`, `Failure`) in the same change. The README, README-PUBLIC, `examples/` and the ten site function samples change with the error shape. The test consumers change only enough to compile; 0716 replaces them.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0667 SHA --memory 8 -- sh libraries/zig/check.sh`, an outside Zig project depending on the unpacked package runs the examples and the existing installed consumers pass. 0666 adds darwin-arm64 to Zig's `check_platforms`, so this ticket follows it.
 - `python3 build-tools/results/answer_rules.py` passes with the Zig template exception removed. Before the change it fails on that file.
-- The Zig packet dump and its 0642 oracle comparison belong to 0716.
-- linux-arm64 and linux-x86_64 run at the 0619 container checkpoints.
+- The installed Zig consumer and its comparison against `conformance/fixtures/packets.json` belong to 0716.
+- Linux arm64: `pm job run --machine m5 0667 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/zig`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

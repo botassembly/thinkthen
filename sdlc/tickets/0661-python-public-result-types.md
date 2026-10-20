@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0662, 0688, 0727
+Depends on: 0662, 0688
 
 ## Outcome
 

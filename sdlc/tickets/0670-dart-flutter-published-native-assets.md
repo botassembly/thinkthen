@@ -6,19 +6,20 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
 - Changes: `libraries/dart/native-assets.json`, `libraries/dart/hook/build.dart`, `libraries/dart/pubspec.yaml`, `libraries/dart/flutter/`, `libraries/dart/check.sh`, `libraries/dart/checks/`, `libraries/dart/README.md`, `sdlc/tools/dart.json`, `sdlc/scripts/release-pack.d/dart`, `sdlc/scripts/release-pack.d/flutter`.
-- `release-pack` generates the native-asset manifest from the `dart` entry under `libraries` in `sdlc/tools.json`. Each supported platform has an HTTPS download address and a checksum.
+- `release-pack` generates the native-asset manifest from the `dart` entry under `libraries` in `sdlc/tools/dart.json`. Each supported platform has an HTTPS download address and a checksum.
 - The checked-in hash and the development-only mode in `hook/build.dart` are deleted.
-- The Flutter plugin declares every supported platform, at least Linux and macOS, and can be published. `sdlc/tools.json` declares Flutter for macOS and adds `darwin-arm64` to the Dart `check_platforms`.
+- The Flutter plugin declares every supported platform, at least Linux and macOS, and can be published. `sdlc/tools/dart.json` declares Flutter for macOS and adds `darwin-arm64` to the Dart `check_platforms`.
+- Flutter's Linux tools are declared in `sdlc/tools/dart.json` and join the Linux image through 0740; a missing tool fails the check, never skips.
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0670 SHA --memory 8 -- sh libraries/dart/check.sh`, a clean Dart project resolves the package from a local pub server, fetches the native asset from a local HTTPS mirror of the candidate, and runs a named call with no library path. A clean Flutter app builds and runs a named call on macOS. Before the change the check exits 77 on the M5 because only `linux-x86_64` is declared.
-- The Flutter app in the arm64 container runs at the 0619 container checkpoint.
+- On the M5 through `pm job run --machine m5 0670 SHA --memory 8 -- sh libraries/dart/check.sh`, a clean Dart project resolves the package from a local pub server, fetches the native asset from a local HTTPS mirror of the candidate, and runs a named call with no library path. A clean Flutter app builds and runs a named call on macOS. Before the change the check fails on the M5 on the missing tool, because only `linux-x86_64` is declared.
+- The Flutter app runs on Linux. Linux arm64: `pm job run --machine m5 0670 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/dart`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

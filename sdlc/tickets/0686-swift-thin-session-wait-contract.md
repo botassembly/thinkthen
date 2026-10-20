@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0688, 0727
+Depends on: 0688, 0740
 
 ## Outcome
 
@@ -16,12 +16,14 @@ Depends on: 0688, 0727
 - The `Session` class in `OwnedSession.swift`, `Client.start`, the two `Client.execute` session drivers, `sessionCheck` and the private closed, reader and producer error text are deleted. One call runs `thinkthen_run_call` on a dispatch queue worker, and cancelling a Task fires a `thinkthen_call_cancel` token and returns promptly while the provider is held.
 - `libraries/swift/Sources/ThinkThen/CallProjection.swift` and `build-tools/results/templates/swift.py` leave this language's exception file `build-tools/results/legacy/swift.txt`.
 - The public surface change updates the Swift entry in `conformance/library-surface/swift.json` (`Session`, `Call`, `SessionBoundaryFailure`) in the same change. Both READMEs drop the `Session` paragraph. The ten site function samples keep their call shape and need no change.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0686 SHA --memory 8 -- sh libraries/swift/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route (`release-pack` for the C archives, `libraries/swift/build-xcframework.sh`, then `release-pack --apple-wrappers aarch64-apple-darwin OUT swift`), the installed Swift consumer runs all ten named calls against a recorded backend. A held-provider case shows other async work progressing and Task cancellation returning before the provider is released.
+- The M5 builds both macOS C packages, cross-compiling `x86_64-apple-darwin` with the pinned Rust toolchain; `release-pack` takes the target and `THINKTHEN_RELEASE_EXPECTED_SHA` as the Swift and Objective-C wrappers require.
 - `python3 build-tools/results/answer_rules.py` passes with the two Swift exceptions removed. Before the change it fails on those files.
-- The Linux Swift run happens at the 0619 container checkpoint.
+- Linux arm64: `pm job run --machine m5 0686 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/swift`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

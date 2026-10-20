@@ -6,20 +6,20 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0650, 0651, 0688, 0728
+Depends on: 0650, 0651, 0688, 0740
 
 ## Outcome
 
 - Changes: `build-tools/results/templates/cobol*.py`, `libraries/cobol/src/`, `libraries/cobol/checks/`, `libraries/cobol/check.sh`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `conformance/children/usage_installed.py`, `conformance/library-surface-test.py`, `sdlc/tools/cobol.json`, `site/src/data/build-lines.mjs`.
 - The generated bridge declares parameters with the types cobc's static-call prototypes use, or callers use `-fno-gen-c-decl-static-call` with matching declarations from the bridge header. No `-Wno-incompatible-pointer-types` remains in the README, the checks or the site's build line.
 - The forced `-include` of `src/tt_session.h` becomes a normal include path.
-- The supported GnuCOBOL range is chosen from released versions and stated in the README. Its lowest and newest versions are both in `sdlc/tools.json`.
+- The supported GnuCOBOL range is chosen from released versions and stated in the README. Its lowest and newest versions are both in `sdlc/tools/cobol.json`.
 - The COBOL build line in `site/src/data/build-lines.mjs` matches the README's command, and the site's COBOL samples replay with it.
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0652 SHA --memory 8 -- sh libraries/cobol/check.sh`, the README's compile command builds the example and the dumper with `-Werror`, and they pass. Before the change, the same command without `-Wno-incompatible-pointer-types` fails with pointer-type errors.
-- At the 0619 container checkpoint, the release suite runs the COBOL gate with both the lowest and newest GnuCOBOL versions.
+- On the M5 through `pm job run --machine m5 0652 SHA --memory 8 -- sh libraries/cobol/check.sh`, the README's compile command builds the example and the installed consumer with `-Werror`, and they pass. Before the change, the same command without `-Wno-incompatible-pointer-types` fails with pointer-type errors.
+- Linux arm64: `pm job run --machine m5 0652 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/cobol`; Linux x86_64: the same command with `--machine gator --memory 7`. The COBOL gate runs there with both the lowest and newest GnuCOBOL versions.
 
 ## Evidence
 

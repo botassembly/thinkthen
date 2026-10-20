@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0670, 0688, 0727
+Depends on: 0670, 0688, 0740
 
 ## Outcome
 
@@ -17,12 +17,13 @@ Depends on: 0670, 0688, 0727
 - `build-tools/results/templates/dart.py` and `libraries/dart/lib/src/session/values.dart` leave this language's exception file `build-tools/results/legacy/dart.txt`.
 - The Dart entry in `conformance/library-surface/dart.json` names the lifecycle owners that remain.
 
-- The Dart conformance runner becomes a packet dumper following the 0642 contract, and the old fixture consumer (`checks/session_consumer/bin/parity_consumer.dart` and the fixture typing it needs from `checks/fixture_types.py`) is deleted.
+- The Dart conformance runner becomes an installed consumer, and the old fixture consumer (`checks/session_consumer/bin/parity_consumer.dart` and the fixture typing it needs from `checks/fixture_types.py`) is deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target dart --check && python3 build-tools/results/generate.py --target dart --bridge --check && cd libraries/dart && dart analyze --fatal-infos'`. Before the change, `answer_rules.py` fails once the two Dart exceptions are removed.
-- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sh libraries/dart/check.sh`, after 0670 declares `darwin-arm64` and Flutter for macOS, the installed Dart consumer and the Flutter consumer run all ten named calls, cancellation and failures against a recorded backend, and their packet dumps match the 0642 oracle. Linux runs at the 0619 container checkpoint.
+- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sh libraries/dart/check.sh`, after 0670 declares `darwin-arm64` and Flutter for macOS, the installed Dart consumer and the Flutter consumer run all ten named calls, cancellation and failures against a recorded backend, and their comparisons against `conformance/fixtures/packets.json` pass. Linux arm64: `pm job run --machine m5 0671 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/dart`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

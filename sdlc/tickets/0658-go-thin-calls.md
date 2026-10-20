@@ -6,8 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0657
-Depends on: 0688, 0727
+Depends on: 0657, 0688, 0740
 
 ## Outcome
 
@@ -19,14 +18,15 @@ Depends on: 0688, 0727
 - The JSON v2 build-tag files are deleted. Go marshals with encoding/json, and Rust rejects invalid input.
 - `libraries/go/session.go` and `build-tools/results/templates/go.py` leave this language's exception file `build-tools/results/legacy/go.txt`.
 - The public surface change updates the Go entry in `conformance/library-surface/go.json` (`Call`, `OwnedSession`, `SessionError`) in the same change. The README, `examples/decide` and the ten site function samples drop their type assertions in the same change.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0658 SHA --memory 8 -- sh libraries/go/check.sh`, the gate builds the installed module, compiles `examples/decide`, and the existing installed consumers pass. Before the change the README example needs `refund.Value.(bool)`; after it, the example compiles with no type assertion.
 - A Go test in the installed module's `go test` run feeds an out-of-range native code and gets `KindDefect`. It fails before the change through `sessionFailure`.
 - `python3 build-tools/results/answer_rules.py` passes with the two Go exceptions removed. Before the change it fails on those files.
-- Go's packet dumper and the 0642 oracle comparison belong to 0656.
-- The Go gate runs on the M5 only after 0657 adds darwin-arm64 to Go's `check_platforms`, and both tickets edit `thinkthen.go` and the README, so this ticket follows 0657. The Linux arm64 and x86_64 runs happen at the 0619 container checkpoint.
+- Go's installed consumer and its comparison against `conformance/fixtures/packets.json` belong to 0656.
+- The Go gate runs on the M5 only after 0657 adds darwin-arm64 to Go's `check_platforms`, and both tickets edit `thinkthen.go` and the README, so this ticket follows 0657. Linux arm64: `pm job run --machine m5 0658 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/go`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 
