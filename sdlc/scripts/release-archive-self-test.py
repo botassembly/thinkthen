@@ -441,7 +441,7 @@ def c_pack_exit(host, version):
         binary = base / "bin"
         binary.mkdir()
         cargo = binary / "cargo"
-        cargo.write_text("#!/bin/sh\nexit 0\n")
+        cargo.write_text("#!/bin/sh\nprintf 'note: native-static-libs: -ldl -lpthread\\n' >&2\nexit 0\n")
         cargo.chmod(0o755)
         env = os.environ | {"PATH": fixture_path(binary),
                             "CARGO_TARGET_DIR": str(native.parent), "THINKTHEN_FULL_COMPILER": "1"}
@@ -521,7 +521,8 @@ def main():
         fake_bin = base / "bin"
         fake_bin.mkdir()
         cargo = fake_bin / "cargo"
-        cargo.write_text("#!/bin/sh\nprintf 'called\\n' >>\"$THINKTHEN_CARGO_CALLS\"\nexit 0\n")
+        cargo.write_text("#!/bin/sh\nprintf 'called\\n' >>\"$THINKTHEN_CARGO_CALLS\"\n"
+                         "[ \"$1\" != rustc ] || printf 'note: native-static-libs: -ldl -lpthread\\n' >&2\nexit 0\n")
         cargo.chmod(0o755)
         native = base / "native-target/release"
         native.mkdir(parents=True)
@@ -579,6 +580,7 @@ def main():
         own_bin.mkdir()
         own_tmp.mkdir()
         (own_bin / "cargo").write_text("#!/bin/sh\nprintf '%s\\n' \"$CARGO_TARGET_DIR\" >>\"$THINKTHEN_CARGO_CALLS\"\n"
+                                       "[ \"$1\" != rustc ] || printf 'note: native-static-libs: -ldl -lpthread\\n' >&2\n"
                                        "mkdir -p \"$CARGO_TARGET_DIR/release\"\n"
                                        f"cp '{native}'/* \"$CARGO_TARGET_DIR/release/\"\n")
         (own_bin / "cargo").chmod(0o755)

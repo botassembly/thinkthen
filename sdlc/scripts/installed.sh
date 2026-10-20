@@ -73,7 +73,7 @@ native_install() {
 	CARGO_TARGET_DIR="$native_build" CARGO_ENCODED_RUSTFLAGS="$native_flags" \
 		CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
 		cargo rustc --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib \
-		-- --print native-static-libs 2>"$native_build/build.log" || { cat "$native_build/build.log" >&2; return 1; }
+		-- --print native-static-libs 2>"$native_build/build.log" || { native_build_status=$?; cat "$native_build/build.log" >&2; return "$native_build_status"; }
 	cat "$native_build/build.log" >&2
 	native_private=$(sed -n 's/^note: native-static-libs: //p' "$native_build/build.log" | tail -n 1)
 	[ -n "$native_private" ] || { echo 'native_install: C build reported no native static libraries' >&2; return 1; }

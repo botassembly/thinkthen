@@ -10,7 +10,7 @@ part_c() {
 	set --
 	[ "$profile" != release ] || set -- --release
 	(cd libraries/c && cargo rustc --locked --quiet --offline "$@" --lib -- --print native-static-libs) \
-		2>"$stage/c-build.log" || { cat "$stage/c-build.log" >&2; return 1; }
+		2>"$stage/c-build.log" || { c_build_status=$?; cat "$stage/c-build.log" >&2; return "$c_build_status"; }
 	cat "$stage/c-build.log" >&2
 	private=$(sed -n 's/^note: native-static-libs: //p' "$stage/c-build.log" | tail -n 1)
 	[ -n "$private" ] || { echo 'release-pack: C build reported no native static libraries' >&2; return 1; }
