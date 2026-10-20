@@ -10,6 +10,8 @@ Depends on: 0615, 0618, 0619
 
 Reviews: revision 5b6430e, accept
 
+Reviews: revision 63cc2ab, accept
+
 ## Outcome
 
 - Changes: `AGENTS.md`, `conformance/test_candidate_campaign.py`, `sdlc/planning/release-process.md`, `sdlc/scripts/README.md`, `sdlc/scripts/test-full-cases`.
