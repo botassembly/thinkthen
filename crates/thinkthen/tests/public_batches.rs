@@ -3,7 +3,8 @@
 //!
 //! Every engine here uses throttle 2, the one explicit throttle this process
 //! registers, so a peak above 2 anywhere is a second gate. Rows hold one lock
-//! so thread and memory counts see no other row.
+//! so process state is shared consistently. The worker count runs in a child
+//! because the test runner changes its own threads outside that lock.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
@@ -39,6 +40,12 @@ mod cache;
 
 #[path = "public_batches/ranks.rs"]
 mod ranks;
+
+#[path = "public_controls/alone.rs"]
+mod alone;
+
+#[path = "../src/test_deadline/child.rs"]
+mod child;
 
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
@@ -128,7 +135,10 @@ fn thread_names() -> Vec<(String, String)> {
         .filter_map(|entry| {
             let entry = entry.expect("thread directory");
             let name = std::fs::read_to_string(entry.path().join("comm")).ok()?;
-            Some((entry.file_name().to_string_lossy().into_owned(), name.trim().to_owned()))
+            Some((
+                entry.file_name().to_string_lossy().into_owned(),
+                name.trim().to_owned(),
+            ))
         })
         .collect();
     names.sort();
@@ -235,6 +245,15 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
 
 #[test]
 fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
+    // SERIAL cannot stop libtest from adding the next row's waiting thread.
+    // Keep the worker count in a process with only this row and its listener.
+    alone::alone(
+        "one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker",
+        shared_engine_workers_leave_after_two_callers,
+    );
+}
+
+fn shared_engine_workers_leave_after_two_callers() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED).after(40)).expect("listener");
     #[cfg(target_os = "linux")]
@@ -299,7 +318,9 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
         assert!(
             threads() <= before + listener.connections(),
             "an engine worker stayed: before={before}, after={}, connections={}, before_names={before_names:?}, after_names={:?}",
-            threads(), listener.connections(), thread_names()
+            threads(),
+            listener.connections(),
+            thread_names()
         );
     }
 }
