@@ -18,9 +18,9 @@ Depends on: 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0679 SHA --memory 12 -- sh libraries/polars/check.sh`, `cargo test --test polars` and the frame consumer run all ten functions over a frame against a recorded backend. Its columns, types and nulls match the 0642 oracle's answer fields.
+- On the M5 through `pm job run --machine m5 0679 SHA --memory 12 -- sdlc/scripts/job sh libraries/polars/check.sh`, `cargo test --test polars` and the frame consumer run all ten functions over a frame against a recorded backend. Its columns, types and nulls match the 0642 oracle's answer fields.
 - `git grep -n serde_json crates/thinkthen/src/public/frame` finds nothing; on current main it finds `schema.rs` and `result.rs`.
-- `python3 sdlc/scripts/inventory` passes in the same job.
+- `pm job run --machine m5 0679 SHA -- sdlc/scripts/job python3 sdlc/scripts/inventory` passes.
 
 ## Evidence
 

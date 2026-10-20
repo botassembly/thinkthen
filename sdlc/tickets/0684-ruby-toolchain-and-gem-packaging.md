@@ -19,7 +19,7 @@ Depends on: 0683, 0688, 0740
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0684 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && THINKTHEN_TEST_PROFILE=full sh libraries/ruby/check.sh'`. Both Ruby minors build, install the platform gem with no library path and run their installed checks. Before the change, `git grep setup-ruby` finds callers in the release scripts, `gate.yml` and the site runner.
+- On the M5: `pm job run --machine m5 0684 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && THINKTHEN_TEST_PROFILE=full sh libraries/ruby/check.sh'`. Both Ruby minors build, install the platform gem with no library path and run their installed checks. Before the change, `git grep setup-ruby` finds callers in the release scripts, `gate.yml` and the site runner.
 - `ruby tests/test_package.rb` in that run proves that installing the diagnostic gem on an unsupported Ruby fails with a message naming Ruby 3.4 and 4.0.
 - The same full check runs in the Linux image with both Rubies. Linux arm64: `pm job run --machine m5 0684 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/ruby`; Linux x86_64: the same command with `--machine gator --memory 7`.
 

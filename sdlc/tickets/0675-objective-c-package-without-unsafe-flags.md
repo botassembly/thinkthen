@@ -18,7 +18,7 @@ Depends on: 0676, 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0675 SHA --memory 8 -- sh libraries/objective-c/check.sh`, a clean SwiftPM consumer adds the package from a local git mirror of the candidate, builds with default flags, and runs a named call. Before the change SwiftPM refuses the package as a remote dependency because of `unsafeFlags`.
+- On the M5 through `pm job run --machine m5 0675 SHA --memory 8 -- sdlc/scripts/job sh libraries/objective-c/check.sh`, a clean SwiftPM consumer adds the package from a local git mirror of the candidate, builds with default flags, and runs a named call. Before the change SwiftPM refuses the package as a remote dependency because of `unsafeFlags`.
 - Intel macOS is proven on the candidate in 0687.
 
 ## Evidence

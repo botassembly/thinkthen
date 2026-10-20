@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0660 SHA --memory 8 -- sh libraries/python/check.sh` builds the host wheel, installs it into a fresh environment, passes the tests, and the installed consumer's comparison passes for every shared case. Before the change no Python installed consumer exists, and the check still runs `tests/native_case.py` through `conformance/children/native_fixture.py`.
+- On the M5 natively: `pm job run --machine m5 0660 SHA --memory 8 -- sdlc/scripts/job sh libraries/python/check.sh` builds the host wheel, installs it into a fresh environment, passes the tests, and the installed consumer's comparison passes for every shared case. Before the change no Python installed consumer exists, and the check still runs `tests/native_case.py` through `conformance/children/native_fixture.py`.
 - `git grep -n 'THINKTHEN_COVERAGE_\|THINKTHEN_PARITY_PREPARE' libraries/python` finds nothing; before the change it finds the branches in `check.sh`.
 - Linux arm64: `pm job run --machine m5 0660 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/python`; Linux x86_64: the same command with `--machine gator --memory 7`. The Windows and Intel macOS wheels are proven on the candidate in 0687.
 

@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0657 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sdlc/scripts/release-pack aarch64-apple-darwin "$out" c go && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-go-*-aarch64-apple-darwin.tar.gz)" THINKTHEN_C_ARTIFACT="$(ls "$out"/thinkthen-c-*-aarch64-apple-darwin.tar.gz)" sh libraries/go/check.sh'`, the installed-mode check serves the packed module from a `GOPROXY=file://` directory, fetches it into a clean module cache, and builds and runs the example with no pkg-config. Before the change `release-pack` refuses Go on this target.
+- On the M5 through `pm job run --machine m5 0657 SHA --memory 8 -- sdlc/scripts/job sh -c 'out=$(mktemp -d) && sdlc/scripts/release-pack aarch64-apple-darwin "$out" c go && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-go-*-aarch64-apple-darwin.tar.gz)" THINKTHEN_C_ARTIFACT="$(ls "$out"/thinkthen-c-*-aarch64-apple-darwin.tar.gz)" sh libraries/go/check.sh'`, the installed-mode check serves the packed module from a `GOPROXY=file://` directory, fetches it into a clean module cache, and builds and runs the example with no pkg-config. Before the change `release-pack` refuses Go on this target.
 - Linux arm64: `pm job run --machine m5 0657 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/go`; Linux x86_64: the same command with `--machine gator --memory 7`.
 - windows/amd64, if supported, is proven on the candidate in 0687.
 

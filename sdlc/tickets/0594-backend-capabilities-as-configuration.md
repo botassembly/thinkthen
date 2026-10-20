@@ -8,21 +8,7 @@ Milestone: 0.3
 
 ThinkThen describes every backend and every model as data, in one catalog with one schema. The ten functions stay the same while backends change underneath them. A built-in catalog ships today's backends and models with today's values. A user adds a backend with a name, an address, an API type, a key variable and a model, and adds or adjusts a model on any backend, built-in ones included, without a ThinkThen release. ThinkThen enforces every limit the catalog states before it sends anything.
 
-## Evidence
-
-- Ian, 2026-10-15: images, context window length "and really anything else that's kind of hard-coded into all these different models should be decoupled and turned into a configuration per backend."
-- Ian, 2026-10-15, after reading the first draft of this ticket: think through "the full graph of meaning: the nodes and edges, the type of graph, and how to configure providers, models, capabilities, attributes, and things like context window, endpoints, options." The functions stay the same and backends swap in and out. Adding a backend should take little more than a URL, a path, a name, a key and its environment variable.
-- Today the facts sit in five places:
-  1. `crates/thinkthen/src/core/adapters/systemone/backends.rs` and the OpenAI adapter: each built-in's name, base, path, API type, key variables, default model, description form and input accounting.
-  2. `core/adapters/systemone/images.rs`: the admitted image models; Liquid's rule (32-pixel patches, 1.5 tokens each, aspect ratio at most 100, 10,000 patches per request, 4,499,999-byte body); Perplexity's rule (32-pixel tiles rounded to nearest, at least one, 2,048 per image, 128 questions, 32 MiB body).
-  3. `images/local.rs`: three measured local setups, chosen by ID in a version-two `--profile`; two images of at most 1 MiB and 1,024 pixels on the longest edge, a 2,800,000-byte body, image tokens unknown.
-  4. Ticket 0590, on the 0.2 release branch: TypeSafe's `assets` route for exactly `jev-1.13.0` and `jev-1.14.0`; lower bounds as well as upper ones (each side 256 to 1,568 pixels, 78,400 to 2,458,624 pixels); 16 MiB per image; a 32 MiB body; the header `TypeSafe-Danger-Zone-Images: true` on image requests only; the moving aliases `jev-latest` and `jev-preview` refused.
-  5. Prose only, in the provider table of `specification/backends.md`: Perplexity's 255 options, 10 score levels and 262,144 input tokens; Jev's 32,000-token context on OpenRouter; Clef's 65,536-token context; MLX's 2 to 10 score levels; TypeSafe's 65,536-token refusal; OpenAI's 128 images per request. ThinkThen enforces none of these as written, and the table is kept by hand.
-- The configuration file already holds `backends` entries with `url`, `path`, `key_env`, `model`, rate, prices, `both_sides` and an inline profile (ADR 0114, ADR 0117). Configured entries always speak System One. Built-in entries take only rate, prices and profile. `--profile` is a second file with byte, question and option limits.
-- One model runs under different names and limits at different addresses. Jev is `jev-1.13.0` at TypeSafe and `typesafe/jev-1.13` at OpenRouter, where its context is 32,000 tokens. Clef runs routed through OpenRouter, directly on Cloudflare and locally on llama.cpp. Neither the model name alone nor the address alone can key these facts.
-- Some limits protect ThinkThen itself and describe no backend: 8 images and 24 MiB per image in the decoder, 8,192-pixel sides, 1 MiB replies, 400 pair questions per relate request.
-
-## The model
+### The model
 
 The catalog is a small directed graph with three kinds of node and two kinds of edge. Names are the references. One JSON document holds it, and ThinkThen checks every reference when it loads.
 
@@ -45,7 +31,7 @@ The facts form a closed vocabulary, and each key names its unit:
 - Prices: input and output US dollars per million tokens.
 - Provenance, required in the built-in catalog: the source link or experiment and the date checked.
 
-## Decisions
+### Decisions
 
 - PM decision, 2026-10-15: the catalog describes what a backend and model accept, never which backend to choose. Fallback, model groups, routing and A/B policy stay with the proxy. In 0.5 the proxy reads this same catalog for what each backend accepts and keeps its routing in its own settings.
 - PM decision, 2026-10-15: ThinkThen enforces every limit before sending, whether built in or declared. A declared value the API type cannot honor, such as image facts on an API type with no image wire, is refused at load with a plain sentence that repeats no value.
@@ -62,12 +48,12 @@ The facts form a closed vocabulary, and each key names its unit:
 - 0.3 PM decision, 2026-10-15: ThinkThen fetches nothing to fill the catalog. It reads no provider model list over the network.
 - Ian can overturn each of these.
 
-## Scope
+### Scope
 
 - Changes: `crates/thinkthen/src/core/backend_profile.rs` and `backend_profile/images.rs`, `core/adapters/systemone/backends.rs`, `core/adapters/systemone/images.rs`, `core/adapters/systemone/images/local.rs`, the OpenAI adapter's built-in row, `crates/thinkthen/src/config.rs`, `crates/thinkthen/src/config/backends.rs`, the help topics, `specification/backends.md`, `specification/settings.md`, `specification/recording.md`, a new ADR, the built-in catalog file and its generator check. The coordinator narrows this when the ADR lands.
 - Starts after 0590 lands on main, because it moves the TypeSafe image route.
 - Checklist:
-  1. Finish the inventory above on main after 0590: every per-backend and per-model fact, its source and its date. Each becomes a built-in catalog entry with provenance.
+  1. Finish the inventory under Evidence on main after 0590: every per-backend and per-model fact, its source and its date. Each becomes a built-in catalog entry with provenance.
   2. Write the ADR for the catalog's schema and resolution order; a reviewer accepts it before code. It replaces the admitted-model clause of ADR 0121 and the parts of ADR 0114 and ADR 0117 it changes.
   3. Add the built-in catalog and its loader, with values equal to today's.
   4. Read the user's catalog: `api` on configured backends, the `models` maps, `like`, image headers, and refusals at load for an unknown key, an unknown reference, a `like` loop, an image fact on an API type with no image wire, and a limit above a safety limit.
@@ -78,7 +64,7 @@ The facts form a closed vocabulary, and each key names its unit:
   9. Delete the in-code tables the catalog replaces.
 - Keeps: every 0.2 request byte for byte under the built-in catalog; every refusal sentence that still applies; zero sends on a refused input.
 
-## Proof
+### Proof
 
 The routine suite passes unchanged under the built-in catalog. Replayed cases against loopback show:
 
@@ -88,12 +74,26 @@ The routine suite passes unchanged under the built-in catalog. Replayed cases ag
 - A profile that raises a limit is refused at load.
 - `thinkthen help backends` shows OpenRouter's Jev at 32,000 context tokens and TypeSafe's Jev without it, each with its source.
 
-## Defers
+### Defers
 
 - New image wires, such as OpenRouter's image format and OpenAI's image parts, and new formats, such as WebP, are separate tickets that add an API type's wire and then use this catalog.
 - Addresses built from environment variables, such as Cloudflare's account ID in its URL, wait for a user who needs a direct Cloudflare backend.
 - Storing the catalog's model name with each answer, so 0.4 can compare one model across backends, goes to the 0.4 grading work.
 - The proxy's use of the catalog belongs to 0.5.
+
+## Evidence
+
+- Ian, 2026-10-15: images, context window length "and really anything else that's kind of hard-coded into all these different models should be decoupled and turned into a configuration per backend."
+- Ian, 2026-10-15, after reading the first draft of this ticket: think through "the full graph of meaning: the nodes and edges, the type of graph, and how to configure providers, models, capabilities, attributes, and things like context window, endpoints, options." The functions stay the same and backends swap in and out. Adding a backend should take little more than a URL, a path, a name, a key and its environment variable.
+- Today the facts sit in five places:
+  1. `crates/thinkthen/src/core/adapters/systemone/backends.rs` and the OpenAI adapter: each built-in's name, base, path, API type, key variables, default model, description form and input accounting.
+  2. `core/adapters/systemone/images.rs`: the admitted image models; Liquid's rule (32-pixel patches, 1.5 tokens each, aspect ratio at most 100, 10,000 patches per request, 4,499,999-byte body); Perplexity's rule (32-pixel tiles rounded to nearest, at least one, 2,048 per image, 128 questions, 32 MiB body).
+  3. `images/local.rs`: three measured local setups, chosen by ID in a version-two `--profile`; two images of at most 1 MiB and 1,024 pixels on the longest edge, a 2,800,000-byte body, image tokens unknown.
+  4. Ticket 0590, on the 0.2 release branch: TypeSafe's `assets` route for exactly `jev-1.13.0` and `jev-1.14.0`; lower bounds as well as upper ones (each side 256 to 1,568 pixels, 78,400 to 2,458,624 pixels); 16 MiB per image; a 32 MiB body; the header `TypeSafe-Danger-Zone-Images: true` on image requests only; the moving aliases `jev-latest` and `jev-preview` refused.
+  5. Prose only, in the provider table of `specification/backends.md`: Perplexity's 255 options, 10 score levels and 262,144 input tokens; Jev's 32,000-token context on OpenRouter; Clef's 65,536-token context; MLX's 2 to 10 score levels; TypeSafe's 65,536-token refusal; OpenAI's 128 images per request. ThinkThen enforces none of these as written, and the table is kept by hand.
+- The configuration file already holds `backends` entries with `url`, `path`, `key_env`, `model`, rate, prices, `both_sides` and an inline profile (ADR 0114, ADR 0117). Configured entries always speak System One. Built-in entries take only rate, prices and profile. `--profile` is a second file with byte, question and option limits.
+- One model runs under different names and limits at different addresses. Jev is `jev-1.13.0` at TypeSafe and `typesafe/jev-1.13` at OpenRouter, where its context is 32,000 tokens. Clef runs routed through OpenRouter, directly on Cloudflare and locally on llama.cpp. Neither the model name alone nor the address alone can key these facts.
+- Some limits protect ThinkThen itself and describe no backend: 8 images and 24 MiB per image in the decoder, 8,192-pixel sides, 1 MiB replies, 400 pair questions per relate request.
 
 ## Amendment, 2026-10-19
 

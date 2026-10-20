@@ -21,7 +21,7 @@ Depends on: 0688
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0683 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/ruby/check.sh'`. The routine check builds and installs the gem on Ruby 4.0 and runs `tests/test_owned_session.rb`, `tests/test_examples.rb` and the shared routine cases in `tests/native_cases.py` through the named calls. A held-cancel case returns `cancelled` promptly.
+- On the M5: `pm job run --machine m5 0683 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/ruby/check.sh'`. The routine check builds and installs the gem on Ruby 4.0 and runs `tests/test_owned_session.rb`, `tests/test_examples.rb` and the shared routine cases in `tests/native_cases.py` through the named calls. A held-cancel case returns `cancelled` promptly.
 - `python3 build-tools/results/answer_rules.py` passes with the three Ruby entries gone from `LEGACY_FILES`. On main, removing those entries alone fails on `session.rb`.
 - `python3 conformance/library-surface.py --library ruby` passes.
 - Ruby 3.4 runs at the release suite (`THINKTHEN_TEST_PROFILE=full`), not in this proof.

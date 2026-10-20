@@ -10,13 +10,13 @@ Status: in progress. Amended design accepted after fresh independent review of `
 
 Milestone: later
 
-## Outcome and authority
+## Outcome
 
 Keep the original outcome: remove only engine test code that a stronger routine proof makes redundant, lower `sdlc/ratchet.json` by measured deleted lines, and report exactly what changed and what remains unproved. Preserve distinct parser, secrecy, cancellation, deadline, cache-miss, invalid-input, conflict, wire-byte, digest, replay and stop-accounting regressions. A line count or a mutation score alone cannot make a test redundant. No product code or public API changes belong here.
 
 The later ruling is recorded in [the current work plan](../planning/work-plan-2026-09-27.md): ordinary validation uses small functional, unit and boundary checks; performance, saturation, churn, repeated contention, full-surface and mutation campaigns require a separately named opt-in run. [AGENTS.md](../../AGENTS.md) now requires a test to answer four questions: protected behavior, credible failing regression, why existing tests miss it, and whether it needs a test-only hook. Before deleting a test, name the stronger routine proof for every behavior it uniquely guards. This amendment changes the evidence method, not the accepted cleanup outcome. Ian can overturn the amended method.
 
-## Bounded method proposed for review
+### Bounded method proposed for review
 
 1. Choose one unheld engine test family at a time. Read each test and its stronger candidate through the public or real internal boundary. For every proposed deletion, name the exact assertion, the credible product regression that would fail it, the stronger test's assertion and fixture, and any behavior the stronger test does not cover. A missing replacement keeps the test. Test-only exports, flags and hooks do not count as stronger proof.
 2. Delete only a small, explicit equivalence group after that comparison. Run the exact proposed replacement tests on unchanged source, remove the proposed duplicate, then run those same replacement tests again. Check that the selection actually ran the expected test count and still covers the behavior. A bounded, targeted deliberate break may help when the equivalence is otherwise unclear, but it is not a whole-scope mutant census or a substitute for reading assertions. Restore any plant before committing. Stop and retain the test if the proof is ambiguous, a focused check fails without the deletion, or a regression loses its only guard.
@@ -25,27 +25,29 @@ The later ruling is recorded in [the current work plan](../planning/work-plan-20
 
 The first candidate family is `crates/thinkthen/src/engine/deadline_tests.rs` and its `schedule.rs` child, subject to the current lane claim before editing. The [preflight](../records/0119-functional-audit-preflight.md) inventories their distinct boundaries. In particular, `cancellation_is_observed_before_a_spent_deadline` appears to overlap the scheduler's fired-plus-spent stop case, but the low-level test also asserts `Cancel::wait` returns cancellation. It stays until an existing stronger proof for that wait behavior is identified. The exact error-format table, `Duration::MAX` handling, zero-send attempt, held response, retry wait and folder/digest deadline tests each have plausible unique failures and are not deletion candidates merely because they share a deadline topic. A post-review bounded read of two further engine families also found no proven duplicate, so this preparation stops without a deletion recommendation.
 
-## Scope and dependencies
+### Scope and dependencies
 
 The first implementation slice may edit only the claimed test family and the shared ratchet after source claims. The other engine and CLI tests, `conformance/`, secrecy sweep, `spec/`, green demos, live test, shell and documentation tests remain untouched in this slice. Existing `cargo-mutants` 27.1.0 pin and the 2026-09-24 review remain historical evidence, not a required tool install. No load gate, repeated mutation baseline, three-run median, arbitrary 500-line target, or whole-ladder run is a stop condition. The earlier report fields for mutation score, Beelink time and whole-suite timing are omitted unless a later opt-in campaign actually measures them.
 
 The related hand-rolled-listener cleanup in [the test-harness issue](../issues/closed/2026-09-25-test-harness-and-review-leftovers.md) is separate from the first deletion slice. A [bounded listener preflight](../records/0119-listener-preflight.md) selected only the scripted reply helper and its two callers in `engine/width_tests.rs` for fresh design review. Both tests and their independent permit/replay regressions stay; only their redundant socket fixture changed after main `7516a832` claimed that exact file. The other historical listeners retain raw-byte, synchronous no-connection, arrival, hold/release or separate deadline guarantees. `conformance/backend` already has the required scripted replies, after-write notification and synchronous cleanup, so this small group needed no fixture API change. Issue item 4's old 50-run high-load demand is historical and opt-in; its functional fix remains landed and the umbrella issue later closes with reviewed command proof `dcec83f0`; the wider engine audit stays open.
 
-## Evidence and routing
-
-The original [scaffold-test issue](../issues/closed/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md) measured 787 tests and 28,164 test-path lines on `ffb8fb79`. Those numbers are historical, not today's baseline. The accepted 2026-09-24 design's repeated mutation method and review are retained as history. This amendment uses current `origin/main` at `ed99407d` and the [preflight](../records/0119-functional-audit-preflight.md); no mutations, deletions, timings or source executions have run in preparation. The fresh independent reviewer accepted the amended method at `02dbdf08`, and the coordinator accepted it under Ian's functional-gate ruling. Fresh Codex review follows any later implementation under Ian's route.
+### Routing
 
 Each later bounded build record must list deleted and retained tests, exact replacement proofs, measured ratchet and focused results, and extend the build lessons below. The first landed listener slice does so in its linked records. Missed coverage becomes an issue only when a specific unguarded regression is demonstrated; this ticket does not pre-create an issue from an unmeasured mutant score.
 
-## Landed bounded listener group
+## Evidence
+
+The original [scaffold-test issue](../issues/closed/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md) measured 787 tests and 28,164 test-path lines on `ffb8fb79`. Those numbers are historical, not today's baseline. The accepted 2026-09-24 design's repeated mutation method and review are retained as history. This amendment uses current `origin/main` at `ed99407d` and the [preflight](../records/0119-functional-audit-preflight.md); no mutations, deletions, timings or source executions have run in preparation. The fresh independent reviewer accepted the amended method at `02dbdf08`, and the coordinator accepted it under Ian's functional-gate ruling. Fresh Codex review follows any later implementation under Ian's route.
+
+### Landed bounded listener group
 
 The old `engine/width_tests.rs` helper sent a scripted 503 retry response and a JSON answer in order, announcing each after write. Its retry-permit and recorded-replay callers do not assert exact raw response bytes or reason text. The accepted replacement uses `Listener::serving` with equivalent status, header and body `Canned` replies and `notifying` at the same after-write point. Both tests retain their attempt/permit/replay assertions. The retry test now pins two completed connections, and the replay test drops the live listener before its cached call. The [listener preflight](../records/0119-listener-preflight.md) inventories all eleven historical sites and names the deferred ten. It also records why an initially considered quiet-socket substitution would weaken synchronous no-connection proof. The [listener build](../records/0119-listener-build.md) contains the exact before/after proof. Fresh independent Medium code review accepted `b89c58f7`; this bounded cleanup does not mark item 1 or ticket 0119 done.
 
-## Bounded request and HTTP audit candidate
+### Bounded request and HTTP audit candidate
 
 The next claimed slice compares the eight tests in `engine/request/tests.rs` and ten in `engine/http/tests.rs` at merged source `1613feec`. The [assertion map](../records/0119-request-http-audit.md) names each trigger, intervening operation, final guarantee, credible regression and closest exact existing proof. None has a complete stronger replacement. In particular, the public refused-answer usage test checks persistent totals but not the request test's in-memory call facts; deadline-held locks do not exercise fired cancellation; and the raw HTTP cases retain after-write or synchronous no-connection guarantees. This candidate changes no Rust test or ratchet number, runs no tests merely for a zero deletion, and leaves the wider audit open for root review.
 
-## What the build taught us
+### What the build taught us
 
 The rejected quiet-socket candidate mattered: a background accept count cannot replace a synchronous zero-connection check. The accepted positive-response helper kept after-write announcement and the 503 retry header through the shared fixture without changing the client. Both exact tests passed before and after the edit, each selecting one case. The old helper and raw response builders occupied 30 nonblank lines; their shared-fixture helper occupies 9. Caller updates make the measured test file 12 nonblank lines smaller, from 427 to 415. No test function or distinct regression was deleted. The [build record](../records/0119-listener-build.md) holds the focused checks and retained limits. The remaining listener sites and the broader engine audit need separate equivalence evidence; this slice does not close either issue.
 

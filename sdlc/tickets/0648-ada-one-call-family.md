@@ -21,7 +21,7 @@ Depends on: 0649, 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0648 SHA --memory 8 -- sh libraries/ada/check.sh`, an outside GNAT project imports the unpacked `thinkthen.gpr`, runs `examples/session_demo.adb`, and the installed Ada consumer's comparison passes for every shared case.
+- On the M5 through `pm job run --machine m5 0648 SHA --memory 8 -- sdlc/scripts/job sh libraries/ada/check.sh`, an outside GNAT project imports the unpacked `thinkthen.gpr`, runs `examples/session_demo.adb`, and the installed Ada consumer's comparison passes for every shared case.
 - `python3 build-tools/results/answer_rules.py` and `python3 conformance/library-surface.py --library ada` pass. Before the change, removing the Ada entries from `LEGACY_FILES` fails the first check on the Ada answer templates.
 
 ## Evidence

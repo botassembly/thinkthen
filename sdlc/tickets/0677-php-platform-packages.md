@@ -18,7 +18,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0677 SHA --memory 8 -- sh libraries/php/check.sh`, a clean Composer project installs the candidate archive and runs a named call with no library path. Before the change the check fails on the M5 on the missing tool, because only `linux-x86_64` is declared.
+- On the M5 through `pm job run --machine m5 0677 SHA --memory 8 -- sdlc/scripts/job sh libraries/php/check.sh`, a clean Composer project installs the candidate archive and runs a named call with no library path. Before the change the check fails on the M5 on the missing tool, because only `linux-x86_64` is declared.
 - Linux arm64: `pm job run --machine m5 0677 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/php`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence

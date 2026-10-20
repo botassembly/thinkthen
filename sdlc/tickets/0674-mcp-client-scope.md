@@ -19,7 +19,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0674 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && cargo build --locked --offline --bin thinkthen && python3 libraries/mcp/tests/test_client.py && python3 libraries/mcp/tests/test_installed.py target/debug/thinkthen target/debug/conformance-backend'`, the installed-binary MCP tests drive the built `thinkthen` over stdio with tool discovery, errors and cancellation intact, and the FIFO and stdin cases run. On current main those cases are skipped on macOS.
+- On the M5 through `pm job run --machine m5 0674 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && cargo build --locked --offline --bin thinkthen && python3 libraries/mcp/tests/test_client.py && python3 libraries/mcp/tests/test_installed.py target/debug/thinkthen target/debug/conformance-backend'`, the installed-binary MCP tests drive the built `thinkthen` over stdio with tool discovery, errors and cancellation intact, and the FIFO and stdin cases run. On current main those cases are skipped on macOS.
 - `git grep -n 'time.sleep' libraries/mcp` finds nothing; on current main it finds the loop in `test_client.py`.
 - Linux arm64: `pm job run --machine m5 0674 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/mcp`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
