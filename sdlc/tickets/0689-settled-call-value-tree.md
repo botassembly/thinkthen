@@ -37,6 +37,7 @@ Reviews: revision 74a84b5, accept
 
 - 2026-10-20 started
 - 2026-10-20 next: Fresh review accepted 28b3e5dd2 after job 1792492594769-67261 passed all255 native and tree fixtures with340 invocation outputs and all12 ordinary installed tests; earlier policy formatting helper typed and inventory receipts remain valid, the attempted selector was cleared by full profile and repeated coverage is recorded, old-API red remains unexecuted, and the configured closing gate is pending.
+- 2026-10-20 next: Fresh fixing review accepted 74a84b571 after M5 job 1792495609159-31056 passed format both clippy modes docs and both typed regressions; earlier targeted receipts exposed nesting and test-helper panic lints now fixed without assertion or projection changes, prior native and tree parity proof remains applicable, and the six-ticket integrated closing gate is next.
 
 ## Reviewed projection and installed proof
 
