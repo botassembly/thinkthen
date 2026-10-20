@@ -63,7 +63,7 @@ def render(native_facts, root, definitions):
         fields = ['uint64_t scalar;', f'const {row} *rows;', 'uint64_t count;', f'{row} first;']
         if function == 'recognize':
             fields += ['const thinkthen_cobol_AnswerRecognitionEdge *edges;', 'uint64_t edge_count;']
-        declarations += f'typedef struct {value_type} {{'.join(fields) + f'}} {value_type};\n'
+        declarations += f'typedef struct {value_type} {{' + ''.join(fields) + f'}} {value_type};\n'
         declarations += f'typedef struct {typ} {{tt_answer_owner *owner; {value_type} value; thinkthen_cobol_AnswerProbability probability; {receipt_types[function]} results; uint64_t facts_present; thinkthen_cobol_AnswerFacts facts;}} {typ};\n'
         signature = f'int TT_{function.upper()}(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,const thinkthen_cobol_RequestOptions *options,{typ} *out,thinkthen_cobol_AnswerStatus *status_out)'
         declarations += signature + ';\n'
