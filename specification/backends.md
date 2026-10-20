@@ -77,7 +77,6 @@ Any entry may set `requests_per_minute`, a whole number from 1 to 60,000, and th
 
 ```json
 {
-  "schema": "thinkthen.config/1",
   "backend": "liquid",
   "backends": {
     "liquid": {"requests_per_minute": 1000},
@@ -254,7 +253,6 @@ Malformed fields exit 5 without repeating values. The price-pair sentence is `co
 
 ```json
 {
-  "schema": "thinkthen.config/1",
   "backends": {
     "perplexity": {
       "requests_per_minute": 600,

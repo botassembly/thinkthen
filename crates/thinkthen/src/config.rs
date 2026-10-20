@@ -45,8 +45,8 @@ pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 const SHARED_BACKENDS: &str = "the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone";
 #[cfg(windows)]
 const SHARED_BACKENDS: &str = "another user owns the configuration file or its Windows access permissions allow another user to change it, so its `backends` are refused; keep it owned by your user and writable only by your user and Windows SYSTEM";
-const UNKNOWN: &str = "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`";
-const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`";
+const UNKNOWN: &str = "the configuration file holds a field other than `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`";
+const SCHEMA: &str = "delete configuration field `schema`";
 const CACHE_BYTES: &str =
     "configuration field `cache_bytes` must be a whole number greater than zero";
 
@@ -57,7 +57,6 @@ pub(crate) struct Config {
     present: bool,
     #[serde(skip)]
     shared: bool,
-    schema: String,
     url: Option<String>,
     model: Option<String>,
     cache: Option<bool>,
@@ -78,7 +77,6 @@ impl std::fmt::Debug for Config {
             .debug_struct("Config")
             .field("present", &self.present)
             .field("shared", &self.shared)
-            .field("schema", &self.schema)
             .field("url", &self.url.as_ref().map(|_| "<withheld>"))
             .field("model", &self.model)
             .field("cache", &self.cache)
@@ -141,9 +139,6 @@ impl Config {
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.schema != "thinkthen.config/1" {
-            return Err(refused(SCHEMA));
-        }
         if self
             .model
             .as_ref()
@@ -243,19 +238,17 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
     let Ok(Value::Object(fields)) = serde_json::from_slice::<Value>(bytes) else {
         return "the configuration file is not valid closed JSON";
     };
-    if !fields.contains_key("schema") {
+    if fields.contains_key("schema") {
         return SCHEMA;
     }
     for (name, value) in &fields {
         let fault = match (name.as_str(), value) {
-            ("schema", Value::String(_))
-            | ("url" | "model", Value::String(_) | Value::Null)
+            ("url" | "model", Value::String(_) | Value::Null)
             | ("cache", Value::Bool(_) | Value::Null) => continue,
             ("cache_bytes", value) if value.is_null() || value.is_u64() => continue,
             ("usd_per_million_input" | "usd_per_million_output", Value::String(_))
             | ("backend", Value::String(_) | Value::Null)
             | ("backends", Value::Object(_) | Value::Null) => continue,
-            ("schema", _) => SCHEMA,
             ("url", _) => "configuration field `url` must be a string",
             ("model", _) => "configuration field `model` must be a string",
             ("cache", _) => "configuration field `cache` must be true or false",

@@ -324,9 +324,9 @@ fn ollama_needs_no_key_at_loopback_and_its_key_stays_off_other_hosts() {
         )
     };
     let stolen = format!(
-        r#"{{"schema":"thinkthen.config/1","backends":{{"stolen":{{"url":"{LIQUID_BASE}","key_env":"OLLAMA_API_KEY","model":"m"}}}}}}"#
+        r#"{{"backends":{{"stolen":{{"url":"{LIQUID_BASE}","key_env":"OLLAMA_API_KEY","model":"m"}}}}}}"#
     );
-    let described = r#"{"schema":"thinkthen.config/1","backends":{"local":{"url":"http://127.0.0.1:9/v1","key_env":"K","model":"m","descriptions":"text"}}}"#;
+    let described = r#"{"backends":{"local":{"url":"http://127.0.0.1:9/v1","key_env":"K","model":"m","descriptions":"text"}}}"#;
     // (flags, changes, configuration, standard error, exit code)
     type Case<'a> = (Vec<&'a str>, Vec<(&'a str, &'a str)>, &'a str, String, i32);
     let cases: Vec<Case<'_>> = vec![
@@ -398,7 +398,7 @@ fn a_question_key_holds_the_bytes_as_sent_so_forms_share_only_equal_questions() 
     let target = typesafe_mimic();
     let home = Home::new("ollama-cache");
     home.config(&format!(
-        r#"{{"schema":"thinkthen.config/1","backends":{{"local":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"nimble"}}}}}}"#,
+        r#"{{"backends":{{"local":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"nimble"}}}}}}"#,
         target.base()
     ));
     let ollama = ["--backend", "ollama", "--url", target.base()];
