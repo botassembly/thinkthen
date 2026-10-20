@@ -359,7 +359,8 @@ class GateRouting(unittest.TestCase):
                                     'rust': {'version': 'unused', 'commands': [],
                                              'groups': ['common'], 'platforms': ['linux']},
                                     'image': {'commands': ['fixture-image-tool'],
-                                              'groups': ['common'], 'platforms': ['linux']}}}
+                                              'groups': ['common', 'lint', 'test'],
+                                              'platforms': ['linux']}}}
                     (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
                     binary = root / 'host-bin'
                     binary.mkdir()
