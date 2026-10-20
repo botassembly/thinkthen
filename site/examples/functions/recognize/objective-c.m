@@ -18,11 +18,11 @@ int main(void) { @autoreleasepool {
         input:text
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    TTRecognizeEntities *facts = [judgment.value scalar];
-        for (TTEntity *one in facts.entities.value) {
+    NSDictionary *facts = judgment.value.value;
+        for (NSDictionary *one in facts[@"entities"]) {
             [names addObject:[NSString stringWithFormat:
-                @"%@ (%@)", one.text.value,
-                one.kind.value]];
+                @"%@ (%@)", one[@"text"],
+                one[@"kind"]]];
         }
     NSArray *expected = @[
         @"Sam Patel (person)",

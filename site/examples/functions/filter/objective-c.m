@@ -30,7 +30,7 @@ int main(void) { @autoreleasepool {
         input:input
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    [complaints addObjectsFromArray:judgment.value.items];
+    [complaints addObjectsFromArray:judgment.value.value];
     NSArray *expected = @[reviews[1], reviews[3]];
     assert([complaints isEqualToArray:expected]);
     return 0;

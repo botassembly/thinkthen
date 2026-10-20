@@ -2,10 +2,9 @@
 import json
 import re
 from csharp import shape, enum_values
-from host_answers import aggregate_answers, named_object_fields
 from union_shapes import predicate
 
-ROOTS = ('completesessionPacket', 'completeplan')
+ROOTS = ('completesessionPacket', 'completeplan', 'completeCallSuccess')
 
 
 def name(key):
@@ -145,21 +144,13 @@ def outputs(definitions, input_definitions=None, abi=None):
     implementation += answer_implementation
     declarations = lambda macro, lines: next(line.split(' ', 2)[2] for line in lines if line.startswith('#define ' + macro + ' '))
     header += answer_header
-    header += ['@class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;',
+    header += ['@class TTTask, TTUsagePersistenceStatus;',
                'typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);',
                'typedef TTInputRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
-               '@interface TTCall : NSObject', '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
-               '@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;', '@end',
-               '@interface TTCall (Values)',
-               '@property(nonatomic, strong, readonly) TTCallValue *value;',
-               '@property(nonatomic, strong, readonly, nullable) TTCallProbability *probability;',
-               '@property(nonatomic, copy, readonly) NSArray<TTResultNode *> *results;',
-               '@end',
                '@interface TTFoundationClient : NSObject',
                '- (nullable instancetype)initWithSettings:(nullable TTInputEngineSettings *)settings error:(NSError **)error NS_DESIGNATED_INITIALIZER;',
                '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
                '- (nullable TTPlan *)plan:(TTInputRequest *)request error:(NSError **)error;',
-               '- (nullable TTSession *)startRequest:(TTInputRequest *)request error:(NSError **)error;',
                '- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;',
                '- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;',
                '@end', '@interface TTFoundationClient (NamedCalls)', declarations('TT_GENERATED_NAMED_DECLARATIONS', calls), '@end']
@@ -355,11 +346,7 @@ id TTNative_thinkthen_complete_json(const struct thinkthen_complete_json *value)
     case THINKTHEN_COMPLETE_JSON_STRING: return TTNativeString(value->data.string);
     case THINKTHEN_COMPLETE_JSON_NUMBER: {
         NSString *text = TTNativeString(value->data.number);
-        NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:text locale:@{NSLocaleDecimalSeparator:@"."}];
-        double floating = text.doubleValue;
-        if (![number isEqual:NSDecimalNumber.notANumber] &&
-            !([number isEqual:NSDecimalNumber.zero] && floating != 0)) return number;
-        if (!isfinite(floating)) TTInvalidResult(); return @(floating);
+        return [NSJSONSerialization JSONObjectWithData:[text dataUsingEncoding:NSUTF8StringEncoding] options:NSJSONReadingFragmentsAllowed error:NULL];
     }
     case THINKTHEN_COMPLETE_JSON_ARRAY: {
         NSMutableArray *items = [NSMutableArray array];
@@ -423,6 +410,18 @@ id TTNative_thinkthen_complete_json(const struct thinkthen_complete_json *value)
             body += ['return ' + decode(dict(members)['value'], 'value->value', schema.get('type') == 'boolean') + ';']
         lines += ['id TTNative_' + key + '(const struct ' + key + ' *value) {'] + body + ['}']
     return '\n'.join(lines) + '\n'
+
+
+def named_object_fields(source, definitions):
+    """Find fields whose every object alternative carries a required text name."""
+    def named(value):
+        if '$ref' in value: value = definitions[value['$ref'].split('/')[-1]]
+        if 'variants' in value:
+            return all(named(definitions[child]) for child, _ in value['variants'])
+        field = value.get('properties', {}).get('name', {})
+        return 'name' in value.get('required', []) and field.get('type') in ('string', ['string'])
+    return [key for key, value in source.get('properties', {}).items()
+            if isinstance(value, dict) and named(value)]
 
 
 def rename_inputs(outputs):

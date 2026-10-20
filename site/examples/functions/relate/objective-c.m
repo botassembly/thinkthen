@@ -32,15 +32,13 @@ int main(void) { @autoreleasepool {
         input:input
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    NSArray *edges = judgment.value.items;
-    for (TTRelatedEntityEdge *edge in edges) {
-        TTRelationEndpointRelatedEntity *company =
-            (id)edge.source.value;
-        TTRelationEndpointRelatedEntity *product =
-            (id)edge.target.value;
+    NSArray *edges = judgment.value.value;
+    for (NSDictionary *edge in edges) {
+        NSDictionary *company = edge[@"source"];
+        NSDictionary *product = edge[@"target"];
         [whoMakes addObject:[NSString stringWithFormat:
-            @"%@ makes %@", company.name.value,
-                product.name.value]];
+            @"%@ makes %@", company[@"name"],
+                product[@"name"]]];
     }
     NSArray *expected = @[
         @"Apple makes iPhone",

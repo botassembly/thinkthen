@@ -20,15 +20,15 @@ int main(void) { @autoreleasepool {
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *refund = [client decide:refundQuestion input:input options:nil feed:nil error:&error];
         if (!refund || error) return 1;
-        if (refund.probability.scalar.doubleValue != [@[@0.99, @0.01, @0.54][i] doubleValue]) return 1;
-        puts([refund.value scalar] ? ([[refund.value scalar] boolValue] ? "true" : "false") : "not sure");
+        if (refund.probability.value.doubleValue != [@[@0.99, @0.01, @0.54][i] doubleValue]) return 1;
+        puts(refund.value.value ? ([refund.value.value boolValue] ? "true" : "false") : "not sure");
     }
     for (NSUInteger i = 0; i < messages.count; i++) { NSString *text = messages[i];
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *team = [client choose:teamQuestion input:input options:nil feed:nil error:&error];
         if (!team || error) return 1;
-        if (team.probability.scalar.doubleValue != 1.0) return 1;
-        puts([team.value scalar] ? [[team.value scalar] UTF8String] : "not sure");
+        if (team.probability.value.doubleValue != 1.0) return 1;
+        puts(team.value.value ? [team.value.value UTF8String] : "not sure");
     }
     return 0;
 } }
@@ -36,3 +36,5 @@ int main(void) { @autoreleasepool {
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/objective-c/) for results, failures, record inputs and offline replay.
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
+
+Generated call accessors preserve missing, null and value through `TTPresence.state`. Read `value`, `probability`, `pick` and `resolution` from the canonical final answer. Failures return an error with native facts and an optional record position.

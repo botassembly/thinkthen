@@ -26,7 +26,7 @@ int main(void) { @autoreleasepool {
         input:message
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    fittingLabels = [judgment.value scalar];
+    fittingLabels = judgment.value.value;
     assert([fittingLabels isEqualToArray:labels]);
     return 0;
 } }

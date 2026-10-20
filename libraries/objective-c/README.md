@@ -23,18 +23,18 @@ int main(void) { @autoreleasepool {
         input:broken
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    isRefund = [[judgment.value scalar] boolValue];
+    isRefund = [judgment.value.value boolValue];
     NSNumber *refundProbability =
-        judgment.probability.scalar;
+        judgment.probability.value;
     assert(isRefund);
     assert(refundProbability.doubleValue == 0.99);
     return 0;
 } }
 ```
 
-`call.value` is a `TTCallValue`: `scalar` holds one answer and `items` holds ordered answers for record inputs. Scalars preserve authored Foundation values, including `NSNull`, booleans and precise integers. Read an authored leaf with message syntax, such as `[call.value scalar]`. A nil decision or choice means not sure. A failure returns an error instead of an answer.
+`call.value`, `call.probability`, `call.pick`, `call.index` and `call.resolution` read the final answer fields returned by Rust. Each uses `TTPresence` to preserve missing, null and value separately. A false answer remains a value. Check `state` before reading `value`; explicit null represents `TTPresenceNull`.
 
-`call.probability` is a `TTCallProbability`: `scalar` is an `NSNumber`, and `items` contains typed probability wrappers for records. A score's probability differs from its numerical value. `call.results` retains the complete typed result records; `call.facts` retains final usage, counts and model information. Generated `TTPresence` fields distinguish missing, explicit null and value. These immutable results survive native owner release.
+`call.answer` retains the generated typed answer. `call.results` retains the complete native receipts, and `call.facts` retains final usage, counts and model information. These immutable results survive native owner release. A failed call returns `TTFailureError` instead of an answer.
 
 `TTTextQuestion`, `TTQuestionFile`, `TTQuestionName` and `TTQuestionReference` select questions. `TTQuestionDefinition` accepts authored builders. `TTOrderedMap` preserves authored member order. `TTItem` builds records, `TTFiles` selects native file readers, and `TTImageBytes(data, media)` builds a byte attachment. The engine checks image admission. Arbitrary authored leaves accept ordinary Foundation values.
 
@@ -46,9 +46,9 @@ Set a hosted key with `THINKTHEN_API_KEY`. [Backend setup](https://thinkthen.dev
 
 ## Advanced calls
 
-`TTSettings` configures the client; `TTControls` selects call options. `plan:error:` builds a typed plan without sending. Blocking calls wait on the calling thread. Asynchronous calls take a completion block and return a cancellable task. Completion runs on a private serial queue; dispatch UI changes to the main queue.
+`TTSettings` configures the client; `TTControls` selects call options. `plan:error:` builds a typed plan without sending. Blocking calls wait on the calling thread. Asynchronous calls take a completion block and return a cancellable task. Completion runs on the dispatch worker; dispatch UI changes to the main queue.
 
-A `TTFeed` supplies one descriptor at a time, EOF, or a typed reader failure. `TTSession` exposes push, finish, read, cancel and close for caller-owned scheduling. `TTFailureError` preserves the native error, retryability and available final facts. `usagePersistence:` observes usage storage; `finishUsageStatus:` finishes pending writes.
+A `TTFeed` supplies one descriptor at a time, EOF, or a typed reader failure on the calling worker. Cancellation signals the native token and completion waits for native cleanup. `TTFailureError` preserves the native error, retryability and available final facts. `usagePersistence:` observes usage storage; `finishUsageStatus:` finishes pending writes.
 
 ## Build and check
 

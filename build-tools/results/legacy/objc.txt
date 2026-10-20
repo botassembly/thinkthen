@@ -1,2 +1,0 @@
-build-tools/results/templates/objc.py
-build-tools/results/templates/objc_calls.py

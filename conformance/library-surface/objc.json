@@ -25,7 +25,6 @@
       ],
       "lifecycle_owners": [
         "TTFoundationClient",
-        "TTSession",
         "TTTask",
         "TTUsagePersistenceStatus",
         "TTCall",
@@ -48,26 +47,14 @@
       },
       "wrapper_members": {
         "TTCall": [
-          "packets",
-          "terminal",
-          "decideAnswer",
-          "chooseAnswer",
-          "tagAnswer",
-          "scoreAnswer",
-          "filterAnswer",
-          "rankAnswer",
-          "findAnswer",
-          "annotateAnswer",
-          "recognizeAnswer",
-          "relateAnswer"
-        ],
-        "TTSession": [
-          "tryPush",
-          "finish",
-          "tryReadEnded",
-          "waitInput",
-          "cancel",
-          "close"
+          "facts",
+          "answer",
+          "value",
+          "probability",
+          "pick",
+          "index",
+          "resolution",
+          "results"
         ],
         "TTTask": [
           "cancel"
@@ -76,7 +63,8 @@
           "kind",
           "retryable",
           "facts",
-          "failure"
+          "failure",
+          "position"
         ],
         "TTOrderedEntry": [
           "key",
@@ -90,15 +78,13 @@
         "TTFoundationClient": [
           "initWithSettings",
           "init",
-          "new",
-          "startRequest"
+          "new"
         ]
       },
       "representation_types": [
         "TTFailureError",
         "TTPresence",
         "TTResultNode",
-        "TTSession",
         "TTTask",
         "TTUsagePersistenceStatus"
       ]

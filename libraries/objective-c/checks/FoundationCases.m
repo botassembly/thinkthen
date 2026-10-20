@@ -21,59 +21,6 @@ static NSDictionary *orderedFields(NSDictionary *node) {
     return fields;
 }
 static id readFixture(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
-static id plainValue(id value) {
-    if ([value isKindOfClass:TTResultNode.class]) return ((TTResultNode *)value).rawFields;
-    if ([value isKindOfClass:NSArray.class]) return TTArray(value, ^id(id item) { return plainValue(item); });
-    if ([value isKindOfClass:NSDictionary.class]) return TTMap(value, ^id(id item) { return plainValue(item); });
-    return value ?: NSNull.null;
-}
-static void completeValue(TTCall *call, NSString *verb, NSDictionary *input) {
-    NSMutableArray *expected = [NSMutableArray array];
-    for (TTResultNode *result in call.results) {
-        NSDictionary *record = result.rawFields;
-        [expected addObject:record[[verb isEqual:@"rank"] ? @"index" : [verb isEqual:@"filter"] ? @"input" : @"value"]];
-    }
-    if ([verb isEqual:@"find"]) {
-        require(expected.count == 1);
-        require([plainValue(call.value.scalar) isEqual:expected[0]]);
-    } else if ([verb isEqual:@"relate"]) {
-        require(expected.count == 1);
-        require([plainValue(call.value.items) isEqual:expected[0]]);
-    } else if (![@[@"rank", @"filter"] containsObject:verb] && [@[@"text", @"json"] containsObject:input[@"kind"]]) {
-        require(expected.count == 1 && call.value.items == nil);
-        require([plainValue(call.value.scalar) isEqual:expected[0]]);
-    } else {
-        require(call.value.scalar == nil && call.value.items != nil);
-        require([plainValue(call.value.items) isEqual:expected]);
-    }
-}
-static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal) {
-    require(terminal.kind.state == TTPresenceValue);
-    if (terminal.facts.state == TTPresenceValue) {
-        require(terminal.facts.value.callId.state == TTPresenceValue);
-        require(terminal.facts.value.requestsSent.state == TTPresenceValue);
-    }
-    for (TTSessionPacket *packet in packets) {
-        if ([packet isKindOfClass:TTSessionPacketDecideRow.class]) {
-            TTDecisionRecord *value = ((TTSessionPacketDecideRow *)packet).value.value;
-            id raw = value.rawFields[@"value"];
-            require(value.value.state == (raw == NSNull.null ? TTPresenceNull : TTPresenceValue));
-            if (value.value.state == TTPresenceValue) require([value.value.value isEqual:raw]);
-        }
-        if ([packet isKindOfClass:TTSessionPacketRecognizeAggregate.class]) {
-            NSArray<TTRecognition *> *values = ((TTSessionPacketRecognizeAggregate *)packet).value.value;
-            require(values.count == [packet.rawFields[@"value"] count]);
-            for (TTRecognition *value in values) {
-                require(value.value.state == TTPresenceValue);
-                if ([value.value.value isKindOfClass:TTRecognizeEntities.class]) {
-                    TTRecognizeEntities *recognized = (id)value.value.value;
-                    require(recognized.entities.state == TTPresenceValue);
-                    require(recognized.entities.value.count == [recognized.rawFields[@"entities"] count]);
-                }
-            }
-        }
-    }
-}
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         require(argc == 3 || argc == 4);
@@ -97,44 +44,8 @@ int main(int argc, const char *argv[]) {
             retained = call; failure = problem; dispatch_semaphore_signal(completed);
         };
         TTTask *task = nil;
-        NSArray<TTSessionPacket *> *explicitPackets = nil;
-        TTSessionPacketTerminal *explicitTerminal = nil;
         NSString *verb = fixture[@"verb"];
-        if ([fixture[@"cancel"] boolValue] || [fixture[@"held_cancel"] boolValue]) {
-            // The explicit session exposes the final native terminal. TTTask
-            // deliberately settles cancellation early with facts still pending.
-            NSDictionary *request = @{@"call":@{
-                @"function":verb, @"question":question,
-                @"input":input, @"options":options}};
-            TTSession *session = [client startRequest:[[TTRequest alloc] initWithFields:request] error:&error];
-            if (session) {
-                if ([fixture[@"cancel"] boolValue]) [session cancel];
-                require([session finish:nil error:&error]);
-                if ([fixture[@"held_cancel"] boolValue]) {
-                    (void)getchar(); [session cancel]; puts("cancel-fired"); fflush(stdout);
-                }
-                if (retained && !failure) {
-                require(retained.value != nil && retained.results != nil);
-                completeValue(retained, verb, input);
-                require(retained.facts.state == TTPresenceValue);
-                if ([verb isEqual:@"score"] || [verb isEqual:@"tag"] || [verb isEqual:@"annotate"]) require(retained.probability == nil);
-            }
-            NSMutableArray *packets = [NSMutableArray array];
-                NSDate *limit = [NSDate dateWithTimeIntervalSinceNow:30];
-                BOOL ended = NO;
-                while (!ended) {
-                    require(limit.timeIntervalSinceNow > 0);
-                    TTSessionPacket *packet = [session tryReadEnded:&ended error:&error];
-                    require(error == nil);
-                    if (packet) {
-                        [packets addObject:packet];
-                        if ([packet isKindOfClass:TTSessionPacketTerminal.class]) explicitTerminal = (id)packet;
-                    } else if (!ended) require([session waitInput:NO error:&error]);
-                }
-                [session close]; session = nil;
-                explicitPackets = [packets copy];
-            }
-        } else {
+        {
             TTFeed feed = nil;
             NSArray *items = fixture[@"ordered"][@"feed_items"] ? orderedValue(fixture[@"ordered"][@"feed_items"]) : nil;
             if (items) {
@@ -151,69 +62,27 @@ int main(int argc, const char *argv[]) {
 #undef NAMED
         }
         if (task) {
+            if ([fixture[@"held_cancel"] boolValue]) {
+                (void)getchar(); [task cancel]; puts("cancel-fired"); fflush(stdout);
+            } else if ([fixture[@"cancel"] boolValue]) [task cancel];
             require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC)) == 0);
         } else failure = error;
-        // Retained public result objects must outlive both native owners.
         task = nil; client = nil;
         NSDictionary *payload;
-        if (retained || explicitPackets) {
-            NSArray<TTSessionPacket *> *values = retained ? retained.packets : explicitPackets;
-            typed(values, retained ? retained.terminal : explicitTerminal);
-            if (blocking && retained && [verb isEqual:@"annotate"] && retained.terminal.failure.state != TTPresenceValue) {
-                require(failure == nil && error == nil);
-                NSArray<TTAnnotation *> *answer = (id)retained.results;
-                require(answer != nil && error == nil);
-                NSMutableArray *rows = [NSMutableArray array];
-                for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketAnnotateRow.class]) [rows addObject:((TTSessionPacketAnnotateRow *)packet).value.value];
-                require(answer.count == rows.count);
-                for (NSUInteger index = 0; index < rows.count; index++) {
-                    TTAnnotation *row = rows[index], *projected = answer[index];
-                    require(projected.input.state == row.input.state);
-                    require([projected.rawFields[@"input"] isEqual:row.rawFields[@"input"]]);
-                    require(projected.value.value.count == row.value.value.count);
-                    for (NSString *key in row.value.value) {
-                        TTAnnotatedField *field = row.value.value[key], *copy = projected.value.value[key];
-                        require([copy.kind isEqual:field.kind]);
-                        if ([field.value isKindOfClass:TTFailed.class]) {
-                            TTFailure *failed = ((TTFailed *)field.value).failed.value;
-                            TTFailure *copied = ((TTFailed *)copy.value).failed.value;
-                            require([copied.kind.value isEqual:failed.kind.value]);
-                            require(copied.cause.state == failed.cause.state);
-                            if (failed.cause.state == TTPresenceValue) require([copied.cause.value isEqual:failed.cause.value]);
-                        } else require([copy.value isEqual:field.value]);
-                    }
-                }
-            }
-            if (retained && [verb isEqual:@"rank"] && !failure) {
-                NSArray<NSNumber *> *answer = retained.value.items;
-                require(answer != nil && error == nil);
-                NSMutableArray *indices = [NSMutableArray array];
-                for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketRankAggregate.class]) {
-                    for (TTRankedRecord *row in ((TTSessionPacketRankAggregate *)packet).value.value) [indices addObject:row.index.value];
-                }
-                require([answer isEqual:indices]);
-            }
-            if (retained && !failure) {
-                require(retained.value != nil && retained.results != nil);
-                completeValue(retained, verb, input);
-                require(retained.facts.state == TTPresenceValue);
-                if ([verb isEqual:@"score"] || [verb isEqual:@"tag"] || [verb isEqual:@"annotate"]) require(retained.probability == nil);
-            }
-            NSMutableArray *packets = [NSMutableArray array];
-            for (TTSessionPacket *packet in values) [packets addObject:packet.rawFields];
-            payload = @{@"packets":packets};
-            if ([fixture[@"call_result_contract"] boolValue]) {
-                require(retained && !failure && retained.results.count == 1);
-                NSMutableArray *records = [NSMutableArray array];
-                for (TTResultNode *record in retained.results) [records addObject:record.rawFields];
-                payload = @{@"packets":packets, @"call_result":@{
-                    @"value":retained.value.scalar ?: NSNull.null,
-                    @"probability":retained.probability.scalar ?: NSNull.null,
-                    @"results":records, @"facts":retained.facts.value.rawFields}};
-            }
+        if (retained) {
+            require(!failure);
+            require(retained.facts.state == TTPresenceValue);
+            require(retained.answer.state == TTPresenceValue);
+            require(retained.resolution.state == TTPresenceValue);
+            payload = retained.rawFields;
         } else {
-            require(failure != nil);
-            payload = @{@"admission":@{@"code":@(failure.code), @"message":failure.localizedDescription}};
+            require([failure isKindOfClass:TTFailureError.class]);
+            TTFailureError *native = (id)failure;
+            NSMutableDictionary *fields = [@{@"code":@(native.kind), @"message":native.localizedDescription,
+                @"retryable":@(native.retryable)} mutableCopy];
+            if (native.position) fields[@"position"] = native.position;
+            if (native.facts) fields[@"facts"] = native.facts.rawFields;
+            payload = @{@"admission":fields};
         }
         NSData *output = [NSJSONSerialization dataWithJSONObject:payload options:0 error:NULL];
         require(output != nil);
