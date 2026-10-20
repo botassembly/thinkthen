@@ -162,3 +162,30 @@ fn find_count_range_and_native_admission_share_the_complete_set_boundary() {
         }
     }
 }
+
+#[test]
+fn saved_rank_set_refusals_retain_native_file_causes() {
+    let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("rank-set-source-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let path = folder.join("question.json");
+    for field in ["on", "threshold"] {
+        let value = if field == "on" { json!("") } else { json!(0.5) };
+        std::fs::write(&path, json!({"version":1,"questions":{"first":{"decide":"Fits?",field:value}}}).to_string()).unwrap();
+        for question in [
+            RequestQuestion::File { path: path.clone() },
+            RequestQuestion::Reference { reference: format!("@{}", path.display()) },
+        ] {
+            let request = Request::for_function(RequestFunction::Rank, RequestArguments {
+                question,
+                input: RequestInput::Records { items: Vec::new() },
+                options: RequestOptions::default(),
+            }).admit().unwrap();
+            let error = request.resolve_question().unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::Local);
+            assert_eq!(error.to_string(), format!("`questions.first.{field}`: rank question sets take no threshold or on"));
+            assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::QuestionSet(_))));
+        }
+    }
+    std::fs::remove_dir_all(folder).unwrap();
+}
