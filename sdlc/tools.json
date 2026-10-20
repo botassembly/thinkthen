@@ -88,6 +88,17 @@
         "common"
       ]
     },
+    "musl": {
+      "commands": [
+        "musl-gcc"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "release-pack"
+      ]
+    },
     "sccache": {
       "commands": [
         "sccache"
@@ -512,6 +523,7 @@
       "sha256": "67abcc2cff49a9dd4536b12bc4a7c2b82c434ddaa42b90516c9734f4dd5481af"
     },
     "tool_groups": [
+      "release-pack",
       "lint",
       "test",
       "spec",
