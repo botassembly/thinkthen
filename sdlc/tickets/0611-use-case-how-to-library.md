@@ -5,17 +5,14 @@ Status: OPEN.
 Milestone: 0.2.2
 
 Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2.1 ships.
-## Why
+
+## Outcome
+
+### Why
 
 Ian wants every use-case idea from 2026-10-01 on the site as its own how-to page. People search for how to use a decision model like Jev for a job. Those searches should land on these pages. The section stays out of the main menu, so it does not clutter it. The sitemap, the footer's sitemap columns and an index page reach it, so search engines find every page.
 
-## Prior evidence
-
-- Earlier site work made the site indexable. `robots.txt` allows all, and the sitemap lists every listed page. `site/src/pages/how-tos/` holds the existing how-tos.
-- Function pages have one tab strip and replay every sample. Releases gate on the doc tests (`npm run test-docs`).
-- Ian's rulings: prefer asserts to show results; keep examples simple, with no `--batch` in simple examples; Bash and SQL show their output.
-
-## The ideas
+### The ideas
 
 Each line becomes one page. The title names the job and the tool, so it matches a search, for example "Triage alerts in Bash with a decision model".
 
@@ -80,7 +77,7 @@ Agent harnesses:
 14. Escalate: is this hard case one for a person?
 15. Write order: which agent writes first?
 
-## Change
+### Change
 
 1. Add a section at `/how-tos/use-cases/` with an index page grouped by Shell, Data and Agent harnesses. Leave it out of the main menu. Link the index from the footer and the how-tos index. List every page in the sitemap and `llms.txt`.
 2. Write one page per idea in plain sentences per `site/WRITING.md`: the problem in two or three sentences, the question, one short replayed example, its output or assert, what the code does with the answer, and how to tune the cutoff. Shell pages use Bash. Data pages show DuckDB SQL first and one data-frame example where it fits. Agent pages use Bash or Python. Keep each example simple, with no `--batch`. Give each page a unique title and description, and link its function page.
@@ -90,7 +87,7 @@ Agent harnesses:
 
 The work may land in slices: shell, data, agents.
 
-## Ticket review decisions
+### Ticket review decisions
 
 The fresh ticket review of 2026-10-01 returned ten findings. The lead decided each one, and these override the text above:
 
@@ -105,14 +102,20 @@ The fresh ticket review of 2026-10-01 returned ten findings. The lead decided ea
 9. The build starts after 0.2.1 ships.
 10. Agent pages name these functions: Permission `decide` with a band; Tool choice `rank`; Context `decide`; Model choice `decide` with a band; Parallel work `decide`; Data safety `decide`; Off track `decide`; Done check `decide`; Review `decide`; Evaluation `audit`; Refusal guard several `decide` questions; Memory recall `rank`; Escalate `decide` with a band.
 
-## Retained behavior
+### Retained behavior
 
 The main menu stays the same. Every other page keeps its content. `npm run build`, `npm run check`, both smoke runs and `npm run test-docs` pass with every key and `THINKTHEN_` variable unset and `CARGO_TARGET_DIR` unset.
 
-## Proof
+### Proof
 
 The built sitemap listing every page, shot-scraper screenshots of the index and three pages at 375 and 1280 px, the live spend from `live --status`, and a fresh reviewer's ACCEPT per slice.
 
-## Deferred
+### Deferred
 
 Translations of each example into the other bindings.
+
+## Evidence
+
+- Earlier site work made the site indexable. `robots.txt` allows all, and the sitemap lists every listed page. `site/src/pages/how-tos/` holds the existing how-tos.
+- Function pages have one tab strip and replay every sample. Releases gate on the doc tests (`npm run test-docs`).
+- Ian's rulings: prefer asserts to show results; keep examples simple, with no `--batch` in simple examples; Bash and SQL show their output.

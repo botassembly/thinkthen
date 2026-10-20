@@ -1,6 +1,6 @@
 # 0744 — Patch the shipped TLS certificate dependencies
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -31,3 +31,6 @@ Changes: `**/Cargo.lock`, `Cargo.lock`. Change a manifest only if the existing c
 - 2026-10-20 started
 - 2026-10-20 next: setup: Gator jobs 1792527683967-1234165 and 1792528070953-1250064 exited 1 before lint/test because the pinned Ubuntu snapshot returned HTTP 503 during image build; no further retry or source workaround. Await coordinator ruling and the M5 standard gate result.
 - 2026-10-20 next: product: Gator candidate job 1792529452380-1255765 exited 1 in release-archive-self-test.py after lint and advisory checks; release-pack rejects its derived Dart native-assets.json because it compares the rewritten paired-C checksum manifest with source bytes. This distinct packaging outcome requires coordinator ordering; no unchanged retry or identity-assertion waiver. Await M5 land-check real exit.
+- 2026-10-20 next: setup: normal landing gate job 1792532702783-21422 exited 100 after 2164 of 2165 Linux routine tests passed; the unchanged aggregate refusal/secrecy matrix timed out at 5.002 seconds with no assertion diagnostic. Earlier configured job 1792529456380-4483 passed the same product; no unchanged retry, deadline increase or test waiver. Await coordinator ruling for the existing routine-limit outcome.
+
+- 2026-10-20 landing authority: PM explicitly approved integration on green configured M5 receipt 1792529456380-4483 (exit 0), gated tree 8408f056c7d5a8b7effbce06151a6ec21e58a770. Later main edits change only sdlc records. Later M5 receipt 1792532702783-21422 timed out in the existing aggregate refusal fixture; setup repair belongs to 0605. Gator packaging failure remains assigned to 0748; no failed receipt is treated as a pass.

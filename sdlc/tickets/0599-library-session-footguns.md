@@ -10,6 +10,19 @@ Draft: filed 2026-10-15 by the 0.2 PM from the design review behind ticket 0598,
 
 No library's session or incremental API can hang, spin, race or lose a result on a plausible caller's code, and every library's documented front door hands ThinkThen an iterator or stream and receives answers back.
 
+### Scope
+
+- Changes: decided per item by the 0.3 PM. Expect `crates/thinkthen/src/public/request/`, `libraries/cpp/`, `libraries/ada/`, `libraries/zig/`, `libraries/jvm/`, `libraries/python/`, `libraries/php/`, `libraries/dart/`, `libraries/ruby/` and the SQL host.
+- Keeps: every request body and answer.
+
+### Proof
+
+One outside-in case per item at the library's public entry point, under replay. Each fails before its fix and passes after. A thread sanitizer run covers the C++ race.
+
+### Defers
+
+The push hang itself is ticket 0598, in 0.2.
+
 ## Evidence
 
 - Ian, 2026-10-15: "What do we do to make it so humans don't have footguns when they're making their code, or agents are making code? I want to make sure that there are no issues."
@@ -26,16 +39,3 @@ No library's session or incremental API can hang, spin, race or lose a result on
   10. **Ruby.** Any interrupt during a wait cancels the whole session.
   11. **SQL row order.** The shared SQL host puts failure rows after recovered rows (`sql_request.rs`).
   12. **Repeated loop.** The step loop is repeated in Python, TypeScript, Ruby, R, PHP and Objective-C. One core call could own it.
-
-## Scope
-
-- Changes: decided per item by the 0.3 PM. Expect `crates/thinkthen/src/public/request/`, `libraries/cpp/`, `libraries/ada/`, `libraries/zig/`, `libraries/jvm/`, `libraries/python/`, `libraries/php/`, `libraries/dart/`, `libraries/ruby/` and the SQL host.
-- Keeps: every request body and answer.
-
-## Proof
-
-One outside-in case per item at the library's public entry point, under replay. Each fails before its fix and passes after. A thread sanitizer run covers the C++ race.
-
-## Defers
-
-The push hang itself is ticket 0598, in 0.2.
