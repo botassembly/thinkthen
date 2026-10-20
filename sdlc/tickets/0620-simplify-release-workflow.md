@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0613, 0614, 0615, 0619, 0622
 
+Reviews: revision 5c3886a, accept
+
 ## Outcome
 
 - Changes: `.github/workflows/release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-language-tools.py`, `sdlc/scripts/release-language-tools-self-test.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/workflows`, `sdlc/scripts/README.md`, `sdlc/tools.json`, `sdlc/scripts/tools.py`, `sdlc/scripts/linux-check`.
