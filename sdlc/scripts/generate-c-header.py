@@ -38,7 +38,7 @@ def interface_header(header):
     # macro is added afterwards, so generation never hashes its own output.
     quoted = rb'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
     declarations = re.sub(quoted + rb'|/\*.*?\*/|//[^\n]*',
-                          lambda match: b'' if match[0].startswith(b'/') else match[0],
+                          lambda match: b' ' if match[0].startswith(b'/') else match[0],
                           header, flags=re.S)
     declarations = re.sub(rb'(?m)^#define THINKTHEN_VERSION_(?:MAJOR|MINOR|PATCH) [^\n]*\n', b'', declarations)
     tokens = re.findall(quoted + rb'|[A-Za-z_][A-Za-z_0-9]*|[0-9]+|[^\s]', declarations)
