@@ -35,3 +35,7 @@ R has the largest hand-written Rust layer among the direct bridges: about 1,550 
 - **Run function.** 0629 added `Engine::call`, which owns a named call from start to settled result and takes the stop controls.
 - **Churn.** R had 253 commits since 2026-09-15, 63 of them fixes, the most of any library here.
 - `crates/thinkthen` is unchanged, so `specification/rust-api-0.2.md` does not change. `conformance/library-surface.json` lists R's declarations as `NAMESPACE` and `R/*.R`, which keep their public names.
+
+## Progress
+
+- 2026-10-20 started
