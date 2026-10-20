@@ -25,3 +25,7 @@ Phase: 1
 Ian asked why Docker kept filling the M5 (Jarvis, 2026-10-20). Seven arm64 images built in 18 hours, 12 to 21 GiB each, about 107 GiB in all. `linux-check` tags the image with a hash of seven inputs, including `tools.py` and `children.py`, which changed 9 and 3 times in 30 hours. One `RUN` installs every toolchain under the classic builder, so every edit rebuilt the whole image from nothing, and the old image stayed.
 
 This ticket goes first: every lane that touches a tool file pays a full image build on each edit.
+
+## Progress
+
+- 2026-10-20 started
