@@ -137,6 +137,7 @@ pub struct CallOptions<'a> {
     cancel: [Option<&'a CancelToken>; 2],
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    owned_check: Option<&'a Arc<dyn Fn() -> bool + Send + Sync>>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
     total: Option<u64>,
     batch: Option<BatchSetting>,
@@ -195,6 +196,7 @@ impl<'a> CallOptions<'a> {
             cancel: [None, None],
             due: None,
             check: None,
+            owned_check: None,
             send_budget: None,
             total: None,
             batch: None,
@@ -206,6 +208,15 @@ impl<'a> CallOptions<'a> {
             proxy: None,
             surface: None,
         }
+    }
+
+    pub(crate) fn owned_interrupt(
+        mut self,
+        check: Option<&'a Arc<dyn Fn() -> bool + Send + Sync>>,
+    ) -> Self {
+        self.owned_check = check;
+        self.check = check.map(|check| check.as_ref() as &(dyn Fn() -> bool + Sync));
+        self
     }
 
     pub(crate) const fn retain_success_on_cancel(mut self, retain: bool) -> Self {
@@ -529,6 +540,7 @@ impl<'a> Stop<'a> {
         };
         let mut base = Cancel::default()
             .with_deadline(deadline)
+            .with_owned_check(options.owned_check.cloned())
             .with_token(options.cancel.map(|token| token.map(CancelToken::flag)))
             .with_send_budget(
                 options

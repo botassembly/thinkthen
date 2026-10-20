@@ -224,7 +224,7 @@ pub enum RequestSessionReady {
 /// Owned session controls, separate from canonical Request JSON.
 #[derive(Default, Clone)]
 pub struct RequestSessionFeedOptions {
-    /// Check caller interruption on the session worker before native sends and
+    /// Check caller interruption on native workers before sends and
     /// while waiting. True stops further work; sent attempts still settle.
     /// Panics become native defects. The callback must not wait on this session.
     /// Defaults to no callback and never enters canonical request JSON.
@@ -271,6 +271,16 @@ pub struct RequestSessionFeedOptions {
     pub all_filter_results: bool,
     /// Replace the prepared record projection with an owned native reading.
     pub record_reading: Option<crate::RecordReading>,
+}
+
+impl RequestSessionFeedOptions {
+    fn controls<'a>(&'a self, queue: &'a Queue, surface: Surface) -> CallOptions<'a> {
+        CallOptions::new()
+            .surface(surface)
+            .cancel(&queue.cancel)
+            .retain_success_on_cancel(self.retain_success_on_cancel)
+            .owned_interrupt(self.interrupt.as_ref())
+    }
 }
 
 impl std::fmt::Debug for RequestSessionFeedOptions {
@@ -613,14 +623,7 @@ fn run(
         }
         _ => None,
     };
-    let mut controls = CallOptions::new()
-        .surface(surface)
-        .cancel(&queue.cancel)
-        .retain_success_on_cancel(options.retain_success_on_cancel)
-        .observe(&observer);
-    if let Some(check) = options.interrupt.as_deref() {
-        controls = controls.interrupt(check);
-    }
+    let mut controls = options.controls(queue, surface).observe(&observer);
     if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
         controls = controls.on_missing_annotation_pointer(callback);
     }
@@ -761,14 +764,7 @@ fn run_recovering(
     );
     let registration =
         feed_request.then(|| super::session_input::Registration::new(queue, readiness.wake()));
-    let mut controls = CallOptions::new()
-        .surface(surface)
-        .cancel(&queue.cancel)
-        .retain_success_on_cancel(options.retain_success_on_cancel)
-        .observe(&observe);
-    if let Some(check) = options.interrupt.as_deref() {
-        controls = controls.interrupt(check);
-    }
+    let mut controls = options.controls(queue, surface).observe(&observe);
     if feed_request {
         controls = controls.readiness(&readiness);
     }

@@ -40,6 +40,7 @@ pub(crate) struct Cancel<'a> {
     token: [Option<Arc<AtomicBool>>; 2],
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
+    owned_check: Option<OwnedCheck>,
     sent_any: Arc<AtomicBool>,
     send_budget: Option<(crate::engine::budget::SendBudget, Option<u64>)>,
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
@@ -75,6 +76,15 @@ impl AttemptSink {
         send: impl Fn(crate::core::AttemptObservation) + Send + Sync + 'static,
     ) -> Self {
         Self(Arc::new(send))
+    }
+}
+
+/// An explicitly owned session interrupt check may run on native workers.
+#[derive(Clone)]
+struct OwnedCheck(Arc<dyn Fn() -> bool + Send + Sync>);
+impl fmt::Debug for OwnedCheck {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("OwnedCheck(<withheld>)")
     }
 }
 
@@ -194,6 +204,13 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    pub(crate) fn with_owned_check(
+        &self,
+        check: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    ) -> Self {
+        Self { owned_check: check.map(OwnedCheck), ..self.clone() }
+    }
+
     /// Share this stop flag with one call whose host check runs on this thread.
     pub(crate) fn with_check<'b>(&self, check: &'b (dyn Fn() -> bool + Sync)) -> Cancel<'b>
     where
@@ -239,14 +256,15 @@ impl<'a> Cancel<'a> {
     /// call's stop. A panic fires it too, then resumes unchanged, so every
     /// worker stops before the unwinding scope joins it.
     fn checked(&self) -> bool {
-        let Some(check) = self
-            .check
-            .filter(|check| check.caller == thread::current().id())
-        else {
+        let check = if let Some(check) = &self.owned_check {
+            check.0.as_ref()
+        } else if let Some(check) = self.check.filter(|check| check.caller == thread::current().id()) {
+            check.run
+        } else {
             return false;
         };
         let interrupted = workers::with_host_diagnostics(|| {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check))
         })
         .unwrap_or_else(|panic| {
             self.fired.store(true, Ordering::Release);
