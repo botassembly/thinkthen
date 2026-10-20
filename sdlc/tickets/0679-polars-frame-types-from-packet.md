@@ -31,6 +31,3 @@ Depends on: 0688
 - **Old entry point.** `execute_feed` in `frame/request.rs` runs calls through `Engine::execute_request`, not `Engine::call`.
 - **Likely break point.** This is the part of Polars most likely to break when the result schema changes (uncertain).
 
-## Progress
-
-- 2026-10-20 started
