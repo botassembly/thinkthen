@@ -27,9 +27,9 @@ fn public_library_shared_configuration_is_silent_and_refusal_debug_withholds_key
         let scratch = Scratch::new();
         fs::create_dir_all(scratch.config().parent().expect("parent")).expect("parent");
         let text = if named {
-            r#"{"schema":"thinkthen.config/1","backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"local-1"}}}"#
+            r#"{"backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"local-1"}}}"#
         } else {
-            r#"{"schema":"thinkthen.config/1","model":"local-1"}"#
+            r#"{"model":"local-1"}"#
         };
         fs::write(scratch.config(), text).expect("configuration");
         support::plant(&scratch.config(), "(A;;FW;;;WD)", false);
@@ -66,7 +66,7 @@ fn public_library_shared_configuration_is_silent_and_refusal_debug_withholds_key
 fn unreadable_configuration_refuses_locally_with_no_native_details_or_sends() {
     let scratch = Scratch::new();
     fs::create_dir_all(scratch.config().parent().expect("parent")).expect("parent");
-    fs::write(scratch.config(), r#"{"schema":"thinkthen.config/1"}"#).expect("config");
+    fs::write(scratch.config(), r#"{}"#).expect("config");
     support::powershell(
         &scratch.config(),
         "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $a.SetSecurityDescriptorSddlForm(\"O:$sid`D:P\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $a",

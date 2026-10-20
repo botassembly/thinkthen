@@ -388,10 +388,12 @@ class RefusalTable(unittest.TestCase):
 
     def test_clean_environment(self):
         with tempfile.TemporaryDirectory() as own, patch.dict('os.environ', {'THINKTHEN_API_KEY': 'fixture', 'OPENAI_API_KEY': 'fixture', 'THINKTHEN_CACHE': '/unowned', 'THINKTHEN_CONFIG': '/unowned',
-                                                                           'PROCESSOR_ARCHITECTURE': 'x86', 'PROCESSOR_ARCHITEW6432': 'AMD64'}):
+                                                                           'PROCESSOR_ARCHITECTURE': 'x86', 'PROCESSOR_ARCHITEW6432': 'AMD64',
+                                                                           'RUSTUP_HOME': str(Path(own) / 'rustup')}, clear=True), patch.object(Path, 'home', side_effect=RuntimeError('no host account')):
             env = clean_environment(Path(own))
             self.assertFalse(any(key.endswith('KEY') or key.startswith('THINKTHEN_') for key in env))
             self.assertEqual(env['HOME'], own)
+            self.assertEqual(env['RUSTUP_HOME'], str(Path(own) / 'rustup'))
             self.assertEqual(env['HOMEBREW_NO_AUTO_UPDATE'], '1')
             self.assertEqual(env['PROCESSOR_ARCHITECTURE'], 'x86')
             self.assertEqual(env['PROCESSOR_ARCHITEW6432'], 'AMD64')

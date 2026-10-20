@@ -266,7 +266,7 @@ fn every_pair_of_tiers_on_the_builder_sends_the_selected_key_to_the_selected_add
         };
         let home = Home::new("builder");
         let mut config = format!(
-            r#"{{"schema":"thinkthen.config/1","model":"config-model","backends":{{"local-d1":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"local-model"}}}}"#,
+            r#"{{"model":"config-model","backends":{{"local-d1":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"local-model"}}}}"#,
             at("D")
         );
         if !config_backend.is_empty() {
@@ -307,7 +307,7 @@ fn every_pair_of_tiers_on_the_builder_sends_the_selected_key_to_the_selected_add
 fn the_builder_refuses_a_built_in_key_at_the_other_host_unless_the_key_is_explicit() {
     let proxy = Proxy::start();
     let home = Home::new("builder-refusals");
-    home.config(r#"{"schema":"thinkthen.config/1","backends":{"remote":{"url":"https://backend.example/v1","key_env":"REMOTE_KEY","model":"m"}}}"#);
+    home.config(r#"{"backends":{"remote":{"url":"https://backend.example/v1","key_env":"REMOTE_KEY","model":"m"}}}"#);
     let proxied = [("HTTPS_PROXY", proxy.url.as_str())];
     let refused = in_child(
         &home,

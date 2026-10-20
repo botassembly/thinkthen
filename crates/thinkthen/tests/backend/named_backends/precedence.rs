@@ -218,7 +218,7 @@ fn every_pair_of_tiers_resolves_as_adr_0114_section_3_states() {
         };
         let home = Home::new("precedence");
         let mut config = format!(
-            r#"{{"schema":"thinkthen.config/1","model":"config-model","backends":{{"local-d1":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"local-model"}}}}"#,
+            r#"{{"model":"config-model","backends":{{"local-d1":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"local-model"}}}}"#,
             base("D")
         );
         if let Some(name) = row.configuration.0 {

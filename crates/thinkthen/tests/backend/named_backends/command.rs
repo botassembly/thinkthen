@@ -6,9 +6,9 @@ use super::support::{Home, LIQUID_BASE, Proxy, TYPESAFE_BASE, by_marker, listene
 const LOCAL: &str = r#""local-d1":{"url":"URL","key_env":"LOCAL_D1_KEY","model":"jev-1.13.0"}"#;
 
 fn config_with(backend: Option<&str>, local_url: &str) -> String {
-    let backend = backend.map_or_else(String::new, |name| format!(r#","backend":"{name}""#));
+    let backend = backend.map_or_else(String::new, |name| format!(r#""backend":"{name}","#));
     format!(
-        r#"{{"schema":"thinkthen.config/1"{backend},"backends":{{{}}}}}"#,
+        r#"{{{backend}"backends":{{{}}}}}"#,
         LOCAL.replace("URL", local_url)
     )
 }
@@ -115,7 +115,7 @@ fn two_backends_at_one_address_and_model_share_answers_and_never_keys() {
 fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     let proxy = Proxy::start();
     let stolen = format!(
-        r#"{{"schema":"thinkthen.config/1","backends":{{"stolen":{{"url":"{LIQUID_BASE}","key_env":"TYPESAFE_API_KEY","model":"m"}}}}}}"#
+        r#"{{"backends":{{"stolen":{{"url":"{LIQUID_BASE}","key_env":"TYPESAFE_API_KEY","model":"m"}}}}}}"#
     );
     let refusal = |name: &str, variable: &str, owner: &str, other: &str| {
         format!(
@@ -128,13 +128,12 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     let marker = "Sk_config_marker_0334";
     let built_in = "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned();
     let rate = "thinkthen: configuration backend field `requests_per_minute` must be a whole number from 1 to 60000\n".to_owned();
-    let entry = |body: &str| {
-        format!(r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{body}}}}}"#)
-    };
+    let entry = |body: &str| format!(r#"{{"backends":{{"local-d1":{body}}}}}"#);
     // (flags, changes, configuration, standard error, exit code). A
     // configuration refusal exits 5, as every configuration refusal does.
     type Case<'a> = (Vec<&'a str>, Vec<(&'a str, &'a str)>, String, String, i32);
-    let cases: Vec<Case<'_>> = vec![
+    let mut cases: Vec<Case<'_>> = vec![
+        (vec![], vec![], r#"{"schema":"thinkthen.config/1"}"#.to_owned(), "thinkthen: delete configuration field `schema`\n".to_owned(), 5),
         (vec!["--backend", "typesafe", "--url", LIQUID_BASE], vec![], String::new(), refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec!["--backend", "liquid", "--url", TYPESAFE_BASE], vec![], String::new(), refusal("liquid", "LIQUIDAI_API_KEY", "liquid", "typesafe"), 2),
         (vec!["--backend", "typesafe", "--url", "https://API.liquid.ai./decisions/v1"], vec![], String::new(), refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
@@ -147,16 +146,25 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
         (vec![], vec![("THINKTHEN_BACKEND", "nowhere")], String::new(), unknown, 2),
         (vec!["--backend", "liquid"], vec![("LIQUIDAI_API_KEY", ""), ("LIQUID_API_KEY", " ")], String::new(), "thinkthen: the environment variable `LIQUIDAI_API_KEY` is unset or blank, so no key is sent\nthinkthen: stopped at record 1; 0 records finished\n".to_owned(), 4),
         (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}"#).replace("local-d1", "liquid"), "thinkthen: configuration entry for built-in backend `liquid` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n".to_owned(), 5),
-        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#), "thinkthen: configuration entry for built-in backend `ollama` cannot set `model`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n".to_owned(), 5),
-        (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(), built_in, 5),
-        (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"ollama":{"requests_per_minute":0}}}"#.to_owned(), rate.clone(), 5),
-        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"liquid":{{"requests_per_minute":"{marker}"}}}}}}"#), rate.clone(), 5),
+        (vec![], vec![], format!(r#"{{"backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#), "thinkthen: configuration entry for built-in backend `ollama` cannot set `model`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n".to_owned(), 5),
+        (vec![], vec![], r#"{"backends":{"typesafe":{}}}"#.to_owned(), built_in, 5),
+        (vec![], vec![], r#"{"backends":{"ollama":{"requests_per_minute":0}}}"#.to_owned(), rate.clone(), 5),
+        (vec![], vec![], format!(r#"{{"backends":{{"liquid":{{"requests_per_minute":"{marker}"}}}}}}"#), rate.clone(), 5),
         (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":60001}"#), rate, 5),
         (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"{marker}","model":"m"}}"#)), "thinkthen: configuration backend field `key_env` names an environment variable: a capital letter or underscore, then capital letters, digits, and underscores\n".to_owned(), 5),
         (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","model":"m"}"#), "thinkthen: configuration backend entries need `url`, `key_env`, and `model`\n".to_owned(), 5),
         (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)), "thinkthen: configuration backend entries hold only `url`, `path`, `key_env`, `model`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned(), 5),
-        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","api_key":"{marker}"}}"#), "thinkthen: the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`\n".to_owned(), 5),
+        (vec![], vec![], format!(r#"{{"api_key":"{marker}"}}"#), "thinkthen: the configuration file holds a field other than `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`\n".to_owned(), 5),
     ];
+    for value in ["null", "false", "7", "[]", "{}", r#""private-marker""#] {
+        cases.push((
+            vec![],
+            vec![],
+            format!(r#"{{"cache":"bad","schema":{value}}}"#),
+            "thinkthen: delete configuration field `schema`\n".to_owned(),
+            5,
+        ));
+    }
     for (index, (flags, changes, config, sentence, code)) in cases.into_iter().enumerate() {
         let home = Home::new("refused");
         home.config(&config);
@@ -350,7 +358,7 @@ fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
             let expected = format!(
                 "thinkthen: configuration entry for built-in backend `{name}` cannot set `{field}`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n"
             );
-            home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:fields}}).to_string());
+            home.config(&serde_json::json!({"backend":name,"backends":{name:fields}}).to_string());
             for plan in [&[][..], &["--plan"][..]] {
                 let flags = [&["--url", target.base(), "--no-cache"][..], plan].concat();
                 let output = decide(&home, &flags, &[]);
@@ -363,7 +371,9 @@ fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
                 assert_eq!(target.count(), 0);
             }
         }
-        home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":name,"backends":{name:{marker:marker}}}).to_string());
+        home.config(
+            &serde_json::json!({"backend":name,"backends":{name:{marker:marker}}}).to_string(),
+        );
         let output = decide(&home, &["--url", target.base(), "--plan"], &[]);
         assert_eq!(output.status.code(), Some(5));
         assert_eq!(said(&output), (String::new(), "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned()));
@@ -394,7 +404,7 @@ fn legacy_builtin_repairs_preserve_builtin_settings_and_custom_routing() {
         ),
     ] {
         for keep_settings in [false, true] {
-            let mut config = serde_json::json!({"schema":"thinkthen.config/1","backend":name});
+            let mut config = serde_json::json!({"backend":name});
             if keep_settings {
                 config["backends"] = serde_json::json!({name:{"requests_per_minute":600,"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":2}}});
             }
@@ -417,7 +427,7 @@ fn legacy_builtin_repairs_preserve_builtin_settings_and_custom_routing() {
         }
     }
     // Renaming the entry and selection keeps explicit custom routing.
-    home.config(&serde_json::json!({"schema":"thinkthen.config/1","backend":"custom-route","backends":{"custom-route":{"url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m"}}}).to_string());
+    home.config(&serde_json::json!({"backend":"custom-route","backends":{"custom-route":{"url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m"}}}).to_string());
     let output = decide(&home, &["--no-cache"], &[]);
     let (stdout, stderr) = said(&output);
     assert_eq!(output.status.code(), Some(0), "{stderr}");
