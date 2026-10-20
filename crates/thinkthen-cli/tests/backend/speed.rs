@@ -34,7 +34,6 @@ fn gate(backend: &Backend, list: &Path) -> io::Result<Output> {
 fn planted(function: &str, from: &str, to: &str) -> io::Result<PathBuf> {
     let table = fs::read_to_string(repository().join("probes/speed/functions.jsonl"))?;
     let key = format!("{{\"function\":\"{function}\",");
-    let mut out = String::new();
     let line = table
         .lines()
         .find(|line| line.starts_with(&key))

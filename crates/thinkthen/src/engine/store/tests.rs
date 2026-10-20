@@ -169,6 +169,10 @@ pub(super) mod tempdir {
 
     impl Drop for Scratch {
         fn drop(&mut self) {
+            if std::thread::panicking() {
+                eprintln!("store fixture retained after failure: {}", self.0.display());
+                return;
+            }
             let _removed = std::fs::remove_dir_all(&self.0);
         }
     }
