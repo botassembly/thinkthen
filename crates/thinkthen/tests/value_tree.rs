@@ -13,11 +13,16 @@ struct Fixture {
     question_set: Option<Box<RawValue>>,
 }
 
-fn field<'a>(tree: &'a RequestValueTree, name: &str) -> &'a RequestValueTree {
+fn field<'a>(
+    tree: &'a RequestValueTree,
+    name: &str,
+) -> Result<&'a RequestValueTree, Box<dyn std::error::Error>> {
     let RequestValueTree::Map(fields) = tree else {
-        panic!("expected a native map");
+        return Err("expected a native map".into());
     };
-    fields.get(name).expect("native field")
+    fields
+        .get(name)
+        .ok_or_else(|| format!("missing native field {name}").into())
 }
 
 #[test]
@@ -75,15 +80,15 @@ fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn
             .build()?;
         let call = engine.call(verb, request.call.arguments, RequestEnvironment::default())?;
         let tree = call.value_tree()?;
-        let value = field(&tree, "value");
+        let value = field(&tree, "value")?;
         if verb == "annotate" {
-            assert_eq!(field(value, "team"), &RequestValueTree::Absent);
-            assert_eq!(field(value, "refund"), &RequestValueTree::Null);
+            assert_eq!(field(value, "team")?, &RequestValueTree::Absent);
+            assert_eq!(field(value, "refund")?, &RequestValueTree::Null);
         } else {
             assert_eq!(value, &RequestValueTree::Null);
-            assert_eq!(field(&tree, "index"), &RequestValueTree::Absent);
+            assert_eq!(field(&tree, "index")?, &RequestValueTree::Absent);
             assert_eq!(
-                field(&tree, "resolution"),
+                field(&tree, "resolution")?,
                 &RequestValueTree::String("resolved".into())
             );
         }
@@ -114,22 +119,22 @@ fn authored_objects_keep_exact_numbers_and_native_looking_keys()
         RequestEnvironment::default(),
     )?;
     let tree = call.value_tree()?;
-    let value = field(&tree, "value");
-    assert_eq!(field(value, "value"), &RequestValueTree::Null);
+    let value = field(&tree, "value")?;
+    assert_eq!(field(value, "value")?, &RequestValueTree::Null);
     assert_eq!(
-        field(value, "resolution"),
+        field(value, "resolution")?,
         &RequestValueTree::String("failed".into())
     );
     assert_eq!(
-        field(value, "Absent"),
+        field(value, "Absent")?,
         &RequestValueTree::String("caller-secret".into())
     );
     assert_eq!(
-        field(value, "number"),
+        field(value, "number")?,
         &RequestValueTree::Number("18446744073709551615".into())
     );
     assert_eq!(
-        field(value, "decimal"),
+        field(value, "decimal")?,
         &RequestValueTree::Number("0.125".into())
     );
     assert!(!format!("{tree:?}").contains("caller-secret"));
