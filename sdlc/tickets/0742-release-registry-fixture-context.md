@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 22d5af5, accept
+
 ## Outcome
 
 The C public README preserves the owned-constructor error instructions and passes the existing public-page contract, so the release-registry self-test exercises every existing Go tag branch without using live services or credentials.
