@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision f9581f3, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/tools-self-test.py`, `sdlc/tools.json`, `sdlc/tools/*.json`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`, `sdlc/records/0738-layered-check-image.md`.
