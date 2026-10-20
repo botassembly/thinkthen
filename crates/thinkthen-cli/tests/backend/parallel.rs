@@ -384,8 +384,20 @@ fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
 
 #[test]
 fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
-    let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(30))
-        .expect("a loopback listener");
+    let closed = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&closed);
+    let (arrived, requested) = std::sync::mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        let place = ordinal(body);
+        let reply = Canned::ok(&answered(place));
+        if place == 2 {
+            let _ = arrived.send(());
+            reply.after_release(Arc::clone(&held))
+        } else {
+            reply
+        }
+    })
+    .expect("a loopback listener");
     let mut child = piped(listener.base(), Some("4")).expect("the compiled binary runs");
 
     let mut input = child.stdin.take().expect("a pipe to standard input");
@@ -397,17 +409,22 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     // One row is read and the pipe is closed, as `head -1` closes it.
     let mut reader = BufReader::new(child.stdout.take().expect("a pipe from standard output"));
     let mut row = String::new();
-    reader.read_line(&mut row).expect("one row");
+    let read = reader.read_line(&mut row);
     drop(reader);
+    let released = std::thread::spawn(move || requested.recv().is_ok() && closed.wait());
 
-    let output = finish(child, "thinkthen after `head -1`").expect("the compiled binary ends");
+    let output = finish(child, "thinkthen after `head -1`");
+    let sent = listener.requests().len();
+    drop(listener);
+    released.join().expect("release thread");
+    let output = output.expect("the compiled binary ends");
+    read.expect("one row");
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
     // stops within one round of requests. The count stays near --jobs and
     // never reaches the input. A tool that kept scheduling would ask, and
     // pay, for all 24.
-    let sent = listener.requests().len();
     assert!(sent <= 12, "the run kept scheduling and sent {sent}");
 }
 
