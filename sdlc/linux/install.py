@@ -299,7 +299,17 @@ def main():
         for tool in requirements.values():
             if tool.get('provider') == 'python-package':
                 for command in tool['commands']:
-                    (root / 'bin' / command).symlink_to(Path(scripts) / command)
+                    target = root / 'bin' / command
+                    executable = Path(scripts) / command
+                    if tool.get('provider') == 'python-package' and command in ('pkgconf', 'pkg-config'):
+                        # The Python wheel omits system metadata search paths.
+                        # Keep caller overrides and ask Ubuntu's provider for its defaults.
+                        target.write_text('#!/bin/sh\n'
+                            'PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR-$(/usr/bin/pkg-config --variable pc_path pkg-config)}\n'
+                            'export PKG_CONFIG_LIBDIR\nexec ' + shlex.quote(str(executable)) + ' "$@"\n')
+                        target.chmod(0o755)
+                    else:
+                        target.symlink_to(executable)
 
 
 if __name__ == '__main__':
