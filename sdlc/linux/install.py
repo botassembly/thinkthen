@@ -165,9 +165,10 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
         subprocess.run([str(root / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
         # The launcher atomically replaces engine.stamp and writes engine.realm;
         # the tool opens lockfile for writing and refreshes flutter.version.json.
-        # Keep cached compilers, engine artifacts and SDK source read-only.
+        # Sticky ownership protects root-owned compiler and artifact entries
+        # while allowing the check user to replace its generated engine stamp.
         cache = sdk / 'bin/cache'
-        subprocess.run(['chmod', 'a+rwx', str(cache)], env=env, check=True)
+        subprocess.run(['chmod', '1777', str(cache)], env=env, check=True)
         for name in ('lockfile', 'engine.realm', 'flutter.version.json'):
             state = cache / name
             if state.is_file():
@@ -201,3 +202,7 @@ groups = {group for tool in manifest['tools'].values() for group in tool['groups
 subprocess.run([str(python), resolver, '--manifest', sys.argv[1], ','.join(sorted(groups))],
                env=env, check=True)
 subprocess.run([str(python), resolver, '--manifest', sys.argv[1], 'ruby34'], env=env, check=True)
+# Tool probes run as root and recreate this atomic launcher state. Let the
+# unprivileged check user create and own it on the first startup instead.
+flutter = (root / 'bin/flutter').resolve().parent.parent
+(flutter / 'bin/cache/engine.stamp').unlink()
