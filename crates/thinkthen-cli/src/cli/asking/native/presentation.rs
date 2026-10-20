@@ -173,22 +173,25 @@ impl Serialize for WithoutBatch<'_> {
     }
 }
 
-pub(super) fn without_batch(value: &impl Serialize) -> Result<String, Failure> {
+pub(super) fn complete(value: &impl Serialize, strip_batch: bool) -> Result<String, Failure> {
     let text = crate::render::json_line(value)?;
     let document = Json::parse(&text)?;
     let Kind::Object(fields) = document.kind() else {
         return Err(Failure::Defect("a complete result is not an object"));
     };
-    crate::render::json_line(&Document(fields)).map_err(Failure::from)
+    crate::render::json_line(&Document { fields, strip_batch }).map_err(Failure::from)
 }
 
-struct Document<'a>(&'a [(String, Json)]);
+struct Document<'a> {
+    fields: &'a [(String, Json)],
+    strip_batch: bool,
+}
 impl Serialize for Document<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap as _;
         let mut map = serializer.serialize_map(None)?;
-        for (name, value) in self.0 {
-            if name == "meta" {
+        for (name, value) in self.fields {
+            if name == "meta" && self.strip_batch {
                 map.serialize_entry(name, &WithoutBatch(value))?;
             } else if name == "question" {
                 map.serialize_entry(name, &Question(value))?;

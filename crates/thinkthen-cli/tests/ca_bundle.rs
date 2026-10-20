@@ -144,14 +144,14 @@ fn certificate_admission_precedes_cache_and_cost_warnings() {
     use std::net::ToSocketAddrs as _;
     let bound = listener.local_addr().unwrap();
     assert_eq!(
-        ("127.1", bound.port()).to_socket_addrs().unwrap().collect::<Vec<_>>(),
+        ("127.1", bound.port())
+            .to_socket_addrs()
+            .unwrap()
+            .collect::<Vec<_>>(),
         [bound],
         "the key-required address reaches the counted listener"
     );
-    let url = format!(
-        "https://127.1:{}",
-        listener.local_addr().unwrap().port()
-    );
+    let url = format!("https://127.1:{}", listener.local_addr().unwrap().port());
     let run = |bundle: &Path, cache: &Path, model: &str, refresh: bool| {
         let mut command = Command::new(crate::command::binary());
         command

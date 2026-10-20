@@ -47,8 +47,9 @@ impl AdmittedRequest {
             return Err(Error::defect("host definition lost its preparation"));
         };
         self.request.call.arguments_mut().options = arguments.options;
-        let definition = admit_definition(function, definition)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
+        let definition = admit_definition(function, definition).map_err(Error::into_local)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)
+            .map_err(Error::into_local)?;
         self.admit_inline(&definition)?;
         self.definition = Some(definition);
         Ok(self)
@@ -211,6 +212,10 @@ fn admit_definition_for(
     native_originals: bool,
 ) -> Result<RequestDefinition, Error> {
     let definition = match definition {
+        RequestDefinition::Atomic(LoadedQuestion::Banded(_)) if function == Function::Filter => {
+            return Err(Error::usage("question kind does not match the requested function")
+                .with_diagnostic(Diagnostic::ThresholdFunction(function)));
+        }
         RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
             if function == Function::Rank =>
         {
@@ -610,13 +615,24 @@ fn admit_definition_controls(
             if rule.is_some_and(|rule| !rule.is_cut())
                 || (q.kind() == QuestionKind::Score && rule.is_some())
             {
+                let diagnostic = if q.kind() == QuestionKind::Score {
+                    Diagnostic::Refusal(Box::new(crate::core::QuestionFileError::RuleOnRank(
+                        crate::core::Source::CommandLine,
+                    )))
+                } else {
+                    Diagnostic::ThresholdFunction(Function::Rank)
+                };
                 return Err(Error::usage(
                     "rank cutoff requires a decide probability and never a band",
-                ));
+                ).with_diagnostic(diagnostic));
             }
         }
         RequestDefinition::RankSet(_) if options.threshold.is_some() => {
-            return Err(Error::usage("rank question sets take no command threshold"));
+            return Err(Error::usage("rank question sets take no command threshold").with_diagnostic(
+                Diagnostic::Refusal(Box::new(crate::core::QuestionFileError::RuleOnRank(
+                    crate::core::Source::CommandLine,
+                ))),
+            ));
         }
         _ => {}
     }

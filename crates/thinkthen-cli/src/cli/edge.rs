@@ -280,7 +280,9 @@ impl Environment {
         crate::cli::facts::Snapshot {
             facts,
             counts: engine.as_ref().map_or(crate::Counters::ZERO, Engine::usage),
-            http_time: engine.as_ref().map_or(Some(Duration::ZERO), Engine::http_time),
+            http_time: engine
+                .as_ref()
+                .map_or(Some(Duration::ZERO), Engine::http_time),
         }
     }
     pub(crate) fn finish_usage(&self) -> Option<Option<crate::UsageFailure>> {

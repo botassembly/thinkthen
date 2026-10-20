@@ -20,9 +20,9 @@ pub enum QuestionRole {
 }
 impl QuestionRole {
     pub(crate) fn differs(self, text: &str) -> bool {
-        // Find's closed saved grammar owns its key/function refusals, including
-        // their local-file classification. Other roles retain role admission.
-        if matches!(self, Self::Find) {
+        // These closed grammars already distinguish malformed content from a
+        // valid different function. Preserve their own typed file causes.
+        if matches!(self, Self::Find | Self::Relate) {
             return false;
         }
         // Syntax, duplicate members, unsupported keys and multiple roles stay

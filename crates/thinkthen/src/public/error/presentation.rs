@@ -312,16 +312,20 @@ impl Error {
                 ErrorDiagnostic::AnnotationThreshold
             }
             Diagnostic::ThresholdFunction(function) => {
-                use crate::core::{QuestionFileError as E, Source::CommandLine};
+                use crate::core::{QuestionFileError as E, Source};
+                let source = if self.kind() == ErrorKind::Local { Source::File } else { Source::CommandLine };
                 let cause = match function {
-                    crate::RequestFunction::Choose => E::BandOnChoose(CommandLine),
-                    crate::RequestFunction::Tag => E::BandOnTag(CommandLine),
-                    crate::RequestFunction::Score => E::RuleOnScore(CommandLine),
-                    crate::RequestFunction::Filter => E::BandOnFilter(CommandLine),
-                    crate::RequestFunction::Rank => E::BandOnRank(CommandLine),
+                    crate::RequestFunction::Choose => E::BandOnChoose(source),
+                    crate::RequestFunction::Tag => E::BandOnTag(source),
+                    crate::RequestFunction::Score => E::RuleOnScore(source),
+                    crate::RequestFunction::Filter => E::BandOnFilter(source),
+                    crate::RequestFunction::Rank => E::BandOnRank(source),
                     _ => return None,
                 };
-                ErrorDiagnostic::Question { message: cause.to_string(), from_file: false }
+                ErrorDiagnostic::Question {
+                    message: cause.to_string(),
+                    from_file: source == Source::File,
+                }
             }
             Diagnostic::QuestionRead(crate::QuestionFileError::Unreadable(cause)) => {
                 ErrorDiagnostic::QuestionUnreadable(cause.to_string())

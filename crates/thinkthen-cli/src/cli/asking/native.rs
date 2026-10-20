@@ -540,11 +540,7 @@ impl Renderer {
         row: &impl serde::Serialize,
         position: Option<crate::cli::intake::Position>,
     ) -> Result<Judged, Failure> {
-        let mut printed = Some(if self.streams {
-            json_line(row)?
-        } else {
-            presentation::without_batch(row)?
-        });
+        let mut printed = Some(presentation::complete(row, !self.streams)?);
         crate::cli::intake::locate(&mut printed, position.as_ref())?;
         crate::cli::intake::source_members(&mut printed, position.as_ref())?;
         Ok(Judged {

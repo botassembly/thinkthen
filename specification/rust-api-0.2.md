@@ -72,7 +72,7 @@ The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retire
 
 `AttemptObservation::transport_failed` exposes the existing precise connection/body transport flag. The broader `AttemptOutcome::Transport` also represents a bounded reply-byte refusal, so the command's backend check uses the precise flag to continue after an oversized reply while stopping after an actual transport failure. This read-only projection changes no attempt serialization, counters or provider behavior. Ian can overturn this API detail.
 
-`QuestionFileReference::parse` retains name, size and anchored-root admission for every role. The Find role delegates function/key membership to its existing closed find parser so saved-file failures retain their local classification and exact grammar cause. Other roles retain the explicit different-function refusal. Typed causes survive the saved-file classification without becoming standard error sources. Ian can overturn this API detail.
+`QuestionFileReference::parse` retains name, size and anchored-root admission for every role. The Find and Relate roles delegate function/key membership to their existing closed parsers so malformed saved files retain their local classification and exact grammar cause. Relate's native parser also distinguishes a valid different-function file from malformed content. Other roles retain the explicit different-function refusal. Typed causes survive the saved-file classification without becoming standard error sources. Ian can overturn this API detail.
 
 ### Retired public declarations
 

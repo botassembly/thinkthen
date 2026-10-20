@@ -118,24 +118,11 @@ fn authored(file: Option<&str>, admitted: &mut AdmittedRequest) -> Result<Option
     Ok(if let Some(file) = file {
         let reference = crate::QuestionFileReference::reference(&format!("@{file}"))?;
         let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
-        let relation = reference
-            .parse(
-                &text,
-                crate::QuestionFileRole::Relate,
-                Relate::from_records_json,
-            )
-            .map_err(|error| {
-                // Reference admission reserves Usage for an unambiguous role
-                // mismatch; saved parser/name/content failures are Local.
-                if error.kind() == crate::ErrorKind::Usage {
-                    Failure::Relate(crate::failure::relate::Error::Config {
-                        file: false,
-                        error: "the question file holds another command's question".to_owned(),
-                    })
-                } else {
-                    Failure::from(error)
-                }
-            })?;
+        let relation = reference.parse(
+            &text,
+            crate::QuestionFileRole::Relate,
+            Relate::from_records_json,
+        )?;
         *admitted = admitted.clone().with_resolved_definition(relation.into())?;
         Some(Json::parse(&text)?)
     } else {

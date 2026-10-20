@@ -721,7 +721,8 @@ pub(super) fn apply(
         && let Some(labels) = &options.labels
     {
         let labels = crate::RecordOptions::new(labels.clone())?;
-        *definition = RequestDefinition::Atomic(LoadedQuestion::Question(question.with_options(&labels)?));
+        *definition =
+            RequestDefinition::Atomic(LoadedQuestion::Question(question.with_options(&labels)?));
     }
     match definition {
         RequestDefinition::Atomic(q) => match q {

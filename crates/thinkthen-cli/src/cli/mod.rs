@@ -242,7 +242,7 @@ fn report_early(
             facts::Snapshot {
                 facts: crate::Tally::new().facts(),
                 counts: crate::Counters::ZERO,
-                http_time: None,
+                http_time: Some(std::time::Duration::ZERO),
             },
             started.elapsed(),
             accepted.elapsed(),

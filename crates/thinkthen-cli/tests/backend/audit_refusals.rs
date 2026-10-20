@@ -506,10 +506,8 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
 
 #[test]
 fn offline_readers_keep_unbounded_object_bytes_and_reject_other_shapes() {
-    let key = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "offline-reader-key-{}.jsonl",
-        std::process::id()
-    ));
+    let key = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("offline-reader-key-{}.jsonl", std::process::id()));
     fs::write(&key, "{\"id\":1,\"value\":true}\n").expect("owned answer key");
     let key_path = key.to_str().expect("owned key path");
     // This unused member exceeds execution admission. Offline commands keep their

@@ -32,9 +32,7 @@ pub(super) fn check(
     for (name, row) in ROWS {
         let stopped = AtomicBool::new(false);
         let observe = |attempt: AttemptObservation| {
-            if attempt.transport_failed()
-                || matches!(attempt.status(), Some(401..=404))
-            {
+            if attempt.transport_failed() || matches!(attempt.status(), Some(401..=404)) {
                 stopped.store(true, Ordering::Relaxed);
             }
         };
