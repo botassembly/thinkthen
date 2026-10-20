@@ -24,7 +24,8 @@ def decimal_json(text):
     """Keep JSON numbers as exact decimal strings, including large integers."""
     def number(raw):
         value = Decimal(raw)
-        return format(value.normalize(), 'f') if value else '0'
+        text = format(value, 'f')
+        return (text.rstrip('0').rstrip('.') if '.' in text else text) if value else '0'
     return json.loads(text, parse_int=number, parse_float=number)
 
 
@@ -148,6 +149,25 @@ def run(consumer, command, root):
     return failures
 
 
+def validate_shared_answers(cases):
+    """Refuse to bless fixture requests that fail before their intended behavior."""
+    contract = {case['id']: case['expect'] for case in
+                json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
+    for case in cases:
+        expected = contract[case['id']]
+        dump = case['dump']
+        terminal = next((packet for packet in reversed(dump['packets'])
+                         if packet['kind'] == 'terminal'), {})
+        failure = dump.get('error', terminal.get('failure', {}))
+        kind = failure.get('error', {}).get('kind')
+        wanted = expected.get('error', {}).get('kind')
+        assert kind == wanted, (case['id'], wanted, failure)
+        if 'settled' in expected:
+            answer = decimal_json(json.dumps(expected['settled']['collection']))
+            assert terminal.get('answer') == answer, (case['id'],
+                    difference(answer, terminal.get('answer')))
+
+
 def main():
     if '--requests' in sys.argv:
         print(json.dumps(requests()))
@@ -156,6 +176,7 @@ def main():
         raw = json.loads(sys.stdin.read())
         for case in raw['cases']:
             case['dump'] = canonical(decimal_json(json.dumps(case['dump'])))
+        validate_shared_answers(raw['cases'])
         if '--update' in sys.argv:
             ORACLE.write_text(json.dumps(raw, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
             return 0
