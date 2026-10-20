@@ -36,3 +36,7 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 ## Proof
 
 Five consecutive routine runs with no timeout, and the slowest test under 2.5 seconds. After landing, measure again and record the result here.
+
+## Progress
+
+- 2026-10-20 started
