@@ -63,7 +63,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
     }
     assert_eq!(
         Value::Object(pinned),
-        json!({"schema":"thinkthen.run/1","records":25,"requests_sent":3,
+        json!({"schema":"thinkthen.run","records":25,"requests_sent":3,
             "retries":0,"cache_answers":0,"input_tokens":300,"output_tokens":30,
             "largest_request_bytes":largest,"largest_request_estimated_input_tokens":(largest * 908).div_ceil(1000),
             "token_estimate_method":"encoded-body-bytes-908-v1",

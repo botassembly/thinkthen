@@ -38,7 +38,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     assert_eq!(
         value,
         serde_json::json!({
-            "schema": "thinkthen.status/2",
+            "schema": "thinkthen.status",
             "version": env!("CARGO_PKG_VERSION"),
             "configuration": {"path": config, "present": false},
             "backend": {"name": null, "url": "https://api.typesafe.ai/v1/systemone", "url_source": "built_in", "model": "jev-1.13.0", "model_source": "built_in", "key_variable": "THINKTHEN_API_KEY", "api_key_set": false},
@@ -150,7 +150,7 @@ fn status_counts_the_live_store_without_writes() {
     let (code, value, stderr) = inspect(&home);
     assert_eq!(code, Some(0));
     assert!(stderr.is_empty());
-    assert_eq!(value["schema"], "thinkthen.status/2");
+    assert_eq!(value["schema"], "thinkthen.status");
     assert_eq!(value["cache"]["entries"], 1);
     assert_eq!(value["cache"]["bytes"], store.len());
     assert_eq!(value["cache"]["old_entries"], 0);

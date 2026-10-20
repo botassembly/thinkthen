@@ -94,7 +94,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
         .filter(|line| !line.is_empty())
         .collect();
     assert_eq!(lines.len(), 3);
-    assert_eq!(lines[1], br#"{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}"#);
+    assert_eq!(lines[1], br#"{"schema":"thinkthen.record-error","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}"#);
     let rows: Vec<Value> = output
         .stdout
         .split(|byte| *byte == b'\n')
@@ -119,7 +119,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
                 FIRST_REQUEST,
                 1
             ),
-            json!({"schema":"thinkthen.record-error/1","at":2,
+            json!({"schema":"thinkthen.record-error","at":2,
             "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}),
             expected_urgent_result(
                 &listener,
@@ -196,7 +196,7 @@ fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> 
     assert_eq!(rows.len(), 2);
     assert_eq!(
         rows[1],
-        json!({"schema":"thinkthen.record-error/1","at":2,
+        json!({"schema":"thinkthen.record-error","at":2,
         "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}})
     );
     assert_eq!(terminal.stderr, b"thinkthen: 1 record skipped\nthinkthen: stopped at record 3; the request for records 3 to 3 failed: the backend answered with status 401: the key was refused; 2 records finished\n");
@@ -362,7 +362,7 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
     assert!(thinkthen::CallId::new(call_id).is_ok());
     assert_eq!(
         facts,
-        json!({"schema":"thinkthen.run/1","records":3,
+        json!({"schema":"thinkthen.run","records":3,
         "requests_sent":2,"retries":0,"cache_answers":0,
         "largest_request_bytes":165,"largest_request_estimated_input_tokens":150,
         "token_estimate_method":"encoded-body-bytes-908-v1","model":"local-1"})
@@ -416,7 +416,7 @@ fn skipped_row_outranks_a_completed_partial_answer_without_erasing_it() -> io::R
     assert_eq!(rows[0]["meta"]["failed_questions"], 1);
     assert_eq!(
         rows[1],
-        json!({"schema":"thinkthen.record-error/1","at":2,
+        json!({"schema":"thinkthen.record-error","at":2,
         "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}})
     );
     let requests = listener.requests();
@@ -456,7 +456,7 @@ fn missing_first_and_last_positions_keep_the_middle_answer() -> io::Result<()> {
         .collect::<Result<_, _>>()?;
     assert_eq!(rows.len(), 3);
     let failure = |at| {
-        json!({"schema":"thinkthen.record-error/1","at":at,
+        json!({"schema":"thinkthen.record-error","at":at,
         "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}})
     };
     assert_eq!(rows[0], failure(1));

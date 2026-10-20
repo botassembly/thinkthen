@@ -131,7 +131,7 @@ fn dry_run_reports_the_exact_request_a_real_run_sends() {
         Value::from(crate::support::keys(&url, &request.body))
     );
     let plan = plan_json(&output);
-    assert_eq!(plan["schema"], "thinkthen.relate-plan/1");
+    assert!(plan.get("schema").is_none(), "{plan}");
     assert_eq!(plan["entity_count"], 3);
     assert_eq!(plan["logical_questions"], 1);
     assert_eq!(plan["request_count"], 1);
