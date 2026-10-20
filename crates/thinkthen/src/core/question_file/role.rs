@@ -20,11 +20,6 @@ pub enum QuestionRole {
 }
 impl QuestionRole {
     pub(crate) fn differs(self, text: &str) -> bool {
-        // These closed grammars already distinguish malformed content from a
-        // valid different function. Preserve their own typed file causes.
-        if matches!(self, Self::Find | Self::Relate) {
-            return false;
-        }
         // Syntax, duplicate members, unsupported keys and multiple roles stay
         // with the owning grammar; only an unambiguous different role is Usage.
         let Ok(Json::Object(members)) = Json::parse(text) else {

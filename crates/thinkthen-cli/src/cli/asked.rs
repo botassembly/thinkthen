@@ -231,8 +231,8 @@ fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
         let scalar_choose = function == crate::RequestFunction::Choose
             && !dynamic
             && admitted.request().call.arguments().options.labels.is_none();
-        let definition = reference.parse(&text, role, |text| {
-            if function == crate::RequestFunction::Rank
+        let retained = reference.parse(&text, role, |text| {
+            let definition = if function == crate::RequestFunction::Rank
                 && matches!(role, crate::QuestionFileRole::Set)
             {
                 crate::RankSet::from_json(text).map(RequestDefinition::RankSet)
@@ -242,10 +242,10 @@ fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
                 crate::Question::from_json(text).map(RequestDefinition::Atomic)
             } else {
                 RequestDefinition::from_authored_json(text)
-            }
+            }?;
+            mismatch(function, &definition).map_err(Failure::into_error)?;
+            admitted.clone().with_resolved_definition(definition)
         })?;
-        mismatch(function, &definition)?;
-        let retained = admitted.clone().with_resolved_definition(definition)?;
         *admitted = retained;
         Some(document.ok_or(Failure::Defect(
             "native admitted file lost its ordered JSON",

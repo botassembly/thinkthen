@@ -110,7 +110,9 @@ impl QuestionFileReference {
     /// Apply caller settings after this saved-file boundary.
     /// # Errors
     /// Name, syntax, size and parser failures are Local; an unambiguous different
-    /// role is Usage. An omitted name stays absent in the supplied grammar.
+    /// role is Usage, except Find delegates membership to its closed parser.
+    /// Relate checks role only for a valid different-function declaration.
+    /// An omitted name stays absent in the supplied grammar.
     pub fn parse<T>(
         &self,
         original_json: &str,
@@ -121,7 +123,19 @@ impl QuestionFileReference {
             return Err(Error::local("the question file is too large"));
         }
         self.validate_name(original_json)?;
-        check_role(original_json, role)?;
+        // Find owns its closed-key grammar. Relate distinguishes a valid
+        // different function from a malformed saved declaration itself.
+        let check = match role {
+            QuestionRole::Find => false,
+            QuestionRole::Relate => matches!(
+                crate::core::RelateSpec::parse(original_json),
+                Err(crate::core::RelateConfigError::WrongVerb)
+            ),
+            _ => true,
+        };
+        if check {
+            check_role(original_json, role)?;
+        }
         parser(original_json).map_err(file_error)
     }
     fn validate_name(&self, text: &str) -> Result<(), Error> {
@@ -188,7 +202,14 @@ impl Reference {
 
 fn check_role(text: &str, role: QuestionRole) -> Result<(), Error> {
     if role.differs(text) {
-        return Err(Error::usage("the question file uses another function"));
+        let error = Error::usage("the question file uses another function");
+        return Err(if matches!(role, QuestionRole::Relate) {
+            error.with_diagnostic(super::error::diagnostic::Diagnostic::Refusal(Box::new(
+                crate::core::RelateConfigError::WrongVerb,
+            )))
+        } else {
+            error
+        });
     }
     Ok(())
 }

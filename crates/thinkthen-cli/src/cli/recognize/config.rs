@@ -21,13 +21,16 @@ pub(super) fn settle(
         }
         let reference = crate::QuestionFileReference::reference(reference)?;
         let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
-        let question = reference.parse(
+        admitted = reference.parse(
             &text,
             crate::QuestionFileRole::Recognize,
-            crate::RecognizeQuestionFile::from_json,
+            |text| {
+                let question = crate::RecognizeQuestionFile::from_json(text)?;
+                admitted
+                    .clone()
+                    .with_resolved_definition(crate::RequestDefinition::Recognize(question))
+            },
         )?;
-        admitted =
-            admitted.with_resolved_definition(crate::RequestDefinition::Recognize(question))?;
     }
     let question = match admitted.resolve_question()? {
         crate::RequestDefinition::Recognition(question) => question,

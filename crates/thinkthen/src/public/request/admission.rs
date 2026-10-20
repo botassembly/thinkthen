@@ -47,9 +47,8 @@ impl AdmittedRequest {
             return Err(Error::defect("host definition lost its preparation"));
         };
         self.request.call.arguments_mut().options = arguments.options;
-        let definition = admit_definition(function, definition).map_err(Error::into_local)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)
-            .map_err(Error::into_local)?;
+        let definition = admit_definition(function, definition)?;
+        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
         self.admit_inline(&definition)?;
         self.definition = Some(definition);
         Ok(self)
