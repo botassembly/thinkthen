@@ -208,7 +208,10 @@ impl<'a> Cancel<'a> {
         &self,
         check: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     ) -> Self {
-        Self { owned_check: check.map(OwnedCheck), ..self.clone() }
+        Self {
+            owned_check: check.map(OwnedCheck),
+            ..self.clone()
+        }
     }
 
     /// Share this stop flag with one call whose host check runs on this thread.
@@ -258,7 +261,10 @@ impl<'a> Cancel<'a> {
     fn checked(&self) -> bool {
         let check = if let Some(check) = &self.owned_check {
             check.0.as_ref()
-        } else if let Some(check) = self.check.filter(|check| check.caller == thread::current().id()) {
+        } else if let Some(check) = self
+            .check
+            .filter(|check| check.caller == thread::current().id())
+        {
             check.run
         } else {
             return false;

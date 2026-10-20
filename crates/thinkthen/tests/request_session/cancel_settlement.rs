@@ -217,7 +217,11 @@ fn owned_interrupt_cancels_or_contains_panics_before_any_send() {
         };
         assert_eq!(
             terminal.error.as_ref().unwrap().kind(),
-            if panics { ErrorKind::Defect } else { ErrorKind::Cancelled }
+            if panics {
+                ErrorKind::Defect
+            } else {
+                ErrorKind::Cancelled
+            }
         );
         assert_eq!(listener.count(), 0);
         let recovering = engine(&listener)
@@ -238,7 +242,11 @@ fn owned_interrupt_cancels_or_contains_panics_before_any_send() {
         };
         assert_eq!(
             terminal.error.as_ref().unwrap().kind(),
-            if panics { ErrorKind::Defect } else { ErrorKind::Cancelled }
+            if panics {
+                ErrorKind::Defect
+            } else {
+                ErrorKind::Cancelled
+            }
         );
         assert_eq!(listener.count(), 0);
     }
