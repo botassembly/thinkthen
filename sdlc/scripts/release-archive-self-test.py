@@ -983,6 +983,16 @@ def main():
             tool.write_text("#!/bin/sh\n[ \"$1\" = --version ] || exit 94\n"
                             + "printf '%s\\n' '" + response + "'\n")
             tool.chmod(0o755)
+        # The hosted PHP prerequisite uses an absolute path. Supply it only in
+        # the extracted fixture, keeping these plants independent of host PHP.
+        fake_php = fake_bin / "php"
+        fake_php.write_text("#!/bin/sh\n"
+                            "[ \"$*\" != '-v' ] || { echo 'PHP 8.3.0 (fixture)'; exit 0; }\n"
+                            "[ \"$*\" = '-n -d extension=ffi -d ffi.enable=1 -r exit(class_exists(\"FFI\") ? 0 : 1);' ] || exit 94\n")
+        fake_php.chmod(0o755)
+        tool_gate = source / "sdlc/scripts/release-workflow"
+        original_tool_gate = tool_gate.read_text()
+        tool_gate.write_text(original_tool_gate.replace("php_bin=/usr/bin/php8.3", f"php_bin='{fake_php}'"))
         fake_curl = fake_bin / "curl"
         fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
                              "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"
@@ -1002,9 +1012,9 @@ def main():
                "Swift/Zig installed tools require Linux x86-64")
         expect(run("sh", gate, "setup-stage", "swift-zig", host, str(base / "bad-zig"), env=tool_env),
                "Zig 0.15.2 archive differs from official checksum")
-        expect(run("sh", gate, "setup-stage", "php-dart", other_target, str(base / "other-dart"), env=tool_env),
+        expect(run("sh", str(tool_gate), "setup-stage", "php-dart", other_target, str(base / "other-dart"), env=tool_env),
                "PHP/Dart installed tools require Linux x86-64")
-        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-dart"), env=tool_env),
+        expect(run("sh", str(tool_gate), "setup-stage", "php-dart", host, str(base / "bad-dart"), env=tool_env),
                "Dart 3.13.4 SDK differs from official checksum")
         if github_path.read_text():
             raise AssertionError("bad tool archive entered the runner path")
@@ -1026,12 +1036,14 @@ def main():
                               "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
                               "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
         fake_unzip.chmod(0o755)
-        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-ffi"), env=tool_env),
+        expect(run("sh", str(tool_gate), "setup-stage", "php-dart", host, str(base / "bad-ffi"), env=tool_env),
                "cached ffi 2.2.0 differs from official digest")
         if github_path.read_text() or github_env.read_text():
             raise AssertionError("bad ffi cache entered the runner environment")
         fake_hash.unlink()
         fake_unzip.unlink()
+        tool_gate.write_text(original_tool_gate)
+        fake_php.unlink()
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),
