@@ -153,6 +153,85 @@ class NativeFixtureEnvironment(unittest.TestCase):
 
 
 
+class OwnedCallComparison(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        sys.path[:0] = [str(parity.ROOT / 'libraries/c/tests'),
+                       str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import installed_call
+        cls.installed = installed_call
+        cls.oracle = {case['id']: case['dumps'] for case in json.loads(
+            (parity.ROOT / 'conformance/fixtures/packets.json').read_text())['cases']}
+        cls.row = parity.required_cases(parity.inventory(), 'c')['01-decide-yes-captured']
+        cases = {case['id']: case for case in json.loads(parity.DOCUMENT.read_text())['cases']}
+        cls.value = installed_call.shared.document(cls.row, cases, {})
+
+    def success(self):
+        expected = self.oracle[self.row['id']][0]
+        fields = self.installed.folded(expected)
+        raw = {'value': fields['results'], 'facts': fields['facts'], 'answer': fields['answer']}
+        text = json.dumps(raw)
+        for group in ('call_id', 'answer_id', 'observation_id', 'sdk_request_id', 'request_sha256'):
+            for index in (1, 2):
+                text = text.replace('"' + group + ':' + str(index) + '"', '"' + str(index) * 64 + '"')
+        raw = json.loads(text)
+        payload = copy.deepcopy(raw)
+        payload['facts']['requests_sent'] = 1
+        return payload, raw, expected
+
+    def check(self, payload, raw, expected, *, row=None, value=None, history=None):
+        # Existing projection assertions have their own behavior regressions.
+        # Exercise the complete owned-field comparison independently of them.
+        with patch.object(self.installed, 'project', return_value={}), \
+                patch.object(self.installed.shared, 'assertions'):
+            self.installed.check_owned(row or self.row, value or self.value, payload, raw,
+                1, 1, expected, Path('/owned/home'), None, history if history is not None else ([], []))
+
+    def test_complete_owned_metadata_and_facts_mismatches_fail(self):
+        payload, raw, expected = self.success()
+        self.check(payload, raw, expected)
+        for section, field, changed in (('metadata', 'batch_setting', '9'),
+                                        ('facts', 'cache_answers', '9')):
+            altered = copy.deepcopy(raw)
+            target = altered['value'][0]['meta'] if section == 'metadata' else altered['facts']
+            target[field] = changed
+            with self.subTest(section=section), self.assertRaisesRegex(AssertionError, field):
+                self.check(payload, altered, expected)
+
+    def test_owned_errors_require_native_facts(self):
+        expected = self.oracle['21-backend-fault'][0]
+        native = self.installed.folded(expected)
+        self.assertIsNotNone(native['facts'])
+        error = native['error']
+        payload = {'code': self.installed.shared.ERRORS[error['kind']],
+                   'message': error['message'], 'retryable': error['retryable'], 'facts': None}
+        with self.assertRaises(AssertionError):
+            self.check(payload, payload, expected, row={'id': '21-backend-fault'}, value={'expect': {}})
+
+    def test_expected_aliases_preserve_cross_step_identity_consistency(self):
+        payload, raw, expected = self.success()
+        history = ([], [])
+        self.check(payload, raw, expected, history=history)
+        self.check(payload, raw, expected, history=history)
+        changed = copy.deepcopy(raw)
+        changed['facts']['call_id'] = 'f' * 64
+        with self.assertRaisesRegex(AssertionError, 'call_id'):
+            self.check(payload, changed, expected, history=history)
+        default = self.installed.canonical([{'host': {'facts': {'call_id': 'call_id:9'}}}])
+        self.assertEqual(default[0]['host']['facts']['call_id'], 'call_id:9')
+
+    def test_opaque_alias_shaped_user_values_remain_unchanged(self):
+        _, raw, _ = self.success()
+        opaque = {'call_id': 'call_id:91', 'answer_id': 'answer_id:72',
+                  'request': 'request_sha256:33', 'seconds': 'seconds:4'}
+        raw['value'][0]['input'] = opaque
+        document = [{'host': {'results': raw['value'], 'facts': raw['facts']}}]
+        for expected_oracle in (False, True):
+            with self.subTest(expected_oracle=expected_oracle):
+                observed = self.installed.canonical(document, expected_oracle=expected_oracle)
+                self.assertEqual(observed[0]['host']['results'][0]['input'], opaque)
+
+
 class BindingCaseTiers(unittest.TestCase):
     def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
         sys.path.insert(0, str(parity.ROOT / 'build-tools/results/templates'))
