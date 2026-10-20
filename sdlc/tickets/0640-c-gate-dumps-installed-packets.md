@@ -37,3 +37,4 @@ The PM's second ruling in `repos/agents/inbox/thinkthen/2026-10-20-thinkthen-064
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Installed blocking-call checks are pushed at 9f429edf for all 254 applicable shared cases; native archive proof and the unchanged-oracle mutation check await a free M5 slot, and legacy deletions wait for replacement proof.
