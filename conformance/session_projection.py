@@ -32,7 +32,7 @@ def project_session(payload, fixture, *, settled=False):
         if fixture.get('incremental'):
             output['completed'] = rows
     else:
-        output = {'code': 0, 'schema': 'thinkthen.result/2', 'rows': rows,
+        output = {'code': 0, 'schema': 'thinkthen.result', 'rows': rows,
                   'observations': sum(packet['kind'] == 'observation' for packet in packets)}
     if settled:
         output['settled'] = terminal.get('answer')

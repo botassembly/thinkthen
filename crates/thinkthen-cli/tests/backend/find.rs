@@ -60,7 +60,7 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     assert_eq!(output.status.code(), Some(3));
     let row = crate::harness::printed(&output);
     let document: serde_json::Value = serde_json::from_str(&row).unwrap();
-    assert_eq!(document["schema"], "thinkthen.result/2");
+    assert_eq!(document["schema"], "thinkthen.result");
     assert_eq!(document["value"], serde_json::Value::Null);
     assert_eq!(document["answer"]["pick"], "u001");
     assert_eq!(

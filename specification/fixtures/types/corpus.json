@@ -377,7 +377,7 @@
   },
   "case_id": "02-decide-no",
   "expect_fields": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "value": false,
     "answer": {
       "kind": "yes_no",
@@ -494,7 +494,7 @@
   "name": "detailed-kind-mismatch",
   "definition": "completeChoose",
   "response": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "value": null,
     "question": {
@@ -546,7 +546,7 @@
   "name": "find-details",
   "definition": "completeFind",
   "response": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "value": null,
     "index": null,
@@ -748,7 +748,7 @@
         "input_tokens": 9
       }
     },
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "value": {
       "failed": {
         "failed": {
@@ -828,7 +828,7 @@
         "input_tokens": 9
       }
     },
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "value": {
       "failed": {
         "failed": {
@@ -975,7 +975,7 @@
   "name": "relate-details",
   "definition": "completeRelation",
   "response": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "value": [],
     "question": {
@@ -1008,7 +1008,7 @@
   "name": "c-detailed-record",
   "definition": "completeFilter",
   "response": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "value": false,
     "question": {
@@ -1091,7 +1091,7 @@
   "name": "c-detailed-record-missing-input",
   "definition": "completeFilter",
   "response": {
-    "schema": "thinkthen.result/2",
+    "schema": "thinkthen.result",
     "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "value": false,
     "question": {
@@ -1181,7 +1181,7 @@
       "name": "native-result2-decide-false-author-declarations",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -1258,7 +1258,7 @@
       "name": "native-result2-decide-null",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": null,
         "question": {
@@ -1335,7 +1335,7 @@
       "name": "native-result2-choose-tie",
       "definition": "completeChoose",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": null,
         "question": {
@@ -1392,7 +1392,7 @@
       "name": "native-result2-tag-empty",
       "definition": "completeTag",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": [],
         "question": {
@@ -1447,7 +1447,7 @@
       "name": "native-result2-score-weighted",
       "definition": "completeScore",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": 0.75,
         "question": {
@@ -1503,7 +1503,7 @@
       "name": "native-result2-filter-original",
       "definition": "completeFilter",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -1587,7 +1587,7 @@
       "name": "native-result2-rank-position",
       "definition": "completeRank",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": 2,
         "question": {
@@ -1647,7 +1647,7 @@
       "name": "native-result2-find-raw-real-pick-none-selection",
       "definition": "completeFind",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": null,
         "index": null,
@@ -1850,7 +1850,7 @@
             "input_tokens": 9
           }
         },
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "value": {
           "failed": {
             "failed": {
@@ -1868,7 +1868,7 @@
       "name": "native-result2-recognize-zero-observations",
       "definition": "completeRecognition",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": {
           "entities": []
@@ -1905,7 +1905,7 @@
       "name": "native-result2-relate-zero-observations",
       "definition": "completeRelation",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": [],
         "question": {
@@ -1938,7 +1938,7 @@
       "definition": "completeCall",
       "response": {
         "value": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "value": false,
           "question": {
@@ -2213,7 +2213,7 @@
       "name": "native-result2-rank-null",
       "definition": "completeRank",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": null,
         "question": {
@@ -2274,7 +2274,7 @@
       "name": "native-result2-missing-answer-id",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": null,
         "value": false,
         "question": {
@@ -2352,7 +2352,7 @@
       "name": "native-result2-null-output-usage",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2431,7 +2431,7 @@
       "name": "native-result2-transient-id-in-body",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2510,7 +2510,7 @@
       "name": "native-result2-unknown-proxy-meta",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2589,7 +2589,7 @@
       "name": "native-result2-zero-batch-count",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2667,7 +2667,7 @@
       "name": "native-result2-null-batch-count",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2745,7 +2745,7 @@
       "name": "native-result2-upper-answer-id",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
         "value": false,
         "question": {
@@ -2823,7 +2823,7 @@
       "name": "native-result2-unknown-declaration-feature",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -2902,7 +2902,7 @@
       "name": "native-result2-both-observation-identities",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -3130,7 +3130,7 @@
             "input_tokens": 9
           }
         },
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "value": {
           "failed": {
             "failed": {
@@ -3149,7 +3149,7 @@
       "name": "native-result2-empty-live-origin",
       "definition": "completeRecognition",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": {
           "entities": []
@@ -3186,7 +3186,7 @@
       "name": "native-result2-empty-invented-model",
       "definition": "completeRecognition",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": {
           "entities": []
@@ -3225,7 +3225,7 @@
       "definition": "completeCall",
       "response": {
         "value": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "value": false,
           "question": {
@@ -3329,7 +3329,7 @@
       "definition": "completeCall",
       "response": {
         "value": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "value": false,
           "question": {
@@ -3433,7 +3433,7 @@
       "schema_only": true,
       "response_valid": false,
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -3511,7 +3511,7 @@
       "schema_only": true,
       "response_valid": false,
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
         "value": false,
         "question": {
@@ -3586,7 +3586,7 @@
       "definition": "completeCall",
       "response": {
         "value": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "value": false,
           "question": {
@@ -3689,7 +3689,7 @@
       "definition": "completeCall",
       "response": {
         "value": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
           "value": false,
           "question": {
@@ -3794,7 +3794,7 @@
       "name": "native-result2-actual-refund-replay-unknown-batch",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e",
         "value": true,
         "question": {
@@ -3848,7 +3848,7 @@
       "name": "native-result2-text-source",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e",
         "value": true,
         "question": {
@@ -3902,7 +3902,7 @@
       "name": "native-result2-image-source-no-lines",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e",
         "value": true,
         "question": {
@@ -3954,7 +3954,7 @@
       "name": "native-result2-source-missing-last-line",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e",
         "value": true,
         "question": {
@@ -4008,7 +4008,7 @@
       "name": "native-result2-source-zero-line",
       "definition": "completeDecide",
       "response": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e",
         "value": true,
         "question": {

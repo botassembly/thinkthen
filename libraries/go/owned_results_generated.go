@@ -26,7 +26,7 @@ func (v Annotation) LastLine() Presence[json.Number] {
 }
 func (v Annotation) Meta() Presence[Meta]         { return ownedMember[Meta](v.raw, "meta") }
 func (v Annotation) Position() Presence[Position] { return ownedMember[Position](v.raw, "position") }
-func (v Annotation) Schema() Presence[Version]    { return ownedMember[Version](v.raw, "schema") }
+func (v Annotation) Schema() Presence[ResultTag]  { return ownedMember[ResultTag](v.raw, "schema") }
 func (v Annotation) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -305,7 +305,9 @@ func (v AtomicArrayOfString) Question() Presence[QuestionDocument] {
 func (v AtomicArrayOfString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicArrayOfString) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicArrayOfString) Schema() Presence[ResultTag] {
+	return ownedMember[ResultTag](v.raw, "schema")
+}
 func (v AtomicArrayOfString) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -335,7 +337,9 @@ func (v AtomicDecideValue) Question() Presence[QuestionDocument] {
 func (v AtomicDecideValue) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicDecideValue) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicDecideValue) Schema() Presence[ResultTag] {
+	return ownedMember[ResultTag](v.raw, "schema")
+}
 func (v AtomicDecideValue) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -367,7 +371,9 @@ func (v AtomicNonZeroUsize) Question() Presence[QuestionDocument] {
 func (v AtomicNonZeroUsize) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicNonZeroUsize) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicNonZeroUsize) Schema() Presence[ResultTag] {
+	return ownedMember[ResultTag](v.raw, "schema")
+}
 func (v AtomicNonZeroUsize) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -401,8 +407,8 @@ func (v AtomicNullableString) Question() Presence[QuestionDocument] {
 func (v AtomicNullableString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicNullableString) Schema() Presence[Version] {
-	return ownedMember[Version](v.raw, "schema")
+func (v AtomicNullableString) Schema() Presence[ResultTag] {
+	return ownedMember[ResultTag](v.raw, "schema")
 }
 func (v AtomicNullableString) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
@@ -431,7 +437,7 @@ func (v AtomicBoolean) Question() Presence[QuestionDocument] {
 func (v AtomicBoolean) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicBoolean) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicBoolean) Schema() Presence[ResultTag] { return ownedMember[ResultTag](v.raw, "schema") }
 func (v AtomicBoolean) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -457,7 +463,7 @@ func (v AtomicDouble) Question() Presence[QuestionDocument] {
 func (v AtomicDouble) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v AtomicDouble) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicDouble) Schema() Presence[ResultTag] { return ownedMember[ResultTag](v.raw, "schema") }
 func (v AtomicDouble) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -664,9 +670,9 @@ func (v Find) Position() Presence[Position]     { return ownedMember[Position](v
 func (v Find) Question() Presence[FindQuestionDocument] {
 	return ownedMember[FindQuestionDocument](v.raw, "question")
 }
-func (v Find) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
-func (v Find) Threshold() Presence[any]  { return ownedMember[any](v.raw, "threshold") }
-func (v Find) Value() Presence[any]      { return ownedMember[any](v.raw, "value") }
+func (v Find) Schema() Presence[ResultTag] { return ownedMember[ResultTag](v.raw, "schema") }
+func (v Find) Threshold() Presence[any]    { return ownedMember[any](v.raw, "threshold") }
+func (v Find) Value() Presence[any]        { return ownedMember[any](v.raw, "value") }
 
 type FindCandidate struct{ ownedJSON }
 
@@ -922,7 +928,9 @@ func (v RankMemberResult) Meta() Presence[Meta]      { return ownedMember[Meta](
 func (v RankMemberResult) Question() Presence[QuestionDocument] {
 	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v RankMemberResult) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v RankMemberResult) Schema() Presence[ResultTag] {
+	return ownedMember[ResultTag](v.raw, "schema")
+}
 func (v RankMemberResult) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -951,7 +959,7 @@ func (v Recognition) Position() Presence[Position] { return ownedMember[Position
 func (v Recognition) Question() Presence[RecognizeQuestionDocument] {
 	return ownedMember[RecognizeQuestionDocument](v.raw, "question")
 }
-func (v Recognition) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v Recognition) Schema() Presence[ResultTag] { return ownedMember[ResultTag](v.raw, "schema") }
 func (v Recognition) Source() Presence[PhysicalSource] {
 	return ownedMember[PhysicalSource](v.raw, "source")
 }
@@ -1067,7 +1075,7 @@ func (v Relation) Position() Presence[Position] { return ownedMember[Position](v
 func (v Relation) Question() Presence[RelateQuestionDocument] {
 	return ownedMember[RelateQuestionDocument](v.raw, "question")
 }
-func (v Relation) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v Relation) Schema() Presence[ResultTag] { return ownedMember[ResultTag](v.raw, "schema") }
 func (v Relation) Value() Presence[[]RelatedEntityEdge] {
 	return ownedMember[[]RelatedEntityEdge](v.raw, "value")
 }
@@ -1241,6 +1249,10 @@ type ResultFunction struct{ ownedJSON }
 
 func (v ResultFunction) Value() (string, error) { return ownedDecode[string](v.raw) }
 
+type ResultTag struct{ ownedJSON }
+
+func (v ResultTag) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type SdkRequestId struct{ ownedJSON }
 
 func (v SdkRequestId) Value() (string, error) { return ownedDecode[string](v.raw) }
@@ -1371,10 +1383,6 @@ func (v UsagePersistence) Value() (string, error) { return ownedDecode[string](v
 type Verb struct{ ownedJSON }
 
 func (v Verb) Value() (string, error) { return ownedDecode[string](v.raw) }
-
-type Version struct{ ownedJSON }
-
-func (v Version) Value() (string, error) { return ownedDecode[string](v.raw) }
 
 type WordingVersion struct{ ownedJSON }
 

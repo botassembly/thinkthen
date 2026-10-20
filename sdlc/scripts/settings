@@ -118,21 +118,26 @@ def help_flags():
 
 def product(path):
     folders = path.parts[:-1]
+    # Library-root check drivers build and exercise the installed package.
+    driver = (len(path.parts) == 3 and path.parts[0] == "libraries" and path.suffix == ".py"
+              and (path.stem == "check" or path.stem.startswith("check-")))
     tests = (path.name in {"tests.rs", "build.rs"} or path.stem.endswith("_tests")
              or path.name.startswith(("test_", "build-"))
+             or driver
              or path == pathlib.Path("databases/duckdb/cpp/verify_decide.py"))
     return path.suffix in SOURCE and not tests and not any(
         part in {"checks", "fixtures", "Tests", "tests", "test", "tools"}
         or part.startswith("test_") or part.endswith("_tests") for part in folders)
 
 
-def env_names():
-    listed = subprocess.run(["git", "-C", str(REPO), "ls-files", ":(glob)crates/*/src/**", "libraries", "databases"],
-                            capture_output=True, text=True, check=True).stdout.split()
+def env_names(sources=None):
+    listed = sources if sources is not None else subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", ":(glob)crates/*/src/**", "libraries", "databases"],
+        capture_output=True, text=True, check=True).stdout.split()
     found = set()
     for path in map(pathlib.Path, listed):
-        if product(path) and (REPO / path).is_file():
-            text = (REPO / path).read_text(encoding="utf-8", errors="replace")
+        if product(path) and (sources is not None or (REPO / path).is_file()):
+            text = sources[path] if sources is not None else (REPO / path).read_text(encoding="utf-8", errors="replace")
             found |= {hit for pattern in NAMES for hit in pattern.findall(text)}
     return {name for name in found if not name.startswith(TEST_ONLY)}
 
@@ -299,8 +304,11 @@ def self_test(flags, names, keys):
     # A package gate's source-like helper must not become a product setting;
     # the matching library implementation remains in the scan.
     helpers = ("checks/settings.py", "fixtures/settings.py", "Tests/settings.py", "tests/settings.py",
-               "test_support/settings.py", "test_data/settings.py", "build.rs", "build-session.py")
+               "test_support/settings.py", "test_data/settings.py", "build.rs", "build-session.py",
+               "check.py", "check-windows.py")
     implementations = ("libraries/example/src/settings.py", "libraries/example/src/testing/settings.py",
+                       "libraries/example/src/check.py", "libraries/example/src/check-windows.py",
+                       "libraries/example/check_settings.py",
                        "libraries/example/src/verify_settings.py",
                        "databases/duckdb/cpp/verify_settings.py",
                        "databases/duckdb/cpp/src/verify_settings.py")
@@ -314,6 +322,18 @@ def self_test(flags, names, keys):
             copy = pathlib.Path(tmp) / "settings.md"
             copy.write_text(body, encoding="utf-8")
             actual = check(copy, flags, names, keys)[0]
+        if actual != expected:
+            bad += 1
+            print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
+    selector = 'import os\nselected = os.environ.get("THINKTHEN_CONFORMANCE_IDS")\n'
+    drivers = {pathlib.Path("libraries/example") / name: selector for name in ("check.py", "check-windows.py")}
+    environment_cases = [
+        ("installed-library check drivers", drivers, []),
+        ("the same selector in product code", {**drivers, pathlib.Path("libraries/example/src/check.py"): selector},
+         ["settings.md: THINKTHEN_CONFORMANCE_IDS is read by product code and has no row"]),
+    ]
+    for name, sources, expected in environment_cases:
+        actual = check(PAGE, flags, names | env_names(sources), keys)[0]
         if actual != expected:
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
@@ -346,7 +366,7 @@ def self_test(flags, names, keys):
         if actual != expected:
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
-    total = len(planted) + len(source_cases) + 1
+    total = len(planted) + len(environment_cases) + len(source_cases) + 1
     print(f"settings self-test: {total - bad}/{total} cases hold")
     return bad
 

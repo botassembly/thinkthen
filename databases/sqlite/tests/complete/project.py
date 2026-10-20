@@ -58,7 +58,7 @@ def project(doc,verb):
         return {'code':ERRORS[kind],'message':message}
     if 'empty_sql_rows' in doc:
         assert doc == {'empty_sql_rows': [], 'details_rows': []}, doc
-        return {'code':0,'schema':'thinkthen.result/2','rows':[],
+        return {'code':0,'schema':'thinkthen.result','rows':[],
                 'observations':0,'empty_sql_rows':[]}
     wrapper=doc
     doc=wrapper['native']
@@ -72,7 +72,7 @@ def project(doc,verb):
         return out
     values=doc['value'] if isinstance(doc['value'],list) else [doc['value']]
     facts=doc['facts'];events=doc.get('observations',[])
-    out={'facts':facts,'code':0,'schema':values[0]['schema'] if values else 'thinkthen.result/2','requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'call_id':facts['call_id'],'observations':len(events)}
+    out={'facts':facts,'code':0,'schema':values[0]['schema'] if values else 'thinkthen.result','requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'call_id':facts['call_id'],'observations':len(events)}
     for key in ('records','input_tokens','output_tokens'):
         if key in facts:out[key]=facts[key]
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
@@ -83,7 +83,7 @@ def project(doc,verb):
 
 def assert_empty_sql(value, got, count):
     """An empty SQL set owns no public receipt; measure sends at the backend."""
-    assert got == {'code':0,'schema':'thinkthen.result/2','rows':[],
+    assert got == {'code':0,'schema':'thinkthen.result','rows':[],
                    'observations':0,'empty_sql_rows':[]}, got
     assert count == 0, count
     if value.get('zero_observations'):

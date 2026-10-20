@@ -1158,7 +1158,7 @@ final class Decoder
         if ($native->last_line->presence !== 0) $values['last_line'] = $native->last_line->presence === 1 ? null : (self::unsigned($native->last_line->value));
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         $values['value'] = self::readAnnotatedRow($native->value[0]);
         return new \ThinkThen\Results\Annotation($values);
@@ -1496,7 +1496,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         $values['value'] = self::sequence($native->value, fn($v) => self::text($v));
@@ -1514,7 +1514,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readDecideValue($native->value->value[0]));
@@ -1532,7 +1532,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         $values['value'] = self::unsigned($native->value);
@@ -1550,7 +1550,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::text($native->value->value));
@@ -1568,7 +1568,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         $values['value'] = (bool)($native->value);
@@ -1586,7 +1586,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
         $values['value'] = $native->value;
@@ -1742,7 +1742,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
         $values['question'] = self::readFindQuestionDocument($native->question[0]);
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::jsonValue($native->threshold->value[0]));
         if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::jsonValue($native->value->value[0]));
         return new \ThinkThen\Results\Find($values);
@@ -1983,7 +1983,7 @@ final class Decoder
         if ($native->images->presence !== 0) $values['images'] = $native->images->presence === 1 ? null : (self::sequence($native->images->value, fn($v) => self::readImage($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
         $values['question'] = self::readQuestionDocument($native->question[0]);
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::jsonValue($native->threshold->value[0]));
         $values['value'] = self::unsigned($native->value);
@@ -2002,7 +2002,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
         $values['question'] = self::readRecognizeQuestionDocument($native->question[0]);
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         $values['value'] = self::readRecognize($native->value[0]);
         return new \ThinkThen\Results\Recognition($values);
@@ -2083,7 +2083,7 @@ final class Decoder
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
         $values['question'] = self::readRelateQuestionDocument($native->question[0]);
-        $values['schema'] = self::readVersion($native->schema[0]);
+        $values['schema'] = self::readResultTag($native->schema[0]);
         $values['value'] = self::sequence($native->value, fn($v) => self::readRelatedEntityEdge($v[0]));
         return new \ThinkThen\Results\Relation($values);
     }
@@ -2191,6 +2191,13 @@ final class Decoder
             8 => 'annotate',
             9 => 'recognize',
             10 => 'relate',
+            default => throw new \LogicException('invalid native enum'),
+        };
+    }
+    private static function readResultTag(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => 'thinkthen.result',
             default => throw new \LogicException('invalid native enum'),
         };
     }
@@ -2331,13 +2338,6 @@ final class Decoder
     {
         return match ($native->kind) {
             1 => 'recognize',
-            default => throw new \LogicException('invalid native enum'),
-        };
-    }
-    private static function readVersion(\FFI\CData $native): mixed
-    {
-        return match ($native->kind) {
-            1 => 'thinkthen.result/2',
             default => throw new \LogicException('invalid native enum'),
         };
     }

@@ -214,7 +214,7 @@ fn numeric_rank_positions_keep_original_occurrences_stable_ties_and_saved_score_
     schema::call(&rows, "completeRank");
     for row in ranked {
         let doc: Value = serde_json::from_str(&row.result().to_json().unwrap()).unwrap();
-        assert_eq!(doc["schema"], "thinkthen.result/2");
+        assert_eq!(doc["schema"], "thinkthen.result");
         assert_eq!(doc["value"], row.result().value());
         assert_eq!(doc["threshold"], Value::Null);
         assert_eq!(doc["question"]["verb"], "score");

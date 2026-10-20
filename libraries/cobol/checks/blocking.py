@@ -211,7 +211,7 @@ end program BLOCK_PLAN.
             assert answer.results.len > 0, function
             payload = contracts[function]['receipt_payload']
             decoded = reader.decode(payload, answer.results if payload.get('type') == 'array' else answer.results.data, 'receipt')
-            assert decoded and (decoded[0] if isinstance(decoded, list) else decoded)['schema'] == 'thinkthen.result/2', ('owned-receipts', function)
+            assert decoded and (decoded[0] if isinstance(decoded, list) else decoded)['schema'] == 'thinkthen.result', ('owned-receipts', function)
             if function == 'decide':
                 assert value_json(Decision.from_address(answer.value.rows).value) is True
                 assert status.facts.attempts.presence == 2 and status.facts.attempts.value.len == 1

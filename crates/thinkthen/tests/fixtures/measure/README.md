@@ -10,7 +10,7 @@ These files define `thinkthen runs audit` and `thinkthen runs diff`. The source 
 
 `small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at those checksums. Two depart. Quick Fix qf-diff-warnings renamed the meta key in `small/annotate.jsonl` to `questions_sha256`, the key a real `annotate` line carries. The small fixtures share the placeholder digest `00`. It also recaptured `golden/diff-choose.jsonl`, the second departure, and `golden/table/diff-choose.txt` from `thinkthen diff` under the wider McNemar rule. Their McNemar p moved from 1.0 to 0.5. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
 
-Saved grading rows use the current unversioned object input contract. Their obsolete `thinkthen.result/1` schema tags were removed; all grading fields and golden outputs remain unchanged.
+Saved grading rows use the current unversioned object input contract. Their obsolete `thinkthen.result` schema tags were removed; all grading fields and golden outputs remain unchanged.
 
 Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines of `decide.jsonl` in reverse. `decide-key-noparts.jsonl` holds the key without `part`. `decide-key-odd.jsonl` holds the key without `part` and without `r6`.
 

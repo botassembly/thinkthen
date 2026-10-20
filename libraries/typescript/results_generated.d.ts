@@ -22,7 +22,7 @@ export class NativeAnnotation {
   readonly "last_line"?: number | NativeNumber;
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "value": NativeAnnotatedRow;
   has(key: string): boolean;
@@ -189,7 +189,7 @@ export class NativeAtomicArrayOfString {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": readonly string[];
@@ -206,7 +206,7 @@ export class NativeAtomicDecideValue {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": NativeDecideValue;
@@ -223,7 +223,7 @@ export class NativeAtomicNonZeroUsize {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": number | NativeNumber;
@@ -240,7 +240,7 @@ export class NativeAtomicNullableString {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": string | null;
@@ -257,7 +257,7 @@ export class NativeAtomicBoolean {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": boolean;
@@ -274,7 +274,7 @@ export class NativeAtomicDouble {
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": NativeThreshold | null;
   readonly "value": number | NativeNumber;
@@ -395,7 +395,7 @@ export class NativeFind {
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
   readonly "question": NativeFindQuestionDocument;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "threshold": null;
   readonly "value": JsonValue;
   has(key: string): boolean;
@@ -553,7 +553,7 @@ export class NativeRankMemberResult {
   readonly "images"?: readonly NativeImage[];
   readonly "meta": NativeMeta;
   readonly "question": NativeQuestionDocument;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": null;
   readonly "value": number | NativeNumber;
@@ -571,7 +571,7 @@ export class NativeRecognition {
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
   readonly "question": NativeRecognizeQuestionDocument;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "source"?: NativePhysicalSource;
   readonly "value": NativeRecognize;
   has(key: string): boolean;
@@ -634,7 +634,7 @@ export class NativeRelation {
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
   readonly "question": NativeRelateQuestionDocument;
-  readonly "schema": NativeVersion;
+  readonly "schema": NativeResultTag;
   readonly "value": readonly NativeRelatedEntityEdge[];
   has(key: string): boolean;
   readonly [key: string]: unknown;
@@ -713,6 +713,7 @@ export type NativeRequestFunction =
   | "annotate"
   | "recognize"
   | "relate";
+export type NativeResultTag = "thinkthen.result";
 export type NativeSdkRequestId = string;
 export type NativeSendBudgetDenial =
   | NativeSendBudgetDenialBeforeFirstSend
@@ -797,7 +798,6 @@ export type NativeUsagePersistence =
   | "written"
   | "failed";
 export type NativeVerb = "recognize";
-export type NativeVersion = "thinkthen.result/2";
 export type NativeWordingVersion = number | NativeNumber;
 export type NativeAnnotatedField =
   | boolean

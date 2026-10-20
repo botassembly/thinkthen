@@ -270,7 +270,7 @@ pub struct Details {
 }
 
 impl Details {
-    /// The `thinkthen.result/2` line that `--details` prints for this one text.
+    /// The `thinkthen.result` line that `--details` prints for this one text.
     #[must_use]
     pub fn to_json(&self) -> String {
         self.json.text()

@@ -55,7 +55,7 @@ fn rank_details_have_numeric_stable_positions_full_answers_and_zero_send_replay(
         [1, 2, 3]
     );
     for row in &live {
-        assert_eq!(row["schema"], "thinkthen.result/2");
+        assert_eq!(row["schema"], "thinkthen.result");
         assert_eq!(row["threshold"], Value::Null);
         assert_eq!(row["meta"]["question_sources"][0]["batch_size"], 3);
         assert!(row["meta"]["usage"].get("output_tokens").is_none());

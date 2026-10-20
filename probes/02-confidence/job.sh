@@ -46,7 +46,7 @@ while IFS= read -r case; do
 		;;
 	esac
 	jq -c --argjson case "$case" \
-		'{schema, value, input: $case, question, answer, threshold, meta}' \
+		'. + {input: $case}' \
 		row.json >>"$out/run.jsonl"
 done <cases.jsonl
 

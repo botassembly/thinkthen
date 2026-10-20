@@ -363,6 +363,7 @@ const ARTICLES = {
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any threshold. It sends no request.",
       "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/#diff) asks about them again with context.",
+      "The current saved packets rebuild the original probabilities through a synthetic local test backend.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
@@ -380,6 +381,7 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
+      "The current saved packets rebuild the original probabilities through a synthetic local test backend.",
       "Here the page reads two saved runs for the 10 songs on the [audit section](/learn/beatles-bench/#audit). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
     ],
     see: {

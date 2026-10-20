@@ -206,7 +206,7 @@ public final class SessionCases {
             }
             rows.clear();rows.addAll(all);
         }
-        var output=new LinkedHashMap<String,Object>();output.put("code",0);output.put("schema","thinkthen.result/2");output.put("observations",call.packets().stream().filter(p->p instanceof SessionPacketObservation).count());output.put("rows",rows);
+        var output=new LinkedHashMap<String,Object>();output.put("code",0);output.put("schema","thinkthen.result");output.put("observations",call.packets().stream().filter(p->p instanceof SessionPacketObservation).count());output.put("rows",rows);
         if(optional(call.terminal().facts()) instanceof Facts facts){output.put("call_id",facts.callId());output.put("requests_sent",facts.requestsSent());output.put("cache_answers",facts.cacheAnswers());output.put("records",facts.records());if(optional(facts.inputTokens())!=null)output.put("input_tokens",facts.inputTokens().value());if(optional(facts.outputTokens())!=null)output.put("output_tokens",facts.outputTokens().value());}
         if(optional(call.terminal().failure()) instanceof CallError error){output.put("code",code(error.error().kind().value()));output.put("message",error.error().message());if(optional(error.error().stopped().at())!=null)output.put("stopped_at",error.error().stopped().at().value());}
         if(yes(data,"call_result_contract") && call instanceof CallResult<?,?,?> result)

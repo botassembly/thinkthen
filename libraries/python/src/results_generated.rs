@@ -476,6 +476,7 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         ),
         "completeRelationMethod" => plain(py, value),
         "completeRequestFunction" => plain(py, value),
+        "completeResultTag" => plain(py, value),
         "completeSdkRequestId" => plain(py, value),
         "completeSendBudgetDenial" => {
             if value.get("kind").and_then(Value::as_str) == Some("before_first_send") {
@@ -553,7 +554,6 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         "completeUsage" => object(py, "NativeUsage", "completeUsage", value),
         "completeUsagePersistence" => plain(py, value),
         "completeVerb" => plain(py, value),
-        "completeVersion" => plain(py, value),
         "completeWordingVersion" => plain(py, value),
         "completeannotatedField" => {
             if value.is_object() {
@@ -1221,7 +1221,7 @@ pub(crate) fn field(
         ("completeAnnotation", "last_line") => plain(py, value),
         ("completeAnnotation", "meta") => convert(py, "completeMeta", value),
         ("completeAnnotation", "position") => convert(py, "completePosition", value),
-        ("completeAnnotation", "schema") => convert(py, "completeVersion", value),
+        ("completeAnnotation", "schema") => convert(py, "completeResultTag", value),
         ("completeAnnotation", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1315,7 +1315,7 @@ pub(crate) fn field(
             convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_Array_of_string", "question_name") => plain(py, value),
-        ("completeAtomic_Array_of_string", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_Array_of_string", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_Array_of_string", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1346,7 +1346,7 @@ pub(crate) fn field(
             convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_DecideValue", "question_name") => plain(py, value),
-        ("completeAtomic_DecideValue", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_DecideValue", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_DecideValue", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1377,7 +1377,7 @@ pub(crate) fn field(
             convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_NonZeroUsize", "question_name") => plain(py, value),
-        ("completeAtomic_NonZeroUsize", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_NonZeroUsize", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_NonZeroUsize", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1408,7 +1408,7 @@ pub(crate) fn field(
             convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_Nullable_string", "question_name") => plain(py, value),
-        ("completeAtomic_Nullable_string", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_Nullable_string", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_Nullable_string", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1437,7 +1437,7 @@ pub(crate) fn field(
         ("completeAtomic_boolean", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_boolean", "question") => convert(py, "completequestionDocument", value),
         ("completeAtomic_boolean", "question_name") => plain(py, value),
-        ("completeAtomic_boolean", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_boolean", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_boolean", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1466,7 +1466,7 @@ pub(crate) fn field(
         ("completeAtomic_double", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_double", "question") => convert(py, "completequestionDocument", value),
         ("completeAtomic_double", "question_name") => plain(py, value),
-        ("completeAtomic_double", "schema") => convert(py, "completeVersion", value),
+        ("completeAtomic_double", "schema") => convert(py, "completeResultTag", value),
         ("completeAtomic_double", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1575,7 +1575,7 @@ pub(crate) fn field(
         ("completeFind", "meta") => convert(py, "completeMeta", value),
         ("completeFind", "position") => convert(py, "completePosition", value),
         ("completeFind", "question") => convert(py, "completefindQuestionDocument", value),
-        ("completeFind", "schema") => convert(py, "completeVersion", value),
+        ("completeFind", "schema") => convert(py, "completeResultTag", value),
         ("completeFind", "threshold") => plain(py, value),
         ("completeFind", "value") => plain(py, value),
         ("completeFindCandidate", "index") => plain(py, value),
@@ -1695,7 +1695,7 @@ pub(crate) fn field(
         }
         ("completeRankMemberResult", "meta") => convert(py, "completeMeta", value),
         ("completeRankMemberResult", "question") => convert(py, "completequestionDocument", value),
-        ("completeRankMemberResult", "schema") => convert(py, "completeVersion", value),
+        ("completeRankMemberResult", "schema") => convert(py, "completeResultTag", value),
         ("completeRankMemberResult", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1717,7 +1717,7 @@ pub(crate) fn field(
         ("completeRecognition", "question") => {
             convert(py, "completerecognizeQuestionDocument", value)
         }
-        ("completeRecognition", "schema") => convert(py, "completeVersion", value),
+        ("completeRecognition", "schema") => convert(py, "completeResultTag", value),
         ("completeRecognition", "source") => {
             if value.is_null() {
                 plain(py, value)
@@ -1778,7 +1778,7 @@ pub(crate) fn field(
         ("completeRelation", "meta") => convert(py, "completeMeta", value),
         ("completeRelation", "position") => convert(py, "completePosition", value),
         ("completeRelation", "question") => convert(py, "completerelateQuestionDocument", value),
-        ("completeRelation", "schema") => convert(py, "completeVersion", value),
+        ("completeRelation", "schema") => convert(py, "completeResultTag", value),
         ("completeRelation", "value") => array(py, value, |value| {
             convert(py, "completerelatedEntityEdge", value)
         }),

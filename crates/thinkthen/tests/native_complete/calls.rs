@@ -40,7 +40,7 @@ fn complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_leg
     let encoded = serde_json::to_string(&call).unwrap();
     assert!(encoded.contains(r#""input":{"z":false,"body":"One.","a":[2,1]}"#));
     let doc: Value = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(doc["value"][0]["schema"], "thinkthen.result/2");
+    assert_eq!(doc["value"][0]["schema"], "thinkthen.result");
     assert_eq!(doc["facts"]["records"], 1);
     assert_eq!(doc["facts"]["requests_sent"], 1);
     assert_eq!(doc["facts"]["attempts"].as_array().unwrap().len(), 1);

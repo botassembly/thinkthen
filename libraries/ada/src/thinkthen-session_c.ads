@@ -164,6 +164,7 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1 : constant := 10;
    K_THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1 : constant := 4;
    K_THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1 : constant := 1;
    K_THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND_V1 : constant := 1;
    K_THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_RETRY_V1 : constant := 3;
@@ -239,7 +240,6 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_COMPLETE_VALUE_NUMBER_V1 : constant := 5;
    K_THINKTHEN_COMPLETE_VALUE_STRING_V1 : constant := 3;
    K_THINKTHEN_COMPLETE_VERB_RECOGNIZE_V1 : constant := 1;
-   K_THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1 : constant := 1;
    K_THINKTHEN_EBACKEND : constant := 2;
    K_THINKTHEN_ECANCELLED : constant := 5;
    K_THINKTHEN_EDEADLINE : constant := 3;
@@ -2193,7 +2193,7 @@ private package Thinkthen.Session_C is
       data : aliased thinkthen_complete_question_document_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_version_v1 is record
+   type thinkthen_complete_result_tag_v1 is record
       kind : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
@@ -2215,7 +2215,7 @@ private package Thinkthen.Session_C is
       images : aliased thinkthen_complete_image_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_json_presence_v1;
       value : aliased Interfaces.Unsigned_64;
@@ -2277,7 +2277,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased thinkthen_complete_decide_value_presence_v1;
@@ -2301,7 +2301,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased thinkthen_complete_utf8_presence_v1;
@@ -2325,7 +2325,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased thinkthen_complete_string_list_v1;
@@ -2349,7 +2349,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased double;
@@ -2373,7 +2373,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased Interfaces.Unsigned_32;
@@ -2542,7 +2542,7 @@ private package Thinkthen.Session_C is
       last_line : aliased thinkthen_complete_u64_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       value : access constant thinkthen_complete_annotated_row_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
@@ -2625,7 +2625,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
       value : aliased Interfaces.Unsigned_64;
@@ -2697,7 +2697,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
       question : access constant thinkthen_complete_find_question_document_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       threshold : aliased thinkthen_complete_json_presence_v1;
       value : aliased thinkthen_complete_json_presence_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
@@ -2995,7 +2995,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
       question : access constant thinkthen_complete_recognize_question_document_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       value : access constant thinkthen_complete_recognize_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
@@ -3197,7 +3197,7 @@ private package Thinkthen.Session_C is
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
       question : access constant thinkthen_complete_relate_question_document_v1;
-      schema : access constant thinkthen_complete_version_v1;
+      schema : access constant thinkthen_complete_result_tag_v1;
       value : aliased thinkthen_complete_related_entity_edge_list_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
    end record

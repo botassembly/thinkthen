@@ -48,9 +48,9 @@ public final class Results {
         public Presence<Position> position() {
             return presence("position", value -> Position.read(value));
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1033,9 +1033,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1087,9 +1087,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1141,9 +1141,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1195,9 +1195,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1249,9 +1249,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1303,9 +1303,9 @@ public final class Results {
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -1706,9 +1706,9 @@ public final class Results {
             Object value = required("question");
             return FindQuestionDocument.read(value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<Object> threshold() {
             required("threshold");
@@ -2183,9 +2183,9 @@ public final class Results {
             Object value = required("question");
             return QuestionDocument.read(value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -2240,9 +2240,9 @@ public final class Results {
             Object value = required("question");
             return RecognizeQuestionDocument.read(value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public Presence<PhysicalSource> source() {
             return presence("source", value -> PhysicalSource.read(value));
@@ -2433,9 +2433,9 @@ public final class Results {
             Object value = required("question");
             return RelateQuestionDocument.read(value);
         }
-        public Version schema() {
+        public ResultTag schema() {
             Object value = required("schema");
-            return Version.read(value);
+            return ResultTag.read(value);
         }
         public List<RelatedEntityEdge> value() {
             Object value = required("value");
@@ -2676,6 +2676,17 @@ public final class Results {
         }
         static RequestFunction read(Object value) {
             return new RequestFunction(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class ResultTag extends View {
+        public ResultTag(Object value) {
+            super(value);
+        }
+        static ResultTag read(Object value) {
+            return new ResultTag(value);
         }
         public String value() {
             return (String)json();
@@ -2952,17 +2963,6 @@ public final class Results {
         }
         static Verb read(Object value) {
             return new Verb(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class Version extends View {
-        public Version(Object value) {
-            super(value);
-        }
-        static Version read(Object value) {
-            return new Version(value);
         }
         public String value() {
             return (String)json();

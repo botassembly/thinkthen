@@ -147,7 +147,7 @@ fn complete_set_rank_keeps_all_members_originals_partial_usage_and_independent_t
         }})
     );
     let json: Value = serde_json::from_str(&call.value()[2].result().to_json().unwrap()).unwrap();
-    assert_eq!(json["schema"], "thinkthen.result/2");
+    assert_eq!(json["schema"], "thinkthen.result");
     assert_eq!(json["value"], 3);
     assert_eq!(json["question_name"], "second");
     assert_eq!(json["answer"]["probability"], 0.99);
