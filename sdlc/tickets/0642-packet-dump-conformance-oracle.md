@@ -42,3 +42,4 @@ PM decision, 2026-10-19: the oracle is a new file, `conformance/fixtures/packets
 
 - 2026-10-19 started
 - 2026-10-19 next: Fresh source1a84df8a7 awaits M5 proof and a PM ruling on shared case25-defect-fault: its private internal_invariant_failure operation has no admitted public input, so the proposed public oracle explicitly names that exclusion while retaining private defect coverage, or the PM can scope a separate internal injection test; every admitted public case proceeds.
+- 2026-10-19 next: Full required-case inventory confirms private25-defect-fault was already outside Rust parity, so retaining that explicit boundary needs no new ruling; current sourcee5be1cf0a preserves all258 required cells through shared orchestration and awaits the next M5 slot for oracle generation, package comparison, lint and planted stale-output negatives.
