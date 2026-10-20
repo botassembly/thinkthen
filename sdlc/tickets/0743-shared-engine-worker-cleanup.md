@@ -23,3 +23,4 @@ Changes: `crates/thinkthen/tests/public_batches.rs`. Add a necessary related sou
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: setup: the original worker assertion counted an unrelated libtest thread, and the existing child fixture preserves every assertion and deadline; formal gate package 1792520837617-78430 passed on 43d797dfe, current main adds only the standard-command decision and root-cause record, and fresh review plus current-main routine qualification precede landing.
