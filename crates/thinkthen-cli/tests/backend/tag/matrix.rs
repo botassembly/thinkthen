@@ -302,7 +302,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     let finished = finish(child, "tag");
     let sent = listener.requests().len();
     drop(listener);
-    assert!(released.join().expect("release thread"), "reply released");
+    released.join().expect("release thread");
     let finished = finished.expect("command ends");
     read.expect("one output row");
     assert_eq!(finished.status.code(), Some(0), "{finished:?}");

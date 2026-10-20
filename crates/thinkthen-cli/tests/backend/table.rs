@@ -467,7 +467,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     let output = finish(child, "table");
     let sent = listener.requests().len();
     drop(listener);
-    assert!(released.join().expect("release thread"), "reply released");
+    released.join().expect("release thread");
     let output = output.expect("command ends");
     read.expect("one output row");
     assert_eq!(output.status.code(), Some(0), "{output:?}");

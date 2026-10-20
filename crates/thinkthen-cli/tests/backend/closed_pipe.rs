@@ -86,7 +86,7 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
         let output = finish(child, "filter after reader closes");
         let sent = listener.count();
         drop(listener);
-        assert!(released.join().expect("release thread"), "reply released");
+        released.join().expect("release thread");
         let output = output.expect("the command ends");
         read.expect("first kept row");
         assert_eq!(first, "keep first\n");

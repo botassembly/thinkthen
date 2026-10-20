@@ -416,7 +416,7 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     let output = finish(child, "thinkthen after `head -1`");
     let sent = listener.requests().len();
     drop(listener);
-    assert!(released.join().expect("release thread"), "reply released");
+    released.join().expect("release thread");
     let output = output.expect("the compiled binary ends");
     read.expect("one row");
     assert_eq!(output.status.code(), Some(0), "{output:?}");

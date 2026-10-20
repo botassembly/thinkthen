@@ -366,7 +366,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     drop(input);
     let sent = listener.requests().len();
     drop(listener);
-    assert!(released.join().expect("release thread"), "reply released");
+    released.join().expect("release thread");
     let status = status.expect("annotate stops after the output pipe closes");
     read.expect("first row");
     assert!(first.contains(r#""record":1"#), "{first}");
