@@ -1,19 +1,14 @@
-//! R completion handles retain the shared native session and its final packets.
+//! Feed collection retains native packets until the shared pull-call bridge exists.
 use crate::{carry, defect};
 use serde_json::{Value, json};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use thinkthen::{
-    RequestSession, RequestSessionRead, RequestSessionResult, RequestSessionRow, RequestValue,
+    RequestSessionResult, RequestSessionRow, RequestValue,
 };
 use crate::calls::Crossed;
 
 pub(crate) struct Completion(Mutex<State>);
 struct State {
-    name: &'static str,
-    kind: Option<String>,
-    session: Option<RequestSession>,
-    positions: Option<Vec<usize>>,
-    details: Vec<Value>,
     observations: Vec<Value>,
     packet: Value,
     value: Option<RequestValue>,
@@ -27,11 +22,6 @@ impl std::fmt::Debug for Completion {
 impl Completion {
     pub(crate) fn new() -> Self {
         Self(Mutex::new(State {
-            name: "unused",
-            kind: None,
-            session: None,
-            positions: None,
-            details: Vec::new(),
             observations: Vec::new(),
             packet: json!({"results": []}),
             value: None,
@@ -41,84 +31,10 @@ impl Completion {
     fn state(&self) -> MutexGuard<'_, State> {
         self.0.lock().unwrap_or_else(PoisonError::into_inner)
     }
-    pub(crate) fn claim(&self) -> bool {
-        let mut state = self.state();
-        if state.name != "unused" {
-            return false;
-        }
-        state.name = "claimed";
-        true
-    }
-    pub(crate) fn settle_early(&self, kind: String) {
-        let mut state = self.state();
-        if state.name == "claimed" {
-            state.name = "terminal";
-            state.kind = Some(kind);
-        }
-    }
-    pub(crate) fn start(&self, session: RequestSession, positions: Option<Vec<usize>>) {
-        let mut state = self.state();
-        state.session = Some(session);
-        state.positions = positions;
-        state.name = "running";
-    }
-    pub(crate) fn cancel(&self) {
-        if let Some(session) = &self.state().session {
-            session.cancel();
-        }
-    }
-    pub(crate) fn wait(&self) {
-        if let Some(session) = &self.state().session {
-            let _ = session.wait(
-                thinkthen::RequestSessionWaitInterest::Settlement,
-                std::time::Duration::from_millis(50),
-            );
-        }
-    }
-    pub(crate) fn drain(&self) -> Crossed<bool> {
-        let mut state = self.state();
-        loop {
-            let Some(session) = &state.session else {
-                return Ok(state.name == "terminal");
-            };
-            let packet = match session.try_read() {
-                RequestSessionRead::Result(packet) => packet,
-                RequestSessionRead::Pending => return Ok(false),
-                RequestSessionRead::End => return Ok(state.name == "terminal"),
-            };
-            let text = packet.to_json().map_err(|e| carry(&e))?;
-            let document: Value = serde_json::from_str(&text)
-                .map_err(|_| defect("session packet could not be decoded"))?;
-            if state.accept(packet, document)? {
-                return Ok(true);
-            }
-        }
-    }
     pub(crate) fn accept(&self, packet: RequestSessionResult, document: Value) -> Crossed<()> {
         self.state().accept(packet, document)?;
         Ok(())
     }
-    pub(crate) fn read(&self) -> Crossed<extendr_api::Robj> {
-        self.drain()?;
-        let state = self.state();
-        let mut fields = vec![("state", extendr_api::Robj::from(state.name))];
-        if let Some(kind) = &state.kind {
-            fields.push(("kind", kind.as_str().into()));
-            fields.push((
-                "facts",
-                match state.packet.get("facts") {
-                    Some(value) => crate::native_results::facts(value)?,
-                    None => ().into(),
-                },
-            ));
-            fields.push((
-                "details",
-                crate::native_results::plain(&json!(state.details))?,
-            ));
-        }
-        Ok(extendr_api::List::from_pairs(fields).into())
-    }
-
     pub(crate) fn result(
         &self,
         function: thinkthen::RequestFunction,
@@ -181,32 +97,8 @@ impl State {
             }
             RequestSessionResult::Observation { .. } => {
                 self.observations.push(document.clone());
-                let mut detail = document
-                    .get("value")
-                    .ok_or_else(|| defect("session packet has no payload"))?
-                    .clone();
-                if detail.get("kind").and_then(Value::as_str) != Some("question") {
-                    return Ok(false);
-                }
-                if let Some(index) = detail.get("index").and_then(Value::as_u64)
-                    && let Some(position) = self
-                        .positions
-                        .as_ref()
-                        .and_then(|p| usize::try_from(index).ok().and_then(|i| p.get(i)))
-                {
-                    field(&mut detail, "index", json!(position))?;
-                }
-                self.details.push(detail);
             }
             RequestSessionResult::Terminal(terminal) => {
-                self.name = "terminal";
-                self.kind = Some(
-                    terminal
-                        .error
-                        .as_ref()
-                        .map_or("success", |e| e.kind().name())
-                        .into(),
-                );
                 if let Some(facts) = document.get("facts") {
                     field(&mut self.packet, "facts", facts.clone())?;
                 }
@@ -214,7 +106,6 @@ impl State {
                     field(&mut self.packet, "failure", failure.clone())?;
                 }
                 self.error = terminal.error;
-                self.session = None;
                 return Ok(true);
             }
         }
