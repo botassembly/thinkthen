@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0629, 0688, 0689, 0727, 0728
+Depends on: 0688
 
 ## Outcome
 
@@ -16,7 +16,7 @@ Depends on: 0629, 0688, 0689, 0727, 0728
 - The call runs on a worker thread. The R thread checks R's own interrupt polling while it waits and cancels through the run function's handle. `.tt_interrupt` in `thinkthen.R`, which sends the process SIGINT and sleeps, is deleted.
 - The "deadline was renamed deadline_ms" message in `thinkthen.R` is deleted.
 - `build-tools/results/templates/r.py` leaves this language's exception file `build-tools/results/legacy/r.txt`.
-- The public R functions keep their names and arguments. The R packet dumper is 0713.
+- The public R functions keep their names and arguments. The R installed consumer is 0713.
 
 ### Proof
 

@@ -6,14 +6,14 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0676, 0688, 0728
+Depends on: 0676, 0688
 
 ## Outcome
 
 - Changes: `libraries/objective-c/Package.swift`, `libraries/objective-c/check.sh`, `libraries/objective-c/checks/foundation_installed.py`, `libraries/objective-c/README.md`, `libraries/objective-c/README-PUBLIC.md`, `sdlc/scripts/release-pack.d/objective-c`.
 - `Package.swift` declares no unsafe flags. ARC and blocks come from standard settings or are defaults, and `-Werror` applies only inside the repository check.
 - The native library ships as an xcframework binary target with `url:` and `checksum:`.
-- The supported platform list, macOS 15 and anything added, comes from Objective-C's entry in `sdlc/tools.json`.
+- The supported platform list, macOS 15 and anything added, comes from Objective-C's entry in `sdlc/tools/objective-c.json`.
 - The consumer package that `checks/foundation_installed.py` writes uses no unsafe flags either, so it proves what a remote consumer sees.
 
 ### Proof

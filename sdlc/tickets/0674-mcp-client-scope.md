@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0639, 0688
+Depends on: 0688, 0740
 
 ## Outcome
 
-- Changes: `libraries/mcp/client.py`, `libraries/mcp/tests/`, `libraries/mcp/test_client.py`, `libraries/mcp/test_installed.py`, `libraries/mcp/installed.py`, `libraries/mcp/conformance.py`, `libraries/mcp/check.sh`, `libraries/mcp/README.md`.
+- Changes: `libraries/mcp/client.py`, `libraries/mcp/tests/`, `libraries/mcp/test_client.py`, `libraries/mcp/test_installed.py`, `libraries/mcp/installed.py`, `libraries/mcp/conformance.py`, `libraries/mcp/check.sh`, `libraries/mcp/README.md`, `sdlc/scripts/children`.
 - `client.py` moves to `libraries/mcp/tests/` and is named as a test client, together with the scripts that import it.
 - The README's "Try a saved answer" example and the text that presents `client.py` as a consumer library are deleted. The README keeps the launch entry and points agent builders at their own MCP client.
 - The strict-JSON rechecks the server already guarantees (`_json`, `_same`) are deleted from the client.
@@ -21,7 +21,7 @@ Depends on: 0639, 0688
 
 - On the M5 through `pm job run --machine m5 0674 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && cargo build --locked --offline --bin thinkthen && python3 libraries/mcp/tests/test_client.py && python3 libraries/mcp/tests/test_installed.py target/debug/thinkthen target/debug/conformance-backend'`, the installed-binary MCP tests drive the built `thinkthen` over stdio with tool discovery, errors and cancellation intact, and the FIFO and stdin cases run. On current main those cases are skipped on macOS.
 - `git grep -n 'time.sleep' libraries/mcp` finds nothing; on current main it finds the loop in `test_client.py`.
-- The arm64 container run is part of the 0619 container checkpoint.
+- Linux arm64: `pm job run --machine m5 0674 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/mcp`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

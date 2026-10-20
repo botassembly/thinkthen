@@ -108,7 +108,7 @@ fi
 # Two sites: the call guard and the usage exit hook (ADR 0113).
 sites=$(grep -rn 'catch_unwind(' src | wc -l)
 guards=$(grep -rn 'contained(' src | wc -l)
-[ "$sites" = 0 ] && [ "$guards" = 2 ] ||
+[ "$sites" -eq 0 ] && [ "$guards" -eq 2 ] ||
 	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 2" >&2; exit 1; }
 
 }
@@ -193,7 +193,7 @@ export THINKTHEN_SQLITE_EXTENSION
 
 step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
-cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen --bin thinkthen
+cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen-cli --bin thinkthen
 
 failed=""
 if [ "$profile" = stress ]; then

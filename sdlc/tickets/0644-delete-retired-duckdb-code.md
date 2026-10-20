@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0688
+Depends on: 0645, 0688, 0740
 
 ## Outcome
 
@@ -19,7 +19,7 @@ Depends on: 0688
 ### Proof
 
 - On the M5 natively: `pm job run --machine m5 0644 SHA --memory 8 -- sdlc/scripts/lint` passes with the retired workspace gone. Its `versions` and `surfaces --registry` steps fail before the registry and version changes, because they still name `databases/duckdb/Cargo.toml`.
-- At the 0619 container checkpoint, in the arm64 container on the M5: `sh databases/duckdb/check.sh` passes on both pinned DuckDB versions, and `SELECT thinkthen_warm('a', 'b')` fails with DuckDB's unknown-function error. Before the change the same query returns the registered refusal sentence.
+- Linux arm64: `pm job run --machine m5 0644 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/duckdb`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `sh databases/duckdb/check.sh` passes on both pinned DuckDB versions, and `SELECT thinkthen_warm('a', 'b')` fails with DuckDB's unknown-function error. Before the change the same query returns the registered refusal sentence.
 
 ## Evidence
 
@@ -27,4 +27,4 @@ Depends on: 0688
 - Readers of the retired manifest: `sdlc/surfaces.txt` (the `databases/duckdb landed` line has no crate folder, so `surfaces` reads the folder's own `Cargo.toml`), the `CARGO` table in `sdlc/scripts/versions`, the manifest list in `sdlc/scripts/hosted-preflight.py`, and the `cargo fetch` loop in `sdlc/scripts/release-workflow`. `bridge/Cargo.toml` carries version `0.0.1` today; the release number moves there, and that is a package release number, which the 2026-10-19 no-version ruling keeps.
 - `databases/duckdb/cpp/src/removed.cpp` defines `RegisterRemoved`, which registers `thinkthen_warm` and `thinkthen_probability` only to refuse them with a pointer to their replacements. Tests of those refusals: `removed_warm_and_probability_forms_refuse_without_transport` and `ordinary_errors_show_retryability_while_removed_warm_stays_plain` in `tools/portable_suite.py` (the first is named in `check.sh`), and the `thinkthen_warm` statements in `cpp/verify_tables.py`. `cpp/README.md` (including its `verify_decide.py` paragraph) and `NOTES.md` describe them.
 - That is backward-compatibility code, which the 2026-10-12 no-compatibility-before-1.0 ruling forbids. `specification/rank.md` already says the per-row `thinkthen_probability` is removed on all three databases, so it needs no change.
-- The DuckDB tools are declared Linux-only in `sdlc/tools.json`, so the installed extension suites run in the 0619 container, not natively on the M5.
+- The DuckDB tools are declared Linux-only in `sdlc/tools/duckdb.json`, so the installed extension suites run in the Linux container through 0740's surface command, not natively on the M5.

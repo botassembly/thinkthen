@@ -1,9 +1,10 @@
 #!/bin/sh
-# Judge every case in cases.jsonl twice, once with each question, and write one
-# row per case. Run through sdlc/scripts/live, which holds the key check and the
-# spend ledger.
+# Record a new provider run for every case twice, once with each question.
+# The committed runs are labeled synthetic fixtures; this script replaces them
+# with new provider results and requires updating their provenance prose.
+# Run through sdlc/scripts/live, which holds the key check and the spend ledger.
 #
-# Record mode arrived after these rows were written, so the loop is the shell's.
+# The shell loop keeps each trusted case beside its result.
 # Each row is shaped the way specification/result.md gives for a record row:
 # the result object with `input` holding the whole case, the trusted label
 # included. The label never leaves the machine, because only the body goes to
