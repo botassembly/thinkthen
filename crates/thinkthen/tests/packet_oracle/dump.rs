@@ -104,10 +104,11 @@ fn execute(document: Document) -> Result<String, Error> {
     } else {
         None
     };
-    let session = engine.request_session(request)?;
-    if cancel {
-        session.cancel();
-    }
+    let session = if cancel {
+        cancelled_session(&engine, request)?
+    } else {
+        engine.request_session(request)?
+    };
     if probe {
         println!("ready");
         std::io::stdout()
@@ -132,6 +133,44 @@ fn execute(document: Document) -> Result<String, Error> {
         }
         drain(&session)
     })
+}
+
+fn cancelled_session(
+    engine: &thinkthen::Engine,
+    request: Request,
+) -> Result<thinkthen::RequestSession, Error> {
+    use std::sync::{Arc, Mutex, mpsc::sync_channel};
+    let (ready, waiting) = sync_channel(1);
+    let (resume, released) = sync_channel(1);
+    let released = Mutex::new(Some(released));
+    let options = thinkthen::RequestSessionFeedOptions {
+        // Cancel at the first native checkpoint, after admission. Cancelling
+        // immediately after spawn races preparation and changes native facts.
+        interrupt: Some(Arc::new(move || {
+            let first = released
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .take();
+            if let Some(release) = first {
+                let _ = ready.send(());
+                return release
+                    .recv_timeout(std::time::Duration::from_secs(5))
+                    .is_err();
+            }
+            false
+        })),
+        ..Default::default()
+    };
+    let session =
+        engine.request_session_with_feed_options(request, thinkthen::Surface::Rust, options)?;
+    waiting
+        .recv_timeout(std::time::Duration::from_secs(5))
+        .map_err(|_| usage("fixture cancellation checkpoint did not arrive"))?;
+    session.cancel();
+    resume
+        .send(())
+        .map_err(|_| usage("fixture cancellation checkpoint did not resume"))?;
+    Ok(session)
 }
 
 fn produce(session: &thinkthen::RequestSession, items: Vec<thinkthen::RequestItem>) {
