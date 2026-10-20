@@ -329,72 +329,100 @@ fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> 
     Ok(())
 }
 
+fn tree_call(
+    document: &native::Document,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
+    let mut request = native::request(document)?;
+    if document.call_result_contract {
+        let RequestInput::Records { items } = &request.call.arguments.input else {
+            return Err(thinkthen::Error::new(
+                thinkthen::ErrorKind::Usage,
+                "scalar fixture requires records",
+            ));
+        };
+        let [item] = items.as_slice() else {
+            return Err(thinkthen::Error::new(
+                thinkthen::ErrorKind::Usage,
+                "scalar fixture requires one record",
+            ));
+        };
+        let Some(thinkthen::RequestOriginal::Text { text }) = &item.original else {
+            return Err(thinkthen::Error::new(
+                thinkthen::ErrorKind::Usage,
+                "scalar fixture requires original text",
+            ));
+        };
+        request.call.arguments.input = RequestInput::Text {
+            text: text.clone(),
+            images: vec![],
+        };
+        request.call.arguments.options.attempts = false;
+    }
+    let engine = native::fixture_engine(document.settings.get())?;
+    let cancel = thinkthen::CancelToken::new();
+    if document.cancel {
+        cancel.cancel();
+    }
+    let invoke = || {
+        engine.call(
+            &document.verb,
+            request.call.arguments,
+            RequestEnvironment {
+                controls: thinkthen::CallOptions::new().cancel(&cancel),
+                feed: None,
+            },
+        )
+    };
+    if document.held_cancel {
+        std::thread::scope(|scope| {
+            let worker = scope.spawn(invoke);
+            let mut resume = String::new();
+            let read = std::io::stdin().read_line(&mut resume);
+            cancel.cancel();
+            read.map_err(|_| {
+                thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture input failed")
+            })?;
+            worker.join().map_err(|_| {
+                thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture worker failed")
+            })?
+        })
+    } else {
+        invoke()
+    }
+}
+
 #[test]
-#[ignore = "installed value-tree proof supplies one owned canonical fixture on stdin"]
 fn shared_value_tree_fixture() -> Result<(), String> {
     use std::io::Write;
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).map_err(failure)?;
-    let document: native::Document = serde_json::from_str(&input).map_err(failure)?;
-    let outcome = (|| {
-        let mut request = native::request(&document)?;
-        if document.call_result_contract {
-            let RequestInput::Records { items } = &request.call.arguments.input else {
-                return Err(thinkthen::Error::new(
-                    thinkthen::ErrorKind::Usage,
-                    "scalar fixture requires records",
-                ));
-            };
-            let [item] = items.as_slice() else {
-                return Err(thinkthen::Error::new(
-                    thinkthen::ErrorKind::Usage,
-                    "scalar fixture requires one record",
-                ));
-            };
-            let Some(thinkthen::RequestOriginal::Text { text }) = &item.original else {
-                return Err(thinkthen::Error::new(
-                    thinkthen::ErrorKind::Usage,
-                    "scalar fixture requires original text",
-                ));
-            };
-            request.call.arguments.input = RequestInput::Text {
-                text: text.clone(),
-                images: vec![],
-            };
-        }
-        let engine = native::fixture_engine(document.settings.get())?;
-        let cancel = thinkthen::CancelToken::new();
-        if document.cancel {
-            cancel.cancel();
-        }
-        let invoke = || {
-            engine.call(
-                &document.verb,
-                request.call.arguments,
-                RequestEnvironment {
-                    controls: thinkthen::CallOptions::new().cancel(&cancel),
-                    feed: None,
-                },
-            )
-        };
-        if document.held_cancel {
-            std::thread::scope(|scope| {
-                let worker = scope.spawn(invoke);
-                let mut resume = String::new();
-                let read = std::io::stdin().read_line(&mut resume);
-                cancel.cancel();
-                read.map_err(|_| {
-                    thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture input failed")
-                })?;
-                worker.join().map_err(|_| {
-                    thinkthen::Error::new(thinkthen::ErrorKind::Local, "fixture worker failed")
-                })?
+    let stdin_fixture = std::env::var_os("THINKTHEN_VALUE_TREE_STDIN").is_some();
+    let owned = if stdin_fixture {
+        None
+    } else {
+        Some(
+            conformance_backend::Listener::answering(|_| {
+                conformance_backend::Canned::ok(
+                    r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+                )
             })
-        } else {
-            invoke()
-        }
-    })();
-    let output = match outcome {
+            .map_err(failure)?,
+        )
+    };
+    let mut input = String::new();
+    if let Some(listener) = &owned {
+        input = json!({
+            "verb":"decide",
+            "question":{"kind":"definition","value":{"decide":"Fits?",
+                "true":{"number":u64::MAX,"authored_null":null}}},
+            "input":{"kind":"text","text":"evidence"},
+            "options":{},
+            "settings":{"base_url":listener.base(),"max_retries":0}
+        })
+        .to_string();
+    } else {
+        std::io::stdin().read_line(&mut input).map_err(failure)?;
+    }
+    let document: native::Document = serde_json::from_str(&input).map_err(failure)?;
+    let output = match tree_call(&document) {
         Ok(call) => {
             let value = tree::render(&call.value_tree().map_err(failure)?)?;
             format!(r#"{{"packets":[],"host":{value}}}"#)
@@ -402,5 +430,16 @@ fn shared_value_tree_fixture() -> Result<(), String> {
         Err(error) => serde_json::to_string(&json!({"packets":[],"error":error.complete()}))
             .map_err(failure)?,
     };
+    if !stdin_fixture {
+        let value: Value = serde_json::from_str(&output).map_err(failure)?;
+        assert_eq!(
+            value["host"]["value"].get("number").and_then(Value::as_u64),
+            Some(u64::MAX)
+        );
+        assert_eq!(
+            value["host"]["value"].get("authored_null"),
+            Some(&Value::Null)
+        );
+    }
     writeln!(std::io::stdout().lock(), "packet_dump: {output}").map_err(failure)
 }

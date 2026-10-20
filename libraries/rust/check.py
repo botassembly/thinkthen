@@ -45,7 +45,7 @@ def value_tree_cases(root, worker):
         (root / 'conformance/fixtures/packets.json').read_text()))['cases']}
     backend_binary = Path(os.environ.get('THINKTHEN_TEST_BACKEND', str(
         Path(os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))) / 'debug/conformance-backend')))
-    command = [str(worker), '--ignored', '--exact', 'shared_value_tree_fixture', '--nocapture']
+    command = [str(worker), '--exact', 'shared_value_tree_fixture', '--nocapture']
     for name, row in rows.items():
         value = shared.document(row, cases, named)
         with tempfile.TemporaryDirectory(prefix='thinkthen-rust-tree-') as temporary:
@@ -54,6 +54,7 @@ def value_tree_cases(root, worker):
             with chdir(home):
                 (home / 'fixture-source').symlink_to(root, target_is_directory=True)
                 env = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8',
+                                THINKTHEN_VALUE_TREE_STDIN='1',
                                 THINKTHEN_API_KEY='sk-conformance-loopback',
                                 LIQUIDAI_API_KEY='sk-conformance-loopback',
                                 OPENROUTER_API_KEY='sk-conformance-loopback',
@@ -127,6 +128,21 @@ def value_tree_cases(root, worker):
                             print('value-tree ' + name + ': native error; no settled Call', flush=True)
                             continue
                         assert 'error' not in expected, name + ': missing native error'
+                        if document['call_result_contract']:
+                            assert name == 'library-call-result', 'unapproved scalar oracle projection'
+                            source = document['input']
+                            assert source['kind'] == 'records' and len(source['items']) == 1, name
+                            original = source['items'][0]['original']
+                            assert original['kind'] == 'text' and isinstance(original['text'], str), name
+                            assert settings['batch'] == 1, name
+                            assert len(expected['results']) == 1, name
+                            result = expected['results'][0]
+                            assert 'input' not in result and 'index' not in result, name
+                            assert 'batch_setting' not in result['meta'], name
+                            # Direct typed scalar calls omit the whole-call occurrence fields.
+                            # Project only the approved expected fixture into Engine::call's scope.
+                            result.update(input=original['text'], index=0)
+                            result['meta']['batch_setting'] = 1
                         tree = actual['host']
                         assert {'value', 'probability', 'resolution', 'results', 'facts'} <= tree.keys(), name
                         assert 'answer' not in tree, name + ': duplicate answer alias'
