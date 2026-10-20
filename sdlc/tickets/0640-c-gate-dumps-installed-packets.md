@@ -22,6 +22,10 @@ Depends on: 0612, 0618, 0638, 0642
 - Done once by hand and not committed: changing one expected value in the oracle `conformance/fixtures/packets.json` makes the same run fail with a diff.
 - Linux runs at the 0619 container checkpoint.
 
+## Amendment, 2026-10-20 (C boundary proof)
+
+The PM approved exact shared-oracle comparison for every other C-applicable case. Keep `23-cancelled-fault`, `boundary-cancelled`, `29-usage-json-text`, `31-usage-rank-blank-question`, `duplicate-metadata`, `duplicate-schema` and `single-format-version` as named installed-C boundary checks instead of exact native packet comparisons. Pin C's existing code, owner, message, retryability and zero sends; cancellation may have absent facts before invocation starts. The malformed-request checks retain `THINKTHEN_EUSAGE`, no result owner, `invalid session arguments or input`, false retryability and absent facts. Preserve independent ABI ownership, threading, secrecy, held-provider cancellation and settlement checks. The native and installed Rust consumers prove the exact facts-bearing cancellation checkpoint and native malformed envelope. This changes the proof obligation only: change no public C API, diagnostic, shared oracle, comparator or deadline. Delete only tests whose behavior the installed dumper actually replaces.
+
 ## Evidence
 
 - `libraries/c/check.sh` runs `tests/test_installed_consumers.py`, then with `THINKTHEN_ARTIFACT` set runs `tests/installed-session.py` on the archive and stops. Without it, it runs `generate-c-header.py --check`, `check-c-exports.py`, the crate's `cargo test` (the Rust door tests in `libraries/c/tests/door/*.rs`, about 1,400 lines), and compiles `examples/session.c` against the debug build.
