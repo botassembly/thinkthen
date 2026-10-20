@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 8397d3f, accept
+
 ## Outcome
 
 Generated Zig primitive-union readers compile with the pinned Zig 0.15.2 compiler. Readers discard the allocator only when every decoding arm leaves it unused. Public signatures, callers, decoding assertions and the compiler pin stay unchanged.
