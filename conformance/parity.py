@@ -152,6 +152,27 @@ from check_verdict import unsupported
 DOCUMENT = ROOT / 'conformance/cases.json'
 PREFIX = 'parity: '
 
+# Serial x86_64 core-container samples, including child processes and file cache.
+# Go's time is the sum of two diagnostic segments: the failed owned-feed run
+# and its separate complete shared corpus, rather than a passing whole-Go run.
+CONSUMER_RESOURCES = {
+    'c': {'peak_memory_bytes': 4_325_498_880, 'duration_seconds': 406.721},
+    'go': {'peak_memory_bytes': 2_635_706_368, 'duration_seconds': 464.078},
+    'zig': {'peak_memory_bytes': 5_178_068_992, 'duration_seconds': 472.141},
+}
+
+
+def container_memory_limit():
+    for filename in ('/sys/fs/cgroup/memory.max',
+                     '/sys/fs/cgroup/memory/memory.limit_in_bytes'):
+        try:
+            limit = int(Path(filename).read_text().strip())
+        except (OSError, ValueError):
+            continue
+        if limit > 0:
+            return limit
+    return None
+
 
 def inventory():
     document = json.loads(DOCUMENT.read_text())
@@ -621,10 +642,35 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             lanes.insert(0, rust_lane)
         def run_lane(lane):
             return [row for command, ids, preparation in lane for row in run_command(command, ids, preparation)]
-        # Each full consumer exercises large image inputs; keep runtime lanes isolated.
-        with ThreadPoolExecutor(max_workers=1) as workers:
-            for rows in workers.map(run_lane, lanes):
-                matrix.extend(rows)
+        limit = container_memory_limit()
+        def lane_resources(lane):
+            samples = [CONSUMER_RESOURCES.get(consumer)
+                       for _, ids, _ in lane for consumer in ids]
+            # Reserve whole GiB above observed peaks. Unmeasured consumers own
+            # the container until their language wave supplies a resource sample.
+            gib = 1024 ** 3
+            peak = max(((sample['peak_memory_bytes'] + gib - 1) // gib * gib
+                        if sample else limit or 0) for sample in samples)
+            seconds = sum(sample['duration_seconds'] for sample in samples if sample)
+            return peak, seconds
+        pending = sorted(lanes, key=lambda lane: lane_resources(lane)[1], reverse=True)
+        # Large-image children keep a core busy under their existing deadlines.
+        # Bound CPU overlap separately from memory; preparation keeps its pool.
+        runtime_workers = 2
+        with ThreadPoolExecutor(max_workers=runtime_workers) as workers:
+            while pending:
+                batch, reserved = [], 0
+                for lane in pending:
+                    peak, _ = lane_resources(lane)
+                    if limit is not None and peak > limit:
+                        raise ValueError('parity consumer measured memory exceeds the container limit')
+                    # Without a known container cap, retain one runtime lane.
+                    if len(batch) < runtime_workers and (not batch or limit is not None and reserved + peak <= limit):
+                        batch.append(lane)
+                        reserved += peak
+                for rows in workers.map(run_lane, batch):
+                    matrix.extend(rows)
+                pending = [lane for lane in pending if lane not in batch]
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)

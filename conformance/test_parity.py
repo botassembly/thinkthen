@@ -76,6 +76,29 @@ class DarwinSignalObservation(unittest.TestCase):
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
+    def test_c_compiler_preserves_the_campaign_profile_without_service_keys(self):
+        from conformance import c_parity
+        sys.path.insert(0, str(parity.ROOT / 'libraries/c/tests'))
+        import installed_cases
+        launch = subprocess.run
+        settings = {'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'CARGO_PROFILE_DEV_DEBUG': '0',
+                    'CARGO_PROFILE_TEST_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_DEBUG': '0',
+                    'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': '',
+                    'CARGO_BUILD_RUSTC_WRAPPER': ''}
+        def compiler(args, **kwargs):
+            self.assertEqual(args[0], 'cargo')
+            probe = ('import os; expected = ' + repr(settings)
+                     + '; assert all(os.environ.get(k) == v for k, v in expected.items()); '
+                     + 'assert "FAKE_SERVICE_API_KEY" not in os.environ; '
+                     + 'assert "THINKTHEN_API_KEY" not in os.environ')
+            return launch([sys.executable, '-c', probe], **kwargs)
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller)
+                | settings | {'FAKE_SERVICE_API_KEY': 'parent-only', 'THINKTHEN_API_KEY': 'parent-only'}), \
+                patch.object(c_parity.subprocess, 'run', side_effect=compiler) as compiled, \
+                patch.object(installed_cases, 'run'):
+            self.assertEqual(c_parity.main(), 0)
+            self.assertEqual(compiled.call_count, 2)
+
     def test_compiler_child_owns_folders_and_preserves_explicit_settings(self):
         sys.path.append(str(parity.ROOT / 'conformance/children'))
         sys.path.insert(0, str(parity.ROOT / 'conformance'))
@@ -128,6 +151,85 @@ class NativeFixtureEnvironment(unittest.TestCase):
                     self.assertIn((consumer, 'library-call-result'), seen)
                     if profile == 'full': self.assertEqual(len(seen), len(cases))
 
+
+
+class OwnedCallComparison(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        sys.path[:0] = [str(parity.ROOT / 'libraries/c/tests'),
+                       str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import installed_call
+        cls.installed = installed_call
+        cls.oracle = {case['id']: case['dumps'] for case in json.loads(
+            (parity.ROOT / 'conformance/fixtures/packets.json').read_text())['cases']}
+        cls.row = parity.required_cases(parity.inventory(), 'c')['01-decide-yes-captured']
+        cases = {case['id']: case for case in json.loads(parity.DOCUMENT.read_text())['cases']}
+        cls.value = installed_call.shared.document(cls.row, cases, {})
+
+    def success(self):
+        expected = self.oracle[self.row['id']][0]
+        fields = self.installed.folded(expected)
+        raw = {'value': fields['results'], 'facts': fields['facts'], 'answer': fields['answer']}
+        text = json.dumps(raw)
+        for group in ('call_id', 'answer_id', 'observation_id', 'sdk_request_id', 'request_sha256'):
+            for index in (1, 2):
+                text = text.replace('"' + group + ':' + str(index) + '"', '"' + str(index) * 64 + '"')
+        raw = json.loads(text)
+        payload = copy.deepcopy(raw)
+        payload['facts']['requests_sent'] = 1
+        return payload, raw, expected
+
+    def check(self, payload, raw, expected, *, row=None, value=None, history=None):
+        # Existing projection assertions have their own behavior regressions.
+        # Exercise the complete owned-field comparison independently of them.
+        with patch.object(self.installed, 'project', return_value={}), \
+                patch.object(self.installed.shared, 'assertions'):
+            self.installed.check_owned(row or self.row, value or self.value, payload, raw,
+                1, 1, expected, Path('/owned/home'), None, history if history is not None else ([], []))
+
+    def test_complete_owned_metadata_and_facts_mismatches_fail(self):
+        payload, raw, expected = self.success()
+        self.check(payload, raw, expected)
+        for section, field, changed in (('metadata', 'batch_setting', '9'),
+                                        ('facts', 'cache_answers', '9')):
+            altered = copy.deepcopy(raw)
+            target = altered['value'][0]['meta'] if section == 'metadata' else altered['facts']
+            target[field] = changed
+            with self.subTest(section=section), self.assertRaisesRegex(AssertionError, field):
+                self.check(payload, altered, expected)
+
+    def test_owned_errors_require_native_facts(self):
+        expected = self.oracle['21-backend-fault'][0]
+        native = self.installed.folded(expected)
+        self.assertIsNotNone(native['facts'])
+        error = native['error']
+        payload = {'code': self.installed.shared.ERRORS[error['kind']],
+                   'message': error['message'], 'retryable': error['retryable'], 'facts': None}
+        with self.assertRaises(AssertionError):
+            self.check(payload, payload, expected, row={'id': '21-backend-fault'}, value={'expect': {}})
+
+    def test_expected_aliases_preserve_cross_step_identity_consistency(self):
+        payload, raw, expected = self.success()
+        history = ([], [])
+        self.check(payload, raw, expected, history=history)
+        self.check(payload, raw, expected, history=history)
+        changed = copy.deepcopy(raw)
+        changed['facts']['call_id'] = 'f' * 64
+        with self.assertRaisesRegex(AssertionError, 'call_id'):
+            self.check(payload, changed, expected, history=history)
+        default = self.installed.canonical([{'host': {'facts': {'call_id': 'call_id:9'}}}])
+        self.assertEqual(default[0]['host']['facts']['call_id'], 'call_id:9')
+
+    def test_opaque_alias_shaped_user_values_remain_unchanged(self):
+        _, raw, _ = self.success()
+        opaque = {'call_id': 'call_id:91', 'answer_id': 'answer_id:72',
+                  'request': 'request_sha256:33', 'seconds': 'seconds:4'}
+        raw['value'][0]['input'] = opaque
+        document = [{'host': {'results': raw['value'], 'facts': raw['facts']}}]
+        for expected_oracle in (False, True):
+            with self.subTest(expected_oracle=expected_oracle):
+                observed = self.installed.canonical(document, expected_oracle=expected_oracle)
+                self.assertEqual(observed[0]['host']['results'][0]['input'], opaque)
 
 
 class BindingCaseTiers(unittest.TestCase):
@@ -565,32 +667,41 @@ class PublicAssertions(unittest.TestCase):
                 self.assertEqual(env[name], value)
             self.assertNotEqual(env['HOME'], '/caller')
 
-    def test_full_consumers_run_alone_and_keep_every_public_cell(self):
+    def test_full_consumers_respect_measured_memory_and_keep_every_public_cell(self):
         import threading
         import time
-        ids = ['rust', 'rust-polars', 'one', 'two', 'three']
+        ids = ['rust', 'rust-polars', 'one', 'two', 'three', 'four', 'unmeasured']
         contract = {'functions': ['decide'], 'consumers': [
             {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', name]}
             for name in ids], 'required_cases': list(self.cases.values())}
-        active, peak = 0, 0
+        gib = 1024 ** 3
+        limit = 10 * gib
+        peaks = {'rust': 5 * gib, 'rust-polars': 5 * gib, 'one': 6 * gib,
+                 'two': 5 * gib, 'three': 4 * gib, 'four': 2 * gib}
+        # Half-GiB samples must reserve the next whole GiB in peaks.
+        resources = {name: {'peak_memory_bytes': memory - gib // 2, 'duration_seconds': len(ids) - ids.index(name)}
+                     for name, memory in peaks.items()}
+        active, peak = set(), 0
         lock = threading.Lock()
         def command(args, **kwargs):
-            nonlocal active, peak
+            nonlocal peak
             name = args[-2]
             with lock:
-                active += 1
-                peak = max(peak, active)
+                active.add(name)
+                peak = max(peak, len(active))
+                self.assertLessEqual(sum(peaks.get(member, limit) for member in active), limit)
+                self.assertFalse({'rust', 'rust-polars'} <= active)
             time.sleep(.03)
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
             kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
             with lock:
-                active -= 1
+                active.remove(name)
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity, 'CONSUMER_RESOURCES', resources), patch.object(parity, 'container_memory_limit', return_value=limit), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
-            self.assertEqual(peak, 1)
+            self.assertGreater(peak, 1)
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))
             self.assertTrue(all(0 <= row['duration_seconds'] < 3 for row in matrix))
             self.assertTrue(all(row['duration_seconds'] != 0.25 for row in matrix))

@@ -36,8 +36,8 @@ def branches(schema, value):
             yield from branches(option, value)
 
 
-def canonical(document, folders=()):
-    """Leave opaque semantic data untouched, including metadata-looking objects."""
+def canonical(document, folders=(), *, expected_oracle=False):
+    """Leave semantic data untouched; optionally reindex stored oracle identities."""
     identities = {}
 
     def visit(value, schema, key=''):
@@ -60,10 +60,13 @@ def canonical(document, folders=()):
             items = next((option['items'] for option in choices if 'items' in option), True)
             return [visit(child, items, 'request_sha256' if key == 'requests' else key)
                     for child in value]
-        if key in IDENTITIES and isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value):
+        if key in IDENTITIES and isinstance(value, str):
             group = 'request_sha256' if key == 'request' else key
-            table = identities.setdefault(group, {})
-            return table.setdefault(value, f'{group}:{len(table) + 1}')
+            native = re.fullmatch('[0-9a-f]{64}', value)
+            stored = expected_oracle and re.fullmatch(re.escape(group) + r':[1-9][0-9]*', value)
+            if native or stored:
+                table = identities.setdefault(group, {})
+                return table.setdefault(value, f'{group}:{len(table) + 1}')
         if key in ('seconds', 'wall_ms') and isinstance(value, str):
             assert Decimal(value) >= 0, (key, value)
             return '0'

@@ -17,6 +17,7 @@ Depends on: 0629, 0688, 0689, 0727, 0728
 - The generated Ruby result files keep only declarations, or are deleted where the tree makes them unused. The Ruby template and registry entries change to match, and `conformance/library-surface.json` names the Ruby declarations that remain.
 - `libraries/ruby/lib/thinkthen/session.rb`, `build-tools/results/templates/ruby.py` and `build-tools/results/templates/ruby_rbs.py` leave this language's exception file `build-tools/results/legacy/ruby.txt`.
 - The public Ruby API keeps its method names and result readers. The phase 3 dumper for Ruby is 0712.
+- A raised Ruby error keeps the native failing record position as an attribute on the existing error type, `nil` when the failure has none (`Fault::from` in `libraries/ruby/src/lib.rs` drops it today). The name follows `libraries/BINDING-AUTHOR.md`.
 
 ### Proof
 

@@ -162,7 +162,13 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 raise AssertionError(("resolve query", mode, ref, calls))
             if error is None:
                 name = rehearsal if mode == "rehearse" else f"v{version}"
-                wanted = f"sha={commit}\nversion={version}\nname={name}\n"
+                from tools import load_manifest
+                import tomllib
+                pins = load_manifest()
+                floor = tomllib.loads((REPO / 'libraries/python/pyproject.toml').read_text())['project']['requires-python'][2:]
+                wanted = (f"sha={commit}\nversion={version}\nname={name}\n"
+                          f"python_version={pins['tools']['python']['version']}\n"
+                          f"node_version={pins['tools']['node']['version']}\npython_floor={floor}\n")
                 if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
                     raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
             elif error != "before-query":
@@ -179,8 +185,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
         for number in (1, 2, 12):
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
         check("rehearse", "refs/heads/main")
-        check("rehearse", "refs/heads/ticket/0543-final")
-        check("rehearse", f"refs/heads/{candidate_branch}")
+        check("rehearse", "refs/heads/ticket/0543-final", error="before-query")
+        check("rehearse", f"refs/heads/{candidate_branch}", error="before-query")
         check("release", f"refs/tags/v{version}")
         for branch in ("main", "ticket/0543-final", candidate_branch):
             branch_run = good | {"head_branch": branch,
@@ -968,17 +974,17 @@ def main():
         github_env.touch()
         tool_env = os.environ | {"PATH": fixture_path(fake_bin),
                                  "GITHUB_PATH": str(github_path), "GITHUB_ENV": str(github_env)}
-        expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", other_target, str(base / "other-tools"), env=tool_env),
                "Go/C++ installed tools require Linux x86-64")
-        expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", host, str(base / "bad-go"), env=tool_env),
                "Go 1.27.1 archive differs from official checksum")
-        expect(run("sh", gate, "swift-zig-tools", other_target, str(base / "other-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", other_target, str(base / "other-zig"), env=tool_env),
                "Swift/Zig installed tools require Linux x86-64")
-        expect(run("sh", gate, "swift-zig-tools", host, str(base / "bad-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", host, str(base / "bad-zig"), env=tool_env),
                "Zig 0.15.2 archive differs from official checksum")
-        expect(run("sh", gate, "php-dart-tools", other_target, str(base / "other-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", other_target, str(base / "other-dart"), env=tool_env),
                "PHP/Dart installed tools require Linux x86-64")
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-dart"), env=tool_env),
                "Dart 3.13.4 SDK differs from official checksum")
         if github_path.read_text():
             raise AssertionError("bad tool archive entered the runner path")
@@ -1000,7 +1006,7 @@ def main():
                               "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
                               "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
         fake_unzip.chmod(0o755)
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-ffi"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-ffi"), env=tool_env),
                "cached ffi 2.2.0 differs from official digest")
         if github_path.read_text() or github_env.read_text():
             raise AssertionError("bad ffi cache entered the runner environment")
