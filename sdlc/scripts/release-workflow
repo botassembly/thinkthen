@@ -445,11 +445,6 @@ setup-stage)
 	[ "$#" -ge 3 ] || fail 'setup-stage STAGE TARGET [INPUTS]'
 	stage=$2 target=$3
 	case $stage in
-	core)
-		[ "$#" = 3 ] || fail 'setup-stage core TARGET'
-		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail "runner does not have target $target"
-		python3 sdlc/scripts/tools.py --check common
-		;;
 	host) host_setup host-setup "$target" ;;
 	managed) managed_tools managed-tools "$target" ;;
 	languages)
@@ -759,6 +754,16 @@ resolve)
 	if [ "$mode" = release ]; then python3 sdlc/scripts/release-rehearsal.py "$version"; fi
 	printf 'sha=%s\nversion=%s\nname=%s\n' "$GITHUB_SHA" "$version" \
 		"$(if [ "$mode" = release ]; then printf 'v%s' "$version"; else printf 'v%s-rehearsal-%.7s' "$version" "$GITHUB_SHA"; fi)"
+	printf 'python_version=%s\nnode_version=%s\n' "$(manifest_version python)" "$(manifest_version node)"
+	python3 - <<'PYFLOOR'
+import re, tomllib
+from pathlib import Path
+requirement = tomllib.loads(Path('libraries/python/pyproject.toml').read_text())['project']['requires-python']
+match = re.fullmatch(r'>=(\d+\.\d+)', requirement)
+if not match:
+    raise SystemExit('release-workflow: unsupported wheel Python floor')
+print('python_floor=' + match[1])
+PYFLOOR
 	;;
 verify-family)
 	[ "$#" = 4 ] || fail 'verify-family ROOT PATTERN COUNT'

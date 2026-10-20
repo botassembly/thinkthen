@@ -162,7 +162,13 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 raise AssertionError(("resolve query", mode, ref, calls))
             if error is None:
                 name = rehearsal if mode == "rehearse" else f"v{version}"
-                wanted = f"sha={commit}\nversion={version}\nname={name}\n"
+                from tools import load_manifest
+                import tomllib
+                pins = load_manifest()
+                floor = tomllib.loads((REPO / 'libraries/python/pyproject.toml').read_text())['project']['requires-python'][2:]
+                wanted = (f"sha={commit}\nversion={version}\nname={name}\n"
+                          f"python_version={pins['tools']['python']['version']}\n"
+                          f"node_version={pins['tools']['node']['version']}\npython_floor={floor}\n")
                 if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
                     raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
             elif error != "before-query":
@@ -179,8 +185,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
         for number in (1, 2, 12):
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
         check("rehearse", "refs/heads/main")
-        check("rehearse", "refs/heads/ticket/0543-final")
-        check("rehearse", f"refs/heads/{candidate_branch}")
+        check("rehearse", "refs/heads/ticket/0543-final", error="before-query")
+        check("rehearse", f"refs/heads/{candidate_branch}", error="before-query")
         check("release", f"refs/tags/v{version}")
         for branch in ("main", "ticket/0543-final", candidate_branch):
             branch_run = good | {"head_branch": branch,
