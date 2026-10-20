@@ -31,3 +31,4 @@ The 0707 targeted job 1792498904879-39616 reached `sdlc/scripts/spec` and failed
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Fresh review accepted 45f4ac618 after exact-head M5 job 1792499956418-98486 passed all25 settings self-tests normal scan and policy, retaining before-repair selector failures from0691 job1792498503545-29335 and0707 job1792498904879-39616; narrow library-root check-driver classification preserves same-name genuine product refusals, and integrated closure plus aggregate specification replay remain.
