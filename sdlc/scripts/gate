@@ -2,7 +2,10 @@
 # Linux owns routine proof; native macOS also checks Apple-only behavior.
 set -eu
 cd -- "$(dirname -- "$0")/../.."
-python3 sdlc/scripts/linux-check "$@" lint test
+# Docker belongs to the host; the job resolver isolates executable tool paths.
+docker=$(command -v docker)
+docker=$(CDPATH= cd -- "$(dirname -- "$docker")" && pwd)/$(basename -- "$docker")
+sdlc/scripts/job python3 sdlc/scripts/linux-check --docker "$docker" "$@" lint test
 if [ "$(uname -s)" = Darwin ]; then
-    exec /usr/bin/python3 sdlc/scripts/tools.py test -- sh sdlc/scripts/test
+    exec sdlc/scripts/job sdlc/scripts/test
 fi

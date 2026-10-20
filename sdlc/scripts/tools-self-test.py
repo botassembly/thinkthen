@@ -338,6 +338,47 @@ class ToolResolution(unittest.TestCase):
 
 
 
+class GateRouting(unittest.TestCase):
+    def test_configured_gate_keeps_host_docker_and_routes_checks_through_job(self):
+        gate = json.loads((ROOT / 'sdlc/pm.json').read_text())['ticketsGate']
+        for host, linux_status, native_status in (
+                ('Linux', 0, 0), ('Darwin', 0, 0), ('Darwin', 41, 0), ('Darwin', 0, 42)):
+            with self.subTest(host=host, linux_status=linux_status, native_status=native_status):
+                with tempfile.TemporaryDirectory(prefix='gate-routing-') as folder:
+                    root = Path(folder)
+                    scripts = root / 'sdlc/scripts'
+                    scripts.mkdir(parents=True)
+                    shutil.copyfile(ROOT / 'sdlc/scripts/gate', scripts / 'gate')
+                    (scripts / 'gate').chmod(0o755)
+                    binary = root / 'host-bin'
+                    binary.mkdir()
+                    for name, body in (('docker', 'exit 0'), ('uname', 'echo ' + host)):
+                        executable = binary / name
+                        executable.write_text('#!/bin/sh\n' + body + '\n')
+                        executable.chmod(0o755)
+                    calls = root / 'calls.jsonl'
+                    job = scripts / 'job'
+                    job.write_text('#!' + sys.executable + '\nimport json,os,sys\n'
+                                   'from pathlib import Path\n'
+                                   'os.environ["PATH"] = "/usr/bin:/bin"\n'
+                                   'with Path("calls.jsonl").open("a") as output:\n'
+                                   '    output.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+                                   'raise SystemExit(' + str(linux_status)
+                                   + ' if sys.argv[1] == "python3" else '
+                                   + str(native_status) + ')\n')
+                    job.chmod(0o755)
+                    env = child_env(home=root / 'home', PATH='host-bin:/usr/bin:/bin')
+                    result = subprocess.run(shlex.split(gate), cwd=root, env=env,
+                                            capture_output=True, text=True)
+                    self.assertEqual(result.returncode, linux_status or native_status, result.stderr)
+                    routed = [json.loads(line) for line in calls.read_text().splitlines()]
+                    expected = [['python3', 'sdlc/scripts/linux-check', '--docker',
+                                 str(binary / 'docker'), 'lint', 'test']]
+                    if host == 'Darwin' and linux_status == 0:
+                        expected.append(['sdlc/scripts/test'])
+                    self.assertEqual(routed, expected)
+
+
 class LinuxSourceIdentity(unittest.TestCase):
     def test_reused_clone_discards_source_edits_and_keeps_build_output(self):
         with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
@@ -384,6 +425,7 @@ class LinuxSourceIdentity(unittest.TestCase):
             source = next(root.glob('.linux-*/src')).resolve()
             run = next(json.loads(line) for line in calls.read_text().splitlines()
                        if json.loads(line)[0] == 'run')
+            self.assertTrue(run[-1].endswith('sdlc/scripts/job sdlc/scripts/test\n'))
             fixture_mounts = [run[index + 1] for index, value in enumerate(run)
                               if value == '--tmpfs']
             owner = ':uid=' + str(os.getuid()) + ',gid=' + str(os.getgid()) + ',mode=0700,exec'

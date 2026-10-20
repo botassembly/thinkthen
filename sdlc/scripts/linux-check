@@ -102,5 +102,5 @@ script += 'cargo deny fetch db\n'
 groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
 script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(sorted(groups))) + '\n'
 for check in args.checks:
-    script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
+    script += 'sdlc/scripts/job sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)
