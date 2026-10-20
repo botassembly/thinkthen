@@ -18,7 +18,7 @@ Depends on: 0645, 0688, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0644 SHA --memory 8 -- sdlc/scripts/lint` passes with the retired workspace gone. Its `versions` and `surfaces --registry` steps fail before the registry and version changes, because they still name `databases/duckdb/Cargo.toml`.
+- On the M5 in the Linux container: `pm job run --machine m5 0644 SHA --memory 16 -- sdlc/scripts/linux-check lint` passes with the retired workspace gone. Its `versions` and `surfaces --registry` steps fail before the registry and version changes, because they still name `databases/duckdb/Cargo.toml`.
 - Linux arm64: `pm job run --machine m5 0644 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/duckdb`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `sh databases/duckdb/check.sh` passes on both pinned DuckDB versions, and `SELECT thinkthen_warm('a', 'b')` fails with DuckDB's unknown-function error. Before the change the same query returns the registered refusal sentence.
 
 ## Evidence

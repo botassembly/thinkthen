@@ -16,7 +16,7 @@ Depends on: 0666, 0667, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0716 SHA --memory 8 -- sh libraries/zig/check.sh`, the installed consumer's comparison passes for every shared case. Before the change the routine check compiles the two fixture consumers and compares their own projections.
+- On the M5 through `pm job run --machine m5 0716 SHA --memory 8 -- sdlc/scripts/job sh libraries/zig/check.sh`, the installed consumer's comparison passes for every shared case. Before the change the routine check compiles the two fixture consumers and compares their own projections.
 - Done once by hand and not committed: changing one expected value in the oracle fails the Zig comparison with a diff.
 - Linux arm64: `pm job run --machine m5 0716 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/zig`; Linux x86_64: the same command with `--machine gator --memory 7`.
 

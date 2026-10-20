@@ -22,8 +22,8 @@ Depends on: 0670, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target dart --check && python3 build-tools/results/generate.py --target dart --bridge --check && cd libraries/dart && dart analyze --fatal-infos'`. Before the change, `answer_rules.py` fails once the two Dart exceptions are removed.
-- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sh libraries/dart/check.sh`, after 0670 declares `darwin-arm64` and Flutter for macOS, the installed Dart consumer and the Flutter consumer run all ten named calls, cancellation and failures against a recorded backend, and their comparisons against `conformance/fixtures/packets.json` pass. Linux arm64: `pm job run --machine m5 0671 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/dart`; Linux x86_64: the same command with `--machine gator --memory 7`.
+- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sdlc/scripts/job sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target dart --check && python3 build-tools/results/generate.py --target dart --bridge --check && cd libraries/dart && dart analyze --fatal-infos'`. Before the change, `answer_rules.py` fails once the two Dart exceptions are removed.
+- On the M5 through `pm job run --machine m5 0671 SHA --memory 8 -- sdlc/scripts/job sh libraries/dart/check.sh`, after 0670 declares `darwin-arm64` and Flutter for macOS, the installed Dart consumer and the Flutter consumer run all ten named calls, cancellation and failures against a recorded backend, and their comparisons against `conformance/fixtures/packets.json` pass. Linux arm64: `pm job run --machine m5 0671 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/dart`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

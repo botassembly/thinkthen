@@ -17,7 +17,7 @@ Depends on: 0688
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0714 SHA --memory 8 -- sh databases/sqlite/check.sh` passes. The check builds its own pinned SQLite host and starts its own loopback backends, so it runs without `surfaces`.
+- On the M5 natively: `pm job run --machine m5 0714 SHA --memory 8 -- sdlc/scripts/job sh databases/sqlite/check.sh` passes. The check builds its own pinned SQLite host and starts its own loopback backends, so it runs without `surfaces`.
 - In that run, `SELECT thinkthen_warm('a', 'b')` fails with `no such function: thinkthen_warm`. Before the change it fails with the registered sentence `thinkthen_warm was removed; pack records with thinkthen_decide_many`.
 
 ## Evidence

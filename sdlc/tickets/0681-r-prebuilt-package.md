@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0681 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/r/check.sh'`. The binary install with no Rust toolchain on the path runs a named call. Before the change, the check installs only from source with `R CMD INSTALL` and the pinned Rust toolchain.
+- On the M5: `pm job run --machine m5 0681 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/r/check.sh'`. The binary install with no Rust toolchain on the path runs a named call. Before the change, the check installs only from source with `R CMD INSTALL` and the pinned Rust toolchain.
 - The offline source install from the vendored tarball runs in the Linux image. Linux arm64: `pm job run --machine m5 0681 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/r`; Linux x86_64: the same command with `--machine gator --memory 7`.
 - In the M5 run, `tests/settings_cases.R` passes in `check.sh`; this is the R proof 0724 deferred here.
 - The R-universe Linux binary is proven on the candidate in 0687 through the `r-universe` install-check channel.

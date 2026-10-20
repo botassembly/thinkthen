@@ -10,11 +10,11 @@ Opt-in import thinkthen.polars registers Expr.tt decide/choose/score/tag via map
 
 The expression deadline applies to each morsel, not the whole query. RSS/load/churn is opt-in.
 
-## Prerequisites and proposed files
+### Prerequisites and proposed files
 
 Prerequisite: F1/F2 and F3. Proposed file families: `libraries/python/thinkthen/{polars.py,__init__.pyi}; libraries/python/src/{frame.rs,engine.rs}; Python pyproject/README/ratchets and focused Polars tests`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
 
-## Smallest meaningful proof
+### Proof
 
 Pinned Polars judged rows and output parity, SIGINT child/recovery/re-chain, per-morsel deadline and tally. Count exact accepted loopback request bodies and pin exit codes and refusal sentences where applicable; record source and installed-host receipts separately. Run only the affected functional cases, measured ratchets, focused format/policy/pages/tickets/diff. [Shared proof routes](../records/2026-09-29-sql-frame-redesign-proofs.md) name optional stress and later package qualification.
 
@@ -26,6 +26,6 @@ Pinned Polars judged rows and output parity, SIGINT child/recovery/re-chain, per
 - Proof: Pinned Polars judged rows and output parity, SIGINT child/recovery/re-chain, per-morsel deadline and tally. Use the [independent corpus](../records/2026-09-29-sql-frame-redesign-corpus.md) and captured wire bodies.
 - Defers: Unrelated package/release qualification, provider work, marketing site, token cap and per-record cache; named prerequisites remain.
 
-## What the build taught us
+### What the build taught us
 
 Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.

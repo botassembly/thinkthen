@@ -17,7 +17,7 @@ Depends on: 0657, 0658, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0656 SHA --memory 8 -- sh libraries/go/check.sh`, the gate installs the module, builds the installed consumer outside the repository, and its comparison passes for every shared case. Before the change the gate runs seven `owned_installed.py` modes and `shared_installed.py` instead.
+- On the M5 through `pm job run --machine m5 0656 SHA --memory 8 -- sdlc/scripts/job sh libraries/go/check.sh`, the gate installs the module, builds the installed consumer outside the repository, and its comparison passes for every shared case. Before the change the gate runs seven `owned_installed.py` modes and `shared_installed.py` instead.
 - Done once by hand and not committed: changing one expected value in the oracle fails the Go comparison with a diff.
 - Linux arm64: `pm job run --machine m5 0656 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/go`; Linux x86_64: the same command with `--machine gator --memory 7`.
 

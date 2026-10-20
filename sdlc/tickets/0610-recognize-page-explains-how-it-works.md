@@ -5,11 +5,26 @@ Status: OPEN.
 Milestone: 0.2.2
 
 Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2.1 ships.
-## Why
+
+## Outcome
+
+### Why
 
 Ian asked that readers of the `recognize` function page understand at least the level of detail in a review the ThinkThen team sent him on 2026-10-01. Today the page shows calls and options. It does not say how `recognize` finds names, picks kinds, scores them or asks for relations.
 
-## Prior evidence
+### Change
+
+Add a "How it works" section to the `recognize` function page, below the language tabs, in plain sentences per `site/WRITING.md`. It covers the five steps, the 40-word window and its context, what strength means and how the cutoff uses it, and both odd-looking results as worked cases. Check every claim against `specification/recognize.md`, `specification/relate.md` and the code, and use the specification's words for options. Name BILOU once, and say it is the same as BIOES. Show the McCartney sentence as a replayed example with its output. Record it through ThinkThen `sdlc/scripts/live` under a $0.05 cap if no recording covers it. Link the section from the `relate` page's relation question.
+
+### Retained behavior
+
+The page's examples and options stay. `npm run build`, `npm run check` and both smoke runs pass.
+
+### Proof
+
+A fresh reviewer checks each sentence against the specification and code, and returns ACCEPT.
+
+## Evidence
 
 The review, as Ian pasted it:
 
@@ -28,15 +43,3 @@ Its live tests, 10 calls for under a cent:
 Two results look odd but work as designed:
 - "Help!" came back as "Help". The code offered both spans, and the model picked the one without "!", 0.87 against 0.13.
 - The "!" on its own was tagged as a name, labeled album at 0.51 strength. It fell below the 0.5 strength cutoff and was dropped.
-
-## Change
-
-Add a "How it works" section to the `recognize` function page, below the language tabs, in plain sentences per `site/WRITING.md`. It covers the five steps, the 40-word window and its context, what strength means and how the cutoff uses it, and both odd-looking results as worked cases. Check every claim against `specification/recognize.md`, `specification/relate.md` and the code, and use the specification's words for options. Name BILOU once, and say it is the same as BIOES. Show the McCartney sentence as a replayed example with its output. Record it through ThinkThen `sdlc/scripts/live` under a $0.05 cap if no recording covers it. Link the section from the `relate` page's relation question.
-
-## Retained behavior
-
-The page's examples and options stay. `npm run build`, `npm run check` and both smoke runs pass.
-
-## Proof
-
-A fresh reviewer checks each sentence against the specification and code, and returns ACCEPT.

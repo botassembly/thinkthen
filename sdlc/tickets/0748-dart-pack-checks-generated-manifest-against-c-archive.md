@@ -1,0 +1,26 @@
+# 0748 — Dart packing checks its generated manifest against the C archive
+
+Status: OPEN.
+
+Milestone: 0.2.1
+
+Phase: 2
+
+## Outcome
+
+- Changes: `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/dart`, `sdlc/scripts/release-archive-self-test.py`.
+- `release-pack`'s archived-source check compares every copied Dart source file with the archived commit, except `native-assets.json`, which `release-pack.d/dart` generates from the paired C library. That generated manifest is checked instead: its sha256 for the target equals the sha256 of `lib/libthinkthen.so` in the paired C archive, as the Swift native library already is.
+- Every existing assertion stays, including the self-test's check that the Dart manifest identifies the packed C bytes.
+
+### Proof
+
+- `pm job run --machine gator 0748 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes; it failed on main's source in Gator receipt 0744/1792529452380-1255765.
+- A planted Dart source edit still fails the archived-source check, and a planted manifest checksum that differs from the C archive fails the new check.
+- The configured landing gate passes.
+
+## Evidence
+
+- Gator 0744/1792529452380-1255765 on fa84bfa exited 1 after advisory checks passed: `release-archive-self-test.py` reports "release-pack: dart source differs from archived commit: native-assets.json". `release-pack.d/dart` rewrites the development manifest's sha256 from the paired C library, then `release-pack` compares that rewritten file with the original source archive, while the self-test expects the rewritten checksum. 0744 touches none of these paths, so main carries the defect; it first showed on x86 under rule 3 of `sdlc/decisions/2026-10-20-freeze-names-the-contract.md`.
+- It does not hold 0744 or the freeze: per standing ruling 6 and the amended rule 3, a Gator failure the batch did not cause gets its own repair ticket. It gates 0687.
+
+## Progress

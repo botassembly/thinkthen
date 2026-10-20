@@ -20,7 +20,7 @@ Superseded by: 0693
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0646 SHA --memory 8 -- cargo test --locked --offline --manifest-path databases/duckdb/bridge/Cargo.toml` passes, and `sdlc/scripts/lint` passes. `sh libraries/c/check.sh` runs `generate-c-header.py --check`, which keeps the header the bridge reads current.
+- On the M5 natively: `pm job run --machine m5 0646 SHA --memory 8 -- sdlc/scripts/job cargo test --locked --offline --manifest-path databases/duckdb/bridge/Cargo.toml` passes, and `sdlc/scripts/lint` passes. `sh libraries/c/check.sh` runs `generate-c-header.py --check`, which keeps the header the bridge reads current.
 - At the 0619 container checkpoint, in the arm64 container on the M5: `sh databases/duckdb/check.sh` passes its rank, nested, listed and image suites on both pinned DuckDB versions.
 
 ## Evidence

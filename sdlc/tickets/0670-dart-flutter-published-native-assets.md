@@ -18,7 +18,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0670 SHA --memory 8 -- sh libraries/dart/check.sh`, a clean Dart project resolves the package from a local pub server, fetches the native asset from a local HTTPS mirror of the candidate, and runs a named call with no library path. A clean Flutter app builds and runs a named call on macOS. Before the change the check fails on the M5 on the missing tool, because only `linux-x86_64` is declared.
+- On the M5 through `pm job run --machine m5 0670 SHA --memory 8 -- sdlc/scripts/job sh libraries/dart/check.sh`, a clean Dart project resolves the package from a local pub server, fetches the native asset from a local HTTPS mirror of the candidate, and runs a named call with no library path. A clean Flutter app builds and runs a named call on macOS. Before the change the check fails on the M5 on the missing tool, because only `linux-x86_64` is declared.
 - The Flutter app runs on Linux. Linux arm64: `pm job run --machine m5 0670 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/dart`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence

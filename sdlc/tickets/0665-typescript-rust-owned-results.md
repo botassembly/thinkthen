@@ -20,7 +20,7 @@ Depends on: 0664, 0688
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0665 SHA --memory 8 -- env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` installs the packed npm package into an outside project, `tsc --strict` type-checks a caller, and the 0664 installed consumer's comparison passes for every shared case.
+- On the M5 natively: `pm job run --machine m5 0665 SHA --memory 8 -- sdlc/scripts/job env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` installs the packed npm package into an outside project, `tsc --strict` type-checks a caller, and the 0664 installed consumer's comparison passes for every shared case.
 - `python3 build-tools/results/answer_rules.py` passes with `templates/typescript.py` removed from `LEGACY_FILES`; before the change the template's `callResult` projection fails it.
 - `git grep -n 'callResult\|callResolution\|\.poll(' libraries/typescript` finds nothing.
 
