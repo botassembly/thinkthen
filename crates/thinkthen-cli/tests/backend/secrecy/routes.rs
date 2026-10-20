@@ -141,7 +141,7 @@ pub(crate) const PATHS: [Route; 17] = [
         damage: Some(HOSTILE),
         says: Some(
             "the entry names a schema this version does not read, \
-             and this version reads `thinkthen.recording/1`",
+             and this version reads `thinkthen.recording`",
         ),
         fixture_says: Some("stored constituents or identity are invalid"),
         keyed: true,

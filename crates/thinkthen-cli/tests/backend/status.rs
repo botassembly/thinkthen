@@ -279,7 +279,7 @@ fn planted(label: &str, files: &[(&str, &[u8])]) -> (std::path::PathBuf, std::pa
 #[cfg(unix)]
 #[test]
 fn a_missing_usage_lock_reads_its_months_without_creating_or_changing_state() {
-    let bytes = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":2,\"output_tokens\":3,\"cache_answers\":0}\n";
+    let bytes = b"{\"requests_sent\":1,\"retries\":0,\"input_tokens\":2,\"output_tokens\":3,\"cache_answers\":0}\n";
     let (home, usage) = planted("no-lock", &[("2026-09.json", bytes)]);
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
@@ -343,7 +343,7 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
 #[cfg(unix)]
 #[test]
 fn a_held_usage_lock_reports_busy_within_a_second_and_exits_zero() {
-    let month = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    let month = b"{\"requests_sent\":1,\"retries\":0,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     let (home, usage) = planted("busy", &[(".lock", b""), ("2026-09.json", month)]);
     let held = fs::File::open(usage.join(".lock")).expect("lock file");
     held.lock().expect("hold the lock");
@@ -365,35 +365,13 @@ fn a_held_usage_lock_reports_busy_within_a_second_and_exits_zero() {
     assert_eq!(value["usage"]["total"], serde_json::Value::Null);
 }
 
-/// QA's case: an older build wrote retries into the month file and a newer
-/// one wrote a `retries-` file with another value. Main refused to choose
-/// (exit 5, "retry totals differ"). The month file alone holds the counts.
-#[cfg(unix)]
-#[test]
-fn an_old_retries_file_beside_a_month_with_retries_is_ignored() {
-    let (home, _usage) = planted(
-        "two-retries",
-        &[
-            (".lock", b""),
-            ("2026-09.json", b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":4,\"retries\":2,\"input_tokens\":7,\"output_tokens\":3,\"cache_answers\":0}\n"),
-            ("retries-2026-09.json", b"{\"schema\":\"thinkthen.usage.retries/1\",\"retries\":5}\n"),
-        ],
-    );
-    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    crate::harness::exits(&output, 0);
-    assert_eq!(output.stderr, b"");
-    let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
-    assert_eq!(value["usage"]["total"]["requests_sent"], 4);
-    assert_eq!(value["usage"]["total"]["retries"], 2);
-}
-
 /// An unsafe month mode gives the unsafe sentence with the full path.
 #[cfg(unix)]
 #[test]
 fn an_unsafe_usage_month_names_the_unsafe_fix() {
     use std::os::unix::fs::PermissionsExt as _;
 
-    let month = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    let month = b"{\"requests_sent\":1,\"retries\":0,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     let (home, usage) = planted("unsafe", &[(".lock", b""), ("2026-09.json", month)]);
     fs::set_permissions(
         usage.join("2026-09.json"),

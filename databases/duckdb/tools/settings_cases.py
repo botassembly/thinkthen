@@ -24,7 +24,7 @@ def recording_entries(folder: str) -> int:
 def shared_settings_corpus():
     """Run every shared engine-setting row through the DuckDB SQL surface."""
     corpus = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "settings.json").read_text())
-    expect(corpus["schema"], "thinkthen.settings-cases/1", "settings corpus version")
+    expect(corpus["schema"], "thinkthen.settings-cases", "settings corpus version")
     spellings = {"timeout": "thinkthen_timeout", "max_retries": "thinkthen_max_retries",
                  "profile": "thinkthen_profile", "model": "thinkthen_model", "record": "thinkthen_record",
                  "replay": "thinkthen_replay", "max_requests": "thinkthen_max_requests",

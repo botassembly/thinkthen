@@ -17,7 +17,7 @@ def test_portable_questions_ride_one_request() -> None:
     folder = pathlib.Path(__file__).resolve().parents[3] / "specification" / "fixtures" / "batching"
     fixture = json.loads((folder / "portable-records.json").read_text())
     bodies = [(folder / f"portable-{number}.request.json").read_text().removesuffix("\n") for number in range(1, 4)]
-    expect(fixture["schema"], "thinkthen.portable-batch-records/1", "shared corpus version")
+    expect(fixture["schema"], "thinkthen.portable-batch-records", "shared corpus version")
     backend = Backend()
     code = f"""
 db = connect()

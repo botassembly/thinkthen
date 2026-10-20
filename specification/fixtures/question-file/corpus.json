@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.question-file-corpus/1",
+  "schema": "thinkthen.question-file-corpus",
   "cases": [
     {
       "name": "decide-text",
