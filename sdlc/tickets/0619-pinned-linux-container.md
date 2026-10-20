@@ -78,6 +78,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: Fresh component review accepted21eb8a401 after M5 job1792452113122-60314 passed explicit Docker selection; merged at86d7eccda, with whole container gates, installed checks and image refresh pending the next data integration.
 - 2026-10-19 next: Fresh component review accepts3e0026983 after M5job1792453065626-23106 passed both fragment integration tests; fingerprint51d2ff24478158bce64f includes22 fragments, Yellow image preparation starts independently, and whole Linux/native gates and release/database suites remain open.
 - 2026-10-19 next: M5 image preparation job1792455383828-81694 passed with real exit0 on3e0026983, producing ARM image914a2427a11fe108b742a1b5d66c5786af246d8059c338175160d028a37feed2 at22-fragment fingerprint51d2ff24478158bce64f2d6debb7e270e61aacaa63c053636df88736aca400cf under4 CPUs and16GiB; x86 preparation and configured gate plus Linux full cases, package and stress remain.
+- 2026-10-19 next: ARM image preparation passed, but Yellow job1792453161573-311087 stalled after successful installer and version probes while Docker commits its final image; bounded read-only diagnosis finds responsive container APIs but image APIs timing out, and no retry or daemon change is authorized while the combined M5 gate runs onb7befb48b6.
 
 ## Amendment, 2026-10-18
 
