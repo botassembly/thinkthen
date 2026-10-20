@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0625, 0629
 
+Reviews: revision 23091e2, accept
+
 ## Outcome
 
 - The library crate holds only the library. The command-line tool and the MCP server live in their own crate (or crates) and use only the library's public API. Any private access they need becomes public API or moves with them.
