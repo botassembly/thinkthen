@@ -1,0 +1,11 @@
+# The freeze names the contract, and qualification runs alongside language work
+
+Ian, 2026-10-20, after the [root-cause analysis of the day's five largest delays](../records/2026-10-20-five-delays-root-cause.md). He approved every fix. This refines rule 1 of [the 0.2.1 ruling](2026-10-18-0-2-1-rebuilds-the-basis.md) and adds to [the standard proof commands](2026-10-20-standard-proof-commands.md).
+
+## Rules
+
+1. **The freeze names the contract.** The 0688 commit is the first main commit after the core contract tickets and 0744 land whose configured landing gate and native Rust/C smoke and package pass. The full three-platform checkpoint run continues alongside language work and gates qualification (0687), not the freeze. A checkpoint finding that changes the C header, the packet schema, `Engine::call` or the value tree still needs a ruling and moves every language in one batch. Any other finding lands as an ordinary ticket alongside language lanes.
+2. **An advisory fails a ticket's gate only when the ticket changes a lock.** Checkpoint and release checks fail on any advisory, and a finding there gets a repair ticket ordered first (0746).
+3. **x86 meets each landing batch.** The coordinator runs `pm job run --machine gator NNNN SHA --memory 7 -- sdlc/scripts/linux-check lint test` on each batch's candidate in parallel with its configured gate, and a batch lands when both pass. When Gator is held, the batch lands on the configured gate alone and the next checkpoint covers x86.
+4. **Tests synchronize explicitly.** No test uses a sleep or a deadline as synchronization, fixture setup stays outside the timed part, and routine limits hold on the slowest supported machine (0605).
+5. **Every command names its machine.** A ticket's proof commands name the machine they run on. Linux-only checks (lint, generation, `cargo deny`) run only through `linux-check` or the configured gate, never as a native job on macOS.

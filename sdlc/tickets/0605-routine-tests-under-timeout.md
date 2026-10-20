@@ -2,11 +2,22 @@
 
 Status: OPEN.
 
-Milestone: 0.3
+Milestone: 0.2.1
+
+Phase: 2
 
 ## Outcome
 
 No routine test comes near the 5-second nextest limit, and a retry reruns only the tests that failed.
+
+## Amendment, 2026-10-20 (timing root cause)
+
+Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../records/2026-10-20-five-delays-root-cause.md), rule 4 of [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md). It gates qualification (0687), not the freeze, and runs alongside language lanes.
+
+- Scope adds the nine cases that timed out on Yellow in checkpoint 0691/1792518201049-861514 (`sdlc/records/0688-yellow-checkpoint-routine-deadlines.md`): seven SQLite fixture cases, the relate ceiling case and the speed fixture. Use that record's recommendations: build legacy fixtures in one transaction and copy valid seeds; keep the large planning regression in the long suite with a smaller routine boundary case; run one complete speed table and restrict each planted fault to its row.
+- No test uses a sleep or a deadline as synchronization. Fixture setup stays outside the timed part. Every assertion and production durability check stays.
+- Changes widen to the test files of those cases and `.config/nextest.toml`.
+- Proof: `pm job run --machine gator 0605 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes five times in a row with no timeout, and the slowest routine test stays under 2.5 seconds there; Yellow serves when Gator is held. The configured landing gate passes.
 
 ## Evidence
 
