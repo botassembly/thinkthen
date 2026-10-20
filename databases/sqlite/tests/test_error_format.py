@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The installed host renders typed failures and explicit removal guidance."""
+"""The installed host renders typed failures and leaves absent functions to SQLite."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ import sys
 from helper import Backend, child, environment, expect, main
 
 
-def test_sql_errors_keep_typed_retryability_and_plain_removal() -> None:
+def test_sql_errors_keep_typed_retryability_and_native_missing_functions() -> None:
     """One bounded 503 send distinguishes the suffix from a zero-send refusal."""
     backend = Backend()
     held = child("""
 db = connect()
 db.execute('SELECT thinkthen_configure(?)', ('{"max_retries":0}',))
 usage = run(db, "SELECT thinkthen_decide('Is it red?', 'a red door', ?)", (json.dumps({"context":""}),))
-removed = run(db, "SELECT thinkthen_warm('q', 'e')")
+removed = run(db, "SELECT thinkthen_warm('a', 'b')")
 structured = run(db, "SELECT thinkthen_try_details('  ', 'private evidence')")
 backend_error = run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')")
 say(usage=usage, removed=removed, structured=structured, backend_error=backend_error)
@@ -24,8 +24,8 @@ say(usage=usage, removed=removed, structured=structured, backend_error=backend_e
     expect(held["usage"], "thinkthen usage: `context` is text that is not blank (retryable: no)",
            "ordinary usage")
     expect(held["removed"],
-           "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
-           "plain removal")
+           "no such function: thinkthen_warm",
+           "SQLite reports the absent warm function")
     expect(held["structured"], "no such function: thinkthen_try_details", "retired recovery call is absent")
     expect("private evidence" in held["structured"], False, "private evidence stays out")
     expect(held["backend_error"],

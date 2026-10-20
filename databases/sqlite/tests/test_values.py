@@ -215,19 +215,15 @@ say(all=run(db, "SELECT thinkthen_annotate(?, x) FROM t ORDER BY i", ({parted!r}
 
 
 def test_a_banded_question_is_refused_where_it_has_no_answer() -> None:
-    """Score, choose and tag refuse a band; removed warm refuses by name."""
+    """Score, choose and tag refuse a band."""
     backend = Backend()
-    choose = json.dumps({"choose": "Which colour?", "options": ["red", "blue"]})
     held = child(f"""
 db = connect()
 say(**{{name: run(db, f"SELECT {{name}}(?, 'a red door')", ({BANDED!r},))
-    for name in ("thinkthen_score", "thinkthen_choose", "thinkthen_tag")}},
-    thinkthen_warm=run(db, "SELECT thinkthen_warm(?, 'a red door')", ({choose!r},)))
+    for name in ("thinkthen_score", "thinkthen_choose", "thinkthen_tag")}})
 """, environment(backend))
     wanted = "thinkthen usage: {} does not take a banded question; use thinkthen_decide or thinkthen_decide_details (retryable: no)"
-    expect(held, {name: wanted.format(name) for name in held if name != "thinkthen_warm"} | {
-        "thinkthen_warm": "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
-    }, "the refusals")
+    expect(held, {name: wanted.format(name) for name in held}, "the refusals")
     expect(backend.close(), 0, "sends")
 
 
@@ -431,10 +427,8 @@ db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
 calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_decide_many('Is it red?', json_object('7','a red door'))",
-         "SELECT count(*) FROM thinkthen_rank('Is it red?', json_object('7','a red door'))",
-         "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
-         "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
-calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_warm") for deadline in ("", ", 0")]
+         "SELECT count(*) FROM thinkthen_rank('Is it red?', json_object('7','a red door'))"]
+calls += [f"SELECT thinkthen_decide('Is it red?', 'a red door'{deadline})" for deadline in ("", ", 0")]
 calls += ["SELECT CASE WHEN failure IS NOT NULL THEN 'thinkthen ' || error_kind || ': ' || error_message || ' (retryable: ' || CASE error_retryable WHEN 1 THEN 'yes' ELSE 'no' END || ')' ELSE value END FROM thinkthen_decide_details('Is it red?','a red door'"+deadline+")" for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
@@ -442,7 +436,7 @@ calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\
           "SELECT thinkthen_annotate('{\\"questions\\":{\\"k\\":{\\"decide\\":\\"Is it red?\\"}}}', 'x')",
           "SELECT * FROM thinkthen_recognize('Ada joined Acme.', 'person')",
           "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', 'works_for=person:organization')",
-          "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()", "SELECT thinkthen_throttle(8)"]
+          "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()"]
 say(said=[run(db, sql) for sql in calls])
 """
 

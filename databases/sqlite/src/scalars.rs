@@ -1,5 +1,5 @@
-//! The judgment functions: volatile scalars, `thinkthen_usage`, and the
-//! removed spellings. All registrations follow SQLite's schema trust setting.
+//! The judgment functions and `thinkthen_usage`.
+//! All registrations follow SQLite's schema trust setting.
 
 use std::sync::Arc;
 
@@ -292,75 +292,6 @@ fn usage_status(context: &Context<'_>) -> rusqlite::Result<String> {
 mod find;
 mod plan;
 
-fn register_removed(connection: &Catalog<'_>, volatile: FunctionFlags) -> rusqlite::Result<()> {
-    for name in [
-        "thinkthen_decide",
-        "thinkthen_choose",
-        "thinkthen_score",
-        "thinkthen_tag",
-        "thinkthen_annotate",
-        "thinkthen_find",
-    ] {
-        let sentence = if name == "thinkthen_find" {
-            "find's none and deadline moved into the settings object"
-        } else {
-            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'"
-        };
-        connection.create_scalar_function(
-            name,
-            4,
-            volatile,
-            "Refuse a removed call form and explain the supported replacement.",
-            move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
-        )?;
-    }
-    for (name, sentence) in [
-        (
-            "thinkthen_warm",
-            "thinkthen_warm was removed; pack records with thinkthen_decide_many",
-        ),
-        (
-            "thinkthen_probability",
-            "thinkthen_probability was removed; order records with thinkthen_rank",
-        ),
-    ] {
-        connection.create_scalar_function(
-            name,
-            -1,
-            volatile,
-            "Refuse a removed call form and explain the supported replacement.",
-            move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
-        )?;
-    }
-    for name in [
-        "throttle",
-        "batch",
-        "max_requests",
-        "max_request_bytes",
-        "max_requests_total",
-        "cache",
-        "model",
-        "timeout",
-        "max_retries",
-        "profile",
-        "record",
-        "replay",
-    ] {
-        let full = format!("thinkthen_{name}");
-        let sentence = format!("thinkthen_{name} was replaced by thinkthen_configure");
-        connection.create_scalar_function(
-            full.as_str(),
-            -1,
-            volatile,
-            "Refuse a removed setting function and direct callers to thinkthen_configure.",
-            move |_| -> rusqlite::Result<String> {
-                Err(Failure::plain_usage(sentence.clone()).into())
-            },
-        )?;
-    }
-    Ok(())
-}
-
 fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusqlite::Result<()> {
     for arity in [2, 3] {
         connection.create_scalar_function(
@@ -419,18 +350,6 @@ pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
         "Recognize entities and relations in one document as JSON.",
         recognize_document::recognize_document,
     )?;
-    connection.create_scalar_function(
-        "thinkthen_recognize_document",
-        -1,
-        flags,
-        "Refuse the removed name and explain its replacement by thinkthen_relations.",
-        |_| -> rusqlite::Result<String> {
-            Err(Failure::plain_usage(
-                "thinkthen_recognize_document was renamed thinkthen_relations",
-            )
-            .into())
-        },
-    )?;
     register_judgments(connection, flags)?;
     connection.create_scalar_function(
         "thinkthen_usage",
@@ -463,6 +382,5 @@ pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
         settings::configure,
     )?;
     crate::images::register(connection, flags)?;
-    register_removed(connection, flags)?;
     Ok(())
 }

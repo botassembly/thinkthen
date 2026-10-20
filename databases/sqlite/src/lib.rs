@@ -202,12 +202,10 @@ mod tests {
             "thinkthen backend: status 503 (retryable: yes)"
         );
         assert_eq!(
-            sqlite(Failure::plain_usage(
-                "thinkthen_warm was removed; use decide_many"
-            )),
+            sqlite(Failure::plain_usage("the reset spelling is removed")),
             (
                 SQLITE_CONSTRAINT,
-                "thinkthen usage: thinkthen_warm was removed; use decide_many".into()
+                "thinkthen usage: the reset spelling is removed".into()
             )
         );
         assert_eq!(

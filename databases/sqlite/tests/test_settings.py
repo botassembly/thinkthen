@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SQLite conversion of the shared engine settings and removed SQL names."""
+"""SQLite conversion of the shared engine settings."""
 
 from __future__ import annotations
 
@@ -202,25 +202,6 @@ say(valid=valid, zero=zero, details=details)
     expect(held["zero"], EXPECTED["sqlite_request_total"], "zero refused")
     expect(held["details"][0][0], "judge-b", "prior model survived")
     expect(backend.close(), 1, "only the valid configuration sent")
-
-
-def test_removed_setters_and_warm_refuse_by_name() -> None:
-    backend = Backend()
-    held = child("""
-db = connect()
-names = ('throttle','batch','max_requests','max_request_bytes','max_requests_total',
-         'cache','model','timeout','max_retries','profile','record','replay')
-say(refused={name: run(db, 'SELECT thinkthen_' + name + '(1)') for name in names},
-    warm=run(db, "SELECT thinkthen_warm('q','e')"),
-    old=run(db, "SELECT thinkthen_recognize_document('x','{}')"),
-    deadline=run(db, "SELECT thinkthen_decide('q','e',-1)"))
-""", environment(backend))
-    for name, result in held["refused"].items():
-        expect(result, f"thinkthen usage: thinkthen_{name} was replaced by thinkthen_configure", name)
-    expect(held["warm"], "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many", "warm")
-    expect(held["old"], "thinkthen usage: thinkthen_recognize_document was renamed thinkthen_relations", "relations rename")
-    expect(held["deadline"], "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'", "old deadline")
-    expect(backend.close(), 0, "removed names send nothing")
 
 
 def test_environment_cache_seed_survives_configure() -> None:

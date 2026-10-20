@@ -35,16 +35,5 @@ say(rows=run(db, "SELECT key,value,probability FROM thinkthen_choose_many(?,?,?)
     expect(backend.close(), 1, "one packed send")
 
 
-def test_old_scalar_probability_refuses_without_a_send() -> None:
-    backend = Backend()
-    held = child("""
-db = connect()
-say(old=run(db, "SELECT thinkthen_probability('q','e')"), settings=run(db, "SELECT thinkthen_probability('q','e','{}')"))
-""", environment(backend))
-    sentence = "thinkthen usage: thinkthen_probability was removed; order records with thinkthen_rank"
-    expect((held["old"], held["settings"]), (sentence, sentence), "old scalar with two and three arguments")
-    expect(backend.close(), 0, "no old scalar send")
-
-
 if __name__ == "__main__":
     raise SystemExit(main(globals()))
