@@ -33,7 +33,7 @@ struct NativeRequest {
 
 struct NativeSession {
     session: RequestSession,
-    completion: Option<calls::Completion>,
+    completion: Option<crate::session_collection::Completion>,
     function: thinkthen::RequestFunction,
     column: Option<thinkthen::RequestColumn>,
 }
@@ -58,34 +58,48 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
     }
     let native =
         thinkthen::Request::for_function(request.admitted.request().call.function(), arguments);
-    let function = native.call.function();
     if interrupt_pending() {
         return Err(crate::interrupted());
     }
     let handle = completion_of(&completion)?
         .unwrap_or_else(|| std::sync::Arc::new(calls::Completion::new()));
-    let session = crate::engine()?
-        .request_session_with_surface(native, thinkthen::Surface::R)
-        .map_err(|e| crate::carry(&e))?;
-    handle.start(
-        session,
-        request
-            .column
-            .as_ref()
-            .map(|column| column.positions().to_vec()),
-    );
-    while !handle.drain()? {
+    let function = native.call.function();
+    let function_name = serde_json::to_value(function).map_err(|_| crate::defect("native function could not be written"))?;
+    let function_name = function_name.as_str().ok_or_else(|| crate::defect("native function has no name"))?.to_owned();
+    let engine = crate::engine()?;
+    let cancel = thinkthen::CancelToken::new();
+    handle.start(cancel.clone());
+    let retained = handle.clone();
+    let positions = request.column.as_ref().map(|column| column.positions().to_vec());
+    let (send, receive) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let observer = |event| retained.observe(event, positions.as_deref());
+        let outcome = engine.call(
+            &function_name,
+            native.call.arguments().clone(),
+            RequestEnvironment {
+                controls: thinkthen::CallOptions::new().surface(thinkthen::Surface::R).cancel(&cancel).observe(&observer),
+                feed: None,
+            },
+        );
+        retained.finish(&outcome);
+        let _ = send.send(outcome);
+    });
+    let outcome = loop {
         if interrupt_pending() {
             handle.cancel();
             return Err(crate::interrupted());
         }
-        handle.wait();
-    }
-    let scalar = matches!(
-        request.admitted.request().call.arguments().input,
-        thinkthen::RequestInput::Text { .. } | thinkthen::RequestInput::Json { .. }
-    );
-    let value = handle.result(function, request.column.as_ref(), scalar)?;
+        match receive.recv_timeout(std::time::Duration::from_millis(50)) {
+            Ok(outcome) => break outcome,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {},
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return Err(crate::defect("native call worker ended without settlement")),
+        }
+    };
+    let call = outcome.map_err(|error| crate::carry(&error))?;
+    let scalar = matches!(request.admitted.request().call.arguments().input,
+        thinkthen::RequestInput::Text { .. } | thinkthen::RequestInput::Json { .. });
+    let value = calls::result(&call, function, request.column.as_ref(), scalar)?;
     match &request.column {
         Some(column) => crate::request::attach(column, value),
         None => Ok(value),
@@ -125,7 +139,7 @@ fn tt_request_batch_start(request: Robj, collect: bool) -> Crossed<Robj> {
     let mut pointer: Robj = ExternalPtr::new(NativeSession {
         session,
         column,
-        completion: collect.then(calls::Completion::new),
+        completion: collect.then(crate::session_collection::Completion::new),
         function: built.admitted.request().call.function(),
     })
     .into();

@@ -224,3 +224,44 @@ pub(crate) fn plan(value: &Value) -> Crossed<Robj> {
 pub(crate) fn facts(value: &Value) -> Crossed<Robj> {
     convert("completeFacts", value)
 }
+
+/// Map the shared settled value tree without selecting or deriving answers.
+pub(crate) fn tree(value: &thinkthen::RequestValueTree) -> Crossed<Robj> {
+    use thinkthen::RequestValueTree as T;
+    Ok(match value {
+        T::Map(fields) => List::from_pairs(fields.iter().map(|(name, value)| Ok((name.as_str(), tree(value)?))).collect::<Crossed<Vec<_>>>()?).into(),
+        T::List(values) => List::from_values(values.iter().map(tree).collect::<Crossed<Vec<_>>>()?).into(),
+        T::String(value) => value.as_str().into(),
+        T::Number(value) => value.parse::<f64>().map_err(|_| crate::defect("native number cannot be represented in R"))?.into(),
+        T::Bool(value) => (*value).into(),
+        T::Null => ().into(),
+        T::Absent => tagged(List::new(0).into(), "absent", "thinkthen_absent")?,
+    })
+}
+pub(crate) fn call(value: &thinkthen::RequestValueTree, function: thinkthen::RequestFunction) -> Crossed<Robj> {
+    let thinkthen::RequestValueTree::Map(fields) = value else { return Err(crate::defect("native call is not a map")); };
+    let kind = function_kind(function)?;
+    let fields = fields.iter().map(|(name, value)| {
+        let item = match name.as_str() {
+            "facts" => convert("completeFacts", &tree_json(value)?)?,
+            "results" => {
+                let value = tree_json(value)?;
+                if value.is_array() { array(&value, |row| convert(kind, row))? } else { List::from_values([convert(kind, &value)?]).into() }
+            }
+            _ => tree(value)?,
+        };
+        Ok((name.as_str(), item))
+    }).collect::<Crossed<Vec<_>>>()?;
+    tagged(List::from_pairs(fields).into(), "Call", "thinkthen_complete")
+}
+fn tree_json(value: &thinkthen::RequestValueTree) -> Crossed<Value> {
+    use thinkthen::RequestValueTree as T;
+    Ok(match value {
+        T::Map(fields) => Value::Object(fields.iter().filter(|(_, value)| !matches!(value, T::Absent)).map(|(name, value)| Ok((name.clone(), tree_json(value)?))).collect::<Crossed<_>>()?),
+        T::List(values) => Value::Array(values.iter().map(tree_json).collect::<Crossed<_>>()?),
+        T::String(value) => Value::String(value.clone()),
+        T::Number(value) => serde_json::from_str(value).map_err(|_| crate::defect("native number cannot be decoded"))?,
+        T::Bool(value) => Value::Bool(*value),
+        T::Null | T::Absent => Value::Null,
+    })
+}

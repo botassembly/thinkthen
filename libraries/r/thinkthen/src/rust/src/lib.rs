@@ -5,6 +5,7 @@
 pub mod ffi;
 
 mod calls;
+mod session_collection;
 mod native_results;
 mod plan;
 mod request;

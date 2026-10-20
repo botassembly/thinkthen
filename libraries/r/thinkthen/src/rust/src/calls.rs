@@ -1,252 +1,69 @@
-//! R completion handles retain the shared native session and its final packets.
-use crate::{carry, defect};
-use serde_json::{Value, json};
+//! Owned calls keep native settlement alive after R handles an interrupt.
+use crate::carry;
 use std::sync::{Mutex, MutexGuard, PoisonError};
-use thinkthen::{
-    RequestSession, RequestSessionRead, RequestSessionResult, RequestSessionRow, RequestValue,
-};
+use thinkthen::{Call, CancelToken, RequestValue};
 pub(crate) type Crossed<T> = Result<T, crate::NativeError>;
-
+type Outcome = Result<Call<RequestValue>, thinkthen::Error>;
 pub(crate) struct Completion(Mutex<State>);
-struct State {
-    name: &'static str,
-    kind: Option<String>,
-    session: Option<RequestSession>,
-    positions: Option<Vec<usize>>,
-    details: Vec<Value>,
-    observations: Vec<Value>,
-    packet: Value,
-    value: Option<RequestValue>,
-    error: Option<thinkthen::Error>,
+enum State {
+    Unused,
+    Claimed,
+    Running { cancel: CancelToken, details: Vec<serde_json::Value> },
+    Terminal { kind: String, facts: Option<serde_json::Value>, details: Vec<serde_json::Value> },
 }
 impl std::fmt::Debug for Completion {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("Completion { content withheld }")
-    }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("Completion { content withheld }") }
 }
 impl Completion {
-    pub(crate) fn new() -> Self {
-        Self(Mutex::new(State {
-            name: "unused",
-            kind: None,
-            session: None,
-            positions: None,
-            details: Vec::new(),
-            observations: Vec::new(),
-            packet: json!({"results": []}),
-            value: None,
-            error: None,
-        }))
-    }
-    fn state(&self) -> MutexGuard<'_, State> {
-        self.0.lock().unwrap_or_else(PoisonError::into_inner)
-    }
+    pub(crate) fn new() -> Self { Self(Mutex::new(State::Unused)) }
+    fn state(&self) -> MutexGuard<'_, State> { self.0.lock().unwrap_or_else(PoisonError::into_inner) }
     pub(crate) fn claim(&self) -> bool {
         let mut state = self.state();
-        if state.name != "unused" {
-            return false;
-        }
-        state.name = "claimed";
+        if !matches!(*state, State::Unused) { return false; }
+        *state = State::Claimed;
         true
     }
     pub(crate) fn settle_early(&self, kind: String) {
         let mut state = self.state();
-        if state.name == "claimed" {
-            state.name = "terminal";
-            state.kind = Some(kind);
-        }
+        if matches!(*state, State::Claimed) { *state = State::Terminal { kind, facts: None, details: Vec::new() }; }
     }
-    pub(crate) fn start(&self, session: RequestSession, positions: Option<Vec<usize>>) {
-        let mut state = self.state();
-        state.session = Some(session);
-        state.positions = positions;
-        state.name = "running";
-    }
+    pub(crate) fn start(&self, cancel: CancelToken) { *self.state() = State::Running { cancel, details: Vec::new() }; }
     pub(crate) fn cancel(&self) {
-        if let Some(session) = &self.state().session {
-            session.cancel();
-        }
+        if let State::Running { cancel, .. } = &*self.state() { cancel.cancel(); }
     }
-    pub(crate) fn wait(&self) {
-        if let Some(session) = &self.state().session {
-            let _ = session.wait(
-                thinkthen::RequestSessionWaitInterest::Settlement,
-                std::time::Duration::from_millis(50),
-            );
-        }
+    pub(crate) fn observe(&self, event: thinkthen::RecordObservation<'_>, positions: Option<&[usize]>) {
+        let event = if let thinkthen::RecordObservation::Question { index, .. } = &event {
+            let position = positions.and_then(|p| p.get(*index)).copied();
+            match position { Some(index) => event.remap_index(index), None => event }
+        } else { return; };
+        if let Ok(value) = serde_json::to_value(event)
+            && let State::Running { details, .. } = &mut *self.state() { details.push(value); }
     }
-    pub(crate) fn drain(&self) -> Crossed<bool> {
+    pub(crate) fn finish(&self, outcome: &Outcome) {
+        let (kind, facts) = match outcome {
+            Ok(call) => ("success", call.facts().complete().and_then(|facts| serde_json::to_value(facts).ok())),
+            Err(error) => (error.kind().name(), error.facts().and_then(|facts| facts.complete()).and_then(|facts| serde_json::to_value(facts).ok())),
+        };
         let mut state = self.state();
-        loop {
-            let Some(session) = &state.session else {
-                return Ok(state.name == "terminal");
-            };
-            let packet = match session.try_read() {
-                RequestSessionRead::Result(packet) => packet,
-                RequestSessionRead::Pending => return Ok(false),
-                RequestSessionRead::End => return Ok(state.name == "terminal"),
-            };
-            let text = packet.to_json().map_err(|e| carry(&e))?;
-            let document: Value = serde_json::from_str(&text)
-                .map_err(|_| defect("session packet could not be decoded"))?;
-            if state.accept(packet, document)? {
-                return Ok(true);
-            }
-        }
-    }
-    pub(crate) fn accept(&self, packet: RequestSessionResult, document: Value) -> Crossed<()> {
-        self.state().accept(packet, document)?;
-        Ok(())
+        let details = match &mut *state { State::Running { details, .. } => std::mem::take(details), _ => Vec::new() };
+        *state = State::Terminal { kind: kind.into(), facts, details };
     }
     pub(crate) fn read(&self) -> Crossed<extendr_api::Robj> {
-        self.drain()?;
+        use extendr_api::prelude::*;
         let state = self.state();
-        let mut fields = vec![("state", extendr_api::Robj::from(state.name))];
-        if let Some(kind) = &state.kind {
+        let name = match &*state { State::Unused => "unused", State::Claimed => "claimed", State::Running { .. } => "running", State::Terminal { .. } => "terminal" };
+        let mut fields = vec![("state", Robj::from(name))];
+        if let State::Terminal { kind, facts, details } = &*state {
             fields.push(("kind", kind.as_str().into()));
-            fields.push((
-                "facts",
-                match state.packet.get("facts") {
-                    Some(value) => crate::native_results::facts(value)?,
-                    None => ().into(),
-                },
-            ));
-            fields.push((
-                "details",
-                crate::native_results::plain(&json!(state.details))?,
-            ));
+            fields.push(("facts", facts.as_ref().map(crate::native_results::facts).transpose()?.unwrap_or_else(|| ().into())));
+            fields.push(("details", crate::native_results::plain(&serde_json::json!(details))?));
         }
-        Ok(extendr_api::List::from_pairs(fields).into())
-    }
-
-    pub(crate) fn result(
-        &self,
-        function: thinkthen::RequestFunction,
-        column: Option<&thinkthen::RequestColumn>,
-        scalar: bool,
-    ) -> Crossed<extendr_api::Robj> {
-        let state = self.state();
-        if state.value.is_none()
-            && let Some(error) = &state.error
-        {
-            return Err(carry(error));
-        }
-        let value = crate::native_results::request_packet(
-            &state.packet.to_string(),
-            function,
-            &state.observations,
-            scalar,
-        )?;
-        let empty = match function {
-            thinkthen::RequestFunction::Decide => Some(RequestValue::Decisions(Vec::new())),
-            thinkthen::RequestFunction::Choose => Some(RequestValue::Choices(Vec::new())),
-            thinkthen::RequestFunction::Tag => Some(RequestValue::Tags(Vec::new())),
-            thinkthen::RequestFunction::Score => Some(RequestValue::Scores(Vec::new())),
-            _ => None,
-        };
-        let view = column
-            .zip(state.value.as_ref().or(empty.as_ref()))
-            .map(|(column, value)| column.view(value).map_err(|e| carry(&e)))
-            .transpose()?
-            .flatten();
-        crate::request::view(value, view, column, scalar)
+        Ok(List::from_pairs(fields).into())
     }
 }
-impl State {
-    fn accept(&mut self, packet: RequestSessionResult, document: Value) -> Crossed<bool> {
-        match packet {
-            RequestSessionResult::Row(row) => {
-                self.packet
-                    .get_mut("results")
-                    .and_then(Value::as_array_mut)
-                    .ok_or_else(|| defect("row results are not a list"))?
-                    .push(
-                        document
-                            .get("value")
-                            .ok_or_else(|| defect("session packet has no payload"))?
-                            .clone(),
-                    );
-                append(&mut self.value, row)?;
-            }
-            RequestSessionResult::Aggregate(value) => {
-                field(
-                    &mut self.packet,
-                    "results",
-                    document
-                        .get("value")
-                        .ok_or_else(|| defect("session packet has no payload"))?
-                        .clone(),
-                )?;
-                self.value = Some(value);
-            }
-            RequestSessionResult::Observation { .. } => {
-                self.observations.push(document.clone());
-                let mut detail = document
-                    .get("value")
-                    .ok_or_else(|| defect("session packet has no payload"))?
-                    .clone();
-                if detail.get("kind").and_then(Value::as_str) != Some("question") {
-                    return Ok(false);
-                }
-                if let Some(index) = detail.get("index").and_then(Value::as_u64)
-                    && let Some(position) = self
-                        .positions
-                        .as_ref()
-                        .and_then(|p| usize::try_from(index).ok().and_then(|i| p.get(i)))
-                {
-                    field(&mut detail, "index", json!(position))?;
-                }
-                self.details.push(detail);
-            }
-            RequestSessionResult::Terminal(terminal) => {
-                self.name = "terminal";
-                self.kind = Some(
-                    terminal
-                        .error
-                        .as_ref()
-                        .map_or("success", |e| e.kind().name())
-                        .into(),
-                );
-                if let Some(facts) = document.get("facts") {
-                    field(&mut self.packet, "facts", facts.clone())?;
-                }
-                if let Some(failure) = document.get("failure") {
-                    field(&mut self.packet, "failure", failure.clone())?;
-                }
-                self.error = terminal.error;
-                self.session = None;
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-}
-
-fn append(value: &mut Option<RequestValue>, row: RequestSessionRow) -> Crossed<()> {
-    macro_rules! add {
-        ($row:expr, $kind:ident) => {{
-            let rows = value.get_or_insert_with(|| RequestValue::$kind(Vec::new()));
-            let RequestValue::$kind(rows) = rows else {
-                return Err(defect("session row function changed"));
-            };
-            rows.push($row);
-        }};
-    }
-    match row {
-        RequestSessionRow::Decision(row) => add!(row, Decisions),
-        RequestSessionRow::Choice(row) => add!(row, Choices),
-        RequestSessionRow::Tags(row) => add!(row, Tags),
-        RequestSessionRow::Score(row) => add!(row, Scores),
-        RequestSessionRow::Filter(row) => add!(row, Filtered),
-        RequestSessionRow::Annotation(row) => add!(row, Annotations),
-    }
-    Ok(())
-}
-
-fn field(object: &mut Value, name: &str, value: Value) -> Crossed<()> {
-    object
-        .as_object_mut()
-        .ok_or_else(|| defect("session document is not an object"))?
-        .insert(name.into(), value);
-    Ok(())
+pub(crate) fn result(call: &Call<RequestValue>, function: thinkthen::RequestFunction, column: Option<&thinkthen::RequestColumn>, scalar: bool) -> Crossed<extendr_api::Robj> {
+    let tree = call.value_tree().map_err(|e| carry(&e))?;
+    let value = crate::native_results::call(&tree, function)?;
+    let view = column.map(|column| column.view(call.value()).map_err(|e| carry(&e))).transpose()?.flatten();
+    crate::request::view(value, view, column, scalar)
 }

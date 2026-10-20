@@ -19,8 +19,8 @@
     held <- list(interrupt = TRUE)
   }
   if (!is.null(had_hook)) options(error = had_hook)
-  if (!is.null(held$interrupt)) .tt_interrupt()
-  if (inherits(held$cond, "thinkthen_interrupt")) .tt_interrupt()
+  if (!is.null(held$interrupt)) stop(structure(list(message = "", call = NULL), class = c("interrupt", "condition")))
+  if (inherits(held$cond, "thinkthen_interrupt")) stop(structure(list(message = "", call = NULL), class = c("interrupt", "condition")))
   if (!is.null(held$cond)) stop(held$cond)
   held$value
 }
@@ -53,7 +53,6 @@
 # R rejects unknown formal arguments.
 .tt_unknown <- function(...) {
   names <- names(list(...))
-  if ("deadline" %in% names) .tt_usage("deadline was renamed deadline_ms, in milliseconds")
   .tt_usage(paste0("unknown keyword: ", if (length(names)) names[[1L]] else "unnamed argument"))
 }
 
@@ -62,24 +61,6 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
 
 .tt_usage <- function(message) .tt_call(tt_error_native("usage", message))
 .tt_local <- function(message) .tt_call(tt_error_native("local", message))
-
-# R's own interrupt, delivered for real: the guarded check consumed the
-# pending signal, so the process sends itself SIGINT and sleeps, and the
-# jump lands in R's own machinery with no Rust frame under it. If the
-# signal does not land, the synthetic condition below still stops the call.
-.tt_interrupt <- function() {
-  delivered <- FALSE
-  if (.Platform$OS.type == "unix") {
-    try(delivered <- tools::pskill(Sys.getpid(), 2L), silent = TRUE)
-    if (isTRUE(delivered)) Sys.sleep(0.1)
-  }
-  had_hook <- getOption("error")
-  if (!is.null(had_hook)) {
-    options(error = NULL)
-    on.exit(options(error = had_hook), add = TRUE)
-  }
-  stop(structure(class = c("interrupt", "condition"), list(message = "", call = NULL)))
-}
 
 # The one JSON writer: every string reaches jsonlite as UTF-8 under any
 # locale. Native bytes that are valid UTF-8 are UTF-8, latin1 converts, and
