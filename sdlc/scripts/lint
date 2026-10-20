@@ -119,7 +119,8 @@ THINKTHEN_RESOLVED_TOOLS=surfaces step sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 step cargo deny --offline check advisories bans licenses
-step cargo test --locked --offline -p thinkthen --test packet_oracle -- --ignored
+step cargo build --locked --offline -p conformance-backend --bin conformance-backend
+step cargo test --locked --offline -p thinkthen --test packet_oracle -- --ignored --exact shared_packet_oracle_is_current
 step cargo fmt --all -- --check
 step cargo clippy --locked --workspace --all-targets -- -D warnings
 step cargo clippy --locked -p thinkthen --lib --no-default-features --features bundled-sqlite -- -D warnings

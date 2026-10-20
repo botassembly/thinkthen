@@ -53,59 +53,6 @@ def canonical(document):
     return visit(document)
 
 
-def requests():
-    """Use shared case composition, then the public canonical Request grammar."""
-    sys.path.insert(0, str(ROOT / 'conformance'))
-    from c_parity import document
-    cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
-    by_id = {case['id']: case for case in cases}
-    rows = []
-    for case in cases:
-        if case['id'] == PRIVATE_CASE:
-            continue
-        value = document({'id': case['id'], 'kind': 'behavior', 'verb': case['verb'],
-                          'input': {'case_ref': case['id']}}, by_id, {})
-        question = value['question'].copy()
-        options = {}
-        if case['verb'] == 'find' and question.pop('none', False):
-            options['none'] = True
-        files = {}
-        if value.get('question_form') == 'file':
-            files['question.json'] = json.dumps(question)
-            selector = {'kind': 'file', 'path': '$FOLDER/question.json'}
-        else:
-            selector = {'kind': 'definition', 'value': question}
-        items = [{'original': {'kind': 'text', 'text': item} if value['text']
-                  and isinstance(item, str) else {'kind': 'json', 'value': item}}
-                 for item in value['items']]
-        source = {'kind': 'records', 'items': items}
-        injection = (value.get('operation') or {}).get('injection')
-        if injection == 'recording_read_failure':
-            source = {'kind': 'source', 'source': {'paths': ['$FOLDER/missing-input'],
-                      'reading': {'unit': 'file'}, 'media': 'text'}}
-        if injection == 'expired_deadline':
-            options['deadline_ms'] = 0
-        if injection == 'cancel_token':
-            source = {'kind': 'feed', 'name': 'cancelled'}
-        request = {'schema': 'thinkthen.request/1', 'call': {'function': case['verb'],
-                   'question': selector, 'input': source, 'options': options}}
-        rows.append({'id': case['id'], 'arm': value['arm'], 'request': request,
-                     **({'cancel': True} if injection == 'cancel_token' else {}),
-                     **({'files': files} if files else {})})
-    return {'schema': 'thinkthen.packet-oracle/1', 'cases': rows,
-            'excluded': [{'id': PRIVATE_CASE, 'reason':
-                          'Private invariant injection has no admitted public input; existing core defect tests retain coverage.'}]}
-
-
-def prepare(case, home, base):
-    """Resolve owned fixture files without retaining machine paths in the oracle."""
-    for name, text in case.get('files', {}).items():
-        (home / name).write_text(text)
-    request = json.loads(json.dumps(case['request']).replace('$FOLDER', str(home)))
-    return {'request': request, 'base_url': base + '/' + case['arm'],
-            'cancel': case.get('cancel', False)}
-
-
 def difference(want, got):
     """Report the changed packet fields as a readable unified JSON diff."""
     left = json.dumps(want, ensure_ascii=False, sort_keys=True, indent=2).splitlines(True)
@@ -113,80 +60,67 @@ def difference(want, got):
     return ''.join(difflib.unified_diff(left, right, fromfile='oracle', tofile='actual'))
 
 
-def run(consumer, command, root):
-    """Compare every admitted shared case against an installed public dumper."""
-    from children import child_env, fixture_run
-    sys.path.insert(0, str(root / 'conformance'))
-    from c_parity import Backend
-    backend_path = Path(os.environ.get('THINKTHEN_TEST_BACKEND',
-                         str(Path(os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))) /
-                             'debug/conformance-backend')))
+def folded(document):
+    """Reuse existing shared assertions over native packets, without a host serializer."""
+    if 'host' in document:
+        return document['host']
+    packets = document['packets']
+    terminal = next((packet for packet in packets if packet['kind'] == 'terminal'), {})
+    failure = document.get('error', terminal.get('failure'))
+    values = [packet['value'] for packet in packets if packet['kind'] == 'row']
+    aggregate = next((packet['value'] for packet in packets if packet['kind'] == 'aggregate'), None)
+    results = aggregate if aggregate is not None else values
+    packet = {'native': True, 'results': results, 'facts': terminal.get('facts'),
+              'answer': terminal.get('answer')}
+    if failure is not None:
+        packet = {'error': failure['error'], 'facts': failure.get('facts', terminal.get('facts')),
+                  'resolution': failure['resolution'], 'completed': packet}
+    return packet
+
+
+def run(consumer, command, root, *, update=False):
+    """Keep every required Rust cell, its probes and assertions, then compare packets."""
+    from fixture_suite import run as shared_run
+    actual = {}
+
+    def record(stdout, row, step, home):
+        # File locations use this run's owned home or this checkout. Keep their
+        # relative names while replacing only the machine-specific prefixes.
+        raw = stdout.replace(str(home), '$FOLDER').replace(str(root), '$ROOT')
+        actual.setdefault(row['id'], []).append(decimal_json(raw))
+        return folded(json.loads(stdout))
+
+    failures = shared_run(consumer, command, root, packet_transform=record)
+    if failures:
+        return failures
+    document = {'schema': 'thinkthen.packet-oracle/1', 'cases': [
+        {'id': case, 'dumps': canonical(dumps)} for case, dumps in actual.items()],
+        'private_cases': [{'id': PRIVATE_CASE, 'reason':
+            'Private invariant injection has no admitted public input and is outside parity.required_cases.'}]}
+    if update:
+        ORACLE.write_text(json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
+        return 0
     oracle = json.loads(ORACLE.read_text())
-    failures = 0
-    for case in oracle['cases']:
-        failed = False
-        with tempfile.TemporaryDirectory(prefix='thinkthen-packet-') as tmp:
-            home = Path(tmp)
-            env = child_env(home=home)
-            backend = Backend(backend_path, env)
-            try:
-                given = prepare(case, home, f'http://127.0.0.1:{backend.port}')
-                child = fixture_run(command, input=json.dumps(given), text=True,
-                                    capture_output=True, env=env, cwd=home, check=True)
-                assert not child.stderr, child.stderr
-                got = canonical(decimal_json(child.stdout))
-                want = case['dump']
-                if got != want:
-                    raise AssertionError(difference(want, got))
-            except Exception as error:
-                failures += 1
-                failed = True
-                print(f'{case["id"]}: {error}', file=sys.stderr)
-            finally:
-                backend.close()
-        print('parity: ' + json.dumps({'consumer': consumer, 'case': case['id'],
-              'checks': ['named', 'runtime'], 'status': 'fail' if failed else 'pass'}), flush=True)
-    return failures
-
-
-def validate_shared_answers(cases):
-    """Refuse to bless fixture requests that fail before their intended behavior."""
-    contract = {case['id']: case['expect'] for case in
-                json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
-    for case in cases:
-        expected = contract[case['id']]
-        dump = case['dump']
-        terminal = next((packet for packet in reversed(dump['packets'])
-                         if packet['kind'] == 'terminal'), {})
-        failure = dump.get('error', terminal.get('failure', {}))
-        kind = failure.get('error', {}).get('kind')
-        wanted = expected.get('error', {}).get('kind')
-        assert kind == wanted, (case['id'], wanted, failure)
-        if 'settled' in expected:
-            answer = decimal_json(json.dumps(expected['settled']['collection']))
-            assert terminal.get('answer') == answer, (case['id'],
-                    difference(answer, terminal.get('answer')))
+    expected = {case['id']: case['dumps'] for case in oracle['cases']}
+    failed = False
+    for case in document['cases']:
+        want = expected.get(case['id'])
+        if want != case['dumps']:
+            failed = True
+            print(case['id'] + ':\n' + difference(want, case['dumps']), file=sys.stderr)
+    if '--check' in sys.argv and document != oracle:
+        failed = True
+        print(difference(oracle, document), file=sys.stderr)
+    return int(failed)
 
 
 def main():
-    if '--requests' in sys.argv:
-        print(json.dumps(requests()))
-        return 0
-    if '--check' in sys.argv:
-        raw = json.loads(sys.stdin.read())
-        for case in raw['cases']:
-            case['dump'] = canonical(decimal_json(json.dumps(case['dump'])))
-        validate_shared_answers(raw['cases'])
-        if '--update' in sys.argv:
-            ORACLE.write_text(json.dumps(raw, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
-            return 0
-        want = json.loads(ORACLE.read_text())
-        if raw != want:
-            print(difference(want, raw), file=sys.stderr)
-            return 1
-        print('packet oracle: current')
-        return 0
-    raise SystemExit('use --requests or --check [--update]')
+    if '--check' not in sys.argv or '--worker' not in sys.argv:
+        raise SystemExit('use --check --worker TEST_BINARY [--update]')
+    worker = sys.argv[sys.argv.index('--worker') + 1]
+    os.environ.pop('THINKTHEN_CONFORMANCE_IDS', None)
+    command = [worker, '--ignored', '--exact', 'packet_dumper_worker', '--nocapture']
+    return run('rust', command, ROOT, update='--update' in sys.argv)
 
 
 if __name__ == '__main__':
