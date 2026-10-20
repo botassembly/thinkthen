@@ -212,7 +212,7 @@ fn authored_cuts_and_on_are_refused_before_normalization_and_sends() -> io::Resu
         ),
         (
             r#"{"version":2,"questions":{"first":{"decide":"secret wording"}}}"#,
-            "`version` is the number 1",
+            "delete the `version` field.",
         ),
         (
             r#"{"threshold":0.5,"questions":{"first":{"decide":"secret wording"}}}"#,

@@ -17,7 +17,7 @@ use thinkthen::QuestionSet;
 
 const SINGLE_OUTPUT: &str = "{\r\n  \"decide\": \"Does the message report a payment failure?\",\r\n  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"],\r\n  \"model\": \"jev-1.13.0\"\r\n}\r\n";
 const SET_OUTPUT: &str = concat!(
-    "{\n  \n  \"threshold\": 0.95,\n  \"questions\": {\n",
+    "{\n  \"threshold\": 0.95,\n  \"questions\": {\n",
     "    \"correct\": {\"decide\": \"Does the answer say the same thing as the reference answer to the question?\", \"on\": [\"/input\", \"/gold\", \"/output\"], \"threshold\": 0.54},\n",
     "    \"grounded\": {\"decide\": \"Is every claim in the answer stated in the source text?\", \"on\": [\"/context\", \"/output\"]},\n",
     "    \"complete\": {\"decide\": \"Does the answer include every fact needed to answer the question as fully as the reference answer?\", \"on\": [\"/input\", \"/gold\", \"/output\"]},\n",
