@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision f9581f3, accept
 
+Reviews: revision 832660c, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/tools-self-test.py`, `sdlc/tools.json`, `sdlc/tools/*.json`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/linux-check`, `sdlc/scripts/tools.py`, `sdlc/scripts/README.md`, `sdlc/records/0738-layered-check-image.md`.
@@ -31,3 +33,4 @@ This ticket goes first: every lane that touches a tool file pays a full image bu
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: The first configured gate failed native bootstrap because fragment order installed Cargo-based providers before Rust; cd00f67975fb4650621e175b3eef47e83c081376 repairs declaration-derived ordering, with fresh native bootstrap, all 17 normal-wrapper resolver fixtures and policy passing in M5 receipts 1792514432255-68912, 1792514482107-85534 and 1792514973933-61891; fresh review and a configured gate remain.

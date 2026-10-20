@@ -301,6 +301,61 @@ class ToolResolution(unittest.TestCase):
             self.assertEqual((root / 'installer-child').read_text(), 'installed')
             self.assertEqual(result.stdout, 'command-started\n')
 
+    @unittest.skipUnless(platform.system() == 'Darwin', 'macOS provisions Cargo providers')
+    def test_fresh_provider_dependencies_allow_cargo_tools_and_python_packages(self):
+        owned = ROOT / '.tools'
+        owned.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='resolver-fresh-', dir=owned) as folder:
+            root = Path(folder)
+            resolved = root / 'resolved'
+            installer = resolved / 'bootstrap/mise/bin/mise'
+            installer.parent.mkdir(parents=True)
+            installer.write_text('#!/bin/sh\nset -eu\n'
+                                 'identity=${3:-$2}\nkind=${identity%%@*}\nkind=${kind#cargo:}\n'
+                                 'binary="$HOME/resolved/providers/$kind"\n'
+                                 'case "$1" in\ninstall)\n'
+                                 'case "$2" in cargo:*) cargo --version ;; esac\n'
+                                 'mkdir -p "$binary"\n'
+                                 'case "$kind" in\n'
+                                 'rust) cp "$HOME/success" "$binary/cargo" ;;\n'
+                                 'python) cp "$HOME/python" "$binary/python3" ;;\n'
+                                 '*) cp "$HOME/success" "$binary/$kind" ;;\nesac ;;\n'
+                                 "env) printf '{\"PATH\":\"%s:/usr/bin:/bin\"}\\n' \"$binary\" ;;\n"
+                                 'esac\n')
+            installer.chmod(0o755)
+            success = root / 'success'
+            success.write_text('#!/bin/sh\nexit 0\n')
+            success.chmod(0o755)
+            python = root / 'python'
+            python.write_text('#!/bin/sh\nset -eu\n'
+                              'if [ "$1" = -m ]; then\n'
+                              'touch "$HOME/packages-installed"\n'
+                              'cp "$HOME/success" "$(dirname "$0")/ruff"\n'
+                              'else\n'
+                              'test -f "$HOME/packages-installed"\n'
+                              'printf "fixture\\n"\nfi\n')
+            python.chmod(0o755)
+            def tool(commands, provider):
+                return {'commands': commands, 'provider': provider, 'version': 'fixture',
+                        'groups': ['common'], 'platforms': ['darwin']}
+            manifest = {'libraries': {}, 'databases': {},
+                        'python_packages': {'PyYAML': 'fixture', 'jsonschema': 'fixture'},
+                        'tools': {'cbindgen': tool(['cbindgen'], 'cargo:cbindgen'),
+                                  'nextest': tool(['cargo-nextest'], 'cargo:cargo-nextest'),
+                                  'ruff': tool(['ruff'], 'python-package'),
+                                  'python': tool(['python3'], 'python'),
+                                  'rust': tool(['cargo'], 'rust')}}
+            source = root / 'tools.json'
+            source.write_text(json.dumps(manifest))
+            result = subprocess.run([sys.executable, str(SCRIPT), '--manifest', str(source),
+                                     '--root', str(resolved), 'test', '--',
+                                     '/bin/sh', '-ec', 'cbindgen; cargo-nextest; ruff; echo command-started'],
+                                    env={'HOME': str(root), 'PATH': '/usr/bin:/bin'},
+                                    text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((root / 'packages-installed').is_file())
+            self.assertEqual(result.stdout, 'command-started\n')
+
     def check(self, commands, succeeds, inherited=False, requirement=None, diagnostic=None):
         owned = ROOT / '.tools'
         owned.mkdir(exist_ok=True)
