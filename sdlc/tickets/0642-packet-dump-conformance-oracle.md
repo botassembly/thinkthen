@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0636
 
+Reviews: revision 90d52a7, accept
+
 ## Outcome
 
 - Changes: `conformance/fixtures/packets.json`, `crates/thinkthen/tests/packet_oracle.rs`, `conformance/children/packet_dump.py`, `libraries/rust/consumer/`, `libraries/rust/check.py`, `sdlc/scripts/lint`.
