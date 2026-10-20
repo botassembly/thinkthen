@@ -16,7 +16,7 @@ Reviews: revision 59e6cd1, accept
 
 ## Outcome
 
-- Changes: `libraries/c/tests/door/main.rs`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/install-check-self-test.py`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
+- Changes: `libraries/c/tests/door/main.rs`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/install-check-self-test.py`, `sdlc/scripts/release-archive-self-test.py`, `sdlc/scripts/release-windows-c-self-test.py`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
 - The archive's one `lib/pkgconfig/thinkthen.pc` follows standard pkg-config semantics: `--static` adds the native static dependencies and the caller selects static linkage. Add no variable or second package name. The README shows the Linux and macOS static link commands without `sed`; macOS names the archive path because its linker prefers the dylib. The Windows archive keeps its `lib/thinkthen.dll.lib` import library, and the README documents the MSVC command.
 - Symbol hiding moves into the Rust build (an export list or version script passed by `build.rs`) where the linker supports it. `localize.sh` shrinks to what remains, or is deleted.
 - Coverage-only branches leave `localize.sh`; the coverage driver passes what it needs itself.
@@ -60,3 +60,5 @@ The first native proof reached an existing rustfmt difference in the door fixtur
 ## Existing installation fixtures, 2026-10-20
 
 Update the existing native-install fixture to supply the compiler dependency output that the real C build now reports. Preserve every effective-artifact, missing-artifact, configured-target, shell and refusal assertion. The integrated routine suite exposed this fixture mismatch; add no compatibility fallback or new checker.
+
+The same compiler-output fixture repair includes the existing archive and Windows C packaging self-tests. Keep the archive test's original compiler exit 42 assertion: the C pack log branch must return the compiler's real status rather than replace it with 1. This restores the existing failure behavior and adds no fallback.
