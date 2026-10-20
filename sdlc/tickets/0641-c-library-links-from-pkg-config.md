@@ -10,7 +10,7 @@ Depends on: 0619
 
 ## Outcome
 
-- Changes: `sdlc/scripts/release-pack`, `sdlc/scripts/installed.sh`, `sdlc/scripts/coverage_installed_c_hosts.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
+- Changes: `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
 - The archive's `lib/pkgconfig/thinkthen.pc` gives separate shared and static link lines, so `pkg-config --libs --static thinkthen` works unedited on Linux and macOS. The Windows archive keeps its `lib/thinkthen.dll.lib` import library, and the README documents the MSVC command.
 - Symbol hiding moves into the Rust build (an export list or version script passed by `build.rs`) where the linker supports it. `localize.sh` shrinks to what remains, or is deleted.
 - Coverage-only branches leave `localize.sh`; the coverage driver passes what it needs itself.
@@ -36,3 +36,7 @@ Depends on: 0619
 
 - 2026-10-19 PM assigned the routine C source-check Darwin linking defect here: libraries/c/check.sh copies target/debug/libthinkthen_c.so and links libthinkthen.so despite declaring Darwin support; 0636 proves the installed CLI, Rust and C entrypoints and makes no source-linking repair.
 - 2026-10-20 started
+
+## Existing caller paths, 2026-10-20
+
+The release-pack dispatcher now delegates C packaging to release-pack.d/c. The initial coverage driver also calls localize.sh and must retain its distinct collection when that calling convention changes. The claim follows these existing implementation and caller paths; the Outcome is unchanged.
