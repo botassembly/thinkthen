@@ -36,7 +36,7 @@ pub enum ProfileFailure {
     Json(JsonFailure),
     /// A profile must be an object.
     Object,
-    /// The schema was absent or unsupported.
+    /// The removed `schema` member was present.
     Schema,
     /// The profile name failed its safe grammar.
     Name,

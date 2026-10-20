@@ -115,8 +115,7 @@ fn process_send_budget_distinguishes_first_send_retry_and_backend_status() {
 
 #[test]
 fn inline_profile_replaces_a_file_and_rejects_invalid_json_as_usage() {
-    let profile =
-        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":8}"#;
+    let profile = r#"{"name":"small","max_evidence_bytes":8}"#;
     let missing = folder("missing-profile.json");
     let from_inline = Engine::builder()
         .no_cache()

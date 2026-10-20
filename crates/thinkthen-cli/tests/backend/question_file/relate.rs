@@ -56,7 +56,7 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
     // calibration identity and its provenance alone.
     let runtime = written(
         "relate-runtime-profile",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"runtime","max_questions":8}"#,
+        r#"{"name":"runtime","max_questions":8}"#,
     );
     let runtime = runtime.strip_prefix('@').unwrap_or(&runtime);
     let profiled = run(

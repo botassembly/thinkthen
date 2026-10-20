@@ -7,7 +7,7 @@ fn one_question_engine(base: &str) -> Engine {
         .throttle(THROTTLE)
         .expect("throttle")
         .max_retries(0)
-        .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#)
+        .profile_json(r#"{"name":"one","max_questions":1}"#)
         .expect("one question per request")
         .no_cache()
         .build()

@@ -68,7 +68,7 @@ fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
     let profiled = build()
         .max_request_bytes(20_000)
         .expect("positive size")
-        .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"smaller","max_request_bytes":10000}"#)
+        .profile_json(r#"{"name":"smaller","max_request_bytes":10000}"#)
         .expect("smaller profile")
         .build()
         .expect("profiled engine");

@@ -15,9 +15,9 @@ The optional `max_estimated_input_tokens_total` setting admits each final encode
 
 Settled by ADR 0032 and amended by ADR 0040.
 
-`--profile FILE` reads one UTF-8 JSON object with schema `thinkthen.backend-profile/1`. It requires `name` and at least one of `max_evidence_bytes`, `max_request_bytes`, `max_questions`, or `max_options`. The name is nonempty and uses lowercase letters, digits, hyphens, and underscores. Each limit is a positive integer. No other key is accepted.
+`--profile FILE` reads one UTF-8 JSON object. It requires `name` and at least one of `max_evidence_bytes`, `max_request_bytes`, `max_questions`, `max_options`, or `image_profile`. The name is nonempty and uses lowercase letters, digits, hyphens, and underscores. Each limit is a positive integer. No other key is accepted. Any present `schema` member is refused with the reason "must delete the `schema` member", regardless of its value.
 
-Version two uses `thinkthen.backend-profile/2` and admits the same limits plus optional `image_profile`. This object has exactly `id` and `model_alias`, both strings. `id` must be one of the three identifiers in [Local image declarations](#local-image-declarations); `model_alias` is nonblank, has no surrounding whitespace or control characters, and must match the effective request model exactly. A version-two profile requires a primitive limit or an image declaration. Version one keeps its closed keys and requires a primitive limit. Null declarations, unknown IDs and extra keys refuse without echoing values. The SDK uses `EngineBuilder::profile_json` or `.profile`; the CLI uses the existing `--profile`. No setting or discovery command is added.
+The optional `image_profile` object has exactly `id` and `model_alias`, both strings. `id` must be one of the three identifiers in [Local image declarations](#local-image-declarations); `model_alias` is nonblank, has no surrounding whitespace or control characters, and must match the effective request model exactly. Null declarations, unknown IDs and extra keys refuse without echoing values. The SDK uses `EngineBuilder::profile_json` or `.profile`; the CLI uses the existing `--profile`. No setting or discovery command is added.
 
 Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization. Request bytes are the exact bytes the adapter encoded. Questions are the expanded wire questions, so each `tag` label counts once. Options are the labels in one `choose` question. An exact limit passes. One unit over exits 2 and names the profile, limit, unit, and actual count. The diagnostic repeats no evidence or request bytes.
 
@@ -243,7 +243,7 @@ Settled by [ADR 0117](../sdlc/planning/adr/0117-provider-setups-extend-the-backe
 
 The read-only `backends` map also supplies caller prices and local profiles. An added entry requires `url`, `key_env` and `model`, with optional `path`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output` and `profile`. `both_sides` is a boolean, default false, and reuses the BothSides form described above. Built-ins accept any nonempty subset of rate, the atomic price pair and profile. An empty built-in entry is refused; `url`, `path`, `key_env`, `model` and `both_sides` overrides are always refused for built-ins.
 
-Prices occur together as decimal strings from 0 through 1000000 with at most six fractional digits, including zero. Signs, exponents, whitespace, numbers and null are refused. An inline profile is exactly the existing closed `thinkthen.backend-profile/1` object; its parser and preflight rules apply unchanged. A selected setup may supply the running profile name for calibration warnings. The file remains owner-writable only whenever it holds backend entries, and it never contains a key.
+Prices occur together as decimal strings from 0 through 1000000 with at most six fractional digits, including zero. Signs, exponents, whitespace, numbers and null are refused. An inline profile is exactly the same closed backend profile object; its parser and preflight rules apply unchanged. A selected setup may supply the running profile name for calibration warnings. The file remains owner-writable only whenever it holds backend entries, and it never contains a key.
 
 Explicit prices from a builder or native/C price setting outrank the selected setup pair, then the file's top-level pair, then none. An explicit profile file or JSON setting outranks the setup profile, then none. Later explicit profile setters replace earlier ones. Setter order relative to backend/address/model does not change either precedence. A named setup keeps its prices/profile when explicit address or model settings override its defaults.
 
@@ -259,7 +259,6 @@ Malformed fields exit 5 without repeating values. The price-pair sentence is `co
       "usd_per_million_input": "0.02",
       "usd_per_million_output": "0",
       "profile": {
-        "schema": "thinkthen.backend-profile/1",
         "name": "perplexity",
         "max_questions": 128,
         "max_options": 255,
@@ -273,7 +272,6 @@ Malformed fields exit 5 without repeating values. The price-pair sentence is `co
       "model": "example-model",
       "both_sides": true,
       "profile": {
-        "schema": "thinkthen.backend-profile/1",
         "name": "local-strict",
         "max_request_bytes": 96000
       }
