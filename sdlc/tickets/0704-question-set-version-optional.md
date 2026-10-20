@@ -8,7 +8,7 @@ Reviews: revision 6f31533, accept
 
 ## Outcome
 
-- Changes: `crates/thinkthen/src/core/question_set/parsing.rs`, `crates/thinkthen/tests/`, `specification/`, `site/src/`, `libraries/*/README.md`, `databases/*/README.md`.
+- Changes: `build-tools/results/templates/r.py`, `build-tools/results/templates/ruby.py`, `conformance/`, `crates/thinkthen-cli/`, `crates/thinkthen/src/core/question_file.rs`, `crates/thinkthen/src/core/question_set.rs`, `crates/thinkthen/src/core/question_set/`, `crates/thinkthen/src/core/recognize_file.rs`, `crates/thinkthen/src/core/relate_file.rs`, `crates/thinkthen/src/core/relate_file/`, `crates/thinkthen/src/core/result/complete/tests/aggregate.rs`, `crates/thinkthen/src/engine/facade_tests.rs`, `crates/thinkthen/src/ownership_tests/bulk_details_tests.rs`, `crates/thinkthen/src/public/rank_set.rs`, `crates/thinkthen/src/public/relate.rs`, `crates/thinkthen/src/public/request/`, `crates/thinkthen/src/public/set.rs`, `crates/thinkthen/tests/`, `databases/`, `demos/`, `libraries/ada/`, `libraries/c/`, `libraries/cobol/`, `libraries/cpp/`, `libraries/csharp/`, `libraries/dart/`, `libraries/go/`, `libraries/jvm/`, `libraries/mcp/`, `libraries/objective-c/`, `libraries/php/`, `libraries/python/`, `libraries/r/`, `libraries/ruby/`, `libraries/rust/`, `libraries/swift/`, `libraries/typescript/`, `libraries/zig/`, `probes/`, `site/`, `spec/`, `specification/`.
 - A question set without `version`, inline or in a saved file, parses as version 1. A present `version` other than the number 1 is still refused with the same message.
 - Documentation examples drop `version`. The specification states that it is optional and defaults to 1.
 
