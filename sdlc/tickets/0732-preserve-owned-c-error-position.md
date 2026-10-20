@@ -8,7 +8,7 @@ Phase: 2
 
 ## Outcome
 
-- Changes: `libraries/c/src/failures.rs`, `libraries/c/src/failures/`, `libraries/c/src/ffi/run_call/`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`.
+- Changes: `libraries/c/src/failures.rs`, `libraries/c/src/failures/`, `libraries/c/src/ffi/run_call/`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`, `libraries/BINDING-AUTHOR.md`.
 - Preserve the native failing record position when `thinkthen_run_call` returns an owned error, and expose it through the surviving owned C error interface before 0688 freezes that interface.
 - Represent an absent position distinctly from every valid native position; never infer the position from the message or input.
 - Keep error kind, message, retryability, facts, admission, send counts and ownership unchanged. Add no legacy session or thread-local error path.
