@@ -10,7 +10,7 @@ Depends on: 0738
 
 ## Outcome
 
-- Changes: `sdlc/scripts/linux-check`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/tools.py`, `sdlc/tools.json`, `sdlc/scripts/README.md`.
+- Changes: `sdlc/scripts/linux-check`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/tools.py`, `sdlc/tools.json`, `sdlc/scripts/README.md`, `conformance/parity.py`, `sdlc/scripts/smoke`, `sdlc/scripts/surfaces`, `sdlc/scripts/tools-self-test.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/tools/python.json`.
 - `linux-check surface PATH` runs that surface's existing `check.sh` (for example `libraries/r` or `databases/duckdb`) in the pinned image, with the same caps, labels and mounts as the other checks.
 - The image installs a language's or database's tools when its `sdlc/tools/NAME.json` declares Linux tools, each in its own layer from 0738. Adding a language's tools edits only that language's file, never a shared list, so phase 3 tickets add tools in parallel without touching the same lines.
 - A surface whose declared tools are missing from the image fails, never skips.
@@ -24,3 +24,7 @@ Depends on: 0738
 ## Evidence
 
 The core cut moved each language's and database's toolchain into its own phase 3 ticket, which proves it in the container. About 35 phase 3 tickets prove Linux "at the 0619 container checkpoint", but `linux-check` accepts only `lint`, `test`, `test-full-cases`, `package`, `test-stress` and `prepare`, so no command runs one surface's check. Tool selection is one `linux.tool_groups` list in `sdlc/tools.json`, so every language ticket would edit the same lines and none could run in parallel. Found by the phase 3 readiness review, 2026-10-20. It lands before any language ticket's container proof.
+
+## Progress
+
+- 2026-10-20 Standing ruling7 covers shared parity, smoke and surface selection, canonical Python tool ownership and their existing fixtures; applicable pure and mechanical Gator proofs passed, while real image and C surface proofs remain before acceptance.
