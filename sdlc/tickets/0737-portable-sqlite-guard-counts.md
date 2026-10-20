@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision 0c86668, accept
+
 ## Outcome
 
 - Changes: `databases/sqlite/check.sh`.
