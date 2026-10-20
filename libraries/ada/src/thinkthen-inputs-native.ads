@@ -107,6 +107,8 @@ function Unwrap (Item : Thinkthen.Inputs.Total_Request_Limit) return Requests.T_
 function Wrap (Item : Requests.T_EngineSettings_field_max_requests_total) return Thinkthen.Inputs.Total_Request_Limit;
 function Unwrap (Item : Thinkthen.Inputs.Option_Schema) return Requests.T_OptionSchema;
 function Wrap (Item : Requests.T_OptionSchema) return Thinkthen.Inputs.Option_Schema;
+function Unwrap (Item : Thinkthen.Inputs.Option_Schema2) return Requests.T_OptionSchema2;
+function Wrap (Item : Requests.T_OptionSchema2) return Thinkthen.Inputs.Option_Schema2;
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example) return Requests.T_RecognitionExample;
 function Wrap (Item : Requests.T_RecognitionExample) return Thinkthen.Inputs.Recognition_Example;
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example_Entity) return Requests.T_RecognitionExampleEntity;
@@ -225,6 +227,8 @@ function Unwrap (Item : Thinkthen.Inputs.JSON_List) return Requests.T_JSON_List;
 function Wrap (Item : Requests.T_JSON_List) return Thinkthen.Inputs.JSON_List;
 function Unwrap (Item : Thinkthen.Inputs.JSON_Map) return Requests.T_JSON_Map;
 function Wrap (Item : Requests.T_JSON_Map) return Thinkthen.Inputs.JSON_Map;
+function Unwrap (Item : Thinkthen.Inputs.Option_Schema2_List) return Requests.T_OptionSchema2_List;
+function Wrap (Item : Requests.T_OptionSchema2_List) return Thinkthen.Inputs.Option_Schema2_List;
 function Unwrap (Item : Thinkthen.Inputs.Option_Schema_List) return Requests.T_OptionSchema_List;
 function Wrap (Item : Requests.T_OptionSchema_List) return Thinkthen.Inputs.Option_Schema_List;
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example_Entity_List) return Requests.T_RecognitionExampleEntity_List;

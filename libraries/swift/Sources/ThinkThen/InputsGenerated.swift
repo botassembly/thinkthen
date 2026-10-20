@@ -1482,6 +1482,38 @@ public struct OptionSchema: ValueRepresentable {
     return .object(object)
   }
 }
+public struct OptionSchema2: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `description`: Presence<DataValue>
+  public let `name`: String
+  public init(
+    extensions: [String: DataValue] = [:], `description`: Presence<DataValue> = .absent,
+    `name`: String
+  ) {
+    self.extensions = extensions
+    self.`description` = `description`
+    self.`name` = `name`
+  }
+  static func read(_ json: DataValue) throws -> OptionSchema2 {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["description", "name"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      description: try readPresence(object, "description", DataValue.self),
+      name: try String.read(jsonRequired(object, "name")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["description", "name"]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`description`, "description", &object)
+    object["name"] = `name`.json
+    return .object(object)
+  }
+}
 public enum ReaderMedia: ValueRepresentable {
   case `text`
   case `image`
@@ -2519,13 +2551,19 @@ public struct Options: ValueRepresentable {
   public let `context`: Presence<String>
   public let `contextField`: Presence<String>
   public let `deadlineMs`: Presence<Int64>
+  public let `entityDefinition`: Presence<String>
   public let `examples`: Presence<[RecognitionExample]>
   public let `examplesField`: Presence<String>
   public let `field`: Presence<[String]>
   public let `filesOnly`: Presence<Bool>
+  public let `instructions`: Presence<String>
+  public let `labels`: Presence<[OptionSchema2]>
+  public let `levels`: Presence<[OptionSchema2]>
   public let `maxRequestsTotal`: Presence<UInt64>
+  public let `maxTextBytes`: Presence<UInt64>
   public let `mode`: Presence<RecognitionMode>
   public let `model`: Presence<String>
+  public let `no`: Presence<DataValue>
   public let `none`: Presence<Bool>
   public let `optionsField`: Presence<String>
   public let `relationThreshold`: Presence<Threshold>
@@ -2535,20 +2573,25 @@ public struct Options: ValueRepresentable {
   public let `stageContext`: Presence<RecognitionStageContext>
   public let `threshold`: Presence<Threshold>
   public let `top`: Presence<UInt64>
+  public let `yes`: Presence<DataValue>
   public init(
     extensions: [String: DataValue] = [:], `attempts`: Presence<Bool> = .absent,
     `batch`: Presence<Batch> = .absent, `context`: Presence<String> = .absent,
     `contextField`: Presence<String> = .absent, `deadlineMs`: Presence<Int64> = .absent,
+    `entityDefinition`: Presence<String> = .absent,
     `examples`: Presence<[RecognitionExample]> = .absent,
     `examplesField`: Presence<String> = .absent, `field`: Presence<[String]> = .absent,
-    `filesOnly`: Presence<Bool> = .absent, `maxRequestsTotal`: Presence<UInt64> = .absent,
+    `filesOnly`: Presence<Bool> = .absent, `instructions`: Presence<String> = .absent,
+    `labels`: Presence<[OptionSchema2]> = .absent, `levels`: Presence<[OptionSchema2]> = .absent,
+    `maxRequestsTotal`: Presence<UInt64> = .absent, `maxTextBytes`: Presence<UInt64> = .absent,
     `mode`: Presence<RecognitionMode> = .absent, `model`: Presence<String> = .absent,
-    `none`: Presence<Bool> = .absent, `optionsField`: Presence<String> = .absent,
-    `relationThreshold`: Presence<Threshold> = .absent,
+    `no`: Presence<DataValue> = .absent, `none`: Presence<Bool> = .absent,
+    `optionsField`: Presence<String> = .absent, `relationThreshold`: Presence<Threshold> = .absent,
     `seedSpans`: Presence<[RecognitionSeedSpan]> = .absent,
     `seedSpansField`: Presence<String> = .absent, `snippetPieces`: Presence<UInt64> = .absent,
     `stageContext`: Presence<RecognitionStageContext> = .absent,
-    `threshold`: Presence<Threshold> = .absent, `top`: Presence<UInt64> = .absent
+    `threshold`: Presence<Threshold> = .absent, `top`: Presence<UInt64> = .absent,
+    `yes`: Presence<DataValue> = .absent
   ) {
     self.extensions = extensions
     self.`attempts` = `attempts`
@@ -2556,13 +2599,19 @@ public struct Options: ValueRepresentable {
     self.`context` = `context`
     self.`contextField` = `contextField`
     self.`deadlineMs` = `deadlineMs`
+    self.`entityDefinition` = `entityDefinition`
     self.`examples` = `examples`
     self.`examplesField` = `examplesField`
     self.`field` = `field`
     self.`filesOnly` = `filesOnly`
+    self.`instructions` = `instructions`
+    self.`labels` = `labels`
+    self.`levels` = `levels`
     self.`maxRequestsTotal` = `maxRequestsTotal`
+    self.`maxTextBytes` = `maxTextBytes`
     self.`mode` = `mode`
     self.`model` = `model`
+    self.`no` = `no`
     self.`none` = `none`
     self.`optionsField` = `optionsField`
     self.`relationThreshold` = `relationThreshold`
@@ -2572,14 +2621,16 @@ public struct Options: ValueRepresentable {
     self.`stageContext` = `stageContext`
     self.`threshold` = `threshold`
     self.`top` = `top`
+    self.`yes` = `yes`
   }
   static func read(_ json: DataValue) throws -> Options {
     let object = try jsonObject(json)
     let known: Set<String> = [
-      "attempts", "batch", "context", "context_field", "deadline_ms", "examples", "examples_field",
-      "field", "files_only", "max_requests_total", "mode", "model", "none", "options_field",
+      "attempts", "batch", "context", "context_field", "deadline_ms", "entity_definition",
+      "examples", "examples_field", "field", "files_only", "instructions", "labels", "levels",
+      "max_requests_total", "max_text_bytes", "mode", "model", "no", "none", "options_field",
       "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces", "stage_context",
-      "threshold", "top",
+      "threshold", "top", "yes",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -2588,13 +2639,19 @@ public struct Options: ValueRepresentable {
       context: try readPresence(object, "context", String.self),
       contextField: try readPresence(object, "context_field", String.self),
       deadlineMs: try readPresence(object, "deadline_ms", Int64.self),
+      entityDefinition: try readPresence(object, "entity_definition", String.self),
       examples: try readPresence(object, "examples", [RecognitionExample].self),
       examplesField: try readPresence(object, "examples_field", String.self),
       field: try readPresence(object, "field", [String].self),
       filesOnly: try readPresence(object, "files_only", Bool.self),
+      instructions: try readPresence(object, "instructions", String.self),
+      labels: try readPresence(object, "labels", [OptionSchema2].self),
+      levels: try readPresence(object, "levels", [OptionSchema2].self),
       maxRequestsTotal: try readPresence(object, "max_requests_total", UInt64.self),
+      maxTextBytes: try readPresence(object, "max_text_bytes", UInt64.self),
       mode: try readPresence(object, "mode", RecognitionMode.self),
       model: try readPresence(object, "model", String.self),
+      no: try readPresence(object, "no", DataValue.self),
       none: try readPresence(object, "none", Bool.self),
       optionsField: try readPresence(object, "options_field", String.self),
       relationThreshold: try readPresence(object, "relation_threshold", Threshold.self),
@@ -2603,17 +2660,19 @@ public struct Options: ValueRepresentable {
       snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
       stageContext: try readPresence(object, "stage_context", RecognitionStageContext.self),
       threshold: try readPresence(object, "threshold", Threshold.self),
-      top: try readPresence(object, "top", UInt64.self))
+      top: try readPresence(object, "top", UInt64.self),
+      yes: try readPresence(object, "yes", DataValue.self))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
-      "attempts", "batch", "context", "context_field", "deadline_ms", "examples", "examples_field",
-      "field", "files_only", "max_requests_total", "mode", "model", "none", "options_field",
+      "attempts", "batch", "context", "context_field", "deadline_ms", "entity_definition",
+      "examples", "examples_field", "field", "files_only", "instructions", "labels", "levels",
+      "max_requests_total", "max_text_bytes", "mode", "model", "no", "none", "options_field",
       "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces", "stage_context",
-      "threshold", "top",
+      "threshold", "top", "yes",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`attempts`, "attempts", &object)
@@ -2621,13 +2680,19 @@ public struct Options: ValueRepresentable {
     writePresence(`context`, "context", &object)
     writePresence(`contextField`, "context_field", &object)
     writePresence(`deadlineMs`, "deadline_ms", &object)
+    writePresence(`entityDefinition`, "entity_definition", &object)
     writePresence(`examples`, "examples", &object)
     writePresence(`examplesField`, "examples_field", &object)
     writePresence(`field`, "field", &object)
     writePresence(`filesOnly`, "files_only", &object)
+    writePresence(`instructions`, "instructions", &object)
+    writePresence(`labels`, "labels", &object)
+    writePresence(`levels`, "levels", &object)
     writePresence(`maxRequestsTotal`, "max_requests_total", &object)
+    writePresence(`maxTextBytes`, "max_text_bytes", &object)
     writePresence(`mode`, "mode", &object)
     writePresence(`model`, "model", &object)
+    writePresence(`no`, "no", &object)
     writePresence(`none`, "none", &object)
     writePresence(`optionsField`, "options_field", &object)
     writePresence(`relationThreshold`, "relation_threshold", &object)
@@ -2637,6 +2702,7 @@ public struct Options: ValueRepresentable {
     writePresence(`stageContext`, "stage_context", &object)
     writePresence(`threshold`, "threshold", &object)
     writePresence(`top`, "top", &object)
+    writePresence(`yes`, "yes", &object)
     return .object(object)
   }
 }

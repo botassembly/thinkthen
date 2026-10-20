@@ -6717,6 +6717,22 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     else [self.requestFields removeObjectForKey:@"name"];
 }
 @end
+@implementation TTOptionSchema2Builder
+- (id)descriptionValue {
+    return self.requestFields[@"description"];
+}
+- (void)setDescriptionValue:(id)value {
+    if (value) self.requestFields[@"description"] = value;
+    else [self.requestFields removeObjectForKey:@"description"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+@end
 @implementation TTRecognitionExampleEntityBuilder
 - (NSNumber *)end {
     return self.requestFields[@"end"];
@@ -7268,6 +7284,13 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"deadline_ms"] = value;
     else [self.requestFields removeObjectForKey:@"deadline_ms"];
 }
+- (NSString *)entityDefinition {
+    return self.requestFields[@"entity_definition"];
+}
+- (void)setEntityDefinition:(NSString *)value {
+    if (value) self.requestFields[@"entity_definition"] = value;
+    else [self.requestFields removeObjectForKey:@"entity_definition"];
+}
 - (NSArray *)examples {
     return self.requestFields[@"examples"];
 }
@@ -7296,12 +7319,40 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"files_only"] = value;
     else [self.requestFields removeObjectForKey:@"files_only"];
 }
+- (NSString *)instructions {
+    return self.requestFields[@"instructions"];
+}
+- (void)setInstructions:(NSString *)value {
+    if (value) self.requestFields[@"instructions"] = value;
+    else [self.requestFields removeObjectForKey:@"instructions"];
+}
+- (NSArray *)labels {
+    return self.requestFields[@"labels"];
+}
+- (void)setLabels:(NSArray *)value {
+    if (value) self.requestFields[@"labels"] = value;
+    else [self.requestFields removeObjectForKey:@"labels"];
+}
+- (NSArray *)levels {
+    return self.requestFields[@"levels"];
+}
+- (void)setLevels:(NSArray *)value {
+    if (value) self.requestFields[@"levels"] = value;
+    else [self.requestFields removeObjectForKey:@"levels"];
+}
 - (NSNumber *)maxRequestsTotal {
     return self.requestFields[@"max_requests_total"];
 }
 - (void)setMaxRequestsTotal:(NSNumber *)value {
     if (value) self.requestFields[@"max_requests_total"] = value;
     else [self.requestFields removeObjectForKey:@"max_requests_total"];
+}
+- (NSNumber *)maxTextBytes {
+    return self.requestFields[@"max_text_bytes"];
+}
+- (void)setMaxTextBytes:(NSNumber *)value {
+    if (value) self.requestFields[@"max_text_bytes"] = value;
+    else [self.requestFields removeObjectForKey:@"max_text_bytes"];
 }
 - (TTRecognitionMode)mode {
     return self.requestFields[@"mode"];
@@ -7316,6 +7367,13 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setModel:(NSString *)value {
     if (value) self.requestFields[@"model"] = value;
     else [self.requestFields removeObjectForKey:@"model"];
+}
+- (id)no {
+    return self.requestFields[@"no"];
+}
+- (void)setNo:(id)value {
+    if (value) self.requestFields[@"no"] = value;
+    else [self.requestFields removeObjectForKey:@"no"];
 }
 - (NSNumber *)none {
     return self.requestFields[@"none"];
@@ -7379,6 +7437,13 @@ TTSourceUnit const TTSourceUnitFile = @"file";
 - (void)setTop:(NSNumber *)value {
     if (value) self.requestFields[@"top"] = value;
     else [self.requestFields removeObjectForKey:@"top"];
+}
+- (id)yes {
+    return self.requestFields[@"yes"];
+}
+- (void)setYes:(id)value {
+    if (value) self.requestFields[@"yes"] = value;
+    else [self.requestFields removeObjectForKey:@"yes"];
 }
 @end
 @implementation TTOriginalJSON

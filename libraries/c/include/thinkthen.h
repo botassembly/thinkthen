@@ -1743,6 +1743,20 @@ typedef struct thinkthen_request_integer_v1 {
   int64_t value;
 } thinkthen_request_integer_v1;
 
+typedef struct thinkthen_request_option_schema_2_description_v1 {
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_request_option_schema_2_description_v1;
+
+typedef struct thinkthen_request_option_schema_2_v1 {
+  const struct thinkthen_request_option_schema_2_description_v1 *m_description;
+  const struct thinkthen_request_text_v1 *m_name;
+} thinkthen_request_option_schema_2_v1;
+
+typedef struct thinkthen_request_option_schema_2_list_v1 {
+  const struct thinkthen_request_option_schema_2_v1 *const *data;
+  size_t len;
+} thinkthen_request_option_schema_2_list_v1;
+
 typedef struct thinkthen_request_literal_whole_v1 {
   uint32_t reserved;
 } thinkthen_request_literal_whole_v1;
@@ -1760,6 +1774,10 @@ typedef struct thinkthen_request_recognition_mode_v1 {
   uint32_t kind;
   union thinkthen_request_recognition_mode_data_v1 data;
 } thinkthen_request_recognition_mode_v1;
+
+typedef struct thinkthen_request_call_options_no_v1 {
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_request_call_options_no_v1;
 
 typedef struct thinkthen_request_number_v1 {
   double value;
@@ -1781,19 +1799,29 @@ typedef struct thinkthen_request_recognition_stage_context_v1 {
   const struct thinkthen_request_text_v1 *m_relation;
 } thinkthen_request_recognition_stage_context_v1;
 
+typedef struct thinkthen_request_call_options_yes_v1 {
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_request_call_options_yes_v1;
+
 typedef struct thinkthen_request_call_options_v1 {
   const struct thinkthen_request_boolean_v1 *m_attempts;
   const struct thinkthen_request_batch_v1 *m_batch;
   const struct thinkthen_request_text_v1 *m_context;
   const struct thinkthen_request_text_v1 *m_context_field;
   const struct thinkthen_request_integer_v1 *m_deadline_ms;
+  const struct thinkthen_request_text_v1 *m_entity_definition;
   const struct thinkthen_request_recognition_example_list_v1 *m_examples;
   const struct thinkthen_request_text_v1 *m_examples_field;
   const struct thinkthen_request_text_list_v1 *m_field;
   const struct thinkthen_request_boolean_v1 *m_files_only;
+  const struct thinkthen_request_text_v1 *m_instructions;
+  const struct thinkthen_request_option_schema_2_list_v1 *m_labels;
+  const struct thinkthen_request_option_schema_2_list_v1 *m_levels;
   const struct thinkthen_request_unsigned_v1 *m_max_requests_total;
+  const struct thinkthen_request_unsigned_v1 *m_max_text_bytes;
   const struct thinkthen_request_recognition_mode_v1 *m_mode;
   const struct thinkthen_request_text_v1 *m_model;
+  const struct thinkthen_request_call_options_no_v1 *m_no;
   const struct thinkthen_request_boolean_v1 *m_none;
   const struct thinkthen_request_text_v1 *m_options_field;
   const struct thinkthen_request_call_threshold_v1 *m_relation_threshold;
@@ -1803,6 +1831,7 @@ typedef struct thinkthen_request_call_options_v1 {
   const struct thinkthen_request_recognition_stage_context_v1 *m_stage_context;
   const struct thinkthen_request_call_threshold_v1 *m_threshold;
   const struct thinkthen_request_unsigned_v1 *m_top;
+  const struct thinkthen_request_call_options_yes_v1 *m_yes;
 } thinkthen_request_call_options_v1;
 
 typedef struct thinkthen_request_question_selector_text_v1 {

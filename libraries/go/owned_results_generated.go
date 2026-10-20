@@ -4580,13 +4580,19 @@ type RequestOptions struct {
 	Context           *string                  `json:"context,omitempty"`
 	ContextField      *string                  `json:"context_field,omitempty"`
 	DeadlineMs        *int64                   `json:"deadline_ms,omitempty"`
+	EntityDefinition  *string                  `json:"entity_definition,omitempty"`
 	Examples          *[]RecognitionExample    `json:"examples,omitempty"`
 	ExamplesField     *string                  `json:"examples_field,omitempty"`
 	Field             *[]string                `json:"field,omitempty"`
 	FilesOnly         *bool                    `json:"files_only,omitempty"`
+	Instructions      *string                  `json:"instructions,omitempty"`
+	Labels            *[]OptionSchema2         `json:"labels,omitempty"`
+	Levels            *[]OptionSchema2         `json:"levels,omitempty"`
 	MaxRequestsTotal  *uint64                  `json:"max_requests_total,omitempty"`
+	MaxTextBytes      *uint64                  `json:"max_text_bytes,omitempty"`
 	Mode              *RecognitionMode         `json:"mode,omitempty"`
 	Model             *string                  `json:"model,omitempty"`
+	No                *any                     `json:"no,omitempty"`
 	None              *bool                    `json:"none,omitempty"`
 	OptionsField      *string                  `json:"options_field,omitempty"`
 	RelationThreshold *RequestThreshold        `json:"relation_threshold,omitempty"`
@@ -4596,6 +4602,7 @@ type RequestOptions struct {
 	StageContext      *RecognitionStageContext `json:"stage_context,omitempty"`
 	Threshold         *RequestThreshold        `json:"threshold,omitempty"`
 	Top               *uint64                  `json:"top,omitempty"`
+	Yes               *any                     `json:"yes,omitempty"`
 }
 
 func (v RequestOptions) marshalJSON() ([]byte, error) {
@@ -4625,6 +4632,11 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.EntityDefinition != nil {
+		if err := transportMember(object, "entity_definition", *v.EntityDefinition); err != nil {
+			return nil, err
+		}
+	}
 	if v.Examples != nil {
 		if err := transportMember(object, "examples", transportSequence(*v.Examples)); err != nil {
 			return nil, err
@@ -4645,8 +4657,28 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.Instructions != nil {
+		if err := transportMember(object, "instructions", *v.Instructions); err != nil {
+			return nil, err
+		}
+	}
+	if v.Labels != nil {
+		if err := transportMember(object, "labels", transportSequence(*v.Labels)); err != nil {
+			return nil, err
+		}
+	}
+	if v.Levels != nil {
+		if err := transportMember(object, "levels", transportSequence(*v.Levels)); err != nil {
+			return nil, err
+		}
+	}
 	if v.MaxRequestsTotal != nil {
 		if err := transportMember(object, "max_requests_total", *v.MaxRequestsTotal); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxTextBytes != nil {
+		if err := transportMember(object, "max_text_bytes", *v.MaxTextBytes); err != nil {
 			return nil, err
 		}
 	}
@@ -4659,6 +4691,13 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 		if err := transportMember(object, "model", *v.Model); err != nil {
 			return nil, err
 		}
+	}
+	if v.No != nil {
+		raw, err := authoredMarshal(*v.No)
+		if err != nil {
+			return nil, err
+		}
+		object["no"] = raw
 	}
 	if v.None != nil {
 		if err := transportMember(object, "none", *v.None); err != nil {
@@ -4705,6 +4744,13 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.Yes != nil {
+		raw, err := authoredMarshal(*v.Yes)
+		if err != nil {
+			return nil, err
+		}
+		object["yes"] = raw
+	}
 	return json.Marshal(object)
 }
 
@@ -4715,6 +4761,26 @@ func (RequestThresholdString) isRequestThreshold() {}
 
 type RequestThresholdString string
 type RequestThresholdNumber float64
+type OptionSchema2 struct {
+	Description *any   `json:"description,omitempty"`
+	Name        string `json:"name"`
+}
+
+func (v OptionSchema2) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Description != nil {
+		raw, err := authoredMarshal(*v.Description)
+		if err != nil {
+			return nil, err
+		}
+		object["description"] = raw
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RequestBatch interface{ isRequestBatch() }
 
 func (RequestBatchInteger) isRequestBatch() {}
