@@ -53,7 +53,8 @@ def canonical(document, folders=()):
                 properties.update(option.get('properties', {}))
             additional = next((option['additionalProperties'] for option in choices
                                if 'additionalProperties' in option), True)
-            return {name: visit(child, properties.get(name, additional), name)
+            return {name: visit(child, properties.get(name, additional),
+                                name if name in properties else '')
                     for name, child in sorted(value.items())}
         if isinstance(value, list):
             items = next((option['items'] for option in choices if 'items' in option), True)
