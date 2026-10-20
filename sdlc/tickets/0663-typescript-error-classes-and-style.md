@@ -18,7 +18,7 @@ Depends on: 0665, 0688
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0663 SHA --memory 8 -- env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` passes. An installed caller in `tests/` catches each error class with `instanceof` in the shared failure cases, and `tsc --strict` passes over it. Before the change `instanceof UsageError` fails because the package exports only `ClientError`.
+- On the M5 natively: `pm job run --machine m5 0663 SHA --memory 8 -- sdlc/scripts/job env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` passes. An installed caller in `tests/` catches each error class with `instanceof` in the shared failure cases, and `tsc --strict` passes over it. Before the change `instanceof UsageError` fails because the package exports only `ClientError`.
 - The gate's formatter check fails on the current packed, many-statements-per-line style and passes on the compiled source.
 - `python3 conformance/library-surface.py --library typescript` passes.
 

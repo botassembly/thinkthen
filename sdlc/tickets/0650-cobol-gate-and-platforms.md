@@ -19,7 +19,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0650 SHA --memory 8 -- sh libraries/cobol/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing `cobc` tool, because the manifest declares `cobc` for Linux only.
+- On the M5 through `pm job run --machine m5 0650 SHA --memory 8 -- sdlc/scripts/job sh libraries/cobol/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing `cobc` tool, because the manifest declares `cobc` for Linux only.
 - Linux arm64: `pm job run --machine m5 0650 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/cobol`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence

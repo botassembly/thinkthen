@@ -17,7 +17,7 @@ Depends on: 0676, 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0717 SHA --memory 8 -- sh libraries/objective-c/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route, the installed consumer's comparison passes for every shared case. Before the change the check runs the `Cases` adapter and the `Results` fixture reader instead.
+- On the M5 through `pm job run --machine m5 0717 SHA --memory 8 -- sdlc/scripts/job sh libraries/objective-c/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route, the installed consumer's comparison passes for every shared case. Before the change the check runs the `Cases` adapter and the `Results` fixture reader instead.
 - The M5 builds both macOS C packages, cross-compiling `x86_64-apple-darwin` with the pinned Rust toolchain; `release-pack` takes the target and `THINKTHEN_RELEASE_EXPECTED_SHA` as the Swift and Objective-C wrappers require.
 - Done once by hand and not committed: changing one expected value in the oracle fails the Objective-C comparison with a diff.
 

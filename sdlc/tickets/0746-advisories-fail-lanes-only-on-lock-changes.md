@@ -1,0 +1,28 @@
+# 0746 — A new advisory fails a lane only when the lane changes a lock
+
+Status: OPEN.
+
+Milestone: 0.2.1
+
+Phase: 2
+
+## Outcome
+
+- Changes: `sdlc/scripts/lint`, `sdlc/scripts/linux-check`, `sdlc/scripts/README.md`, and a lint self-test fixture.
+- The landing gate's `cargo deny` step keeps checking bans and licenses on every run. It checks advisories only when the candidate changes a tracked `Cargo.lock` or `Cargo.toml` against its merge base with main.
+- When a ticket's gate skips the advisory check, lint prints one line saying so and naming the merge base.
+- The 0691 checkpoint run, the release workflow and `sdlc/scripts/test-full-cases --checkpoint` check advisories on every run, whatever changed. An advisory found there gets its own repair ticket, ordered first, as 0744 was.
+- Shipped code still never carries a known advisory: the checkpoint and release checks are the bar for a candidate.
+
+### Proof
+
+- A lint self-test fixture shows three cases: an unchanged lock with a planted advisory passes the ticket gate and prints the skip line; a changed lock with the same advisory fails; checkpoint mode with an unchanged lock fails.
+- `pm job run --machine m5 0746 SHA -- sdlc/scripts/job sdlc/scripts/lint --self-test` passes, run on the Linux side through the configured gate as `sdlc/scripts/README.md` names.
+- The configured landing gate passes.
+
+## Evidence
+
+- On 2026-10-20 one new TLS advisory (CVE-2026-111943) turned red the landing gates of 0743, 0745 and 0740 and the Gator checkpoint run within the hour. None of them changed a dependency. Every lane then waited on the standalone 0744 repair. Root-cause record: `sdlc/records/2026-10-20-five-delays-root-cause.md`.
+- The step reads a locally fetched advisory database (`cargo deny fetch db` in `linux-check`), so main's gate can turn red with no commit.
+
+## Progress

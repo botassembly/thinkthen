@@ -22,8 +22,8 @@ Depends on: 0672, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target jvm --check && sh libraries/jvm/build.sh'`, the generator is current and the three host JARs compile. Before the change, `answer_rules.py` fails once the two JVM exceptions are removed.
-- On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- python3 libraries/jvm/tests/package_check.py`, after 0672 adds the Gradle build, the clean Gradle and Maven consumers run a named call through `thinkthen_run_call` on Java 22 and the newest pinned JDK.
+- On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- sdlc/scripts/job sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target jvm --check && sh libraries/jvm/build.sh'`, the generator is current and the three host JARs compile. Before the change, `answer_rules.py` fails once the two JVM exceptions are removed.
+- On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- sdlc/scripts/job python3 libraries/jvm/tests/package_check.py`, after 0672 adds the Gradle build, the clean Gradle and Maven consumers run a named call through `thinkthen_run_call` on Java 22 and the newest pinned JDK.
 - `git grep -n 'ValueLayout\|MemoryLayout' libraries/jvm/session` finds only the declarations that call `thinkthen_run_call` and free its handles; on current main it finds the layout readers.
 - The JVM check needs bubblewrap, so the installed-package checks (`session_installed.py`, `usage_installed.py`, `package_check.py`) run all ten named calls for Java, Kotlin and Scala against a recorded backend in the Linux image, through `sh libraries/jvm/check.sh`. Linux x86_64: `pm job run --machine gator 0673 SHA --memory 7 -- sdlc/scripts/linux-check surface libraries/jvm`. Linux arm64 joins only if 0672 declares bubblewrap and the JVM tools for linux-arm64 in `sdlc/tools/jvm.json`.
 
