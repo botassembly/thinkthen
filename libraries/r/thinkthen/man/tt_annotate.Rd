@@ -7,7 +7,7 @@ tt_annotate(question, input, options = tt_options(), deadline_ms = NULL,
 }
 \arguments{
 \item{question}{An authored question set: an ordinary named list with
-\code{version} and \code{questions}, each entry one named question for a
+\code{questions}, each entry one named question for a
 member of the set, such as
 \code{list(questions = list(approved = list(decide = "Approved?")))},
 or a \code{\link{tt_question}} selector for the file or saved name that holds
