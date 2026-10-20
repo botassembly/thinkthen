@@ -33,6 +33,8 @@ Depends on: 0613, 0614, 0615, 0619, 0622
 - Hosted Linux jobs delete only the install steps the core image covers. Language setup the image does not yet cover, and the manylinux distribution build setup, stay until the language's own wave adds those tools to the manifest.
 - The Linux arm64 and x86_64 stage entrypoints and the full Linux stage proof move to 0691's hosted rehearsal, instead of the 0619 checkpoint.
 
+- Ruling, 2026-10-20: hosted stages that still run natively (language smokes, the manylinux build) keep their native prerequisites, pinned from the manifest, until each consumer's wave moves its stage into the image. This replaces the Outcome bullet that deletes every covered install step now. No preparation-only Docker call stands in for a native prerequisite, and no artifact transfer is added to `linux-check` in this ticket.
+
 ## Evidence
 
 - Starts from: `.github/workflows/release.yml`, whose jobs call `sdlc/scripts/release-workflow` subcommands (`host-setup`, `managed-tools`, `go-cpp-tools`, `swift-zig-tools`, `php-dart-tools`, `ada-objc-cobol-tools`, `dart-tools` and the per-family gates) and hold steps behind `if: matrix.target == '...'` lines. `release-workflow` is about 1,100 lines, and each new tool or target adds branches to both files. `sdlc/scripts/release-language-tools.py` acquires the Linux x86 language tools on its own. `sdlc/scripts/hosted-workflow-self-test.py` and `sdlc/scripts/workflows` check the YAML.
