@@ -5,9 +5,9 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
-pub(crate) enum Version {
-    #[serde(rename = "thinkthen.result/2")]
-    V2,
+pub(crate) enum ResultTag {
+    #[serde(rename = "thinkthen.result")]
+    Result,
 }
 /// Decide alone may present an authored reading instead of its primitive answer.
 #[derive(Serialize)]
@@ -24,7 +24,7 @@ pub(crate) enum DecideValue<'a> {
     schemars(rename = "completeAtomic_{V}")
 )]
 pub(crate) struct AtomicDocument<'a, T: Serialize, V: Serialize = DecideValue<'a>> {
-    pub(crate) schema: Version,
+    pub(crate) schema: ResultTag,
     pub(crate) answer_id: &'a AnswerId,
     pub(crate) value: V,
     #[serde(skip_serializing_if = "Option::is_none")]

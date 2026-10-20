@@ -117,7 +117,7 @@ pub(super) fn verb(
                 && entry.member("threshold") == Some(&NULL)
                 && (matches!(value.map(Json::kind), Some(Kind::Null))
                     || (entry.member("schema").and_then(Json::as_str)
-                        == Some("thinkthen.result/2")
+                        == Some("thinkthen.result")
                         && entry.member("input").is_some()
                         && matches!(value.map(Json::kind), Some(Kind::Number(number))
                             if number.as_u64().is_some_and(|position| position > 0)))) =>

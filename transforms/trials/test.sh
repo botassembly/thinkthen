@@ -6,10 +6,10 @@ cd -- "$(dirname -- "$0")"
 scratch_dir work
 
 yes_row='def row($id;$label;$probability;$threshold;$replayed;$value):
-  {schema:"thinkthen.result/1",input:{id:$id,label:$label,body:"fixture"},value:$value,
+  {schema:"thinkthen.result",input:{id:$id,label:$label,body:"fixture"},value:$value,
    question:{verb:"decide",text:"Fixture question"},
    answer:{kind:"yes_no",probability:$probability},threshold:$threshold,
-   meta:{tool:"thinkthen 0.0.1",question_sha256:("a"*64),url:"https://example.invalid",model:"fixture",replayed:$replayed,
+   meta:{tool:"thinkthen 0.0.1",question_sha256:("a"*64),url:"https://example.invalid",model:"fixture",cached:$replayed,
          usage:{input_tokens:1,output_tokens:1}}};'
 
 jq -n -c "$yes_row
@@ -29,20 +29,20 @@ test "$(wc -l < "$work/yes-derived.jsonl")" -eq 5
 jq -c '{schema,input,value,question,answer,threshold,trials,meta,has_usage:(.meta|has("usage")),has_replayed:(.meta|has("replayed"))}' \
   "$work/yes-derived.jsonl" > "$work/yes-report.jsonl"
 cat > "$work/yes-expected.jsonl" <<'EOF'
-{"schema":"thinkthen.trials/1","input":{"id":"many","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.6},"threshold":0.6,"trials":{"count":3,"live":2,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
-{"schema":"thinkthen.trials/1","input":{"id":"band-low","label":false,"body":"fixture"},"value":null,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.25},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
-{"schema":"thinkthen.trials/1","input":{"id":"band-inside","label":true,"body":"fixture"},"value":null,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.5},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
-{"schema":"thinkthen.trials/1","input":{"id":"band-high","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.75},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
-{"schema":"thinkthen.trials/1","input":{"id":"one","label":false,"body":"fixture"},"value":false,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.49},"threshold":0.5,"trials":{"count":1,"live":1,"replayed":0},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials","input":{"id":"many","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.6},"threshold":0.6,"trials":{"count":3,"live":2,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials","input":{"id":"band-low","label":false,"body":"fixture"},"value":null,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.25},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials","input":{"id":"band-inside","label":true,"body":"fixture"},"value":null,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.5},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials","input":{"id":"band-high","label":true,"body":"fixture"},"value":true,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.75},"threshold":"0.25:0.75","trials":{"count":2,"live":1,"replayed":1},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
+{"schema":"thinkthen.trials","input":{"id":"one","label":false,"body":"fixture"},"value":false,"question":{"verb":"decide","text":"Fixture question"},"answer":{"kind":"yes_no","probability":0.49},"threshold":0.5,"trials":{"count":1,"live":1,"replayed":0},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","url":"https://example.invalid","model":"fixture"},"has_usage":false,"has_replayed":false}
 EOF
 cmp "$work/yes-expected.jsonl" "$work/yes-report.jsonl"
 
 jq -n -c '
   def row($id;$probabilities;$threshold;$replayed):
-    {schema:"thinkthen.result/1",input:{id:$id,label:"blue"},value:"fixture_secret_7c83",
+    {schema:"thinkthen.result",input:{id:$id,label:"blue"},value:"fixture_secret_7c83",
      question:{verb:"choose",text:"Fixture choice",options:["red","blue","other"]},
      answer:{kind:"choice",pick:"fixture_secret_7c83",probabilities:$probabilities},threshold:$threshold,
-     meta:{tool:"thinkthen 0.0.1",question_sha256:("b"*64),url:"https://example.invalid",model:"fixture",replayed:$replayed}};
+     meta:{tool:"thinkthen 0.0.1",question_sha256:("b"*64),url:"https://example.invalid",model:"fixture",cached:$replayed}};
   row("winner";{red:0.5,blue:0.25,other:0.25};null;false),
   row("tie";{red:0.75,blue:0.25,other:0};null;false),
   row("cut";{red:0.5,blue:0.25,other:0.25};0.6;false),
@@ -61,10 +61,10 @@ cmp "$work/choice-expected.jsonl" "$work/choice-report.jsonl"
 
 jq -n -c '
   def row($probabilities;$replayed):
-    {schema:"thinkthen.result/1",input:{id:"score",label:1},value:99,
+    {schema:"thinkthen.result",input:{id:"score",label:1},value:99,
      question:{verb:"score",text:"Fixture score",levels:["low","middle","high"]},
      answer:{kind:"score",level:"fixture_secret_7c83",probabilities:$probabilities},threshold:null,
-     meta:{tool:"thinkthen 0.0.1",question_sha256:("c"*64),url:"https://example.invalid",model:"fixture",replayed:$replayed}};
+     meta:{tool:"thinkthen 0.0.1",question_sha256:("c"*64),url:"https://example.invalid",model:"fixture",cached:$replayed}};
   row({low:0.5,middle:0.25,high:0.25};false),
   row({low:0.25,middle:0.625,high:0.125};true)
 ' > "$work/score.jsonl"
@@ -75,40 +75,13 @@ printf '%s\n' '{"value":0.8125,"answer":{"kind":"score","level":"middle","probab
 cmp "$work/score-expected.json" "$work/score-report.json"
 
 jq -n -c '
-  def row($id;$provenance):
-    {schema:"thinkthen.result/1",input:{id:$id},value:true,
-     question:{verb:"decide",text:"Fixture question"},
-     answer:{kind:"yes_no",probability:0.9},threshold:0.5,
-     meta:({tool:"thinkthen 0.0.1",question_sha256:("e"*64),url:"https://example.invalid",model:"fixture"} + $provenance)};
-  row("new-stored";{cached:true}),
-  row("new-live";{cached:false}),
-  row("old-stored";{replayed:true}),
-  row("old-live";{replayed:false}),
-  row("both-stored-wins";{cached:true,replayed:false}),
-  row("both-live-wins";{cached:false,replayed:true}),
-  row("legacy-ignored";{cached:true,replayed:"junk"})
-' > "$work/provenance.jsonl"
-jq -n -c -f trials.jq "$work/provenance.jsonl" \
-  | jq -c '{id:.input.id,trials}' > "$work/provenance-report.jsonl"
-cat > "$work/provenance-expected.jsonl" <<'EOF'
-{"id":"new-stored","trials":{"count":1,"live":0,"replayed":1}}
-{"id":"new-live","trials":{"count":1,"live":1,"replayed":0}}
-{"id":"old-stored","trials":{"count":1,"live":0,"replayed":1}}
-{"id":"old-live","trials":{"count":1,"live":1,"replayed":0}}
-{"id":"both-stored-wins","trials":{"count":1,"live":0,"replayed":1}}
-{"id":"both-live-wins","trials":{"count":1,"live":1,"replayed":0}}
-{"id":"legacy-ignored","trials":{"count":1,"live":0,"replayed":1}}
-EOF
-cmp "$work/provenance-expected.jsonl" "$work/provenance-report.jsonl"
-
-jq -n -c '
   [range(0;255) | "option-\(.)"] as $options
   | reduce $options[] as $name ({}; .[$name]=0)
   | .[$options[0]]=1 | .[$options[1]]=0.01000000000002
-  | {schema:"thinkthen.result/1",input:{id:"tolerance"},value:null,
+  | {schema:"thinkthen.result",input:{id:"tolerance"},value:null,
      question:{verb:"choose",text:"Fixture choice",options:$options},
      answer:{kind:"choice",pick:$options[0],probabilities:.},threshold:null,
-     meta:{tool:"thinkthen 0.0.1",question_sha256:("d"*64),url:"https://example.invalid",model:"fixture",replayed:false}}
+     meta:{tool:"thinkthen 0.0.1",question_sha256:("d"*64),url:"https://example.invalid",model:"fixture",cached:false}}
 ' > "$work/tolerance.jsonl"
 jq -n -c -f trials.jq "$work/tolerance.jsonl" \
   | jq -e '.trials.count == 1 and .answer.pick == "option-0"' > /dev/null
@@ -137,7 +110,7 @@ private_row=$(head -n 1 "$work/yes.jsonl")
 printf '%s\n' '[]' > "$work/bad.jsonl"
 expect_failure container 'trials: every row must be an object' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .schema="fixture_secret_7c83"' > "$work/bad.jsonl"
-expect_failure schema 'trials: every row must use schema thinkthen.result/1' "$work/bad.jsonl"
+expect_failure schema 'trials: every row must use schema thinkthen.result' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c 'del(.input.id)' > "$work/bad.jsonl"
 expect_failure missing-id 'trials: every row must carry a string input id' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id=7' > "$work/bad.jsonl"
@@ -154,7 +127,7 @@ printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .meta.ca
 expect_failure canonical-null 'trials: every row must carry valid metadata' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .meta.cached="yes"' > "$work/bad.jsonl"
 expect_failure canonical-string 'trials: every row must carry valid metadata' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | del(.meta.replayed)' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | del(.meta.cached)' > "$work/bad.jsonl"
 expect_failure no-provenance 'trials: every row must carry valid metadata' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .answer.kind="tag"' > "$work/bad.jsonl"
 expect_failure kind 'trials: answer kind must be yes_no, choice, or score and match the question verb' "$work/bad.jsonl"
@@ -215,3 +188,17 @@ done
 jq -n --argjson cut 0.5 -f ../score/score.jq "$work/yes-derived.jsonl" > /dev/null
 jq -n --argjson band '[0.2,0.8]' -f ../band/band.jq "$work/yes-derived.jsonl" > /dev/null
 jq -n -f ../sweep/sweep.jq "$work/yes-derived.jsonl" > /dev/null
+
+# Real command details must be consumable without rebuilding their envelope.
+usage_home
+config_home
+repo=$(CDPATH= cd -- ../.. && pwd)
+case ${CARGO_TARGET_DIR:-target} in
+  /*) native_bin="${CARGO_TARGET_DIR}/debug/thinkthen" ;;
+  *) native_bin="$repo/${CARGO_TARGET_DIR:-target}/debug/thinkthen" ;;
+esac
+"$native_bin" decide "$(cat ../rows/question.txt)" --jsonl --field /body --details \
+  --batch 1 --replay ../rows/recording --input ../rows/cases.jsonl > "$work/current.jsonl"
+jq -n -c -f trials.jq "$work/current.jsonl" > "$work/current-derived.jsonl"
+jq -s -e 'length == 40 and all(.[]; .schema == "thinkthen.trials" and .trials.count == 1)' \
+  "$work/current-derived.jsonl" > /dev/null

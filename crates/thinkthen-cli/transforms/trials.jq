@@ -12,9 +12,7 @@
 #     derived row describes that average and never claims to be one call.
 #   - Input, question, threshold, answer kind, and stable run facts must agree
 #     within a case. Usage and stored provenance may differ.
-#   - Stored provenance is `meta.cached`; rows written before the rename carry
-#     it as `meta.replayed`, read only when `cached` is absent. A present
-#     `cached` must be a boolean and wins even when false.
+#   - Stored provenance is the boolean `meta.cached`.
 #   - Tag, annotate, and find need other grouping rules and are refused.
 #   - Probability means remain unrounded. A score value alone is rounded to
 #     twelve decimal places, matching the product.
@@ -64,7 +62,7 @@ def valid_probabilities:
     and distribution_complete(.question.levels)
   end;
 
-def stored: if .meta | has("cached") then .meta.cached else .meta.replayed end;
+def stored: .meta.cached;
 
 def stable_facts:
   {schema, input, question, threshold, kind:.answer.kind,
@@ -134,7 +132,7 @@ def derived_answer($rows; $first):
 def derive($rows):
   $rows[0] as $first
   | derived_answer($rows; $first) as $derived
-  | {schema:"thinkthen.trials/1", input:$first.input, value:$derived.value,
+  | {schema:"thinkthen.trials", input:$first.input, value:$derived.value,
      question:$first.question, answer:$derived.answer, threshold:$first.threshold,
      trials:{count:($rows | length),
              live:([$rows[] | select(stored | not)] | length),
@@ -148,8 +146,8 @@ else . end
 | [inputs] as $rows
 | if all($rows[]; type == "object") | not
   then error("trials: every row must be an object")
-  elif all($rows[]; .schema? == "thinkthen.result/1") | not
-  then error("trials: every row must use schema thinkthen.result/1")
+  elif all($rows[]; .schema? == "thinkthen.result") | not
+  then error("trials: every row must use schema thinkthen.result")
   elif all($rows[]; (.input? | type) == "object" and (.input.id? | type) == "string") | not
   then error("trials: every row must carry a string input id")
   elif all($rows[]; (.question? | type) == "object" and (.question.text? | type) == "string") | not

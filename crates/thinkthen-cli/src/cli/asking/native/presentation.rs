@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn command_details_preserve_authored_values_and_native_identity_order() {
-        let document = Json::parse(r#"{"schema":"thinkthen.result/2","answer_id":"unchanged","value":{"authored":false},"question":{"text":"question-marker"},"answer":{"p":0.75},"meta":{"batch_setting":"max","model":"same-model","batch_warning":{"tuned":2},"requests":["first","second"]}}"#).unwrap();
+        let document = Json::parse(r#"{"schema":"thinkthen.result","answer_id":"unchanged","value":{"authored":false},"question":{"text":"question-marker"},"answer":{"p":0.75},"meta":{"batch_setting":"max","model":"same-model","batch_warning":{"tuned":2},"requests":["first","second"]}}"#).unwrap();
         let Kind::Object(fields) = document.kind() else {
             panic!("object")
         };
@@ -228,7 +228,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             text,
-            r#"{"schema":"thinkthen.result/2","answer_id":"unchanged","value":{"authored":false},"input":{"z":null,"a":false},"index":3,"question":{"text":"question-marker"},"answer":{"p":0.75},"meta":{"model":"same-model","requests":["first","second"]}}"#
+            r#"{"schema":"thinkthen.result","answer_id":"unchanged","value":{"authored":false},"input":{"z":null,"a":false},"index":3,"question":{"text":"question-marker"},"answer":{"p":0.75},"meta":{"model":"same-model","requests":["first","second"]}}"#
         );
         let streamed = crate::render::json_line(&Details {
             fields,

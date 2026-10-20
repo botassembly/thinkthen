@@ -1,4 +1,4 @@
-//! Canonical result/2 constituent facts; no retrieval facts are inferred.
+//! Canonical result constituent facts; no retrieval facts are inferred.
 
 use serde::Serialize;
 

@@ -59,9 +59,9 @@ The [question-store contract](cache.md#the-question-store) now lives in cache.md
 
 ## What replay changes in a result
 
-For landed result/1, `meta.cached` is `true` when every answer came from the store and `false` when a backend answered. It is always present. `meta.requests` lists the row's question keys, the same keys that name its stored answers. Replay and live execution therefore report one identity. Everything else in the result is what the stored answers yield, their usage shares included. A later token ledger counts only answers that a backend gave.
+In detailed results, `meta.cached` is `true` when every answer came from the store and `false` when a backend answered. It is always present. `meta.requests` lists the row's question keys, the same keys that name its stored answers. Replay and live execution therefore report one identity. Everything else in the result is what the stored answers yield, their usage shares included. A later token ledger counts only answers that a backend gave.
 
-Result/2 adds actual source/observation identity and uses v2 question keys under [result.md](result.md#metadata-and-empty-aggregates) and [cache.md](cache.md). A result with zero observations has null origin, no answered model and `cached:false`; an empty actionable value after stored answers still reports their provenance. Refresh changes observation identity, cache/replay retain it, and rereading changes answer identity only when the normalized reading changes.
+Detailed results retain actual source/observation identity and question keys under [result.md](result.md#metadata-and-empty-aggregates) and [cache.md](cache.md). A result with zero observations has null origin, no answered model and `cached:false`; an empty actionable value after stored answers still reports their provenance. Refresh changes observation identity, cache/replay retain it, and rereading changes answer identity only when the normalized reading changes.
 
 A store installs no failed answer, so a replay of a question the backend failed is a miss at exit 5, and a cached run asks it again. ADR 0111 section 6 rules it. To retry a failed question, run the same command again under a cache. This includes `relate` edges.
 

@@ -1070,12 +1070,12 @@ pub const Relation = struct {
     meta: Meta,
     position: Presence(Position),
     question: RelateQuestionDocument,
-    schema: Version,
+    schema: ResultTag,
     value: []const RelatedEntityEdge,
     extensions: Map(Value),
 };
 
-pub const Version = enum { @"thinkthen.result/2" };
+pub const ResultTag = enum { @"thinkthen.result" };
 
 pub const RelateQuestionDocument = struct {
     batch: Presence(Batch),
@@ -1269,7 +1269,7 @@ pub const Recognition = struct {
     meta: Meta,
     position: Presence(Position),
     question: RecognizeQuestionDocument,
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     value: Recognize,
     extensions: Map(Value),
@@ -1400,7 +1400,7 @@ pub const Annotation = struct {
     last_line: Presence(u64),
     meta: Meta,
     position: Presence(Position),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     value: AnnotatedRow,
     extensions: Map(Value),
@@ -1470,7 +1470,7 @@ pub const Find = struct {
     meta: Meta,
     position: Presence(Position),
     question: FindQuestionDocument,
-    schema: Version,
+    schema: ResultTag,
     threshold: Presence(Value),
     value: Presence(Value),
     extensions: Map(Value),
@@ -1525,7 +1525,7 @@ pub const AtomicNonZeroUsize = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: u64,
@@ -1544,7 +1544,7 @@ pub const RankMemberResult = struct {
     images: Presence([]const Image),
     meta: Meta,
     question: QuestionDocument,
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Value),
     value: u64,
@@ -1578,7 +1578,7 @@ pub const AtomicBoolean = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: bool,
@@ -1602,7 +1602,7 @@ pub const AtomicDouble = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: f64,
@@ -1626,7 +1626,7 @@ pub const AtomicArrayOfString = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: []const []const u8,
@@ -1650,7 +1650,7 @@ pub const AtomicNullableString = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: Presence([]const u8),
@@ -1674,7 +1674,7 @@ pub const AtomicDecideValue = struct {
     meta: Meta,
     question: QuestionDocument,
     question_name: Presence([]const u8),
-    schema: Version,
+    schema: ResultTag,
     source: Presence(PhysicalSource),
     threshold: Presence(Threshold),
     value: Presence(DecideValue),
@@ -4354,7 +4354,7 @@ pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) a
             else => return error.InvalidNativeDiscriminator,
         },
         .question = try readRelateQuestionDocument(a, v.question[0]),
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .value = blk: {
             const items = try a.alloc(RelatedEntityEdge, v.value.len);
             for (items, 0..) |*out, i| {
@@ -4367,10 +4367,10 @@ pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) a
     };
 }
 
-pub fn readVersion(a: std.mem.Allocator, v: c.thinkthen_complete_version_v1) anyerror!Version {
+pub fn readResultTag(a: std.mem.Allocator, v: c.thinkthen_complete_result_tag_v1) anyerror!ResultTag {
     _ = a;
     return switch (v.kind) {
-        1 => .@"thinkthen.result/2",
+        1 => .@"thinkthen.result",
         else => error.InvalidNativeDiscriminator,
     };
 }
@@ -4927,7 +4927,7 @@ pub fn readRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_recognition
             else => return error.InvalidNativeDiscriminator,
         },
         .question = try readRecognizeQuestionDocument(a, v.question[0]),
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5382,7 +5382,7 @@ pub fn readAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_v
             2 => .{ .value = try readPosition(a, v.position.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5579,7 +5579,7 @@ pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find_v1) anyerror!
             else => return error.InvalidNativeDiscriminator,
         },
         .question = try readFindQuestionDocument(a, v.question[0]),
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .threshold = switch (v.threshold.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5791,7 +5791,7 @@ pub fn readAtomicNonZeroUsize(a: std.mem.Allocator, v: c.thinkthen_complete_atom
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5836,7 +5836,7 @@ pub fn readRankMemberResult(a: std.mem.Allocator, v: c.thinkthen_complete_rank_m
         },
         .meta = try readMeta(a, v.meta[0]),
         .question = try readQuestionDocument(a, v.question[0]),
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5939,7 +5939,7 @@ pub fn readAtomicBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_bo
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -6023,7 +6023,7 @@ pub fn readAtomicDouble(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_dou
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -6107,7 +6107,7 @@ pub fn readAtomicArrayOfString(a: std.mem.Allocator, v: c.thinkthen_complete_ato
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -6198,7 +6198,7 @@ pub fn readAtomicNullableString(a: std.mem.Allocator, v: c.thinkthen_complete_at
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -6287,7 +6287,7 @@ pub fn readAtomicDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_atomi
             2 => .{ .value = try a.dupe(u8, text(v.question_name.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .schema = try readVersion(a, v.schema[0]),
+        .schema = try readResultTag(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
             1 => .null_value,
@@ -6533,6 +6533,7 @@ pub const Types = struct {
     pub const RelationMethod = @import("results_generated.zig").RelationMethod;
     pub const RelationRule = @import("results_generated.zig").RelationRule;
     pub const RequestFunction = @import("results_generated.zig").RequestFunction;
+    pub const ResultTag = @import("results_generated.zig").ResultTag;
     pub const SdkRequestId = @import("results_generated.zig").SdkRequestId;
     pub const SendBudgetDenial = @import("results_generated.zig").SendBudgetDenial;
     pub const SendBudgetDenialBeforeAdditionalSend = @import("results_generated.zig").SendBudgetDenialBeforeAdditionalSend;
@@ -6607,7 +6608,6 @@ pub const Types = struct {
     pub const UsagePersistence = @import("results_generated.zig").UsagePersistence;
     pub const Value = @import("results_generated.zig").Value;
     pub const Verb = @import("results_generated.zig").Verb;
-    pub const Version = @import("results_generated.zig").Version;
     pub const WordingVersion = @import("results_generated.zig").WordingVersion;
 };
 

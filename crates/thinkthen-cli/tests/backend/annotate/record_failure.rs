@@ -36,7 +36,7 @@ fn expected_urgent_result(
     member["request"] = request.clone().into();
     member["question_sources"] = sources.clone();
     member["observations"] = observations.clone();
-    json!({"schema":"thinkthen.result/2","answer_id":"0".repeat(64),
+    json!({"schema":"thinkthen.result","answer_id":"0".repeat(64),
         "position":{"file":null,"first":position,"last":position},"input":input,
         "value":{"urgent":member["value"]},"answers":{"urgent":member},
         "meta":{"tool":concat!("thinkthen ",env!("CARGO_PKG_VERSION")),
@@ -103,7 +103,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
         .collect::<Result<_, _>>()?;
     assert_eq!(
         rows.into_iter()
-            .map(|row| if row["schema"] == "thinkthen.result/2" {
+            .map(|row| if row["schema"] == "thinkthen.result" {
                 crate::native_results::comparison::judgment(row)
             } else {
                 row

@@ -47,7 +47,7 @@ while IFS= read -r case; do
 		exit "$exit"
 	}
 	jq -c --argjson case "$case" \
-		'{schema, value, input: $case, question, answer, threshold, meta}' \
+		'. + {input: $case}' \
 		row.json >>"$out/score.jsonl"
 
 	# shellcheck disable=SC2086
@@ -62,7 +62,7 @@ while IFS= read -r case; do
 		;;
 	esac
 	jq -c --argjson case "$case" \
-		'{schema, value, input: $case, question, answer, threshold, meta}' \
+		'. + {input: $case}' \
 		row.json >>"$out/choose.jsonl"
 done <cases.jsonl
 

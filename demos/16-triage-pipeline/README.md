@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `annotate`
 
-Use this when one record needs several answers before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files.
+Use this when one record needs several answers before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files. `fake-rows.jsonl` holds complete synthetic packets produced through the existing local test backend for the script tests.
 
 ```bash
 ./run --batch 1 --replay recording/ | mustmatch "SUP-1042	Duplicate renewal charge	draft	routine

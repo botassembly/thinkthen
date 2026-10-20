@@ -4,7 +4,7 @@ use serde_json::Value;
 /// Keep every field; normalize only native identities and measured durations.
 #[cfg(test)]
 pub(crate) fn judgment(mut row: Value) -> Value {
-    assert_eq!(row["schema"], "thinkthen.result/2");
+    assert_eq!(row["schema"], "thinkthen.result");
     identity(&mut row, "answer_id");
     let meta = &mut row["meta"];
     assert!(meta["origin"].is_string() || meta["origin"].is_null());

@@ -20,7 +20,7 @@ def run(binary):
             expected = json.loads((ROOT / 'conformance/cases.json').read_text())['parity']['functions']
             assert [tool['name'] for tool in client.tools()] == expected, 'ten-tool catalog differs'
             result = client.decide(question=case['question'], evidence=case['exchanges'][0]['evidence'])
-            assert result['value']['schema'] == 'thinkthen.result/2', 'complete result unavailable'
+            assert result['value']['schema'] == 'thinkthen.result', 'complete result unavailable'
             assert result['value']['value'] is True, 'recorded answer changed'
             assert result['value']['meta']['origin'] == 'replay', 'replay provenance lost'
             assert result['facts']['requests_sent'] == 0, 'replay reported sends'

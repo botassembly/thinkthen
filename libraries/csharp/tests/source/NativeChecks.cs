@@ -50,7 +50,7 @@ static class NativeChecks
             } } : Records;
             var decide = ReadDecide((OwnedCall)await engine.DecideAsync(Decide, (dynamic)source, controls));
             Check(decide.Count == 2 && decide[0].Value.GetBoolean() && decide[0].Answer is R.AnswerYesNo { Probability: .9 }, "decision");
-            Check(decide[0].Schema.Value == "thinkthen.result/2" && decide[0].AnswerId.Length == 64, "row schema and identity");
+            Check(decide[0].Schema.Value == "thinkthen.result" && decide[0].AnswerId.Length == 64, "row schema and identity");
             if (files) Check(decide[0].Source.Value.FirstLine.Value == 1 && decide[1].Source.Value.LastLine.Value == 2, "physical lines");
             var choose = ReadChoose((OwnedCall)await engine.ChooseAsync(Choose, (dynamic)source, controls));
             Check(choose.Count == 2 && choose[0].Value.Value == "first" && choose[0].Answer is R.AnswerChoice answer && answer.Probabilities.Count == 2, "choice distribution");

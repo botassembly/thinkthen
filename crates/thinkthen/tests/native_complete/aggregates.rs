@@ -25,7 +25,7 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
     assert_eq!(result.candidates()[2].probability(), 0.5);
     assert!(result.candidates()[2].is_none());
     let row: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
-    assert_eq!(row["schema"], "thinkthen.result/2");
+    assert_eq!(row["schema"], "thinkthen.result");
     assert_eq!(row["value"], Value::Null);
     assert_eq!(
         row["answer"]["probabilities"],

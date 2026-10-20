@@ -96,7 +96,7 @@ fn located_recognition_retains_duplicate_occurrences_and_one_call_with_row_attem
         None
     );
     let document = serde_json::to_value(&rows[1]).unwrap();
-    assert_eq!(document["schema"], "thinkthen.result/2");
+    assert_eq!(document["schema"], "thinkthen.result");
     assert_eq!(document["input"], json!("Ada met Acme."));
     assert_eq!(document["value"]["entities"][0]["start"], 0);
     assert_eq!(document["value"]["entities"][1]["end"], 12);
