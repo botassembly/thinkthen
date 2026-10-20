@@ -699,7 +699,7 @@ def main():
             outputs['calls_generated.dart'] = dart.calls(definitions, prepare(graph(immediate_schema(json.loads(args.schema.read_text())), dart.ROOTS)))
         for filename, result in outputs.items():
             output = output_path(ROOT, 'dart', filename)
-            result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
+            result = subprocess.run([(os.environ["TT_DART"] if "TT_DART" in os.environ else shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
                                     env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:

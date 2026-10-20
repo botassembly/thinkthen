@@ -441,7 +441,7 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
     fs::create_dir_all(config.under(&root)).expect("configuration directory");
     fs::write(
         config.under(&root).join("config.json"),
-        r#"{"schema":"thinkthen.config/1","model":"configured-1"}"#,
+        r#"{"model":"configured-1"}"#,
     )
     .expect("configuration");
     let listener = other_model();
