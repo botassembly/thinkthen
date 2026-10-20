@@ -728,17 +728,35 @@ def main():
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
                                  ("cobol", "src/tt_session.c"),
+                                 ("dart", "README-PUBLIC.md"),
                                  ("flutter", "README-PUBLIC.md")):
             source_member = f"libraries/dart/flutter/{relative}" if family == "flutter" else f"libraries/{family}/{relative}"
             copied_env = env | {"THINKTHEN_PLANT_SOURCE": source_member}
             output = base / f"{family}-copied-change"
             selected_parts = ("c", "dart", "flutter") if family == "flutter" else parts
-            packed_member = "flutter/README.md" if family == "flutter" else relative
+            packed_member = {"flutter": "flutter/README.md", "dart": "README.md"}.get(family, relative)
             expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                        str(output), *selected_parts, cwd=source, env=copied_env),
                    f"{family} source differs from archived commit: {packed_member}")
             if list(output.glob(f"thinkthen-{family}-*")):
                 raise AssertionError(f"changed {family} copied member created wrapper output")
+        # Corrupt the generated manifest after its generator has finished, so the
+        # staged identity check must compare it with the paired C archive.
+        fake_python = fake_bin / "python3"
+        fake_python.write_text(f"#!/bin/sh\n'{sys.executable}' \"$@\" || exit\n"
+                               "case \"$1:$2\" in -:*/native-assets.json)\n"
+                               f"  '{sys.executable}' -c \"import json,sys; from pathlib import Path; "
+                               "p=Path(sys.argv[1]); m=json.loads(p.read_text()); "
+                               "m['assets']['linux_x64']['sha256']='0'*64; "
+                               "p.write_text(json.dumps(m))\" \"$2\" ;;\nesac\n")
+        fake_python.chmod(0o755)
+        output = base / "dart-generated-checksum-change"
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(output), "c", "dart", cwd=source, env=env),
+               "Dart native asset differs from C archive")
+        if list(output.glob("thinkthen-dart-*")):
+            raise AssertionError("changed Dart generated checksum created wrapper output")
+        fake_python.unlink()
         # The archive writer still refuses names that collide on case-blind Apple volumes.
         output = base / "swift-twin"
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host, str(output), *parts, cwd=source,

@@ -246,6 +246,19 @@ part_source_wrapper() {
 				if [ "$relative" = flutter/README.md ]; then member=libraries/dart/flutter/README-PUBLIC.md; fi
 			fi
 			if [ "$relative" = README.md ] && [ "$1" != go ]; then member=libraries/$1/README-PUBLIC.md; fi
+			if [ "$1" = dart ] && [ "$relative" = native-assets.json ]; then
+				python3 - "$copied" "$OUT/$c_name" "$TARGET" <<'DART_IDENTITY'
+import hashlib, json, sys, tarfile
+with open(sys.argv[1]) as definition:
+    manifest = json.load(definition)
+assets = [asset for asset in manifest['assets'].values() if asset['target'] == sys.argv[3]]
+with tarfile.open(sys.argv[2]) as archive:
+    digest = hashlib.sha256(archive.extractfile('./lib/libthinkthen.so').read()).hexdigest()
+if len(assets) != 1 or assets[0]['sha256'] != digest:
+    raise SystemExit('release-pack: Dart native asset differs from C archive')
+DART_IDENTITY
+				continue
+			fi
 			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
 				native_input=$(mktemp "$stage/swift-native.XXXXXX")
 				tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$native_input" || {
