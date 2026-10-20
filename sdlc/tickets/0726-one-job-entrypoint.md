@@ -1,6 +1,6 @@
 # 0726 — One entrypoint for every machine job
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
