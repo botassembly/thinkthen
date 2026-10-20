@@ -71,7 +71,11 @@ impl InputDeclaration {
                     None => Vec::new(),
                     Some(Json::Array(names)) => names
                         .iter()
-                        .map(|v| v.as_str().map(str::to_owned).ok_or(DeclarationError::Unsupported))
+                        .map(|v| {
+                            v.as_str()
+                                .map(str::to_owned)
+                                .ok_or(DeclarationError::Unsupported)
+                        })
                         .collect::<Result<Vec<_>, _>>()?,
                     _ => return Err(DeclarationError::Unsupported),
                 };

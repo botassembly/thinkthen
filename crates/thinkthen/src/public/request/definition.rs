@@ -164,11 +164,18 @@ impl RequestDefinition {
     /// Returns usage for an unsupported feature or an invalid canonical request.
     pub fn from_request_json(text: &str) -> Result<Self, Error> {
         Self::from_authored_json(text).map_err(|mut error| {
-            if let Some(crate::public::error::diagnostic::Diagnostic::Refusal(cause)) = error.take_diagnostic() {
+            if let Some(crate::public::error::diagnostic::Diagnostic::Refusal(cause)) =
+                error.take_diagnostic()
+            {
                 if crate::core::declaration::DeclarationError::is_retired(cause.as_ref()) {
-                    return error.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(cause));
+                    return error.with_diagnostic(
+                        crate::public::error::diagnostic::Diagnostic::Refusal(cause),
+                    );
                 }
-                if matches!(cause.downcast_ref::<crate::core::QuestionFileError>(), Some(crate::core::QuestionFileError::Declaration(_))) {
+                if matches!(
+                    cause.downcast_ref::<crate::core::QuestionFileError>(),
+                    Some(crate::core::QuestionFileError::Declaration(_))
+                ) {
                     return super::RequestDecodeCause::UnsupportedDeclaration.error();
                 }
             }

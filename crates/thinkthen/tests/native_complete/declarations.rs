@@ -10,7 +10,10 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
     let folder = folder();
     let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
-    let first = Question::from_json(r#"{"decide":"Refund?","name":"refund","item_schema":{"type":"string"}}"#).unwrap();
+    let first = Question::from_json(
+        r#"{"decide":"Refund?","name":"refund","item_schema":{"type":"string"}}"#,
+    )
+    .unwrap();
     let second = Question::from_json(r#"{"decide":"Refund?","name":"other","model":"fixed","batch":2,"on":[""],"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
     let live = crate::api::decide(&engine, &first, "Refund me.", CallOptions::new()).unwrap();
     let live_result = crate::api::decision(&live).unwrap();
@@ -116,8 +119,7 @@ fn declarations_admit_typed_projection_false_unicode_and_extras_without_coercion
 }
 
 #[test]
-fn closed_question_metadata_grammar_refuses_unknown_features_and_retired_metadata_safely()
- {
+fn closed_question_metadata_grammar_refuses_unknown_features_and_retired_metadata_safely() {
     for addition in [
         r#""name":"../private""#,
         r#""name":"Refund""#,
@@ -157,8 +159,6 @@ fn closed_question_metadata_grammar_refuses_unknown_features_and_retired_metadat
             .name()
             .is_none()
     );
-
-
 }
 
 #[test]

@@ -196,16 +196,33 @@ pub(crate) enum DeclarationError {
 impl DeclarationError {
     pub(crate) fn is_retired(cause: &(dyn std::any::Any + Send + Sync)) -> bool {
         matches!(cause.downcast_ref::<Self>(), Some(Self::RetiredWording))
-            || matches!(cause.downcast_ref::<crate::core::QuestionFileError>(),
-                Some(crate::core::QuestionFileError::Declaration(Self::RetiredWording)))
-            || matches!(cause.downcast_ref::<crate::core::QuestionSetError>(),
-                Some(crate::core::QuestionSetError::Question { error: crate::core::QuestionFileError::Declaration(Self::RetiredWording), .. }))
+            || matches!(
+                cause.downcast_ref::<crate::core::QuestionFileError>(),
+                Some(crate::core::QuestionFileError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
+            || matches!(
+                cause.downcast_ref::<crate::core::QuestionSetError>(),
+                Some(crate::core::QuestionSetError::Question {
+                    error: crate::core::QuestionFileError::Declaration(Self::RetiredWording),
+                    ..
+                })
+            )
             || matches!(cause.downcast_ref::<crate::core::QuestionSetError>(),
                 Some(crate::core::QuestionSetError::UnknownKey(key)) if key == "wording_version")
-            || matches!(cause.downcast_ref::<crate::core::RecognizeConfigError>(),
-                Some(crate::core::RecognizeConfigError::Declaration(Self::RetiredWording)))
-            || matches!(cause.downcast_ref::<crate::core::RelateConfigError>(),
-                Some(crate::core::RelateConfigError::Declaration(Self::RetiredWording)))
+            || matches!(
+                cause.downcast_ref::<crate::core::RecognizeConfigError>(),
+                Some(crate::core::RecognizeConfigError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
+            || matches!(
+                cause.downcast_ref::<crate::core::RelateConfigError>(),
+                Some(crate::core::RelateConfigError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
     }
 }
 

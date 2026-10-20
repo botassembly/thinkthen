@@ -312,7 +312,6 @@ fn assert_located_documents(document: &Value) {
         assert!(member["result"].get("index").is_none());
     }
 
-
     let other = &document["value"][1];
     assert_eq!(other["index"], 1);
     assert_eq!(other["input"]["item"]["body"], "b");

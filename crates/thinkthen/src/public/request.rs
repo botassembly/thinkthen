@@ -163,9 +163,14 @@ impl Request {
     /// Refuses malformed, unknown, duplicate or null request controls.
     pub fn from_json(text: &str) -> Result<Self, Error> {
         decoding::decode(text, |text| {
-            if crate::core::Json::parse(text).ok().is_some_and(|value| value.member("schema").is_some()) {
+            if crate::core::Json::parse(text)
+                .ok()
+                .is_some_and(|value| value.member("schema").is_some())
+            {
                 return Err(Error::usage("delete the `schema` field.").with_diagnostic(
-                    crate::public::error::diagnostic::Diagnostic::RequestDecode(RequestDecodeCause::Malformed),
+                    crate::public::error::diagnostic::Diagnostic::RequestDecode(
+                        RequestDecodeCause::Malformed,
+                    ),
                 ));
             }
             definition::validate_wire_definition(text)

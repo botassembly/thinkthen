@@ -276,7 +276,7 @@ impl QuestionSet {
                 && !schema.accepts(&selected)
             {
                 return Err(PartError::Declaration(
-                    crate::core::declaration::DeclarationError,
+                    crate::core::declaration::DeclarationError::Unsupported,
                 ));
             }
         }

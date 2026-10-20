@@ -1,8 +1,6 @@
 //! Validated author declaration constructors use the ordinary six error kinds.
 use super::Error;
-use crate::core::declaration::{
-    InputProperty, InputPropertyType, ObjectDeclaration, QuestionName,
-};
+use crate::core::declaration::{InputProperty, InputPropertyType, ObjectDeclaration, QuestionName};
 
 impl QuestionName {
     /// Validate a case-sensitive lowercase ASCII author name of at most 64 bytes.

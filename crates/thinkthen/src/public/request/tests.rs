@@ -78,7 +78,8 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         .collect();
     let texts = [
         valid.to_owned(),
-        r#"{"call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#.to_owned(),
+        r#"{"call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#
+            .to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
         definition(serde_json::json!({"choose":"Which?"})),
         definition(serde_json::json!({"choose":"Which?","options":["a","b"]})),
@@ -106,9 +107,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         definition(serde_json::json!({"rank":"Fits?"})),
         definition(serde_json::json!({"recognize":{"unknown":true}})),
         definition(serde_json::json!({"recognize":{"kinds":null}})),
-        definition(
-            serde_json::json!({"questions":{"fits":{"decide":"Fits?","model":"fixed"}}}),
-        ),
+        definition(serde_json::json!({"questions":{"fits":{"decide":"Fits?","model":"fixed"}}})),
         valid.replace("\"input\":", "\"options\":{\"context\":\"\"},\"input\":"),
         valid.replacen("{", "{\"schema\":null,", 1),
         valid.replace("\"input\":", "\"options\":{\"context\":null},\"input\":"),

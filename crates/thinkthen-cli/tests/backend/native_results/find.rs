@@ -4,7 +4,11 @@ use super::*;
 fn find_none_replays_the_actual_raw_pick_and_partial_usage_without_a_second_send() {
     let root = crate::input_sources::folder("complete-command-find").unwrap();
     let set = root.join("question.json");
-    std::fs::write(&set, r#"{"find":"Which?","name":"unit-choice","item_schema":{"type":"string"},"on":"/body"}"#).unwrap();
+    std::fs::write(
+        &set,
+        r#"{"find":"Which?","name":"unit-choice","item_schema":{"type":"string"},"on":"/body"}"#,
+    )
+    .unwrap();
     let recording = root.join("recording");
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":0.5,"u002":0.0,"none":0.5}}},"usage":{"input_tokens":887}}"#)).unwrap();
     let reference = format!("@{}", set.display());
