@@ -1,9 +1,9 @@
 """Run shell fixtures against the complete tracked checkout."""
-import json
 import subprocess
 import tarfile
 
 from conformance.children.children import child_env
+from sdlc.scripts.tools import load_manifest
 
 
 def stage_checkout(source, root):
@@ -23,7 +23,7 @@ def stage_checkout(source, root):
 
 def fixture_tool_groups(source):
     """Let controlled tool stubs serve every declared library and rung."""
-    manifest = json.loads((source / 'sdlc/tools.json').read_text())
+    manifest = load_manifest(source / 'sdlc/tools.json')
     groups = [group for tool in manifest['tools'].values() for group in tool['groups']]
     return ','.join(dict.fromkeys(('test', 'surfaces', *groups, *manifest['libraries'], *manifest['databases'])))
 

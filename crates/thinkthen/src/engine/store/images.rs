@@ -11,7 +11,7 @@ pub(crate) struct Lookup {
 }
 
 pub(super) const COLUMNS: &str = "a.key, a.answer, a.answered_by, a.input_tokens, a.output_tokens,
-    a.observation_id, a.batch_size, a.key_version, a.adapter,
+    a.observation_id, a.batch_size, a.adapter,
     a.url, a.model, a.question, s.sha256, s.state, a.taken_at, a.origin";
 
 impl Store {
@@ -75,10 +75,10 @@ pub(super) fn valid(
     found: &Found,
     image: Option<&Ask>,
 ) -> rusqlite::Result<bool> {
-    let Some(state) = row.get_ref(13)?.as_str().ok() else {
+    let Some(state) = row.get_ref(12)?.as_str().ok() else {
         return Ok(false);
     };
-    let Some(digest) = row.get_ref(12)?.as_blob().ok() else {
+    let Some(digest) = row.get_ref(11)?.as_blob().ok() else {
         return Ok(false);
     };
     // An image hit also compares each original ordered constituent with the
@@ -87,14 +87,13 @@ pub(super) fn valid(
         return Ok(false);
     }
     let saved = super::Answer {
-        key_version: Some(2),
-        adapter: Some(row.get(8)?),
+        adapter: Some(row.get(7)?),
         key: found.key.hex(),
         observation_id: Some(found.observation_id.clone()),
         batch_size: found.batch_size,
-        url: row.get(9)?,
-        model: row.get(10)?,
-        question: row.get(11)?,
+        url: row.get(8)?,
+        model: row.get(9)?,
+        question: row.get(10)?,
         state: crate::core::hex(digest),
         answer: found.answer.clone(),
         answered_by: found.answered_by.clone(),
@@ -104,8 +103,8 @@ pub(super) fn valid(
         output_tokens: found
             .usage
             .and_then(crate::core::ReportedUsage::output_tokens),
-        taken_at: row.get(14)?,
-        origin: row.get(15)?,
+        taken_at: row.get(13)?,
+        origin: row.get(14)?,
     };
     Ok(
         super::versioned::complete_key(&saved, state, &saved.answered_by)

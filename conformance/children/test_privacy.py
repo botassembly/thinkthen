@@ -123,7 +123,7 @@ class PrivacyTests(unittest.TestCase):
                     (root / 'libraries/rust/check.py').write_text('raise SystemExit("installed consumer reached")\n')
                 else:
                     # The package-only route needs no Linux compiler on the build host.
-                    manifest = root / 'sdlc/tools.json'
+                    manifest = root / 'sdlc/tools/zig.json'
                     tools_manifest = json.loads(manifest.read_text())
                     arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
                     tools_manifest['libraries']['zig']['check_platforms'].append(platform.system().lower() + '-' + arch)

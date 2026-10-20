@@ -296,6 +296,14 @@ class Cases(unittest.TestCase):
         script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
         script(shim / 'cargo', "printf '%s\\n' '" + json.dumps(metadata) + "'")
         env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_TOOLCHAINS': str(cache)}
+        steps = tree / 'sdlc/scripts/release-pack.d'
+        saved_steps = self.root / 'saved-steps'
+        steps.rename(saved_steps)
+        result = pack(tree, TARGET, self.root / 'missing-steps', env)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn(f'release-pack: missing step {steps}/*', result.stderr)
+        self.assertEqual(list((self.root / 'missing-steps').glob('*.tar.gz*')), [])
+        saved_steps.rename(steps)
         result = pack(tree, TARGET, self.root / 'positive', env)
         self.assertEqual(result.returncode, 0, result.stderr)
         archive = self.root / 'positive' / f'thinkthen-duckdb-0.2.0-{TARGET}.tar.gz'

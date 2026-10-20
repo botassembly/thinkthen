@@ -1,0 +1,72 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/Results.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/Inputs.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/RequestVersion.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/NativeWait.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/UsagePersistence.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/NativeUsageLayouts.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/NativeResults.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/NamedCalls.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/NativeNamed.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/thinkthen/ErrorKind.java",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/kotlin/UsagePersistence.kt",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/kotlin/KotlinNamedCalls.kt",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/scala/UsagePersistence.scala",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/jvm/session/scala/ScalaNamedCalls.scala",
+    "producer": "results"
+  }
+]

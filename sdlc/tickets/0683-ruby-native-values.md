@@ -10,7 +10,7 @@ Depends on: 0629, 0688, 0689, 0727, 0728
 
 ## Outcome
 
-- Changes: `libraries/ruby/src/`, `libraries/ruby/lib/thinkthen/session.rb`, `libraries/ruby/lib/thinkthen/results_generated.rb`, `libraries/ruby/sig/thinkthen/`, `libraries/ruby/Cargo.toml`, `libraries/ruby/Cargo.lock`, `libraries/ruby/tests/test_owned_session.rb`, `build-tools/results/templates/ruby.py`, `build-tools/results/templates/ruby_rbs.py`, `build-tools/results/registry/ruby.py`, `build-tools/results/legacy/ruby.txt`, `conformance/library-surface/ruby.json`.
+- Changes: `libraries/ruby/src/`, `libraries/ruby/lib/thinkthen/session.rb`, `libraries/ruby/lib/thinkthen/results_generated.rb`, `libraries/ruby/sig/thinkthen/`, `libraries/ruby/Cargo.toml`, `libraries/ruby/Cargo.lock`, `libraries/ruby/tests/test_owned_session.rb`, `build-tools/results/templates/ruby.py`, `build-tools/results/templates/ruby_rbs.py`, `build-tools/results/registry/ruby.json`, `build-tools/results/legacy/ruby.txt`, `conformance/library-surface/ruby.json`.
 - The extension calls `Engine::call` (the Rust run function from 0629) and builds Ruby objects by mapping the 0689 value tree. No JSON crosses from Rust into Ruby, and `serde_json` leaves the extension's dependencies.
 - `Results::Completed#value` and `#probability` in `session.rb` read the answer and probability from the tree. Their projection over `CALL_RESULTS` is deleted.
 - The session loop in `Client::Operation` (`result`, `feed`, `close_producer`) is deleted, with its nil-producer check and its private closed, reader and producer error text. The call runs without the global VM lock and cancels through the run function's handle.

@@ -482,6 +482,7 @@ def main():
         # Exercise the working candidate before it is committed; archived product files still
         # come from HEAD and are compared by release-pack to the original tar below.
         shutil.copy2(REPO / "sdlc/scripts/release-pack", source / "sdlc/scripts/release-pack")
+        shutil.copytree(REPO / "sdlc/scripts/release-pack.d", source / "sdlc/scripts/release-pack.d", dirs_exist_ok=True)
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "legacy"), "first-run", cwd=source), "", success=True)
         if not (base / "legacy/thinkthen-first-run.tar.gz").is_file():

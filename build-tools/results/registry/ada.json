@@ -1,0 +1,122 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-requests.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-sessions-calls.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-sessions-calls.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-session_c.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-native_sessions.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-native_sessions.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-requests-native.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-requests-native.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen_kinds.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen_kinds.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-persistence.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-persistence.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-values.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-values.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-answers.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-answers.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-native_values.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-native_values.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs-native.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs-native.adb",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs-calls.ads",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/ada/src/thinkthen-inputs-calls.adb",
+    "producer": "results"
+  }
+]

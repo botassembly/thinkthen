@@ -1,0 +1,7 @@
+# The R source package with its crates vendored, built as the R check builds it: from a git archive tree.
+part_r() {
+	committed r
+	tree=$(fresh r-tree)
+	git archive HEAD | tar -x -C "$tree"
+	keep "$(CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$stage/r-target" "$tree/libraries/r/tools/make-tarball.sh" "$(fresh r)")"
+}

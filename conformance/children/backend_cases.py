@@ -38,7 +38,7 @@ def canonical_replay(folder, row):
     key = canonical_question_key(row["url"], row["model"], row["model"],
                                  json.loads(state), json.loads(question))
     sha = hashlib.sha256(state.encode()).hexdigest()
-    answer = {"key_version":2, "adapter":"systemone", "observation_id":key, "batch_size":1,
+    answer = {"adapter":"systemone", "observation_id":key, "batch_size":1,
               "key":key, "url":row["url"], "model":row["model"], "state":sha,
               "question":question, "answer":'{"type":"noul","noul":0.9}',
               "answered_by":row["model"], "input_tokens":1, "output_tokens":1,

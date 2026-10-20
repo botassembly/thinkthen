@@ -1,5 +1,3 @@
-import { readDuckDBVersions } from '../../scripts/duckdb-inputs.mjs';
-const duckDBArchiveVersions = readDuckDBVersions(new URL('../../../databases/duckdb/tools/version.env', import.meta.url)).join(' and ');
 // The names, the order, and the one line for every function and surface.
 //
 // The one line for each function is the first line of its help text. The
@@ -428,429 +426,61 @@ export function exitMark(script, exit) {
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
 
 
-const LINUX_PLATFORMS = 'Linux x86-64 and ARM64';
-const MAC_PLATFORMS = 'macOS 15 or later on Intel and Apple silicon';
-const UNIX_PLATFORMS = `${LINUX_PLATFORMS}; ${MAC_PLATFORMS}`;
-const NATIVE_PLATFORMS = `${UNIX_PLATFORMS}; Windows x86-64`;
+import { NATIVE_PLATFORMS } from './catalog/platforms.mjs';
 
 export const MCP = {
   name: 'MCP', route: '/languages/agents/',
   versions: { runtime: 'MCP 2025-11-25; no language runtime required', platforms: NATIVE_PLATFORMS },
 };
 
+import surface_shell from './catalog/shell.mjs';
+import surface_python from './catalog/python.mjs';
+import surface_polars from './catalog/polars.mjs';
+import surface_pandas from './catalog/pandas.mjs';
+import surface_typescript from './catalog/typescript.mjs';
+import surface_ruby from './catalog/ruby.mjs';
+import surface_r from './catalog/r.mjs';
+import surface_rust from './catalog/rust.mjs';
+import surface_c from './catalog/c.mjs';
+import surface_cpp from './catalog/cpp.mjs';
+import surface_objective_c from './catalog/objective-c.mjs';
+import surface_cobol from './catalog/cobol.mjs';
+import surface_ada from './catalog/ada.mjs';
+import surface_jvm from './catalog/jvm.mjs';
+import surface_csharp from './catalog/csharp.mjs';
+import surface_go from './catalog/go.mjs';
+import surface_swift from './catalog/swift.mjs';
+import surface_zig from './catalog/zig.mjs';
+import surface_php from './catalog/php.mjs';
+import surface_dart from './catalog/dart.mjs';
+import surface_duckdb from './catalog/duckdb.mjs';
+import surface_sqlite from './catalog/sqlite.mjs';
+import surface_postgresql from './catalog/postgresql.mjs';
+
 export const SURFACES = [
-  {
-    slug: 'shell', name: 'Bash', deckHeading: null,
-    versions: { runtime: 'No language runtime required', platforms: NATIVE_PLATFORMS },
-    backends: 'cli',
-    lang: 'bash', tab: 'Bash',
-    blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
-    unsureWord: '`null`, and exit code 3',
-    facts: '`--facts` prints one line of run facts on standard error, after the answers.',
-    install: [
-      ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
-      ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
-    ],
-    windows: [
-      'On Windows x86-64, download `https://thinkthen.dev/install.ps1`, read it, and run `.\\install.ps1` in Windows PowerShell 5.1 or PowerShell 7. It installs `thinkthen.exe` and its receipt in `%LOCALAPPDATA%\\Programs\\thinkthen`, or in the folder `THINKTHEN_INSTALL_DIR` names. That folder must be an absolute path on a local NTFS drive.',
-      'The script checks the archive against its checksum and checks the command\'s version. A checksum does not prove who published the archive.',
-      'The script changes no execution policy, profile, registry or runtime configuration. It prints the command\'s path. When the install folder is not on `PATH`, it also prints a `PATH` command for the current session.',
-      'To remove ThinkThen, delete `thinkthen.exe`, `thinkthen.install.json` and `.thinkthen-install.lock` from the install folder.',
-    ],
-    uninstall: {
-      text: 'To remove the download, delete the binary and its receipt. If you set `THINKTHEN_INSTALL_DIR`, delete the same two files there. With Homebrew, run `brew uninstall thinkthen`.',
-      code: 'rm ~/.local/bin/thinkthen \\\n  ~/.local/bin/thinkthen.install.json',
-    },
-    particular: [
-      'Standard input carries the evidence. Standard output carries the answer and nothing else.',
-      'On one piece of evidence, the exit code is the answer. `if` and `case` read it directly.',
-      '`--jobs` sets how many requests run at once.',
-      '`--plan` prints the plan and needs no key.',
-    ],
-  },
-  {
-    slug: 'python', name: 'Python', deckHeading: 'Python',
-    versions: { runtime: 'Python 3.10 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'python', tab: 'Python',
-    blurb: "Use one `Engine` and read each answer from `Result.value`.",
-    unsureWord: '`None`',
-    facts: "`Result.facts` retains actual final native settlement.",
-    errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
-    settings: '`tt.Engine` takes each setting as a keyword and reads the environment for the rest. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
-    install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
-    particular: ["An authored question dictionary carries thresholds and options. Explicit `QuestionSource` selectors choose saved questions.", "Use `engine.iterate` for lazy typed rows and `engine.plan` for a no-send plan."],
-  },
-  {
-    slug: 'polars', name: 'Polars', deckHeading: 'Polars',
-    versions: { runtime: 'Python 3.10 or later; Polars 1.44.2 or later, below 2', platforms: NATIVE_PLATFORMS },
-    backends: 'python',
-    lang: 'python', tab: 'Python',
-    blurb: "Use named Python engine methods or the opt-in Polars Series namespace.",
-    unsureWord: '`None`',
-    facts: "`Result.results` retains generated native rows; `Result.facts` counts the whole call.",
-    errors: 'Every failure raises a `ThinkThenError`, as in Python. A failed row in a column call ends the call with `BackendError`.',
-    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
-    install: [['pip install thinkthen[polars]', null]],
-    particular: [
-      '`decide`, `choose`, `score`, and `tag` send a whole column to the engine in one call.',
-      '`on=` names the column the questions read.',
-    ],
-  },
-  {
-    slug: 'pandas', name: 'pandas', deckHeading: null,
-    versions: { runtime: 'Python 3.10 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'python',
-    lang: 'python', tab: 'Python',
-    blurb: "Use the opt-in `series.tt` namespace or named engine methods.",
-    unsureWord: '`pd.NA`',
-    facts: "`Result.facts` retains settled call observations.",
-    errors: 'Every failure raises a `ThinkThenError`, as in Python. Its subclass names the kind.',
-    settings: '`tt.Engine` takes each setting as a keyword, as in Python. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
-    install: [['pip install thinkthen pandas', null]],
-    particular: ["Import `thinkthen.pandas` to register the Series namespace.", "DataFrame `on=` selects evidence; annotation adds named typed columns and failures."],
-  },
-  {
-    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
-    versions: { runtime: 'Node.js 22 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'ts', tab: 'TypeScript',
-    blurb: "Await one of the ten `Client` methods. Read each answer from `call.value`.",
-    unsureWord: '`null`',
-    facts: "`call.facts` retains final native observations.",
-    errors: "`ClientError` retains native kind, retryability, failure facts and completed results.",
-    settings: "`new Client({...})` reads environment settings with explicit overrides. Use native snake_case names, including `base_url`.",
-    install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
-    particular: ["`client.start` returns an asynchronous packet iterator with cancellation and cleanup.", "Close the client in `finally`; generated results remain owned after cleanup."],
-  },
-  {
-    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
-    versions: { runtime: 'Ruby 3.4 or later, below 4.1', platforms: UNIX_PLATFORMS },
-    backends: 'code',
-    lang: 'ruby', tab: 'Ruby',
-    blurb: "Use the ten named methods on `ThinkThen::Client` and read each answer from the result.",
-    unsureWord: '`nil`',
-    facts: "`result.facts` retains final native observations.",
-    errors: 'Every failure raises a `ThinkThen::Error`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `CancelledError`.',
-    settings: "`Client.open` scopes cleanup. Constructor keywords override native settings; `record:` writes and `replay:` sends nothing.",
-    install: [['gem install thinkthen', null]],
-    particular: ["Use ordinary authored hashes and explicit `Client.question_file` selectors.", "Enumerable inputs use bounded native sessions; generated results survive client cleanup."],
-  },
-  {
-    slug: 'r', name: 'R', deckHeading: 'R',
-    versions: { runtime: 'R 4.2 or later', platforms: UNIX_PLATFORMS },
-    backends: 'code',
-    lang: 'r', tab: 'R',
-    blurb: "Call `tt_decide` and nine more functions from R, on text, vectors and data frames.",
-    call: 'Call `tt_decide(question, input)` and read the answer from `call$value`. The other nine functions follow the same shape, such as `tt_choose` and `tt_rank`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "`call$results` retains generated rows and `call$facts` retains native settlement.",
-    errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
-    settings: "`tt_engine(backend =)` configures the native engine; call controls go in `options = list()`.",
-    install: [
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'On Linux this route builds from source: jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Ubuntu 26.04 (Resolute), R 4.6, x86-64 only. Use `resolute-arm64` for ARM64. Dependencies or missing binaries can fall back to source; keep source prerequisites then.'],
-    ],
-    particular: ["Authored lists supply questions, labels and thresholds.", "`tt_batch` streams generated results; `tt_plan` previews supported native requests."],
-  },
-  {
-    slug: 'rust', name: 'Rust', deckHeading: 'Rust',
-    versions: { runtime: 'Rust 1.95.0 or later; Polars 0.55.2 or later, below 0.56, for the polars feature', platforms: NATIVE_PLATFORMS },
-    backends: 'builder',
-    lang: 'rust', tab: 'Rust',
-    blurb: 'Call the engine directly. The compiler makes you handle not sure.',
-    unsureWord: '`None` from `call.value()` on `decide` or `choose`; `call.probability()` is also `None`',
-    facts: '`call.results()` retains complete records; `call.facts()` counts this call.',
-    errors: 'Every call returns a `Result`. Its `Error` names one of six kinds. A started call that fails keeps its facts in `Error::facts()`.',
-    settings: '`EngineBuilder` sets each setting. `record` writes a recording to a folder. `replay` answers from that recording and sends nothing, even on a miss.',
-    install: [['cargo add thinkthen', null]],
-    fragment: 'Put this code inside `fn main() -> Result<(), Box<dyn std::error::Error>>` and end it with `Ok(())`. `main` returns a `Result`, so `?` compiles.',
-    particular: [
-      'Calls block. No async runtime comes with it.',
-    ],
-  },
-  {
-    slug: 'c', name: 'C', deckHeading: 'C',
-    versions: { runtime: 'C11', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'c', tab: 'Rust',
-    blurb: "Call the ten functions from C through one header and one library.",
-    call: 'Write the request as JSON, start it with `thinkthen_session_new`, and read the answers the session returns.',
-    unsureWord: 'a present null generated answer; typed failures remain separate',
-    facts: "Generated complete session views retain presence and terminal facts.",
-    errors: "Admission diagnostics remain thread-local; terminal packets retain native typed failures.",
-    settings: "`thinkthen_engine_new_with` forwards native settings to Rust.",
-    install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
-    fragment: 'Keep the `#include` lines on top. Put the rest inside `int main(void)` and end it with `return 0;`.',
-    particular: ["New callers use generated native sessions.", "The C package owns the matching generated header and native library."],
-  },
-  {
-    slug: 'cpp', name: 'C++', deckHeading: null,
-    versions: { runtime: 'C++17', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'cpp', tab: 'C++',
-    blurb: "Call the ten functions from C++17 through a header-only CMake package.",
-    call: 'Open a `tt::Client` and call one of its ten named methods, such as `decide`, with a question and the text.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "`call.result()` returns the value, probability, complete records and final call counts.",
-    errors: "`tt::Failure` retains the failure kind, retryability, completed packets and available facts.",
-    settings: "`tt::Client` takes native settings. Rust owns configuration, recording and replay.",
-    install: [
-      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release. Needs a compiler and CMake.'],
-    ],
-    particular: ["Each named method returns a `ResultCall`. Read its completed result with `result()`; use `collect` or `poll` to read packets.", "Use `tt::inputs` for typed questions and inputs. The result owns its records after the call closes."],
-  },
-  {
-    slug: 'objective-c', name: 'Objective-C', deckHeading: null,
-    versions: { runtime: 'Objective-C with ARC; Swift tools 6.0 or later', platforms: MAC_PLATFORMS },
-    backends: 'code',
-    lang: 'objective-c', tab: 'Objective-C',
-    blurb: "Call the ten functions from Objective-C on Apple platforms, with blocks and ARC.",
-    call: 'Create a `TTFoundationClient` and call `decide:input:options:feed:completion:error:`. The completion block receives the answer.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "`TTCall` retains generated packets and typed terminal facts with explicit presence.",
-    errors: "`NSError` retains native typed failures under `TTFailureDetailsKey`.",
-    settings: "`initWithSettings:error:` forwards Foundation settings to Rust.",
-    install: [
-      ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The Swift package `ThinkThenFoundation`, from each release. A SwiftPM project on an Apple platform depends on it and imports `ThinkThenFoundation.h`.'],
-    ],
-    particular: ["The package uses Apple Foundation and ARC."],
-  },
-  {
-    slug: 'cobol', name: 'COBOL', deckHeading: null,
-    versions: { runtime: 'GnuCOBOL 4', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'cobol', tab: 'COBOL',
-    blurb: "Call the ten functions from GnuCOBOL through copybooks and called programs.",
-    call: 'Fill the request records and call the named program, such as `TT_DECIDE`. Read the value from its returned result record.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "The returned answer record has `v-value`, `v-probability`, `v-results` and `v-facts`, with presence indicators for nullable answers.",
-    errors: "`tt-n-cobol-AnswerStatus` preserves native errors and refuses representation overflow. Free its nonnull `v-owner` with `TT_ANSWER_FREE`, including after failure.",
-    settings: "The generated engine declarations forward settings to Rust.",
-    install: [
-      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybooks, the bridge and the native library, from each release.'],
-    ],
-    particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library."],
-  },
-  {
-    slug: 'ada', name: 'Ada', deckHeading: null,
-    versions: { runtime: 'Ada 2022; GNAT 13.3', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'ada', tab: 'Ada',
-    blurb: "Call the ten functions from Ada 2022 through a GNAT project.",
-    call: 'Build the question and input and call a named function in `Thinkthen.Inputs.Calls`, such as `Decide`. Read the returned result\'s `Value` field.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "The returned result has `Value`, `Probability`, `Results` and `Facts`. Its owned records survive session finalization.",
-    errors: "Typed native failures preserve kind, retryability and owned messages.",
-    settings: "`Configure` forwards engine settings to Rust.",
-    install: [
-      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release. Needs gprbuild.'],
-    ],
-    particular: ["Release owned sessions after their borrowers finish.", "Direct ABI planning remains; no named typed Ada Plan result is claimed."],
-  },
-  {
-    slug: 'java', name: 'Java', deckHeading: null,
-    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'java', tab: 'Java',
-    blurb: "Call the ten functions from Java 22 or later. Each call returns a future.",
-    call: 'Open a `thinkthen.Engine`, call `engine.decide(question, input)`, and `join()` the future it returns.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "Owned packets retain generated results, explicit presence and terminal facts.",
-    errors: "Native admission and session failures retain typed errors and completed results.",
-    settings: "`Engine` takes generated settings; Rust owns recording and replay.",
-    install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate. Run with `--enable-native-access=ALL-UNNAMED`.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
-    ],
-    particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target."],
-  },
-  {
-    slug: 'kotlin', name: 'Kotlin', deckHeading: null,
-    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'kotlin', tab: 'Kotlin',
-    blurb: "Call the ten functions from Kotlin as suspend functions.",
-    call: 'Open a `KotlinEngine` and call its `decide` suspend function from a coroutine.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "Generated owned packets retain results, presence and terminal facts.",
-    errors: "Typed native failures preserve completed results and actual facts.",
-    settings: "`KotlinEngine` uses the generated JVM engine settings.",
-    install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Maven coordinate with the `kotlin` classifier. It needs no separate Java dependency. Add `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0` beside it. Run with `--enable-native-access=ALL-UNNAMED`.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
-    ],
-    particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Kotlin cancellation and cleanup follow the shared owned session."],
-  },
-  {
-    slug: 'scala', name: 'Scala', deckHeading: null,
-    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'scala', tab: 'Scala',
-    blurb: "Call the ten functions from Scala. Each call returns a Future you can cancel.",
-    call: 'Open a `ScalaEngine` and call `decide`. It returns a `Future` you can cancel.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "Generated owned packets retain results, presence and terminal facts.",
-    errors: "Typed native failures preserve completed results and actual facts.",
-    settings: "`ScalaEngine` uses the generated JVM engine settings.",
-    install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Maven coordinate with the `scala` classifier. It needs no separate Java dependency. Keep the normal Scala runtime libraries. Run with `--enable-native-access=ALL-UNNAMED`.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
-    ],
-    particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Keep the normal Scala runtime libraries on the class path."],
-  },
-  {
-    slug: 'csharp', name: 'C#', deckHeading: null,
-    versions: { runtime: '.NET 8 or later', platforms: NATIVE_PLATFORMS },
-    backends: 'code',
-    lang: 'csharp', tab: 'C#',
-    blurb: "Await the ten functions from .NET 8, with cancellation tokens.",
-    call: 'Open an `Engine` with `Engine.Open` and `await engine.DecideAsync(question, input)`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "Generated `ThinkThen.Results` preserve presence, completed answers and terminal facts.",
-    errors: "Typed failures retain native kind, retryability, final facts and completed prefixes.",
-    settings: "`Engine.Open(InputEngineSettings)` forwards generated settings to Rust.",
-    install: [
-      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
-      ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
-    ],
-    particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup."],
-  },
-  {
-    slug: 'go', name: 'Go', deckHeading: null,
-    versions: { runtime: 'Go 1.22 or later', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'go', tab: 'Go',
-    blurb: "Call the ten functions from Go, with a context for deadlines and cancellation.",
-    call: 'Create a client with `thinkthen.NewClient` and call `client.Decide(ctx, question, input, nil)`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "A completed call retains its full records and final facts.",
-    errors: "`SessionError` retains failed calls; admission returns typed `Error` values.",
-    settings: "`NewClient(EngineSettings)` forwards native settings to Rust.",
-    install: [
-      ['go get github.com/botassembly/thinkthen/libraries/go', 'Needs a C compiler.'],
-      ['thinkthen-go-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
-    ],
-    particular: ["The native-bearing package requires Go and a C compiler.", "A context deadline reaches native execution; producers must return promptly on cancellation."],
-  },
-  {
-    slug: 'swift', name: 'Swift', deckHeading: null,
-    versions: { runtime: 'Swift 6.0 or later', platforms: `Linux x86-64; ${MAC_PLATFORMS}` },
-    backends: 'code',
-    lang: 'swift', tab: 'Swift',
-    blurb: "Await the ten functions from Swift with async throws.",
-    call: 'Create a `Client` and call `try await client.decide(.text(question), input: InputText(text: text))`. Read the returned value.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "`CallResult.facts` counts the call; `CallResult.results` retains its complete records.",
-    errors: "`SessionFailure.call` preserves typed failure settlement and completed packets.",
-    settings: "`Client` takes generated engine settings and loads its packaged native target.",
-    install: [
-      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
-    ],
-    particular: ["Close the client after use; generated results remain owned.", "Rust owns files, images, cache, replay and admission."],
-  },
-  {
-    slug: 'zig', name: 'Zig', deckHeading: null,
-    versions: { runtime: 'Zig 0.15.2 or later', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'zig', tab: 'Zig',
-    blurb: "Call the ten functions from Zig through a source module.",
-    call: 'Call a named function in `thinkthen.calls` with `calls.Arguments(Input)`. Read the successful result\'s `value` field and release that result with `deinit`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "The successful result has `value`, `probability`, `results` and `facts`. Its owned records survive native session cleanup.",
-    errors: "Handle the `failed` arm of `thinkthen.Result` and release it with `thinkthen.releaseFailure` using the engine allocator. Started failures retain packets and terminal facts.",
-    settings: "Generated engine settings forward recording and replay configuration to Rust.",
-    install: [
-      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
-    ],
-    particular: ["The package carries its generated header and native engine.", "`Request.plan` returns an owned plan; release owners with `deinit` after borrowers finish."],
-  },
-  {
-    slug: 'php', name: 'PHP', deckHeading: null,
-    versions: { runtime: 'PHP 8.3 or later', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'php', tab: 'PHP',
-    blurb: "Call the ten functions from PHP 8.3 through FFI.",
-    call: 'Create a `ThinkThen\\Client` and call `$client->decide($question, $text)`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "Generated result objects retain presence, completed answers and terminal facts.",
-    errors: "Typed native failures retain their kind, retryability and final settlement.",
-    settings: "`Client` forwards native settings to Rust and loads its packaged native library.",
-    install: [
-      ['composer require botassembly/thinkthen', 'Needs `ext-ffi`. Run PHP with `-d ffi.enable=1`.'],
-      ['thinkthen-php-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
-    ],
-    particular: ["Enable PHP FFI and release the client after use.", "Use `Client::item` and `Client::files` for explicit input selectors."],
-  },
-  {
-    slug: 'dart', name: 'Dart', deckHeading: null,
-    versions: { runtime: 'Dart 3.10 or later, below 4; Flutter 3.38 or later', platforms: 'Linux x86-64' },
-    backends: 'code',
-    lang: 'dart', tab: 'Dart',
-    blurb: "Await the ten functions from Dart and Flutter.",
-    call: 'Open an `Engine` with `Engine.open()`, `await engine.decide(question, input)`, and close the engine in `finally`.',
-    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
-    facts: "`CallResult` has `value`, `probability`, `results` and `facts`; its owned packets retain presence and native terminal facts.",
-    errors: "`NativeFailure` reports admission errors; `SessionFailure` retains the failed call.",
-    settings: "`Engine.open(settings: InputEngineSettings(...))` loads the bundled native asset.",
-    install: [
-      ['dart pub add thinkthen_dart', null],
-      ['thinkthen-dart-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
-    ],
-    particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route."],
-  },
-  {
-    slug: 'duckdb', backends: 'sql', name: 'DuckDB', deckHeading: 'DuckDB',
-    versions: { runtime: ['v1.5.6', 'v2.0-cyanoptera'], platforms: UNIX_PLATFORMS },
-    lang: 'sql', tab: 'SQL',
-    blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
-    unsureWord: '`NULL`',
-    facts: '`thinkthen_<function>_details` returns typed rows with the value, probability, full record, failure, facts and observations.',
-    errors: 'Scalar calls raise an SQL error on failure. Details calls return recoverable failures in the row’s `failure` field. Check that field before using `value` or `probability`. Cancellation, deadline and defect failures raise an SQL error. A not-sure answer has a null probability; an authored JSON null answer can have a numeric probability.',
-    settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
-    install: [
-      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'Unsigned extensions, from each release. Unpack the archive where DuckDB runs.'],
-      ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
-    ],
-    particular: ['dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2.', 'To load by path, choose the member under your DuckDB version and platform, then pass its path to LOAD.', 'DuckDB hands the extension rows in chunks. One call judges a chunk together, and `SET thinkthen_max_requests` caps that call.'],
-  },
-  {
-    slug: 'sqlite', backends: 'sql', name: 'SQLite', deckHeading: 'SQLite',
-    versions: { runtime: 'SQLite 3.50.0 or later', platforms: UNIX_PLATFORMS },
-    lang: 'sql', tab: 'SQL',
-    blurb: 'Judge a whole table in one call, then join the answers back by key.',
-    unsureWord: '`NULL`',
-    facts: '`thinkthen_usage()` gives the totals for the process.',
-    errors: 'A failure is an error whose text starts `thinkthen <kind>: `. The message follows, and the text ends with `(retryable: yes)` or `(retryable: no)`.',
-    settings: '`thinkthen_configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
-    install: [
-      ['thinkthen-sqlite-VERSION-TARGET.tar.gz', 'The extension, from each release. Rename `libthinkthen0.so` to `thinkthen.so`, or `libthinkthen0.dylib` to `thinkthen.dylib` on a Mac.'],
-      ['.load ./thinkthen', null],
-    ],
-    particular: [
-      'Normal loading registers every ThinkThen function for use in triggers, views, CHECK constraints and column defaults.',
-    ],
-  },
-  {
-    slug: 'postgresql', backends: 'sql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
-    versions: { runtime: 'PostgreSQL 16, 17 and 18', platforms: UNIX_PLATFORMS },
-    lang: 'sql', tab: 'SQL',
-    blurb: 'One extension. Ask questions in any query.',
-    unsureWord: '`NULL`',
-    facts: '`thinkthen_usage()` gives the totals for the process.',
-    errors: 'A failed plain call raises its named error. A `_details` row retains a recoverable typed failure separately from its value.',
-    settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
-    install: [
-      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
-      ['thinkthen-postgresql17-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
-      ['thinkthen-postgresql18-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
-      ['CREATE EXTENSION thinkthen;', null],
-    ],
-    particular: [
-      'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
-      'pg_cancel_backend and statement_timeout stop a call. A request already sent still completes and is billed.',
-    ],
-  },
+  surface_shell,
+  surface_python,
+  surface_polars,
+  surface_pandas,
+  surface_typescript,
+  surface_ruby,
+  surface_r,
+  surface_rust,
+  surface_c,
+  surface_cpp,
+  surface_objective_c,
+  surface_cobol,
+  surface_ada,
+  ...surface_jvm,
+  surface_csharp,
+  surface_go,
+  surface_swift,
+  surface_zig,
+  surface_php,
+  surface_dart,
+  surface_duckdb,
+  surface_sqlite,
+  surface_postgresql,
 ];
 
 // The bindings: every language and database ThinkThen works with. Bash is
@@ -858,17 +488,12 @@ export const SURFACES = [
 // name the same 24. Each binding links to
 // /languages/<slug>/ or, for a database, /databases/<slug>/. A binding with no entry in SURFACES has no page yet, and
 // scripts/check-links.mjs allows exactly those paths.
-const DATABASE_SLUGS = new Set(['duckdb', 'postgresql', 'sqlite']);
-export const BINDINGS = [
-  ['Ada', 'ada'], ['C', 'c'], ['C#', 'csharp'], ['C++', 'cpp'],
-  ['COBOL', 'cobol'], ['Dart', 'dart'], ['DuckDB', 'duckdb'], ['Go', 'go'],
-  ['Java', 'java'], ['Kotlin', 'kotlin'], ['Objective-C', 'objective-c'],
-  ['pandas', 'pandas'], ['PHP', 'php'], ['Polars', 'polars'],
-  ['PostgreSQL', 'postgresql'], ['Python', 'python'], ['R', 'r'],
-  ['Ruby', 'ruby'], ['Rust', 'rust'], ['Scala', 'scala'],
-  ['SQLite', 'sqlite'], ['Swift', 'swift'], ['TypeScript', 'typescript'],
-  ['Zig', 'zig'],
-].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: DATABASE_SLUGS.has(slug) ? `/databases/${slug}/` : `/languages/${slug}/` }));
+export const BINDINGS = SURFACES.filter((surface) => surface.slug !== 'shell')
+  .map(({ name, slug, backends }) => ({
+    name, slug, database: backends === 'sql',
+    route: backends === 'sql' ? `/databases/${slug}/` : `/languages/${slug}/`,
+  }))
+  .sort((a, b) => a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1);
 
 // The install paths of the bindings with no page yet.
 export const BINDING_PATHS_WITHOUT_PAGES = BINDINGS

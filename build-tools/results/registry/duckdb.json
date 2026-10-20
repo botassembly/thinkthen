@@ -1,0 +1,32 @@
+[
+  {
+    "mode": "receipt-types",
+    "path": "databases/duckdb/cpp/src/receipt_types_generated.hpp",
+    "producer": "databases/duckdb/tools/receipt_types.py"
+  },
+  {
+    "mode": "receipt-types",
+    "path": "databases/duckdb/cpp/src/receipt_types_generated_1.hpp",
+    "producer": "databases/duckdb/tools/receipt_types.py"
+  },
+  {
+    "mode": "receipt-types",
+    "path": "databases/duckdb/cpp/src/receipt_types_generated_2.hpp",
+    "producer": "databases/duckdb/tools/receipt_types.py"
+  },
+  {
+    "mode": "receipt-types",
+    "path": "databases/duckdb/cpp/src/receipt_types_generated_3.hpp",
+    "producer": "databases/duckdb/tools/receipt_types.py"
+  },
+  {
+    "mode": "receipt-types",
+    "path": "databases/duckdb/cpp/src/receipt_types_generated_4.hpp",
+    "producer": "databases/duckdb/tools/receipt_types.py"
+  },
+  {
+    "mode": "request-helpers",
+    "path": "databases/duckdb/cpp/src/request_helpers_generated.hpp",
+    "producer": "databases/duckdb/tools/request_helpers.py"
+  }
+]

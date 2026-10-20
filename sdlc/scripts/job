@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 """Run a machine job through the existing manifest tool resolver."""
-import json
 import os
 from pathlib import Path
 import sys
@@ -14,7 +13,7 @@ if len(sys.argv) < 2:
     sys.exit(2)
 
 os.environ['TMPDIR'] = str(Path(tempfile.gettempdir()).resolve())
-manifest = json.loads((tools.ROOT / 'sdlc/tools.json').read_text())
+manifest = tools.load_manifest()
 groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
 groups.update(manifest['libraries'])
 groups.update(manifest['databases'])

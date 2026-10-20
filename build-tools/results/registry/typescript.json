@@ -1,0 +1,12 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/typescript/results_generated.js",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/typescript/results_generated.d.ts",
+    "producer": "results"
+  }
+]

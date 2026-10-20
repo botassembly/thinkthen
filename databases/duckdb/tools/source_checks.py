@@ -21,6 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent.parent
+RELEASE = REPO / "sdlc/scripts/release-pack.d/duckdb"
 sys.path.insert(0, str(REPO / "conformance" / "children"))
 from children import CARGO, child_env  # noqa: E402  the shared helper, ticket 0127
 FAILED: list[str] = []
@@ -58,7 +59,7 @@ def retired_entry() -> None:
             'crate-type = ["cdylib"]' in manifest or
             'mod ffi;' in entry or (ROOT / "src" / "ffi.rs").exists()):
         fail("ADR 0081: the retired raw C API still has a dependency or entry point")
-    release = (REPO / "sdlc" / "scripts" / "release-pack").read_text()
+    release = RELEASE.read_text()
     check = (ROOT / "check.sh").read_text()
     if "sh databases/duckdb/cpp/build.sh" not in release or "sh cpp/build.sh" not in check:
         fail("ADR 0081: release and check must build the C++ extension")
@@ -82,7 +83,7 @@ def cargo_flags() -> None:
 
 
 def vendored() -> None:
-    named = (ROOT / "check.sh").read_text() + (REPO / "sdlc" / "scripts" / "release-pack").read_text()
+    named = (ROOT / "check.sh").read_text() + RELEASE.read_text()
     named += "".join(path.read_text() for path in (ROOT / "tools").iterdir() if path.is_file())
     for path in sorted((ROOT / "vendor").iterdir()):
         if path.name != "LICENSE" and path.name not in named:

@@ -20,6 +20,20 @@ def run(argv, env, **kwargs):
     return subprocess.run(list(map(str, argv)), env=env, check=True, **kwargs)
 
 
+def load_manifest(path=None):
+    """Read shared tool requirements and each language's own requirements."""
+    source = Path(path) if path is not None else ROOT / 'sdlc/tools.json'
+    manifest = json.loads(source.read_text())
+    for fragment in sorted(source.with_suffix('').glob('*.json')):
+        for section, entries in json.loads(fragment.read_text()).items():
+            combined = manifest.setdefault(section, {})
+            overlap = combined.keys() & entries.keys()
+            if overlap:
+                raise ValueError(f'{fragment}: duplicate {section}: {sorted(overlap)}')
+            combined.update(entries)
+    return manifest
+
+
 def selected(manifest, groups, host):
     groups = set(groups)
     if 'surfaces' in groups:
@@ -34,7 +48,7 @@ def selected(manifest, groups, host):
 
 def commands(groups=(), host=None):
     """Read the declared command set for fixture and collection environments."""
-    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    manifest = load_manifest()
     requirements = selected(manifest, groups, host or platform.system().lower())
     return tuple(dict.fromkeys(command for tool in requirements.values()
                                for command in tool['commands']))
@@ -322,7 +336,7 @@ def main():
     parser.add_argument('groups', help='comma-separated gate or library names')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    manifest = json.loads(args.manifest.read_text())
+    manifest = load_manifest(args.manifest)
     groups = args.groups.split(',')
     known = {'install', 'lint', 'test', 'spec', 'surfaces', *manifest['libraries'], *manifest['databases']}
     known.update(group for tool in manifest['tools'].values() for group in tool['groups'])
