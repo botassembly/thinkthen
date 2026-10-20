@@ -23,12 +23,51 @@ RUN command -v musl-gcc
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg libedit2 libpython3.12t64 libcurl4t64 libz3-4 tzdata && rm -rf /var/lib/apt/lists/*
 COPY sdlc/tools.json /tmp/tools.json
-COPY sdlc/tools/ /tmp/tools/
 COPY rust-toolchain.toml /opt/thinkthen-image/rust-toolchain.toml
 COPY sdlc/linux/install.py /opt/thinkthen-image/sdlc/linux/install.py
-COPY sdlc/scripts/tools.py /opt/thinkthen-image/sdlc/scripts/tools.py
-COPY conformance/children/children.py /opt/thinkthen-image/conformance/children/children.py
-RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json bootstrap
+COPY sdlc/tools/rust.json /tmp/tools/rust.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/rust.json
+COPY sdlc/tools/python.json /tmp/tools/python.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/python.json
+COPY sdlc/tools/node.json /tmp/tools/node.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/node.json
+COPY sdlc/tools/sccache.json /tmp/tools/sccache.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/sccache.json
+COPY sdlc/tools/nextest.json /tmp/tools/nextest.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/nextest.json
+COPY sdlc/tools/jq.json /tmp/tools/jq.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/jq.json
+COPY sdlc/tools/deny.json /tmp/tools/deny.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/deny.json
+COPY sdlc/tools/public-api.json /tmp/tools/public-api.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/public-api.json
+COPY sdlc/tools/mustmatch.json /tmp/tools/mustmatch.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/mustmatch.json
+COPY sdlc/tools/ruff.json /tmp/tools/ruff.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/ruff.json
+COPY sdlc/tools/prettier.json /tmp/tools/prettier.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/prettier.json
+COPY sdlc/tools/cmake.json /tmp/tools/cmake.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/cmake.json
+COPY sdlc/tools/uv.json /tmp/tools/uv.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/uv.json
+COPY sdlc/tools/rust-nightly.json /tmp/tools/rust-nightly.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/rust-nightly.json
+COPY sdlc/tools/c.json /tmp/tools/c.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/c.json
+COPY sdlc/tools/dart.json /tmp/tools/dart.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/dart.json
+COPY sdlc/tools/cpp.json /tmp/tools/cpp.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/cpp.json
+COPY sdlc/tools/go.json /tmp/tools/go.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/go.json
+COPY sdlc/tools/ruby.json /tmp/tools/ruby.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/ruby.json
+COPY sdlc/tools/swift.json /tmp/tools/swift.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/swift.json
+COPY sdlc/tools/zig.json /tmp/tools/zig.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/zig.json
 ENV PATH=/opt/thinkthen-tools/bin:/usr/bin:/bin \
     RUSTUP_HOME=/opt/thinkthen-tools/rustup \
     THINKTHEN_LINUX_IMAGE=1

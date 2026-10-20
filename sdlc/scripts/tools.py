@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Install job-owned macOS tools or consume the pinned Linux image's tool prefix."""
 import argparse
-import gzip
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,59 +10,12 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import urllib.request
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from sdlc.linux.install import download, load_manifest, run, rust_components, selected
 
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin'
-
-
-def download(url, path, sha256=None):
-    """Save HTTP representation bytes before checking a pinned content digest."""
-    request = urllib.request.Request(url, headers={'Accept-Encoding': 'identity'})
-    with tempfile.TemporaryDirectory(prefix='.' + path.name + '-', dir=path.parent) as temporary:
-        staged = Path(temporary) / 'download'
-        digest = hashlib.sha256()
-        with urllib.request.urlopen(request, timeout=60) as response, staged.open('wb') as output:
-            encoding = response.headers.get('Content-Encoding', 'identity').strip().lower()
-            if encoding not in ('identity', 'gzip'):
-                raise RuntimeError('unsupported download content encoding: ' + encoding)
-            with gzip.GzipFile(fileobj=response) if encoding == 'gzip' else response as source:
-                for part in iter(lambda: source.read(1024 * 1024), b''):
-                    output.write(part)
-                    digest.update(part)
-        if sha256 is not None and digest.hexdigest() != sha256:
-            raise RuntimeError('download checksum differs from tools.json')
-        staged.replace(path)
-
-
-def run(argv, env, **kwargs):
-    return subprocess.run(list(map(str, argv)), env=env, check=True, **kwargs)
-
-
-def load_manifest(path=None):
-    """Read shared tool requirements and each language's own requirements."""
-    source = Path(path) if path is not None else ROOT / 'sdlc/tools.json'
-    manifest = json.loads(source.read_text())
-    for fragment in sorted(source.with_suffix('').glob('*.json')):
-        for section, entries in json.loads(fragment.read_text()).items():
-            combined = manifest.setdefault(section, {})
-            overlap = combined.keys() & entries.keys()
-            if overlap:
-                raise ValueError(f'{fragment}: duplicate {section}: {sorted(overlap)}')
-            combined.update(entries)
-    return manifest
-
-
-def selected(manifest, groups, host):
-    groups = set(groups)
-    if 'surfaces' in groups:
-        arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-        target = host + '-' + arch
-        groups.update(name for name, library in manifest['libraries'].items()
-                      if target in library['check_platforms'])
-        groups.update(manifest['databases'])
-    return {name: tool for name, tool in manifest['tools'].items()
-            if host in tool['platforms'] and set(tool['groups']) & {'common', *groups}}
 
 
 def commands(groups=(), host=None):
@@ -166,34 +117,6 @@ def environment(root):
                SCCACHE_DIR=str(root / 'sccache'), PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
                UV_PYTHON_INSTALL_DIR=str(root / 'python'))
     return env
-
-
-def rust_toolchain(manifest, env):
-    """Read the repository's Rust contract with its prepared Python."""
-    tool = manifest['tools']['rust']
-    source = ROOT / tool['toolchain_file']
-    contract = json.loads(subprocess.check_output(['python3', '-c',
-        'import json, sys, tomllib; '
-        'print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))["toolchain"]))',
-        str(source)], env=env, text=True))
-    if contract['channel'] != tool['version']:
-        raise RuntimeError('Rust manifest version differs from rust-toolchain.toml')
-    return contract, [*contract['components'], *tool.get('components', [])]
-
-
-def rust_components(manifest, env, install=False):
-    contract, components = rust_toolchain(manifest, env)
-    version = contract['channel']
-    if install:
-        run(['rustup', 'toolchain', 'install', version, '--profile', contract['profile'],
-             *[arg for component in components for arg in ('--component', component)]], env)
-    installed = subprocess.check_output(['rustup', 'component', 'list', '--toolchain', version,
-                                        '--installed'], env=env, text=True).splitlines()
-    missing = [component for component in components
-               if not any(line == component or line.startswith(component.removesuffix('-preview') + '-')
-                          for line in installed)]
-    if missing:
-        raise RuntimeError('Rust components missing: ' + ', '.join(missing))
 
 
 def cargo_runtime(root, shared):

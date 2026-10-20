@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "uv": {
+      "commands": [
+        "uv"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "python",
+        "polars",
+        "common"
+      ],
+      "provider": "uv",
+      "version": "0.8.22"
+    }
+  }
+}

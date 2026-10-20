@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "nextest": {
+      "commands": [
+        "cargo-nextest"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "install"
+      ],
+      "provider": "cargo:cargo-nextest",
+      "version": "0.9.114",
+      "probe": {
+        "argv": [
+          "cargo",
+          "nextest",
+          "--version"
+        ],
+        "contains": "cargo-nextest {version}"
+      }
+    }
+  }
+}

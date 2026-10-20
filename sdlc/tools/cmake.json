@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "cmake": {
+      "commands": [
+        "cmake"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "cpp",
+        "duckdb",
+        "test"
+      ],
+      "provider": "cmake",
+      "version": "4.1.1"
+    }
+  }
+}

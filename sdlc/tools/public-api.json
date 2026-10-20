@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "public-api": {
+      "commands": [
+        "cargo-public-api"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "cargo:cargo-public-api",
+      "version": "0.52.0",
+      "probe": {
+        "argv": [
+          "cargo",
+          "public-api",
+          "--version"
+        ],
+        "contains": "cargo-public-api {version}"
+      }
+    }
+  }
+}

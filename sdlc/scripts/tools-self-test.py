@@ -348,6 +348,8 @@ class GateRouting(unittest.TestCase):
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True)
+                    (root / 'sdlc/linux').mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(ROOT / 'sdlc/linux/install.py', root / 'sdlc/linux/install.py')
                     for name in ('gate', 'job', 'tools.py'):
                         shutil.copyfile(ROOT / 'sdlc/scripts' / name, scripts / name)
                     # Model Linux tool resolution even when this regression runs on macOS.
@@ -418,6 +420,8 @@ class SurfaceToolGroups(unittest.TestCase):
     def test_registry_requires_core_tools_and_language_checks_still_require_their_tools(self):
         with tempfile.TemporaryDirectory(prefix='surface-tools-') as folder:
             root = Path(folder)
+            (root / 'sdlc/linux').mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / 'sdlc/linux/install.py', root / 'sdlc/linux/install.py')
             for name in ('surfaces', 'resolved-tools', 'tools.py', 'verdict.sh', 'allow-list'):
                 target = root / 'sdlc/scripts' / name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -477,11 +481,21 @@ class LinuxSourceIdentity(unittest.TestCase):
             docker.write_text('#!' + sys.executable + '\nimport json,sys\nfrom pathlib import Path\n'
                               + 'if sys.argv[1] == "build":\n'
                               + '    context = Path(sys.argv[-1])\n'
+                              + '    assert not (context / "sdlc/scripts/tools.py").exists()\n'
+                              + '    assert not (context / "conformance/children/children.py").exists()\n'
                               + '    expected = json.loads((context / "sdlc/tools/ruby.json").read_text())\n'
                               + '    assert "ruby" in expected["tools"]\n'
                               + 'with open(' + repr(str(calls)) + ', "a") as log:\n'
                               + '    log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
-                              + 'if sys.argv[1] == "image": print("sha256:test")\n')
+                              + 'if sys.argv[1:3] == ["image", "inspect"]:\n'
+                              + '    print("sha256:old" if sys.argv[-1].endswith("-old") else "sha256:test")\n'
+                              + 'if sys.argv[1] == "ps": print("running-container")\n'
+                              + 'if sys.argv[1] == "inspect": print("sha256:test")\n'
+                              + 'if sys.argv[1:3] == ["image", "ls"]:\n'
+                              + '    arch = "arm64" if __import__("platform").machine() in ("arm64", "aarch64") else "x86_64"\n'
+                              + '    print("thinkthen-check:" + arch + "-old")\n'
+                              + '    print("thinkthen-check:" + arch + "-live")\n'
+                              + '    print("thinkthen-check:other-old")\n')
             docker.chmod(0o755)
             isolated = root / 'isolated-bin'
             isolated.mkdir()
@@ -524,6 +538,18 @@ class LinuxSourceIdentity(unittest.TestCase):
                       if json.loads(line)[0] == 'build']
             first_tag = builds[0][builds[0].index('-t') + 1]
             self.assertEqual(first_tag, builds[1][builds[1].index('-t') + 1])
+            for relative in ('sdlc/scripts/tools.py', 'conformance/children/children.py'):
+                path = root / relative
+                path.write_text(path.read_text() + '\n# Runtime edit\n')
+            runtime = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(runtime.returncode, 0, runtime.stderr)
+            runtime_build = [json.loads(line) for line in calls.read_text().splitlines()
+                             if json.loads(line)[0] == 'build'][-1]
+            self.assertEqual(first_tag, runtime_build[runtime_build.index('-t') + 1])
+            runtime_run = [json.loads(line) for line in calls.read_text().splitlines()
+                           if json.loads(line)[0] == 'run'][-1]
+            for relative in ('sdlc/scripts/tools.py', 'conformance/children/children.py'):
+                self.assertIn(str(root / relative) + ':' + str(source / relative) + ':ro', runtime_run)
             fragment = root / 'sdlc/tools/ruby.json'
             fragment.write_text(fragment.read_text() + '\n')
             third = subprocess.run([*command[:-1], 'prepare'], env=env, capture_output=True, text=True)
@@ -531,6 +557,10 @@ class LinuxSourceIdentity(unittest.TestCase):
             last_build = [json.loads(line) for line in calls.read_text().splitlines()
                           if json.loads(line)[0] == 'build'][-1]
             self.assertNotEqual(first_tag, last_build[last_build.index('-t') + 1])
+            removals = [json.loads(line) for line in calls.read_text().splitlines()
+                        if json.loads(line)[:2] == ['image', 'rm']]
+            arch = 'arm64' if platform.machine() in ('arm64', 'aarch64') else 'x86_64'
+            self.assertEqual(removals, [['image', 'rm', 'thinkthen-check:' + arch + '-old']])
 
 
 if __name__ == '__main__':
