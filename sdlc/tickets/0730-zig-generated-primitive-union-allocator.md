@@ -31,3 +31,4 @@ Given the generated Zig library, when its installed smoke builds and decodes the
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: Fresh review accepts8397d3f6d after Yellow job1792462656061-558376 passed pinned Zig0.15.2 generation consistency and installed smoke in prepared imagefa71288f842e; the configured closing gate remains for the next accepted batch.
