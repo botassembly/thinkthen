@@ -5,7 +5,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 ## Build and review
 
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`, offline. Run focused checks per change, `spec` and affected surfaces as needed, and `lint` and `test` once at closure. Large-input cases, full parity and load are release-only: `sdlc/decisions/2026-10-09-two-test-suites.md`.
-- Run main checkpoints through pm job: [release process](sdlc/planning/release-process.md#2-checkpoints). Run native Rust/C smokes and package plus both configured container gates at phase 1 and core freeze. Start full campaigns once all language providers and assets are manifested. Read logs after jobs exit.
+- Run main checkpoints via pm job: [release process](sdlc/planning/release-process.md#2-checkpoints). Run native Rust/C smokes and package plus both configured container gates at phase 1 and core freeze. Start full campaigns once all language providers and assets are manifested. Read logs after jobs exit.
 - Write tests as `repos/agents/skills/outside-in-tests.md` says.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` for the adapter-word boundary and dependency rules. Code review judges size; avoid mechanical splits.
 - Run Git-history checks after committing; finish them before the next commit.
