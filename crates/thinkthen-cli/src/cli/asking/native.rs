@@ -221,14 +221,22 @@ impl From<crate::Error> for FeedRead {
 }
 
 fn descriptor(unit: &Held) -> Result<crate::RequestSessionDescriptor, crate::Error> {
-    let original = Some(match unit.record.literal() {
-        Some(text) => crate::RequestOriginal::Text {
-            text: text.to_owned(),
-        },
-        None => crate::RequestOriginal::Json {
-            value: unit.record.clone(),
-        },
-    });
+    let original = if unit
+        .images
+        .as_ref()
+        .is_some_and(|images| images.text().is_none())
+    {
+        None
+    } else {
+        Some(match unit.record.literal() {
+            Some(text) => crate::RequestOriginal::Text {
+                text: text.to_owned(),
+            },
+            None => crate::RequestOriginal::Json {
+                value: unit.record.clone(),
+            },
+        })
+    };
     let images = unit.images.as_ref().map_or_else(Vec::new, |images| {
         images
             .images()
