@@ -8,8 +8,8 @@ Phase: 1
 
 ## Outcome
 
-- Changes: `probes/find-0040/self-test`.
-- The probe uses the executable supplied by the existing package/spec caller, with the existing repository convention for a standalone invocation. It runs in a fresh package checkout without a debug command at target/debug/thinkthen.
+- Changes: `probes/find-0040/self-test`, `probes/probability-total-0038/self-test`.
+- Both probes prefer the executable supplied by the existing package/spec caller, with the existing repository convention for a standalone invocation. It runs in a fresh package checkout without a debug command at target/debug/thinkthen.
 
 ## Keeps
 
@@ -17,7 +17,7 @@ Phase: 1
 
 ## Proof
 
-- Reproduce the missing-command failure through the existing probe command with an installed command supplied and no repository debug command. Show that the repaired command passes with the same assertions.
+- Reproduce the missing-command failure through the existing probe command with an installed command supplied and no repository debug command. Show that the repaired command passes with the same assertions, and a stale repository debug command cannot override the supplied installed command.
 - The configured landing gate passes on the integrated revision.
 
 ## Evidence
