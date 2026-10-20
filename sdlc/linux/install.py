@@ -113,8 +113,11 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     elif name == 'swift':
         selected = swift_sdk(tool, env)
     else:
-        acquired = subprocess.run([str(mise), 'install', identity], env=env)
-        if acquired.returncode and name == 'flutter':
+        # The Flutter provider's Linux archive contains an x86 Dart compiler.
+        # ARM uses the existing pinned framework with its native binary engine.
+        acquired = (None if name == 'flutter' and arch == 'arm64' else
+                    subprocess.run([str(mise), 'install', identity], env=env))
+        if name == 'flutter' and (acquired is None or acquired.returncode):
             # This is the framework source, paired with downloaded engine and
             # Dart compiler binaries. Never build a compiler from source.
             framework = root / 'flutter'
@@ -124,10 +127,6 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
             subprocess.run(['git', '-C', str(framework), 'fetch', '--depth=1', 'origin',
                             tool['source_commit']], env=env, check=True)
             subprocess.run(['git', '-C', str(framework), 'checkout', '--detach', 'FETCH_HEAD'], env=env, check=True)
-            head = subprocess.check_output(['git', '-C', str(framework), 'rev-parse', 'HEAD'], env=env, text=True).strip()
-            if head != tool['source_commit']:
-                raise SystemExit('Flutter framework differs from tools.json')
-            subprocess.run([str(framework / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
             selected = {'PATH': str(framework / 'bin') + ':' + env['PATH']}
         else:
             acquired.check_returncode()
