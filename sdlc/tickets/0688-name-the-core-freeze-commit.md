@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 2
 
-Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 0689, 0691, 0692, 0705, 0707, 0708, 0709, 0719, 0720, 0721, 0723, 0724, 0725, 0731, 0732, 0741, 0743, 0744, 0745
+Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 0689, 0691, 0692, 0705, 0707, 0708, 0709, 0719, 0720, 0721, 0723, 0724, 0725, 0731, 0732, 0741, 0744
 
 ## Outcome
 
@@ -18,13 +18,18 @@ Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 06
 
 ### Proof
 
-- The decision record names the commit, and that commit passes the 0691 checkpoint run: the release suite natively on the M5, in the arm64 container on the M5 and in the x86_64 container on Yellow, each through pm job with one log.
+- The decision record names the commit, and that commit passes the configured landing gate and native Rust/C smoke and package on the M5 (`pm job run --machine m5 0688 SHA --memory 16 -- sdlc/scripts/job sdlc/scripts/package` and the existing `smoke libraries/rust libraries/c` selection), each through pm job with one log.
+- The full 0691 checkpoint run on both containers continues alongside language work and gates 0687, per [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md).
 - `pm next --milestone 0.2.1` shows no phase 3 ticket started before this ticket closed.
 
 ## Evidence
 
 - Rule 1 of `sdlc/decisions/2026-10-18-0-2-1-rebuilds-the-basis.md` says a named commit fixes the C interface and the final result packet, and no language ticket starts before it. In 0.2, the binding design changed four times and the header changed 51 times during binding work, because no commit was ever named as the freeze. Rule 7 closes scope at the same point.
 - `sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md` lands its removals before the freeze; 0706 to 0709 carry them, and 0705 removes the fixture time limits that fail gates on a loaded M5.
+
+## Amendment, 2026-10-20 (freeze names the contract)
+
+Ian approved [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md) after [the five-delays analysis](../records/2026-10-20-five-delays-root-cause.md). The freeze commit is the first main commit after 0744 lands whose configured gate and native smoke and package pass; the contract tickets already landed. 0743 and 0745 leave this ticket's dependencies, land alongside language lanes and gate 0687. The three-platform checkpoint run moves to 0687; a finding there that changes the header, packet schema, `Engine::call` or value tree needs a ruling.
 
 ## Progress
 
