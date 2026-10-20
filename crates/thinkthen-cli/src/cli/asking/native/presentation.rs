@@ -62,6 +62,9 @@ impl Atomic<'_> {
         Json::parse(&text).map_err(|_| Failure::Defect("a complete result is not JSON"))
     }
     pub(super) fn value(&self) -> Result<Json, Failure> {
+        if let Self::Decision(value) = self {
+            return Ok(Json::made(value.value().map_or(Kind::Null, Kind::Bool)));
+        }
         self.document()?
             .member("value")
             .cloned()
