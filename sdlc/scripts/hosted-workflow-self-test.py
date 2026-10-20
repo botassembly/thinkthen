@@ -364,6 +364,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         scripts.mkdir(parents=True)
         for name in ('scratch.sh', 'release-workflow'):
             shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
+        shutil.copyfile(REPO / 'sdlc/tools.json', root / 'sdlc/tools.json')
         for relative, body in (('libraries/ruby/toolchain.env', 'RUBY_MINORS=\n'),
                                ('libraries/python/host.sh', 'python_host() { command -v python3; }\n'),
                                ('libraries/typescript/node.sha256', ''),
