@@ -79,7 +79,7 @@ def image_environment(manifest, host=None):
             and (Path(manifest['linux_prefix']) / 'image-ready').is_file())
 
 
-def surface_paths(manifest, host=None):
+def surface_paths(manifest, host=None, registry=None):
     """Select prepared image surfaces; native hosts keep their full inventory."""
     host = host or platform.system().lower()
     arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
@@ -89,6 +89,11 @@ def surface_paths(manifest, host=None):
     candidates += [f'databases/{name}' for name, targets in manifest['databases'].items()
                    if target in targets]
     if image_environment(manifest, host):
+        registry = registry or ROOT / 'sdlc/surfaces.txt'
+        registered = {fields[0] for line in registry.read_text().splitlines()
+                      if (fields := line.split()) and not line.startswith('#')
+                      and len(fields) > 1 and fields[1] in ('landed', 'feature')}
+        candidates = [path for path in candidates if path in registered]
         available = linux_requirements(manifest)
         candidates = [path for path in candidates
                       if set(selected(manifest, [path.split('/')[1]], host)) <= available.keys()]

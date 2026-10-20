@@ -283,7 +283,7 @@ def main():
     if set(groups) - known:
         parser.error('unknown tool groups: ' + ', '.join(sorted(set(groups) - known)))
     if args.surfaces:
-        print('\n'.join(surface_paths(manifest)))
+        print('\n'.join(surface_paths(manifest, registry=args.manifest.parent / 'surfaces.txt')))
         return 0
     if args.list:
         print(json.dumps(selected(manifest, groups, platform.system().lower()), indent=2))

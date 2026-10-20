@@ -424,6 +424,7 @@ class SurfaceToolGroups(unittest.TestCase):
             prefix = root / 'image'
             (prefix / 'bin').mkdir(parents=True)
             (prefix / 'image-ready').touch()
+            (root / 'surfaces.txt').write_text('libraries/scratch landed\nlibraries/planned planned\n')
             source = root / 'tools.json'
             source.write_text(json.dumps({
                 'linux_prefix': str(prefix), 'linux': {'tool_groups': ['test']},
@@ -433,7 +434,8 @@ class SurfaceToolGroups(unittest.TestCase):
             fragments = root / 'tools'
             fragments.mkdir()
             arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-            fragment = {'libraries': {'scratch': {'check_platforms': ['linux-' + arch]}},
+            fragment = {'libraries': {name: {'check_platforms': ['linux-' + arch]}
+                                      for name in ('scratch', 'planned')},
                         'tools': {'scratch': {'commands': ['scratch-compiler'], 'version': '1',
                                              'provider': 'fixture', 'platforms': ['linux'],
                                              'groups': ['scratch']}}}
