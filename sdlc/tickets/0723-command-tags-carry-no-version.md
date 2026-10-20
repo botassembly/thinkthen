@@ -33,6 +33,7 @@ Shares specification pages with 0707 and 0706; any order lands. Paths under `cra
 - 2026-10-20 started
 - 2026-10-20 next: Independent command writers readers plans and public examples are pushed at c9f9ec588 with fixture checkpoint 0f6be3a74; two shared backend test files remain held until 0721 lands, then the remaining references and admitted M5 red-green replay proof follow.
 - 2026-10-20 next: Source 5b1785abe includes the accepted backend parent and complete command-tag fixture updates; M5 job1792488209366-26374 exited2 before any proof because native lint selected the Linux GCC pin, so the retained receipt proves no test result and targeted red-green plus replay checks resume after the approved0733 manifest correction.
+- 2026-10-20 next: Fresh review acceptedfa4e259ab with four intended old-code failures and233 CLI passes plus spec demos type and site receipts; approved replay-model repair passed policy10tallycases CLI rebuild and all3answer-cache examples in1792490555939-96723, while native lint reached Linux-only Ada generation and the pending configured Linux closing gate supplies full lint format clippy and documentation proof.
 
 ## Replay facts repair, PM ruling 2026-10-20
 
