@@ -34,11 +34,7 @@ fn home(label: &str) -> PathBuf {
 fn configuration_model_and_environment_route_reach_the_command_plan() {
     let listener = Listener::answering(|_| Canned::ok(ANSWERED)).unwrap();
     let home = home("plan");
-    let configured = Folder::configure(
-        &home,
-        r#"{"model":"model-from-config"}"#,
-    )
-    .unwrap();
+    let configured = Folder::configure(&home, r#"{"model":"model-from-config"}"#).unwrap();
     let evidence = home.join("evidence");
     fs::write(&evidence, EVIDENCE).unwrap();
     let mut command = Command::new(crate::command::binary());

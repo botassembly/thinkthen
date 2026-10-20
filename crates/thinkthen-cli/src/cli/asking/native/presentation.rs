@@ -63,7 +63,11 @@ impl Atomic<'_> {
     }
     pub(super) fn value(&self) -> Result<Json, Failure> {
         if let Self::Decision(value) = self {
-            return Ok(Json::made(value.value().map_or(Kind::Null, Kind::Bool)));
+            return Ok(Json::made(match value.value() {
+                crate::Answer::Yes => Kind::Bool(true),
+                crate::Answer::No => Kind::Bool(false),
+                crate::Answer::Unsure => Kind::Null,
+            }));
         }
         self.document()?
             .member("value")

@@ -67,7 +67,11 @@ fn configuration_capture_retains_configured_nonsecret_metadata() {
         home.join("thinkthen/config.json")
     };
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    fs::write(&config, r#"{"cache":false,"cache_bytes":17,"model":"configured-model"}"#).unwrap();
+    fs::write(
+        &config,
+        r#"{"cache":false,"cache_bytes":17,"model":"configured-model"}"#,
+    )
+    .unwrap();
     let written = in_child(
         "config-only",
         &[
