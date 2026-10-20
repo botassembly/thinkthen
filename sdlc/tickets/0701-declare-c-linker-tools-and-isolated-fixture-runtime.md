@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 0daf68c, accept
+
 ## Outcome
 
 - The existing tool resolver supplies a declared, pinned `pkg-config` implementation for installed C static-link checks on supported native and Linux hosts. Selecting the C group supplies the real executable; a resolved-tools marker alone is not proof of availability.
