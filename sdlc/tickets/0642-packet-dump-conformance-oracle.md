@@ -37,3 +37,7 @@ PM decision, 2026-10-19: the oracle is a new file, `conformance/fixtures/packets
 - `libraries/rust/check.py` `main` builds `libraries/rust/consumer` and calls `native_fixture.run('rust', ...)`; Python, TypeScript, R and Polars call the same `run`.
 - 0612 put the settled answer, probability, pick and resolution in the final packet; 0636 (running) puts expected settled answers in `conformance/cases.json`.
 - Fixture changes fan out to every language. Since 2026-09-15, 97 commit subjects across the nine scoped libraries mention fixtures. Examples: 6ee099210 changed 54 files, and 9f04b5c7a and 1a4b68b02 touched C, C++, Zig, Ada and COBOL.
+
+## Progress
+
+- 2026-10-19 started
