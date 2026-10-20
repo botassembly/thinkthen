@@ -46,6 +46,7 @@ Reviews: revision 0ba76a7, accept
 - 2026-10-20 started
 - 2026-10-20 next: Fresh fixing review acceptedf8a4d0d39 after corrected job1792491843921-50434 passed real native static linkage own-SQLite dependency and installed-source C checks, preserving first receipt1792491463122-29115 with policy and clippy passes and formatting README failures, while Linux Windows Intel macOS and coverage remain checkpoint proof and the integrated closing gate is pending.
 - 2026-10-20 next: Combined gate receipt gate-runs/thinkthen/0632/m5/5f67fbb64aa8499ee58d9f63ab21d3678a3bdca1 stopped before tests at an unsupported README bat fence; fixing review accepted 59e6cd14a with commands unchanged and M5 job 1792494861621-11079 passed the named-answer page public-README and whitespace checks, while the repaired batch closing gate remains required.
+- 2026-10-20 next: Combined gate passed lint then exposed native-install fixture drift in gate-runs/thinkthen/0632/m5/c148f4d387ec6a9f721e3eea96e370cc624b4681; fixing review accepted 0ba76a7bd after job 1792496799041-95974 passed all26 installation cases archive compiler-exit42 and Windows portable checks, repairing every affected compiler stub and restoring real failure statuses while preserving assertions, with integrated closure still required.
 
 ## Existing caller paths, 2026-10-20
 
