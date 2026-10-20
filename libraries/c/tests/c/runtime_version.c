@@ -1,6 +1,7 @@
 #include "thinkthen.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -15,7 +16,9 @@ int main(void) {
         typedef const char *(*bootstrap)(uint32_t *);
 #ifdef _WIN32
         HMODULE library = LoadLibraryA(path);
-        bootstrap check = library ? (bootstrap)(void *)GetProcAddress(library, "thinkthen_version") : NULL;
+        FARPROC symbol = library ? GetProcAddress(library, "thinkthen_version") : NULL;
+        bootstrap check = NULL;
+        if (symbol) memcpy(&check, &symbol, sizeof(check));
 #else
         void *library = dlopen(path, RTLD_NOW | RTLD_LOCAL);
         bootstrap check = library ? (bootstrap)dlsym(library, "thinkthen_version") : NULL;
