@@ -721,7 +721,11 @@ fn ranked_score_projection_retains_native_weighting_ties_and_decision_absence() 
     let engine = super::engine(&listener);
     let definitions = [
         Question::rank("Fits?").unwrap().into(),
-        RankSet::from_json(r#"{"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Ready?"}}}"#).unwrap().into(),
+        RankSet::from_json(
+            r#"{"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Ready?"}}}"#,
+        )
+        .unwrap()
+        .into(),
     ];
     for definition in definitions {
         let call = engine

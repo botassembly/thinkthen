@@ -15,8 +15,6 @@ pub const AnnotateDefinition = struct {
     questions: Map(AnnotateQuestion),
 
     threshold: ?AuthoredThreshold = null,
-
-    version: i64 = 1,
 };
 
 pub const AnnotateQuestion = union(enum) {
@@ -290,8 +288,6 @@ pub const AuthoredRelate = struct {
 
     threshold: ?AuthoredCut = null,
 
-    version: i64 = 1,
-
     wording_version: ?i64 = null,
 };
 
@@ -490,8 +486,6 @@ pub const RecognizeDefinition = struct {
 
     threshold: ?AuthoredCut = null,
 
-    version: i64 = 1,
-
     wording_version: ?i64 = null,
 };
 
@@ -571,8 +565,6 @@ pub const RequestDefinitionAnnotateDefinition = struct {
     questions: Map(AnnotateQuestion),
 
     threshold: ?AuthoredThreshold = null,
-
-    version: i64 = 1,
 };
 
 pub const RequestDefinitionAuthoredChoose = struct {
@@ -658,8 +650,6 @@ pub const RequestDefinitionAuthoredRelate = struct {
 
     threshold: ?AuthoredCut = null,
 
-    version: i64 = 1,
-
     wording_version: ?i64 = null,
 };
 
@@ -727,8 +717,6 @@ pub const RequestDefinitionRecognizeDefinition = struct {
     relation_threshold: ?AuthoredCut = null,
 
     threshold: ?AuthoredCut = null,
-
-    version: i64 = 1,
 
     wording_version: ?i64 = null,
 };

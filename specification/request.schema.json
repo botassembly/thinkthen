@@ -484,9 +484,6 @@
         "threshold": {
           "$ref": "#/$defs/Authored_cut"
         },
-        "version": {
-          "const": 1
-        },
         "wording_version": {
           "type": "integer",
           "maximum": 2147483647,
@@ -495,7 +492,6 @@
       },
       "additionalProperties": false,
       "required": [
-        "version",
         "relate"
       ]
     },
@@ -1080,9 +1076,6 @@
             "threshold": {
               "$ref": "#/$defs/Authored_cut"
             },
-            "version": {
-              "const": 1
-            },
             "wording_version": {
               "type": "integer",
               "maximum": 2147483647,
@@ -1091,7 +1084,6 @@
           },
           "additionalProperties": false,
           "required": [
-            "version",
             "recognize"
           ]
         },
@@ -1263,14 +1255,10 @@
             },
             "threshold": {
               "$ref": "#/$defs/Authored_threshold"
-            },
-            "version": {
-              "const": 1
             }
           },
           "additionalProperties": false,
           "required": [
-            "version",
             "questions"
           ]
         }

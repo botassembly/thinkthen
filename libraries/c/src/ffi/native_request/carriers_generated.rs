@@ -2449,16 +2449,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_annotate_definition_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "questions".into(),
-                        read_thinkthen_request_annotate_question_map_v1(
-                            input.m_questions,
-                            context,
-                        )?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "questions".into(),
+                    read_thinkthen_request_annotate_question_map_v1(input.m_questions, context)?,
+                )];
                 optional(
                     "batch",
                     input.m_batch,
@@ -3174,13 +3168,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_recognize_definition_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "recognize".into(),
-                        read_thinkthen_request_recognize_question_v1(input.m_recognize, context)?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "recognize".into(),
+                    read_thinkthen_request_recognize_question_v1(input.m_recognize, context)?,
+                )];
                 optional(
                     "context_schema",
                     input.m_context_schema,
@@ -3507,13 +3498,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_relate_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "relate".into(),
-                        read_thinkthen_request_relate_question_v1(input.m_relate, context)?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "relate".into(),
+                    read_thinkthen_request_relate_question_v1(input.m_relate, context)?,
+                )];
                 optional(
                     "context_schema",
                     input.m_context_schema,

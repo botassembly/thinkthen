@@ -700,7 +700,10 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
         let mut parts = Vec::new();
         let mut token_bytes = 0usize;
         for text in ["combine-private-evidence", "second evidence"] {
-            let question = QuestionSet::from_json(r#"{"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#).unwrap();
+            let question = QuestionSet::from_json(
+                r#"{"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#,
+            )
+            .unwrap();
             let request = Request::named(
                 "annotate",
                 args(

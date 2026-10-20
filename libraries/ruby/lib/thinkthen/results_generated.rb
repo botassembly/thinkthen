@@ -1019,7 +1019,7 @@ module ThinkThen
       {choose: text, options: options}.freeze
     end
     def self.recognize_question(kinds:, **fields)
-      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
+      {recognize: {kinds: kinds, **fields}}.freeze
     end
     def self.relation(name, **fields)
       {name: name, **fields}.freeze
@@ -1027,7 +1027,7 @@ module ThinkThen
     def self.relate_question(relations:, fields: nil)
       body = {relations: relations}
       body[:fields] = fields unless fields.nil?
-      {version: 1, relate: body}.freeze
+      {relate: body}.freeze
     end
   end
 end

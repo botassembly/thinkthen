@@ -154,10 +154,9 @@ mod tests {
             "person= ",
         ]);
         let question = inline(&arguments).unwrap();
-        let native = Recognize::from_json(
-            r#"{"recognize":{"kinds":{"place":"Where","person":" "}}}"#,
-        )
-        .unwrap();
+        let native =
+            Recognize::from_json(r#"{"recognize":{"kinds":{"place":"Where","person":" "}}}"#)
+                .unwrap();
         assert_eq!(
             crate::RequestDefinition::from(question)
                 .question_sha256()
