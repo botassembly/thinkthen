@@ -14,6 +14,8 @@ Reviews: revision fcfddcb, accept
 
 Reviews: revision 59e6cd1, accept
 
+Reviews: revision 0ba76a7, accept
+
 ## Outcome
 
 - Changes: `libraries/c/tests/door/main.rs`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/c`, `sdlc/scripts/installed.sh`, `sdlc/scripts/install-check-self-test.py`, `sdlc/scripts/release-archive-self-test.py`, `sdlc/scripts/release-windows-c-self-test.py`, `sdlc/scripts/coverage_installed_c_hosts.py`, `sdlc/scripts/coverage_installed_initial.py`, `libraries/c/build.rs`, `libraries/c/localize.sh`, `libraries/c/check.sh`, `libraries/c/README.md`, `libraries/c/README-PUBLIC.md`.
