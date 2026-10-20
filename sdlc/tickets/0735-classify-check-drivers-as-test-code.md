@@ -25,3 +25,7 @@ Depends on: 0689
 ## Evidence
 
 The 0707 targeted job 1792498904879-39616 reached `sdlc/scripts/spec` and failed in settings --self-test: ten failures reported that THINKTHEN_CONFORMANCE_IDS is read by product code with no settings row. The read is libraries/rust/check.py:35, unchanged from published main d81fb759a. The scanner's existing exclusions at settings:119-137 recognize test folders and test-prefixed files but misclassify this installed check driver. The selector read came from the landed value-tree test driver; it is not a new product setting or a result-tag change. The repair belongs to scanner classification and preserves its product boundary.
+
+## Progress
+
+- 2026-10-20 started
