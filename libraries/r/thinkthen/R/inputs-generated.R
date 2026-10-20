@@ -25,9 +25,9 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
 }
 tt_recognize_question <- function(entity_definition = NULL, instructions = NULL, kinds = NULL, mode = NULL, relations = NULL, snippet_pieces = NULL, stage_context = NULL) {
   values <- list(entity_definition = entity_definition, instructions = instructions, kinds = kinds, mode = mode, relations = relations, snippet_pieces = snippet_pieces, stage_context = stage_context)
-  tt_question(list(version = 1L, recognize = values[!vapply(values, is.null, TRUE)]))
+  tt_question(list(recognize = values[!vapply(values, is.null, TRUE)]))
 }
 tt_relate_question <- function(fields = NULL, relations = NULL) {
   values <- list(fields = fields, relations = relations)
-  tt_question(list(version = 1L, relate = values[!vapply(values, is.null, TRUE)]))
+  tt_question(list(relate = values[!vapply(values, is.null, TRUE)]))
 }

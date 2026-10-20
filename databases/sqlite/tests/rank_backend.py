@@ -10,8 +10,8 @@ sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
 from loopback_server import LoopbackServer
 
 SAVED = json.loads((pathlib.Path(__file__).parent / 'fixtures/rank-set-exchanges.json').read_text())
-SET = '{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
-ONE = '{"version":1,"questions":{"first":{"decide":"First?"}}}'
+SET = '{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
+ONE = '{"questions":{"first":{"decide":"First?"}}}'
 RECORDS = '{"a":"a","b":"b","c":"c","d":"a"}'
 # Declared independently: first=[a,d,b,c], second=[a,d,c,b].
 # Duplicate visits consume their turns; cross-member probabilities do not sort.

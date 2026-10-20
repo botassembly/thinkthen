@@ -72,7 +72,9 @@ impl RelateQuestion<'_> {
 pub(crate) enum RelateConfigError {
     #[error(transparent)]
     Declaration(#[from] crate::core::declaration::DeclarationError),
-    #[error("a relate question file is one closed version-one object")]
+    #[error("{}", super::question_file::VERSION_FIELD_ERROR)]
+    Version,
+    #[error("a relate question file is one closed object")]
     Shape,
     #[error("relate takes one or more distinct relation rules")]
     Relations,
@@ -106,7 +108,6 @@ pub(crate) enum EntitySetError {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct FileShape {
-    version: u8,
     #[serde(rename = "name")]
     _name: Option<IgnoredAny>,
     #[serde(rename = "wording_version")]
@@ -163,15 +164,15 @@ impl RelateSpec {
         let Json::Object(members) = &value else {
             return Err(RelateConfigError::Shape);
         };
+        if value.member("version").is_some() {
+            return Err(RelateConfigError::Version);
+        }
         if !members.iter().any(|(name, _)| name == "relate")
             && (QuestionFile::parse_top(text).is_ok() || RecognizeSpec::parse(text).is_ok())
         {
             return Err(RelateConfigError::WrongVerb);
         }
         let parsed: FileShape = serde_json::from_str(text).map_err(|_| RelateConfigError::Shape)?;
-        if parsed.version != 1 {
-            return Err(RelateConfigError::Shape);
-        }
         let fields = parsed
             .relate
             .fields

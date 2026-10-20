@@ -1701,7 +1701,6 @@
       "id": "17-annotate-mixed",
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "refund": {
             "decide": "Does this ask for a refund?",
@@ -1923,7 +1922,6 @@
       "id": "17-annotate-partial",
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "refund": {
             "decide": "Does this ask for a refund?",
@@ -2148,7 +2146,6 @@
         "body": "Please refund me."
       },
       "question_set": {
-        "version": 1,
         "questions": {
           "summary": {
             "decide": "Is this concise?",
@@ -3574,7 +3571,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "spam": {
             "decide": "Is this a complaint?",
@@ -3749,7 +3745,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "strength": {
             "score": "How strong is the claim?",
@@ -3955,7 +3950,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "spam": {
             "decide": "Is this a complaint?",
@@ -4080,7 +4074,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "team": {
             "choose": "Which team owns this?",
@@ -4180,7 +4173,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "severity": {
             "score": "How severe is this?",
@@ -4279,7 +4271,6 @@
       },
       "verb": "annotate",
       "question_set": {
-        "version": 1,
         "questions": {
           "topics": {
             "tag": "Which labels apply?",
@@ -4474,7 +4465,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name."
@@ -4710,7 +4700,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -5108,7 +5097,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -5446,7 +5434,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -5770,7 +5757,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "organization": "An organization name.",
@@ -6196,7 +6182,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -6651,7 +6636,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -7077,7 +7061,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -7529,7 +7512,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -8113,7 +8095,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -9116,7 +9097,6 @@
       },
       "verb": "relate",
       "question": {
-        "version": 1,
         "relate": {
           "relations": [
             {
@@ -9485,7 +9465,6 @@
       },
       "verb": "relate",
       "question": {
-        "version": 1,
         "relate": {
           "relations": [
             {
@@ -9822,7 +9801,6 @@
       },
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name.",
@@ -10210,7 +10188,6 @@
       "id": "56-recognize-caller-defined-amount",
       "verb": "recognize",
       "question": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "amount": "Receipt total amount, not its label."
@@ -12748,7 +12725,6 @@
           ],
           "unit": "file",
           "question": {
-            "version": 1,
             "relate": {
               "relations": [
                 {

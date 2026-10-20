@@ -128,11 +128,7 @@ fn native_readiness_emits_a_row_and_cancels_without_waiting_for_input_eof() {
     use std::os::unix::process::ExitStatusExt as _;
     let questions = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("reader-questions-{}.json", std::process::id()));
-    std::fs::write(
-        &questions,
-        r#"{"version":1,"questions":{"keep":{"decide":"Keep?"}}}"#,
-    )
-    .expect("questions");
+    std::fs::write(&questions, r#"{"questions":{"keep":{"decide":"Keep?"}}}"#).expect("questions");
     for verb in ["decide", "annotate", "recognize"] {
         let listener = Listener::answering(move |body| {
             if verb == "recognize" {

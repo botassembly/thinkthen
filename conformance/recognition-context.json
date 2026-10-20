@@ -1,6 +1,5 @@
 {
   "question": {
-    "version": 1,
     "recognize": {
       "kinds": {
         "person": "A person's name.",
@@ -668,5 +667,5 @@
       ]
     }
   ],
-  "question_json": "{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\"},\"relations\":[{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\"},{\"name\":\"founded\",\"source\":\"person\",\"target\":\"organization\"}]},\"threshold\":0.5,\"relation_threshold\":0.5}"
+  "question_json": "{\"recognize\":{\"kinds\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\"},\"relations\":[{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\"},{\"name\":\"founded\",\"source\":\"person\",\"target\":\"organization\"}]},\"threshold\":0.5,\"relation_threshold\":0.5}"
 }

@@ -95,7 +95,7 @@ fn question_set() -> PathBuf {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("record-values-questions.json");
     let _written = fs::write(
         &path,
-        r#"{"version":1,"questions":{"accepted":{"decide":"Is it accepted?"}}}"#,
+        r#"{"questions":{"accepted":{"decide":"Is it accepted?"}}}"#,
     );
     path
 }

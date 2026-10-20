@@ -1479,7 +1479,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionAnnotateDefinition extends Builder<RequestDefinitionAnnotateDefinition> implements RequestDefinition {
         public RequestDefinitionAnnotateDefinition() {
-            put("version", 1);
         }
         static RequestDefinitionAnnotateDefinition fromJson(Object value) {
             RequestDefinitionAnnotateDefinition result = new RequestDefinitionAnnotateDefinition();
@@ -1487,7 +1486,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("questions");
             result.omit("threshold");
-            result.omit("version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1879,7 +1877,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionAuthoredRelate extends Builder<RequestDefinitionAuthoredRelate> implements RequestDefinition {
         public RequestDefinitionAuthoredRelate() {
-            put("version", 1);
         }
         static RequestDefinitionAuthoredRelate fromJson(Object value) {
             RequestDefinitionAuthoredRelate result = new RequestDefinitionAuthoredRelate();
@@ -1890,7 +1887,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("relate");
             result.omit("threshold");
-            result.omit("version");
             result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
@@ -2207,7 +2203,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionRecognizeDefinition extends Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
         public RequestDefinitionRecognizeDefinition() {
-            put("version", 1);
         }
         static RequestDefinitionRecognizeDefinition fromJson(Object value) {
             RequestDefinitionRecognizeDefinition result = new RequestDefinitionRecognizeDefinition();
@@ -2220,7 +2215,6 @@ public final class Inputs {
             result.omit("recognize");
             result.omit("relation_threshold");
             result.omit("threshold");
-            result.omit("version");
             result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
@@ -3471,14 +3465,14 @@ public final class Inputs {
     }
     static RequestDefinition readRequestDefinition(Object value) {
         Map<String,Object> object = Values.object(value);
-        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredDecide.fromJson(value);
-        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredChoose.fromJson(value);
-        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("version")) return RequestDefinitionAuthoredTag.fromJson(value);
-        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredScore.fromJson(value);
-        if (object.containsKey("relate") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
-        if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredFind.fromJson(value);
-        if (object.containsKey("recognize") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
-        if (object.containsKey("questions") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
+        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredDecide.fromJson(value);
+        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredChoose.fromJson(value);
+        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score")) return RequestDefinitionAuthoredTag.fromJson(value);
+        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag")) return RequestDefinitionAuthoredScore.fromJson(value);
+        if (object.containsKey("relate") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
+        if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredFind.fromJson(value);
+        if (object.containsKey("recognize") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
+        if (object.containsKey("questions") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
         return RequestDefinitionAuthoredDecide.fromJson(value);
     }
     static RequestImage readRequestImage(Object value) {

@@ -249,14 +249,10 @@
       "description": "A `relate` entry: one ordered set of relation rules and the pointers that identify each entity.",
       "type": "object",
       "required": [
-        "version",
         "relate"
       ],
       "additionalProperties": false,
       "properties": {
-        "version": {
-          "const": 1
-        },
         "relate": {
           "type": "object",
           "required": [

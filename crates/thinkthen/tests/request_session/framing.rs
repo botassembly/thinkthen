@@ -589,7 +589,7 @@ fn owned_eager_cases() -> Vec<Request> {
         input: feed(),
         options: RequestOptions::default(),
     };
-    let set = r#"{"version":1,"questions":{"fits":{"decide":"Fits?"}}}"#;
+    let set = r#"{"questions":{"fits":{"decide":"Fits?"}}}"#;
     let decide = Question::decide("Fits?").unwrap().cut();
     let choice = Question::choose_labels("Which?")
         .unwrap()
@@ -624,7 +624,7 @@ fn owned_eager_cases() -> Vec<Request> {
         RequestCall::new(RequestFunction::Rank, arguments(RankSet::from_json(set).unwrap().into())),
         RequestCall::new(RequestFunction::Find, arguments(Question::find("Which?").unwrap().into())),
         RequestCall::new(RequestFunction::Recognize, arguments(Recognize::builder().build().unwrap().into())),
-        RequestCall::new(RequestFunction::Relate, arguments(Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into())),
+        RequestCall::new(RequestFunction::Relate, arguments(Relate::from_records_json(r#"{"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into())),
         RequestCall::new(RequestFunction::Choose, arguments(RecordChooseQuestion::from_json(r#"{"choose":"Which?"}"#).unwrap().into())),
     ].into_iter().map(Request::new).collect()
 }

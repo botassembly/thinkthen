@@ -15,7 +15,7 @@ CREATE TABLE rules AS FROM (VALUES
 
 SELECT * FROM thinkthen_relate(
     'SELECT id, body AS name, ''rule'' AS kind FROM rules',
-    '{"version": 1, "relate": {"relations": [{' ||
+    '{"relate": {"relations": [{' ||
     '"name": "contradicts", "source": "*", ' ||
     '"target": "*", "either": true}]}}'
 ) AS contradiction;

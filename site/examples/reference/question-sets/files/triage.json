@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "threshold": "0.2:0.8",
   "questions": {
     "urgent": {

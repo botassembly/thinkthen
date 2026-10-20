@@ -354,7 +354,7 @@ fn a_question_file_past_the_depth_limit_names_the_limit() {
 fn an_annotate_document_nests_at_most_127_levels() {
     let set = written(
         "depth-annotate-set.json",
-        br#"{"version":1,"questions":{"one":{"decide":"Is it kept?"}}}"#,
+        br#"{"questions":{"one":{"decide":"Is it kept?"}}}"#,
     )
     .expect("a question set");
     let set = set.to_string_lossy();

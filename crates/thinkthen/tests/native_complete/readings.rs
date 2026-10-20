@@ -84,7 +84,7 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
 #[test]
 fn named_member_getters_retain_admitted_readings_failure_ids_and_actual_sources() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.5},"q2":{"type":"choice","probabilities":{"wrong":1}}},"usage":{"input_tokens":887}}"#)).unwrap();
-    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"uncertain":{"decide":"Sure?","true":null,"false":{"z":"No.","a":null},"threshold":"0.2:0.8"},"failed":{"decide":"Failed?","threshold":0.9}}}"#).unwrap();
+    let set = thinkthen::QuestionSet::from_json(r#"{"questions":{"uncertain":{"decide":"Sure?","true":null,"false":{"z":"No.","a":null},"threshold":"0.2:0.8"},"failed":{"decide":"Failed?","threshold":0.9}}}"#).unwrap();
     let engine = engine(&listener);
     let call = crate::api::annotate(
         &engine,
@@ -175,7 +175,7 @@ fn aggregate_request_debug_withholds_authored_names_models_and_private_rules() {
         .unwrap();
     let reading = thinkthen::RecordReading::new(&[&format!("/{secret}")], None, None).unwrap();
     let saved = thinkthen::RecognizeQuestionFile::from_json(&format!(
-        r#"{{"version":1,"recognize":{{}},"on":"/{secret}"}}"#
+        r#"{{"recognize":{{}},"on":"/{secret}"}}"#
     ))
     .unwrap();
     assert!(!format!("{reading:?}").contains(secret));
@@ -239,10 +239,11 @@ fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
         ))
         .unwrap();
         let recognition = thinkthen::RecognizeQuestionFile::from_json(&format!(
-            r#"{{"version":1,"recognize":{{"kinds":{{"person":null}}}},"model":"fixed","on":"/body"{extra}}}"#
-        )).unwrap();
+            r#"{{"recognize":{{"kinds":{{"person":null}}}},"model":"fixed","on":"/body"{extra}}}"#
+        ))
+        .unwrap();
         let relation = thinkthen::Relate::from_json(&format!(
-            r#"{{"version":1,"relate":{{"relations":[{{"name":"knows","source":"person","target":"person","reads":"knows"}}]}},"model":"fixed"{extra}}}"#
+            r#"{{"relate":{{"relations":[{{"name":"knows","source":"person","target":"person","reads":"knows"}}]}},"model":"fixed"{extra}}}"#
         ))
         .unwrap();
         let found = crate::api::find(

@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use std::{fs, io};
 
 pub(super) const SET: &str =
-    r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
+    r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
 
 pub(super) fn saved(name: &str, set: &str) -> io::Result<String> {
     let path = folder(name)?.join("questions.json");
@@ -207,63 +207,63 @@ fn set_facts_count_originals_and_details_sum_only_their_actual_member_receipts()
 fn authored_cuts_and_on_are_refused_before_normalization_and_sends() -> io::Result<()> {
     let cases = [
         (
-            r#"{"version":1,"questions":{}}"#,
+            r#"{"questions":{}}"#,
             "`questions` holds at least one named question",
         ),
         (
             r#"{"version":2,"questions":{"first":{"decide":"secret wording"}}}"#,
-            "`version` is the number 1",
+            "delete the `version` field.",
         ),
         (
-            r#"{"version":1,"threshold":0.5,"questions":{"first":{"decide":"secret wording"}}}"#,
+            r#"{"threshold":0.5,"questions":{"first":{"decide":"secret wording"}}}"#,
             "`threshold`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","threshold":0.5}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","threshold":0.5}}}"#,
             "`questions.first.threshold`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","on":""}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","on":""}}}"#,
             "`questions.first.on`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","on":[""]}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","on":[""]}}}"#,
             "`questions.first.on`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","on":"/private"}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","on":"/private"}}}"#,
             "`questions.first.on`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"score":"secret wording","levels":["low","high"]}}}"#,
+            r#"{"questions":{"first":{"score":"secret wording","levels":["low","high"]}}}"#,
             "`questions.first`: rank takes only decide questions",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"choose":"secret wording","options":["a","b"]}}}"#,
+            r#"{"questions":{"first":{"choose":"secret wording","options":["a","b"]}}}"#,
             "`questions.first`: rank takes only decide questions",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","unknown":"secret value"}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","unknown":"secret value"}}}"#,
             "the question set holds no key `questions.first.unknown`",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","model":"secret value"}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","model":"secret value"}}}"#,
             "the question set holds no key `questions.first.model`",
         ),
         (
-            r#"{"version":1,"questions":{"first":{"decide":"secret wording","profile":"secret value"}}}"#,
+            r#"{"questions":{"first":{"decide":"secret wording","profile":"secret value"}}}"#,
             "the question set holds no key `questions.first.profile`",
         ),
         (
-            r#"{"version":1,"questions":{"Bad":{"decide":"secret wording"}}}"#,
+            r#"{"questions":{"Bad":{"decide":"secret wording"}}}"#,
             "`questions.Bad` uses lowercase letters, digits, and underscores, and is not empty",
         ),
         (
-            r#"{"version":1,"batch":0,"questions":{"first":{"decide":"secret wording"}}}"#,
+            r#"{"batch":0,"questions":{"first":{"decide":"secret wording"}}}"#,
             "`batch` in the question file takes max or a whole number of at least 1",
         ),
         (
-            r#"{"version":1,"questions":{"first":"secret value"}}"#,
+            r#"{"questions":{"first":"secret value"}}"#,
             "`questions.first` is one question object",
         ),
     ];
@@ -314,9 +314,9 @@ fn set_owned_meanings_and_existing_display_conflicts_fail_without_sends() -> io:
 fn malformed_or_duplicate_sets_never_fall_back_and_file_load_is_capped() -> io::Result<()> {
     let listener = Listener::answering(answer)?;
     for (index, set) in [
-        r#"{"version":1,"questions":{broken"#,
-        r#"{"version":1,"questions":{"first":{"decide":"secret"},"first":{"decide":"secret"}}}"#,
-        r#"{"version":1,"questions":{"first":{"decide":"secret","decide":"secret"}}}"#,
+        r#"{"questions":{broken"#,
+        r#"{"questions":{"first":{"decide":"secret"},"first":{"decide":"secret"}}}"#,
+        r#"{"questions":{"first":{"decide":"secret","decide":"secret"}}}"#,
     ]
     .into_iter()
     .enumerate()
@@ -376,11 +376,11 @@ pub(super) fn mixed_members() -> io::Result<()> {
     for (name, set) in [
         (
             "rank-set-preview-text-json-0400",
-            r#"{"version":1,"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
+            r#"{"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
         ),
         (
             "rank-set-preview-json-text-0400",
-            r#"{"version":1,"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+            r#"{"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
         ),
     ] {
         for jobs in [None, Some("1"), Some("4"), Some("8")] {

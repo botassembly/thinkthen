@@ -23,7 +23,7 @@ fn per_record_context_previews_refuse_the_same_request_limit_as_execution() {
         fs::write(
             &question,
             if verb == "annotate" {
-                json!({"version":1,"questions":{"refund":declaration}})
+                json!({"questions":{"refund":declaration}})
             } else {
                 declaration
             }
@@ -239,7 +239,7 @@ fn annotate_and_relate_send_shared_context_and_keep_originals() {
     fs::write(&context, "Reference text").expect("context");
     fs::write(
         &questions,
-        r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#,
+        r#"{"questions":{"refund":{"decide":"Refund?"}}}"#,
     )
     .expect("questions");
     let listener = Listener::answering(|body| {

@@ -64,19 +64,17 @@ final class ChooseQuestion extends \ThinkThen\Internal\Document implements \Thin
 namespace ThinkThen\Inputs;
 final class RelateQuestion extends \ThinkThen\Internal\Document implements \ThinkThen\Inputs\QuestionDefinition
 {
-    private const TAGS = ['version' => 1];
     public function __construct(public readonly RelationSpec $relate, public readonly mixed $context_schema = Omitted::Value, public readonly mixed $item_schema = Omitted::Value, public readonly string|Omitted $model = Omitted::Value, public readonly string|Omitted $name = Omitted::Value, public readonly string|Omitted $profile = Omitted::Value, public readonly int|float|string|Omitted $threshold = Omitted::Value, public readonly int|Omitted $wording_version = Omitted::Value)
     {
-        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'relate' => $relate, ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
+        parent::__construct([...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'relate' => $relate, ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
     }
 }
 namespace ThinkThen\Inputs;
 final class RecognizeQuestion extends \ThinkThen\Internal\Document implements \ThinkThen\Inputs\QuestionDefinition
 {
-    private const TAGS = ['version' => 1];
     public function __construct(public readonly RecognitionSpec $recognize, public readonly mixed $context_schema = Omitted::Value, public readonly mixed $item_schema = Omitted::Value, public readonly string|Omitted $model = Omitted::Value, public readonly string|Omitted $name = Omitted::Value, public readonly string|array|Omitted $on = Omitted::Value, public readonly string|Omitted $profile = Omitted::Value, public readonly int|float|string|Omitted $relation_threshold = Omitted::Value, public readonly int|float|string|Omitted $threshold = Omitted::Value, public readonly int|Omitted $wording_version = Omitted::Value)
     {
-        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($on === Omitted::Value ? [] : ['on' => $on]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'recognize' => $recognize, ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
+        parent::__construct([...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($on === Omitted::Value ? [] : ['on' => $on]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'recognize' => $recognize, ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
     }
 }
 namespace ThinkThen\Internal\Requests;

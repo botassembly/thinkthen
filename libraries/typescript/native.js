@@ -51,8 +51,8 @@ class Client {
   }
   static files(paths,reading={unit:'line'},media='text',framing){return Object.freeze({[sourceTag]:{paths,reading,media,...(framing===undefined?{}:{framing})}});}
   static item(value,fields={}) {return Object.freeze({[itemTag]:{...(value===undefined?{}:{original:original(value)}),...fields}});}
-  static recognizeQuestion(kinds,options={}){return Object.freeze({version:1,recognize:{...options,kinds}});}
-  static relateQuestion(relations,options={}){return Object.freeze({version:1,relate:{...options,relations}});}
+  static recognizeQuestion(kinds,options={}){return Object.freeze({recognize:{...options,kinds}});}
+  static relateQuestion(relations,options={}){return Object.freeze({relate:{...options,relations}});}
   static questionFile(path){return Object.freeze({[questionTag]:{kind:'file',path}});}
   static questionName(name){return Object.freeze({[questionTag]:{kind:'name',name}});}
   static questionReference(reference){return Object.freeze({[questionTag]:{kind:'reference',reference}});}

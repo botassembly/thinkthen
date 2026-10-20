@@ -132,7 +132,7 @@ fn an_over_limit_first_record_suppresses_a_later_parallel_warning_and_output() {
 fn annotate_suppresses_the_warning_and_never_starts_after_first_preflight_refusal() {
     let set = file(
         "parallel-stop-set.json",
-        r#"{"version":1,"profile":"old","questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"profile":"old","questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let running = profile("parallel-stop-annotate", r#""max_evidence_bytes":1"#);
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");

@@ -51,7 +51,7 @@ fn saved_boundary_mode_replays_whole_questions_without_later_sends_and_preserves
     let saved = root.join("boundary.json");
     fs::write(
         &saved,
-        r#"{"version":1,"recognize":{"mode":"boundary_only","kinds":{"person":null}}}"#,
+        r#"{"recognize":{"mode":"boundary_only","kinds":{"person":null}}}"#,
     )
     .unwrap();
     let operand = format!("@{}", saved.display());
@@ -191,7 +191,7 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
         let file = root.join(format!("{at}.json"));
         fs::write(
             &file,
-            format!(r#"{{"version":1,"recognize":{{"mode":"boundary_only",{controls}}}}}"#),
+            format!(r#"{{"recognize":{{"mode":"boundary_only",{controls}}}}}"#),
         )
         .unwrap();
         let operand = format!("@{}", file.display());

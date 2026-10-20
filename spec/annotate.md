@@ -10,7 +10,6 @@ trap 'rm -rf -- "$work"' EXIT
 cd "$work"
 cat > triage.json <<'SET'
 {
-  "version": 1,
   "threshold": "0.1:0.9",
   "profile": "jev",
   "questions": {

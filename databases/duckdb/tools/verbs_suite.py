@@ -74,7 +74,7 @@ def verbs_answer_through_the_generic_arm():
             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
             "SELECT thinkthen_choose('Which team?', 'my card was charged twice', ['billing', 'shipping'])",
             "SELECT thinkthen_tag('Which topics?', 'charged twice and late', ['billing', 'shipping'])",
-            "SELECT thinkthen_annotate('{\"version\": 1, \"questions\": {\"refund\": {\"decide\": \"Is it a refund?\"}}}', 'refund now')",
+            "SELECT thinkthen_annotate('{\"questions\": {\"refund\": {\"decide\": \"Is it a refund?\"}}}', 'refund now')",
             "SELECT thinkthen_decide('Is it a refund?', 'refund now', NULL)",
             "SELECT thinkthen_choose('@q.json', 'text', ['a', 'b'])",
         ]
@@ -172,8 +172,8 @@ def usage_counts_differences_around_a_call():
     expect(after["requests_sent"] - before, 1, "requests_sent moves by one")
 
 
-SET = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}}}'
-NAMES = '{"version": 1, "recognize": {"kinds": {"person": "A name of a person."}}}'
+SET = '{"questions": {"refund": {"decide": "Is it a refund?"}}}'
+NAMES = '{"recognize": {"kinds": {"person": "A name of a person."}}}'
 CALLS = [
     "SELECT thinkthen_decide('Is it a refund?', 'a')",
     "SELECT * FROM thinkthen_rank('Is it a refund?', '{\"r\":\"a\"}')",

@@ -15,7 +15,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--extension", required=True, type=Path)
     extension = parser.parse_args().extension.resolve(strict=True)
-    rules = ('{"version":1,"recognize":{"kinds":{"person":null},'
+    rules = ('{"recognize":{"kinds":{"person":null},'
              '"relations":[{"name":"near","source":"person","target":"person"}]}}')
     with Backend() as backend:
         names = run(

@@ -217,11 +217,11 @@ thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --thresh
 thinkthen runs audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.9 --table | sed -n 2p \
   | mustmatch "  matched 215, extra 11, missed 132: precision 0.951   recall 0.620   f1 0.750"
 
-printf '%s\n' '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.01}' > "$work/five.json"
+printf '%s\n' '{"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.01}' > "$work/five.json"
 replay "@$work/five.json" > "$work/low.jsonl"
 thinkthen runs audit "$work/low.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
   | mustmatch "thinkthen: audit: wrote threshold 0.44 for the question; it was 0.01"
-mustmatch '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.44,"model":"jev-1.13.0"}' < "$work/five.json"
+mustmatch '{"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.44,"model":"jev-1.13.0"}' < "$work/five.json"
 replay "@$work/five.json" > "$work/again.jsonl"
 thinkthen runs audit "$work/again.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
   | mustmatch "thinkthen: audit: kept the bar for the question; the steady bar beat it on 0 of 20 held parts"

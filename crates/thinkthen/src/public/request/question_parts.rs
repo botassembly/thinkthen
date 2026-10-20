@@ -44,7 +44,7 @@ impl RequestQuestion {
             } else {
                 "relate"
             };
-            format!("{{\"version\":1,\"{name}\":{{{}}}}}", members.join(","))
+            format!("{{\"{name}\":{{{}}}}}", members.join(","))
         } else {
             let name = match function {
                 RequestFunction::Filter | RequestFunction::Rank | RequestFunction::Decide => {

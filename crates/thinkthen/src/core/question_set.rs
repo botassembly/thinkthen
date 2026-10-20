@@ -31,6 +31,9 @@ pub(crate) enum PartError {
 /// Why a question set was refused.
 #[derive(Clone, Error, PartialEq)]
 pub(crate) enum QuestionSetError {
+    /// A removed format member is present.
+    #[error("{}", super::question_file::VERSION_FIELD_ERROR)]
+    Version,
     /// The bytes are not JSON this tool reads.
     #[error(
         "the question set is not valid JSON: the JSON at line {line} column {column} is not one"

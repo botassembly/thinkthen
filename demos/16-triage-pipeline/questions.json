@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "questions": {
     "credential_request": {
       "decide": "Does the customer ask the support agent to provide or reveal a password, login code, security code, token, or other credential?",

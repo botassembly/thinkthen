@@ -561,7 +561,7 @@ rank_sets_plain_member_recordings_replay_without_sends() {
 check rank_sets_plain_member_recordings_replay_without_sends
 rank_set_ties_keep_key_order_and_public_types() {
 	fresh generic
-	local spec='{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
+	local spec='{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
 	local input='{"z":"one","b":"two","aa":"three"}'
 	same "$(q -c "SELECT string_agg(key || ':' || rank || ':' || probability || ':' || question_name, ' ' ORDER BY rank) FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json)")" 'aa:1:0.9:first b:2:0.9:first z:3:0.9:first'
 	same "$(q -c "SELECT pg_typeof(key)::text || ',' || pg_typeof(rank)::text || ',' || pg_typeof(probability)::text || ',' || pg_typeof(question_name)::text || ',' || pg_typeof(facts)::text FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json) LIMIT 1")" 'text,bigint,double precision,text,jsonb'
@@ -606,7 +606,7 @@ check annotate_settings_do_not_accept_question_fields
 # neighbours' answers stay in the question store for a rerun.
 an_annotate_row_missing_its_part_fails_alone() {
 	fresh generic
-	parted='{"version":1,"questions":{"refund":{"decide":"Is it a refund?","on":"/body"}}}'
+	parted='{"questions":{"refund":{"decide":"Is it a refund?","on":"/body"}}}'
 	rows="(1, '{\"body\":\"one\"}'), (2, '{\"body\":\"two\"}')"
 	out=$(q -c "SELECT thinkthen_annotate('$parted', x)::text FROM (VALUES $rows, (3, '{\"note\":\"three\"}')) t(i, x) ORDER BY i")
 	has "$out" 'thinkthen usage: the record holds nothing at `/body` (retryable: no)'
@@ -710,9 +710,9 @@ explicit_question_loader_keeps_authored_json_and_privilege_gate() {
 	fresh generic
 	mkdir -p "$RUN/question-loader"
 	printf ' {"decide":"Is red visible?"}\n' >"$RUN/question-loader/question.json"
-	printf '{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
+	printf '{"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
 	printf '{"decide":"one","decide":"two"}\n' >"$RUN/question-loader/duplicate.json"
-	printf '{"version":1,"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
+	printf '{"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
 	printf '{"decide":"private-loader-evidence"' >"$RUN/question-loader/broken.json"
 	printf '{"decide":"literal at filename?"}' >"$RUN/question-loader/@literal"
 	q -c 'CREATE ROLE tt_loader LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_question_file(text) TO tt_loader' >/dev/null
@@ -921,7 +921,7 @@ find_cancel() {
 check find_cancel
 rank_set_cancel() {
 	fresh arm/held
-	held "SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb, '{\"batch\":\"max\"}'::json)"
+	held "SELECT key FROM thinkthen_rank_set('{\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb, '{\"batch\":\"max\"}'::json)"
 	bwait 1
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
 	wait "$HELD" || true

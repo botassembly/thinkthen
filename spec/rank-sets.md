@@ -9,7 +9,7 @@ set -euo pipefail
 export HOME="$(mktemp -d)"
 unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL
 root="$(git rev-parse --show-toplevel)"
-printf '%s\n' '{"version":1,"questions":{"first":{"decide":"The passage answers the query."},"second":{"decide":"The passage answers the query."}}}' > "$HOME/search.json"
+printf '%s\n' '{"questions":{"first":{"decide":"The passage answers the query."},"second":{"decide":"The passage answers the query."}}}' > "$HOME/search.json"
 cd "$root/demos/06-top-search-hits"
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl > "$HOME/input.jsonl"
 thinkthen rank 'The passage answers the query.' --batch 1 --jsonl --field /query --field /passage --top 3 --replay recording/ < "$HOME/input.jsonl" > "$HOME/ordinary"
@@ -26,8 +26,8 @@ Authored cuts and pointers are refused before normalization. A set owns its mean
 ```bash
 set -euo pipefail
 export HOME="$(mktemp -d)"
-printf '%s\n' '{"version":1,"questions":{"first":{"decide":"Ready?"}}}' > "$HOME/search.json"
-printf '%s\n' '{"version":1,"questions":{"first":{"decide":"Ready?","on":""}}}' > "$HOME/invalid.json"
+printf '%s\n' '{"questions":{"first":{"decide":"Ready?"}}}' > "$HOME/search.json"
+printf '%s\n' '{"questions":{"first":{"decide":"Ready?","on":""}}}' > "$HOME/invalid.json"
 set +e
 printf 'a\n' | thinkthen rank @"$HOME/invalid.json" --no-cache > "$HOME/out" 2> "$HOME/err"
 status=$?

@@ -228,7 +228,7 @@ class Installed(unittest.TestCase):
                 self.assertEqual(failure.exception.result['error']['kind'], 'usage')
                 self.assertEqual(failure.exception.result['error']['message'], 'the item does not match item_schema')
                 self.assertEqual(self.count(), 0)
-            checks = {'version': 1, 'questions': {'valid': {'decide': 'Q?'},
+            checks = {'questions': {'valid': {'decide': 'Q?'},
                       'declared': {'decide': 'Q?', 'item_schema': {'type': 'string'}}}}
             with self.assertRaises(ToolError) as failure:
                 client.annotate(question=checks, records=['first', 'second', False], options={'batch': 1})
@@ -257,7 +257,7 @@ class Installed(unittest.TestCase):
         tail = self.home / 'unread-tail.txt'
         tail.write_bytes(b'\xff')
         with self.launch('generic', '--no-cache') as client:
-            for question in ('Q?', {'version': 1, 'questions': {'q': {'decide': 'Q?'}}}):
+            for question in ('Q?', {'questions': {'q': {'decide': 'Q?'}}}):
                 with self.assertRaises(ToolError) as failure:
                     client.rank(question=question, source={'paths': [str(p) for p in (*paths, tail)], 'unit': 'file'},
                                 options={'field': '/public', 'batch': 1})
@@ -335,7 +335,7 @@ class Installed(unittest.TestCase):
             self.assertEqual(list(row['answer']['probabilities']), ['zebra', 'alpha'])
             self.assertEqual(row['question']['context_schema'], {'type': 'object', 'properties': {}})
             schema = {'type': 'object', 'properties': {}}
-            questions = {'version': 1, 'questions': {'q': {'decide': 'Q?', 'context_schema': schema}}}
+            questions = {'questions': {'q': {'decide': 'Q?', 'context_schema': schema}}}
             for method in (client.annotate, client.rank):
                 typed = method(question=questions, records=[record],
                                options={'field': '/body', 'context_field': '/context', 'batch': 1})
@@ -386,10 +386,10 @@ class Installed(unittest.TestCase):
                                  records=['a', 'b'], options={'batch': 1, 'top': 1})
             self.assertEqual(len(ranked['value']), 1)
             self.assertEqual(ranked['value'][0]['value'], 1)
-            set_rank = client.rank(question={'version': 1, 'questions': {'z': {'decide': 'Q?'}}},
+            set_rank = client.rank(question={'questions': {'z': {'decide': 'Q?'}}},
                                    records=['a', 'b'], options={'batch': 'max', 'top': 0})
             self.assertEqual(set_rank['value'], [])
-            full_set = client.rank(question={'version': 1, 'questions': {'z': {'decide': 'Q?'}}},
+            full_set = client.rank(question={'questions': {'z': {'decide': 'Q?'}}},
                                    records=['a', 'b'], options={'batch': 'max'})
             self.assertEqual([row['index'] for row in full_set['value']], [0, 1])
             self.assertEqual([row['value'] for row in full_set['value']], [1, 2])

@@ -74,7 +74,7 @@ def test_complete_references_keep_native_roles_names_and_link_behavior() -> None
             'choose': {'choose':'Which?','options':['a','b']},
             'dynamic': {'choose':'Which?'},
             'rank': {'decide':'First?'},
-            'set': {'version':1,'questions':{'first':{'decide':'First?'}}},
+            'set': {'questions':{'first':{'decide':'First?'}}},
             'wrong': {'find':'Which?'},
             'bad': {'choose':'Which?','options':[]},
         }
@@ -130,7 +130,7 @@ def test_a_rewritten_file_is_read_again() -> None:
     folder = pathlib.Path(tempfile.mkdtemp(prefix="thinkthen-door-"))
     question, questions = folder / "q.json", folder / "qs.json"
     question.write_text(json.dumps({"decide": "Is it red?", "model": "judge-a"}))
-    questions.write_text(json.dumps({"version": 1, "questions": {"kind": {"decide": "Is it red?"}}}))
+    questions.write_text(json.dumps({"questions": {"kind": {"decide": "Is it red?"}}}))
     held = child(f"""
 import os
 def moved(path, text):
@@ -142,7 +142,7 @@ packed = run(db, "SELECT count(*) FROM thinkthen_decide_many(?, ?)", ('@{questio
 moved({str(question)!r}, {json.dumps({"decide": "Is it red?", "model": "judge-b"})!r})
 decided = run(db, "SELECT thinkthen_decide('@{question}', 'a red door')")
 first = run(db, "SELECT thinkthen_annotate('@{questions}', 'a red door')")
-moved({str(questions)!r}, {json.dumps({"version": 1, "questions": {"topic": {"decide": "Is it red?"}}})!r})
+moved({str(questions)!r}, {json.dumps({"questions": {"topic": {"decide": "Is it red?"}}})!r})
 second = run(db, "SELECT thinkthen_annotate('@{questions}', 'a red door')")
 say(packed=packed, decided=decided, first=first, second=second)
 """, environment(backend))

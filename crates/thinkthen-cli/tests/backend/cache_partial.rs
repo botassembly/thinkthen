@@ -11,7 +11,7 @@ use crate::child::Folder;
 use crate::harness::spawn;
 
 /// A decide question, then a choice, so the arm below fails the choice alone.
-const SET: &str = r#"{"version":1,"questions":{"ready":{"decide":"Is it ready?"},"kind":{"choose":"Which kind?","options":["bug","other"]}}}"#;
+const SET: &str = r#"{"questions":{"ready":{"decide":"Is it ready?"},"kind":{"choose":"Which kind?","options":["bug","other"]}}}"#;
 const ARM: &str = "/arm/malformed/missing_answer/v1";
 const GENERIC: &str = "/generic/v1";
 type Printed = (&'static str, Option<i32>);

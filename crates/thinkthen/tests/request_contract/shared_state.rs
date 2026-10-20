@@ -2,7 +2,7 @@
 use super::*;
 
 fn arguments() -> Result<RequestArguments, Error> {
-    Ok(args(QuestionSet::from_json(r#"{"version":1,"questions":{"yes":{"decide":"Fits?","true":{"what":"yes detail","examples":["extra-detail"]}},"pick":{"choose":"Which?","options":{"z":{"what":"first detail","examples":["extra-option"]},"a":null}}}}"#)?.into(),
+    Ok(args(QuestionSet::from_json(r#"{"questions":{"yes":{"decide":"Fits?","true":{"what":"yes detail","examples":["extra-detail"]}},"pick":{"choose":"Which?","options":{"z":{"what":"first detail","examples":["extra-option"]},"a":null}}}}"#)?.into(),
         RequestInput::Text { text: "shared evidence".into(), images: vec![] }))
 }
 
@@ -223,7 +223,7 @@ fn annotation_leaders_retain_native_answers_before_thresholds_and_weighted_readi
             r#"{{"model":"fixed","answers":{{"q1":{{"type":"choice","probabilities":{distribution},"confidence":{confidence}}},"q2":{{"type":"score","probabilities":{{"0":0.4,"1":0.6}}}},"q3":{{"type":"noul","noul":0.9}},"q4":{{"type":"noul","noul":0.8}}}}}}"#
         );
         let listener = Listener::answering(move |_| Canned::ok(&body)).unwrap();
-        let set = QuestionSet::from_json(r#"{"version":1,"questions":{"pick":{"choose":"Which?","options":["z","a"],"threshold":0.9},"score":{"score":"How?","levels":["low","high"]},"yes":{"decide":"Fits?"},"tag":{"tag":"Tags?","labels":["x"]}}}"#).unwrap();
+        let set = QuestionSet::from_json(r#"{"questions":{"pick":{"choose":"Which?","options":["z","a"],"threshold":0.9},"score":{"score":"How?","levels":["low","high"]},"yes":{"decide":"Fits?"},"tag":{"tag":"Tags?","labels":["x"]}}}"#).unwrap();
         let arguments = args(
             set.into(),
             RequestInput::Text {

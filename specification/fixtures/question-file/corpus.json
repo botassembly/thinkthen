@@ -437,7 +437,6 @@
       "name": "relate-complete",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "fields": {
             "name": "/label",
@@ -463,7 +462,6 @@
       "name": "relate-single",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "relations": [
             {
@@ -481,7 +479,6 @@
       "name": "relate-defaults",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "relations": [
             {
@@ -498,7 +495,6 @@
       "name": "relate-empty-relations",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "relations": []
         }
@@ -509,7 +505,6 @@
       "name": "relate-incomplete-fields",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "fields": {
             "name": "/name"
@@ -529,7 +524,6 @@
       "name": "relate-extra-key",
       "verb": "relate",
       "file": {
-        "version": 1,
         "relate": {
           "relations": [
             {
