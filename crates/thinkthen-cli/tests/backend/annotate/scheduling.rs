@@ -296,9 +296,20 @@ fn annotate_equal_records_share_one_request() {
 
 #[test]
 fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
-    let listener =
-        Listener::answering(|body| Canned::ok(&all_yes(body, "local-1", 1, 1)).after(20))
-            .expect("a listener");
+    let closed = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&closed);
+    let (arrived, requested) = std::sync::mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        let reply = Canned::ok(&all_yes(body, "local-1", 1, 1));
+        // Record 2 cannot advance ordered output before the reader closes.
+        if String::from_utf8_lossy(body).contains("record 2 group ") {
+            let _ = arrived.send(());
+            reply.after_release(Arc::clone(&held))
+        } else {
+            reply
+        }
+    })
+    .expect("a listener");
     let file = grouped("broken-pipe", 2);
     let state = crate::child::Folder::Usage.variable(&folder("broken-pipe-usage"));
     let mut child = crate::harness::piped(env!("CARGO_TARGET_TMPDIR"))
@@ -330,25 +341,36 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     input.flush().expect("records flushed");
     let mut output = BufReader::new(child.stdout.take().expect("stdout"));
     let mut first = String::new();
-    output.read_line(&mut first).expect("first row");
-    assert!(first.contains(r#""record":1"#), "{first}");
+    let read = output.read_line(&mut first);
     drop(output);
+    let released = thread::spawn(move || requested.recv().is_ok() && closed.wait());
 
     let deadline = Instant::now() + Duration::from_secs(30);
     let status = loop {
-        if let Some(status) = child.try_wait().expect("status") {
-            break status;
+        match child.try_wait() {
+            Ok(Some(status)) => break Ok(status),
+            Ok(None) => {}
+            Err(error) => break Err(error),
         }
         if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            panic!("annotate did not stop after the output pipe closed");
+            break Err(std::io::Error::other(
+                "annotate did not stop after the output pipe closed",
+            ));
         }
         thread::yield_now();
     };
+    if status.is_err() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
     drop(input);
-    assert_eq!(status.code(), Some(0));
     let sent = listener.requests().len();
+    drop(listener);
+    assert!(released.join().expect("release thread"), "reply released");
+    let status = status.expect("annotate stops after the output pipe closes");
+    read.expect("first row");
+    assert!(first.contains(r#""record":1"#), "{first}");
+    assert_eq!(status.code(), Some(0));
     // One request a record. The window holds (4 + 1) records, and it slides
     // by the rows written before the closed pipe shows.
     assert!(sent <= 8, "broken pipe sent {sent} requests");

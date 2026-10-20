@@ -3,6 +3,9 @@
 use crate::harness::{Canned, Listener, finish, spawn, spawn_local, stderr_is};
 use std::io::{BufRead, BufReader, Write};
 use std::process::Stdio;
+use std::sync::Arc;
+
+use conformance_backend::Rendezvous;
 
 use super::file;
 
@@ -249,8 +252,19 @@ fn earliest_tag_record_failure_wins_after_reverse_completion() {
 
 #[test]
 fn a_closed_tag_output_pipe_stops_quietly() {
-    let listener =
-        Listener::answering(|_| Canned::ok(&answer(&[0.9])).after(20)).expect("listener");
+    let closed = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&closed);
+    let (arrived, requested) = std::sync::mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        let reply = Canned::ok(&answer(&[0.9]));
+        if String::from_utf8_lossy(body).contains(r#"row 2\""#) {
+            let _ = arrived.send(());
+            reply.after_release(Arc::clone(&held))
+        } else {
+            reply
+        }
+    })
+    .expect("a listener");
     let mut child = crate::harness::command(&[], &[])
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
@@ -282,13 +296,19 @@ fn a_closed_tag_output_pipe_stops_quietly() {
         .expect("records written");
     let mut output = BufReader::new(child.stdout.take().expect("output pipe"));
     let mut first = String::new();
-    output.read_line(&mut first).expect("one row");
+    let read = output.read_line(&mut first);
     drop(output);
-    let finished = finish(child, "tag").expect("tag ends");
+    let released = std::thread::spawn(move || requested.recv().is_ok() && closed.wait());
+    let finished = finish(child, "tag");
+    let sent = listener.requests().len();
+    drop(listener);
+    assert!(released.join().expect("release thread"), "reply released");
+    let finished = finished.expect("command ends");
+    read.expect("one output row");
     assert_eq!(finished.status.code(), Some(0), "{finished:?}");
     assert_eq!(first, "{\"input\":\"row 1\",\"value\":[\"billing\"]}\n");
     assert!(finished.stderr.is_empty());
-    assert!(listener.requests().len() <= 12);
+    assert!(sent <= 12);
 }
 
 #[test]

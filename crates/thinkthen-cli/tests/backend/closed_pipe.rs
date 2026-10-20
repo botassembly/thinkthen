@@ -1,7 +1,10 @@
 //! The compiled filter stops asking after its output reader closes.
 use std::io::{BufRead, BufReader, Write};
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+use conformance_backend::Rendezvous;
 
 use serde_json::{Map, Value, json};
 
@@ -41,7 +44,22 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
     ]
     .concat();
     for batch in ["1", "10"] {
-        let listener = Listener::answering(reply).expect("a loopback listener");
+        let closed = Arc::new(Rendezvous::new(2));
+        let held = Arc::clone(&closed);
+        let (arrived, requested) = std::sync::mpsc::channel();
+        // Batch 10's second request starts at drop 11, not drop 2.
+        let second = if batch == "1" { "drop 2" } else { "drop 11" };
+        let listener = Listener::answering(move |body| {
+            // This case orders closure explicitly instead of using reply's delay.
+            let reply = reply(body).after(0);
+            if String::from_utf8_lossy(body).contains(&format!(r#"{second}\""#)) {
+                let _ = arrived.send(());
+                reply.after_release(Arc::clone(&held))
+            } else {
+                reply
+            }
+        })
+        .expect("a loopback listener");
         let mut child = start(
             &[
                 "filter",
@@ -62,12 +80,17 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
         .expect("the command starts");
         let mut reader = BufReader::new(child.stdout.take().expect("stdout pipe"));
         let mut first = String::new();
-        reader.read_line(&mut first).expect("first kept row");
-        assert_eq!(first, "keep first\n");
+        let read = reader.read_line(&mut first);
         drop(reader);
-        let output = finish(child, "filter after reader closes").expect("the command ends");
-        crate::harness::exits_because(&output, 0, || format!("batch {batch}"));
+        let released = std::thread::spawn(move || requested.recv().is_ok() && closed.wait());
+        let output = finish(child, "filter after reader closes");
         let sent = listener.count();
+        drop(listener);
+        assert!(released.join().expect("release thread"), "reply released");
+        let output = output.expect("the command ends");
+        read.expect("first kept row");
+        assert_eq!(first, "keep first\n");
+        crate::harness::exits_because(&output, 0, || format!("batch {batch}"));
         assert!(sent <= 12, "batch {batch} kept scheduling: {sent}");
     }
 }
