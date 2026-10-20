@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ORACLE = ROOT / 'conformance/fixtures/packets.json'
 PRIVATE_CASE = '25-defect-fault'
 IDENTITIES = {'call_id', 'observation_id', 'failure_id', 'answer_id',
-              'sdk_request_id', 'request_sha256'}
+              'sdk_request_id', 'request_sha256', 'request'}
 
 
 def decimal_json(text):
@@ -38,7 +38,7 @@ def canonical(document):
             return [visit(child, 'request_sha256' if key == 'requests' else key)
                     for child in value]
         if key in IDENTITIES and isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value):
-            group = 'request_sha256' if key == 'requests' else key
+            group = 'request_sha256' if key == 'request' else key
             table = identities.setdefault(group, {})
             return table.setdefault(value, f'{group}:{len(table) + 1}')
         if key in ('seconds', 'wall_ms') and isinstance(value, str):

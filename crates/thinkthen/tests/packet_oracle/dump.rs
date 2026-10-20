@@ -54,10 +54,30 @@ fn request(document: &Document) -> Result<Request, Error> {
     ))
 }
 
+fn fixture_engine(settings: &str) -> Result<thinkthen::Engine, Error> {
+    // Validate the whole closed document before applying public setters. A bare
+    // builder keeps ambient configuration and asynchronous usage storage out.
+    EngineBuilder::validate_settings_json(settings)?;
+    let values: std::collections::BTreeMap<String, Box<RawValue>> =
+        serde_json::from_str(settings).map_err(|_| usage("invalid fixture settings"))?;
+    let mut builder = thinkthen::Engine::builder()
+        .no_cache()
+        .api_key("sk-conformance-loopback")?;
+    for (name, value) in values {
+        builder = if name == "profile" {
+            let path: String = serde_json::from_str(value.get())
+                .map_err(|_| usage("invalid fixture profile"))?;
+            builder.profile(path)?
+        } else {
+            builder.setting(&name, value.get())?
+        };
+    }
+    builder.build()
+}
+
 fn execute(document: Document) -> Result<String, Error> {
     let mut request = request(&document)?;
-    let settings = document.settings.get();
-    let engine = EngineBuilder::from_settings_json(settings)?.build()?;
+    let engine = fixture_engine(document.settings.get())?;
     if document.call_result_contract {
         return scalar(&engine, &request);
     }
@@ -65,7 +85,10 @@ fn execute(document: Document) -> Result<String, Error> {
     let probe = document.batch_probe;
     let held = document.held_cancel;
     let streamed_records = document.incremental
-        && matches!(&request.call.arguments.input, thinkthen::RequestInput::Records { .. });
+        && matches!(
+            &request.call.arguments.input,
+            thinkthen::RequestInput::Records { .. }
+        );
     let feed = if probe || cancel || streamed_records {
         let items = match &request.call.arguments.input {
             thinkthen::RequestInput::Records { items } => items.clone(),

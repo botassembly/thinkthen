@@ -309,7 +309,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get('image_variants'):
                             backend.close();backend=c_parity.Backend(backend_path,env);c_parity.prepare(home,step)
-                        settings={'cache':False,'batch':1,'max_retries':0,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0',**step.get('settings',{})}
+                        settings={'cache':False,'batch':1,**({'throttle':1} if packet_transform is not None else {}),'max_retries':0,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0',**step.get('settings',{})}
                         settings['base_url']=f'http://127.0.0.1:{backend.port}/{step.get("override_arm",step["arm"] if value.get("image_variants") else value["arm"])}'
                         for key,v in settings.items():
                             if isinstance(v,str) and v in ('$FOLDER','$REFRESH','$PROFILE'):settings[key]=str(home/{'$FOLDER':'saved','$REFRESH':'refreshed','$PROFILE':'profile.json'}[v])
