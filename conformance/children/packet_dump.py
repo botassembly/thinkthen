@@ -4,6 +4,7 @@ Dumpers return {"packets": [native packet JSON, ...]} and optional host
 conversions. Only this comparator normalizes runtime identities and timing.
 """
 import base64
+from contextlib import chdir
 import difflib
 import gzip
 import io
@@ -112,7 +113,10 @@ def run(consumer, command, root, *, update=False):
         folders[row['id']] = ((str(home), '$FOLDER'), (str(root), '$ROOT'))
         return folded(json.loads(stdout))
 
-    failures = shared_run(consumer, command, root, packet_transform=record)
+    # Relative source selectors keep core-created originals deterministic too;
+    # opaque authored JSON remains untouched by metadata normalization.
+    with chdir(root):
+        failures = shared_run(consumer, command, root, packet_transform=record)
     if failures:
         return failures
     document = {'schema': 'thinkthen.packet-oracle/1', 'cases': [

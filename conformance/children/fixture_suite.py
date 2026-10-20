@@ -223,6 +223,7 @@ def selected_case_ids(selector):
 
 def run(consumer, command, root, extra_env=None, settings_names=None, rust_manifest=None, typescript_compiler=None, packet_transform=None):
     import os, subprocess, sys, tempfile, sqlite3
+    request_root = Path('.') if packet_transform is not None else root
     backend_path = Path(os.environ.get('THINKTHEN_TEST_BACKEND', str(Path(os.environ.get('CARGO_TARGET_DIR', str(root/'target')))/'debug/conformance-backend')))
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
@@ -321,7 +322,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             step={**step,'expect':{**step['expect'],'error':'local'}}
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
-                            framed=request(step,root,home,given)
+                            framed=request(step,request_root,home,given)
                             if raw_file:
                                 # Object-only hosts admit original authored bytes through their public file selector.
                                 path=home/'authored-question.json';path.write_text(framed['question']['raw'])
@@ -329,7 +330,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             if consumer in ('r','rust','rust-polars','javascript','typescript'):framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
-                                child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+                                child=subprocess.Popen(command,cwd=root if packet_transform is not None else home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                                 try:
                                     child.stdin.write(c_parity.compact(framed)+'\n');child.stdin.flush()
                                     if framed['batch_probe']:
@@ -349,7 +350,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                                 except BaseException:
                                     child.kill();child.wait();raise
                             else:
-                                child=subprocess.run(command,input=c_parity.compact(framed)+'\n',cwd=home,env=env,capture_output=True,text=True,timeout=120)
+                                child=subprocess.run(command,input=c_parity.compact(framed)+'\n',cwd=root if packet_transform is not None else home,env=env,capture_output=True,text=True,timeout=120)
                             assert child.returncode==0,(child.returncode,child.stdout[-1000:],child.stderr[-1600:])
                             assert not child.stderr,child.stderr
                             assert 'sk-conformance-loopback' not in child.stdout
@@ -361,7 +362,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             if packet.get('facts') is not None:assert packet['facts']['requests_sent']==int(backend.read('count'))-invocation_count,(packet,invocation_count)
                             needs_body=any(key in step['expect'] for key in ('selected_item','per_item_context','capture_request'))
                             bodies=json.loads(backend.read('capture'))['bodies'] if needs_body else []
-                            assert_required(packet,row,step,bodies,root)
+                            assert_required(packet,row,step,bodies,request_root)
                             return project(packet,step['verb'])
                         got=invoke(settings)
                         count=int(backend.read('count'))
