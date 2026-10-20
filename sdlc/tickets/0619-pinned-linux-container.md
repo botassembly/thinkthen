@@ -45,6 +45,16 @@ Reviews: revision 3e00269, accept
 - Image preparation verifies the declared Linux tools and records the actual constructed image ID and pinned base for each architecture; receipts identify the tracked recipe and manifest revision. Resource receipts show the manifest CPU and memory caps on each machine.
 - A grep finds no `push:` or `pull_request:` trigger in `.github/workflows/`, and no instruction claims one.
 
+## Amendment, 2026-10-19 (core cut)
+
+Three image runs in a row each found one more language toolchain fault, so this ticket now closes on what the core freeze needs.
+
+- One `linux.tool_groups` selection over the existing `lint`, `test`, `spec` and `c` groups chooses the tools the image installs. It keeps the Dart, Go, Zig and Swift formatters and the Ruby lexer, because core generation and policy run them. A missing selected tool still fails the check, and no selector skips one.
+- The ticket closes when both images build, the configured Linux and native tickets gate passes, and the existing named core smoke and `package` parts pass for Rust, the command line and C in the arm64 container.
+- `test-full-cases` and `test-stress` in the container, and the Yellow reproduction of hosted run 39102240049, move to 0691's later checkpoint, because both runners enter every language surface.
+- Each other language's toolchain (Flutter, R, DuckDB, the SQLite amalgamation, PostgreSQL and the rest) joins the manifest with that language's or database's own ticket, which proves it in the container.
+- The DuckDB backend setup proof that 0720 left here moves to 0694.
+
 ## Evidence
 
 The PM answers in `2026-10-18-thinkthen-0619-container-prerequisites-need-a-ruling.md` supply the existing authority: answer 2 approves Ubuntu 24.04 checks with manylinux only for distribution artifacts and forbids source-built compilers; answer 3 accepts digest-pinned bases plus the tracked recipe and manifest with actual per-machine image IDs, without publication or a shared tools-image digest claim; answer 4 approves the Yellow-only memory exception while preserving M5 and hosted limits. Commit `52f852a15` implements that exception in `linux.yellow_memory_gib`; review `3ee1ea3cf` accepts that revision. This reconciliation applies those answers without changing the remaining proof obligations.
