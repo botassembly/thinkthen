@@ -119,11 +119,12 @@ def bootstrap(manifest, root, env):
     if binary.is_file():
         return binary
     pin = manifest['bootstrap']
-    arch = {'arm64': 'arm64', 'x86_64': 'x64'}[platform.machine()]
-    url = 'https://github.com/jdx/mise/releases/download/v{0}/mise-v{0}-macos-{1}.tar.gz'.format(pin['version'], arch)
+    arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x64'}[platform.machine()]
+    host = 'macos' if platform.system() == 'Darwin' else 'linux'
+    url = 'https://github.com/jdx/mise/releases/download/v{0}/mise-v{0}-{1}-{2}.tar.gz'.format(pin['version'], host, arch)
     archive = root / 'mise.tar.gz'
     root.mkdir(parents=True, exist_ok=True)
-    download(url, archive, pin['sha256'][arch])
+    download(url, archive, pin['sha256' if host == 'macos' else 'linux_sha256'][arch])
     # The pinned public archive contains only the mise directory.
     with tarfile.open(archive) as packed:
         for member in packed.getmembers():

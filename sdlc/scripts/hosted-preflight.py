@@ -207,15 +207,14 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
 
 def installed(check, target, cache, installed_files=False):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
-    check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
+    pins = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']
+    check.command(['uv', '--version'], '^uv ' + re.escape(pins['uv']['version']) + r'\b')
     check.check('native prepared inputs', lambda: native_inputs(check, target, cache, installed_files=installed_files))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
-    # Read formatter pins from their existing bootstrap rather than keep a second authority.
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    for binary, expression, path in (
-            ('ruff', r"'ruff==([^']+)'", generators / 'bin/ruff'),
-            ('prettier', r"'prettier@([^']+)'", generators / 'node_modules/.bin/prettier')):
-        version = re.search(expression, bootstrap)[1]
+    for binary, path in (
+            ('ruff', generators / 'bin/ruff'),
+            ('prettier', generators / 'node_modules/.bin/prettier')):
+        version = pins[binary]['version']
         check.command([path, '--version'], re.escape(version))
         check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
                     require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
@@ -258,7 +257,7 @@ def consumer_tools(check):
         found = shutil.which(binary) or '/nonexistent'
         check.command(['dpkg-query', '-S', found], '^' + re.escape(package) + ':')
     for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
-        block = re.split(r'\n[a-z][a-z-]*\)\n', bootstrap.split('\n' + operation + ')\n', 1)[1])[0]
+        block = bootstrap.split('\n' + operation.replace('-', '_') + '() (\n', 1)[1].split('\n)\n', 1)[0]
         for words in re.findall(r'for tool in ([^;]+); do', block):
             check.tools(shlex.split(words))
     for tool, args, expression in (
@@ -396,8 +395,7 @@ def qualify(check, stage, target):
         check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    maturin = re.search(r"'maturin==([^']+)'", bootstrap)[1]
+    maturin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
     check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
