@@ -619,7 +619,7 @@ class LinuxSourceIdentity(unittest.TestCase):
             removals = [json.loads(line) for line in calls.read_text().splitlines()
                         if json.loads(line)[:2] == ['image', 'rm']]
             arch = 'arm64' if platform.machine() in ('arm64', 'aarch64') else 'x86_64'
-            self.assertEqual(removals, [['image', 'rm', 'thinkthen-check:' + arch + '-old']])
+            self.assertEqual(removals, [['image', 'rm', '--no-prune', 'thinkthen-check:' + arch + '-old']])
 
 
 if __name__ == '__main__':

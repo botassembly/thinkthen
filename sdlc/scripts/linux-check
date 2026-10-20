@@ -86,7 +86,8 @@ if args.checks == ['prepare']:
                                            text=True).strip()
         if identity != image and identity not in live:
             # Docker refuses removal if a container starts using it in the meantime.
-            subprocess.run([args.docker, 'image', 'rm', candidate], check=True)
+            # Keep untagged parent image metadata for the classic build cache.
+            subprocess.run([args.docker, 'image', 'rm', '--no-prune', candidate], check=True)
     raise SystemExit(0)
 owned = ROOT / ('.linux-' + arch)
 (owned / 'home').mkdir(parents=True, exist_ok=True)
