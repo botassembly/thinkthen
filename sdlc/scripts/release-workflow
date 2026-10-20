@@ -447,6 +447,12 @@ setup-stage)
 	case $stage in
 	host) host_setup host-setup "$target" ;;
 	managed) managed_tools managed-tools "$target" ;;
+	languages)
+		[ "$#" = 5 ] || fail 'setup-stage languages TARGET SHA managed|smoke'
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			python3 sdlc/scripts/release-language-tools.py "$5" "$RUNNER_TEMP/thinkthen-language-$5" "$4" --acquire
+		fi
+		;;
 	consumers)
 		[ "$#" = 4 ] || fail 'setup-stage consumers TARGET OUT'
 		if [ "$target" = x86_64-unknown-linux-gnu ]; then

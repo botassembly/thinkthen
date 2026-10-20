@@ -100,22 +100,11 @@ jobs:
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
           sdlc/scripts/release-workflow setup-stage host "$TARGET"
-      - name: Read the JVM runtime floor
-        id: jvm-contract
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
-          jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
-          echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}
       - name: Select managed language tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
-          python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
+          sdlc/scripts/release-workflow setup-stage languages "$TARGET" "$SHA" managed
       - name: Check every prepared build input
         env: {TARGET: "${{ matrix.target }}"}
         run: |
@@ -567,22 +556,11 @@ jobs:
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           sdlc/scripts/release-workflow setup-stage host "$TARGET"
-      - name: Read the JVM runtime floor
-        id: jvm-contract
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: |
-          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
-          echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        with: {distribution: temurin, java-version: "${{ steps.jvm-contract.outputs.jdk }}"}
       - name: Select installed language tools
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: |
           exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
-          python3 sdlc/scripts/release-language-tools.py smoke "$RUNNER_TEMP/thinkthen-language-smoke" "$SHA" --acquire
+          sdlc/scripts/release-workflow setup-stage languages "$TARGET" "$SHA" smoke
       - name: Prepare the target consumers
         env: {TARGET: "${{ matrix.target }}"}
         run: |
