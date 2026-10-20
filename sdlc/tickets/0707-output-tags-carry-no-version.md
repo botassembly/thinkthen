@@ -45,3 +45,7 @@ Collides with 0719 and 0709 on generated wrappers and the C header, and with 064
 The claim follows the landed CLI move and the existing complete-result serializer readers. Generator-owned Ada and other wrapper outputs remain generator-owned. Use existing replay recordings to regenerate historical examples with truthful provenance; make no paid calls and invent no historical identifiers. The existing generators may prepare job-local outputs for checks; the lander commits refreshed outputs as already required above.
 
 The private serde carrier becomes ResultTag so its generated completeResultTag does not collide with the existing completeTag result definition. It remains the required single literal tag, with no additional carrier or call family.
+
+## Saved-example provenance ruling, PM 2026-10-20
+
+Replace unmatched historical samples with retained replayable data while keeping each page's lesson, then regenerate expected teaching output. Where no retained recording teaches that lesson, use labeled synthetic packets from the existing loopback fixtures. Make no paid calls, invent no historical provenance, and keep no reduced legacy shape.
