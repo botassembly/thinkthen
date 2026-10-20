@@ -72,7 +72,7 @@ function Read_thinkthen_complete_wording_version_v1 (P : access constant thinkth
 function Read_thinkthen_complete_question_document_choose_v1 (P : access constant thinkthen_complete_question_document_choose_v1) return Value;
 function Read_thinkthen_complete_question_document_tag_v1 (P : access constant thinkthen_complete_question_document_tag_v1) return Value;
 function Read_thinkthen_complete_question_document_score_v1 (P : access constant thinkthen_complete_question_document_score_v1) return Value;
-function Read_thinkthen_complete_version_v1 (P : access constant thinkthen_complete_version_v1) return Value;
+function Read_thinkthen_complete_result_tag_v1 (P : access constant thinkthen_complete_result_tag_v1) return Value;
 function Read_thinkthen_complete_physical_source_v1 (P : access constant thinkthen_complete_physical_source_v1) return Value;
 function Read_thinkthen_complete_threshold_v1 (P : access constant thinkthen_complete_threshold_v1) return Value;
 function Read_thinkthen_complete_decide_value_v1 (P : access constant thinkthen_complete_decide_value_v1) return Value;
@@ -1472,15 +1472,15 @@ when 4 => return Read_thinkthen_complete_question_document_score_v1 (P.data.scor
 when others => raise Constraint_Error with "invalid native alternative";
 end case;
 end Read_thinkthen_complete_question_document_v1;
-function Read_thinkthen_complete_version_v1 (P : access constant thinkthen_complete_version_v1) return Value is
+function Read_thinkthen_complete_result_tag_v1 (P : access constant thinkthen_complete_result_tag_v1) return Value is
 
 begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
 case P.kind is
-when 1 => return String_Item ("thinkthen.result/2");
+when 1 => return String_Item ("thinkthen.result");
 when others => raise Constraint_Error with "invalid native enum";
 end case;
-end Read_thinkthen_complete_version_v1;
+end Read_thinkthen_complete_result_tag_v1;
 function Read_thinkthen_complete_physical_source_v1 (P : access constant thinkthen_complete_physical_source_v1) return Value is
 Fields : Field_List (1 .. 3 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
@@ -1528,7 +1528,7 @@ when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
 Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -1646,7 +1646,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -1740,7 +1740,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -1834,7 +1834,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -1923,7 +1923,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -2012,7 +2012,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -2364,7 +2364,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("position", Null_Item);
 when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthen_complete_position_v1(P.position.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -2627,7 +2627,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("question_name", String_Item (Text (P.question_name.value)));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -2897,7 +2897,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthe
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_find_question_document_v1(P.question));
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.threshold.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("threshold", Null_Item);
@@ -3731,7 +3731,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthe
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_recognize_question_document_v1(P.question));
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 case P.source.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("source", Null_Item);
@@ -4271,7 +4271,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthe
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_relate_question_document_v1(P.question));
-Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
+Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_result_tag_v1(P.schema));
 Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_related_entity_edge_list_v1(P.value));
 declare
 Extension_Count : constant Natural := Index (P.extensions.len);

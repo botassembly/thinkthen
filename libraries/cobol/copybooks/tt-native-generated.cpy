@@ -843,7 +843,7 @@
  03 v-data-choose redefines v-data-union-storage usage pointer.
  03 v-data-tag redefines v-data-union-storage usage pointer.
  03 v-data-score redefines v-data-union-storage usage pointer.
-01 tt-n-complete-version-v1 based.
+01 tt-n-complete-result-tag-v1 based.
  02 v-kind usage binary-long unsigned.
 01 tt-n-complete-physical-source-v1 based.
  02 v-file.
@@ -5631,7 +5631,7 @@
 01 tt-n-cobol-ReceiptU32Presence based.
  02 v-presence usage binary-long unsigned.
  02 v-value usage binary-long unsigned.
-01 tt-n-cobol-ReceiptVersion based.
+01 tt-n-cobol-ReceiptResultTag based.
  02 v-kind usage binary-long unsigned.
 01 tt-n-cobol-ReceiptRelateQuestionDocument based.
  02 v-batch.
@@ -8921,6 +8921,7 @@
 78 tt-n-complete-request-function-relate-v1-k value 10.
 78 tt-n-complete-request-function-score-v1-k value 4.
 78 tt-n-complete-request-function-tag-v1-k value 3.
+78 tt-n-complete-result-tag-thinkthen-result-v1-k value 1.
 78 tt-n-complete-send-denial-before-additional-send-v1-k value 2.
 78 tt-n-complete-send-denial-before-first-send-v1-k value 1.
 78 tt-n-complete-send-denial-before-retry-v1-k value 3.
@@ -8996,7 +8997,6 @@
 78 tt-n-complete-value-number-v1-k value 5.
 78 tt-n-complete-value-string-v1-k value 3.
 78 tt-n-complete-verb-recognize-v1-k value 1.
-78 tt-n-complete-version-thinkthen-result-2-v1-k value 1.
 78 tt-n-declaration-absent-v1-k value 0.
 78 tt-n-declaration-object-v1-k value 2.
 78 tt-n-declaration-string-v1-k value 1.

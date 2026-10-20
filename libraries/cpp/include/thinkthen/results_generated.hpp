@@ -147,6 +147,7 @@ namespace tt::results {
     class RelationMemberFailureId;
     class RelationMethod;
     class RequestFunction;
+    class ResultTag;
     class SdkRequestId;
     class SendBudgetDenial;
     class SendBudgetDenialBeforeAdditionalSend;
@@ -166,7 +167,6 @@ namespace tt::results {
     class Usage;
     class UsagePersistence;
     class Verb;
-    class Version;
     class WordingVersion;
     class AnnotatedField;
     class AnnotatedRow;
@@ -289,8 +289,8 @@ namespace tt::results {
         public: const Presence<Meta>& meta() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Position>>> cached_position_ = std::make_shared<std::shared_ptr<const Presence<Position>>>();
         public: const Presence<Position>& position() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnnotatedRow>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnnotatedRow>>>();
@@ -719,8 +719,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -751,8 +751,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -783,8 +783,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -815,8 +815,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -847,8 +847,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -879,8 +879,8 @@ namespace tt::results {
         public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
@@ -1125,8 +1125,8 @@ namespace tt::results {
         public: const Presence<Position>& position() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<FindQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<FindQuestionDocument>>>();
         public: const Presence<FindQuestionDocument>& question() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::nullptr_t>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<std::nullptr_t>>>();
         public: const Presence<std::nullptr_t>& threshold() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
@@ -1475,8 +1475,8 @@ namespace tt::results {
         public: const Presence<Meta>& meta() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
         public: const Presence<QuestionDocument>& question() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::nullptr_t>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<std::nullptr_t>>>();
@@ -1509,8 +1509,8 @@ namespace tt::results {
         public: const Presence<Position>& position() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RecognizeQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<RecognizeQuestionDocument>>>();
         public: const Presence<RecognizeQuestionDocument>& question() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Recognize>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Recognize>>>();
@@ -1631,8 +1631,8 @@ namespace tt::results {
         public: const Presence<Position>& position() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RelateQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<RelateQuestionDocument>>>();
         public: const Presence<RelateQuestionDocument>& question() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
-        public: const Presence<Version>& schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<ResultTag>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<ResultTag>>>();
+        public: const Presence<ResultTag>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>>();
         public: const Presence<std::vector<RelatedEntityEdge>>& value() const;
     };
@@ -1774,6 +1774,14 @@ namespace tt::results {
     };
     class RequestFunction final : public Node {
         RequestFunction(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
+        public: const std::string& value() const;
+    };
+    class ResultTag final : public Node {
+        ResultTag(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
         public:
@@ -1943,14 +1951,6 @@ namespace tt::results {
     };
     class Verb final : public Node {
         Verb(const Data& value, int):Node(value) {
-        }
-        friend struct detail::Loader;
-        public:
-        private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
-        public: const std::string& value() const;
-    };
-    class Version final : public Node {
-        Version(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
         public:
@@ -3450,10 +3450,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_position_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& Annotation::schema() const {
+    inline const Presence<ResultTag>& Annotation::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4042,10 +4042,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicArrayOfString::schema() const {
+    inline const Presence<ResultTag>& AtomicArrayOfString::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4146,10 +4146,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicDecideValue::schema() const {
+    inline const Presence<ResultTag>& AtomicDecideValue::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4250,10 +4250,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicNonZeroUsize::schema() const {
+    inline const Presence<ResultTag>& AtomicNonZeroUsize::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4354,10 +4354,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicNullableString::schema() const {
+    inline const Presence<ResultTag>& AtomicNullableString::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4458,10 +4458,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicBoolean::schema() const {
+    inline const Presence<ResultTag>& AtomicBoolean::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4562,10 +4562,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_name_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& AtomicDouble::schema() const {
+    inline const Presence<ResultTag>& AtomicDouble::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5131,10 +5131,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& Find::schema() const {
+    inline const Presence<ResultTag>& Find::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5847,10 +5847,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& RankMemberResult::schema() const {
+    inline const Presence<ResultTag>& RankMemberResult::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5959,10 +5959,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& Recognition::schema() const {
+    inline const Presence<ResultTag>& Recognition::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6254,10 +6254,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Version>& Relation::schema() const {
+    inline const Presence<ResultTag>& Relation::schema() const {
         auto stored = std::atomic_load(cached_schema_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
+            auto candidate = std::make_shared<const Presence<ResultTag>>(detail::member_value<ResultTag>(value_,
             "schema"));
             if (std::atomic_compare_exchange_strong(cached_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6625,6 +6625,13 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
+    inline const std::string& ResultTag::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
     inline const std::string& SdkRequestId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
@@ -6824,13 +6831,6 @@ namespace tt::results {
         } return *stored;
     }
     inline const std::string& Verb::value() const {
-        auto stored = std::atomic_load(cached_value_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
-            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const std::string& Version::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
             auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
@@ -10778,7 +10778,7 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_session_input_source_list_presence_v1& value);
     inline Data native_value(const thinkthen_complete_position_presence_v1& value);
     inline Data native_value(const thinkthen_complete_relation_v1& value);
-    inline Data native_value(const thinkthen_complete_version_v1& value);
+    inline Data native_value(const thinkthen_complete_result_tag_v1& value);
     inline Data native_value(const thinkthen_complete_relate_fields_presence_v1& value);
     inline Data native_value(const thinkthen_complete_relation_rule_list_v1& value);
     inline Data native_value(const thinkthen_complete_relate_question_document_v1& value);
@@ -13452,9 +13452,9 @@ namespace tt::results::detail {
         }
         return Data(std::move(items));
     }
-    inline Data native_value(const thinkthen_complete_version_v1& value) {
+    inline Data native_value(const thinkthen_complete_result_tag_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1: return Data("thinkthen.result/2");
+            case THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1: return Data("thinkthen.result");
             default: throw std::invalid_argument("invalid native enum");
         }
     }

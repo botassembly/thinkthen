@@ -64,7 +64,7 @@ public sealed class Annotation : ResultObject
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public IReadOnlyDictionary<string, AnnotatedField> Value => new ReadOnlyDictionary<string,
     AnnotatedField>(RequiredElement("value").EnumerateObject().ToDictionary(entry0 => entry0.Name,
@@ -1059,7 +1059,7 @@ public sealed class AtomicArrayOfString : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
@@ -1079,7 +1079,7 @@ public sealed class AtomicDecideValue : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public JsonElement Value => RequiredElement("value").Clone();
@@ -1099,7 +1099,7 @@ public sealed class AtomicNonZeroUsize : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public ulong Value => RequiredElement("value").GetUInt64();
@@ -1119,7 +1119,7 @@ public sealed class AtomicNullableString : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
@@ -1139,7 +1139,7 @@ public sealed class AtomicBoolean : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public bool Value => RequiredElement("value").GetBoolean();
@@ -1159,7 +1159,7 @@ public sealed class AtomicDouble : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public double Value => RequiredElement("value").GetDouble();
@@ -1345,7 +1345,7 @@ public sealed class Find : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
     public FindQuestionDocument Question => new FindQuestionDocument(RequiredElement("question"));
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public Presence<JsonElement> Value => RequiredNullable<JsonElement>("value", member => member.Clone());
 }
@@ -1605,7 +1605,7 @@ public sealed class RankMemberResult : ResultObject
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public ulong Value => RequiredElement("value").GetUInt64();
@@ -1624,7 +1624,7 @@ public sealed class Recognition : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
     public RecognizeQuestionDocument Question => new RecognizeQuestionDocument(RequiredElement("question"));
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Recognize Value => global::ThinkThen.Results.Recognize.Read(RequiredElement("value"));
 }
@@ -1720,7 +1720,7 @@ public sealed class Relation : ResultObject
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
     public RelateQuestionDocument Question => new RelateQuestionDocument(RequiredElement("question"));
-    public Version Schema => new Version(RequiredElement("schema").GetString()!);
+    public ResultTag Schema => new ResultTag(RequiredElement("schema").GetString()!);
     public IReadOnlyList<RelatedEntityEdge> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new RelatedEntityEdge(item0)).ToArray());
 }
 public readonly record struct RelationDirection(string Value)
@@ -1855,6 +1855,10 @@ public readonly record struct RequestFunction(string Value)
     public static RequestFunction Annotate => new("annotate");
     public static RequestFunction Recognize => new("recognize");
     public static RequestFunction Relate => new("relate");
+}
+public readonly record struct ResultTag(string Value)
+{
+    public static ResultTag ThinkthenResult => new("thinkthen.result");
 }
 public abstract class SendBudgetDenial : ResultObject
 {
@@ -2040,10 +2044,6 @@ public readonly record struct UsagePersistence(string Value)
 public readonly record struct Verb(string Value)
 {
     public static Verb Recognize => new("recognize");
-}
-public readonly record struct Version(string Value)
-{
-    public static Version ThinkthenResult2 => new("thinkthen.result/2");
 }
 public abstract class AnnotatedField
 {

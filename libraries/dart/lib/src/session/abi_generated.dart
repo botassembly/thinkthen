@@ -2037,15 +2037,15 @@ final class _NativePacketReader {
           ? null
           : readPosition(_pointer(_at(_at(p, 136), 8)));
     values["question"] = readRelateQuestionDocument(_pointer(_at(p, 152)));
-    values["schema"] = readVersion(_pointer(_at(p, 160)));
+    values["schema"] = readResultTag(_pointer(_at(p, 160)));
     values["value"] =
         _list(_at(p, 168), 8, (p) => readRelatedEntityEdge(_pointer(p)));
     return values;
   }
 
-  static Object? readVersion(Pointer<Void> p) {
+  static Object? readResultTag(Pointer<Void> p) {
     return switch (_u32(_at(p, 0))) {
-      1 => "thinkthen.result/2",
+      1 => "thinkthen.result",
       _ => throw StateError('Invalid native enum'),
     };
   }
@@ -2382,7 +2382,7 @@ final class _NativePacketReader {
           ? null
           : readPosition(_pointer(_at(_at(p, 112), 8)));
     values["question"] = readRecognizeQuestionDocument(_pointer(_at(p, 128)));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -2620,7 +2620,7 @@ final class _NativePacketReader {
       values["position"] = _u32(_at(p, 120)) == 1
           ? null
           : readPosition(_pointer(_at(_at(p, 120), 8)));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -2738,7 +2738,7 @@ final class _NativePacketReader {
           ? null
           : readPosition(_pointer(_at(_at(p, 120), 8)));
     values["question"] = readFindQuestionDocument(_pointer(_at(p, 136)));
-    values["schema"] = readVersion(_pointer(_at(p, 144)));
+    values["schema"] = readResultTag(_pointer(_at(p, 144)));
     if (_u32(_at(p, 152)) != 0)
       values["threshold"] =
           _u32(_at(p, 152)) == 1 ? null : _value(_pointer(_at(_at(p, 152), 8)));
@@ -2850,7 +2850,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -2880,7 +2880,7 @@ final class _NativePacketReader {
           : _list(_at(_at(p, 16), 8), 8, (p) => readImage(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 40)));
     values["question"] = readQuestionDocument(_pointer(_at(p, 48)));
-    values["schema"] = readVersion(_pointer(_at(p, 56)));
+    values["schema"] = readResultTag(_pointer(_at(p, 56)));
     if (_u32(_at(p, 64)) != 0)
       values["source"] = _u32(_at(p, 64)) == 1
           ? null
@@ -2941,7 +2941,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -2985,7 +2985,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -3029,7 +3029,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -3074,7 +3074,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
@@ -3121,7 +3121,7 @@ final class _NativePacketReader {
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
-    values["schema"] = readVersion(_pointer(_at(p, 136)));
+    values["schema"] = readResultTag(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
           ? null
