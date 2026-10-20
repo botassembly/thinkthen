@@ -9,13 +9,21 @@ fn loaded_interface_must_match_before_any_other_operation() {
     let binary = compile(&source);
     let output = run(&binary, &base, b"");
     successful(&output);
-    assert_eq!(text(&output.stdout), format!("{}\n", env!("CARGO_PKG_VERSION")));
+    assert_eq!(
+        text(&output.stdout),
+        format!("{}\n", env!("CARGO_PKG_VERSION"))
+    );
 
     let (library, required, loaded) = incompatible_library();
     let output = run_with(&binary, &base, b"", &[("THINKTHEN_TEST_LIBRARY", &library)]);
     assert_eq!(output.status.code(), Some(78));
     assert!(output.stdout.is_empty());
-    assert_eq!(text(&output.stderr), format!("ThinkThen C interface mismatch: header requires {required}, loaded library different-interface provides {loaded}\n"));
+    assert_eq!(
+        text(&output.stderr),
+        format!(
+            "ThinkThen C interface mismatch: header requires {required}, loaded library different-interface provides {loaded}\n"
+        )
+    );
     assert_eq!(backend.count(), 0, "version checks must send nothing");
 }
 
@@ -32,22 +40,58 @@ fn incompatible_library() -> (PathBuf, u32, u32) {
         .output().expect("generate incompatible interface");
     successful(&generated);
     let number = |path| -> u32 {
-        std::fs::read_to_string(path).expect("generated header").lines()
+        std::fs::read_to_string(path)
+            .expect("generated header")
+            .lines()
             .find_map(|line| line.strip_prefix("#define THINKTHEN_INTERFACE_NUMBER "))
-            .expect("digest").trim_end_matches('u').parse().expect("uint32 digest")
+            .expect("digest")
+            .trim_end_matches('u')
+            .parse()
+            .expect("uint32 digest")
     };
     let required = number(header);
     let loaded = number(incompatible.join("thinkthen.h"));
-    assert_ne!(loaded, required, "a declaration changes the interface digest");
+    assert_ne!(
+        loaded, required,
+        "a declaration changes the interface digest"
+    );
     let fixture = incompatible.join("library.c");
     std::fs::write(&fixture, "#include \"thinkthen.h\"\n#ifdef _WIN32\n__declspec(dllexport)\n#endif\nconst char *thinkthen_version(uint32_t *number) { *number = THINKTHEN_INTERFACE_NUMBER; return \"different-interface\"; }\n").expect("library source");
-    let library = incompatible.join(if cfg!(windows) { "different.dll" } else if cfg!(target_os = "macos") { "different.dylib" } else { "different.so" });
-    let mut compiler = child::command(if cfg!(windows) { "cl.exe" } else { "cc" }, &["INCLUDE", "LIB", "LIBPATH"]);
-    if cfg!(windows) {
-        compiler.args(["/nologo", "/LD"]).arg(&fixture).arg(format!("/Fe{}", library.display()));
+    let library = incompatible.join(if cfg!(windows) {
+        "different.dll"
+    } else if cfg!(target_os = "macos") {
+        "different.dylib"
     } else {
-        compiler.args([if cfg!(target_os = "macos") { "-dynamiclib" } else { "-shared" }, "-fPIC"]).arg(&fixture).arg("-o").arg(&library);
+        "different.so"
+    });
+    let mut compiler = child::command(
+        if cfg!(windows) { "cl.exe" } else { "cc" },
+        &["INCLUDE", "LIB", "LIBPATH"],
+    );
+    if cfg!(windows) {
+        compiler
+            .args(["/nologo", "/LD"])
+            .arg(&fixture)
+            .arg(format!("/Fe{}", library.display()));
+    } else {
+        compiler
+            .args([
+                if cfg!(target_os = "macos") {
+                    "-dynamiclib"
+                } else {
+                    "-shared"
+                },
+                "-fPIC",
+            ])
+            .arg(&fixture)
+            .arg("-o")
+            .arg(&library);
     }
-    successful(&compiler.current_dir(&incompatible).output().expect("compile library"));
+    successful(
+        &compiler
+            .current_dir(&incompatible)
+            .output()
+            .expect("compile library"),
+    );
     (library, required, loaded)
 }

@@ -8,10 +8,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo::rerun-if-changed=include/thinkthen.h");
     println!("cargo::rerun-if-changed=tests/door/header.rs");
     let input = std::fs::read_to_string("include/thinkthen.h")?;
-    let number: u32 = input.lines()
+    let number: u32 = input
+        .lines()
         .find_map(|line| line.strip_prefix("#define THINKTHEN_INTERFACE_NUMBER "))
         .ok_or("missing generated C interface digest")?
-        .trim_end_matches('u').parse()?;
+        .trim_end_matches('u')
+        .parse()?;
     let output = std::path::PathBuf::from(std::env::var_os("OUT_DIR").ok_or("missing OUT_DIR")?);
     std::fs::write(output.join("interface.rs"), format!("{number}_u32"))?;
     let target = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
