@@ -158,7 +158,8 @@ def abi_plants(header):
         for original in (ROOT / 'src').glob('*.cs'):
             (source / original.name).write_bytes(original.read_bytes())
         project = scratch / 'ThinkThen.csproj'
-        project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
+        (scratch / 'thinkthen.h').write_bytes(Path(header).read_bytes())
+        project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup><ItemGroup><EmbeddedResource Include="thinkthen.h" LogicalName="ThinkThen.Interface.h" /></ItemGroup></Project>')
         generated = ROOT.parents[1] / 'build-tools/results/csharp/CompleteFacts.g.cs'
         (source / generated.name).write_bytes(generated.read_bytes())
         config = scratch / 'NuGet.Config'

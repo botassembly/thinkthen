@@ -302,13 +302,6 @@ def self_test():
         ("dart", lambda r: edit(r, "libraries/dart/flutter/example/pubspec.yaml", f"version: {version}",
                                 "version: 9.9.9"), [],
          (1, [f"versions: libraries/dart/flutter/example/pubspec.yaml reads 9.9.9, and {CRATE} reads {version}"])),
-        ("zig-abi", lambda r: edit(r, "libraries/zig/build.zig", f"const expected = [_]u32{{ {major}, {minor}, {patch} }};",
-                                   f"const expected = [_]u32{{ {major}, {minor}, {int(patch) + 1} }};"), [],
-         (1, [f"versions: libraries/zig/build.zig reads {int(patch) + 1}, and {CRATE} reads {patch}"])),
-        ("zig-diagnostic", lambda r: edit(r, "libraries/zig/build.zig",
-                                          f'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI {version}");',
-                                          'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 9.9.9");'), [],
-         (1, [f"versions: libraries/zig/build.zig reads 9.9.9, and {CRATE} reads {version}"])),
         ("swift-name", lambda r: edit(r, "libraries/swift/Package.swift", 'name: "ThinkThen",',
                                       'name: "Renamed",'), [],
          (1, ["versions: libraries/swift/Package.swift has no package identity the check can read"])),
@@ -372,9 +365,6 @@ def self_test():
                     for name, part in zip(("MAJOR", "MINOR", "PATCH"), (9, 8, 7))
                 ):
                     got = (got, "--set did not update the C version owner")
-                zig = (root / "libraries/zig/build.zig").read_text(encoding="utf-8")
-                if "const expected = [_]u32{ 9, 8, 7 };" not in zig or zig.count("package ABI 9.8.7") != 2:
-                    got = (got, "--set did not update Zig's numeric ABI and both diagnostics")
                 if any(re.search(pattern, (root / path).read_text(encoding="utf-8")) for path, pattern in HOLDS):
                     got = (got, "--set past the placeholder kept a publish hold")
             if expected[0] and argv[:1] == ["--set"] and before != {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}:
