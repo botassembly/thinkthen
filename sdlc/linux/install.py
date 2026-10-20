@@ -55,14 +55,59 @@ def load_manifest(path=None):
     return manifest
 
 
+def image_dockerfile(template, fragments):
+    """Append new fragment layers after the established core layer order."""
+    layers = []
+    for relative in fragments:
+        if 'COPY ' + relative + ' ' not in template:
+            name = Path(relative).name
+            layers += ['COPY ' + relative + ' /tmp/tools/' + name,
+                       'RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/' + name]
+    return template.replace('# Additional fragment layers.', '\n'.join(layers))
+
+
+def linux_requirements(manifest):
+    """Install core requirements and every fragment's declared Linux provider."""
+    core = selected(manifest, manifest['linux']['tool_groups'], 'linux')
+    return {name: tool for name, tool in manifest['tools'].items()
+            if name in core or ('linux' in tool['platforms']
+                                and tool.get('linux_provider', tool.get('provider')))}
+
+
+def image_environment(manifest, host=None):
+    return ((host or platform.system().lower()) == 'linux'
+            and (Path(manifest['linux_prefix']) / 'image-ready').is_file())
+
+
+def surface_paths(manifest, host=None):
+    """Select prepared image surfaces; native hosts keep their full inventory."""
+    host = host or platform.system().lower()
+    arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+    target = host + '-' + arch
+    candidates = [f'libraries/{name}' for name, row in manifest['libraries'].items()
+                  if target in row['check_platforms']]
+    candidates += [f'databases/{name}' for name, targets in manifest['databases'].items()
+                   if target in targets]
+    if image_environment(manifest, host):
+        available = linux_requirements(manifest)
+        candidates = [path for path in candidates
+                      if set(selected(manifest, [path.split('/')[1]], host)) <= available.keys()]
+    return candidates
+
+
 def selected(manifest, groups, host):
     groups = set(groups)
+    if 'linux-image' in groups:
+        return linux_requirements(manifest)
     if 'surfaces' in groups:
-        arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-        target = host + '-' + arch
-        groups.update(name for name, library in manifest['libraries'].items()
-                      if target in library['check_platforms'])
-        groups.update(manifest['databases'])
+        if image_environment(manifest, host):
+            groups.update(path.split('/')[1] for path in surface_paths(manifest, host))
+        else:
+            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            target = host + '-' + arch
+            groups.update(name for name, row in manifest['libraries'].items()
+                          if target in row['check_platforms'])
+            groups.update(manifest['databases'])
     return {name: tool for name, tool in manifest['tools'].items()
             if host in tool['platforms'] and set(tool['groups']) & {'common', *groups}}
 
@@ -145,6 +190,7 @@ def main():
                CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
                CARGO_PROFILE_RELEASE_DEBUG='0')
     if sys.argv[2] == 'finish':
+        (root / 'image-ready').touch()
         # Skip already-readable files so Docker does not copy earlier layers.
         for path in (root, *root.rglob('*')):
             if path.is_symlink():
@@ -176,7 +222,7 @@ def main():
         (root / 'bin/cargo-binstall').symlink_to(executable)
         return
     fragment = json.loads(Path(sys.argv[2]).read_text())
-    selected_requirements = selected(manifest, manifest['linux']['tool_groups'], 'linux')
+    selected_requirements = linux_requirements(manifest)
     requirements = {name: tool for name, tool in fragment.get('tools', {}).items()
                     if name in selected_requirements}
     for name, tool in requirements.items():
@@ -185,7 +231,16 @@ def main():
         provider = tool.get('linux_provider', tool.get('provider'))
         if name == 'swift':
             provider = name
-        if provider is None or provider in ('python-package', 'ruby-bundled'):
+        if provider == 'ruby-bundled':
+            destination = root / tool.get('linux_directory', 'bin')
+            ruby = (destination / 'ruby').resolve()
+            for command in tool['commands']:
+                executable = ruby.with_name(command)
+                if not executable.is_file():
+                    raise SystemExit('installed provider lacks ' + command)
+                (destination / command).symlink_to(executable)
+            continue
+        if provider is None or provider == 'python-package':
             continue
         if provider == 'rustup':
             subprocess.run([str(root / 'bin/rustup'), 'toolchain', 'install', tool['version'],

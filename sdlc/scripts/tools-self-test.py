@@ -417,6 +417,45 @@ class GateRouting(unittest.TestCase):
 
 
 class SurfaceToolGroups(unittest.TestCase):
+    @unittest.skipUnless(platform.system() == 'Linux', 'Linux image selection')
+    def test_declared_surface_is_selected_and_missing_tool_refuses_execution(self):
+        with tempfile.TemporaryDirectory(prefix='image-surface-') as folder:
+            root = Path(folder)
+            prefix = root / 'image'
+            (prefix / 'bin').mkdir(parents=True)
+            (prefix / 'image-ready').touch()
+            source = root / 'tools.json'
+            source.write_text(json.dumps({
+                'linux_prefix': str(prefix), 'linux': {'tool_groups': ['test']},
+                'python_packages': {}, 'libraries': {}, 'databases': {},
+                'tools': {'rust': {'version': 'unused', 'commands': [],
+                                   'groups': ['common'], 'platforms': ['linux']}}}))
+            fragments = root / 'tools'
+            fragments.mkdir()
+            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            fragment = {'libraries': {'scratch': {'check_platforms': ['linux-' + arch]}},
+                        'tools': {'scratch': {'commands': ['scratch-compiler'], 'version': '1',
+                                             'provider': 'fixture', 'platforms': ['linux'],
+                                             'groups': ['scratch']}}}
+            (fragments / 'scratch.json').write_text(json.dumps(fragment))
+            env = child_env(home=root / 'home', PATH='/usr/bin:/bin')
+            command = [sys.executable, str(SCRIPT), '--manifest', str(source)]
+            selected = subprocess.run([*command, '--surfaces', 'surfaces'], env=env,
+                                      text=True, capture_output=True)
+            self.assertEqual(selected.returncode, 0, selected.stderr)
+            self.assertEqual(selected.stdout, 'libraries/scratch\n')
+            run = [*command, '--check', 'scratch', '--', 'sh', '-c', 'echo started']
+            missing = subprocess.run(run, env=env, text=True, capture_output=True)
+            self.assertEqual(missing.returncode, 2, missing.stderr)
+            self.assertIn('missing tools: scratch-compiler', missing.stderr)
+            self.assertEqual(missing.stdout, '')
+            executable = prefix / 'bin/scratch-compiler'
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+            ready = subprocess.run(run, env=env, text=True, capture_output=True)
+            self.assertEqual(ready.returncode, 0, ready.stderr)
+            self.assertEqual(ready.stdout, 'started\n')
+
     def test_registry_requires_core_tools_and_language_checks_still_require_their_tools(self):
         with tempfile.TemporaryDirectory(prefix='surface-tools-') as folder:
             root = Path(folder)
@@ -469,6 +508,8 @@ class LinuxSourceIdentity(unittest.TestCase):
                 shutil.copyfile(ROOT / relative, destination)
             (root / '.gitignore').write_text('.linux-*/\ntarget/\n')
             (root / 'source.txt').write_text('committed\n')
+            (root / 'libraries/c').mkdir(parents=True)
+            (root / 'libraries/c/check.sh').write_text('#!/bin/sh\nexit 0\n')
             git = ['git', '-C', str(root)]
             subprocess.run([*git, 'init', '-q'], env=env, check=True)
             subprocess.run([*git, 'add', '.'], env=env, check=True)
@@ -510,11 +551,18 @@ class LinuxSourceIdentity(unittest.TestCase):
             runs = [json.loads(line) for line in calls.read_text().splitlines()
                     if json.loads(line)[0] == 'run']
             script = runs[-1][-1]
-            groups = load_manifest(root / 'sdlc/tools.json')['linux']['tool_groups']
+            groups = ['linux-image']
             self.assertIn('python3 sdlc/scripts/tools.py --check ' + ','.join(groups), script)
             self.assertNotIn('tools/setup.sh', script)
             self.assertNotIn('databases/sqlite/setup.sh', script)
             self.assertNotIn('flutter pub get', script)
+            surface = subprocess.run([*command[:-1], 'surface', 'libraries/c'], env=env, capture_output=True, text=True)
+            self.assertEqual(surface.returncode, 0, surface.stderr)
+            surface_run = [json.loads(line) for line in calls.read_text().splitlines()
+                           if json.loads(line)[0] == 'run'][-1]
+            self.assertIn('python3 sdlc/scripts/tools.py --check c\n', surface_run[-1])
+            self.assertIn('backend_start\n', surface_run[-1])
+            self.assertTrue(surface_run[-1].endswith('sdlc/scripts/job sh libraries/c/check.sh "$port" 3>&-\n'))
             source = next(root.glob('.linux-*/src')).resolve()
             run = runs[-1]
             self.assertTrue(run[-1].endswith('sdlc/scripts/job sdlc/scripts/test\n'))

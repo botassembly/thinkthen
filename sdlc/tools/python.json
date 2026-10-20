@@ -39,6 +39,21 @@
         ],
         "contains": "Python {version}"
       }
+    },
+    "maturin": {
+      "commands": [
+        "maturin"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "python",
+        "polars"
+      ],
+      "provider": "python-package",
+      "version": "1.9.4"
     }
   }
 }

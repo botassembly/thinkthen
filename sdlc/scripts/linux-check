@@ -14,10 +14,20 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from sdlc.scripts.tools import load_manifest
+from sdlc.linux.install import image_dockerfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--docker', default='docker', help='host Docker executable captured before tool PATH isolation')
-parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
+parser.add_argument('checks', nargs='+', help='lint, test, test-full-cases, package, test-stress, prepare, or surface PATH')
 args = parser.parse_args()
+surface = None
+if args.checks[0] == 'surface':
+    if len(args.checks) != 2:
+        parser.error('surface requires one libraries/NAME or databases/NAME path')
+    surface = args.checks[1]
+    if len(Path(surface).parts) != 2 or Path(surface).parts[0] not in ('libraries', 'databases') or not (ROOT / surface / 'check.sh').is_file():
+        parser.error('surface requires an existing libraries/NAME or databases/NAME check.sh')
+elif set(args.checks) - {'lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'}:
+    parser.error('unknown Linux check')
 if 'prepare' in args.checks and args.checks != ['prepare']:
     parser.error('prepare runs separately from checks')
 job = os.environ.get('PM_JOB', '').split()
@@ -26,6 +36,9 @@ if len(ticket) != 4 or not ticket.isdigit():
     parser.error('container label requires a four-digit ticket')
 manifest = load_manifest()
 pin = manifest['linux']
+if surface and surface.split('/')[1] not in manifest[surface.split('/')[0]]:
+    parser.error('surface is not declared in the tool manifest')
+image_groups = ['linux-image']
 arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machine()]
 base = pin['images'][arch]
 is_yellow = platform.node().split('.')[0] == 'yellow'
@@ -45,6 +58,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
         destination = context / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)
+    dockerfile = context / 'sdlc/linux/Dockerfile'
+    dockerfile.write_text(image_dockerfile(dockerfile.read_text(),
+                         [str(path.relative_to(context)) for path in sorted((context / 'sdlc/tools').glob('*.json'))]))
     subprocess.run([args.docker, 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
                     '--cpu-period', '100000', '--cpu-quota', str(pin['cpus'] * 100000), '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),
                     '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
@@ -54,7 +70,7 @@ print('linux-check: image=' + image + ' base=' + base, flush=True)
 subprocess.run([args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
                 '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
                 '-v', str(ROOT) + ':/opt/thinkthen-checkout:ro', '-w', '/opt/thinkthen-checkout',
-                image, 'python3', 'sdlc/scripts/tools.py', ','.join(pin['tool_groups'])], check=True)
+                image, 'python3', 'sdlc/scripts/tools.py', ','.join(image_groups)], check=True)
 if args.checks == ['prepare']:
     running = subprocess.check_output([args.docker, 'ps', '-q'], text=True).split()
     live = set()
@@ -127,9 +143,17 @@ for relative in locks.splitlines():
 # Advisory data is a separate prerequisite from Cargo registry dependencies.
 # Fetch it in this same mounted home before the offline checks consume it.
 script += 'cargo deny fetch db\n'
-# Validate the prepared core gate requirements before starting any check. Other
-# language checks retain their own required groups and fail if tools are absent.
-script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(pin['tool_groups'])) + '\n'
-for check in args.checks:
+# Validate every declared image provider before starting any check. Surface
+# checks also validate their own requirements and refuse missing tools.
+script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(image_groups)) + '\n'
+if surface:
+    group = surface.split('/')[1]
+    script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(group) + '\n'
+    script += '. sdlc/scripts/scratch.sh\nusage_guard\n. sdlc/scripts/installed.sh\nbackend_start\n'
+    if surface == 'databases/postgresql':
+        script += 'for major in 16 17 18; do sdlc/scripts/job sh databases/postgresql/check.sh "$major" 3>&-; done\n'
+    else:
+        script += 'sdlc/scripts/job sh ' + shlex.quote(surface + '/check.sh') + ' "$port" 3>&-\n'
+for check in ([] if surface else args.checks):
     script += 'sdlc/scripts/job sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)

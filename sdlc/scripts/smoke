@@ -92,6 +92,9 @@ scratch_dir bin
 cp target/smoke/debug/thinkthen target/smoke/debug/conformance-backend "$bin/"
 if [ "$#" -eq 0 ]; then
 	set -- $(awk '!/^#/ && ($2 == "landed" || $2 == "feature") { print $1 }' sdlc/surfaces.txt)
+	if python3 -c 'from sdlc.scripts.tools import image_environment, load_manifest; raise SystemExit(not image_environment(load_manifest()))'; then
+		set -- $(python3 sdlc/scripts/tools.py --surfaces surfaces)
+	fi
 	for surface in $skipped; do
 		set -- $(printf '%s\n' "$@" | grep -vx "$surface")
 	done

@@ -256,6 +256,10 @@ usage_guard
 . "$(dirname -- "$0")/installed.sh"
 backend_start
 
+selected_surfaces="$(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt)"
+if python3 -c 'from sdlc.scripts.tools import image_environment, load_manifest; raise SystemExit(not image_environment(load_manifest()))'; then
+    selected_surfaces=$(python3 sdlc/scripts/tools.py --surfaces surfaces)
+fi
 failed=0 skipped= selected_checks=0
 if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
     # The public C projection does not run the C crate's private safety tests.
@@ -270,7 +274,7 @@ if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
     fi
     python3 conformance/parity.py "$port" ${parity_baseline:+"$parity_baseline"}
 else
-for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
+for surface in $selected_surfaces; do
     if [ "$profile" = stress ]; then
         # These check.sh scripts select existing stress cases. Other profiles
         # cannot stand in for stress, and unsupported selection is not a pass.
@@ -332,6 +336,15 @@ code=0
 host=$(rustc -vV | sed -n 's/^host: //p')
 # A publish adds the source wrappers to the default parts, so the smoke checks each pair and install.
 parts=
+if python3 -c 'from sdlc.scripts.tools import image_environment, load_manifest; raise SystemExit(not image_environment(load_manifest()))'; then
+    parts='command c first-run'
+    for surface in $selected_surfaces; do
+        case $surface in
+        libraries/python | libraries/typescript | libraries/ruby | databases/sqlite | databases/duckdb | databases/postgresql)
+            parts="$parts ${surface#*/}" ;;
+        esac
+    done
+fi
 [ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada cobol'
 case $host in *-apple-darwin) [ -z "$publish_tag" ] || parts="$parts objective-c" ;; esac
 [ "$profile" != full ] || export THINKTHEN_TEST_PROFILE=full

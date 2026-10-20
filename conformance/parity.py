@@ -148,6 +148,7 @@ def validate_consumer_contracts(parity):
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
 from check_verdict import unsupported
+from tools import image_environment, load_manifest, surface_paths
 
 DOCUMENT = ROOT / 'conformance/cases.json'
 PREFIX = 'parity: '
@@ -494,6 +495,13 @@ def run(port, baseline=False, artifact_dir=None):
         raise ValueError('strict parity refuses a case selector')
     cases = {case['id']: case for case in parity['required_cases']}
     consumers = {row['id']: row for row in all_consumers(parity)}
+    manifest = load_manifest()
+    if image_environment(manifest):
+        selected = {'.', *surface_paths(manifest)}
+        for name, row in list(consumers.items()):
+            if row['surface'] not in selected:
+                print(f"parity: not selected {name} (Linux tools not declared)", flush=True)
+                del consumers[name]
     if artifact_dir is not None and baseline:
         raise ValueError('installed parity cannot be a partial baseline')
     artifacts, command_archive, native_archive = installed_artifacts(artifact_dir, consumers) if artifact_dir is not None else ({}, None, None)

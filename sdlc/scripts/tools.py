@@ -12,7 +12,7 @@ import tarfile
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from sdlc.linux.install import download, load_manifest, run, rust_components, selected
+from sdlc.linux.install import download, load_manifest, run, rust_components, selected, surface_paths, image_environment
 
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin'
@@ -271,16 +271,20 @@ def main():
     parser.add_argument('--manifest', type=Path, default=ROOT / 'sdlc/tools.json')
     parser.add_argument('--root', type=Path, help='job tool folder; Linux image supplies its declared prefix')
     parser.add_argument('--check', action='store_true', help='refuse missing tools without installation')
+    parser.add_argument('--surfaces', action='store_true', help='print platform surfaces selected by the image manifest')
     parser.add_argument('--list', action='store_true', help='print selected manifest entries for image construction')
     parser.add_argument('groups', help='comma-separated gate or library names')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     manifest = load_manifest(args.manifest)
     groups = args.groups.split(',')
-    known = {'install', 'lint', 'test', 'spec', 'surfaces', *manifest['libraries'], *manifest['databases']}
+    known = {'linux-image', 'install', 'lint', 'test', 'spec', 'surfaces', *manifest['libraries'], *manifest['databases']}
     known.update(group for tool in manifest['tools'].values() for group in tool['groups'])
     if set(groups) - known:
         parser.error('unknown tool groups: ' + ', '.join(sorted(set(groups) - known)))
+    if args.surfaces:
+        print('\n'.join(surface_paths(manifest)))
+        return 0
     if args.list:
         print(json.dumps(selected(manifest, groups, platform.system().lower()), indent=2))
         return 0
