@@ -232,6 +232,30 @@ class OwnedCallComparison(unittest.TestCase):
                 self.assertEqual(observed[0]['host']['results'][0]['input'], opaque)
 
 
+    def test_tree_metadata_omission_preserves_material_values_and_authored_nulls(self):
+        opaque = {'pick': None, 'index': None, 'value': None, 'resolution': 'failed'}
+        answer = {'function': 'decide', 'value': opaque, 'probability': '0.9',
+                  'pick': None, 'index': None, 'resolution': 'resolved'}
+        wrap = lambda value: [{'host': {'call_result': {'answer': value}}}]
+        wanted = self.installed.canonical(wrap(answer), expected_oracle=True,
+                                          absent_metadata=True)
+        actual = {key: value for key, value in answer.items() if key not in ('pick', 'index')}
+        self.assertEqual(self.installed.canonical(wrap(actual), absent_metadata=True), wanted)
+        self.assertEqual(wanted[0]['host']['call_result']['answer']['value'], opaque)
+        self.assertNotEqual(self.installed.canonical(wrap(answer), absent_metadata=True), wanted)
+        self.assertIn('pick', self.installed.canonical(wrap(answer))[0]['host']['call_result']['answer'])
+        for altered in ({key: value for key, value in actual.items() if key != 'value'},
+                        {**actual, 'value': {**opaque, 'value': False}}):
+            with self.subTest(altered=altered):
+                self.assertNotEqual(self.installed.canonical(wrap(altered), absent_metadata=True), wanted)
+        collection = {**answer, 'value': [opaque], 'probability': ['0.9'],
+                      'resolution': ['resolved'], 'pick': [None], 'index': [None]}
+        projected = {key: value for key, value in collection.items() if key not in ('pick', 'index')}
+        self.assertEqual(self.installed.canonical(wrap(collection), expected_oracle=True,
+                                                absent_metadata=True),
+                         self.installed.canonical(wrap(projected), absent_metadata=True))
+
+
 class BindingCaseTiers(unittest.TestCase):
     def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
         sys.path.insert(0, str(parity.ROOT / 'build-tools/results/templates'))

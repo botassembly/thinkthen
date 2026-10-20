@@ -10,12 +10,13 @@ IDENTITIES = {'call_id', 'observation_id', 'failure_id', 'answer_id',
               'sdk_request_id', 'request_sha256', 'request'}
 
 
-def branches(schema, value):
+def branches(schema, value, *, absent_metadata=False):
     """Follow carrier alternatives using their shapes and authored discriminators."""
     if not isinstance(schema, dict):
         return
     if '$ref' in schema:
-        yield from branches(SCHEMA[schema['$ref'].rsplit('/', 1)[1]], value)
+        yield from branches(SCHEMA[schema['$ref'].rsplit('/', 1)[1]], value,
+                            absent_metadata=absent_metadata)
         return
     types = schema.get('type', [])
     types = [types] if isinstance(types, str) else types
@@ -24,7 +25,10 @@ def branches(schema, value):
                   (value is None and 'null' not in types)):
         return
     if isinstance(value, dict):
-        if any(key not in value for key in schema.get('required', [])):
+        required = schema.get('required', [])
+        if absent_metadata and 'x-probability-mode' in schema:
+            required = [key for key in required if key not in ('pick', 'index')]
+        if any(key not in value for key in required):
             return
         for key, field in schema.get('properties', {}).items():
             if key in value and isinstance(field, dict) and 'const' in field:
@@ -33,10 +37,10 @@ def branches(schema, value):
     yield schema
     for field in ('allOf', 'anyOf', 'oneOf'):
         for option in schema.get(field, []):
-            yield from branches(option, value)
+            yield from branches(option, value, absent_metadata=absent_metadata)
 
 
-def canonical(document, folders=(), *, expected_oracle=False):
+def canonical(document, folders=(), *, expected_oracle=False, absent_metadata=False):
     """Leave semantic data untouched; optionally reindex stored oracle identities."""
     identities = {}
 
@@ -44,7 +48,7 @@ def canonical(document, folders=(), *, expected_oracle=False):
         # An unconstrained schema is user data, regardless of names or content.
         if not isinstance(schema, dict):
             return value
-        choices = list(branches(schema, value))
+        choices = list(branches(schema, value, absent_metadata=absent_metadata))
         if not choices:
             return value
         if isinstance(value, dict):
@@ -53,9 +57,14 @@ def canonical(document, folders=(), *, expected_oracle=False):
                 properties.update(option.get('properties', {}))
             additional = next((option['additionalProperties'] for option in choices
                                if 'additionalProperties' in option), True)
+            settled = absent_metadata and expected_oracle and any(
+                'x-probability-mode' in option for option in choices)
+            def absent(name, child):
+                return settled and name in ('pick', 'index') and (child is None or
+                    isinstance(child, list) and bool(child) and all(item is None for item in child))
             return {name: visit(child, properties.get(name, additional),
                                 name if name in properties else '')
-                    for name, child in sorted(value.items())}
+                    for name, child in sorted(value.items()) if not absent(name, child)}
         if isinstance(value, list):
             items = next((option['items'] for option in choices if 'items' in option), True)
             return [visit(child, items, 'request_sha256' if key == 'requests' else key)
