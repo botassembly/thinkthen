@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision d721b6d, accept
+
 ## Outcome
 
 - Changes: `libraries/c/src/ffi.rs`, `libraries/c/src/ffi/`, `libraries/c/src/failures.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`, `libraries/c/README.md`, `libraries/BINDING-AUTHOR.md`, `build-tools/results/operations.py`, `build-tools/results/templates/operations.py`, `sdlc/scripts/install_check_consumers.py`, `libraries/c/examples/session.c`, `libraries/c/README-PUBLIC.md`.
