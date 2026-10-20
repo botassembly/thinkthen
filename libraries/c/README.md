@@ -37,7 +37,7 @@ cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) \
 
 On Windows, run this command from an MSVC developer command prompt in the extracted archive:
 
-```bat
+```console
 cl /nologo /W4 /I include consumer.c lib\thinkthen.dll.lib /Fe:consumer.exe
 set "PATH=%CD%\bin;%PATH%"
 consumer.exe
