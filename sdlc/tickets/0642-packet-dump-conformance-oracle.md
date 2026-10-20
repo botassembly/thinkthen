@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0636
 
+Reviews: revision 90d52a7, accept
+
 ## Outcome
 
 - Changes: `conformance/fixtures/packets.json`, `crates/thinkthen/tests/packet_oracle.rs`, `conformance/children/packet_dump.py`, `libraries/rust/consumer/`, `libraries/rust/check.py`, `sdlc/scripts/lint`.
@@ -45,3 +47,5 @@ PM decision, 2026-10-19: the oracle is a new file, `conformance/fixtures/packets
 - 2026-10-19 next: Full required-case inventory confirms private25-defect-fault was already outside Rust parity, so retaining that explicit boundary needs no new ruling; current sourcee5be1cf0a preserves all258 required cells through shared orchestration and awaits the next M5 slot for oracle generation, package comparison, lint and planted stale-output negatives.
 - 2026-10-19 next: M5 job1792462197161-60612 passed generation and independent comparison of255 Rust-applicable cells from258 global cells, with only3 existing MCP-only exclusions, plus authored-value preservation and lossless fixture-storage probes; pushed498811adf needs final currency,full installed Rust,lint,test and the two planted stale-output checks under fresh review.
 - 2026-10-19 next: M5 job1792462908099-82036 atdfb691f60 passed policy,backend,package,full255 installed Rust cases and routine tests, then exited2 before lint because native tool resolution selected Apple gcc instead of the Linux-pinned GCC; source remains unchanged, and the next slot uses existing Linux lint plus currency and both planted negatives before fresh acceptance.
+- 2026-10-20 next: Fresh review accepts source 90d52a718: job 1792468804508-31699 passed Linux lint, both intended packet-diff negatives and restored native currency; prior job 1792467656278-89184 passed native/Linux currency and all 255 installed Rust cases at 4020fc933 before formatting/helper-only edits, preserving all three existing MCP-only exclusions, and the accepted lane is ready for the shared landing gate.
+- 2026-10-20 next: Accepted standalone proof passed, but the combined landing gate at d8fcb38c859557a4266360d51385cd691478ace5 exited 101 on packet-currency differences after main gained 0639 core changes; the fixing reviewer is merging current main and classifying all refusal-facts diffs before any oracle regeneration, and no 0642 source has landed.
