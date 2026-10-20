@@ -33,3 +33,4 @@ Reviews: revision a30dd15, accept
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Fresh review accepteda30dd1590 after job1792489932144-81437 passed real native command installation in both smoke modes and old-versus-new default proof plus all installer checks, while every fake case kept a distinct assertion and Linux Windows and full-surface packaging remain checkpoint obligations pending the integrated closing gate.
