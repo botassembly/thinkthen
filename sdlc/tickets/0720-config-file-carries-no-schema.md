@@ -19,6 +19,10 @@ Reviews: revision 374c5df, accept
 - On the M5 through `pm job run --machine m5 0720 SHA --memory 8 -- cargo nextest run -p thinkthen config`, a configuration file without `schema` loads and one with `"schema":"thinkthen.config/1"` is refused with the exact sentence. Before the change, the first is refused with "configuration field `schema` must be `thinkthen.config/1`".
 - On the M5 through pm job, `sdlc/scripts/spec` and `sdlc/scripts/demos` pass. The DuckDB backend setup suite runs at the 0619 container checkpoint.
 
+## Amendment, 2026-10-19 (core cut)
+
+The DuckDB backend setup suite runs with 0694, DuckDB's replay of the shared cases, instead of at the 0619 checkpoint. This ticket closes on its config, spec and demos proofs.
+
 ## Evidence
 
 Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbers-before-1-0.md). Split from 0706.

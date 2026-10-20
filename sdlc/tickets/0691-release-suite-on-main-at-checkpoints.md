@@ -21,6 +21,14 @@ Depends on: 0615, 0618, 0619
 
 - The phase 1 checkpoint revision passes the command on all three targets, each with one log the PM can cite by revision.
 
+## Amendment, 2026-10-19 (core cut)
+
+0619 now closes on the core image only.
+
+- The phase 1 checkpoint and the core-freeze checkpoint (0688) run the existing named core smoke and `package` parts on the M5 natively and in the arm64 container, and the configured tickets gate in both containers.
+- `test-full-cases` and `test-stress` run in both containers from the phase 3 checkpoint at which every language's toolchain is in the manifest, and at each later checkpoint. Until then they run natively on the M5 at each checkpoint.
+- Add no core-only selector to `test-full-cases` or `test-stress`, and never weaken a missing-tool failure.
+
 ## Evidence
 
 Rule 6 of the 0.2.1 ruling says candidates are main revisions and the release suite runs on main at each checkpoint, so no release-only check meets a candidate first. In 0.2, release-only checks ran for the first time at each candidate, and each candidate found one new setup fault. Nothing in the 0.2.1 set runs the release suite before 0687. The retired campaign-owner verifier needs no replacement runner: the suite already has entrypoints.
