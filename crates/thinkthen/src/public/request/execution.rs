@@ -24,6 +24,7 @@ pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
     Session(std::sync::Arc<super::session_queue::Queue>),
+    SessionDescriptors(Box<dyn Iterator<Item = Result<super::RequestSessionDescriptor, super::RequestReaderFailure>> + 'a>),
     Descriptors(Vec<super::transport::RequestDescriptor>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
@@ -72,6 +73,23 @@ impl<'a> RequestFeed<'a> {
         Self {
             name: name.into(),
             contents: FeedContents::Items(Box::new(items)),
+            eager: false,
+            image_inputs: false,
+            all_filter_results: false,
+            record_reading: None,
+        }
+    }
+    /// Pull session descriptors through native framing, projection and reader failures.
+    /// Headers and blank records do not count as logical records. Reader failures
+    /// retain the same safe kind and message as an owned session.
+    #[must_use]
+    pub fn from_session_descriptors(
+        name: impl Into<String>,
+        descriptors: impl Iterator<Item = Result<super::RequestSessionDescriptor, super::RequestReaderFailure>> + 'a,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            contents: FeedContents::SessionDescriptors(Box::new(descriptors)),
             eager: false,
             image_inputs: false,
             all_filter_results: false,

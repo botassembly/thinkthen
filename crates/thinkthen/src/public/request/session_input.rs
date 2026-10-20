@@ -75,7 +75,7 @@ impl Logical {
         if self.stopped {
             return None;
         }
-        let value = self.decoder.next(queue, controls);
+        let value = self.decoder.next(|| queue.next(controls), controls);
         self.stopped = value.as_ref().is_none_or(Result::is_err);
         value
     }

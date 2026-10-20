@@ -13,6 +13,8 @@ mod child;
 mod annotation_missing;
 #[path = "request_session/cancel_settlement.rs"]
 mod cancel_settlement;
+#[path = "request_session/pull_descriptors.rs"]
+mod pull_descriptors;
 #[path = "request_session/framing.rs"]
 mod framing;
 #[path = "request_session/incremental_ranking.rs"]

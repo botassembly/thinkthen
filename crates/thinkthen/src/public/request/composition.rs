@@ -128,7 +128,7 @@ impl AdmittedRequest {
                         controls,
                     );
                 }
-                if matches!(feed.contents, super::execution::FeedContents::Session(_)) {
+                if matches!(feed.contents, super::execution::FeedContents::Session(_) | super::execution::FeedContents::SessionDescriptors(_)) {
                     return self.session_records(definition, feed, controls, image_refusal);
                 }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
@@ -153,9 +153,6 @@ impl AdmittedRequest {
         controls: CallOptions<'a>,
         image_refusal: Option<String>,
     ) -> Result<Inputs<'a>, Error> {
-        let super::execution::FeedContents::Session(queue) = feed.contents else {
-            return Err(Error::defect("session feed lost its queue"));
-        };
         let options = &self.request.call.arguments().options;
         super::framing::reading(self, definition)?;
         let schema = context_schema(definition).cloned();
@@ -179,8 +176,23 @@ impl AdmittedRequest {
             return Err(Error::defect("session feed lost its declaration"));
         };
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let input_queue = std::sync::Arc::clone(&queue);
-        let descriptors = std::iter::from_fn(move || input_queue.next_decoded(controls));
+        let (descriptors, queue): (
+            Box<dyn Iterator<Item = Result<super::RequestSessionDescriptor, Error>> + 'a>,
+            Option<std::sync::Arc<super::session_queue::Queue>>,
+        ) = match feed.contents {
+            super::execution::FeedContents::Session(queue) => {
+                let input_queue = std::sync::Arc::clone(&queue);
+                (Box::new(std::iter::from_fn(move || input_queue.next_decoded(controls))), Some(queue))
+            }
+            super::execution::FeedContents::SessionDescriptors(mut descriptors) => {
+                let mut decoder = super::framing::Decoder::new(*framing);
+                (Box::new(std::iter::from_fn(move || decoder.next(
+                    || descriptors.next().map(|row| row.map_err(|failure| failure.error())),
+                    controls,
+                ))), None)
+            }
+            _ => return Err(Error::defect("session feed lost its descriptors")),
+        };
         let mut compose = move |descriptor: super::RequestSessionDescriptor| {
             if options.files_only && descriptor.location.is_none() {
                 return Err(Error::usage(
@@ -206,7 +218,9 @@ impl AdmittedRequest {
             }
             if row.is_err() {
                 *stopped = true;
-                queue.close_intake();
+                if let Some(queue) = &queue {
+                    queue.close_intake();
+                }
             }
             Some(row)
         });

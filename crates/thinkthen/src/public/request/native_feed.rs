@@ -132,7 +132,7 @@ pub(super) fn projection(
         && feed.is_none_or(|feed| {
             !matches!(
                 feed.contents,
-                FeedContents::Records(_) | FeedContents::Session(_)
+                FeedContents::Records(_) | FeedContents::Session(_) | FeedContents::SessionDescriptors(_)
             )
         })
     {
@@ -144,7 +144,7 @@ pub(super) fn projection(
             || feed.is_none_or(|feed| {
                 !matches!(
                     feed.contents,
-                    FeedContents::Records(_) | FeedContents::Session(_)
+                    FeedContents::Records(_) | FeedContents::Session(_) | FeedContents::SessionDescriptors(_)
                 )
             }))
     {

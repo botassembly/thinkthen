@@ -4,6 +4,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 ## Authority
 
+[0751](../sdlc/tickets/0751-shared-pull-feed-descriptors.md) adds `RequestFeed::from_session_descriptors` for pull producers carrying `RequestSessionDescriptor` or `RequestReaderFailure`. It shares session framing, location retention, projection and safe reader error mapping. Header admission and stop checks precede advancement. Headers and skipped blanks do not count as logical records; failed calls retain their actual completed prefix. `Engine::call`, C headers, packets and the settled value tree retain their contracts. Ian can overturn these API details.
+
 [0719](../sdlc/tickets/0719-request-contract-carries-no-version.md) retires the request schema field, its version type and every author wording-version constructor and reading accessor. Native requests and declarations retain all other admission rules and behavior.
 
 [0689](../sdlc/tickets/0689-settled-call-value-tree.md) adds `Call<RequestValue>::value_tree` and `RequestValueTree` beside the named call owner. The tree exposes the native host call fields `value`, `probability`, `pick`, `index`, `resolution`, `results` and `facts`. Its bare value and metadata derive only from the retained `SettledAnswer`; `results` retains the complete `RequestValue`, and `facts` retains native call facts. Adapters map variants without selecting fields by function. Maps, lists, strings, exact JSON number tokens, booleans and null use existing native serialization. Missing optional answer fields and failed named annotation members carry `Absent`; authored null remains `Null`. Caller objects are opaque and their keys never control absence or resolution. A number token is a string so adapters never narrow an integer or decimal through floating point conversion. The tree adds no duplicate answer alias and changes no existing Call or wire serialization. The tree has no wire schema or serializer; host adapters map its variants directly. Debug withholds caller content. Missing settlement or native serialization failure returns a safe Local error. These reviewed API details fall within the approved outcome; Ian can overturn them.
@@ -711,6 +713,7 @@ RequestDescriptor::item: RequestItem
 RequestDescriptor::source: Option<RequestSource>
 impl Debug for RequestDescriptor
 fn CallOptions::retained_attachment_limit(self, usize) -> Result<CallOptions<'a>, Error>
+fn RequestFeed::from_session_descriptors(impl Into<String>, impl Iterator<Item = Result<RequestSessionDescriptor, RequestReaderFailure>> + 'a) -> RequestFeed<'a>
 fn RequestFeed::from_descriptors(impl Into<String>, Vec<RequestDescriptor>) -> RequestFeed<'a>
 fn Error::completed(&self) -> Option<&RequestValue>
 const fn RequestFunction::name(self) -> &'static str

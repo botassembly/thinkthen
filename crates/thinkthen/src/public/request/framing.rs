@@ -188,14 +188,18 @@ impl Decoder {
 
     pub(super) fn next(
         &mut self,
-        queue: &super::session_queue::Queue,
+        mut next: impl FnMut() -> Option<Result<super::RequestSessionDescriptor, Error>>,
         controls: crate::CallOptions<'_>,
     ) -> Option<Result<super::RequestSessionDescriptor, Error>> {
         if self.stopped {
             return None;
         }
         loop {
-            let decoded = match queue.next(controls) {
+            let decoded = match controls.reader_admission() {
+                Err(error) => Some(Err(error)),
+                Ok(()) => next(),
+            };
+            let decoded = match decoded {
                 Some(descriptor) => descriptor.and_then(|descriptor| self.descriptor(descriptor)),
                 None => {
                     self.stopped = true;
