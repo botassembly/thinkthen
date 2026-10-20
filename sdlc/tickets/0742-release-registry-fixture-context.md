@@ -25,3 +25,5 @@ The release-registry self-test exercises every existing Go tag branch in the iso
 - Reproduce the cause through the existing isolated test path, make all existing registry fixtures pass, and run the configured gate on the combined repaired revision before landing.
 
 ## Progress
+
+- 2026-10-20 started
