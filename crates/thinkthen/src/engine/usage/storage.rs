@@ -198,8 +198,7 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
     replace(path, &directory, &name, next)
 }
 
-/// Every recognized month, sorted. Any other name, such as an older build's
-/// `retries-` file, is not a month and is ignored.
+/// Every recognized month, sorted.
 fn scan(path: &Path) -> Result<Vec<(String, Counts)>, ReadFailure> {
     let mut names = Vec::new();
     for entry in fs::read_dir(path).map_err(|error| ReadFailure::at(DIRECTORY, error))? {

@@ -153,7 +153,7 @@ def main() -> None:
         print("pass calibration")
         return
     corpus = json.loads(CORPUS.read_text())
-    assert corpus["schema"] == "thinkthen.settings-cases/1"
+    assert corpus["schema"] == "thinkthen.settings-cases"
     if sys.argv[1] == "plan":
         for case in corpus["cases"]:
             # PostgreSQL's keyed form prevalidates max_requests for its whole call.

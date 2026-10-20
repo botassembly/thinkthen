@@ -1,7 +1,7 @@
 # The shared settings corpus through tt_engine's R argument names.
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
 corpus <- jsonlite::fromJSON(file.path(Sys.getenv("TT_TESTS"), "..", "..", "..", "conformance", "settings.json"), simplifyVector = FALSE)
-check("settings schema", identical(corpus$schema, "thinkthen.settings-cases/1"))
+check("settings schema", identical(corpus$schema, "thinkthen.settings-cases"))
 literal <- function(value) as.character(jsonlite::toJSON(value, auto_unbox = TRUE))
 
 for (case in corpus$cases) {

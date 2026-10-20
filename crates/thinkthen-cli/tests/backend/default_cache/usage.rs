@@ -289,7 +289,12 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
 fn a_malformed_month_without_a_lock_refuses_the_run_before_any_send() {
     use std::os::unix::fs::PermissionsExt as _;
 
-    for (label, bytes) in [("garbage", &b"garbage\n"[..]), ("zero", &b""[..])] {
+    for (label, bytes) in [
+        ("garbage", &b"garbage\n"[..]),
+        ("zero", &b""[..]),
+        ("old-schema", &br#"{"schema":"retired","requests_sent":1,"retries":0,"input_tokens":0,"output_tokens":0,"cache_answers":0}"#[..]),
+        ("missing-retries", &br#"{"requests_sent":1,"input_tokens":0,"output_tokens":0,"cache_answers":0}"#[..]),
+    ] {
         let root = folder(&format!("usage-no-lock-{label}"));
         let usage_folder = Folder::Usage.under(&root);
         fs::create_dir_all(&usage_folder).expect("usage folder");
@@ -323,7 +328,7 @@ fn a_month_other_users_can_read_refuses_the_run_and_names_the_unsafe_fix() {
     let lock = usage_folder.join(".lock");
     let month = usage_folder.join("2026-08.json");
     fs::write(&lock, b"").expect("stable lock");
-    fs::write(&month, b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n").expect("month");
+    fs::write(&month, b"{\"requests_sent\":1,\"retries\":0,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n").expect("month");
     fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).expect("private lock");
     fs::set_permissions(&month, fs::Permissions::from_mode(0o644)).expect("shared month");
     let (output, requests) = refused_before_any_send(&root, "secret-shared-month-key");
@@ -411,7 +416,7 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
 }
 
 /// The totals are state. Removing the cache home keeps them. One month file
-/// holds all five counts, and no `retries-` file appears (ticket 0360).
+/// holds all five counts (ticket 0360).
 #[test]
 fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
     let root = folder("usage-survives-the-cache");
@@ -458,8 +463,7 @@ fn removing_the_cache_home_keeps_the_count_in_one_month_file() {
             "input_tokens",
             "output_tokens",
             "requests_sent",
-            "retries",
-            "schema"
+            "retries"
         ]
     );
 }

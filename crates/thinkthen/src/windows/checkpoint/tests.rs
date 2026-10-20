@@ -69,7 +69,7 @@ fn counts(root: &Scratch, sent: u64) {
         serde_json::from_slice(&fs::read(month(root)).expect("month bytes")).expect("month JSON");
     assert_eq!(
         saved,
-        serde_json::json!({"schema":"thinkthen.usage/1", "requests_sent":sent, "retries":0, "input_tokens":sent*5, "output_tokens":sent, "cache_answers":0})
+        serde_json::json!({"requests_sent":sent, "retries":0, "input_tokens":sent*5, "output_tokens":sent, "cache_answers":0})
     );
 }
 fn release(root: &Scratch) {

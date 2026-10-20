@@ -328,7 +328,7 @@ fn shared_settings_child() {
     use serde_json::Value;
     let corpus: Value =
         serde_json::from_str(include_str!("../../../../settings.json")).expect("cases");
-    assert_eq!(corpus["schema"], "thinkthen.settings-cases/1");
+    assert_eq!(corpus["schema"], "thinkthen.settings-cases");
     for case in corpus["cases"].as_array().expect("cases") {
         let backend = Backend::start().expect("backend");
         let id = case["id"].as_str().expect("id");

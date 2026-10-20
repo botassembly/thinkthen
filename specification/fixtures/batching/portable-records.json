@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.portable-batch-records/1",
+  "schema": "thinkthen.portable-batch-records",
   "question": "Is it relevant?",
   "model": "jev-1.13.0",
   "texts": ["alpha", "café-5544", "omega", "line 2907", "tail"],

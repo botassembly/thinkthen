@@ -7,8 +7,8 @@ use thinkthen::{ImageAdmission, ImageEvidence, ImageInput, ImageMedia, Judgment,
 
 use crate::{Failure, ffi, guard, question, worker};
 
-const IMAGE: &[u8] = b"thinkthen.image/1\0";
-const IMAGES: &[u8] = b"thinkthen.images/1\0";
+const IMAGE: &[u8] = b"thinkthen.image\0";
+const IMAGES: &[u8] = b"thinkthen.images\0";
 
 fn blob<'a>(value: ValueRef<'a>) -> Result<&'a [u8], Failure> {
     match value {

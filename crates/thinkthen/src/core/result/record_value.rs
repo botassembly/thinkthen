@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn shared_typed_cases_cross_the_production_serializer() {
         let document: Document = serde_json::from_str(CASES).expect("shared record-value cases");
-        assert_eq!(document.schema, "thinkthen.record-value-conformance/1");
+        assert_eq!(document.schema, "thinkthen.record-value-conformance");
         let reading = Reading::new(Framing::Jsonl, Vec::new()).expect("JSONL framing");
         for case in document.cases {
             let record = reading.record(case.input.as_bytes()).expect("typed record");

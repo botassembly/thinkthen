@@ -44,7 +44,7 @@ pub(crate) struct Invocation {
 
 impl Invocation {
     fn new(surface: Surface) -> Result<Self, Error> {
-        let call_id = CallId::new(fresh(b"thinkthen.call-id/1")?)
+        let call_id = CallId::new(fresh(b"thinkthen.call-id")?)
             .map_err(|_| Error::Defect("a generated call identity is invalid"))?;
         Ok(Self { call_id, surface })
     }
@@ -55,17 +55,17 @@ impl Invocation {
 }
 
 pub(crate) fn request_id() -> Result<SdkRequestId, Error> {
-    SdkRequestId::new(fresh(b"thinkthen.sdk-request-id/1")?)
+    SdkRequestId::new(fresh(b"thinkthen.sdk-request-id")?)
         .map_err(|_| Error::Defect("a generated request identity is invalid"))
 }
 
 pub(crate) fn observation_id() -> Result<crate::core::ObservationId, Error> {
-    crate::core::ObservationId::new(fresh(b"thinkthen.observation-id/1")?)
+    crate::core::ObservationId::new(fresh(b"thinkthen.observation-id")?)
         .map_err(|_| Error::Defect("a generated observation identity is invalid"))
 }
 
 pub(crate) fn failure_id() -> Result<crate::core::FailureId, Error> {
-    crate::core::FailureId::new(fresh(b"thinkthen.failure-id/1")?)
+    crate::core::FailureId::new(fresh(b"thinkthen.failure-id")?)
         .map_err(|_| Error::Defect("a generated failure identity is invalid"))
 }
 

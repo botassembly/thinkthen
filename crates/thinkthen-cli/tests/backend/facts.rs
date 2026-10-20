@@ -97,32 +97,51 @@ pub(crate) fn fresh_root(name: &str) -> std::path::PathBuf {
     root
 }
 
+/// Restore owner write even when a refusal assertion panics.
+#[cfg(unix)]
+#[derive(Debug)]
+pub(crate) struct UsageWriteGuard(std::path::PathBuf);
+
+#[cfg(unix)]
+impl Drop for UsageWriteGuard {
+    fn drop(&mut self) {
+        use std::os::unix::fs::PermissionsExt as _;
+        if let Ok(metadata) = fs::metadata(&self.0) {
+            let mut permissions = metadata.permissions();
+            permissions.set_mode(permissions.mode() | 0o200);
+            let _restored = fs::set_permissions(&self.0, permissions);
+        }
+    }
+}
+
 /// Make the folder that holds the usage folder read-only, so the writer
 /// cannot make the usage folder. On macOS that folder also holds the
 /// configuration file, which stays readable.
 #[cfg(unix)]
-pub(crate) fn block_usage(root: &Path) {
+pub(crate) fn block_usage(root: &Path) -> UsageWriteGuard {
     use std::os::unix::fs::PermissionsExt as _;
     let usage = Folder::Usage.under(root);
     let parent = usage.parent().expect("the usage folder's parent");
     fs::create_dir_all(parent).expect("the usage folder's parent");
+    let guard = UsageWriteGuard(parent.to_owned());
     fs::set_permissions(parent, fs::Permissions::from_mode(0o500)).expect("read-only");
+    guard
 }
 
 /// A usage folder the writer cannot make passes the read before the first
 /// send, since it is missing, then fails the write: the warning stays.
 #[cfg(unix)]
-pub(crate) fn unwritable_state(name: &str) -> std::path::PathBuf {
+pub(crate) fn unwritable_state(name: &str) -> (std::path::PathBuf, UsageWriteGuard) {
     let root = fresh_root(name);
-    block_usage(&root);
-    root
+    let guard = block_usage(&root);
+    (root, guard)
 }
 
 #[cfg(unix)]
 #[test]
 fn a_usage_warning_precedes_the_facts_line() {
     let listener = Listener::answering(answered).expect("warning loopback");
-    let blocked = unwritable_state("facts-usage-unwritable");
+    let (blocked, _restore_write) = unwritable_state("facts-usage-unwritable");
     let state = Folder::Usage.variable(&blocked);
     let warned = spawn(
         &[

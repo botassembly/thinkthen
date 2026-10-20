@@ -112,7 +112,7 @@ pub(crate) const HOSTILE_SCHEMA_MARKER: &str = "PWNED";
 
 /// A recording entry that is not JSON, holding the evidence it recorded.
 pub(crate) const DAMAGED: &str = concat!(
-    r#"{"schema":"thinkthen.recording/1","adapter":"systemone","#,
+    r#"{"schema":"thinkthen.recording","adapter":"systemone","#,
     r#""request":{"evidence":"marker-evidence-7b3ac5"} "response":{}}"#,
 );
 
