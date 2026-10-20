@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0635, 0637, 0638, 0642, 0692
 
+Reviews: revision 37ea94c, accept
+
 ## Outcome
 
 - Changes: `libraries/BINDING-AUTHOR.md`, `libraries/files.md`.
