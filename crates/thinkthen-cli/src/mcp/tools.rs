@@ -57,7 +57,8 @@ fn input_schema(tool: Tool) -> Value {
             *schema = summary(schema, &canonical);
         }
         let field = map.get("field").cloned().unwrap_or_else(|| json!({}));
-        map.insert("field".into(), json!({"oneOf":[{"type":"string"},field]}));
+        let field = summary(&json!({"oneOf":[{"type":"string"},field]}), &canonical);
+        map.insert("field".into(), field);
         map.insert(
             "cancelled".into(),
             json!({"type":"boolean","default":false}),
