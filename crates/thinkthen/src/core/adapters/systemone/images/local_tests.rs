@@ -37,7 +37,7 @@ fn declarations_require_exact_ids_closed_fields_and_literal_aliases() {
     assert!(!declaration.matches(" PRIVATE_ALIAS"));
     assert!(!format!("{parsed:?}").contains("PRIVATE_ALIAS"));
     for invalid in [
-        valid.replace("/2", "/1"),
+        valid.replace("\"name\":", "\"schema\":null,\"name\":"),
         valid.replace("clef-llamacpp-v0.6.0-0036", "clef"),
         valid.replace("PRIVATE_ALIAS", " PRIVATE_ALIAS"),
         valid.replace("PRIVATE_ALIAS", ""),
