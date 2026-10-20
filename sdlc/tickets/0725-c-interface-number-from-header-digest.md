@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0709
 
+Reviews: revision d7b0f06, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/generate-c-header.py`, `libraries/c/src/ffi/values.rs`, `libraries/c/src/ffi/runtime_version/ffi.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/README.md`, `libraries/c/tests/c/runtime_version.c`, `libraries/c/tests/door/runtime_version.rs`, `libraries/go/thinkthen.go`, `libraries/zig/build.zig`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/tests/package_check.py`, `libraries/c/build.rs`, `libraries/zig/src/thinkthen.zig`, `libraries/csharp/ThinkThen.csproj`, `sdlc/scripts/versions`.
