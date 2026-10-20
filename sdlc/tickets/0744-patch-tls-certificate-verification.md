@@ -30,3 +30,4 @@ Changes: `**/Cargo.lock`, `Cargo.lock`. Change a manifest only if the existing c
 
 - 2026-10-20 started
 - 2026-10-20 next: setup: Gator jobs 1792527683967-1234165 and 1792528070953-1250064 exited 1 before lint/test because the pinned Ubuntu snapshot returned HTTP 503 during image build; no further retry or source workaround. Await coordinator ruling and the M5 standard gate result.
+- 2026-10-20 next: product: Gator candidate job 1792529452380-1255765 exited 1 in release-archive-self-test.py after lint and advisory checks; release-pack rejects its derived Dart native-assets.json because it compares the rewritten paired-C checksum manifest with source bytes. This distinct packaging outcome requires coordinator ordering; no unchanged retry or identity-assertion waiver. Await M5 land-check real exit.
