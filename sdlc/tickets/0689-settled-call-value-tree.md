@@ -30,3 +30,9 @@ Depends on: 0612, 0629, 0642
 ## Progress
 
 - 2026-10-20 started
+
+## Reviewed projection and installed proof
+
+The PM approved the host projection in the 2026-10-20 neutral-value-tree ruling: lift the typed settled answer once in Rust into `value`, `probability`, `pick`, `index`, `resolution`, `results` and `facts`. Add no duplicate `answer` alias. Hosts only map this tree; existing `Call` and wire serialization stay unchanged. Preserve exact settled native number values without broadening this ticket into parser changes.
+
+Expand the existing installed settled-consumer test to execute one `Engine::call` per shared case in a separate owned fixture. Print its tree and compare answer fields through the existing shared normalizer and packet oracle. Leave native packet dumping unchanged and do not add another call inside the packet fixture. Prove absent versus null directly in typed tests. A native error has no settled `Call` tree: retain the real error proof rather than invent an answer. Add no private JSON rewrite, comparator or new oracle format. The existing `libraries/rust/check.py` driver may keep its consumer wrapper while copying the unchanged native dumper separately.
