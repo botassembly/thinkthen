@@ -25,3 +25,7 @@ Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 06
 
 - Rule 1 of `sdlc/decisions/2026-10-18-0-2-1-rebuilds-the-basis.md` says a named commit fixes the C interface and the final result packet, and no language ticket starts before it. In 0.2, the binding design changed four times and the header changed 51 times during binding work, because no commit was ever named as the freeze. Rule 7 closes scope at the same point.
 - `sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md` lands its removals before the freeze; 0706 to 0709 carry them, and 0705 removes the fixture time limits that fail gates on a loaded M5.
+
+## Progress
+
+- 2026-10-20 started
