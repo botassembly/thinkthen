@@ -10,7 +10,7 @@ Reviews: revision 0c86668, accept
 
 ## Outcome
 
-- Changes: `databases/sqlite/check.sh`.
+- Changes: `databases/sqlite/check.sh`, `sdlc/tickets/0695-sqlite-replays-shared-cases.md` (remove duplicate guard ownership and record deferred routine failures).
 - The existing source guards read the same counts on BSD and GNU tools. BSD wc padding does not refuse valid source before the installed SQLite checks run.
 - Preserve both expected guard counts, the protected-source scopes, their failure behavior and every downstream check. Change no product code, platform support, timeout, provider or toolchain.
 - Reproduce the failure through the existing check on main, then fix the count interpretation in that script. Add no helper, runner or new checking framework.
