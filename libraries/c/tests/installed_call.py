@@ -94,6 +94,7 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
                                    if key not in ('completed_prefix', 'stopped_at')}}
     shared.assertions(row, value, projected, count)
     if payload.get('code'):
+        assert payload.get('constructor', False) == (row['id'] == 'proxy-reservation-refusal'), payload
         packets = expected_dump.get('packets', [])
         failure = expected_dump.get('error') or next(packet['failure'] for packet in packets
                                                     if packet.get('failure'))
