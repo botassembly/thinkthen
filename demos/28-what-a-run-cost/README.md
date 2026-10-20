@@ -8,7 +8,7 @@ A request may judge several records. Estimate a finished run at your prices, che
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` each hold forty judged rows with reported `meta.usage` and legacy `meta.replayed` (now `meta.cached`). `../../transforms/rows/recording/` holds their eighty request and response bodies, without headers or keys. The input-only transform `../../transforms/cost/cost.jq` takes your contract's input price as an argument.
+`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` each hold forty synthetic rows with `meta.usage` and `meta.cached: false`. The current command serialized them from loopback replies that preserve the probabilities and reported token counts in the eighty retained provider exchanges. The local fixture requests incurred no provider charge; the examples price them as charged rows. `../../transforms/rows/recording/` holds the retained exchanges separately, without headers or keys. The input-only transform `../../transforms/cost/cost.jq` takes your contract's input price as an argument.
 
 ## Add up one run
 
@@ -19,7 +19,7 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   | mustmatch '{"rows":40,"no_usage":[],"charged":{"rows":40,"input_tokens":11784,"output_tokens":840},"replayed":{"rows":0,"input_tokens":0,"output_tokens":0},"usd":0.000495,"usd_per_million_input":0.042}'
 ```
 
-These forty cases cost five hundredths of a cent. `no_usage` is empty: no token count was guessed. `jq` can add multiple run files in one call.
+At this price, these forty fixture cases represent five hundredths of a cent. `no_usage` is empty: no token count was guessed. `jq` can add multiple run files in one call.
 
 ```bash
 set -euo pipefail
@@ -41,7 +41,7 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   | mustmatch '{"tokens_per_case":294.6,"usd_per_100k_cases":1.237}'
 ```
 
-For roughly twenty-five-word messages, `run-a.jsonl` measured 294.6 input tokens per case. The question and wire shape add cost; evidence length alone does not predict it.
+For roughly twenty-five-word messages, `run-a.jsonl` preserves the retained run's 294.6 input tokens per case. The question and wire shape add cost; evidence length alone does not predict it.
 
 ## A replayed row spent nothing
 
