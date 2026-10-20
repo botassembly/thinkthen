@@ -461,7 +461,7 @@ def linux_coverage_destination_case():
 
 def dart_cache_setup_case():
     bootstrap = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    preparation = bootstrap.split('\tpub_cache=$1/pub-cache\n', 1)[1].split('\n}\ncase ', 1)[0]
+    preparation = bootstrap.split('\tpub_cache=$1/pub-cache\n', 1)[1].split('\n}\n', 1)[0]
     with tempfile.TemporaryDirectory(prefix='thinkthen-dart-cache-') as temporary:
         root = Path(temporary)
         dart = root / 'dart'
@@ -516,7 +516,7 @@ def dart_cache_setup_case():
 
 def flutter_locked_setup_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    step = workflow.split('\nphp-dart-tools)\n', 1)[1].split('\nswift-zig-tools)', 1)[0]
+    step = workflow.split('\nphp_dart_tools() (\n', 1)[1].split('\n)\n', 1)[0]
     step = step[step.index('mkdir -p "$HOME/.local/opt/flutter"'):]
     acquisition = step.split('flutter=', 1)[0]
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
@@ -720,7 +720,7 @@ def preflight_cases():
         step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
         assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
     stage = (REPO / 'sdlc/scripts/release-workflow').read_text().split('smoke-stage)\n', 1)[1].split('\nbuild-stage)', 1)[0]
-    assert stage.index('hosted-preflight.py smoke') < stage.index('go-cpp-gate') < stage.index('release-smoke smoke-files')
+    assert stage.index('hosted-preflight.py smoke') < stage.index('for family in go-cpp') < stage.index('release-smoke smoke-files')
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
         scripts = root / 'sdlc/scripts'

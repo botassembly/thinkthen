@@ -136,7 +136,7 @@ host_setup() (
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
 	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
 	rustup toolchain install "$(manifest_version rust)" --profile minimal --component clippy --component rustfmt
-	[ "$(rustc --version | cut -d ' ' -f 2)" = "$(manifest_version rust)" ] || fail 'Rust 1.95.0 pin changed'
+	[ "$(rustc --version | cut -d ' ' -f 2)" = "$(manifest_version rust)" ] || fail 'Rust version differs from tools.json'
 	if [ "$2" = x86_64-pc-windows-msvc ]; then
 		python3 - "$(rustc --print sysroot)" "${RUSTUP_HOME:-$HOME/.rustup}" <<'PYWIN'
 from pathlib import Path
@@ -457,6 +457,14 @@ setup-stage)
 			managed_tools managed-tools "$target"
 		fi
 		;;
+	go-cpp | swift-zig | php-dart)
+		[ "$#" = 4 ] || fail 'setup-stage FAMILY TARGET OUT'
+		case $stage in
+		go-cpp) go_cpp_tools go-cpp-tools "$target" "$4" ;;
+		swift-zig) swift_zig_tools swift-zig-tools "$target" "$4" ;;
+		php-dart) php_dart_tools php-dart-tools "$target" "$4" ;;
+		esac
+		;;
 	registry)
 		[ "$#" = 4 ] || fail 'setup-stage registry TARGET OUT'
 		dart_tools dart-tools "$target" "$4"
@@ -470,19 +478,10 @@ smoke-stage)
 	export TARGET SHA THINKTHEN_RELEASE_SMOKE_FAMILY THINKTHEN_TEST_PROFILE
 	python3 sdlc/scripts/hosted-preflight.py smoke "$TARGET"
 	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"
-	fi
-	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	sdlc/scripts/release-workflow swift-zig-gate platform "$TARGET" "$SHA"
-	fi
-	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
-	fi
-	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
-	fi
-	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
+		for family in go-cpp swift-zig php-dart ada-objc-cobol; do
+			sdlc/scripts/release-workflow "$family-gate" platform "$TARGET" "$SHA"
+		done
+		sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
 	fi
 	if [ "$TARGET" != x86_64-pc-windows-msvc ] && [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" != examples ] && [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" != installers ]; then
 	sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files

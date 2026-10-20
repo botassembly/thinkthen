@@ -968,17 +968,17 @@ def main():
         github_env.touch()
         tool_env = os.environ | {"PATH": fixture_path(fake_bin),
                                  "GITHUB_PATH": str(github_path), "GITHUB_ENV": str(github_env)}
-        expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", other_target, str(base / "other-tools"), env=tool_env),
                "Go/C++ installed tools require Linux x86-64")
-        expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", host, str(base / "bad-go"), env=tool_env),
                "Go 1.27.1 archive differs from official checksum")
-        expect(run("sh", gate, "swift-zig-tools", other_target, str(base / "other-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", other_target, str(base / "other-zig"), env=tool_env),
                "Swift/Zig installed tools require Linux x86-64")
-        expect(run("sh", gate, "swift-zig-tools", host, str(base / "bad-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", host, str(base / "bad-zig"), env=tool_env),
                "Zig 0.15.2 archive differs from official checksum")
-        expect(run("sh", gate, "php-dart-tools", other_target, str(base / "other-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", other_target, str(base / "other-dart"), env=tool_env),
                "PHP/Dart installed tools require Linux x86-64")
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-dart"), env=tool_env),
                "Dart 3.13.4 SDK differs from official checksum")
         if github_path.read_text():
             raise AssertionError("bad tool archive entered the runner path")
@@ -1000,7 +1000,7 @@ def main():
                               "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
                               "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
         fake_unzip.chmod(0o755)
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-ffi"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-ffi"), env=tool_env),
                "cached ffi 2.2.0 differs from official digest")
         if github_path.read_text() or github_env.read_text():
             raise AssertionError("bad ffi cache entered the runner environment")

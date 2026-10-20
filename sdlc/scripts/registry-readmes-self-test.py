@@ -573,9 +573,9 @@ class PackageText(unittest.TestCase):
     def test_release_replays_every_public_package_on_a_prepared_host(self):
         jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
         steps = jobs['smoke']['steps']
-        replay = next(step for step in steps if 'public-examples' in step.get('run', ''))
-        self.assertEqual(replay['if'], "matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'")
-        self.assertLess(next(i for i, step in enumerate(steps) if 'host-setup' in step.get('run', '')), steps.index(replay))
+        replay = next(step for step in steps if 'release-workflow smoke-stage' in step.get('run', ''))
+        self.assertNotIn("if", replay)
+        self.assertLess(next(i for i, step in enumerate(steps) if 'setup-stage host' in step.get('run', '')), steps.index(replay))
         script = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text()
         routing = script.split('\npublic-examples)\n')[1].split('\ncrate-smoke)')[0]
         families = set(readmes.re.findall(r'--family ([a-z-]+)', routing))
