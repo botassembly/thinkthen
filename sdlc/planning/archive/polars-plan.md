@@ -1,5 +1,7 @@
 # The Polars plan: one Rust door, two Python containers
 
+Background, not a plan. The one plan is [milestones.md](../milestones.md).
+
 Plan, 2026-09-21. The surfaces experiment on branch `surfaces` carries `contract/`, `standin/`, and the nine surfaces. This page plans the Polars work that follows. It authorizes nothing; the experiments carry the numbers and Ian rules the doors.
 
 ## The goal

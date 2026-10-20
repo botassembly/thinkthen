@@ -11,7 +11,7 @@ use crate::batching::{self, KEY, QUESTION};
 use crate::child::Folder;
 use crate::harness::{Canned, Listener, spawn};
 
-// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// Its cases name the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 mod filtered;
 #[cfg(unix)]
@@ -442,7 +442,7 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
     assert_eq!(line(&refused)["retries"], 1);
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn dry_run_and_early_setup_failures_report_zero_work() {

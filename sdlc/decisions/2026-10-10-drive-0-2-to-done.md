@@ -1,5 +1,7 @@
 # Drive 0.2 to done: delete old code, close tickets, cut process
 
+Superseded by [0.2.1 rebuilds the basis](2026-10-18-0-2-1-rebuilds-the-basis.md) and [the freeze names the contract](2026-10-20-freeze-names-the-contract.md). 0.2 is never published, and platform qualification belongs to 0687. The permissions `AGENTS.md` names stay: deleting old code, candidate tags and nonpublishing workflows. The text below is history.
+
 Ruled by Ian on 2026-10-10.
 
 ## Ruling

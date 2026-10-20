@@ -64,7 +64,7 @@ An eval is a reproducible workflow over the same commands as everything else. Th
 | 25 | [Check the judge against human labels](25-check-the-judge/) | `decide` | green |
 | 28 | [Know what a run cost](28-what-a-run-cost/) | `decide` | green |
 
-Demos 13, 25, 28, and 41 read the `jq` transforms in `transforms/` over committed rows, which is what `report` would have done inside the tool. `documentation-plan.md` maps Ian's six capabilities to the how-tos that teach each one.
+Demos 13, 25, 28, and 41 read the `jq` transforms in `transforms/` over committed rows, which is what `report` would have done inside the tool. `sdlc/planning/archive/documentation-plan.md` maps Ian's six capabilities to the how-tos that teach each one.
 
 ## What a demo never asks
 
@@ -76,7 +76,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 A how-to is one of the four names in the table in [`CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names). A green page is the how-to, the demo, and the test at once. `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
 
-ADR 0018 fixed the base list at 20 pages, and later tickets added focused pages. This page holds the one list of how-tos. `sdlc/planning/documentation-plan.md` keeps the form, the capability map, the numbers that left and the rules, and points here. `sdlc/scripts/pages` checks that every relative link resolves.
+ADR 0018 fixed the base list at 20 pages, and later tickets added focused pages. This page holds the one list of how-tos. `sdlc/planning/archive/documentation-plan.md` keeps the form, the capability map, the numbers that left and the rules, and points here. `sdlc/scripts/pages` checks that every relative link resolves.
 
 ### How to read one
 
@@ -96,4 +96,4 @@ Green pages follow the standard of ADR 0016 as writing guidance: at most 120 lin
 
 ### Retired numbers
 
-The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. Demos 20, 24, 30, 23, 37, and 42 left under ADR 0018. Demos 04 and 07 left when page 16 turned green. The table at the end of `documentation-plan.md` says where each idea went. `specification/roadmap.md` says what each retired number held.
+The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and demo 10 left with the configuration file under the same ADR. Demos 05 and 38 left under ADR 0016, into 02 and 25. Demos 20, 24, 30, 23, 37, and 42 left under ADR 0018. Demos 04 and 07 left when page 16 turned green. The table at the end of `sdlc/planning/archive/documentation-plan.md` says where each idea went. `specification/roadmap.md` says what each retired number held.

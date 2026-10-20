@@ -2,7 +2,7 @@
 
 use super::*;
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_malformed_variable_is_usage_and_an_unreadable_configuration_is_local() {
@@ -140,7 +140,7 @@ fn the_rate_variable_paces_an_engine_built_from_the_environment() {
     );
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_rate_in_the_configuration_file_paces_the_backend_it_names() {

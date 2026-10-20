@@ -110,7 +110,7 @@ fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() 
     assert_eq!(listener.requests().len(), 2, "replay sends nothing");
 }
 
-// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
@@ -179,7 +179,7 @@ fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
     assert_eq!(second.requests().len(), 3);
 }
 
-// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_control_character_key_writes_nothing_and_a_hit_reads_no_key() {
@@ -267,7 +267,7 @@ fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
     assert!(fs::symlink_metadata(&cache).is_ok());
 }
 
-// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_cache_pointed_at_a_new_address_resends_and_keeps_both_answers() {

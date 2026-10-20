@@ -539,7 +539,7 @@ fn a_close_before_headers_is_not_sent_again() {
     assert_eq!(output.status.code(), Some(4));
 }
 
-// Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
+// Windows reports a refused loopback port as unreachable (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn a_refused_port_fails_before_the_first_default_retry_wait() {

@@ -2,7 +2,7 @@
 
 use super::*;
 
-// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/windows.md).
+// It reads the default cache under `HOME/.cache`, the Linux folder (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn the_default_cache_answers_the_second_run() {

@@ -1,4 +1,4 @@
-# 0071: The two narrow exceptions granted in the review waves
+# 0071: Two narrow lane exceptions
 
 Date: 2026-09-22
 

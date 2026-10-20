@@ -5,13 +5,13 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 ## Build and review
 
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`, offline. Run focused checks per change, `spec` and affected surfaces as needed, and `lint` and `test` once at closure. Large-input cases, full parity and load are release-only: `sdlc/decisions/2026-10-09-two-test-suites.md`.
-- Run main checkpoints via pm job: [release process](sdlc/planning/release-process.md#2-checkpoints). Run native Rust/C smokes and package plus both configured container gates at phase 1 and core freeze. Start full campaigns once all language providers and assets are manifested. Read logs after jobs exit.
+- Run main checkpoints via pm job: [release process](sdlc/planning/release-process.md#2-checkpoints). The freeze names the contract once the configured landing gate and the native Rust/C smoke and package pass. The three-platform checkpoint run gates qualification, not the freeze: `sdlc/decisions/2026-10-20-freeze-names-the-contract.md`. Read logs after jobs exit.
 - Write tests as `repos/agents/skills/outside-in-tests.md` says.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` for the adapter-word boundary and dependency rules. Code review judges size; avoid mechanical splits.
 - Run Git-history checks after committing; finish them before the next commit.
-- Run everyday builds and checks through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND`. `sdlc/scripts/linux-check` owns Linux arm64 checks on M5; x86_64 proof uses `--machine yellow`. Match pm memory to the caps under `linux` in `sdlc/tools.json`. Yellow uses `yellow_memory_gib` and runs one heavy job. Hosted workflows run by hand for releases after local checks pass. PM jobs admit every build.
+- Run everyday builds, checks and the configured gate on the M5, natively and in the arm64 container, through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND`. Run x86_64 container checks on Gator; Yellow is the fallback. `sdlc/scripts/linux-check` owns the container checks. Take each command's machine and memory from `sdlc/decisions/2026-10-20-standard-proof-commands.md`. Hosted workflows run by hand for releases after local checks pass. PM jobs admit every build.
 - Cap each lane at 40 GB, `libraries/` and `databases/` included. At the cap or when a build needs room, delete its regenerable output and caches, never other lanes' active work. Keep 50 GB free and branch-specific source copies.
-- Delete dead code, scaffolding tests and old language APIs once replacements pass routine installed checks. Close migrations after those checks, API deletion, one `lint` and `test` run and fresh code review. Qualify platforms at the candidate: `sdlc/decisions/2026-10-10-drive-0-2-to-done.md`.
+- Delete dead code, scaffolding tests and old language APIs once replacements pass routine installed checks. Close migrations after those checks, API deletion, one `lint` and `test` run and fresh code review. Platform qualification belongs to the qualification ticket, 0687.
 - Keep no backward compatibility before 1.0. Delete old code when its replacement lands: `sdlc/decisions/2026-10-12-no-compatibility-before-1-0.md`.
 
 ## Boundaries

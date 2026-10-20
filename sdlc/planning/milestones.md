@@ -1,8 +1,6 @@
 # Milestones
 
-Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any milestone, criterion or placement. The steps that move work through a release live in [release-process.md](release-process.md). Branching follows [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md).
-
-Every open ticket and open issue carries a `Milestone:` line with `0.1`, `0.2` or `later`. The lists below come from those lines. `grep -rn '^Milestone:' sdlc/tickets sdlc/issues` reads them until `pm` supports milestones; the pm team was asked on 2026-10-01. Whoever changes a `Milestone:` line updates the list here in the same commit.
+This is ThinkThen's one plan. It says what each release builds, why, and in what order. Ian can overturn any milestone, criterion or placement. pm holds the milestones and every ticket's status, order and dependencies. The steps that move work through a release live in [release-process.md](release-process.md). Branching follows [ADR 0116](adr/0116-release-branches-cut-at-the-release-candidate.md).
 
 ## Hardest problems
 
@@ -21,147 +19,18 @@ ThinkThen puts decision models in your code from about eighteen languages, three
 11. **Long Linux runs that time out.** The full consumer runs time out on Linux and the cause has not been measured. It must be measured before it is fixed.
 12. **An answer store that lasts.** The next release adds one answer database. Its schema must already hold what later curation and evaluation need, and many writers must share one file safely.
 
-## 0.1
-
-Outcome: the first public release, on every registry, with every surface and binding ([preserved release ruling](../decisions/2026-10-08-preserve-planning-rulings.md#cache-types-and-release-rulings)).
-
-Exit criteria, all met on 2026-10-03. 0.1.1 is published on every registry, and GitHub release v0.1.1 is public. The record is [0128-release-0-1.md](../records/0128-release-0-1.md).
-
-1. Done: a clean release rehearsal. Every job passed through `draft` in runs 36945370940, 36998358908 and 37010060315.
-2. Done: release QA's round 5 was clean on `checkpoint/surfaces/2026-10-02-1` (`4e880cdf6`).
-3. Done: registry setup for every registry the release workflow publishes to. crates.io, PyPI, npm and RubyGems are set up. NuGet publishes by trusted publishing. pub.dev holds `thinkthen_dart` 0.0.1 under its publisher, with automated publishing enabled. Maven Central has its namespace verified, its secrets set and its signing key on the public key servers. The Homebrew tap repo `botassembly/homebrew-thinkthen` exists with its deploy key. The `release` environment has required reviewers and a `v*` tag policy. The `v-tags` ruleset is in place, and `RELEASE_ARMED` is `true`.
-4. Done: tickets 0149 and 0157 are closed.
-5. Done: Ian gave the go. Release run 37035814818 from `v0.1.0` published only Maven Central, pub.dev and the Homebrew tap. Release run 37059415069 from `v0.1.1` published every registry, after Ian allowed direct publishing on npm for the rerun.
-
-R-universe and Packagist are set up. The registry repo `botassembly/botassembly.r-universe.dev` exists, and Ian installed the R-universe GitHub app on `botassembly`. Packagist lists `botassembly/thinkthen`, and its GitHub webhook works; its last delivery returned 202. The release workflow has no job for either one. Packagist reads the `v0.1.0` tag through its webhook. R-universe builds from the published GitHub release. Ticket 0128's Phase 4 step 8 includes the R-universe and Packagist install checks.
-
-Blockers, refreshed 2026-10-03: none for the release. Ticket 0128 waits on its public install checks, Phase 4 step 8, and the Pages deploy that follows. Two items wait on Ian: confirming the local registry tokens are deleted, and deciding the retained history step of ticket 0128. The fresh one-commit history did not happen before the repository went public, and the published tags and the Go module proxy now name existing commits.
-
-The 2026-10-02 sweep closed twelve 0.1 tickets that waited only on release-target proof. Ticket 0374's installed-file cases ran on all four release runners in run 37010060315. The sweep also closed the README issue. Its overhead sentence landed in `248bc6aa4`.
-
-Tickets 0149 and 0157 closed on 2026-10-02 on the coordinator's ruling. Ticket 0231's macOS 26 proof, with Intel under Rosetta, is enough for 0.1. Rehearsal runs 36998358908 and 37010060315 also built and smoked on the `macos-15` and `macos-15-intel` runners.
-
-Path to 0.1:
-
-1. Done: ticket 0374 landed the panic and token-cap cases in the installed-file checks.
-2. Done: a clean rehearsal passed on all four targets (ticket 0128 phase 3b). Run 36945370940 passed on main `94d0500c0` at version 0.0.1. Run 36998358908 passed on main `f65faea4e` at version 0.1.0.
-3. Done: the checkpoint `checkpoint/surfaces/2026-10-02-1` was tagged on `4e880cdf6`. Release QA round 5 ran on it and was clean.
-4. Done: ticket 0387 landed the release commit at `ff7120f89`. The coordinator tagged `rc/0.1.0-rc.1` on `4e880cdf6` and cut `release/0.1` there. Run 37010060315 passed from `release/0.1`.
-5. Done: ticket 0389 landed on main and on `release/0.1`. Registry setup and the arming switch are done. Tickets 0149 and 0157 closed.
-6. Done: ticket 0391 fixed the PyPI, npm and NuGet steps that failed in the 0.1.0 run. Checkpoint `checkpoint/surfaces/2026-10-02-2` and rehearsal 37048376945 passed on `release/0.1`. Ian tagged `v0.1.1` at `9463cef05`, and run 37059415069 published it.
-7. Done: the public install checks of ticket 0128 phase 4 step 8 ran on 2026-10-03. Left: the Pages deploy of ticket 0392.
-8. Left: ticket 0394 and a 0.1.2 release. On macOS 26, `gem install thinkthen` installs the 0.0.1 placeholder.
-
-Open items:
-
-- [0128: Release and install for 0.1](../tickets/0128-release-and-install.md)
-- [Release and install for 0.1](../issues/closed/2026-09-25-release-and-install-for-0-1.md)
-- [0394: macOS gems install on every macOS version](../tickets/0394-darwin-gem-platform.md), for 0.1.2
-
-Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268, 0269, 0270, 0271, 0272, 0273 and 0299, and the issue [README: where to get a key, how to change the backend, and the overhead line](../issues/closed/2026-09-29-readme-key-backend-and-overhead-lines.md). Closed 2026-10-02 on the coordinator's ruling: [0149](../tickets/0149-sql-settings.md) and [0157](../tickets/0157-library-size-and-retry-settings.md).
-
-## 0.2
-
-Not published. Ian ruled on 2026-10-18 that the current code will not ship: [0.2.1 rebuilds the basis](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Its open tickets moved to 0.2.1. The text below records the 0.2 scope that 0.2.1 inherits.
-
-Ian's 2026-10-08 architecture ruling requires the shared Request contract, generated header and host types, bounded binding experiment and all language migrations in 0.2. The [waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md) sets the remaining order. The request contract and binding experiment run alongside the final per-record context checks. The PM cleared tagged examples in 0490: render only answered step-1 questions, before the recognition controls and language migrations. Stage context 0478, boundary-only 0479, MCP protocol 0488 and Windows Node/C#/JVM packaging 0383–0385 are also 0.2. These rulings supersede earlier SDK deferrals; the proxy moved to 0.5 under the 2026-10-14 ruling. All languages stay, and release management remains held.
-
-Ian lifted the 2026-10-08 release hold on 2026-10-10 except for publication. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
-
-Outcome: every SDK supports the same ten functions with the same admitted inputs, complete typed results, errors and cache/record/replay behavior, including admitted image decide/choose/score, the local MCP surface and additive named question/input declarations. The SDK uses one configured route; business policy belongs to the proxy. [Preserved scope and order](../decisions/2026-10-08-preserve-planning-rulings.md#retained-02-scope-and-order) carries the lasting 0.2 plan rulings; read work status and dispatch order through pm. Ian’s 2026-10-06 direction supersedes the earlier core-only deferrals. The preserved scope retains the seventeen asks, accepted 0456 intake and dependencies. Read acceptance from the owning tickets through pm.
-
-Exit criteria, under [the done ruling](../decisions/2026-10-10-drive-0-2-to-done.md):
-
-1. Every 0.2 language migration and SQL ticket is closed: its new API passes routine installed checks, and its old public names are deleted.
-2. The gaps in [the 2026-10-11 closure review](../records/2026-10-11-0-2-closure-review.md) are closed through 0530 and 0534 to 0543. The gaps in [the 2026-10-11 adversarial review](../records/2026-10-11-0-2-adversarial-review.md) are closed through 0549 to 0556.
-3. 0530 assembles every final artifact, and each installs and runs cleanly.
-4. 0542's final code review accepts, and lint and test each pass once on the final commit.
-5. 0543's candidate passes the release suite and the hosted rehearsal on Linux, macOS and Windows. This ends the build side of 0.2.
-6. 0425's release QA passes and Ian gives the go to publish.
-
-Retain version and release safety, backends and provider setups, the default of eight requests, rank search, audit and recipe contracts, Windows CLI/Rust/C/Python, backend selection, DuckDB 1.5.4/1.5.5, the agent skill, native files and local runtimes. Raw JSON compatibility methods and older qualification runs do not establish the newly required typed SDK parity.
-
-The contract owners below retain their distinct outcomes. Read execution order through `pm next`.
-
-The reviewed 2026-10-07 intake adds [0457: source-size warnings](../tickets/0457-warn-on-large-handwritten-source.md), [0459: binding C-header agreement](../tickets/0459-enforce-binding-c-header-layouts.md), and [0458: bounded file-seam cleanup](../tickets/0458-audit-file-seams-after-core-freeze.md). Implement 0457 before cleanup. C-header agreement is required for 0.2. Run 0458 only after a named reviewed core-freeze commit; it is the first candidate for 0.2.1 deferral if Ian changes priorities.
-
-- [0400 slice D: Reconcile provider setup measured rows](../tickets/0400-provider-setups-and-concurrency.md), using landed 0421 runtime evidence without new paid calls.
-- [0296: Add the pandas Series accessor for all ten functions](../tickets/0296-pandas-series-accessor.md)
-- [0300: ---](../tickets/0300-caller-priced-call-cost.md)
-- [0393: npm publishes through staged publishing](../tickets/0393-npm-staged-publishing.md)
-- [0406: Preserve rank criteria and score ordering on every surface](../tickets/0406-rank-question-equivalence.md)
-- [0407: Supply separate per-record context everywhere](../tickets/0407-per-record-context.md)
-- [0408: Expose complete probabilities and details everywhere](../tickets/0408-j1-full-probabilities.md)
-- [0409: Match TypeScript rank and find types to runtime](../tickets/0409-typescript-rank-find-contract.md)
-- [0410: Complete all ten dataframe functions and located files](../tickets/0410-column-function-equivalence.md)
-- [0411: Reread stored answers under changed rules on every surface](../tickets/0411-binding-reading-replay-proof.md)
-- [0412: Document and test R index conventions](../tickets/0412-r-result-contract.md)
-- [0413: Supply per-record candidate options everywhere](../tickets/0413-options-per-record-equivalence.md)
-- [0414: Separate context from aggregate evidence everywhere](../tickets/0414-separate-shared-context.md)
-- [0417: Rank question sets on every SQL surface](../tickets/0417-sql-rank-question-sets.md)
-- [0418: Rank question sets through typed language and frame APIs](../tickets/0418-binding-rank-question-sets.md)
-- [0425: Put the complete SDK outcome into the 0.2 plan](../tickets/0425-sdk-consistency-0-2-plan.md)
-- [0426: Expose typed C calls and complete result carriers](../tickets/0426-typed-c-ten-function-carriers.md)
-- [0427: Complete Go, C# and JVM typed parity](../tickets/0427-go-csharp-jvm-typed-parity.md)
-- [0428: Complete C++, Swift, Zig and Objective-C typed parity](../tickets/0428-cpp-swift-zig-objc-typed-parity.md)
-- [0429: Complete PHP, Dart and Flutter typed parity](../tickets/0429-php-dart-flutter-typed-parity.md)
-- [0430: Complete Ada and COBOL typed parity](../tickets/0430-ada-cobol-typed-parity.md)
-- [0431: Complete typed located results in existing named SDKs](../tickets/0431-named-sdk-located-result-parity.md)
-- [0432: Enforce shared behavior and generate the current parity table](../tickets/0432-canonical-binding-parity-matrix.md)
-- [0433: Keep SQLite find’s selected model](../tickets/0433-sqlite-find-keeps-selected-model.md)
-- [0434: Match SQL question inputs and descriptions](../tickets/0434-sql-question-and-option-parity.md)
-- [0435: Return isolated SQL call facts and caller-priced cost](../tickets/0435-sql-call-facts-and-prices.md)
-- [0436: Return rank position in detailed rank values](../tickets/0436-rank-details-return-rank-position.md)
-- [0437: Honor the configured native build output folder](../tickets/0437-native-install-honors-target-dir.md)
-- [0438: Replace Ruby’s unsupported-platform placeholder route](../tickets/0438-ruby-platform-fallback-diagnostic.md)
-- [0439: Document Linux R installation](../tickets/0439-r-linux-install-guide.md)
-- [0440: Move audit and diff under runs](../tickets/0440-runs-audit-diff-command-tree.md)
-- [0441: Prepare the Decisions backend for preview access](../tickets/0441-openai-decisions-backend-preview.md)
-- [0442: Settle SDK identity, provenance and cache compatibility](../tickets/0442-proxy-ready-sdk-contract.md)
-- [0454: Store actual batch size and preserve per-question caching](../tickets/0454-group-questions-only-with-explicit-route-opt-in.md)
-- [0443: Carry SDK call identity and cache instructions](../tickets/0443-sdk-call-identity-and-cache-policy.md)
-- [0444: Version cache keys and preserve offline replay](../tickets/0444-versioned-cache-identity-and-replay.md)
-- [0445: Complete attempt observations and command facts](../tickets/0445-complete-attempt-and-command-facts.md)
-- [Every surface gives back run facts](../issues/closed/2026-09-26-every-surface-should-give-back-run-facts.md), through the explicit owners in the plan.
-- [0415: Signed DuckDB community listing](../tickets/0415-signed-duckdb-community-listing.md), submitted upstream; publication remains DuckDB’s decision.
-
-- [0446: Add vision and the SDK boundary to the 0.2 plan](../tickets/0446-vision-and-sdk-boundary-0-2-plan.md)
-
-- [0447: Execute typed image questions and read image files](../tickets/0447-typed-image-questions-and-file-items.md)
-
-- [0448: Enforce documented image limits and refuse dropped images](../tickets/0448-image-route-limits-and-explicit-refusals.md)
-
-- [0449: Keep each SDK engine on one configured route](../tickets/0449-one-route-sdk-boundary.md)
-
-- [0450: Give each answer a stable identifier and reserve proxy policy fields](../tickets/0450-stable-answer-identifiers-and-proxy-reservations.md)
-
-- [0451: Create production Guides and a reusable lesson template](../tickets/0451-production-guides-section-and-template.md)
-
-- [0452: Carry typed image values through SQL](../tickets/0452-sql-image-values-and-queries.md)
-
-- [0455: Local ten-function MCP server](../tickets/0455-mcp-ten-function-surface.md), adoption landed at `e720e8204`; local Cargo-built stdio timing is recorded. Archive timing and Windows qualification remain unmeasured.
-
-- [0456: Add named questions and declared item inputs](../tickets/0456-named-questions-and-input-declarations.md), native/C/MCP/SDK/SQL/dataframe adoption and final installed qualification are complete after review; retain the existing 0407/0414 outcomes.
-
-OpenAI Decisions text support (0441) is required in 0.2 under the later PM ruling; access, documentation and recorded probe replies are now available. DuckDB community acceptance/signing (0415) remains external and does not block 0.2; it can arrive in a point release when available. Vendor documentation starts image work now; experiment 0036 can adjust limits later and never blocks.
-
-Support work: [0453: Extend authorized live token admission](../tickets/0453-extend-authorized-live-token-admission.md) preserves charges for separately approved runs; experiments remain outside the release gate.
-
-Read ticket and check status through pm. Existing installed-package campaigns and candidate lessons remain in their owning records; they do not qualify later contract and binding changes. The after-sprint review assigns confirmed fixes to their tickets.
-
-The 0456 amendment defines implementation scope. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final installed parity including MCP, image inputs, 0.1 file/cache compatibility and complete public documentation. Run every local check before requesting a candidate. Windows and hosted macOS checks run once, at the 0543 candidate. Publication needs Ian's go. M5 may run experiments and Mac-specific checks; Yellow remains excluded. Main targets 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. Vision belongs to 0.2; unsupported routes refuse explicitly. Each engine keeps one endpoint, key and API type. Proxy execution belongs to 0.5 under an admitted protocol. PostgreSQL file inputs retain the reviewed client-reader workaround in 0434.
-
-[0460](../tickets/0460-conservative-repeated-input-request-plan.md) requires conservative initial-send plans while retaining runtime coalescing, caches and the C header. Byte/token previews describe uninterrupted packing. Final installed parity must cover the settled request contract and all binding migrations.
-
 ## 0.2.1
 
 Outcome: the first release after 0.1, published as 0.2.1, with the 0.2 scope on a rebuilt basis. Rust computes every call's answer. Each language is a thin, idiomatic, properly packaged wrapper over one C entry point or one direct Rust bridge. One pinned environment per architecture runs every check. Adding a core feature mostly touches only Rust. Ruling and root causes: [0.2.1 rebuilds the basis](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Findings: [the 2026-10-18 quality review](../records/2026-10-18-0-2-quality-review.md).
 
-Order, in three phases. A phase's tickets run in parallel where they do not collide. Read their status through pm.
+Order. pm dependencies carry the detail. Tickets that do not collide run in parallel.
 
-1. The test machinery, release workflows, Rust core, host crate, settings parser and Rust library. The release suite runs on main at the end of this phase and at each later checkpoint.
-2. The C interface's run-call entry point, single input path and single result representation, the value tree for the direct Rust bridges, the C library, the command line, the installers, the generator, the binding contract and conformance. Phase 2 adds the new path and moves the C and Rust libraries onto it; it deletes nothing another language still uses. Phase 2 ends with a named core-freeze commit that fixes the C interface and the final result packet.
-3. Every other language and the three database extensions, starting from the frozen core. Each language ticket deletes its own projection, session loop and fixture consumer. A final ticket then deletes the old shared C paths and answer rules.
+1. The core contracts: the test machinery, the release workflows, the Rust core, the host crate, the settings parser, the Rust library, the C interface's run call with one input path and one result packet, the value tree, the C library, the command line, the installers, the generator, the binding contract and conformance.
+2. The freeze names the contract. [0688](../tickets/0688-name-the-core-freeze-commit.md) names the first main commit after the core contract tickets and 0744 whose configured landing gate and native Rust/C smoke and package pass. The [core-freeze decision](../decisions/2026-10-20-0-2-1-core-freeze.md) names the contract revision and its change rules. The three-platform checkpoint run does not gate the freeze: [the freeze and qualification ruling](../decisions/2026-10-20-freeze-names-the-contract.md).
+3. [0740](../tickets/0740-surface-checks-in-container.md) lands alone. It runs one surface's check in the Linux container, and every later container proof uses it.
+4. The first language lanes: Objective-C ([0676](../tickets/0676-objective-c-thin-results.md)), Polars ([0679](../tickets/0679-polars-frame-types-from-packet.md)), R ([0682](../tickets/0682-r-thin-binding.md)), Ruby ([0683](../tickets/0683-ruby-native-values.md)) and the SQLite spellings ([0714](../tickets/0714-delete-sqlite-removed-spellings.md)). The routine timing fix ([0605](../tickets/0605-routine-tests-under-timeout.md)) lands before this first batch lands.
+5. Every other language and the three database extensions follow as pm dependencies say. Each language ticket deletes its own projection, session loop and fixture consumer. A final ticket deletes the old shared C paths and answer rules.
+6. Qualification ([0687](../tickets/0687-qualify-the-0-2-1-candidate.md)) runs the three-platform checkpoint on one frozen main revision. It needs 0605, 0743, 0745, 0746 and 0748 as well as the language work.
 
 Exit criteria:
 
@@ -169,47 +38,15 @@ Exit criteria:
 2. The release qualification ticket passes on one frozen main revision: every language library builds natively and passes its installed tests on every platform it supports, with the rehearsal and the hosted Linux jobs on the same revision. Coverage does not gate it.
 3. The artifact QA control job passes on the tag, and Ian gives the go to publish.
 
-### Batches
-
-Each wave holds tickets whose claims do not collide and whose dependencies sit in earlier waves. Develop a wave's tickets in parallel and land them four to six per gate. ThinkThen gets about two M5 jobs at a time, so keep at most two lanes in a heavy proof at once. Tickets that share a smaller file (`sdlc/scripts/children`, `sdlc/scripts/release-workflow`, `site/src/data/build-lines.mjs`, the coverage scripts, `build-tools/results/generate.py`) sit in different waves; within a wave, land any pair that shares a file in sequence.
-
-1. 0705, 0726, 0727, 0702, 0603, 0564: fixture limits, the job entrypoint, per-language migration files, SQLite schema calls, gate step timing, outside-in tests. 0728 opens wave 2 because it needs 0727 and shares `sdlc/scripts/tools.py` with 0726.
-2. 0728, 0622, 0636, 0708, 0710: per-language build data, the Intel smoke, settled answers in conformance, stored key versions, one installer copy.
-3. 0619, 0720: the pinned Linux container and the configuration schema member.
-4. 0639, 0691, 0621, 0642, 0723: the command-line crate split, checkpoint runs, Linux parity timeouts, the packet oracle, command tags.
-5. 0701, 0704, 0634, 0641: C linker tools, file versions, the binding guide, C archive linking.
-6. 0620, 0633, 0640, 0689: the release workflow, the musl toolchain, the installed C gate, the value tree.
-7. 0632, 0707: installer archives and the result tag.
-8. 0709, 0721: C names and backend profiles.
-9. 0719: the request contract and `wording_version`.
-10. 0724, 0725: small stored tags and the header digest.
-11. 0688: the core freeze.
-12. 0577, 0591, 0644, 0645, 0649, 0650: DuckDB and PostgreSQL cleanup, Ada and COBOL packaging.
-13. 0647, 0648, 0651, 0653, 0657, 0660: PostgreSQL replay, Ada and COBOL calls, C++ and Go packaging, Python wheels.
-14. 0652, 0658, 0662, 0664, 0666, 0669: COBOL warnings, Go and Python calls, TypeScript and Zig and C# packaging.
-15. 0655, 0656, 0661, 0665, 0667, 0670: C++ and Zig and TypeScript calls, the Go gate, Python types, Dart packaging.
-16. 0663, 0668, 0671, 0672, 0674, 0676: TypeScript errors, C# and Dart and Objective-C calls, the JVM build, the MCP client.
-17. 0673, 0675, 0677, 0679, 0680, 0681: JVM calls, Objective-C and PHP and R packaging, Polars.
-18. 0678, 0682, 0683, 0686, 0693, 0695: PHP and R and Ruby and Swift calls, DuckDB answers, SQLite replay.
-19. 0684, 0685, 0690, 0694, 0711, 0713: Ruby and Swift packaging, old C paths, DuckDB replay, answer exceptions, the R dumper.
-20. 0712, 0714, 0715, 0716, 0717, 0722: Ruby, Zig, Objective-C and JVM dumpers, SQLite and PostgreSQL stubs.
-21. 0718, 0578: the Swift dumper and the registry pages.
-22. 0687: qualification.
-23. 0575: the site and public text.
-
 ## 0.2.2
 
-Outcome: the docs and site sell one idea after 0.2.1 ships: put Jev-class decision models in your code, whatever model, language or database you use. This is the first thing committed after 0.2.1 goes out, ideally a docs-only change with no new release. Jarvis owns it as the docs team; the release team does not work on it (Ian, 2026-10-12).
+Outcome: the docs and site sell one idea after 0.2.1 ships: put Jev-class decision models in your code, whatever model, language or database you use. It is a docs change with no release of its own (Ian, 2026-10-12). It starts with a trial: a reader who has never seen ThinkThen installs it and asks one question from the public documents alone, and the docs are fixed where that reader got stuck.
 
 ## 0.3
 
 Outcome: ThinkThen owns your answers. One answer database, designed from the start with the full schema that 0.4's curation and evals need. A toolbox and a `run` command. MCP as one tool. Publishing. Spreadsheets join only if the writer prototype passes. Libraries gain only the ten functions and `run`; the toolbox, answers and admin stay in Rust and the command line. Ruling: [three releases after 0.2](../decisions/2026-10-14-three-releases-after-0-2.md).
 
-Experiments before 0.3 product tickets. A dedicated build coordinator drives them with experiment agents, apart from the 0.2 team. None changes product code, spends model money or publishes; each lands record-only, and all run on the M5 through `pm job`. None starts before 0.2.1 is published: [0.3 plans while 0.2 ships](../decisions/2026-10-17-0-3-plans-while-0-2-ships.md).
-
-1. [0583](../tickets/0583-experiment-duckdb-one-build-across-versions.md) first: DuckDB 2.0 is due about 2026-10-21, and the result may also help 0577.
-2. [0584](../tickets/0584-experiment-answer-schema-covers-0-4.md), [0585](../tickets/0585-experiment-many-writers-one-sqlite-file.md), [0586](../tickets/0586-experiment-split-wording-evidence-context.md), [0587](../tickets/0587-experiment-command-inside-python-and-npm.md) and [0588](../tickets/0588-experiment-spreadsheet-writer-round-trip.md) in parallel. 0585 uses 0584's tables when they are ready and a minimal table before then. 0584 and 0586 set the database ticket; 0587 and 0588 answer Ian's decisions 16 and 7.
-3. Filed later, when their decision lands: the agent-connection trial (Ian's go on agent token spend), agents learning tools from help (decision 8), and the BANKING77 evals and ranking experiments (the caps in decisions 12 and 13).
+Experiments come before 0.3 product tickets. None changes product code, spends model money or publishes, and none starts before 0.2.1 is published: [0.3 plans while 0.2 ships](../decisions/2026-10-17-0-3-plans-while-0-2-ships.md). [0583](../tickets/0583-experiment-duckdb-one-build-across-versions.md) runs first. [0584](../tickets/0584-experiment-answer-schema-covers-0-4.md), [0585](../tickets/0585-experiment-many-writers-one-sqlite-file.md), [0586](../tickets/0586-experiment-split-wording-evidence-context.md), [0587](../tickets/0587-experiment-command-inside-python-and-npm.md) and [0588](../tickets/0588-experiment-spreadsheet-writer-round-trip.md) follow in parallel. 0584 and 0586 set the database ticket.
 
 ## 0.4
 
@@ -217,38 +54,4 @@ Outcome: ThinkThen grades and improves your answers. Curation fixes data: with l
 
 ## later
 
-Outcome: no release is promised. The proxy and document structure wait here for 0.5 under the [three-release ruling](../decisions/2026-10-14-three-releases-after-0-2.md). Each item waits on its own trigger, such as a user's request, an upstream fix or Ian's ruling.
-
-Exit criteria: none. An item moves to a numbered milestone when its trigger fires or Ian places it.
-
-Blockers: none.
-
-Open items:
-
-- [Windows static-library distribution waits for stage 3](../issues/2026-10-05-windows-static-library-waits-for-stage-3.md)
-
-
-
-- [0119: Functional audit of the engine tests](../tickets/0119-mutation-audit-of-the-engine-tests.md)
-- [0295 — Polars namespace and SIGINT (F4)](../tickets/0295-polars-namespace-and-sigint.md)
-- [The new-user stumble register](../issues/2026-09-20-new-user-stumble-register.md)
-- [Annotate options from a file or a record](../issues/2026-09-23-annotate-options-from-a-file-or-a-record.md)
-- [Rank by graded relevance: custom weights and rank fusion](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md)
-- [Docs and how-tos owed](../issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md)
-- [Public library API gaps](../issues/2026-09-25-public-library-api-gaps.md)
-- [recognize and relate: scale](../issues/2026-09-25-recognize-and-relate-scale-and-shape.md)
-- [Relation pairs span the whole text](../issues/2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md)
-- [Tuning loop asks: cases to label, repeated runs, and cost beside the score](../issues/2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md)
-- [A lone record over the size setting is sent, and one backend refusal stops the file](../issues/2026-09-30-a-lone-oversized-record-is-sent-anyway.md)
-- [A usage write that fails after a good start is silent on the libraries](../issues/closed/2026-09-30-a-usage-write-that-fails-after-a-good-start-is-silent-on-the-libraries.md)
-- [A batch command that runs many questions in one process, after 0.1](../issues/2026-09-30-batch-command-runs-many-questions-in-one-process.md)
-- [OpenTelemetry traces for backend calls, after 0.1](../issues/2026-09-30-opentelemetry-traces-after-0-1.md)
-- [The Polars door cannot test lazy streaming](../issues/2026-09-30-polars-door-cannot-test-lazy-streaming.md)
-- [The proxy: a second program that serves the functions](../issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md)
-- [Three status phrases pass the site word check](../issues/2026-09-30-site-replay-folders-have-no-fixture.md)
-- [About a third of the spec's "no calls" edges show only after a real send, and the spec lags the build in places](../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md)
-- [The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses](../issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md)
-- [Zig 0.15.2's linker drops constant alignment](../issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md)
-- [`tag` takes a separate cutoff for each label](../issues/2026-10-01-tag-cutoff-per-label.md)
-- [The command's own time: the usage fsync and a new connection per run](../issues/2026-10-03-command-overhead-fsync-and-connection.md)
-- [Two site paths point at bench runs that left the bench's main branch](../issues/closed/2026-10-03-site-bench-paths-point-at-deleted-runs.md)
+Outcome: no release is promised. The proxy and document structure wait here for 0.5 under the [three-release ruling](../decisions/2026-10-14-three-releases-after-0-2.md). Each item waits on its own trigger, such as a user's request, an upstream fix or Ian's ruling, and moves to a numbered milestone when its trigger fires or Ian places it.

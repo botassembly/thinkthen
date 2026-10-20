@@ -1,5 +1,7 @@
 # 0.2 adversarial review, 2026-10-11
 
+Ticket: [0549](../tickets/0549-fast-valid-release-campaign.md), [0550](../tickets/0550-binding-defects-from-adversarial-review.md), [0551](../tickets/0551-one-named-request-constructor.md), [0552](../tickets/0552-c-library-runs-the-shared-request.md), [0553](../tickets/0553-python-r-host-request-residue.md), [0554](../tickets/0554-engine-methods-build-requests.md)
+
 Ian asked for an adversarial review of the 0.2 build after 0534 to 0542 closed. Three read-only reviewers covered the release test campaign, the language bindings and the Rust core at 8e75481d5. The PM checked the main claims against the code. Tickets 0549 to 0554 carry the work.
 
 ## Release test campaign

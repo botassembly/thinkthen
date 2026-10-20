@@ -5,6 +5,9 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::Stdio;
+use std::sync::Arc;
+
+use conformance_backend::Rendezvous;
 
 use super::harness::{Canned, Listener, finish, spawn_one as spawn};
 
@@ -413,8 +416,19 @@ fn table_backend_failures_hide_cell_and_key_markers() {
 #[test]
 fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     let response = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
-    let listener =
-        Listener::answering(move |_| Canned::ok(response).after(20)).expect("a listener");
+    let closed = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&closed);
+    let (arrived, requested) = std::sync::mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        let reply = Canned::ok(response);
+        if String::from_utf8_lossy(body).contains(r#"row 1\""#) {
+            let _ = arrived.send(());
+            reply.after_release(Arc::clone(&held))
+        } else {
+            reply
+        }
+    })
+    .expect("a listener");
     let mut child = crate::harness::command(&[], &[])
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_BATCH", "1")
@@ -447,10 +461,16 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     drop(input);
     let mut reader = BufReader::new(child.stdout.take().expect("output pipe"));
     let mut first = String::new();
-    reader.read_line(&mut first).expect("one output row");
+    let read = reader.read_line(&mut first);
     drop(reader);
-    let output = finish(child, "table").expect("command ends");
+    let released = std::thread::spawn(move || requested.recv().is_ok() && closed.wait());
+    let output = finish(child, "table");
+    let sent = listener.requests().len();
+    drop(listener);
+    released.join().expect("release thread");
+    let output = output.expect("command ends");
+    read.expect("one output row");
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert_eq!(first, "{\"input\":{\"body\":\"row 0\"},\"value\":true}\n");
-    assert!(listener.requests().len() <= 12);
+    assert!(sent <= 12);
 }

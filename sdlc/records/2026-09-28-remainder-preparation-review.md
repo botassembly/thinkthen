@@ -1,5 +1,7 @@
 # Review of remaining contract and SQL preparation
 
+Verdict: accepted, the cross-surface note at `d879d523` and the DuckDB Q5 note at `03ac1fd1`.
+
 Fresh independent Medium review accepted the corrected five-row cross-surface note at `d879d523` and the DuckDB Q5 note at `03ac1fd1`. It read original criteria, accepted contracts, current selectors and implementations; no build, provider call or product edit ran.
 
 The cross-surface note initially mixed invalid Ruby path arguments with Local file-content failures and treated stale settings-page platform prose as current code. The correction preserves Usage for invalid path bytes, Local for invalid file contents, and separates three existing C++ package routes from remaining native runner qualification. Current0244 source has since landed at `6717d80c`. The Q5 note correctly traces the C++ listed-form refusal, caller file authority and the public metadata-preserving route. Its overload remains a proposal for a reviewed ticket, not approved implementation.
