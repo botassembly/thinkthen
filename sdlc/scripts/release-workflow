@@ -508,7 +508,7 @@ sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages swift 
 sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages objective-c "$SHA"
 	;;
 apple-prepare-stage)
-	[ "$#" = 1 ] || fail 'apple-prepare-stage' 
+	[ "$#" = 1 ] || fail 'apple-prepare-stage'
 set -eu
 rustup toolchain install "$(manifest_version rust)" --profile minimal
 cargo fetch --locked
@@ -614,6 +614,9 @@ build-stage)
 	set -eu
 	mkdir -p release-files
 	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	  usage_guard
+	  config_home
+	  temp_home
 	  cargo clippy --locked --offline --workspace --all-targets -- -D warnings
 	  cargo test --locked --offline --no-fail-fast --workspace --all-targets
 	  cargo clippy --locked --offline --manifest-path libraries/c/Cargo.toml --all-targets -- -D warnings
