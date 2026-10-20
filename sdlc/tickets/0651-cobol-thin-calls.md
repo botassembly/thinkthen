@@ -21,7 +21,7 @@ Depends on: 0650, 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0651 SHA --memory 8 -- sh libraries/cobol/check.sh`, the gate unpacks the archive, compiles `examples/blocking.cob` and the installed consumer outside the repository, and the consumer's comparison passes for every shared case.
+- On the M5 through `pm job run --machine m5 0651 SHA --memory 8 -- sdlc/scripts/job sh libraries/cobol/check.sh`, the gate unpacks the archive, compiles `examples/blocking.cob` and the installed consumer outside the repository, and the consumer's comparison passes for every shared case.
 - `python3 build-tools/results/answer_rules.py` and `python3 conformance/library-surface.py --library cobol` pass. Before the change, removing `cobol_results.py` from `LEGACY_FILES` fails the first check.
 
 ## Evidence

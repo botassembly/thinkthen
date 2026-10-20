@@ -11,6 +11,12 @@ Milestone: 0.2.1
 3. Slice C. Release mode refuses a `v*` tag whose commit has no successful rehearsal run of `release.yml`.
 4. Gates stay offline. The live parts are proved by a rehearsal and the 0.2 release run.
 
+### What Ian can overturn
+
+- No rehearsal check of trusted publishers, and no `rehearse` environment.
+- The install check as a separate workflow that `publish` starts, rather than jobs inside `release.yml`.
+- Counting a rehearsal whose failed jobs were rerun to success as clean.
+
 ## Evidence
 
 - Starts from: the three 0.1 release runs in `sdlc/records/0128-release-0-1.md` and the design record `sdlc/records/0398-release-safety.md`.
@@ -30,9 +36,3 @@ Milestone: 0.2.1
   - Install checks on hosts below each version floor, such as Ruby 3.3 and macOS's Python 3.9. Issue `2026-10-03-rubygems-ruby-platform-gem-is-the-0-0-1-placeholder.md` owns them, and 0425 checks the diagnostic failure after publication.
   - Staged npm publishing. Ticket 0393 owns it.
   - Issues `2026-10-04-r-install-on-linux-and-before-release.md` and `2026-10-04-two-release-secrets-remain.md` stay separate.
-
-## What Ian can overturn
-
-- No rehearsal check of trusted publishers, and no `rehearse` environment.
-- The install check as a separate workflow that `publish` starts, rather than jobs inside `release.yml`.
-- Counting a rehearsal whose failed jobs were rerun to success as clean.

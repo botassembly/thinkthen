@@ -18,7 +18,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0664 SHA --memory 8 -- env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` packs the tarball, installs it into a fresh project, and passes on each Node major the manifest lists, with the installed consumer's comparison passing for every shared case. Before the change the check refuses any Node other than v22.22.3, so the newest-major run fails.
+- On the M5 natively: `pm job run --machine m5 0664 SHA --memory 8 -- sdlc/scripts/job env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` packs the tarball, installs it into a fresh project, and passes on each Node major the manifest lists, with the installed consumer's comparison passing for every shared case. Before the change the check refuses any Node other than v22.22.3, so the newest-major run fails.
 - `git grep -n 'thinkthen-toolchains\|node.sha256\|22\.22\.3' libraries/typescript sdlc/scripts` finds nothing.
 - Linux arm64: `pm job run --machine m5 0664 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/typescript`; Linux x86_64: the same command with `--machine gator --memory 7`. Windows and Intel macOS are proven on the candidate in 0687.
 

@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0680 SHA --memory 12 -- sh -c 'sdlc/scripts/package && THINKTHEN_ARTIFACT=$(ls target/package/thinkthen-*.crate) sh libraries/polars/check.sh'`, the installed check builds the consumer against the extracted candidate crate and runs the shared native fixture through a Polars frame.
+- On the M5 through `pm job run --machine m5 0680 SHA --memory 12 -- sdlc/scripts/job sh -c 'sdlc/scripts/package && THINKTHEN_ARTIFACT=$(ls target/package/thinkthen-*.crate) sh libraries/polars/check.sh'`, the installed check builds the consumer against the extracted candidate crate and runs the shared native fixture through a Polars frame.
 - Linux arm64: `pm job run --machine m5 0680 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/polars`; Linux x86_64: the same command with `--machine gator --memory 7`.
 - `git grep -n '#\[path' libraries/polars` and `git grep -n 'thread::sleep' libraries/polars` find nothing; both find a line on current main.
 

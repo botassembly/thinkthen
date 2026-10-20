@@ -21,7 +21,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0649 SHA --memory 8 -- sh libraries/ada/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing GNAT tool, because the manifest declares GNAT for Linux only.
+- On the M5 through `pm job run --machine m5 0649 SHA --memory 8 -- sdlc/scripts/job sh libraries/ada/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing GNAT tool, because the manifest declares GNAT for Linux only.
 - Linux arm64: `pm job run --machine m5 0649 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/ada`; Linux x86_64: the same command with `--machine gator --memory 7`. The Ada gate passes there with both GNAT versions.
 
 ## Evidence

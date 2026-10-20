@@ -19,7 +19,7 @@ Depends on: 0650, 0651, 0688, 0740, 0741
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0652 SHA --memory 8 -- sh libraries/cobol/check.sh`, the README's compile command builds the example and the installed consumer with `-Werror`, and they pass. Before the change, the same command without `-Wno-incompatible-pointer-types` fails with pointer-type errors.
+- On the M5 through `pm job run --machine m5 0652 SHA --memory 8 -- sdlc/scripts/job sh libraries/cobol/check.sh`, the README's compile command builds the example and the installed consumer with `-Werror`, and they pass. Before the change, the same command without `-Wno-incompatible-pointer-types` fails with pointer-type errors.
 - Linux arm64: `pm job run --machine m5 0652 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/cobol`; Linux x86_64: the same command with `--machine gator --memory 7`. The COBOL gate runs there with both the lowest and newest GnuCOBOL versions.
 
 ## Evidence

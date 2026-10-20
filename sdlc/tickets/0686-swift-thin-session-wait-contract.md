@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0686 SHA --memory 8 -- sh libraries/swift/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route (`release-pack` for the C archives, `libraries/swift/build-xcframework.sh`, then `release-pack --apple-wrappers aarch64-apple-darwin OUT swift`), the installed Swift consumer runs all ten named calls against a recorded backend. A held-provider case shows other async work progressing and Task cancellation returning before the provider is released.
+- On the M5 through `pm job run --machine m5 0686 SHA --memory 8 -- sdlc/scripts/job sh libraries/swift/check.sh`, with `THINKTHEN_ARTIFACT` naming the Apple package built at the same revision by the release route (`release-pack` for the C archives, `libraries/swift/build-xcframework.sh`, then `release-pack --apple-wrappers aarch64-apple-darwin OUT swift`), the installed Swift consumer runs all ten named calls against a recorded backend. A held-provider case shows other async work progressing and Task cancellation returning before the provider is released.
 - The M5 builds both macOS C packages, cross-compiling `x86_64-apple-darwin` with the pinned Rust toolchain; `release-pack` takes the target and `THINKTHEN_RELEASE_EXPECTED_SHA` as the Swift and Objective-C wrappers require.
 - `python3 build-tools/results/answer_rules.py` passes with the two Swift exceptions removed. Before the change it fails on those files.
 - Linux arm64: `pm job run --machine m5 0686 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/swift`; Linux x86_64: the same command with `--machine gator --memory 7`.

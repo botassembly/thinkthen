@@ -20,7 +20,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0672 SHA --memory 8 -- python3 libraries/jvm/tests/package_check.py`, Gradle publishes the artifacts into a scratch Maven repository. A clean Gradle consumer and a clean Maven consumer each resolve them and run a named call on Java 22 and on the pinned newest JDK, with no library path override. On current main no Gradle or Maven build exists, so the consumers cannot resolve anything.
+- On the M5 through `pm job run --machine m5 0672 SHA --memory 8 -- sdlc/scripts/job python3 libraries/jvm/tests/package_check.py`, Gradle publishes the artifacts into a scratch Maven repository. A clean Gradle consumer and a clean Maven consumer each resolve them and run a named call on Java 22 and on the pinned newest JDK, with no library path override. On current main no Gradle or Maven build exists, so the consumers cannot resolve anything.
 - The installed JVM check (`sh libraries/jvm/check.sh`) needs bubblewrap, so it runs in the Linux image. Linux x86_64: `pm job run --machine gator 0672 SHA --memory 7 -- sdlc/scripts/linux-check surface libraries/jvm`. Linux arm64 joins only if this ticket declares bubblewrap and the JVM tools for linux-arm64 in `sdlc/tools/jvm.json`.
 
 ## Evidence

@@ -13,6 +13,19 @@ Ticket review: accepted 2026-10-06; blocking findings corrected.
 2. Ian can untick direct publishing on the npm trusted publisher for `thinkthen`, and the next release still publishes npm.
 3. `release-process.md` section 6 says that npm holds each release until Ian approves it on npmjs.com. The GitHub `release` environment approval still releases the job.
 
+### What Ian can overturn
+
+- Staged publishing on npm at all. Direct publishing works today.
+- A second approval on npmjs.com after the GitHub `release` environment approval.
+
+### Current planning boundary
+
+PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct publishing already exist; the missing outcome is staged publishing. Validate the exact supported npm command/version against official documentation before changing the workflow. Plan and offline workflow tests do not change registry settings or publish a package. Integration rehearsal and actual staging are later authorized qualification steps; no such run is scheduled by 0425.
+
+### Implementation choice
+
+Official [staged publishing docs](https://docs.npmjs.com/staged-publishing/) require npm 11.15.0 or later and Node 22.14.0 or later. Pin npm 11.15.0 in both jobs; the existing Node 22.22.3 meets that requirement. The [stage command](https://docs.npmjs.com/cli/v11/commands/npm-stage/) accepts a package specification, dry run, provenance and public access. Keep the exact archive and existing release guards. Ian's npm approval happens after staging; the initial public install check may precede it, so its npm channel is rerun after approval. No registry settings or actual staging change in this implementation.
+
 ## Evidence
 
 - Starts from: release run 37059415069, dispatched from tag `v0.1.1` at `9463cef05` (record `sdlc/records/0128-release-0-1.md`).
@@ -34,22 +47,7 @@ Ticket review: accepted 2026-10-06; blocking findings corrected.
   - Unticking direct publishing on npmjs.com. Ian does that after this lands, before the next release.
   - Staged publishing on the other registries. Each registry's own approval feature is a separate decision.
 
-## What Ian can overturn
-
-- Staged publishing on npm at all. Direct publishing works today.
-- A second approval on npmjs.com after the GitHub `release` environment approval.
-
-
-## Current planning boundary
-
-PM ask 8 keeps this existing ticket as npm’s owner. Registry setup and direct publishing already exist; the missing outcome is staged publishing. Validate the exact supported npm command/version against official documentation before changing the workflow. Plan and offline workflow tests do not change registry settings or publish a package. Integration rehearsal and actual staging are later authorized qualification steps; no such run is scheduled by 0425.
-
-
-## Implementation choice
-
-Official [staged publishing docs](https://docs.npmjs.com/staged-publishing/) require npm 11.15.0 or later and Node 22.14.0 or later. Pin npm 11.15.0 in both jobs; the existing Node 22.22.3 meets that requirement. The [stage command](https://docs.npmjs.com/cli/v11/commands/npm-stage/) accepts a package specification, dry run, provenance and public access. Keep the exact archive and existing release guards. Ian's npm approval happens after staging; the initial public install check may precede it, so its npm channel is rerun after approval. No registry settings or actual staging change in this implementation.
-
-## Landing slices
+### Landing slices
 
 Slice A lands the reviewed workflow, parser and approval instructions. Final rehearsal and actual registry staging, approval and public availability remain open under this ticket and final qualification.
 

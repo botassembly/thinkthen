@@ -17,7 +17,7 @@ Depends on: 0644, 0645, 0688, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0693 SHA --memory 8 -- cargo test --locked --offline --manifest-path databases/duckdb/bridge/Cargo.toml` passes, and `sdlc/scripts/lint` passes with the receipt outputs gone from `build-tools/results/generate.py --all --check`.
+- On the M5 natively: `pm job run --machine m5 0693 SHA --memory 8 -- sdlc/scripts/job cargo test --locked --offline --manifest-path databases/duckdb/bridge/Cargo.toml` passes, and `sdlc/scripts/lint` passes with the receipt outputs gone from `build-tools/results/generate.py --all --check`.
 - `git grep -il receipt databases/duckdb/cpp/src` finds nothing; before the change it lists nine files.
 - Linux arm64: `pm job run --machine m5 0693 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/duckdb`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `sh databases/duckdb/check.sh` passes its full suite on both pinned DuckDB versions.
 

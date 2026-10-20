@@ -157,6 +157,8 @@ The 0456 amendment defines implementation scope. [0425 completion criteria](../t
 
 Outcome: the first release after 0.1, published as 0.2.1, with the 0.2 scope on a rebuilt basis. Rust computes every call's answer. Each language is a thin, idiomatic, properly packaged wrapper over one C entry point or one direct Rust bridge. One pinned environment per architecture runs every check. Adding a core feature mostly touches only Rust. Ruling and root causes: [0.2.1 rebuilds the basis](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Findings: [the 2026-10-18 quality review](../records/2026-10-18-0-2-quality-review.md).
 
+The [core-freeze decision](../decisions/2026-10-20-0-2-1-core-freeze.md) names the contract revision and its change rules. The [freeze and qualification ruling](../decisions/2026-10-20-freeze-names-the-contract.md) separates the freeze from the three-platform qualification checkpoint.
+
 Order, in three phases. A phase's tickets run in parallel where they do not collide. Read their status through pm.
 
 1. The test machinery, release workflows, Rust core, host crate, settings parser and Rust library. The release suite runs on main at the end of this phase and at each later checkpoint.
