@@ -32,6 +32,7 @@ Reviews: revision 28b3e5d, accept
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Fresh review accepted 28b3e5dd2 after job 1792492594769-67261 passed all255 native and tree fixtures with340 invocation outputs and all12 ordinary installed tests; earlier policy formatting helper typed and inventory receipts remain valid, the attempted selector was cleared by full profile and repeated coverage is recorded, old-API red remains unexecuted, and the configured closing gate is pending.
 
 ## Reviewed projection and installed proof
 
