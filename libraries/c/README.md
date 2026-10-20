@@ -32,7 +32,7 @@ PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
 ./consumer
 ```
 
-[examples/session.c](examples/session.c) is a complete caller using the blocking call and owned canonical JSON. Supply the backend environment before a live call. The focused local package check runs that caller and the JSON session and plan cases against an extracted archive with a synthetic loopback backend:
+[examples/session.c](examples/session.c) is a complete caller using the blocking call. It parses the owned result with `thinkthen_value_parse`, reads the boolean answer and numeric probability through typed JSON views, and prints those two values. The parsed value has its own owner, so the example releases the call result before reading the views. Supply the backend environment before a live call. The focused local package check runs that caller and the JSON session and plan cases against an extracted archive with a synthetic loopback backend:
 
 ```sh
 python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE

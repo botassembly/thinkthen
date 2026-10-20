@@ -1,4 +1,4 @@
-/* Run one named call with owned canonical JSON from the installed C package. */
+/* Run one named call and read its typed answer and probability. */
 #include <thinkthen.h>
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +8,17 @@
 #endif
 static thinkthen_complete_utf8_v1 text(const char *s) {
     return (thinkthen_complete_utf8_v1){s,strlen(s)};
+}
+static const thinkthen_complete_json_v1 *member(
+    const thinkthen_complete_json_v1 *value, const char *name) {
+    if (!value || value->kind != THINKTHEN_COMPLETE_JSON_OBJECT_V1) return NULL;
+    thinkthen_complete_json_object_v1 object = value->data.object;
+    for (size_t i = 0; i < object.len; ++i) {
+        thinkthen_complete_json_entry_v1 entry = object.data[i];
+        if (entry.name.len == strlen(name) && !memcmp(entry.name.data, name, entry.name.len))
+            return entry.value;
+    }
+    return NULL;
 }
 int main(void) {
 #ifdef _WIN32
@@ -31,6 +42,28 @@ int main(void) {
         thinkthen_call_error_free(error);return 1;
     }
     thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(result);
-    fwrite(json.data,1,json.len,stdout);putchar('\n');
-    thinkthen_call_result_free(result);return 0;
+    thinkthen_value *owner = NULL;
+    const thinkthen_complete_json_v1 *call = NULL;
+    int failed = thinkthen_value_parse(json.data, json.len, &owner) ||
+        thinkthen_value_view(owner, &call);
+    thinkthen_call_result_free(result);
+    const thinkthen_complete_json_v1 *answer = member(call, "value");
+    const thinkthen_complete_json_v1 *probability = member(call, "probability");
+    if (failed || !answer || !probability ||
+        (answer->kind != THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 &&
+         answer->kind != THINKTHEN_COMPLETE_JSON_NULL_V1) ||
+        (probability->kind != THINKTHEN_COMPLETE_JSON_NUMBER_V1 &&
+         probability->kind != THINKTHEN_COMPLETE_JSON_NULL_V1)) {
+        fputs("Expected a decide answer and probability\n", stderr);
+        thinkthen_value_free(owner);
+        return 1;
+    }
+    printf("{\"answer\":%s,\"probability\":",
+        answer->kind == THINKTHEN_COMPLETE_JSON_NULL_V1 ? "null" :
+        answer->data.boolean ? "true" : "false");
+    if (probability->kind == THINKTHEN_COMPLETE_JSON_NULL_V1) fputs("null", stdout);
+    else fwrite(probability->data.number.data, 1, probability->data.number.len, stdout);
+    puts("}");
+    thinkthen_value_free(owner);
+    return 0;
 }
