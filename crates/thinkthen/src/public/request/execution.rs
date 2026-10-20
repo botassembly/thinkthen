@@ -347,9 +347,7 @@ impl<I> Validated<'_, I> {
             return Ok(());
         };
         if at == maximum {
-            return Err(Error::usage(crate::public::bulk::count_message(
-                maximum == 254,
-            )));
+            return Err(crate::public::bulk::count_error(maximum == 254));
         }
         let bytes = match input {
             crate::QuestionInput::Text(text) => text.len(),

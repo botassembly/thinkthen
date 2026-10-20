@@ -114,7 +114,7 @@ impl Engine {
         };
         let engine = crate::public::complete::contextual(self.asking(question)?, options)?;
         let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
-            .map_err(|_| Error::usage(count_message(none)))?;
+            .map_err(|_| count_error(none))?;
         let find = crate::public::find_question::profiled(find, question);
         Ok((units, find, engine))
     }
@@ -142,11 +142,16 @@ impl Question {
     ) -> Result<(), Error> {
         let units = admit_find(self, units, &CallOptions::new(), |_| Ok(()))?;
         let none = self.kind == Kind::FindNone;
-        Find::validate_count(units.len(), none).map_err(|_| Error::usage(count_message(none)))
+        Find::validate_count(units.len(), none).map_err(|_| count_error(none))
     }
 }
 
-pub(in crate::public) fn count_message(none: bool) -> &'static str {
+pub(in crate::public) fn count_error(none: bool) -> Error {
+    Error::usage(count_message(none))
+        .with_diagnostic(crate::public::error::diagnostic::Diagnostic::FindCount(none))
+}
+
+fn count_message(none: bool) -> &'static str {
     if none {
         "a find question offering none takes 1 to 254 units"
     } else {
@@ -177,7 +182,7 @@ where
         let unit = unit?;
         check_limit(held.len())?;
         if held.len() == maximum {
-            return Err(Error::usage(count_message(none)));
+            return Err(count_error(none));
         }
         bytes.charge(unit.evidence().len())?;
         held.push(unit);

@@ -198,6 +198,11 @@ pub enum ErrorDiagnostic<'a> {
     },
     /// Complete relation input exceeded its entity ceiling.
     RelationEntityCount(usize),
+    /// Complete find input violated its candidate count.
+    FindCount {
+        /// Whether the question offers the additional none answer.
+        none: bool,
+    },
     /// A model selector has forbidden control characters.
     ModelControl,
     /// A model selector is blank.
@@ -298,6 +303,7 @@ impl Error {
                 cause: cause.as_ref().map(ToString::to_string),
             },
             Diagnostic::RelationEntityCount(count) => ErrorDiagnostic::RelationEntityCount(*count),
+            Diagnostic::FindCount(none) => ErrorDiagnostic::FindCount { none: *none },
             Diagnostic::Model(crate::core::BlankTextError::ModelControl) => {
                 ErrorDiagnostic::ModelControl
             }

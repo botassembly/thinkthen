@@ -72,7 +72,9 @@ The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retire
 
 `AttemptObservation::transport_failed` exposes the existing precise connection/body transport flag. The broader `AttemptOutcome::Transport` also represents a bounded reply-byte refusal, so the command's backend check uses the precise flag to continue after an oversized reply while stopping after an actual transport failure. This read-only projection changes no attempt serialization, counters or provider behavior. Ian can overturn this API detail.
 
-`QuestionFileReference::parse` retains name, size and anchored-root admission for every role. The Find and Relate roles delegate function/key membership to their existing closed parsers so malformed saved files retain their local classification and exact grammar cause. Relate's native parser also distinguishes a valid different-function file from malformed content. Other roles retain the explicit different-function refusal. Typed causes survive the saved-file classification without becoming standard error sources. Ian can overturn this API detail.
+`ErrorDiagnostic::FindCount { none: bool }` projects the existing native candidate-count refusal without changing its public message, error kind, facts or wire representation. The command maps this typed cause to its existing sentence after native item-schema admission, preserving validation order without matching message text. Saved-definition admission itself retains Usage; the command applies saved-file classification only within its authorized file-parsing boundary. Ian can overturn this API detail.
+
+`QuestionFileReference::parse` retains name, size and anchored-root admission for every role. The Find role delegates key membership to its existing closed parser at this host parsing boundary so malformed saved files retain their local classification and exact grammar cause. Relate uses its existing parser to distinguish a valid different-function file from malformed content before applying the explicit role refusal. Native named and reference loaders retain their strict role admission and Usage classification; other roles retain their existing role checks. Typed causes survive the saved-file classification without becoming standard error sources. Ian can overturn this API detail.
 
 ### Retired public declarations
 
@@ -535,6 +537,8 @@ ErrorDiagnostic::Context::limit: usize
 ErrorDiagnostic::Context::actual: usize
 ErrorDiagnostic::Context::profile: Option<&'a str>
 ErrorDiagnostic::RelationEntityCount(usize)
+ErrorDiagnostic::FindCount
+ErrorDiagnostic::FindCount::none: bool
 ErrorDiagnostic::ModelControl
 ErrorDiagnostic::ModelBlank
 ErrorDiagnostic::Pointer

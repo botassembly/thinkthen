@@ -25,6 +25,7 @@ pub(crate) enum Diagnostic {
     },
     Refusal(Box<dyn Any + Send + Sync>),
     RelationEntityCount(usize),
+    FindCount(bool),
     Model(crate::core::BlankTextError),
     Pointer(&'static str, String, crate::core::PointerError),
     Batch,

@@ -145,6 +145,7 @@ fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
             profile: profile.map(str::to_owned),
         }),
         D::RelationEntityCount(count) => F::Relate(super::relate::Error::TooMany { count }),
+        D::FindCount { none } => F::FindCount { none },
         D::ModelControl => {
             F::Usage("--model holds no control character or white space but a plain space")
         }
