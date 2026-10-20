@@ -10,7 +10,7 @@ Depends on: 0619
 
 ## Outcome
 
-- Changes: `conformance/parity.py`, `conformance/test_parity.py`.
+- Changes: `conformance/parity.py`, `conformance/test_parity.py`, `conformance/c_parity.py`.
 - The cause of each Linux timeout is measured in the capped x86_64 container on Yellow, with a memory and time sample per consumer, before any fix is called a fix.
 - The parity pool in `run_consumers` schedules consumers by their measured peak memory against the container's limit. The measured peak memory and time of each consumer sit in that scheduling table, the one place the code reads them.
 - The serial setting from 412d17372 stays only if the measurement supports it.
