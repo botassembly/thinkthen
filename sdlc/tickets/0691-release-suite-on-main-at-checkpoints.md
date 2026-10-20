@@ -1,12 +1,22 @@
 # 0691: Run the release suite on main at each checkpoint
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0615, 0618, 0619
+
+Reviews: revision 5b6430e, accept
+
+Reviews: revision 63cc2ab, accept
+
+Reviews: revision 5ad7d11, accept
+
+Reviews: revision efa8d45, accept
+
+Reviews: revision 8c9d297, accept
 
 ## Outcome
 
@@ -25,10 +35,16 @@ Depends on: 0615, 0618, 0619
 
 0619 now closes on the core image only.
 
-- The phase 1 checkpoint and the core-freeze checkpoint (0688) run the existing named core smoke and `package` parts on the M5 natively and in the arm64 container, and the configured tickets gate in both containers.
-- `test-full-cases` and `test-stress` run in both containers from the phase 3 checkpoint at which every language's toolchain is in the manifest, and at each later checkpoint. Until then they run natively on the M5 at each checkpoint.
+- The PM's 2026-10-20 scope ruling makes the phase 1 checkpoint and the core-freeze checkpoint (0688) run the existing full Rust and C smoke selection (`smoke libraries/rust libraries/c`) and `package` natively on M5, plus the configured gate and existing `package` check in both containers.
+- The whole native `test-full-cases` and `test-stress` campaign and the full container campaigns start at the phase 3 checkpoint where every language's providers and assets are in the manifest, and run at each later checkpoint. R and PostgreSQL provider work stays with its own wave tickets. Missing consumers never count as passing.
 - Add no core-only selector to `test-full-cases` or `test-stress`, and never weaken a missing-tool failure.
 
 ## Evidence
 
 Rule 6 of the 0.2.1 ruling says candidates are main revisions and the release suite runs on main at each checkpoint, so no release-only check meets a candidate first. In 0.2, release-only checks ran for the first time at each candidate, and each candidate found one new setup fault. Nothing in the 0.2.1 set runs the release suite before 0687. The retired campaign-owner verifier needs no replacement runner: the suite already has entrypoints.
+
+## Progress
+
+- 2026-10-18 started
+- 2026-10-20 next: Fresh fixing review accepted 63cc2ab41 with current-main integration and corrected checkpoint instructions; PM ruled that existing container package and configured C checks plus lint and test satisfy the amendment, named Rust and C smokes run natively on M5, and no linux-check extension is added, while the unchanged checkpoint regression runs in the pending integrated closing gate.
+- 2026-10-20 next: Combined six-ticket gate stopped before tests at CLAUDE.md 5056/5000 characters in receipt gate-runs/thinkthen/0632/m5/d2ef97a52a0fe9781e13c7cb478125837a3d591d; fresh fixing review accepted 8c9d297b1 with all rules preserved at 4998 characters, and the integrated gate will rerun on the repaired batch.
