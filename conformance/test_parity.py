@@ -597,7 +597,7 @@ class PublicAssertions(unittest.TestCase):
             for name in ids], 'required_cases': list(self.cases.values())}
         gib = 1024 ** 3
         limit = 10 * gib
-        peaks = {'rust': 3 * gib, 'rust-polars': 5 * gib, 'one': 6 * gib,
+        peaks = {'rust': 5 * gib, 'rust-polars': 5 * gib, 'one': 6 * gib,
                  'two': 5 * gib, 'three': 4 * gib, 'four': 2 * gib}
         # Half-GiB samples must reserve the next whole GiB in peaks.
         resources = {name: {'peak_memory_bytes': memory - gib // 2, 'duration_seconds': len(ids) - ids.index(name)}
