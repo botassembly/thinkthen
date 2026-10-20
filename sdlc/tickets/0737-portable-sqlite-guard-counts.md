@@ -15,7 +15,7 @@ Phase: 2
 
 ### Proof
 
-- Through pm job on the M5, the unchanged script reproduces the false refusal, then the repaired existing SQLite routine passes the guards and runs its downstream cases. Verify a genuinely wrong protected-source count still refuses before builds, using an existing fixture or temporary job-local mutation.
+- Through pm job on the M5, the unchanged script reproduces the false refusal, then the repaired existing SQLite routine passes the guards and runs its downstream cases. Verify a genuinely wrong protected-source count still refuses before downstream builds and checks, using an existing fixture or temporary job-local mutation.
 
 ## Evidence
 
