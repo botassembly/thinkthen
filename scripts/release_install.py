@@ -84,6 +84,46 @@ python3 checks/sql.py postgres "$(command -v psql)" unused checks/stub.json"""
     (out / 'INSTALL.md').write_text('\n'.join(lines))
 
 
+def release_note(version, platforms):
+    """Describe the release once; platform archives retain their install guides."""
+    from runtime_floors import FLOORS
+
+    lines = [f'# ThinkThen {version}', '',
+             'Ask typed questions about records from Python, TypeScript, R, Go, Java, Kotlin, C#, C, C++, Swift, Zig and Ruby. Use the `thinkthen` command or query DuckDB, SQLite and PostgreSQL. Work with pandas, Polars and R data frames. Read and write CSV, TSV and Excel files. Run saved questions and steps from toolboxes with `thinkthen run`.', '',
+             '## Install', '',
+             'Download the command, C, C++ and Zig archives from GitHub Releases. Verify SHA256SUMS before extracting an archive. The platform package archives also contain offline installation commands in INSTALL.md and package READMEs.', '',
+             'Package-site installation follows publication of 0.2.0 on each site. Use PyPI `thinkthen` for Python, npm `thinkthen` for TypeScript, RubyGems `thinkthen` for Ruby, NuGet `Botassembly.ThinkThen` for C#, and Maven Central `io.github.botassembly:thinkthen-java` or `io.github.botassembly:thinkthen-kotlin` for Java or Kotlin. Install the command through the Homebrew tap `botassembly/homebrew-thinkthen`. Install R `thinkthen` from `https://botassembly.r-universe.dev`. Use the Go module `github.com/botassembly/thinkthen/sdk/go` at `v' + version + '`. Select version `' + version + '` with Swift Package Manager; Swift Package Index lists the package. Rust users install `thinkthen`, `thinkthen-cli`, `thinkthen-core`, `thinkthen-files` and `thinkthen-runs` from crates.io.', '',
+             'Download the DuckDB and SQLite extensions from GitHub Releases. PostgreSQL ships for Linux in the platform package archives. PGXN installation and the DuckDB community listing are outside this release.', '',
+             '## Platforms and requirements', '',
+             '| Platform | Minimum system libraries or operating system |',
+             '| --- | --- |']
+    for host, requirements in platforms.items():
+        if host.startswith('linux-'):
+            base, swift = requirements['command'], requirements['swift']
+            floor = (f'glibc {base["supported_glibc"]}, GLIBCXX {base["supported_glibcxx"]}; '
+                     f'Swift: glibc {swift["supported_glibc"]}, GLIBCXX {swift["supported_glibcxx"]}')
+        elif host == 'macos-arm64':
+            floor = f'macOS {requirements["command"]["macos"]} or newer (Apple Silicon)'
+        else:
+            floor = FLOORS['windows']['support']
+        lines.append(f'| {host} | {floor} |')
+    database_runtimes = {}
+    for requirements in platforms.values():
+        for name in ('sqlite', 'duckdb', 'postgres'):
+            if name in requirements:
+                database_runtimes.setdefault(name, requirements[name]['runtime'])
+    language_requirements = []
+    for name, value in FLOORS['runtimes'].items():
+        # Only Swift needs a separate runtime floor after its build requirement.
+        requirement = value.split(',')[0] if name == 'swift' else value.split(';')[0]
+        language_requirements.append(('Kotlin: ' if name == 'kotlin' else '') + requirement)
+    lines += ['', 'Language requirements: ' + '; '.join(language_requirements) + '.', '',
+              f'R requires the {FLOORS["r"]["Linux"]} series on Linux and the {FLOORS["r"]["Darwin"]} series on macOS; Windows requires ' + platforms.get('windows-x86_64', {}).get('r', {}).get('runtime', 'the R version in its archive requirements.json').split(';')[0] + '. C needs a C compiler to build, and C++ needs C++17. See each archive’s requirements.json for its package requirements and supplied runtime dependencies.', '',
+              'Database requirements: ' + '; '.join(database_runtimes.values()) + '.', '',
+              'ThinkThen uses 0.x APIs. APIs may change between releases.', '']
+    return '\n'.join(lines)
+
+
 def checksums(out):
     (out / 'SHA256SUMS').write_text(''.join(
         f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(out)}\n'

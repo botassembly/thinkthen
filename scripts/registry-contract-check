@@ -18,7 +18,9 @@ import urllib.request
 
 import release_crates
 import release_upload
-from release_workflow import ROOT, version
+from release_workflow import ROOT, TARGETS, collect, version
+from release_install import checksums
+from runtime_floors import FLOORS, requirements
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as temporary:
     scratch = Path(temporary)
@@ -113,6 +115,47 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
         service.shutdown()
         service.server_close()
         thread.join()
+
+    # The public notes summarize platforms while offline guides stay in archives.
+    archives = scratch / 'archives'
+    archives.mkdir()
+    revision = 'a' * 40
+    for target in TARGETS:
+        package = scratch / 'packages' / version() / target
+        package.mkdir(parents=True)
+        (package / 'build.json').write_text(json.dumps({
+            'version': version(), 'platform': target, 'revision': revision}))
+        runtime = {name: {'runtime': value} for name, value in
+                   dict(command='operating system', swift=FLOORS['runtimes']['swift'], r='R 4.6',
+                        sqlite='SQLite >=3.41 with extension loading', duckdb='DuckDB 1.4.3').items()}
+        if target.startswith('linux-'):
+            runtime['postgres'] = {'runtime': 'PostgreSQL18 ' + target}
+        if target != 'windows-x86_64':
+            runtime = requirements(runtime, 'Darwin' if target == 'macos-arm64' else 'Linux')
+        (package / 'requirements.json').write_text(json.dumps(runtime))
+        (package / 'INSTALL.md').write_text('Offline installation for ' + target)
+        checksums(package)
+        with tarfile.open(archives / f'thinkthen-{version()}-{target}-packages.tar.gz', 'w:gz') as archive:
+            archive.add(package, arcname=f'{version()}/{target}')
+    release = scratch / 'release'
+    collect(archives, release, revision, TARGETS)
+    notes = (release / 'INSTALL.md').read_text()
+    assert notes.startswith(f'# ThinkThen {version()}\n\nAsk typed questions')
+    assert 'bundled Java' not in notes, 'dependency text must not imply a supplied Java runtime'
+    assert 'Swift >=6.3 toolchain to build; Swift 6.3.2 runtime' in notes
+    assert f'Select version `{version()}` with Swift Package Manager' in notes
+    assert 'Offline installation for' not in notes
+    assert notes.count('| linux-x86_64 |') == 1 and notes.count('| linux-arm64 |') == 1
+    assert f'glibc {FLOORS["linux"]["glibc"]}, GLIBCXX {FLOORS["linux"]["glibcxx"]}' in notes
+    assert f'macOS {FLOORS["macos"]}' in notes and FLOORS['windows']['support'] in notes
+    for text in ('Python', 'TypeScript', 'R data frames', 'Go', 'Java', 'Kotlin', 'C#', 'C++',
+                 'Swift', 'Zig', 'Ruby', 'DuckDB', 'SQLite', 'PostgreSQL', 'pandas', 'Polars',
+                 'CSV', 'TSV', 'Excel', 'thinkthen run', '0.x APIs', 'PyPI', 'npm', 'NuGet',
+                 'Maven Central', 'Homebrew', 'r-universe', 'Swift Package Index', 'crates.io'):
+        assert text in notes, text
+    with tarfile.open(release / f'thinkthen-{version()}-linux-x86_64-packages.tar.gz') as archive:
+        assert archive.extractfile(f'{version()}/linux-x86_64/INSTALL.md').read() == b'Offline installation for linux-x86_64'
+    print(notes)
 
     source = scratch / 'source'
     shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', 'target'))

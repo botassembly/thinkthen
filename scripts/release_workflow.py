@@ -124,9 +124,7 @@ def check_archive(target, archive, sha):
 
 def collect(source, destination, sha, targets):
     destination.mkdir(parents=True, exist_ok=False)
-    guides = [f'# Install ThinkThen {version()}\n',
-              'Download the archive for your platform and verify SHA256SUMS. '
-              'Extract it and follow INSTALL.md inside its platform directory.\n']
+    platforms = {}
     for target in targets:
         name = f'thinkthen-{version()}-{target}-packages.tar.gz'
         matches = list(source.rglob(name))
@@ -134,9 +132,10 @@ def collect(source, destination, sha, targets):
             raise ValueError(f'expect one checked archive for {target}')
         with tempfile.TemporaryDirectory(prefix='thinkthen-release-bundle-') as scratch:
             package = unpack(matches[0], Path(scratch), target, sha)
-            guides.extend([f'## {target}\n', (package / 'INSTALL.md').read_text()])
+            platforms[target] = json.loads((package / 'requirements.json').read_text())
         shutil.copy2(matches[0], destination / name)
-    (destination / 'INSTALL.md').write_text('\n'.join(guides))
+    from release_install import release_note
+    (destination / 'INSTALL.md').write_text(release_note(version(), platforms))
     sums = [f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
             for p in sorted(destination.iterdir())]
     (destination / 'SHA256SUMS').write_text(''.join(sums))
