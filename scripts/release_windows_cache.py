@@ -44,10 +44,58 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         elif result.returncode:
             raise RuntimeError('installed cache consumer failed: ' + output)
 
-    consumer()
+    identity = json.loads(control('''$i = [System.Security.Principal.WindowsIdentity]::GetCurrent();
+[pscustomobject]@{ caller = $i.User.Value; defaultOwner = $i.Owner.Value } | ConvertTo-Json -Compress''', root))
+    print('Windows cache baseline identity: ' + json.dumps(identity), flush=True)
+    print('Windows cache inherited root: ' + json.dumps(state(root)), flush=True)
+    control('''$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User;
+$acl = New-Object System.Security.AccessControl.DirectorySecurity;
+$acl.SetOwner($sid);
+$acl.SetAccessRuleProtection($true, $false);
+foreach ($principal in @($sid.Value, 'S-1-5-18', 'S-1-5-32-544')) {
+  $identity = New-Object System.Security.Principal.SecurityIdentifier($principal);
+  $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+    $identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow');
+  $acl.AddAccessRule($rule);
+}
+Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $acl''', root)
+    baseline = state(root)
+    assert baseline['owner'] == identity['caller'], 'private cache root owner is not the caller'
+    verified = control('''$acl = Get-Acl -LiteralPath $env:TT_CACHE_PATH;
+$caller = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;
+$allowed = @($caller, 'S-1-5-18', 'S-1-5-32-544');
+$rules = @($acl.Access);
+$valid = $acl.AreAccessRulesProtected -and $rules.Count -eq $allowed.Count;
+foreach ($rule in $rules) {
+  $sid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value;
+  $valid = $valid -and ($sid -in $allowed) -and $rule.AccessControlType -eq 'Allow' -and
+    $rule.FileSystemRights -eq 'FullControl' -and $rule.InheritanceFlags -eq 'ContainerInherit,ObjectInherit';
+}
+$valid''', root)
+    assert verified == 'True', 'private cache root DACL was not established'
+    print('Windows cache private root verified: ' + json.dumps(baseline), flush=True)
+    probe = root / '.owner-probe'
+    probe.mkdir()
+    file = probe / 'file'
+    try:
+        file.write_bytes(b'owner probe')
+        for path in (probe, file):
+            actual = state(path)
+            print('Windows cache creation prerequisite: ' + json.dumps(actual), flush=True)
+            assert actual['owner'] == identity['caller'], ('Windows runner creates cache objects with a distinct owner; '
+                'a caller-owned process token is required: ' + str(path))
+    finally:
+        if file.exists(): file.unlink()
+        probe.rmdir()
+    try:
+        consumer()
+    except RuntimeError:
+        for path in sorted(root.rglob('*')):
+            print('Windows cache baseline child ' + str(path) + ': ' + json.dumps(state(path)), flush=True)
+        raise
     asset, = root.glob('thinkthen/native/*/' + filename)
     paths = (asset, asset.parent, asset.parent.parent, root / 'thinkthen', root)
-    caller = control('[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value', root)
+    caller = identity['caller']
     for path in paths:
         saved = state(path)
         try:

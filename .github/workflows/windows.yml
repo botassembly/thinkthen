@@ -2,6 +2,12 @@ name: Windows native SDK proof
 
 on:
   workflow_dispatch:
+    inputs:
+      surface:
+        description: Select all checks or only the surface that needs evidence
+        type: choice
+        default: all
+        options: [all, cache, csharp]
 
 permissions: {contents: read}
 env:
@@ -27,11 +33,11 @@ jobs:
         id: native
         run: python scripts/windows-native-proof native "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove installed Go cache security
-        if: always() && steps.native.outcome == 'success'
+        if: always() && steps.native.outcome == 'success' && inputs.surface != 'csharp'
         run: python scripts/windows-native-proof go "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove installed Java and Kotlin cache security
-        if: always() && steps.native.outcome == 'success'
+        if: always() && steps.native.outcome == 'success' && inputs.surface != 'csharp'
         run: python scripts/windows-native-proof jvm "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove the installed C# single-file consumer
-        if: always() && steps.native.outcome == 'success'
+        if: always() && steps.native.outcome == 'success' && inputs.surface != 'cache'
         run: python scripts/windows-native-proof csharp "$env:RUNNER_TEMP/windows-native-proof"
