@@ -2,13 +2,14 @@
 # Prepare the pinned SDK before running offline C# gates.
 set -eu
 cd "$(dirname "$0")/.."
+export THINKTHEN_DOTNET_HOME="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
 python3 - <<'PY'
 import json, os, platform, tarfile
 from pathlib import Path
 import sys
 sys.path.insert(0, 'scripts')
 from release_downloads import PINS, fetch
-tools = Path(os.environ.get('THINKTHEN_DOTNET_HOME', Path.home() / '.local/share/thinkthen-build-tools/dotnet10'))
+tools = Path(os.environ['THINKTHEN_DOTNET_HOME'])
 system = 'osx' if platform.system() == 'Darwin' else 'linux'
 arch = 'arm64' if platform.machine() in ('arm64', 'aarch64') else 'x64'
 urls = [url for url in json.loads(PINS.read_text()) if '/Sdk/' in url and url.endswith(f'-{system}-{arch}.tar.gz')]
@@ -30,4 +31,4 @@ cat > "$scratch/Consumer.csproj" <<'PROJECT'
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup>
 </Project>
 PROJECT
-"$tools/dotnet" restore "$scratch/Consumer.csproj" --packages "$tools/singlefile-packages" --source https://api.nuget.org/v3/index.json
+"$THINKTHEN_DOTNET_HOME/dotnet" restore "$scratch/Consumer.csproj" --packages "$THINKTHEN_DOTNET_HOME/singlefile-packages" --source https://api.nuget.org/v3/index.json
