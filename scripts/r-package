@@ -26,12 +26,12 @@ with tempfile.TemporaryDirectory() as temporary:
     engine.mkdir()
     for name in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "clippy.toml", "LICENSE", "README.md"):
         shutil.copy2(root / name, engine / name)
-    for name in ("thinkthen-core", "thinkthen"):
+    for name in ("thinkthen",):
         shutil.copytree(root / "crates" / name, engine / "crates" / name)
     shutil.copytree(root / "sdk/r/native", engine / "sdk/r/native")
     manifest = engine / "Cargo.toml"
     lines = manifest.read_text().splitlines()
-    lines = ['members = ["crates/thinkthen-core", "crates/thinkthen", "sdk/r/native"]' if line.startswith("members =") else line for line in lines]
+    lines = ['members = ["crates/thinkthen", "sdk/r/native"]' if line.startswith("members =") else line for line in lines]
     # The library's unpublished test fixture is not part of the package build.
     for name in ("crates/thinkthen/Cargo.toml", "sdk/r/native/Cargo.toml"):
         package_manifest = engine / name

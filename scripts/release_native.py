@@ -11,10 +11,11 @@ import tempfile
 
 from native_platform import current
 
-PACKAGES = ('thinkthen-cli', 'thinkthen-ffi', 'thinkthen-python', 'thinkthen-node', 'thinkthen-r')
+PACKAGES = ('thinkthen', 'thinkthen-ffi', 'thinkthen-python', 'thinkthen-node', 'thinkthen-r')
 
 
 def source_inputs(root, run):
+    root = Path(root).resolve()
     metadata = json.loads(run('cargo', 'metadata', '--offline', '--locked', '--format-version=1').stdout)
     packages = {item['id']: item for item in metadata['packages']}
     nodes = {item['id']: item for item in metadata['resolve']['nodes']}
@@ -27,7 +28,7 @@ def source_inputs(root, run):
         visited.add(identity)
         item = packages[identity]
         if item['source'] is None:
-            folders.add(str(Path(item['manifest_path']).parent.relative_to(root)))
+            folders.add(str(Path(item['manifest_path']).resolve().parent.relative_to(root)))
         pending.extend(dependency['pkg'] for dependency in nodes[identity]['deps']
                        if any(kind['kind'] != 'dev' for kind in dependency['dep_kinds']))
     names = run('git', 'ls-files', '--', *sorted(folders), 'Cargo.toml', 'Cargo.lock',

@@ -66,16 +66,6 @@ def inputs():
         folder.mkdir(exist_ok=True)
         for name in ('sqlite3.h', 'sqlite3ext.h'):
             (folder / name).write_bytes(archive.read('sqlite-amalgamation-3410000/' + name))
-    from release_windows_check import wine_executable
-    wine = wine_executable()
-    env = dict(os.environ, WINEPREFIX=str(WINDOWS / 'wine-tools'), WINEDEBUG='-all',
-               WINEDLLOVERRIDES='mscoree,mshtml=', LC_ALL='C', LANG='C')
-    r = WINDOWS / 'R-4.6.1'
-    if not (r / 'bin/x64/R.dll').exists():
-        target = 'Z:' + str(r).replace('/', '\\')
-        run(wine, WINDOWS / 'R-4.6.1-win.exe', '/VERYSILENT', '/SUPPRESSMSGBOXES',
-            '/NORESTART', '/SP-', '/DIR=' + target, env=env)
-    with zipfile.ZipFile(WINDOWS / 'jsonlite_2.0.0.zip') as archive: archive.extractall(r / 'library')
     run('scripts/cpp-prepare')
     run('scripts/jvm-prepare')
     run('scripts/csharp-prepare')

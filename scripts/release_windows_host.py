@@ -31,7 +31,7 @@ def environment():
     vcvars = Path(installation) / 'VC/Auxiliary/Build/vcvars64.bat'
     selected = subprocess.check_output(f'call "{vcvars}" >nul && set', shell=True, text=True)
     env.update((key.upper(), value) for line in selected.splitlines() if '=' in line and not line.startswith('=') for key, value in [line.split('=', 1)])
-    paths = [TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
+    paths = [TOOLS / 'windows/R-4.6.1/bin/x64', TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
     for variable in ('JAVA_HOME_25_X64', 'JAVA_HOME_22_X64'):
         if env.get(variable):
             paths.append(Path(env[variable]) / 'bin')
@@ -44,6 +44,8 @@ def environment():
 
 
 def native():
+    from release_windows_r import runtime
+    runtime()
     pins = selections()['INPUTS']
     folder = TOOLS / 'windows-check'
     folder.mkdir(parents=True, exist_ok=True)
@@ -105,6 +107,12 @@ def native():
     print('release: native Windows runtime preparation complete; installed checks remain mandatory')
 
 
+def prepare_wine():
+    # Wine runs only the x64 command and C smoke consumers.
+    run('sudo', 'apt-get', 'update')
+    run('sudo', 'apt-get', 'install', '-y', '--no-install-recommends', 'wine64', 'wine', 'cmake', 'ninja-build')
+
+
 def prepare():
     if not os.environ.get('PM_JOB'):
         raise ValueError('run preparation through pm job')
@@ -121,8 +129,7 @@ def prepare():
         run('sudo', 'tee', '/etc/apt/sources.list.d/thinkthen-llvm.list', input='deb [signed-by=/usr/share/keyrings/thinkthen-llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main\n', text=True)
         run('sudo', 'apt-get', 'update')
         run('sudo', 'apt-get', 'install', '-y', 'clang-21', 'lld-21', 'llvm-21', 'llvm-21-tools')
-    if not shutil.which('wine'):
-        run('sudo', 'apt-get', 'install', '-y', 'wine64', 'wine', 'cmake', 'ninja-build')
+    prepare_wine()
     prepared('sh', '-eu', '-c', 'for tool in clang-cl lld-link llvm-readobj llvm-lib-21 llvm-rc-21; do command -v "$tool"; done')
     pins = selections()
     prepared('scripts/release-windows-prepare', 'inputs')

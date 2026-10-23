@@ -57,7 +57,7 @@ The libraries call the same engine and expose the ten functions. Their package g
 | Swift | [`ThinkThen`](sdk/swift/README.md) |
 | Zig | [`thinkthen`](sdk/zig/README.md) |
 
-Rust applications use the [`thinkthen` crate](https://docs.rs/thinkthen/0.2.0/thinkthen/). Rust callers can also use `thinkthen-files` for tables and `thinkthen-runs` for saved entries.
+Rust applications use the [`thinkthen` crate](https://docs.rs/thinkthen/0.2.0/thinkthen/). Use `cargo add thinkthen` for the library and `cargo install thinkthen` for the command. The default `command` feature includes `thinkthen::files` for tables and `thinkthen::runs` for saved entries. Set `default-features = false` to omit command dependencies.
 
 ## Databases
 
@@ -73,7 +73,7 @@ thinkthen decide 'Does the customer ask for money back?' --adapter stub \
   --csv --input messages.csv --column Body --into refund
 ```
 
-The output is `messages.thinkthen.csv`. Use `--tsv` or `--xlsx` for the other formats, repeat `--column` to select several columns, and use `--sheet` to select an Excel worksheet. `--output` names a new destination. `--in-place` keeps a backup before replacing the source. The [file guide](crates/thinkthen-files/README.md) describes cell handling and write behavior.
+The output is `messages.thinkthen.csv`. Use `--tsv` or `--xlsx` for the other formats, repeat `--column` to select several columns, and use `--sheet` to select an Excel worksheet. `--output` names a new destination. `--in-place` keeps a backup before replacing the source. The [file guide](crates/thinkthen/src/files/README.md) describes cell handling and write behavior.
 
 ## Backends
 
@@ -89,7 +89,7 @@ OpenAI reads only `OPENAI_API_KEY`, uses `https://api.openai.com/v1` and default
 
 Rust callers can add an entry to `BackendTable` and create a client with `Client::from_json_with_backends`. Each `BackendEntry` holds its name, wire `Adapter`, address, key variable, default model and `Limits`. `model_limits` replaces those bounds for a selected model. Adding a name does not change a function or a language's settings type. The client resolves the name and credentials once. A question that cannot fit the selected model's bounds fails with `backend.limit` before sending; it is a backend failure.
 
-Rust applications using the `thinkthen` crate own their logger configuration. Enabling trace logging for `ureq_proto` writes raw HTTP request headers, including backend API keys. Keep that dependency below trace level. The shipped command, SDK native libraries and database extensions compile out trace logging through the `log` crate; the reusable Rust library leaves the embedding application's logging policy unchanged.
+Rust applications using the `thinkthen` crate own their logger configuration. Enabling trace logging for `ureq_proto` writes raw HTTP request headers, including backend API keys. Keep that dependency below trace level. The shipped command, SDK native libraries and database extensions compile out trace logging through the `log` crate; library callers that set `default-features = false` keep the embedding application's logging policy unchanged. The default `command` feature also compiles out trace logging.
 
 ## Output and exit codes
 
@@ -142,7 +142,7 @@ A saved function entry uses the ordinary request contract without `records`:
 
 Save it as `refund.json` and run `thinkthen run refund.json < records.jsonl`. Each nonblank input line is one JSON value; quote a text record as a JSON string. `--lines` accepts ordinary text lines. A named toolbox wraps entries in `{"entries":{"refund":...}}`. A run wraps function requests and literal command arguments in `{"run":[...]}`. Run prints JSON rows and returns zero when no step fails, including false and unsure answers. A shell step uses `{"shell":["program","argument"]}`; shell syntax requires an explicit interpreter. Only commands written into the toolbox run. Shell steps inherit the caller's environment, including API keys. `thinkthen run NAME` reads `./thinkthen.json` or `./thinkthen/`; inspect its entry before running it from an unfamiliar directory. The run design describes records, quoting, exit status and cancellation.
 
-In-memory question toolboxes keep their `questions` object for `annotate` and language callers. Shared `on` selects evidence unless a question sets its own. Choose questions use `options`, tag questions use `labels`, and score questions use `levels`. The Rust API parses those definitions with `Toolbox::from_bytes`; libraries take definitions from memory. The command's `annotate` argument is an inline JSON definition. Rust callers use `thinkthen-runs` for saved entry loading and execution; other language libraries expose the ten functions.
+In-memory question toolboxes keep their `questions` object for `annotate` and language callers. Shared `on` selects evidence unless a question sets its own. Choose questions use `options`, tag questions use `labels`, and score questions use `levels`. The Rust API parses those definitions with `Toolbox::from_bytes`; libraries take definitions from memory. The command's `annotate` argument is an inline JSON definition. Rust callers use `thinkthen::runs` for saved entry loading and execution; other language libraries expose the ten functions.
 
 The JSON boundary separates client settings from calls. Create a `Client` once with settings such as `{"adapter":"stub","batch":16}`. Admit calls with `SdkRequest::from_json`, for example `{"function":"decide","question":{"type":"inline","value":"Ready?"},"records":["evidence"]}`. Run the request with that client. Each function has its own request shape in the [call schema](schemas/request.schema.json); [client settings](schemas/client.schema.json) travel separately. A tagged toolbox question carries `{"type":"toolbox","value":{"questions":{"ready":{"decide":"Ready?"}}},"name":"ready"}`. A named proxy question carries `{"type":"reference","name":"ready"}`. Proxy mode and named references return a usage error until the proxy transport is available.
 

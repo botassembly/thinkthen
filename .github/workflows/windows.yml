@@ -1,0 +1,43 @@
+# Proof-only overlay for the registered manual Windows entrypoint.
+# Keep this workflow on its owned proof ref; it is not a release dependency.
+name: Windows native R proof
+
+on:
+  workflow_dispatch:
+
+permissions: {contents: read}
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  PM_JOB: release-${{ github.run_id }}
+
+jobs:
+  windows-r:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults: {run: {shell: pwsh}}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Prepare pinned native Windows R inputs
+        run: python scripts/release_windows_r.py prepare
+      - name: Build the actual native Windows R package
+        run: python scripts/release_windows_r.py build "$env:RUNNER_TEMP/native-windows-r-build"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-windows-r-proof
+          path: |
+            ${{ runner.temp }}/native-windows-r-build/manifest.json
+            ${{ runner.temp }}/native-windows-r-build/artifacts.json
+            ${{ runner.temp }}/native-windows-r-build/thinkthen_*.zip
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: native-windows-r-proof
+          path: ${{ runner.temp }}/native-windows-r-delivered
+      - name: Verify transported source and run installed R stub consumers
+        run: python scripts/windows-r-proof "$env:RUNNER_TEMP/native-windows-r-delivered"

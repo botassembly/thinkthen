@@ -1,6 +1,6 @@
 //! Send attempts, status backoff and safe connection retries.
 
-use thinkthen_core::{Error, ErrorKind};
+use crate::core::{Error, ErrorKind};
 
 use crate::{Cancel, RetryPolicy};
 

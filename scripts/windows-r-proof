@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Check a transported native R binary using the existing installed consumers."""
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+import tempfile
+
+from release_prepare_common import ROOT, TOOLS, fetch
+from release_windows_r import pins, verified
+from release_windows_sdks import environment, r_cases, run, runtime_environment
+
+
+def check(bundle):
+    if os.name != 'nt':
+        raise ValueError('native R proof requires Windows')
+    bundle = verified(bundle)
+    selected = pins()
+    installer = next(name for name in selected if name.startswith('R-'))
+    r = TOOLS / 'windows' / installer.removesuffix('-win.exe')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-native-r-proof-') as temporary:
+        scratch = Path(temporary)
+        prepared = environment(scratch)
+        prepared['PATH'] = str(r / 'bin/x64') + os.pathsep + prepared['PATH']
+        runtime = runtime_environment(scratch, prepared)
+        folder = scratch / 'candidate'
+        checks = folder / 'checks'
+        checks.mkdir(parents=True)
+        shutil.copy2(ROOT / 'sdk/r/tests/run.R', checks / 'run.R')
+        dependency = next(name for name in selected if name.startswith('jsonlite_'))
+        url, digest = selected[dependency]
+        source = fetch(url, TOOLS / 'windows' / dependency, digest)
+        prerequisites = folder / 'prerequisites/r'
+        prerequisites.mkdir(parents=True)
+        shutil.copy2(source, prerequisites / dependency)
+        cases = json.loads((ROOT / 'construction/stub.json').read_text())
+        package, = bundle.glob('thinkthen_*.zip')
+        def execute(*args, extra=None):
+            return run(*args, cwd=scratch, env=runtime | (extra or {}), resolve_path=prepared['PATH'])
+        r_cases(execute, folder, scratch, package, cases)
+        print('Native Windows R: verified artifact transport and installed shared stub cases pass', flush=True)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        sys.exit('usage: windows-r-proof TRANSPORTED_NATIVE_R_DIRECTORY')
+    check(Path(sys.argv[1]).resolve())

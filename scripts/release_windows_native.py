@@ -74,34 +74,11 @@ def databases_and_r(stage, out, version, native, packages):
     copy(ROOT / 'databases/duckdb/README.md', duckdb / 'README.md')
     packages['duckdb'] = out / f'duckdb/thinkthen-duckdb-{version}-windows-x86_64.zip'
     zip_package(duckdb, packages['duckdb'])
-    r = native / f'thinkthen_{version}.zip'
+    r = stage / f'thinkthen_{version}.zip'
     if not r.is_file(): raise SystemExit('Build the Windows R binary package before packaging')
     packages['r'] = out / 'r' / r.name
     copy(r, packages['r'])
 
-
-def r_binary(stage, native, version):
-    """Let Windows R write its installed metadata; then add its target library."""
-    from release_windows import copy, zip_package
-    source = stage / 'r-source'
-    shutil.copytree(ROOT / 'sdk/r', source, ignore=shutil.ignore_patterns('native', 'src', 'tests'))
-    library = stage / 'r-library'
-    library.mkdir()
-    root = TOOLS / 'windows/R-4.6.1'
-    env = dict(os.environ, WINEPREFIX=str(TOOLS / 'windows/wine-tools'), WINEDEBUG='-all', LC_ALL='C', LANG='C')
-    env.pop('R_HOME', None)
-    env.pop('R_INCLUDE_DIR', None)
-    from release_windows_check import wine_executable
-    wine = wine_executable()
-    def windows(path): return 'Z:' + str(path).replace('/', '\\')
-    run(wine, root / 'bin/x64/R.exe', 'CMD', 'INSTALL', '--no-libs', '--no-test-load',
-        '--library=' + windows(library), windows(source), env=env)
-    installed = library / 'thinkthen'
-    copy(native / 'thinkthen.dll', installed / 'libs/x64/thinkthen.dll')
-    # R's own metadata already names the Windows runtime and serialization format.
-    result = native / f'thinkthen_{version}.zip'
-    zip_package(library, result)
-    return result
 
 
 def system_libraries():
@@ -211,27 +188,3 @@ def duckdb_build(stage, native, toolchain):
     (output / 'DUCKDB-LICENSE').write_text(''.join(str(p.relative_to(source)) + '\n\n' + p.read_text() + '\n' for p in notices))
     copy(source / 'third_party/yyjson/LICENSE', output / 'YYJSON-LICENSE')
     copy(ROOT / 'LICENSE', output / 'THINKTHEN-LICENSE')
-
-
-def prepare_r_import():
-    """Create the normal COFF import library from the prepared R DLL's exports."""
-    root = TOOLS / 'windows/R-4.6.1'
-    library = root / 'lib/R.lib'
-    if not library.exists():
-        report = subprocess.check_output(['llvm-readobj', '--coff-exports',
-                                         str(root / 'bin/x64/R.dll')], text=True)
-        names = [line.split(':', 1)[1].strip() for line in report.splitlines() if line.strip().startswith('Name:')]
-        if not names: raise SystemExit('Windows R DLL has no exported symbols')
-        library.parent.mkdir(exist_ok=True)
-        definition = library.with_suffix('.def')
-        definition.write_text('LIBRARY R.dll\nEXPORTS\n' + '\n'.join(names) + '\n')
-        run('lld-link', '/lib', '/machine:x64', '/def:' + str(definition), '/out:' + str(library))
-    return root
-
-
-def build_r(native):
-    root = TOOLS / 'windows/R-4.6.1'
-    compile_windows(native / 'thinkthen.dll', [ROOT / 'sdk/r/src/entrypoint.c'],
-                    includes=[root / 'include'],
-                    libraries=[native / 'thinkthen_r.lib', root / 'lib/R.lib', *system_libraries()],
-                    exports=['R_init_thinkthen'])

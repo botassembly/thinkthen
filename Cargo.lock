@@ -1497,42 +1497,23 @@ dependencies = [
 name = "thinkthen"
 version = "0.2.0"
 dependencies = [
- "jsonschema",
- "loopback",
- "schemars",
- "serde",
- "serde_json",
- "thinkthen-core",
- "ureq",
-]
-
-[[package]]
-name = "thinkthen-cli"
-version = "0.2.0"
-dependencies = [
  "clap",
+ "command-group",
  "csv",
  "ctrlc",
+ "jsonschema",
  "log",
  "loopback",
- "serde_json",
- "tempfile",
- "thinkthen",
- "thinkthen-files",
- "thinkthen-runs",
- "zip",
-]
-
-[[package]]
-name = "thinkthen-core"
-version = "0.2.0"
-dependencies = [
+ "quick-xml",
  "schemars",
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "thiserror",
  "unicode-general-category",
+ "ureq",
+ "zip",
 ]
 
 [[package]]
@@ -1544,19 +1525,6 @@ dependencies = [
  "serde_json",
  "thinkthen",
  "thinkthen-sql",
-]
-
-[[package]]
-name = "thinkthen-files"
-version = "0.2.0"
-dependencies = [
- "quick-xml",
- "serde_json",
- "sha2",
- "tempfile",
- "thinkthen",
- "thiserror",
- "zip",
 ]
 
 [[package]]
@@ -1606,17 +1574,6 @@ dependencies = [
  "log",
  "loopback",
  "thinkthen",
-]
-
-[[package]]
-name = "thinkthen-runs"
-version = "0.2.0"
-dependencies = [
- "command-group",
- "serde",
- "serde_json",
- "thinkthen",
- "thinkthen-files",
 ]
 
 [[package]]

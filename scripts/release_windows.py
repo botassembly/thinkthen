@@ -77,43 +77,38 @@ def source_package(stage, out, name, version, native, import_library):
 
 def build_native():
     """Reuse one target build when only distribution scripts or docs change."""
-    from release_windows_native import prepare_r_import
-    r = prepare_r_import()
     inputs = source_inputs(ROOT, run)
-    for name, function in [('producer', build_native), ('source_selection', source_inputs), ('R_import', prepare_r_import)]:
+    for name, function in [('producer', build_native), ('source_selection', source_inputs)]:
         inputs[name] = hashlib.sha256(inspect.getsource(function).encode()).hexdigest()
     channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
     compiler = run('rustup', 'which', '--toolchain', channel, 'rustc').stdout.strip()
     inputs['compiler'] = run(compiler, '-vV').stdout
     inputs['build_settings'] = Path(run('scripts/native-prepare', '--path').stdout.strip()).name
     inputs['linker'] = run('clang-cl', '--version').stdout
-    inputs['R_import_library'] = hashlib.sha256((r / 'lib/R.lib').read_bytes()).hexdigest()
     inputs['cross'] = subprocess.check_output(['cargo', 'xwin', '--version'], text=True)
     pins = json.loads((TOOLS / 'windows-msvc/versions.json').read_text())
     inputs['windows_sdk'] = pins
     inputs['runtime'] = 'static-crt'
-    inputs['R'] = hashlib.sha256((r / 'include/Rversion.h').read_bytes()).hexdigest()
     inputs['flags'] = {name: value for name, value in os.environ.items()
                        if name.startswith(('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_PROFILE_', 'XWIN_'))}
     digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
     cache = TOOLS / 'windows-native' / digest
     cache.mkdir(parents=True, exist_ok=True)
     artifacts = ['thinkthen.exe', 'thinkthen_ffi.dll', 'thinkthen_ffi.dll.lib',
-                 'thinkthen_ffi.lib', '_native.dll', 'thinkthen_node.dll', 'thinkthen_r.lib']
+                 'thinkthen_ffi.lib', '_native.dll', 'thinkthen_node.dll']
     with (cache / 'build.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         payload = cache / 'rust-artifacts'
         if not complete(payload, inputs, artifacts):
-            env = dict(os.environ, R_HOME=str(r), R_INCLUDE_DIR=str(r / 'include'),
-                       RUSTUP_TOOLCHAIN=channel, RUSTC=compiler,
+            env = dict(os.environ, RUSTUP_TOOLCHAIN=channel, RUSTC=compiler,
                        CARGO_NET_OFFLINE='true', CARGO_BUILD_JOBS='4', RUSTFLAGS='-C target-feature=+crt-static',
                        XWIN_CACHE_DIR=str(TOOLS / 'windows-msvc'), XWIN_ARCH='x86_64',
                        XWIN_VERSION='17', XWIN_SDK_VERSION=pins['sdk'], XWIN_CRT_VERSION=pins['crt'])
             env.pop('CARGO_ENCODED_RUSTFLAGS', None)
             result = run('cargo', 'xwin', 'build', '--offline', '--locked', '--release', '--target', TARGET,
                 '--message-format=json-render-diagnostics',
-                '-p', 'thinkthen-cli', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
-                '-p', 'thinkthen-node', '-p', 'thinkthen-r', env=env)
+                '-p', 'thinkthen', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
+                '-p', 'thinkthen-node', env=env)
             (cache / 'artifacts.json').write_text(result.stdout)
             target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve() / TARGET / 'release'
             stage_outputs(target, payload, inputs, artifacts)
@@ -134,14 +129,20 @@ def candidate(destination):
     from release_sites import crates
     crates(out)
     windows_requirements(out)
+    from release_windows_r import verified
+    r = verified()
     native = build_native()
     from release_notices import compiled_names
-    names = compiled_names('windows-x86_64', native / 'artifacts.json', ROOT)
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.json') as messages:
+        messages.write((native / 'artifacts.json').read_text().rstrip() + '\n' + (r / 'artifacts.json').read_text())
+        messages.flush()
+        names = compiled_names('windows-x86_64', messages.name, ROOT)
     (out / 'compiled-crates.json').write_text(json.dumps({'target': 'windows-x86_64', 'crates': names}, indent=2) + '\n')
     # Protect adapter writes and every package copy from another recipe writer.
     with (native / 'distribution.lock').open('w') as lock, tempfile.TemporaryDirectory(prefix='thinkthen-windows-pack-') as temporary:
         fcntl.flock(lock, fcntl.LOCK_EX)
         stage = Path(temporary)
+        copy(r / f'thinkthen_{version}.zip', stage / f'thinkthen_{version}.zip')
         command = stage / 'command'
         copy(native / 'thinkthen.exe', command / 'thinkthen.exe')
         copy(ROOT / 'README.md', command / 'README.md')
@@ -238,9 +239,7 @@ def package_more(stage, out, version, native, packages):
     host.csharp(out, checks, 'win-x64', native / 'thinkthen_ffi.dll')
     for name in ('java', 'kotlin'): packages[name] = next((out / name).glob('thinkthen-*.jar'))
     packages['csharp'] = next((out / 'csharp').glob('*.nupkg'))
-    from release_windows_native import databases_and_r, c_consumer, build_r, r_binary
-    build_r(native)
-    r_binary(stage, native, version)
+    from release_windows_native import databases_and_r, c_consumer
     databases_and_r(stage, out, version, native, packages)
     c_consumer(out, native)
 
