@@ -27,8 +27,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
     registry = scratch / 'registry'
     (registry / 'crates').mkdir(parents=True)
     (registry / 'rubygems').mkdir()
-    crate = registry / f'crates/thinkthen-core-{version()}.crate'
-    manifest = f'[package]\nname="thinkthen-core"\nversion="{version()}"\ndescription="Typed evidence"\nlicense="MIT"\n'.encode()
+    crate = registry / f'crates/thinkthen-{version()}.crate'
+    manifest = f'[package]\nname="thinkthen"\nversion="{version()}"\ndescription="Typed evidence"\nlicense="MIT"\n'.encode()
     with tarfile.open(crate, 'w:gz') as archive:
         entry = tarfile.TarInfo(crate.stem + '/Cargo.toml')
         entry.size = len(manifest)
@@ -145,13 +145,14 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
     assert 'Swift >=6.3 toolchain to build; Swift 6.3.2 runtime' in notes
     assert f'Select version `{version()}` with Swift Package Manager' in notes
     assert 'Offline installation for' not in notes
+    assert 'Swift Package Index' not in notes
     assert notes.count('| linux-x86_64 |') == 1 and notes.count('| linux-arm64 |') == 1
     assert f'glibc {FLOORS["linux"]["glibc"]}, GLIBCXX {FLOORS["linux"]["glibcxx"]}' in notes
     assert f'macOS {FLOORS["macos"]}' in notes and FLOORS['windows']['support'] in notes
     for text in ('Python', 'TypeScript', 'R data frames', 'Go', 'Java', 'Kotlin', 'C#', 'C++',
                  'Swift', 'Zig', 'Ruby', 'DuckDB', 'SQLite', 'PostgreSQL', 'pandas', 'Polars',
                  'CSV', 'TSV', 'Excel', 'thinkthen run', '0.x APIs', 'PyPI', 'npm', 'NuGet',
-                 'Maven Central', 'Homebrew', 'r-universe', 'Swift Package Index', 'crates.io'):
+                 'Maven Central', 'Homebrew', 'r-universe', 'Swift Package Manager', 'crates.io'):
         assert text in notes, text
     with tarfile.open(release / f'thinkthen-{version()}-linux-x86_64-packages.tar.gz') as archive:
         assert archive.extractfile(f'{version()}/linux-x86_64/INSTALL.md').read() == b'Offline installation for linux-x86_64'

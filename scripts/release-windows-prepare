@@ -68,13 +68,25 @@ def inputs():
             (folder / name).write_bytes(archive.read('sqlite-amalgamation-3410000/' + name))
     from release_windows_check import wine_executable
     wine = wine_executable()
-    env = dict(os.environ, WINEPREFIX=str(WINDOWS / 'wine-tools'), WINEDEBUG='-all',
+    env = dict(os.environ, WINEPREFIX=str(WINDOWS / 'wine-tools'), WINEDEBUG='err+all',
                WINEDLLOVERRIDES='mscoree,mshtml=', LC_ALL='C', LANG='C')
     r = WINDOWS / 'R-4.6.1'
     if not (r / 'bin/x64/R.dll').exists():
         target = 'Z:' + str(r).replace('/', '\\')
-        run(wine, WINDOWS / 'R-4.6.1-win.exe', '/VERYSILENT', '/SUPPRESSMSGBOXES',
-            '/NORESTART', '/SP-', '/DIR=' + target, env=env)
+        log = WINDOWS / 'R-4.6.1-install.log'
+        log.unlink(missing_ok=True)
+        log_path = 'Z:' + str(log).replace('/', '\\')
+        try:
+            run(wine, WINDOWS / 'R-4.6.1-win.exe', '/VERYSILENT', '/SUPPRESSMSGBOXES',
+                '/NORESTART', '/SP-', '/DIR=' + target, '/LOG=' + log_path,
+                env=env, capture_output=True, text=True)
+        except subprocess.CalledProcessError as error:
+            print('\n'.join(((error.stdout or '') + (error.stderr or '')).splitlines()[-30:]), file=sys.stderr)
+            if log.is_file():
+                data = log.read_bytes()
+                encoding = 'utf-16' if data.startswith((b'\xff\xfe', b'\xfe\xff')) else 'utf-8-sig'
+                print('\n'.join(data.decode(encoding, errors='replace').splitlines()[-30:]), file=sys.stderr)
+            raise
     with zipfile.ZipFile(WINDOWS / 'jsonlite_2.0.0.zip') as archive: archive.extractall(r / 'library')
     run('scripts/cpp-prepare')
     run('scripts/jvm-prepare')

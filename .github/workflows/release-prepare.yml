@@ -1,0 +1,131 @@
+name: release-prepare
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release version to build from this source revision (v0.2.0)
+        required: true
+        type: string
+      dry_run:
+        description: Qualify every package without creating a release draft
+        required: true
+        default: true
+        type: boolean
+
+permissions: {}
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {contents: read}
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Refuse sources outside main before preparing or building
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT_NAME" = push ]; then
+            scripts/qualification-source "$TAG"
+          else
+            scripts/qualification-source --dispatch "$RELEASE_TAG"
+          fi
+      - id: resolve
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: scripts/release-workflow resolve "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  qualification:
+    # Source refusal always runs; the existing release flag still holds builds.
+    if: vars.RELEASE_ARMED == 'true'
+    needs: source
+    permissions: {contents: read}
+    uses: ./.github/workflows/native-qualification.yml
+    with:
+      revision: ${{ needs.source.outputs.sha }}
+      matrix: ${{ needs.source.outputs.matrix }}
+
+  bundle:
+    needs: [source, qualification]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: platform-*
+          path: platforms
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22'}
+      - name: Prepare registry package tools
+        run: |
+          scripts/jvm-prepare
+          scripts/csharp-prepare
+          scripts/release-workflow prepare-registry
+      - name: Bundle every checked platform and its install guide
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+        run: |
+          . scripts/native-tools-env
+          scripts/release-workflow bundle platforms release "$RELEASE_SHA"
+          scripts/release-workflow registry platforms registries "$RELEASE_SHA"
+          scripts/release-workflow attach registries release "$RELEASE_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  draft:
+    needs: [source, bundle]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {contents: write}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: release, path: release}
+      - name: Create a draft for review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.source.outputs.tag }}
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA" --dry-run
+          else
+            scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA"
+          fi

@@ -105,6 +105,13 @@ def native():
     print('release: native Windows runtime preparation complete; installed checks remain mandatory')
 
 
+def prepare_wine():
+    # The pinned R installer has a 32-bit bootstrap even though R itself is x64.
+    run('sudo', 'dpkg', '--add-architecture', 'i386')
+    run('sudo', 'apt-get', 'update')
+    run('sudo', 'apt-get', 'install', '-y', 'wine64', 'wine32:i386', 'wine', 'cmake', 'ninja-build')
+
+
 def prepare():
     if not os.environ.get('PM_JOB'):
         raise ValueError('run preparation through pm job')
@@ -121,8 +128,7 @@ def prepare():
         run('sudo', 'tee', '/etc/apt/sources.list.d/thinkthen-llvm.list', input='deb [signed-by=/usr/share/keyrings/thinkthen-llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main\n', text=True)
         run('sudo', 'apt-get', 'update')
         run('sudo', 'apt-get', 'install', '-y', 'clang-21', 'lld-21', 'llvm-21', 'llvm-21-tools')
-    if not shutil.which('wine'):
-        run('sudo', 'apt-get', 'install', '-y', 'wine64', 'wine', 'cmake', 'ninja-build')
+    prepare_wine()
     prepared('sh', '-eu', '-c', 'for tool in clang-cl lld-link llvm-readobj llvm-lib-21 llvm-rc-21; do command -v "$tool"; done')
     pins = selections()
     prepared('scripts/release-windows-prepare', 'inputs')

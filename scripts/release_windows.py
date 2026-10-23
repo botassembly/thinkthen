@@ -112,7 +112,7 @@ def build_native():
             env.pop('CARGO_ENCODED_RUSTFLAGS', None)
             result = run('cargo', 'xwin', 'build', '--offline', '--locked', '--release', '--target', TARGET,
                 '--message-format=json-render-diagnostics',
-                '-p', 'thinkthen-cli', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
+                '-p', 'thinkthen', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
                 '-p', 'thinkthen-node', '-p', 'thinkthen-r', env=env)
             (cache / 'artifacts.json').write_text(result.stdout)
             target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve() / TARGET / 'release'

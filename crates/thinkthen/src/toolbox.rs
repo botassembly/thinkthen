@@ -1,6 +1,6 @@
 //! Bounded toolbox input.
+use crate::core::{Error, ErrorKind, TOOLBOX_LIMIT, Toolbox};
 use std::io::Read;
-use thinkthen_core::{Error, ErrorKind, TOOLBOX_LIMIT, Toolbox};
 
 /// Read at most one byte beyond the toolbox limit and validate its contents.
 ///

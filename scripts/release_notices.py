@@ -10,7 +10,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {'linux-x86_64': 'x86_64-unknown-linux-gnu', 'linux-arm64': 'aarch64-unknown-linux-gnu',
            'macos-arm64': 'aarch64-apple-darwin', 'windows-x86_64': 'x86_64-pc-windows-msvc'}
-SURFACES = {'command': 'thinkthen-cli', 'python': 'thinkthen-python',
+SURFACES = {'command': 'thinkthen', 'python': 'thinkthen-python',
             'typescript': 'thinkthen-node', 'r': 'thinkthen-r'}
 NOTICE = 'THIRD-PARTY-NOTICES'
 

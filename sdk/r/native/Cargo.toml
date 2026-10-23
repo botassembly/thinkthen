@@ -25,4 +25,4 @@ loopback.workspace = true
 
 [[test]]
 name = "transport_logging"
-path = "../../../crates/thinkthen-cli/tests/transport_logging.rs"
+path = "../../../crates/thinkthen/tests/cli_transport_logging.rs"
