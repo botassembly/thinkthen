@@ -18,8 +18,7 @@ parser.add_argument("--scratch", type=pathlib.Path, required=True)
 args = parser.parse_args()
 # Copy prepared optional table packages before isolating the installed consumer.
 # Discover their actual dependency closure instead of keeping a second list.
-prepared_environment = {name: value for name, value in os.environ.items()
-                        if name not in ("R_LIBS", "R_LIBS_USER", "R_LIBS_SITE")}
+prepared_environment = dict(os.environ)
 packages = subprocess.run(["Rscript", "--vanilla", "-e", '''
 packages <- c("tibble", "dplyr", "data.table")
 installed <- installed.packages()
@@ -28,7 +27,10 @@ dependencies <- tools::package_dependencies(packages, db = installed,
 packages <- unique(c(packages, unlist(dependencies, use.names = FALSE)))
 packages <- packages[!packages %in% installed[!is.na(installed[, "Priority"]), "Package"]]
 cat(jsonlite::toJSON(setNames(lapply(packages, find.package), packages), auto_unbox = TRUE))
-'''], env=prepared_environment, check=True, capture_output=True, text=True)
+'''], env=prepared_environment, capture_output=True, text=True)
+if packages.returncode:
+    diagnostic = "\n".join(packages.stderr.splitlines()[-20:])[-4000:]
+    raise RuntimeError("Prepared R dependency discovery failed:\n" + diagnostic)
 for name, source in json.loads(packages.stdout).items():
     if not (args.library / name).exists():
         shutil.copytree(source, args.library / name)
