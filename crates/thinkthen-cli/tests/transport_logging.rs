@@ -31,7 +31,7 @@ fn final_artifacts_do_not_trace_backend_credentials() {
     log::set_max_level(log::LevelFilter::Trace);
     let server = Loopback::noul(0.9).unwrap();
     let backend = Backend::new(server.base(), Key::new(KEY).unwrap(), "model");
-    let mut count=0;
+    let mut count = 0;
     Engine::new(backend)
         .call(
             &Decide::new("Ready?").unwrap(),
