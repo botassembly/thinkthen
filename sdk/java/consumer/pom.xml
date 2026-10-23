@@ -1,0 +1,6 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion><parent><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId><version>0.2.0</version><relativePath/></parent>
+  <artifactId>thinkthen-consumer</artifactId>
+  <dependencies><dependency><groupId>io.github.botassembly</groupId><artifactId>thinkthen-kotlin</artifactId><version>0.2.0</version></dependency></dependencies>
+  <build><plugins><plugin><groupId>org.jetbrains.kotlin</groupId><artifactId>kotlin-maven-plugin</artifactId><version>${kotlin.version}</version><executions><execution><id>consumer</id><phase>process-classes</phase><goals><goal>compile</goal></goals></execution></executions><configuration><jvmTarget>22</jvmTarget><sourceDirs><sourceDir>src/main/kotlin</sourceDir></sourceDirs><args><arg>-Xjspecify-annotations=strict</arg><arg>-Werror</arg></args></configuration></plugin></plugins></build>
+</project>

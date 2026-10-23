@@ -1,0 +1,69 @@
+{
+  "client": {},
+  "expected": [
+    {
+      "answer": 1,
+      "detail": {
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99"
+        }
+      },
+      "id": 2,
+      "status": "answered"
+    },
+    {
+      "answer": 2,
+      "detail": {
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99"
+        }
+      },
+      "id": 1,
+      "status": "answered"
+    },
+    {
+      "answer": 3,
+      "detail": {
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99"
+        }
+      },
+      "id": 3,
+      "status": "answered"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "noul": 0.9,
+        "type": "noul"
+      },
+      "contains": "\"b\""
+    },
+    {
+      "answer": {
+        "noul": 0.1,
+        "type": "noul"
+      }
+    }
+  ],
+  "request": {
+    "function": "rank",
+    "question": {
+      "type": "inline",
+      "value": "Ready?"
+    },
+    "records": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  "requests": 1
+}

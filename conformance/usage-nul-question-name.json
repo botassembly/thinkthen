@@ -1,0 +1,24 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.name"
+  },
+  "replies": [],
+  "request": {
+    "function": "annotate",
+    "question": {
+      "type": "inline",
+      "value": {
+        "questions": {
+          "bad\u0000name": {
+            "decide": "Ready?"
+          }
+        }
+      }
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

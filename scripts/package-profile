@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Check the actual Cargo artifact selected for a native package.
+
+An optional R install log must show that archive in the shared-object link.
+"""
+import json
+from pathlib import Path
+import sys
+
+messages, selected, mode, *link_logs = sys.argv[1:]
+selected = Path(selected).resolve(strict=True)
+artifacts = [json.loads(line) for line in (sys.stdin.read() if messages == "-" else Path(messages).read_text()).splitlines()]
+matching = [a for a in artifacts if a.get("reason") == "compiler-artifact"
+            and str(selected) in [str(Path(f).resolve()) for f in a["filenames"]]]
+if len(matching) != 1:
+    sys.exit(f"package engine is not a Cargo artifact: {selected}")
+profile = matching[0]["profile"]
+optimized = profile["opt_level"] != "0" and not profile["debug_assertions"]
+if mode not in ("release", "debug") or optimized != (mode == "release"):
+    sys.exit(f"package engine profile is not {mode}: {profile}")
+for log in link_logs:
+    links = [line for line in Path(log).read_text().splitlines()
+             if " -shared " in line or " -dynamiclib " in line]
+    if not any(str(selected) in line for line in links):
+        sys.exit(f"installed package did not link the checked archive: {selected}")
+print(f"package engine: {mode} ({selected.name})")

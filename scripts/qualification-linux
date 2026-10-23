@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""Run each delivered Linux install command with its ordinary runtimes alone."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import subprocess
+
+from release_workflow import ROOT, prepared
+from release_prepare_common import run as prepare_run
+from runtime_floors import FLOORS
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('candidate', type=Path, nargs='?')
+parser.add_argument('--prepare', action='store_true')
+args = parser.parse_args()
+label = (os.environ.get('PM_JOB', '').split() or ['qualification'])[0]
+images = ('base', 'node', 'ruby', 'r', 'managed', 'postgres', 'swift', 'swift-source')
+if args.prepare:
+    for name in images:
+        if name == 'swift-source' and os.environ.get('THINKTHEN_SWIFT_IMAGE'):
+            continue
+        prepare_run('docker', 'build', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + label,
+                    '--target', name, '-t', 'thinkthen-qualification:' + name,
+                    '-f', ROOT / 'scripts/qualification.Dockerfile', ROOT)
+        print('qualification runtime prepared: ' + name, flush=True)
+    raise SystemExit(0)
+if args.candidate is None:
+    parser.error('a candidate directory is required for qualification')
+package = args.candidate.resolve()
+commands = dict(re.findall(r'^## ([^\n]+)\n(?:(?!^## ).)*?^```sh\n(.*?)\n```',
+                           (package / 'INSTALL.md').read_text(), re.M | re.S))
+expected = set(json.loads((package / 'requirements.json').read_text())) | {'pandas and Polars'}
+if commands.keys() != expected:
+    raise ValueError('the install guide and package inventory differ')
+tools = Path.home() / '.local/share/thinkthen-build-tools'
+python = Path(prepared('uv', 'python', 'find', '--offline', '3.10', capture_output=True, text=True).stdout.strip()).resolve().parent.parent
+floor = tools / ('floors/linux-glibc' + FLOORS['linux']['glibc'])
+for name, command in commands.items():
+    if name == 'postgres':
+        # Server setup runs separately below under its unprivileged OS account.
+        continue
+    image = {'typescript': 'node', 'ruby': 'ruby', 'r': 'r', 'java': 'managed', 'kotlin': 'managed',
+             'csharp': 'managed', 'swift': 'swift'}.get(name, 'base')
+    mounts = []
+    paths = ['/usr/bin', '/bin']
+    if name in ('python', 'pandas and Polars', 'sqlite', 'duckdb', 'zig', 'csharp'):
+        mounts += [(python, '/runtime/python')]
+        paths.insert(0, '/runtime/python/bin')
+    if name == 'typescript': paths.insert(0, '/opt/node/bin')
+    if name == 'ruby': paths.insert(0, '/opt/ruby/bin')
+    if name == 'r': paths.insert(0, '/opt/R/bin')
+    if name in ('java', 'kotlin'):
+        mounts += [(tools / 'jvm/jdk-22.0.2+9/bin/java', '/runtime/java/bin/java'),
+                   (tools / 'jvm/jdk-22.0.2+9/lib', '/runtime/java/lib'),
+                   (tools / 'jvm/jdk-22.0.2+9/conf', '/runtime/java/conf')]
+        paths.insert(0, '/runtime/java/bin')
+    if name == 'csharp':
+        mounts += [(tools / 'dotnet10' / item, '/runtime/dotnet/' + item) for item in ('dotnet', 'host', 'shared')]
+        paths.insert(0, '/runtime/dotnet')
+    if name == 'sqlite':
+        mounts += [(floor / 'bin/sqlite3', '/runtime/sqlite/sqlite3')]
+        paths.insert(0, '/runtime/sqlite')
+    args = ['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+            '--label', 'pm.ticket=' + label, '-v', f'{package}:/candidate:ro']
+    for source, destination in mounts:
+        args += ['-v', f'{source}:{destination}:ro']
+    floor_version = FLOORS['linux']['swift_glibc' if name == 'swift' else 'glibc']
+    script = ('set -eu; mkdir /work /home/consumer; cp -a /candidate/. /work/; cd /work; '
+              'export HOME=/home/consumer LANG=C.UTF-8 PATH=' + ':'.join(paths) + '; '
+              'test "$(getconf GNU_LIBC_VERSION)" = ' + shlex.quote('glibc ' + floor_version) + '; '
+              'for tool in cc c++ gcc clang cargo rustc go swift swiftc zig javac; do if command -v "$tool" >/dev/null 2>&1; then echo "unexpected build tool: $tool" >&2; exit 1; fi; done; '
+              + command)
+    subprocess.run([*args, 'thinkthen-qualification:' + image, 'sh', '-eu', '-c', script], check=True)
+    print('runtime-only floor install: ' + name + ' passes', flush=True)
+# The database smoke owns its server lifecycle. No compiler or source is mounted.
+script = '''set -eu
+mkdir /tmp/package /tmp/pg
+tar -xzf /candidate/postgres/*.tar.gz -C /tmp/package
+cp /tmp/package/lib/* "$(/opt/thinkthen-pg18/bin/pg_config --pkglibdir)/"
+cp /tmp/package/share/extension/* "$(/opt/thinkthen-pg18/bin/pg_config --sharedir)/extension/"
+chown -R 65534:65534 /tmp/pg
+exec setpriv --reuid 65534 --regid 65534 --clear-groups env -i HOME=/tmp/pg PATH=/opt/thinkthen-pg18/bin:/runtime/python/bin:/usr/bin:/bin LANG=C.UTF-8 sh -eu -c 'sh /candidate/checks/postgres.sh; exec python3 /proof/qualification-postgres /candidate'
+'''
+subprocess.run(['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+                '--label', 'pm.ticket=' + label, '-v', f'{package}:/candidate:ro',
+                '-v', f'{python}:/runtime/python:ro', '-v', f'{ROOT / "scripts/qualification-postgres"}:/proof/qualification-postgres:ro', 'thinkthen-qualification:postgres', 'sh', '-eu', '-c', script], check=True)
+print('runtime-only floor installs: every Linux package passes', flush=True)

@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""Carry the Linux producer's identity into a paired native gate."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from release_images import image
+
+ROOT = Path(__file__).resolve().parent.parent
+STORE = Path.home() / '.local/share/thinkthen-build-tools'
+ASSETS = ('linux-x64/libthinkthen_ffi.so', 'linux-x64/libthinkthen_ffi.a', 'thinkthen.h')
+
+
+def output(*args):
+    return subprocess.check_output(args, cwd=ROOT, text=True).strip()
+
+
+def revision():
+    return output('git', 'rev-parse', 'HEAD')
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate(data):
+    if set(data) != {'revision', 'floor_image', 'native_key', 'assets'}:
+        raise ValueError('native pair has unexpected manifest fields')
+    for name in ('revision', 'native_key'):
+        width = 40 if name == 'revision' else 64
+        if not isinstance(data[name], str) or not re.fullmatch('[0-9a-f]{' + str(width) + '}', data[name]):
+            raise ValueError('native pair has invalid ' + name)
+    if data['revision'] != revision():
+        raise ValueError('native pair revision does not match this checkout')
+    if not isinstance(data['floor_image'], str) or not re.fullmatch('sha256:[0-9a-f]{64}', data['floor_image']):
+        raise ValueError('native pair has invalid floor image')
+    if not isinstance(data['assets'], dict) or set(data['assets']) != set(ASSETS):
+        raise ValueError('native pair has unexpected assets')
+    if any(not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value)
+           for value in data['assets'].values()):
+        raise ValueError('native pair has invalid asset hashes')
+    explicit = os.environ.get('THINKTHEN_FLOOR_IMAGE')
+    if explicit is not None and explicit != data['floor_image']:
+        raise ValueError('native pair conflicts with the explicit floor image')
+    os.environ['THINKTHEN_FLOOR_IMAGE'] = data['floor_image']
+    cache = Path(output(str(ROOT / 'scripts/native-prepare'), '--path'))
+    expected = STORE / 'native' / data['native_key']
+    if cache != expected:
+        raise ValueError('native pair key does not match this checkout')
+    return cache
+
+
+def verify(data, source):
+    for name in ASSETS:
+        if digest(source / name) != data['assets'][name]:
+            raise ValueError('native pair asset hash differs: ' + name)
+
+
+def atomic_copy(source, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    handle, temporary = tempfile.mkstemp(dir=destination.parent)
+    os.close(handle)
+    try:
+        shutil.copyfile(source, temporary)
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, destination)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def manifest_path():
+    return STORE / 'native-pairs' / (revision() + '.json')
+
+
+def load(path):
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise ValueError('native pair manifest must be an object')
+    return data
+
+
+def export(destination):
+    floor = image('floor')
+    cache = Path(output(str(ROOT / 'scripts/native-prepare'), '--path'))
+    data = {'revision': revision(), 'floor_image': floor, 'native_key': cache.name,
+            'assets': {name: digest(cache / name) for name in ASSETS}}
+    validate(data)
+    destination.write_text(json.dumps(data, sort_keys=True) + '\n')
+
+
+def import_pair(path, source):
+    data = load(path)
+    cache = validate(data)
+    verify(data, source)
+    destination = manifest_path()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.with_suffix('.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        cache.mkdir(parents=True, exist_ok=True)
+        with (cache / 'import.lock').open('w') as cache_lock:
+            fcntl.flock(cache_lock, fcntl.LOCK_EX)
+            if destination.exists() and load(destination) != data:
+                raise ValueError('native pair conflicts with the stored manifest')
+            for name in ASSETS:
+                target = cache / name
+                if target.exists() and digest(target) != data['assets'][name]:
+                    raise ValueError('native pair conflicts with a cached asset: ' + name)
+            for name in ASSETS:
+                if not (cache / name).exists():
+                    atomic_copy(source / name, cache / name)
+                (cache / name).chmod(0o644)
+            atomic_copy(path, destination)
+
+
+def main():
+    args = sys.argv[1:]
+    if len(args) == 2 and args[0] == 'export':
+        export(Path(args[1]))
+    elif len(args) == 3 and args[0] == 'import':
+        import_pair(Path(args[1]), Path(args[2]))
+    elif args == ['image']:
+        data = load(manifest_path())
+        cache = validate(data)
+        verify(data, cache)
+        print(data['floor_image'])
+    else:
+        sys.exit('usage: scripts/native-pair export MANIFEST | import MANIFEST ASSETS | image')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        sys.exit('native pair: ' + str(error))

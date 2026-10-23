@@ -1,0 +1,24 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.name"
+  },
+  "replies": [],
+  "request": {
+    "function": "choose",
+    "options": {
+      "options": [
+        "bad\u0000option",
+        "other"
+      ]
+    },
+    "question": {
+      "type": "inline",
+      "value": "Which?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

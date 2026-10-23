@@ -1,0 +1,34 @@
+{
+  "client": {},
+  "expected": {
+    "error": "backend.reply"
+  },
+  "expected_rows": [
+    {
+      "error": {
+        "code": "backend.reply"
+      },
+      "id": 1,
+      "status": "failed"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "probabilities": {},
+        "type": "choice"
+      }
+    }
+  ],
+  "request": {
+    "function": "decide",
+    "question": {
+      "type": "inline",
+      "value": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 1
+}

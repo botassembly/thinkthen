@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Prove Maven consumers keep their own existing engines. Usage: jvm-isolation-test NEW_NATIVE OLD_NATIVE."""
+import multiprocessing
+import os
+from pathlib import Path
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from jvm_repository import seed, verify
+
+ROOT = Path(__file__).resolve().parent.parent
+CACHE = Path(os.environ.get('THINKTHEN_JVM_CACHE', Path.home() / '.local/share/thinkthen-build-tools/jvm'))
+JAVA = CACHE / ('jdk-22.0.2+9/Contents/Home' if platform.system() == 'Darwin' else 'jdk-22.0.2+9')
+PLATFORM = 'macos-arm64' if platform.system() == 'Darwin' else 'linux-amd64'
+SOURCE = '''import io.thinkthen.*;
+import java.util.List;
+public class IsolationCase {
+    public static void main(String[] args) {
+        try (var client = Client.builder().adapter("stub").build()) {
+            try (var rows = client.rank(Question.inline("Priority?"), List.of("record"), CallOptions.defaults().withTop(0))) {
+                System.out.println("rows=" + rows.count());
+            } catch (ThinkThenException error) { System.out.println("rejected=" + error.code()); }
+        }
+    }
+}
+'''
+
+
+def worker(connection, root, repository, native, expected):
+    try:
+        env = dict(os.environ, JAVA_HOME=str(JAVA), PATH=f'{JAVA}/bin:{CACHE}/apache-maven-3.9.11/bin:' + os.environ['PATH'])
+        for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'CLASSPATH', 'THINKTHEN_API_KEY', 'OPENAI_API_KEY'):
+            env.pop(key, None)
+        def run(*args):
+            return subprocess.run(list(map(str, args)), cwd=root, env=env, check=True, capture_output=True, text=True).stdout
+        def mvn(*args):
+            return run('mvn', '-o', '-B', '-q', f'-Dmaven.repo.local={repository}', *args)
+        resources = root / 'sdk/java/library/target/classes/io/thinkthen/native'
+        resource = resources / PLATFORM
+        resource.mkdir(parents=True)
+        shutil.copy2(native, resource / native.name)
+        assert connection.recv() == 'install'
+        mvn('-f', 'sdk/java/pom.xml', 'install', '-DskipTests')
+        connection.send('installed')
+        assert connection.recv() == 'resolve'
+        classpath_file = root / 'classpath'
+        mvn('-f', 'sdk/java/consumer/pom.xml', 'dependency:build-classpath', f'-Dmdep.outputFile={classpath_file}')
+        classpath = classpath_file.read_text().strip()
+        # Execute first so the negative control proves a wrong public result too.
+        source = root / 'IsolationCase.java'
+        source.write_text(SOURCE)
+        home = root / 'home'
+        home.mkdir()
+        result = run(JAVA / 'bin/java', f'-Duser.home={home}', '--enable-native-access=ALL-UNNAMED', '-cp', classpath, source).strip()
+        print(f'{root.name}: {result}', flush=True)
+        failures = []
+        if not result.startswith(expected):
+            failures.append(f'expected {expected}, got {result}')
+        try:
+            verify(root, classpath.split(':'), resources, PLATFORM, native)
+        except AssertionError as error:
+            failures.append(str(error))
+        connection.send('failed: ' + '; '.join(failures) if failures else 'passed')
+    except BaseException as error:
+        connection.send(f'failed: {error}')
+    finally:
+        connection.close()
+
+
+def scenario(scratch, natives, shared):
+    repository = seed(CACHE / 'm2', scratch / 'shared') if shared else None
+    connections, processes = [], []
+    for label, native, expected in zip(('A', 'B'), natives, ('rejected=usage.question', 'rows=0')):
+        root = scratch / label
+        shutil.copytree(ROOT / 'sdk', root / 'sdk', ignore=shutil.ignore_patterns('target'))
+        repo = repository or seed(CACHE / 'm2', scratch / f'm2-{label}')
+        parent, child = multiprocessing.Pipe()
+        process = multiprocessing.Process(target=worker, args=(child, root, repo, native, expected))
+        process.start()
+        child.close()
+        connections.append(parent)
+        processes.append(process)
+    try:
+        # Signals force A install, B install, A resolve, B resolve while both live.
+        for connection in connections:
+            connection.send('install')
+            assert connection.poll(180), 'install timed out'
+            assert connection.recv() == 'installed'
+        results = []
+        for connection in connections:
+            connection.send('resolve')
+            assert connection.poll(180), 'resolve timed out'
+            results.append(connection.recv())
+        print(('shared control' if shared else 'private repositories') + ': ' + '; '.join(results), flush=True)
+        assert results == ['passed', 'passed'] if not shared else 'expected rejected=' in results[0] and 'JVM artifact differs' in results[0] and results[1] == 'passed'
+    finally:
+        for connection in connections:
+            connection.close()
+        for process in processes:
+            process.join(5)
+            if process.is_alive():
+                process.terminate()
+                process.join()
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        sys.exit(__doc__)
+    natives = [Path(p).resolve(strict=True) for p in sys.argv[1:]]
+    with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-isolation-') as directory:
+        for shared in (True, False):
+            scratch = Path(directory) / ('control' if shared else 'private')
+            scratch.mkdir()
+            scenario(scratch, natives, shared)
+    print('JVM consumers retain their own engine hashes and public results')

@@ -1,0 +1,46 @@
+{
+  "client": {},
+  "expected": [
+    {
+      "answer": null,
+      "detail": {
+        "probabilities": {
+          "none": 0.7,
+          "u1": 0.1,
+          "u2": 0.2
+        },
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "3c9159fc0cb2ac320ce4661ad4eae7354e3065a97504a5912ce03b38c9c16c41"
+        }
+      },
+      "id": 1,
+      "p": 0.7,
+      "status": "answered"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "probabilities": {
+          "none": 0.7,
+          "u1": 0.1,
+          "u2": 0.2
+        },
+        "type": "choice"
+      }
+    }
+  ],
+  "request": {
+    "function": "find",
+    "question": {
+      "type": "inline",
+      "value": "Which line?"
+    },
+    "records": [
+      "first\nsecond"
+    ]
+  },
+  "requests": 1
+}

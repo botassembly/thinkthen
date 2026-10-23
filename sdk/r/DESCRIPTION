@@ -1,0 +1,15 @@
+Package: thinkthen
+Type: Package
+Title: Typed Questions About Text
+Version: 0.2.0
+Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
+Description: Judge text and structured records with typed questions. The native
+    engine supplies decisions, labels, scores, names and relations. Calls use
+    ordinary R vectors and data frames, with coded error conditions.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Imports: jsonlite
+Suggests: tibble, dplyr, data.table
+SystemRequirements: Rust, Cargo, C compiler
+URL: https://github.com/botassembly/thinkthen
+BugReports: https://github.com/botassembly/thinkthen/issues

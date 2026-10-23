@@ -1,0 +1,39 @@
+#!/bin/sh
+# Compile the installed C user API, then prove its boundary without a service.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/c-package "$scratch/package"
+cargo build --locked -p loopback --bin loopback
+build_target=${CARGO_TARGET_DIR:-target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+mkdir "$scratch/installed"
+tar -xzf "$scratch/package"/*.tar.gz -C "$scratch/installed"
+test ! -e "$scratch/installed/lib/libjansson.a"
+export PKG_CONFIG_PATH="$scratch/installed/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+# Deliberately compile through the installed pkg-config surface, not source paths.
+cc -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
+    $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/consumer"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/conformance.c \
+    $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/conformance"
+python3 - "$scratch/installed/share/thinkthen-c/README.md" "$scratch/example.c" <<'PYTHON'
+from pathlib import Path
+import re, sys
+Path(sys.argv[2]).write_text(re.search(r"```c\n(.*?)\n```", Path(sys.argv[1]).read_text(), re.S)[1])
+PYTHON
+cc -std=c11 -Wall -Wextra -Werror "$scratch/example.c" \
+    $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/example"
+"$scratch/example"
+mkdir "$scratch/home"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$root/construction/stub.json" "$build_target/debug/loopback" "$scratch/conformance" "$root/conformance"
+cmake -S sdk/c/tests -B "$scratch/cmake-consumer" \
+    -DCMAKE_PREFIX_PATH="$scratch/installed" -DCMAKE_BUILD_TYPE=Debug
+cmake --build "$scratch/cmake-consumer" --parallel 2
+"$scratch/cmake-consumer/consumer" "$root/construction/stub.json"
+if [ -n "${THINKTHEN_C_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_C_ARTIFACT_DIR"
+    cp "$scratch/package"/*.tar.gz "$THINKTHEN_C_ARTIFACT_DIR/"
+fi

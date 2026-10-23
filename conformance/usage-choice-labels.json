@@ -1,0 +1,24 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.question"
+  },
+  "replies": [],
+  "request": {
+    "function": "choose",
+    "options": {
+      "options": [
+        "a",
+        "a"
+      ]
+    },
+    "question": {
+      "type": "inline",
+      "value": "Which?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

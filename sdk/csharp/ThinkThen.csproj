@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PackageId>Botassembly.ThinkThen</PackageId>
+    <Version>0.2.0</Version>
+    <Description>Typed questions about evidence through ten functions.</Description>
+    <RepositoryUrl>https://github.com/botassembly/thinkthen</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/botassembly/thinkthen</PackageProjectUrl>
+    <Authors>ThinkThen contributors</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src/*.cs" />
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="$(LinuxNative)" Pack="true" PackagePath="runtimes/linux-x64/native/libthinkthen_ffi.so" Condition="'$(LinuxNative)' != ''" />
+    <None Include="$(WindowsNative)" Pack="true" PackagePath="runtimes/win-x64/native/thinkthen_ffi.dll" Condition="'$(WindowsNative)' != ''" />
+    <None Include="$(LinuxArm64Native)" Pack="true" PackagePath="runtimes/linux-arm64/native/libthinkthen_ffi.so" Condition="'$(LinuxArm64Native)' != ''" />
+    <None Include="$(MacNative)" Pack="true" PackagePath="runtimes/osx-arm64/native/libthinkthen_ffi.dylib" Condition="'$(MacNative)' != ''" />
+  </ItemGroup>
+  <Target Name="RequireNativeAssets" BeforeTargets="Pack">
+    <Error Condition="!Exists('$(LinuxNative)') and !Exists('$(LinuxArm64Native)') and !Exists('$(MacNative)') and !Exists('$(WindowsNative)')" Text="Pack requires at least one supported native asset from this build." />
+  </Target>
+</Project>

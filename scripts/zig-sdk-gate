@@ -1,0 +1,44 @@
+#!/bin/sh
+# Compile and exercise an installed offline Zig package.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+zig_release=$(sed -n 's/.*minimum_zig_version = "\([^"]*\)".*/\1/p' sdk/zig/build.zig.zon)
+PATH="$HOME/.local/share/thinkthen-build-tools/zig/$zig_release:$PATH"
+export PATH
+if ! command -v zig >/dev/null 2>&1 || [ "$(zig version)" != "$zig_release" ]; then
+    echo "Prepare Zig $zig_release before running the offline Zig gate" >&2
+    exit 1
+fi
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/zig-package "$scratch/archive"
+mkdir "$scratch/unpacked" "$scratch/consumer"
+tar -xzf "$scratch/archive"/thinkthen-zig-*.tar.gz -C "$scratch/unpacked"
+mv "$scratch/unpacked/thinkthen" "$scratch/package"
+mkdir -p "$scratch/readme/src"
+python3 - "$scratch/package/README.md" "$scratch/readme" <<'PYTHON'
+from pathlib import Path
+import re, sys
+text = Path(sys.argv[1]).read_text()
+blocks = re.findall(r"```zig\n(.*?)\n```", text, re.S)
+root = Path(sys.argv[2])
+(root / "src/main.zig").write_text(blocks[0])
+(root / "build.zig").write_text(next(block for block in blocks if "pub fn build(" in block))
+(root / "build.zig.zon").write_text(next(block for block in blocks if ".fingerprint" in block).replace('"../thinkthen"', '"../package"'))
+PYTHON
+(cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
+"$scratch/readme/zig-out/bin/example"
+cp sdk/zig/tests/build.zig sdk/zig/tests/build.zig.zon sdk/zig/tests/consumer.zig "$scratch/consumer/"
+zig fmt --check sdk/zig/src sdk/zig/build.zig sdk/zig/build.zig.zon sdk/zig/tests
+(cd "$scratch/consumer" && zig build -j2 --cache-dir "$scratch/cache")
+cargo build --offline --locked -p loopback --bin loopback
+build_target=${CARGO_TARGET_DIR:-target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+python3 sdk/zig/tests/run.py "$scratch/consumer/zig-out/bin/consumer" "$root" "$build_target/debug/loopback"
+if [ -n "${THINKTHEN_ZIG_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_ZIG_ARTIFACT_DIR"
+    cp "$scratch/archive"/thinkthen-zig-*.tar.gz "$THINKTHEN_ZIG_ARTIFACT_DIR/"
+    cp "$scratch/consumer/zig-out/bin/"* "$THINKTHEN_ZIG_ARTIFACT_DIR/"
+    cp sdk/zig/examples/all-ten.py construction/stub.json "$THINKTHEN_ZIG_ARTIFACT_DIR/"
+fi

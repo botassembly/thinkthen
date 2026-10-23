@@ -1,0 +1,9 @@
+#!/bin/sh
+# Run the packaged ten-function consumers offline, without build tools.
+set -eu
+cd "$(dirname "$0")"
+case "${1:-}" in java) main=ConsumerCases ;; kotlin) main=KotlinCasesKt ;; *) echo 'usage: run-stub java|kotlin' >&2; exit 2 ;; esac
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+jvm_java=java
+if [ -x runtime/bin/java ]; then jvm_java=./runtime/bin/java; fi
+exec "$jvm_java" --enable-native-access=ALL-UNNAMED -cp 'lib/*' "$main" construction/stub.json --stub-only

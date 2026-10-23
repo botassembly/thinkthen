@@ -1,0 +1,582 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Row",
+  "description": "One record's result: its id and what its question came to.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/Id"
+    }
+  },
+  "oneOf": [
+    {
+      "description": "The model answered and the threshold accepted the answer.",
+      "type": "object",
+      "properties": {
+        "answer": {
+          "description": "The answer.",
+          "$ref": "#/$defs/Answer"
+        },
+        "detail": {
+          "description": "The backend probabilities for each label or scale level.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Detail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p": {
+          "description": "The probability behind the answer.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Probability"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "const": "answered"
+        }
+      },
+      "required": [
+        "status",
+        "answer"
+      ]
+    },
+    {
+      "description": "The model answered inside the not sure band.",
+      "type": "object",
+      "properties": {
+        "answer": {
+          "type": "null"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Detail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p": {
+          "$ref": "#/$defs/Probability"
+        },
+        "status": {
+          "type": "string",
+          "const": "unsure"
+        }
+      },
+      "required": [
+        "status",
+        "answer",
+        "p"
+      ]
+    },
+    {
+      "description": "The question could not be answered.",
+      "type": "object",
+      "properties": {
+        "error": {
+          "description": "Why.",
+          "$ref": "#/$defs/Error"
+        },
+        "status": {
+          "type": "string",
+          "const": "failed"
+        }
+      },
+      "required": [
+        "status",
+        "error"
+      ]
+    }
+  ],
+  "required": [
+    "id"
+  ],
+  "$defs": {
+    "Answer": {
+      "description": "An answer's value. Its shape depends on the function.",
+      "anyOf": [
+        {
+          "description": "Relations stated by the text.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Relation"
+          }
+        },
+        {
+          "description": "Names and their kinds in text order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Name"
+          }
+        },
+        {
+          "description": "A selected text unit, or no matching unit.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Found"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "description": "The record's rank, starting at one.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        {
+          "description": "Each named question and its own outcome.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Outcome"
+          }
+        },
+        {
+          "description": "The chosen option.",
+          "type": "string"
+        },
+        {
+          "description": "The answer to a yes or no question.",
+          "type": "boolean"
+        },
+        {
+          "description": "Every label that applies.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "description": "A number on a scale from 0 to 1.",
+          "type": "number",
+          "format": "double"
+        }
+      ]
+    },
+    "Detail": {
+      "description": "The backend probabilities behind a structured answer.",
+      "anyOf": [
+        {
+          "description": "The caller-visible question identity and route with optional backend detail.",
+          "type": "object",
+          "properties": {
+            "probabilities": {
+              "description": "The function's complete backend detail, when present.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Detail"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source": {
+              "description": "The question and route that answered.",
+              "$ref": "#/$defs/Source"
+            }
+          },
+          "required": [
+            "source"
+          ]
+        },
+        {
+          "description": "Every asked pair and its probability.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Relation"
+          }
+        },
+        {
+          "description": "Boundary and kind probabilities for recognized names.",
+          "$ref": "#/$defs/RecognizeDetail"
+        },
+        {
+          "description": "A probability for each named label.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Probability"
+          }
+        },
+        {
+          "description": "A probability for each scale level, in the question's order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Probability"
+          }
+        }
+      ]
+    },
+    "Error": {
+      "description": "A failure with its kind and its message.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ]
+    },
+    "Found": {
+      "description": "A chosen line and its Unicode scalar offsets in the record.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive end, counted in Unicode scalar values.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "start": {
+          "description": "Inclusive start, counted in Unicode scalar values.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "text": {
+          "description": "The line without its line ending.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end"
+      ]
+    },
+    "Id": true,
+    "KindDetail": {
+      "description": "Backend kind probabilities for one decoded name, including dropped names.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kinds": {
+          "description": "Each kind's probability, including none of these.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Probability"
+          }
+        },
+        "start": {
+          "description": "Inclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "kinds"
+      ]
+    },
+    "Name": {
+      "description": "A name recognized in the original text.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "The chosen kind, or ENTITY when kinds were omitted.",
+          "type": "string"
+        },
+        "p": {
+          "description": "The least member-piece membership multiplied by the chosen kind's probability.\nThis support score is not the probability of exact name boundaries.",
+          "$ref": "#/$defs/Probability"
+        },
+        "start": {
+          "description": "Inclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "text": {
+          "description": "The original text covered by the name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "kind",
+        "p"
+      ]
+    },
+    "Outcome": {
+      "description": "What a record's question came to.",
+      "oneOf": [
+        {
+          "description": "The model answered and the threshold accepted the answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer.",
+              "$ref": "#/$defs/Answer"
+            },
+            "detail": {
+              "description": "The backend probabilities for each label or scale level.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Detail"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "p": {
+              "description": "The probability behind the answer.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Probability"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "The model answered inside the not sure band.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "type": "null"
+            },
+            "detail": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Detail"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "p": {
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "answer",
+            "p"
+          ]
+        },
+        {
+          "description": "The question could not be answered.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "Why.",
+              "$ref": "#/$defs/Error"
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ]
+    },
+    "PieceDetail": {
+      "description": "Backend probabilities for one original piece.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "start": {
+          "description": "Inclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "tags": {
+          "description": "The five boundary tag probabilities.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Probability"
+          }
+        },
+        "text": {
+          "description": "The original piece.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "tags"
+      ]
+    },
+    "Probability": {
+      "description": "A finite probability from 0 to 1, inclusive.\n\nSerialization rounds to two decimal places; [`Self::get`] retains full precision.",
+      "type": "number",
+      "format": "double",
+      "maximum": 1,
+      "minimum": 0
+    },
+    "RecognizeDetail": {
+      "description": "The underlying choice probabilities for name recognition.",
+      "type": "object",
+      "properties": {
+        "names": {
+          "description": "Each decoded name's kind probabilities in text order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KindDetail"
+          }
+        },
+        "pieces": {
+          "description": "Each piece's boundary probabilities in text order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PieceDetail"
+          }
+        }
+      },
+      "required": [
+        "pieces",
+        "names"
+      ]
+    },
+    "Relation": {
+      "description": "One allowed pair and its probability of being stated in the text.",
+      "type": "object",
+      "properties": {
+        "either": {
+          "description": "Present only for unordered rules.",
+          "type": "boolean"
+        },
+        "p": {
+          "description": "Probability of yes for this pair.",
+          "$ref": "#/$defs/Probability"
+        },
+        "relation": {
+          "description": "The rule name.",
+          "type": "string"
+        },
+        "source": {
+          "description": "The first endpoint, or directed source.",
+          "$ref": "#/$defs/RelationName"
+        },
+        "target": {
+          "description": "The second endpoint, or directed target.",
+          "$ref": "#/$defs/RelationName"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "relation",
+        "p"
+      ]
+    },
+    "RelationName": {
+      "description": "A relation endpoint in the original text.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "description": "Exclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "description": "Recognized kind.",
+          "type": "string"
+        },
+        "start": {
+          "description": "Inclusive Unicode scalar offset.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "text": {
+          "description": "Original name text.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "kind"
+      ]
+    },
+    "Source": {
+      "description": "The caller-visible question and actual route that answered it.",
+      "type": "object",
+      "properties": {
+        "backend": {
+          "description": "The backend that served the question.",
+          "type": "string"
+        },
+        "model": {
+          "description": "The model that served the question.",
+          "type": "string"
+        },
+        "question_identity": {
+          "description": "SHA-256 of the caller-visible function and question content.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question_identity",
+        "backend",
+        "model"
+      ]
+    }
+  }
+}

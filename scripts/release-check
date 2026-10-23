@@ -1,0 +1,412 @@
+#!/usr/bin/env python3
+"""Install a candidate using only its files and the matching standard runtimes.
+
+Usage: check PLATFORM_DIRECTORY. Prints one result per package; errors stop it.
+"""
+from release_images import image
+import json
+import io
+import hashlib
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
+
+
+def run(*arguments, **options):
+    options.setdefault('env', ENV)
+    options.setdefault('cwd', SCRATCH)
+    return subprocess.run(list(map(str, arguments)), check=True, **options)
+
+
+def unpack(archive, destination):
+    destination.mkdir(parents=True, exist_ok=True)
+    if zipfile.is_zipfile(archive):
+        with zipfile.ZipFile(archive) as source:
+            source.extractall(destination)
+    else:
+        with tarfile.open(archive) as source:
+            source.extractall(destination, filter='data')
+    return destination
+
+
+def only(pattern):
+    paths = list(PACKAGE.glob(pattern))
+    assert len(paths) == 1, (pattern, paths)
+    return paths[0]
+
+
+def members(path):
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as source:
+            return [p for p in source.namelist() if not p.endswith('/')]
+    with package_tar(path) as source:
+        return [p.name.removeprefix('./') for p in source.getmembers() if p.isfile()]
+
+
+def package_tar(path):
+    if path.suffix == '.gem':
+        with tarfile.open(path) as package:
+            return tarfile.open(fileobj=io.BytesIO(package.extractfile('data.tar.gz').read()), mode='r:gz')
+    return tarfile.open(path)
+
+
+def native_members(path):
+    # Names and extensions alone cannot rule out another bundled native object.
+    def binary(stream):
+        magic = stream.read(8)
+        if magic[:4] in (b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf'):
+            # A Java class shares the fat Mach-O magic, but its version is not
+            # a valid count of native architectures.
+            return 0 < int.from_bytes(magic[4:8], 'big') < 32
+        return magic.startswith((b'\x7fELF', b'MZ', b'!<arch>\n', b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf'))
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as source:
+            return {p for p in source.namelist() if not p.endswith('/') and binary(source.open(p))}
+    with package_tar(path) as source:
+        return {p.name.removeprefix('./') for p in source.getmembers()
+                if p.isfile() and binary(source.extractfile(p))}
+
+
+def require_native(path, expected):
+    actual = native_members(path)
+    assert actual == set(expected), (path.name, 'native objects', actual, set(expected))
+
+
+def container_ticket():
+    job = os.environ.get('PM_JOB', '').split() or ['local']
+    return 'pm.ticket=' + job[0]
+
+
+def inventory():
+    inventory = {}
+    for name, pattern in [('command', 'thinkthen-*.tar.gz'), ('python', 'python/*.whl'),
+                          ('typescript', 'typescript/*.tgz'), ('go', 'go/*.tar.gz'),
+                          ('csharp', 'csharp/*.nupkg'), ('c', 'c/*.tar.gz'), ('cpp', 'cpp/*.tar.gz'),
+                          ('sqlite', 'sqlite/*.tar.gz'), ('duckdb', 'duckdb/*.tar.gz'),
+                          ('ruby', 'ruby/*.gem'), ('zig', 'zig/*.tar.gz'), ('swift', 'swift/*.tar.gz')]:
+        package = only(pattern)
+        assert VERSION in package.name, (name, package.name, VERSION)
+        from release_notice_check import verify
+        verify(package)
+        files = [p for p in members(package) if 'THIRD-PARTY-NOTICES' not in p.split('/')]
+        assert any(p.endswith('/README.md') or p == 'README.md' for p in files), (name, 'missing package README')
+        expected_native = {
+            'command': {'thinkthen'},
+            'python': {'thinkthen/_native.abi3.so'},
+            'typescript': {'package/thinkthen.node'},
+            'go': {'native/library'},
+            'csharp': {'lib/net10.0/ThinkThen.dll', f'runtimes/{RID}/native/libthinkthen_ffi.{SUFFIX}'},
+            'c': {f'lib/libthinkthen_ffi.{SUFFIX}', f'lib/libthinkthen_c.{SUFFIX}'},
+            'cpp': {f'lib/libthinkthen_ffi.{SUFFIX}'},
+            'sqlite': {f'thinkthen_sqlite.{SUFFIX}'},
+            'duckdb': {'thinkthen.duckdb_extension'},
+            'ruby': {f'lib/thinkthen/libthinkthen_ffi.{SUFFIX}'},
+            'zig': {f'thinkthen/native/{RID}/libthinkthen_ffi.{SUFFIX}'},
+            'swift': {f'Sources/ThinkThen/Native/{RID}/libthinkthen_ffi.{SUFFIX}'},
+        }
+        require_native(package, expected_native[name])
+        assert files and len(files) == len(set(files)), name
+        # Distribution code may include C/Go public sources, never build recipes.
+        forbidden = re.compile(r'(^|/)(tests?|target|node_modules|vendor|\.git|src/engine)(/|$)|\.(pdb|dSYM|profraw|profdata|o|obj)$|(^|/)(cargo|rustc|cmake|mvn|gcc|clang)$')
+        assert not [p for p in files if forbidden.search(p)], (name, files)
+        if name == 'command': assert set(files) == {'thinkthen', 'LICENSE', 'README.md'}, files
+        if name == 'python':
+            assert len([p for p in files if p.endswith('.so')]) == 1, files
+            assert all(p.startswith(('thinkthen/', 'thinkthen-')) for p in files), files
+            with zipfile.ZipFile(package) as wheel:
+                metadata = wheel.read(next(p for p in files if p.endswith('.dist-info/METADATA'))).decode()
+            assert f'Version: {VERSION}\n' in metadata, metadata
+        if name == 'typescript':
+            with tarfile.open(only(pattern)) as source:
+                manifest = json.load(source.extractfile('package/package.json'))
+            assert manifest['version'] == VERSION, manifest['version']
+            assert set(files) == {'package/' + p for p in manifest['files']} | {'package/package.json'}, files
+            assert files.count('package/thinkthen.node') == 1
+        if name == 'go':
+            assert 'native/library' in files
+            assert all(p.endswith(('.go', '.h', '.c')) or p in {'go.mod','README.md','LICENSE','native/library','native/dependencies.txt'} for p in files), files
+        if name == 'csharp':
+            native = [p for p in files if p.startswith('runtimes/')]
+            assert len(native) == 1 and RID in native[0], native
+            assert 'lib/net10.0/ThinkThen.dll' in files
+            with zipfile.ZipFile(package) as bundle:
+                metadata = ET.fromstring(bundle.read(next(p for p in files if p.endswith('.nuspec'))))
+            assert any(node.tag.endswith('}version') and node.text == VERSION for node in metadata.iter())
+        if name == 'c':
+            assert sum('libthinkthen_ffi.' in p for p in files) == 1
+            assert sum('libthinkthen_c.' in p for p in files) == 1
+            assert not any('jansson' in Path(p).name.lower() and p.startswith(('lib/', 'bin/', 'include/')) for p in files)
+            assert all(p.startswith(('include/', 'lib/', 'share/')) for p in files), files
+            with tarfile.open(package) as bundle:
+                metadata = bundle.extractfile(next(p for p in bundle.getmembers() if p.name.removeprefix('./') == 'lib/pkgconfig/thinkthen-c.pc')).read().decode()
+            assert f'Version: {VERSION}\n' in metadata, metadata
+        if name == 'sqlite':
+            assert set(files) == {f'thinkthen_sqlite.{SUFFIX}', 'README.md', 'LICENSE'}, files
+        if name == 'cpp':
+            assert set(files) == {'include/thinkthen/thinkthen.hpp', 'include/thinkthen/answers.hpp', 'include/thinkthen.h',
+                f'lib/libthinkthen_ffi.{SUFFIX}', 'share/thinkthen-cpp/LICENSE', 'share/thinkthen-cpp/README.md',
+                *{f'lib/cmake/ThinkThenCpp/ThinkThenCpp{part}.cmake' for part in ('Config', 'ConfigVersion', 'Targets')}}, files
+            with tarfile.open(package) as bundle:
+                metadata = bundle.extractfile(next(p for p in bundle.getmembers() if p.name.endswith('/ThinkThenCppConfigVersion.cmake'))).read().decode()
+            assert f'set(PACKAGE_VERSION "{VERSION}")' in metadata, metadata
+            dependencies = PACKAGE / 'cpp/dependencies/nlohmann-json'
+            assert {str(p.relative_to(dependencies)) for p in dependencies.rglob('*') if p.is_file()} == {
+                'include/nlohmann/json.hpp', 'include/nlohmann/json_fwd.hpp', 'share/pkgconfig/nlohmann_json.pc', 'LICENSE',
+                *{f'share/cmake/nlohmann_json/nlohmann_json{part}.cmake' for part in ('Config', 'ConfigVersion', 'Targets')}}
+        if name == 'duckdb':
+            assert 'thinkthen.duckdb_extension' in files
+            assert all(p == 'thinkthen.duckdb_extension' or 'LICENSE' in p.upper() or 'NOTICE' in p.upper() or p == 'README.md' for p in files), files
+        if name == 'ruby':
+            assert all(p in {'README.md', 'LICENSE'} or p.startswith('lib/') for p in files), files
+        if name == 'zig':
+            assert all(p in {'thinkthen/build.zig', 'thinkthen/build.zig.zon', 'thinkthen/LICENSE', 'thinkthen/README.md'}
+                or p.startswith(('thinkthen/src/', 'thinkthen/include/', 'thinkthen/native/')) for p in files), files
+            with tarfile.open(package) as bundle:
+                assert f'.version = "{VERSION}"' in bundle.extractfile('thinkthen/build.zig.zon').read().decode()
+        if name == 'swift':
+            assert all(p in {'Package.swift', 'README.md', 'LICENSE', 'VERSION'} or p.startswith('Sources/') for p in files), files
+            with tarfile.open(package) as bundle: assert bundle.extractfile('VERSION').read().decode().strip() == VERSION
+        inventory[name] = files
+    for name in ('java','kotlin'):
+        package = only(f'{name}/thinkthen-{name}-*.jar')
+        from release_notice_check import verify
+        verify(package)
+        files = [p for p in members(package) if 'THIRD-PARTY-NOTICES' not in p.split('/')]
+        assert 'META-INF/README.md' in files, (name, 'missing package README')
+        native = [p for p in files if 'native/' in p]
+        assert len(native) == (1 if name == 'java' else 0), (name, native)
+        assert all(p.startswith(('META-INF/', 'io/thinkthen/')) for p in files), (name, files)
+        assert not any(p.endswith(('.java','.kt')) for p in files)
+        with zipfile.ZipFile(only(f'{name}/thinkthen-{name}-*.jar')) as bundle:
+            metadata = bundle.read(next(p for p in files if p.endswith('/pom.properties'))).decode()
+        assert f'version={VERSION}\n' in metadata, metadata
+        native = []
+        for jar in (PACKAGE / name).rglob('*.jar'):
+            if jar.name.startswith('thinkthen-java-'): verify(jar)
+            platform = {'osx-arm64': 'macos-arm64', 'linux-x64': 'linux-amd64', 'linux-arm64': 'linux-aarch64'}[RID]
+            expected = {f'io/thinkthen/native/{platform}/libthinkthen_ffi.{SUFFIX}'} if jar.name.startswith('thinkthen-java-') else set()
+            require_native(jar, expected)
+            native.extend(p for p in members(jar) if '/libthinkthen_ffi.' in p)
+        assert len(native) == 1, (name, native)
+        inventory[name] = files
+    r_archives = sorted((PACKAGE / 'r').glob('*.tar.gz')) + sorted((PACKAGE / 'r').glob('*.tgz'))
+    assert len(r_archives) == 2, r_archives
+    for path in r_archives:
+        from release_notice_check import verify
+        verify(path)
+        files = [p for p in members(path) if 'THIRD-PARTY-NOTICES' not in p.split('/')]
+        package_name = 'thinkthen' if path.name.startswith('thinkthen_') else 'jsonlite'
+        require_native(path, {f'{package_name}/libs/{package_name}.so'})
+        assert not any('/src/' in p or '/native/' in p or '/tests/' in p or p.endswith('.a') for p in files), path
+        assert len([p for p in files if '/libs/' in p and p.endswith(('.so','.dylib'))]) == 1, path
+        if path.name.startswith('thinkthen_'):
+            assert 'thinkthen/README.md' in files, (path.name, 'missing package README')
+            with tarfile.open(path) as bundle:
+                metadata = bundle.extractfile(next(p for p in bundle.getmembers() if p.name.endswith('/DESCRIPTION'))).read().decode()
+            assert f'Version: {VERSION}\n' in metadata, metadata
+        inventory['r/' + path.name] = files
+    if (PACKAGE / 'postgres').exists():
+        package = only('postgres/*.tar.gz')
+        from release_notice_check import verify
+        verify(package)
+        files = [p for p in members(package) if 'THIRD-PARTY-NOTICES' not in p.split('/')]
+        require_native(package, {'lib/thinkthen_postgres.so'})
+        assert set(files) == {'lib/thinkthen_postgres.so','share/extension/thinkthen.control',
+                              f'share/extension/thinkthen--{VERSION}.sql','LICENSE','README.md'}, files
+        inventory['postgres'] = files
+    optional = PACKAGE / 'prerequisites/python-frames-cp310'
+    dependencies = json.loads((optional / 'inventory.json').read_text())
+    assert 'CPython 3.10 only' in dependencies['scope'], dependencies['scope']
+    assert {p.name for p in (optional / 'wheels').glob('*.whl')} == {p['file'] for p in dependencies['wheels']}
+    for record in dependencies['wheels']:
+        path = optional / 'wheels' / record['file']
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == record['sha256'], path
+        assert record['licenses'] and set(record['licenses']) <= set(members(path)), path
+    optional = PACKAGE / 'prerequisites/r-frames'
+    dependencies = json.loads((optional / 'inventory.json').read_text())
+    assert {p.name for p in optional.glob('*.tar.gz')} == set(dependencies['install_order'])
+    for record in dependencies['packages'].values():
+        path = optional / record['file']
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == record['sha256'], path
+        assert record['license'], record
+    print('candidate: package file lists pass', flush=True)
+    return inventory
+
+
+def command():
+    installed = unpack(only('thinkthen-*.tar.gz'), SCRATCH / 'command')
+    for case in CASES:
+        request = case['request']
+        function = request['function']
+        entry = {key: value for key, value in request.items() if key != 'records'}
+        path = SCRATCH / 'question.json'
+        path.write_text(json.dumps(entry))
+        result = run(installed / 'thinkthen', 'run', path, '--adapter', 'stub',
+                     input=''.join(json.dumps(record) + '\n' for record in request['records']), capture_output=True, text=True)
+        assert [json.loads(line) for line in result.stdout.splitlines()] == case['expected'], function
+    print('candidate command: ten shared stub cases pass', flush=True)
+
+
+def python_node():
+    python = os.environ.get('THINKTHEN_CHECK_PYTHON') or sys.executable
+    node, npm = shutil.which('node'), shutil.which('npm')
+    run(python, '-m', 'venv', SCRATCH / 'python')
+    interpreter = SCRATCH / 'python/bin/python'
+    run(interpreter, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', only('python/*.whl'))
+    run(interpreter, CHECKS / 'python.py', CHECKS / 'stub.json')
+    optional = PACKAGE / 'prerequisites/python-frames-cp310'
+    run(interpreter, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', optional / 'wheels', '-r', optional / 'requirements.txt')
+    run(interpreter, CHECKS / 'python-frames.py')
+    consumer = SCRATCH / 'node'
+    consumer.mkdir()
+    run(npm, 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+        '--cache', SCRATCH / 'npm-cache', '--prefix', consumer, only('typescript/*.tgz'))
+    shutil.copy2(CHECKS / 'node.mjs', consumer / 'check.mjs')
+    run(node, consumer / 'check.mjs', CHECKS / 'stub.json')
+
+
+def native_languages():
+    installed = unpack(only('c/*.tar.gz'), SCRATCH / 'c')
+    binary = SCRATCH / 'bin/c-consumer'
+    binary.parent.mkdir()
+    shutil.copy2(CHECKS / 'c-consumer', binary)
+    run(binary, CHECKS / 'stub.json')
+    run(CHECKS / 'go-consumer', '-test.run=^TestSharedStub$', env=dict(ENV, THINKTHEN_STUB_CASES=str(CHECKS / 'stub.json')))
+    print('candidate C and Go: shared stub cases pass without compilers', flush=True)
+    unpack(only('cpp/*.tar.gz'), SCRATCH / 'cpp')
+    binary = SCRATCH / 'bin/cpp-consumer'
+    shutil.copy2(CHECKS / 'cpp-consumer', binary)
+    run(binary, 'stub', CHECKS / 'stub.json')
+    print('candidate C++: shared stub cases pass without a compiler', flush=True)
+
+
+def managed():
+    java = os.environ.get('THINKTHEN_CHECK_JAVA') or shutil.which('java')
+    for language, main in [('java', 'ConsumerCases'), ('kotlin', 'KotlinCasesKt')]:
+        paths = [CHECKS / 'jvm/consumer.jar', *sorted((PACKAGE / language).glob('*.jar')),
+                 *sorted((PACKAGE / language / 'dependencies').glob('*.jar'))]
+        run(java, '-Duser.home=' + ENV['HOME'], '--enable-native-access=ALL-UNNAMED', '-cp', os.pathsep.join(map(str, paths)), main, CHECKS / 'stub.json', '--stub-only')
+    dotnet = shutil.which('dotnet')
+    consumer = SCRATCH / 'dotnet'
+    shutil.copytree(CHECKS / 'csharp', consumer)
+    package = unpack(only('csharp/*.nupkg'), SCRATCH / 'nuget')
+    shutil.copy2(package / 'lib/net10.0/ThinkThen.dll', consumer / 'ThinkThen.dll')
+    shutil.copytree(package / 'runtimes', consumer / 'runtimes')
+    run(dotnet, consumer / 'Consumer.dll', CHECKS / 'stub.json', '--stub-only',
+        env=dict(ENV, DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1'))
+
+
+def extra_languages():
+    gems = SCRATCH / 'gems'
+    ruby_env = dict(ENV, GEM_HOME=str(gems), GEM_PATH=str(gems))
+    run('gem', 'install', '--local', '--no-document', only('ruby/dependencies/*.gem'), only('ruby/*.gem'), env=ruby_env)
+    run('ruby', CHECKS / 'ruby.rb', CHECKS / 'stub.json', env=ruby_env)
+    zig = SCRATCH / 'zig'
+    zig.mkdir()
+    package = unpack(only('zig/*.tar.gz'), SCRATCH / 'zig-package')
+    shutil.copy2(CHECKS / 'zig/consumer', zig / 'consumer')
+    shutil.copy2(package / f'thinkthen/native/{RID}/libthinkthen_ffi.{SUFFIX}', zig / f'libthinkthen_ffi.{SUFFIX}')
+    if SUFFIX == 'so':
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+            '-v', f'{PACKAGE}:/candidate:ro', '-v', f'{zig}:/installed:ro', image('floor'),
+            'sh', '-c', 'mkdir /tmp/home; exec env -i HOME=/tmp/home PATH=/usr/bin:/bin LANG=C.UTF-8 '
+            'python3 /candidate/checks/zig.py /installed/consumer /candidate/checks/stub.json')
+    else:
+        run(sys.executable, CHECKS / 'zig.py', zig / 'consumer', CHECKS / 'stub.json')
+    resources = list((CHECKS / 'swift').rglob(f'libthinkthen_ffi.{SUFFIX}'))
+    assert len(resources) == 1, resources
+    with tarfile.open(only('swift/*.tar.gz')) as bundle:
+        engine = bundle.extractfile(f'Sources/ThinkThen/Native/{RID}/libthinkthen_ffi.{SUFFIX}').read()
+    assert hashlib.sha256(engine).digest() == hashlib.sha256(resources[0].read_bytes()).digest()
+    if SUFFIX == 'so':
+        runtime = PACKAGE / 'prerequisites/swift-runtime/linux'
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+            '-v', f'{PACKAGE}:/candidate:ro', '-v', f'{runtime}:/runtime:ro',
+            image('swift'), 'sh', '-c',
+            'set -eu; for tool in swift clang cc rustc cargo; do if command -v "$tool"; then echo "compiler present: $tool" >&2; exit 1; fi; done; mkdir /tmp/home; '
+            'exec env -i HOME=/tmp/home PATH=/usr/bin:/bin LANG=C.UTF-8 LD_LIBRARY_PATH=/runtime '
+            'python3 /candidate/checks/swift.py /candidate/checks/swift/Consumer /candidate/checks/stub.json')
+    else:
+        run(sys.executable, CHECKS / 'swift.py', CHECKS / 'swift/Consumer', CHECKS / 'stub.json')
+
+
+def r_package():
+    if SUFFIX == 'so' and not shutil.which('Rscript'):
+        # Only candidate files enter this runtime check; no Rust/cache/source mount.
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+            '-v', f'{PACKAGE}:/candidate:ro', image('floor'), 'sh', '-c',
+            'mkdir -p /tmp/runtime /tmp/library /tmp/home; ln -s /opt/R/bin/R /opt/R/bin/Rscript /tmp/runtime/; '
+            'exec env -i HOME=/tmp/home PATH=/tmp/runtime:/usr/bin:/bin LANG=C.UTF-8 R_LIBS_SITE= R_LIBS_USER=/tmp/library '
+            'Rscript --vanilla /candidate/checks/r.R /candidate')
+    else:
+        run('Rscript', '--vanilla', CHECKS / 'r.R', PACKAGE,
+            env=dict(ENV, R_LIBS_USER=str(SCRATCH / 'r'), R_LIBS_SITE=''))
+
+
+def databases():
+    sqlite = unpack(only('sqlite/*.tar.gz'), SCRATCH / 'sqlite')
+    executable = os.environ.get('THINKTHEN_CHECK_SQLITE') or shutil.which('sqlite3')
+    run(sys.executable, CHECKS / 'sql.py', 'sqlite', executable, sqlite / f'thinkthen_sqlite.{SUFFIX}', CHECKS / 'stub.json')
+    duck = unpack(only('duckdb/*.tar.gz'), SCRATCH / 'duckdb')
+    executable = PACKAGE / 'prerequisites/duckdb/duckdb'
+    run(sys.executable, CHECKS / 'sql.py', 'duckdb', executable, duck / 'thinkthen.duckdb_extension', CHECKS / 'stub.json')
+    interpreter = os.environ.get('THINKTHEN_CHECK_DUCKDB_PYTHON') or sys.executable
+    run(interpreter, '-m', 'venv', '--without-pip', SCRATCH / 'duck-python')
+    python = SCRATCH / 'duck-python/bin/python'
+    site = run(python, '-c', 'import sysconfig; print(sysconfig.get_paths()["purelib"])', capture_output=True, text=True).stdout.strip()
+    # The official wheel has no runtime dependency or install hook.
+    with zipfile.ZipFile(only('prerequisites/duckdb/*.whl')) as wheel:
+        wheel.extractall(site)
+    run(python, CHECKS / 'sql.py', 'duckdb-python', 'unused', duck / 'thinkthen.duckdb_extension', CHECKS / 'stub.json')
+    if (PACKAGE / 'postgres').exists():
+        # The standard PostgreSQL runtime runs in its prepared offline image.
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', container_ticket(),
+            '-v', f'{PACKAGE}:/candidate:ro', image('floor'), 'sh', '-c',
+            'set -eu; mkdir /tmp/package /tmp/pg; tar -xzf /candidate/postgres/*.tar.gz -C /tmp/package; '
+            'cp /tmp/package/lib/* "$(pg_config --pkglibdir)/"; cp /tmp/package/share/extension/* "$(pg_config --sharedir)/extension/"; '
+            'chown -R nobody /tmp/pg; exec setpriv --reuid nobody --regid 65534 --clear-groups env -i '
+            'HOME=/tmp/pg PATH="$(dirname "$(command -v pg_config)"):/usr/bin:/bin" LANG=C.UTF-8 '
+            'sh /candidate/checks/postgres.sh')
+
+
+def main():
+    global PACKAGE, CHECKS, SCRATCH, ENV, VERSION, RID, SUFFIX, CASES
+    if sys.argv[1:] in (['--help'], ['-h']):
+        print(__doc__)
+        return
+    if len(sys.argv) != 2: sys.exit('usage: check PLATFORM_DIRECTORY')
+    PACKAGE = Path(sys.argv[1]).resolve()
+    CHECKS = PACKAGE / 'checks'
+    info = json.loads((PACKAGE / 'build.json').read_text())
+    if info['platform'] == 'windows-x86_64':
+        from release_windows_check import smoke
+        smoke(PACKAGE)
+        return
+    VERSION = info['version']
+    RID, SUFFIX = {'macos-arm64': ('osx-arm64', 'dylib'), 'linux-x86_64': ('linux-x64', 'so'), 'linux-arm64': ('linux-arm64', 'so')}[info['platform']]
+    CASES = json.loads((CHECKS / 'stub.json').read_text())
+    assert len(CASES) == 10
+    inventory()
+    with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-install-') as temporary:
+        SCRATCH = Path(temporary)
+        home = SCRATCH / 'home'
+        home.mkdir()
+        ENV = {'PATH': os.environ['PATH'], 'HOME': str(home), 'TMPDIR': temporary, 'LANG': 'C.UTF-8'}
+        command()
+        python_node()
+        native_languages()
+        managed()
+        extra_languages()
+        r_package()
+        databases()
+    print('candidate: all installed packages pass shared stub cases', flush=True)
+
+
+if __name__ == '__main__': main()

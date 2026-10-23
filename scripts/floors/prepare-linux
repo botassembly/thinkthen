@@ -1,0 +1,30 @@
+#!/bin/sh
+# Prepare small native dependencies and the pinned R sources for offline builds.
+set -eu
+cd "$(dirname "$0")/../.."
+: "${PM_JOB:?Run preparation through pm job}"
+. scripts/native-build-env
+prefix=$THINKTHEN_RUNTIME_PREFIX
+mkdir -p "$prefix/sources" "$prefix/bin"
+python3 scripts/release_downloads.py https://github.com/akheron/jansson/archive/refs/tags/v2.14.tar.gz "$prefix/sources/jansson.tar.gz"
+python3 scripts/release_downloads.py https://cran.r-project.org/src/contrib/jsonlite_2.0.0.tar.gz "$prefix/sources/jsonlite_2.0.0.tar.gz" || \
+    python3 scripts/release_downloads.py https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_2.0.0.tar.gz "$prefix/sources/jsonlite_2.0.0.tar.gz"
+python3 scripts/release_downloads.py https://www.sqlite.org/2023/sqlite-amalgamation-3410000.zip "$prefix/sources/sqlite.zip"
+work="$PWD/.floor-dependencies"
+mkdir "$work"
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+tar -xzf "$prefix/sources/jansson.tar.gz" -C "$work"
+python3 - "$prefix/sources/sqlite.zip" "$work" <<'PY'
+import sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    archive.extractall(sys.argv[2])
+PY
+scripts/runtime-floor-build cmake -S "$work/jansson-2.14" -B "$work/jansson-build" \
+    -DCMAKE_INSTALL_PREFIX="$prefix/jansson" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DJANSSON_BUILD_SHARED_LIBS=OFF -DJANSSON_BUILD_DOCS=OFF -DJANSSON_BUILD_TESTS=OFF
+scripts/runtime-floor-build cmake --build "$work/jansson-build" --parallel 2
+scripts/runtime-floor-build cmake --install "$work/jansson-build"
+scripts/runtime-floor-build cc -O2 -DSQLITE_THREADSAFE=1 "$work/sqlite-amalgamation-3410000/shell.c" \
+    "$work/sqlite-amalgamation-3410000/sqlite3.c" -ldl -lpthread -lm -o "$prefix/bin/sqlite3"
+scripts/runtime-floor-build scripts/floors/prepare-r
+sha256sum "$prefix/sources/"*.gz "$prefix/sources/sqlite.zip" > "$prefix/sources/SHA256SUMS"

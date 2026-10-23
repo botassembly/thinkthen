@@ -1,0 +1,88 @@
+{
+  "requests": [
+    {
+      "request": {
+        "function": "decide",
+        "question": {
+          "type": "inline",
+          "value": "Ready?"
+        },
+        "options": {
+          "threshold": "0"
+        }
+      },
+      "code": "usage.threshold"
+    },
+    {
+      "request": {
+        "function": "decide",
+        "question": {
+          "type": "inline",
+          "value": "Ready?"
+        },
+        "options": {
+          "on": "body"
+        }
+      },
+      "code": "usage.pointer"
+    },
+    {
+      "request": {
+        "function": "decide",
+        "question": {
+          "type": "reference",
+          "name": "ready"
+        }
+      },
+      "code": "usage.reference"
+    }
+  ],
+  "record": {
+    "input": "{",
+    "code": "usage.record"
+  },
+  "toolbox": {
+    "input": "{",
+    "code": "local.toolbox"
+  },
+  "transport": {
+    "record": "alpha",
+    "code": "backend.transport"
+  },
+  "limit": {
+    "record": "alpha",
+    "request_bytes": 1,
+    "code": "backend.limit"
+  },
+  "input": {
+    "bytes": [
+      255
+    ],
+    "code": "local.io",
+    "exit": 5
+  },
+  "files": [
+    {
+      "columns": [],
+      "code": "usage.file"
+    },
+    {
+      "columns": [
+        "Body"
+      ],
+      "code": "local.file"
+    }
+  ],
+  "store": {
+    "question": {
+      "request": "{",
+      "code": "proxy.question"
+    },
+    "storage": {
+      "code": "proxy.storage"
+    },
+    "conflict": {
+      "code": "proxy.conflict"
+    }
+  }
+}

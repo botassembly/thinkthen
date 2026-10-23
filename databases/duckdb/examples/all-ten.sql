@@ -1,0 +1,10 @@
+SELECT 'decide' AS check_name, * FROM thinkthen_decide((SELECT 'Please refund my order.' AS record), 'Does the customer ask for money back?');
+SELECT 'choose' AS check_name, * FROM thinkthen_choose((SELECT 'Please refund my order.' AS record), 'What is the message about?', options := '{"options":["billing","shipping"]}');
+SELECT 'tag' AS check_name, * FROM thinkthen_tag((SELECT 'Please refund my order.' AS record), 'Which topics apply?', options := '{"labels":["refund","delivery"]}');
+SELECT 'score' AS check_name, * FROM thinkthen_score((SELECT 'Please refund my order.' AS record), 'How urgent is the message?', options := '{"levels":["not urgent","urgent"]}');
+SELECT 'filter' AS check_name, * FROM thinkthen_filter((SELECT body AS record FROM (VALUES (0,'Please refund my order.'),(1,'Thanks for the delivery.')) evidence(i,body) ORDER BY i), 'Does the customer ask for money back?');
+SELECT 'rank' AS check_name, * FROM thinkthen_rank((SELECT body AS record FROM (VALUES (0,'Please refund my order.'),(1,'Thanks for the delivery.')) evidence(i,body) ORDER BY i), 'Does the customer ask for money back?');
+SELECT 'find' AS check_name, * FROM thinkthen_find((SELECT 'Thanks for the delivery.' || chr(10) || 'Please refund my order.' AS record), 'Which line asks for money back?');
+SELECT 'annotate' AS check_name, * FROM thinkthen_annotate((SELECT 'Please refund my order.' AS record), '{"type":"toolbox","value":{"questions":{"refund":{"decide":"Does the customer ask for money back?"},"topic":{"choose":"What is the message about?","options":["billing","shipping"]}}}}');
+SELECT 'recognize' AS check_name, * FROM thinkthen_recognize((SELECT 'Ada works for Acme.' AS record), '{"type":"inline","value":["person","company"]}');
+SELECT 'relate' AS check_name, * FROM thinkthen_relate((SELECT 'Ada works for Acme.' AS record), '{"type":"inline","value":[{"name":"works_for","source":"person","target":"company"}]}');

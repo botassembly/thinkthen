@@ -1,0 +1,31 @@
+#!/bin/sh
+# Use prepared build tools offline; install the wheel alone before adding pytest.
+set -eu
+cd "$(dirname "$0")/.."
+exec uv run --offline --no-project --python 3.10 \
+  --with 'maturin>=1.5,<2' --with 'pytest>=8,<9' \
+  --with 'ruff>=0.11,<1' --with 'mypy>=1.15,<2' \
+  --with 'pandas>=2.2' --with pandas-stubs --with 'polars>=1.0' -- sh -eu <<'CHECKS'
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python sdk/python/relation_type.py
+ruff check sdk/python --exclude _relation.py
+ruff format --check sdk/python --exclude _relation.py
+mypy --strict --no-incremental sdk/python/thinkthen/*.py sdk/python/tests
+cargo build -p loopback --bin loopback --locked
+mkdir "$scratch/wheels"
+(cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")
+python -m venv "$scratch/venv"
+"$scratch/venv/bin/python" -m pip install --no-index "$scratch"/wheels/*.whl
+export THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-$root/target}/debug/loopback"
+export THINKTHEN_CASES="$root/conformance"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH PYTHONPATH
+cd "$scratch"
+"$scratch/venv/bin/python" "$root/sdk/python/tests/conformance.py" --cases "$root/conformance" --scratch "$scratch"
+"$scratch/venv/bin/python" -c 'import sys, thinkthen; assert "pandas" not in sys.modules and "polars" not in sys.modules'
+uv pip install --offline --python "$scratch/venv/bin/python" 'pandas>=2.2' 'polars>=1.0' pandas-stubs
+mypy --strict --no-incremental --python-executable "$scratch/venv/bin/python" "$root/sdk/python/tests/typing_examples.py"
+uv pip install --offline --python "$scratch/venv/bin/python" 'pytest>=8,<9'
+"$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests" -q --tb=short
+CHECKS

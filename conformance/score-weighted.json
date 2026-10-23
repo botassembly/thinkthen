@@ -1,0 +1,49 @@
+{
+  "client": {},
+  "expected": [
+    {
+      "answer": 0.8,
+      "detail": {
+        "probabilities": [
+          0.2,
+          0.8
+        ],
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "6b7eb38e96d8570df5483f48c3245266a5ed62072ebbfdbb8afdb4986b930daa"
+        }
+      },
+      "id": 1,
+      "status": "answered"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "probabilities": {
+          "0": 0.2,
+          "1": 0.8
+        },
+        "type": "score"
+      }
+    }
+  ],
+  "request": {
+    "function": "score",
+    "options": {
+      "levels": [
+        "low",
+        "high"
+      ]
+    },
+    "question": {
+      "type": "inline",
+      "value": "How much?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 1
+}

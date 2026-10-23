@@ -1,0 +1,39 @@
+#!/bin/sh
+# Load one installed extension in the minimum and current SQLite native hosts.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/sqlite-package "$scratch/built"
+mkdir "$scratch/installed"
+tar -xzf "$scratch/built"/*.tar.gz -C "$scratch/installed"
+case "$(uname -s)" in Darwin) extension=thinkthen_sqlite.dylib ;; Linux) extension=thinkthen_sqlite.so ;; esac
+tools="$HOME/.local/share/thinkthen-build-tools"
+cargo build --offline --locked -p loopback --bin loopback
+target=${CARGO_TARGET_DIR:-target}
+case "$target" in /*) ;; *) target="$root/$target" ;; esac
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # Attribute static SQL host counters to the installed database consumer.
+    LLVM_PROFILE_FILE="$target/sqlite-%p-%m.profraw"
+    export LLVM_PROFILE_FILE
+fi
+status=0
+for version in 3.41.0 3.54.1; do
+    cc -std=c11 -Wall -Wextra -Werror -pthread \
+        -I "$tools/sqlite-$version" -I "$tools/jansson/include" \
+        extensions/sqlite/tests/consumer.c "$tools/sqlite-$version/libsqlite3.a" \
+        "$tools/jansson/lib/libjansson.a" -ldl -lm -o "$scratch/consumer"
+    python3 extensions/sqlite/tests/record-types.py "$tools/sqlite-$version/bin/sqlite3" "$scratch/installed/$extension" "$root" || status=1
+    python3 extensions/sqlite/tests/run.py "$scratch/consumer" "$scratch/installed/$extension" "$target/debug/loopback" "$root" || status=1
+done
+[ "$status" = 0 ] || exit "$status"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # Retain the actual static consumer for cargo-llvm-cov object discovery.
+    cp "$scratch/installed/$extension" "$target/debug/thinkthen-ffi.so"
+fi
+if [ -n "${THINKTHEN_SQLITE_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_SQLITE_ARTIFACT_DIR"
+    cp "$scratch/built"/*.tar.gz "$scratch/consumer" "$THINKTHEN_SQLITE_ARTIFACT_DIR/"
+    cp -R "$scratch/built/build" "$THINKTHEN_SQLITE_ARTIFACT_DIR/"
+fi

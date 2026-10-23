@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Run the delivered PostgreSQL README quickstart in an isolated local server."""
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+package = Path(sys.argv[1])
+blocks = re.findall(r'```sql\n(.*?)\n```', (package / 'postgres/README.md').read_text(), re.S)
+with tempfile.TemporaryDirectory(prefix='thinkthen-readme-pg-') as temporary:
+    home = Path(temporary)
+    data = home / 'data'
+    subprocess.run(['initdb', '-D', data, '-A', 'trust', '-U', 'thinkthen', '--no-locale', '-E', 'UTF8'], check=True)
+    subprocess.run(['pg_ctl', '-D', data, '-l', home / 'server.log', '-o', '-k ' + temporary + ' -c listen_addresses=', '-w', 'start'], check=True)
+    try:
+        env = dict(os.environ, PGHOST=temporary, PGUSER='thinkthen', PGDATABASE='postgres')
+        sql = 'CREATE ROLE application_role;\n' + blocks[0] + '\n' + blocks[1]
+        result = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
+                                capture_output=True, env=env, check=True)
+        assert '(2 rows)' in result.stdout, result.stdout
+    finally:
+        subprocess.run(['pg_ctl', '-D', data, '-m', 'fast', '-w', 'stop'], check=True)
+print('README: PostgreSQL passes')

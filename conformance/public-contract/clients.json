@@ -1,0 +1,42 @@
+[
+  {
+    "settings": "{",
+    "code": "usage.settings"
+  },
+  {
+    "settings": "{\"adapter\":\"stub\",\"unexpected\":true}",
+    "code": "usage.settings"
+  },
+  {
+    "settings": "{\"adapter\":\"stub\",\"adapter\":\"stub\"}",
+    "code": "usage.settings"
+  },
+  {
+    "settings": "{\"mode\":\"unavailable\"}",
+    "code": "usage.settings"
+  },
+  {
+    "settings": "{\"adapter\":\"unknown\"}",
+    "code": "usage.backend"
+  },
+  {
+    "settings": "{\"mode\":\"proxy\"}",
+    "code": "usage.mode"
+  },
+  {
+    "settings": "{}",
+    "code": "usage.key-missing"
+  },
+  {
+    "settings": "{\"adapter\":\"stub\",\"batch\":0}",
+    "code": "usage.batch"
+  },
+  {
+    "settings": "{\"adapter\":\"stub\",\"key_source\":\"THINKTHEN_API_KEY\"}",
+    "code": "usage.key-source"
+  },
+  {
+    "settings": "{\"url\":\"http://remote.invalid\"}",
+    "code": "usage.url"
+  }
+]

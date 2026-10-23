@@ -1,0 +1,20 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.name"
+  },
+  "replies": [],
+  "request": {
+    "function": "recognize",
+    "question": {
+      "type": "inline",
+      "value": [
+        "bad\u0000kind"
+      ]
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

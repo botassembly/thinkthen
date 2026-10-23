@@ -1,0 +1,22 @@
+#!/bin/sh
+# Compile the pinned database archives for the approved Mac deployment target.
+set -eu
+cd "$(dirname "$0")/../.."
+: "${PM_JOB:?Run preparation through pm job}"
+. scripts/native-build-env
+[ "$(uname -s)" = Darwin ]
+source="$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3"
+prefix="$THINKTHEN_RUNTIME_PREFIX/duckdb"
+mkdir -p "$prefix/static" "$prefix/cli"
+if [ ! -d "$prefix/duckdb-1.4.3" ]; then cp -R "$source/duckdb-1.4.3" "$prefix/"; fi
+cp "$source/cli/duckdb" "$prefix/cli/"
+cp "$source"/duckdb-*.whl "$prefix/"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+cmake -S "$prefix/duckdb-1.4.3" -B "$work/build" -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
+    -DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DDISABLE_BUILTIN_EXTENSIONS=ON \
+    -DOVERRIDE_GIT_DESCRIBE=v1.4.3
+cmake --build "$work/build" --target duckdb_static --parallel 2 > "$work/build.log" 2>&1 || { tail -80 "$work/build.log"; exit 1; }
+find "$work/build" -name '*.a' -exec cp {} "$prefix/static/" \;
+printf '%s\n' "$prefix"

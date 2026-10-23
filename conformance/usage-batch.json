@@ -1,0 +1,20 @@
+{
+  "client": {
+    "batch": 0
+  },
+  "expected": {
+    "error": "usage.batch"
+  },
+  "replies": [],
+  "request": {
+    "function": "decide",
+    "question": {
+      "type": "inline",
+      "value": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

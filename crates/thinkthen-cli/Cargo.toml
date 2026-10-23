@@ -1,0 +1,31 @@
+[package]
+name = "thinkthen-cli"
+description = "The thinkthen command"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+
+[[bin]]
+name = "thinkthen"
+path = "src/main.rs"
+
+[dependencies]
+log.workspace = true
+ctrlc = "3.5"
+clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context"] }
+serde_json.workspace = true
+thinkthen.workspace = true
+thinkthen-runs.workspace = true
+thinkthen-files.workspace = true
+
+[dev-dependencies]
+csv = "=1.4.0"
+tempfile = "=3.23.0"
+zip = { version = "=0.6.6", default-features = false, features = ["deflate"] }
+loopback.workspace = true
+
+[lints]
+workspace = true

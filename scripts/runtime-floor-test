@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Run the delivered install commands inside their approved Linux baselines."""
+from release_images import image
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+from runtime_floors import FLOORS
+
+if len(sys.argv) != 2:
+    sys.exit('usage: runtime-floor-test PLATFORM_DIRECTORY ')
+folder = Path(sys.argv[1]).resolve()
+tools = Path.home() / '.local/share/thinkthen-build-tools'
+commands = dict(re.findall(r'^## ([^\n]+)\n(?:(?!^## ).)*?^```sh\n(.*?)\n```', (folder / 'INSTALL.md').read_text(), re.M | re.S))
+assert {'command', 'python', 'typescript', 'go', 'c', 'cpp', 'java', 'kotlin', 'csharp', 'ruby', 'zig', 'r', 'sqlite', 'duckdb', 'postgres', 'swift', 'pandas and Polars'} == commands.keys(), commands.keys()
+base = ['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+        '--label', 'pm.ticket=' + (os.environ.get('PM_JOB', '').split() or ['local'])[0], '-i', '-v', f'{folder}:/candidate:ro']
+runtime = tools / f'floors/linux-glibc{FLOORS["linux"]["glibc"]}'
+mounts = ['-v', f'{tools}/jvm/jdk-22.0.2+9:/runtime/java:ro',
+          '-v', f'{tools}/dotnet10:/runtime/dotnet:ro', '-v', f'{runtime}/bin:/runtime/bin:ro']
+script = '''set -eu
+mkdir -p /tmp/work /tmp/home /tmp/bin
+cp -a /candidate/. /tmp/work/
+cd /tmp/work
+export HOME=/tmp/home LANG=C.UTF-8 PATH=/tmp/bin:/runtime/bin:/opt/python/cp310-cp310/bin:/opt/node/bin:/opt/ruby/bin:/opt/R/bin:/usr/bin:/bin
+ln -s /runtime/java/bin/java /tmp/bin/java
+ln -s /runtime/dotnet/dotnet /tmp/bin/dotnet
+getconf GNU_LIBC_VERSION
+'''
+for name, command in commands.items():
+    if name not in ('swift', 'postgres'):
+        script += f'printf "runtime floor: {name}\\n"\n( {command} )\n'
+# The official DuckDB Python host has a separate ABI wheel beside its CLI.
+script += """python3 - <<'PYTHON'
+import glob, subprocess, sysconfig, zipfile
+wheel = glob.glob('prerequisites/duckdb/*.whl')[0]
+tag = wheel.split('-')[2]
+subprocess.run([f'/opt/python/{tag}-{tag}/bin/python', '-m', 'venv', '--without-pip', '.smoke-duck-python'], check=True)
+python = '.smoke-duck-python/bin/python'
+site = subprocess.check_output([python, '-c', 'import sysconfig; print(sysconfig.get_paths()["purelib"])'], text=True).strip()
+with zipfile.ZipFile(wheel) as archive: archive.extractall(site)
+subprocess.run([python, 'checks/sql.py', 'duckdb-python', 'unused', 'duckdb/thinkthen.duckdb_extension', 'checks/stub.json'], check=True)
+PYTHON
+"""
+subprocess.run([*base, *mounts, image('floor'), 'sh'], input=script, text=True, check=True)
+# Swift uses its own documented Jammy runtime dependencies and no compiler mount.
+script = '''set -eu
+mkdir -p /tmp/work /tmp/home
+cp -a /candidate/. /tmp/work/
+cd /tmp/work
+export HOME=/tmp/home PATH=/usr/bin:/bin LANG=C.UTF-8
+getconf GNU_LIBC_VERSION
+for tool in swift clang cc rustc cargo; do if command -v "$tool"; then echo "compiler present: $tool" >&2; exit 1; fi; done
+''' + commands['swift'] + '\n'
+subprocess.run([*base, image('swift'), 'sh'], input=script, text=True, check=True)
+# The same installed PostgreSQL consumer owns server setup and shutdown.
+script = '''set -eu
+mkdir /tmp/package /tmp/pg
+tar -xzf /candidate/postgres/*.tar.gz -C /tmp/package
+cp /tmp/package/lib/* "$(pg_config --pkglibdir)/"
+cp /tmp/package/share/extension/* "$(pg_config --sharedir)/extension/"
+chown -R 65534:65534 /tmp/pg
+exec setpriv --reuid 65534 --regid 65534 --clear-groups env -i HOME=/tmp/pg PATH=/opt/thinkthen-pg18/bin:/opt/python/cp310-cp310/bin:/usr/bin:/bin LANG=C.UTF-8 sh /candidate/checks/postgres.sh
+'''
+subprocess.run([*base, image('floor'), 'sh'], input=script, text=True, check=True)
+print('installed packages: all public install commands pass on their Linux floors')

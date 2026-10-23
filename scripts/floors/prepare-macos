@@ -1,0 +1,52 @@
+#!/bin/sh
+# Prepare compatible public R and C dependencies without changing installed tools.
+set -eu
+cd "$(dirname "$0")/../.."
+: "${PM_JOB:?Run preparation through pm job}"
+. scripts/native-build-env
+tools="$HOME/.local/share/thinkthen-build-tools"
+floor="$tools/floors/macos$MACOSX_DEPLOYMENT_TARGET"
+mkdir -p "$floor/sources"
+python3 scripts/release_downloads.py https://cran.r-project.org/bin/macosx/sonoma-arm64/base/R-4.6.1-arm64.pkg "$floor/sources/R.pkg"
+pkgutil --check-signature "$floor/sources/R.pkg"
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+pkgutil --expand-full "$floor/sources/R.pkg" "$work/expanded"
+framework=$(find "$work/expanded" -type d -name R.framework | head -1)
+test -n "$framework"
+mkdir -p "$floor/Frameworks"
+cp -R "$framework" "$floor/Frameworks/"
+resources="$floor/Frameworks/R.framework/Resources"
+mkdir -p "$floor/bin" "$floor/include"
+# Header only: libR exports these functions; no Homebrew library is linked.
+gettext_header=/opt/zerobrew/opt/gettext/include/libintl.h
+if [ ! -f "$gettext_header" ]; then gettext_header="$(brew --prefix gettext)/include/libintl.h"; fi
+cp "$gettext_header" "$floor/include/"
+# R's launcher chooses its relocated resource root; the framework's public
+# install names remain those of the ordinary CRAN installation.
+python3 - "$resources" "$floor" <<'PY'
+from pathlib import Path
+import sys
+resources, floor = map(Path, sys.argv[1:])
+for name in ('bin/R', 'etc/Makeconf', 'etc/Renviron'):
+    path = resources / name
+    text = path.read_text().replace('/Library/Frameworks', str(floor / 'Frameworks'))
+    text = text.replace('-I/opt/R/arm64/include', '-I' + str(floor / 'include')).replace('-L/opt/R/arm64/lib', '')
+    path.write_text(text)
+for tool in ('R', 'Rscript'):
+    path = floor / 'bin' / tool
+    path.write_text('#!/bin/sh\nexport RHOME="' + str(resources) + '"\nexport DYLD_FRAMEWORK_PATH="' + str(floor / 'Frameworks') + '"\nexec "' + str(resources / 'bin' / tool) + '" "$@"\n')
+    path.chmod(0o755)
+PY
+"$floor/bin/Rscript" --vanilla -e 'cat(as.character(getRversion()), "\n")'
+python3 scripts/release_downloads.py https://github.com/akheron/jansson/archive/refs/tags/v2.14.tar.gz "$floor/sources/jansson.tar.gz"
+tar -xzf "$floor/sources/jansson.tar.gz" -C "$work"
+cmake -S "$work/jansson-2.14" -B "$work/jansson-build" -DCMAKE_INSTALL_PREFIX="$floor/jansson" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DJANSSON_BUILD_SHARED_LIBS=OFF -DJANSSON_BUILD_DOCS=OFF -DJANSSON_BUILD_TESTS=OFF
+cmake --build "$work/jansson-build" --parallel 2
+cmake --install "$work/jansson-build"
+python3 scripts/release_downloads.py https://cran.r-project.org/src/contrib/jsonlite_2.0.0.tar.gz "$floor/sources/jsonlite_2.0.0.tar.gz" || \
+    python3 scripts/release_downloads.py https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_2.0.0.tar.gz "$floor/sources/jsonlite_2.0.0.tar.gz"
+shasum -a 256 "$floor/sources/R.pkg" "$floor/sources/jansson.tar.gz" "$floor/sources/jsonlite_2.0.0.tar.gz" > "$floor/sources/SHA256SUMS"
+printf '%s\n' "$floor"

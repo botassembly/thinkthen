@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Package optimized platform gems, or the instrumented host gem for coverage."""
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import tomllib
+from native_platform import HOSTS, current
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+if len(sys.argv) != 2:
+    sys.exit("usage: scripts/ruby-package OUTPUT")
+output = pathlib.Path(sys.argv[1]).resolve()
+output.mkdir(parents=True, exist_ok=True)
+version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+platforms = tuple((row[4], row[1], 'libthinkthen_ffi.' + row[5]) for row in HOSTS.values())
+host = current()['ruby']
+if os.environ.get("LLVM_PROFILE_FILE"):
+    subprocess.run(["cargo", "build", "--offline", "--locked", "-p", "thinkthen-ffi"], cwd=ROOT, check=True)
+    platforms = tuple(item for item in platforms if item[0] == host)
+    target = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+    cache = None
+else:
+    cache = pathlib.Path(subprocess.check_output([str(ROOT / "scripts/native-prepare"), "--path"], text=True).strip())
+    platforms = tuple(item for item in platforms if (cache / item[1] / item[2]).is_file())
+    if not any(item[0] == host for item in platforms):
+        sys.exit('Prepare the host native engine before packaging Ruby')
+for platform, rid, library in platforms:
+    asset = cache / rid / library if cache else ROOT / target / "debug" / library
+    if not asset.is_file():
+        sys.exit(f"missing prepared native asset: {asset}")
+    with tempfile.TemporaryDirectory() as temporary:
+        stage = pathlib.Path(temporary)
+        shutil.copytree(ROOT / "sdk/ruby/lib", stage / "lib")
+        for source in (ROOT / "sdk/ruby/README.md", ROOT / "sdk/ruby/thinkthen.gemspec", ROOT / "LICENSE"):
+            shutil.copy2(source, stage / source.name)
+        shutil.copy2(asset, stage / "lib/thinkthen" / library)
+        (stage / "VERSION").write_text(version + "\n")
+        (stage / "PLATFORM").write_text(platform + "\n")
+        subprocess.run(["gem", "build", "--strict", "thinkthen.gemspec"], cwd=stage, check=True)
+        archive = next(stage.glob("*.gem"))
+        shutil.copy2(archive, output / archive.name)

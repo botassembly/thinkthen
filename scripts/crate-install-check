@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+"""Install published Rust packages by name from their release source archives."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import tarfile
+import tempfile
+
+from release_workflow import run, version
+from release_sites import CRATES
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('crates', type=Path)
+args = parser.parse_args()
+with tempfile.TemporaryDirectory(prefix='thinkthen-crate-install-') as temporary:
+    scratch = Path(temporary)
+    vendor = scratch / 'vendor'
+    run('cargo', 'vendor', '--offline', '--locked', '--quiet', vendor, stdout=subprocess.DEVNULL)
+    for name in CRATES:
+        archive = args.crates / f'{name}-{version()}.crate'
+        with tarfile.open(archive) as source:
+            source.extractall(vendor, filter='data')
+        package = vendor / archive.stem
+        files = {str(path.relative_to(package)): hashlib.sha256(path.read_bytes()).hexdigest()
+                 for path in package.rglob('*') if path.is_file()}
+        (package / '.cargo-checksum.json').write_text(json.dumps({
+            'package': hashlib.sha256(archive.read_bytes()).hexdigest(), 'files': files}))
+    consumer = scratch / 'consumer'
+    (consumer / '.cargo').mkdir(parents=True)
+    (consumer / '.cargo/config.toml').write_text(
+        '[source.crates-io]\nreplace-with="release-packages"\n'
+        '[source.release-packages]\ndirectory=' + json.dumps(str(vendor)) + '\n')
+    run('cargo', 'install', '--config', consumer / '.cargo/config.toml', '--offline', '--locked', '--root', scratch / 'installed',
+        '--version', version(), 'thinkthen-cli', cwd=consumer)
+    environment = {k: v for k, v in os.environ.items() if k not in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL')}
+    result = subprocess.run([scratch / 'installed/bin/thinkthen', 'decide', '--adapter', 'stub',
+        '--details', 'Ready?'], input='evidence 5', text=True, capture_output=True, env=environment)
+    assert result.returncode in (0, 1, 3), result.stderr
+    assert json.loads(result.stdout)['status'] in ('answered', 'unsure'), result.stdout
+    print('release: all five Rust source packages install by name and the command loads the engine')

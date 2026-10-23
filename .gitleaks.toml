@@ -1,0 +1,8 @@
+# Keep every upstream detector. This literal is a public loopback-test fixture.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exact synthetic key used by the JVM and TypeScript loopback tests"
+regexTarget = "secret"
+regexes = ['''^sk-test-0123456789$''']

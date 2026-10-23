@@ -1,0 +1,79 @@
+[
+  {
+    "function": "recognize",
+    "sample": "48 names-template sentences",
+    "backend": "systemone",
+    "model": "jev-1.13.0",
+    "date": "2026-09-30",
+    "metric": "song precision/recall",
+    "precision": 1,
+    "recall": 1,
+    "f1": null,
+    "source": "https://github.com/botassembly/beatles-bench/blob/40e9384ccc33cd0c92a069ebe0708a4544f79d99/reports/results.md",
+    "comparison": "Same texts, kinds and punctuation-trim matching; aggregate F1 unavailable in recorded table.",
+    "scope": "recognize:song"
+  },
+  {
+    "function": "recognize",
+    "sample": "48 names-template sentences",
+    "backend": "systemone",
+    "model": "jev-1.13.0",
+    "date": "2026-09-30",
+    "metric": "person precision/recall",
+    "precision": 1,
+    "recall": 1,
+    "f1": null,
+    "source": "https://github.com/botassembly/beatles-bench/blob/40e9384ccc33cd0c92a069ebe0708a4544f79d99/reports/results.md",
+    "comparison": "Same texts, kinds and punctuation-trim matching; aggregate F1 unavailable in recorded table.",
+    "scope": "recognize:person"
+  },
+  {
+    "function": "recognize",
+    "sample": "48 names-template sentences",
+    "backend": "systemone",
+    "model": "jev-1.13.0",
+    "date": "2026-09-30",
+    "metric": "album precision/recall",
+    "precision": 0.844,
+    "recall": 0.792,
+    "f1": null,
+    "source": "https://github.com/botassembly/beatles-bench/blob/40e9384ccc33cd0c92a069ebe0708a4544f79d99/reports/results.md",
+    "comparison": "Same texts, kinds and punctuation-trim matching; aggregate F1 unavailable in recorded table.",
+    "scope": "recognize:album"
+  },
+  {
+    "function": "relate",
+    "sample": "40 relations sentences",
+    "backend": "systemone",
+    "model": "jev-1.13.0",
+    "date": "2026-09-30",
+    "metric": "stated edge precision/recall/F1",
+    "precision": 0.972,
+    "recall": 0.761,
+    "f1": 0.854,
+    "source": "https://github.com/botassembly/beatles-bench/blob/40e9384ccc33cd0c92a069ebe0708a4544f79d99/reports/results.md",
+    "comparison": "Same stated-edge task and texts; benchmark command recognizes names with song/person/album then reads sung_by/appears_on. Current relate obtains kinds from relation rules."
+  },
+  {
+    "function": "find",
+    "sample": "nine numbered-line documents, 100/175/250 lines",
+    "backend": "systemone",
+    "model": "jev-1.13.0",
+    "metric": "correct answering lines / answerable documents; correct refusals / blank documents",
+    "answerable": "6/6",
+    "blank": "3/3",
+    "precision": null,
+    "recall": null,
+    "f1": null,
+    "source": "Authored permit-document measurement: fixed s100-a1/a2/b1, s175-a1/a2/b1, s250-a1/a2/b1 sample",
+    "comparison": "Same line content and answer positions; benchmark offered labeled units as choices. Current command reads newline text. Recorded precision/recall/F1 unavailable; do not treat hit counts as an equivalent baseline."
+  },
+  {
+    "function": "all",
+    "backend": "openai",
+    "precision": null,
+    "recall": null,
+    "f1": null,
+    "comparison": "Unavailable: no recorded OpenAI scores for these samples."
+  }
+]

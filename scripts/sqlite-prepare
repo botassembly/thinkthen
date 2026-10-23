@@ -1,0 +1,37 @@
+#!/bin/sh
+# Online dependency preparation; ordinary package checks never download tools.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-build-env
+tools="$HOME/.local/share/thinkthen-build-tools"
+sqlite="$tools/sqlite-3.41.0"
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+check_hash() {
+    if command -v sha256sum >/dev/null 2>&1; then actual=$(sha256sum "$1" | cut -d ' ' -f 1)
+    else actual=$(shasum -a 256 "$1" | cut -d ' ' -f 1); fi
+    [ "$actual" = "$2" ] || { echo 'dependency checksum mismatch' >&2; exit 1; }
+}
+for release in '3.41.0 2023 3410000 146ce189b67fdbefbf2d72cdc81e198d07ff643614cc9102e9bf063255e8e7e1' \
+               '3.54.1 2026 3540100 0a9c8e34352dad46006aa82836d5383bff9dc6bc9ce5a60553c05aa30e6ad1f9'; do
+    set -- $release
+    sqlite="$tools/sqlite-$1"
+    if [ -f "$sqlite/libsqlite3.a" ] && [ -x "$sqlite/bin/sqlite3" ]; then continue; fi
+    curl -fsSL "https://www.sqlite.org/$2/sqlite-amalgamation-$3.zip" -o "$scratch/sqlite.zip"
+    check_hash "$scratch/sqlite.zip" "$4"
+    unzip -q "$scratch/sqlite.zip" -d "$scratch"
+    mkdir -p "$sqlite/bin"
+    cp "$scratch/sqlite-amalgamation-$3/sqlite3.h" "$sqlite/"
+    cp "$scratch/sqlite-amalgamation-$3/sqlite3ext.h" "$sqlite/"
+    cc -O2 -fPIC -DSQLITE_THREADSAFE=1 -c "$scratch/sqlite-amalgamation-$3/sqlite3.c" -o "$scratch/sqlite3.o"
+    ar rcs "$sqlite/libsqlite3.a" "$scratch/sqlite3.o"
+    cc -O2 "$scratch/sqlite-amalgamation-$3/shell.c" "$sqlite/libsqlite3.a" \
+        -ldl -lpthread -lm -o "$sqlite/bin/sqlite3"
+done
+if [ ! -f "$tools/jansson/lib/libjansson.a" ]; then
+    curl -fsSL https://github.com/akheron/jansson/releases/download/v2.14.1/jansson-2.14.1.tar.gz -o "$scratch/jansson.tar.gz"
+    check_hash "$scratch/jansson.tar.gz" 2521cd51a9641d7a4e457f7215a4cd5bb176f690bc11715ddeec483e85d9e2b3
+    tar -xzf "$scratch/jansson.tar.gz" -C "$scratch"
+    (cd "$scratch/jansson-2.14.1" && CFLAGS='-O2 -fPIC' ./configure --prefix="$tools/jansson" --disable-shared && make -j2 && make install)
+fi
+printf '%s\n' 'SQLite and Jansson build dependencies are ready'

@@ -1,0 +1,47 @@
+[workspace]
+members = ["crates/thinkthen-proxy", "crates/thinkthen-runs", "crates/thinkthen-files", "crates/thinkthen-sql", "crates/thinkthen-core", "crates/thinkthen", "crates/thinkthen-cli", "crates/thinkthen-ffi", "crates/loopback", "sdk/python/native", "sdk/typescript/native", "sdk/r/native"]
+resolver = "3"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.95.0"
+license = "MIT"
+repository = "https://github.com/botassembly/thinkthen"
+
+[workspace.dependencies]
+# Final artifacts disable dependency wire tracing; reusable libraries omit this dependency.
+log = { version = "0.4", features = ["max_level_debug"] }
+thinkthen-runs = { path = "crates/thinkthen-runs", version = "0.2.0" }
+thinkthen-files = { path = "crates/thinkthen-files", version = "0.2.0" }
+thinkthen-core = { path = "crates/thinkthen-core", version = "0.2.0" }
+thinkthen = { path = "crates/thinkthen", version = "0.2.0" }
+loopback = { path = "crates/loopback" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "1.2.3"
+sha2 = { version = "0.10", default-features = false }
+thiserror = "2"
+unicode-general-category = "1.1"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+[workspace.lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "deny"
+unreachable_pub = "forbid"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+allow_attributes_without_reason = "deny"
+dbg_macro = "deny"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
+
+[profile.release]
+overflow-checks = true

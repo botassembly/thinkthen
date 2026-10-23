@@ -1,0 +1,24 @@
+[package]
+name = "thinkthen"
+description = "Ask typed questions about evidence and branch on the answer"
+readme = "../../README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thinkthen-core.workspace = true
+ureq.workspace = true
+
+[dev-dependencies]
+jsonschema = { version = "0.46", default-features = false }
+loopback.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

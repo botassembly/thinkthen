@@ -1,0 +1,16 @@
+{
+  "Cargo.lock": "8b4f48fc7422998b089bcf34be627532126589d72f9264cb668531e4d5d1e760",
+  "Cargo.toml": "52737b4e788d4eb64ad7faf239add6793670b97f2d7ac18a64b9773098e96075",
+  "crates/loopback/Cargo.toml": "947edf6c3781d7d0a211780377e55589d617ade10f85b00631f17d63cec8b455",
+  "crates/thinkthen-cli/Cargo.toml": "a87e43144da4712326e90dfea390194a62733dd53dd18400459282a7b32b9281",
+  "crates/thinkthen-core/Cargo.toml": "78dbfce8154f3f57b3ece6b45a73560b2a2144761de8449b751a81631b7c31d2",
+  "crates/thinkthen-ffi/Cargo.toml": "79e84c177d77560a54c18df60bc56839c9818fe290eb69e2d42496660ff7f1b7",
+  "crates/thinkthen-files/Cargo.toml": "d455f103a6c81633205c93d97ddcac2835a77a92f2b12729337869cb979d8dea",
+  "crates/thinkthen-proxy/Cargo.toml": "2849f19758bc48016a7883669e98d8f69a34665f77124fd54db12b71e4d27c52",
+  "crates/thinkthen-runs/Cargo.toml": "1e88b7f1afd5ba028169ee1f4e38bb3d0fd7fcf9a0b8a6821f607ee84177c481",
+  "crates/thinkthen-sql/Cargo.toml": "ad685304e3bc991b0a203b7086d5f77488f1c3c1586e4750bb7d9f1aef3e348a",
+  "crates/thinkthen/Cargo.toml": "314e101bea20bf1c8c1865f03fdb281fabffc801353533ea8564ff28835e8448",
+  "sdk/python/native/Cargo.toml": "15d82fb31816b59ef34601f41d29c95b2f43cf13484c790b52240f3f944a7fe1",
+  "sdk/r/native/Cargo.toml": "1341964d41d9abeaa2763ed7949562e355deecf8e53f954e848de2f68efc0217",
+  "sdk/typescript/native/Cargo.toml": "9a694a25b92fc072078b290eb9e999637d0cd233c2b0291a90ef0a34d710478d"
+}

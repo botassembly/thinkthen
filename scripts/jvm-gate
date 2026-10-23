@@ -1,0 +1,108 @@
+#!/bin/sh
+# Build native output once; test the installed Java and Kotlin artifacts offline.
+set -eu
+version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
+cd "$(dirname "$0")/.."
+root=$PWD
+. scripts/jvm-env
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH CLASSPATH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ]; then
+  cargo build --offline --locked -p loopback --bin loopback
+else
+  cargo build --offline --locked -p thinkthen-ffi -p loopback --bin loopback --lib
+fi
+rm -rf sdk/java/library/target/classes sdk/kotlin/target/classes
+native_target=${CARGO_TARGET_DIR:-target}
+resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+mkdir -p "$resource"
+if [ -z "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ]; then cp "$native_target/debug/$jvm_library" "$resource/"; fi
+if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ]; then
+  test -f "$THINKTHEN_JVM_NATIVE_ASSETS/linux-amd64/libthinkthen_ffi.so"
+  test -f "$THINKTHEN_JVM_NATIVE_ASSETS/macos-arm64/libthinkthen_ffi.dylib"
+  cp -RL "$THINKTHEN_JVM_NATIVE_ASSETS"/. sdk/java/library/target/classes/io/thinkthen/native/
+fi
+# The shared pair is release output. Coverage must execute this tree's
+# instrumented host library while retaining the opposite platform in the jar.
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+  cargo build --offline --locked -p thinkthen-ffi
+  cp "$native_target/debug/$jvm_library" "$resource/"
+fi
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
+mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" install -DskipTests
+cp -R sdk/java/consumer/. "$scratch/"
+case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
+native_input="$native_target/debug/$jvm_library"
+if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ] && [ -z "${LLVM_PROFILE_FILE:-}" ]; then
+  native_input="$THINKTHEN_JVM_NATIVE_ASSETS/$jvm_platform/$jvm_library"
+fi
+export THINKTHEN_LOOPBACK="$native_target/debug/loopback"
+export THINKTHEN_API_KEY=sk-test-0123456789
+PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:/usr/bin:/bin"
+export PATH
+cd "$scratch"
+mvn -o -B -q -Dmaven.repo.local="$scratch/m2" package dependency:build-classpath -Dmdep.outputFile="$scratch/classpath"
+python3 "$root/scripts/jvm_repository.py" verify "$root" "$scratch/classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
+classpath="target/classes:$(cat "$scratch/classpath")"
+mkdir -p "$scratch/home"
+XDG_CACHE_HOME="$scratch/home/.cache"
+export XDG_CACHE_HOME
+java() { command "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" "$@"; }
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json"
+case "$(uname -s)" in
+    Darwin) loader_cache="$scratch/home/Library/Caches" ;;
+    *) loader_cache="$XDG_CACHE_HOME" ;;
+esac
+python3 "$root/scripts/loader-cache-check" "$loader_cache" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json" --stub-only
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinCasesKt "$root/construction/stub.json"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCases "$root/construction/options.json"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCasesKt "$root/construction/options.json"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinConformanceKt "$root/conformance"
+
+
+cat > src/main/kotlin/UnsupportedThreshold.kt <<'KOTLIN'
+import io.thinkthen.kotlin.ThinkThen
+import com.fasterxml.jackson.databind.JsonNode
+suspend fun unsupported(client: ThinkThen, toolbox: JsonNode) {
+    client.score("Ready?", "text", listOf("low", "high"), threshold = "0.5")
+    client.rank("Ready?", listOf("text"), threshold = "0.5")
+    client.annotate(toolbox, "text", threshold = "0.5")
+}
+KOTLIN
+if mvn -o -B -q -Dmaven.repo.local="$scratch/m2" process-classes > "$scratch/threshold.log" 2>&1; then
+  echo 'Kotlin accepted unsupported threshold parameters' >&2
+  exit 1
+fi
+python3 - "$scratch/threshold.log" <<'PYTHON'
+from pathlib import Path
+import sys
+text = Path(sys.argv[1]).read_text()
+for line in (4, 5, 6):
+    assert any(f'UnsupportedThreshold.kt:{line}:' in message and 'None of the following candidates is applicable' in message
+               for message in text.splitlines()), text
+print("Kotlin score, rank and annotate reject threshold at compile time")
+PYTHON
+rm src/main/kotlin/UnsupportedThreshold.kt
+
+if [ -n "${THINKTHEN_JVM_OUT:-}" ]; then
+  mkdir -p "$THINKTHEN_JVM_OUT/lib" "$THINKTHEN_JVM_OUT/maven" "$THINKTHEN_JVM_OUT/construction"
+  python3 - "$scratch/classpath" "$THINKTHEN_JVM_OUT/lib" "$scratch/packaged-classpath" <<'PYTHON'
+import pathlib, shutil, sys
+selected = []
+for item in pathlib.Path(sys.argv[1]).read_text().strip().split(':'):
+    destination = pathlib.Path(sys.argv[2]) / pathlib.Path(item).name
+    shutil.copy2(item, destination)
+    selected.append(str(destination))
+pathlib.Path(sys.argv[3]).write_text(':'.join(selected))
+PYTHON
+  cp target/thinkthen-consumer-$version.jar "$THINKTHEN_JVM_OUT/lib/"
+  cp "$root/sdk/java/consumer/run-live" "$root/sdk/java/consumer/run-stub" "$THINKTHEN_JVM_OUT/"
+  cp "$root/construction/stub.json" "$THINKTHEN_JVM_OUT/construction/"
+  cp "$root/sdk/java/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-jvm-parent-$version.pom"
+  cp "$root/sdk/java/library/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-java-$version.pom"
+  cp "$root/sdk/kotlin/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-kotlin-$version.pom"
+  python3 "$root/scripts/jvm_repository.py" verify "$root" "$scratch/packaged-classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
+  shasum -a 256 "$THINKTHEN_JVM_OUT/lib/thinkthen-java-$version.jar" "$THINKTHEN_JVM_OUT/lib/thinkthen-kotlin-$version.jar"
+fi

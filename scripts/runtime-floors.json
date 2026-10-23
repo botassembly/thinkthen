@@ -1,0 +1,29 @@
+{
+  "macos": "15.0",
+  "linux": {
+    "glibc": "2.28",
+    "glibcxx": "3.4.25",
+    "swift_glibc": "2.35",
+    "swift_glibcxx": "3.4.30"
+  },
+  "runtimes": {
+    "python": "Python >=3.10 with its pip/venv installer",
+    "typescript": "Node >=22",
+    "go": "Go >=1.22 and C compiler to build; OS runtime thereafter",
+    "java": "Java >=22; bundled Jackson/JSpecify jars",
+    "kotlin": "Java >=22; bundled Java, Kotlin stdlib and coroutine jars",
+    "csharp": ".NET10",
+    "ruby": "CRuby >=3.3 and RubyGems; bundled precompiled ffi gem",
+    "swift": "Swift >=6.3 toolchain to build; Swift 6.3.2 runtime, bundled Linux runtime libraries",
+    "zig": "Zig 0.17.0 compiler to build; operating-system runtime thereafter"
+  },
+  "r": {
+    "Darwin": "4.6",
+    "Linux": "4.3"
+  },
+  "windows": {
+    "name": "Windows Server 2022 x64",
+    "build": 20348,
+    "support": "tested on Windows Server 2022 x64; Windows 10 and 11 x64 are expected to work but are not tested in 0.2.0."
+  }
+}

@@ -1,0 +1,7 @@
+/target/
+**/target/
+*.profraw
+*.profdata
+/coverage/
+
+/sdk/python/thinkthen/_relation.py

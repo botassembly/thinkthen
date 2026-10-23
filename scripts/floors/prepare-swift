@@ -1,0 +1,21 @@
+#!/bin/sh
+# Prepare the pinned official Jammy compiler separately from offline consumers.
+set -eu
+cd "$(dirname "$0")/../.."
+: "${PM_JOB:?Run preparation through pm job}"
+tools="$HOME/.local/share/thinkthen-build-tools"
+mkdir -p "$tools/swift/6.3.2-ubuntu22.04"
+archive="$tools/swift/6.3.2-ubuntu22.04.tar.gz"
+case "$(uname -m)" in
+    aarch64) distribution=ubuntu2204-aarch64; suffix=-aarch64 ;;
+    x86_64) distribution=ubuntu2204; suffix= ;;
+    *) echo 'Unsupported Swift Linux architecture' >&2; exit 1 ;;
+esac
+python3 scripts/release_downloads.py \
+    "https://download.swift.org/swift-6.3.2-release/$distribution/swift-6.3.2-RELEASE/swift-6.3.2-RELEASE-ubuntu22.04$suffix.tar.gz" "$archive"
+if [ ! -x "$tools/swift/6.3.2-ubuntu22.04/usr/bin/swift" ]; then
+    tar -xzf "$archive" --strip-components=1 -C "$tools/swift/6.3.2-ubuntu22.04"
+fi
+sha256sum "$archive"
+docker build --label pm.repo=thinkthen --label "pm.ticket=${PM_JOB%% *}" \
+    -t thinkthen-swift-build:6.3.2-ubuntu22.04 -f scripts/floors/Swift.Dockerfile scripts/floors

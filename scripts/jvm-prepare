@@ -1,0 +1,28 @@
+#!/bin/sh
+# Prepare pinned build tools and Maven dependencies separately from offline gates.
+set -eu
+cd "$(dirname "$0")/.."
+cache=${THINKTHEN_JVM_CACHE:-$HOME/.local/share/thinkthen-build-tools/jvm}
+mkdir -p "$cache"
+case "$(uname -sm)" in
+  'Linux x86_64') asset=OpenJDK22U-jdk_x64_linux_hotspot_22.0.2_9.tar.gz; java_folder=jdk-22.0.2+9 ;;
+  'Linux aarch64') asset=OpenJDK22U-jdk_aarch64_linux_hotspot_22.0.2_9.tar.gz; java_folder=jdk-22.0.2+9 ;;
+  'Darwin arm64') asset=OpenJDK22U-jdk_aarch64_mac_hotspot_22.0.2_9.tar.gz; java_folder=jdk-22.0.2+9/Contents/Home ;;
+  *) echo 'Unsupported JVM build host' >&2; exit 1 ;;
+esac
+if [ ! -x "$cache/$java_folder/bin/java" ]; then
+  base=https://github.com/adoptium/temurin22-binaries/releases/download/jdk-22.0.2%2B9
+  python3 scripts/release_downloads.py "$base/$asset" "$cache/$asset"
+  tar -xzf "$cache/$asset" -C "$cache"
+  rm "$cache/$asset"
+fi
+if [ ! -x "$cache/apache-maven-3.9.11/bin/mvn" ]; then
+  url=https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz
+  python3 scripts/release_downloads.py "$url" "$cache/maven.tar.gz"
+  tar -xzf "$cache/maven.tar.gz" -C "$cache"
+  rm "$cache/maven.tar.gz"
+fi
+export JAVA_HOME="$cache/$java_folder"
+export PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:$PATH"
+java -version
+mvn -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$cache/m2" dependency:go-offline

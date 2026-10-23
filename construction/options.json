@@ -1,0 +1,256 @@
+[
+  {
+    "name": "saved-choose-domain",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "choose",
+      "question": {
+        "type": "toolbox",
+        "value": {
+          "questions": {
+            "saved": {
+              "choose": "Which fits?",
+              "options": [
+                "red",
+                "blue"
+              ]
+            }
+          }
+        },
+        "name": "saved"
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "equivalent_request": {
+      "function": "choose",
+      "question": {
+        "type": "inline",
+        "value": "Which fits?"
+      },
+      "options": {
+        "options": [
+          "red",
+          "blue"
+        ]
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    }
+  },
+  {
+    "name": "saved-tag-domain",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "tag",
+      "question": {
+        "type": "toolbox",
+        "value": {
+          "questions": {
+            "saved": {
+              "tag": "Which fits?",
+              "labels": [
+                "red",
+                "blue"
+              ]
+            }
+          }
+        },
+        "name": "saved"
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "equivalent_request": {
+      "function": "tag",
+      "question": {
+        "type": "inline",
+        "value": "Which fits?"
+      },
+      "options": {
+        "labels": [
+          "red",
+          "blue"
+        ]
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    }
+  },
+  {
+    "name": "saved-score-domain",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "score",
+      "question": {
+        "type": "toolbox",
+        "value": {
+          "questions": {
+            "saved": {
+              "score": "Which fits?",
+              "levels": [
+                "low",
+                "high"
+              ]
+            }
+          }
+        },
+        "name": "saved"
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "equivalent_request": {
+      "function": "score",
+      "question": {
+        "type": "inline",
+        "value": "Which fits?"
+      },
+      "options": {
+        "levels": [
+          "low",
+          "high"
+        ]
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    }
+  },
+  {
+    "name": "rank-levels",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "rank",
+      "question": {
+        "type": "inline",
+        "value": "How strong?"
+      },
+      "options": {
+        "levels": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "records": [
+        "alpha",
+        "beta",
+        "gamma"
+      ]
+    },
+    "equivalent_request": {
+      "function": "rank",
+      "question": {
+        "type": "toolbox",
+        "value": {
+          "questions": {
+            "saved": {
+              "score": "How strong?",
+              "levels": [
+                "low",
+                "medium",
+                "high"
+              ]
+            }
+          }
+        },
+        "name": "saved"
+      },
+      "records": [
+        "alpha",
+        "beta",
+        "gamma"
+      ]
+    }
+  },
+  {
+    "name": "score-refuses-threshold",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "score",
+      "question": {
+        "type": "inline",
+        "value": "How strong?"
+      },
+      "options": {
+        "threshold": "0.5",
+        "levels": [
+          "low",
+          "high"
+        ]
+      },
+      "records": [
+        "alpha"
+      ]
+    },
+    "expected_error": "usage.question"
+  },
+  {
+    "name": "rank-refuses-threshold",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "rank",
+      "question": {
+        "type": "inline",
+        "value": "How strong?"
+      },
+      "options": {
+        "threshold": "0.5"
+      },
+      "records": [
+        "alpha"
+      ]
+    },
+    "expected_error": "usage.question"
+  },
+  {
+    "name": "annotate-refuses-threshold",
+    "client": {
+      "adapter": "stub"
+    },
+    "request": {
+      "function": "annotate",
+      "question": {
+        "type": "inline",
+        "value": {
+          "questions": {
+            "ready": {
+              "decide": "Ready?"
+            }
+          }
+        }
+      },
+      "options": {
+        "threshold": "0.5"
+      },
+      "records": [
+        "alpha"
+      ]
+    },
+    "expected_error": "usage.question"
+  }
+]

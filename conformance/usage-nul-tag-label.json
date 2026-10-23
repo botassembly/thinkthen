@@ -1,0 +1,23 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.name"
+  },
+  "replies": [],
+  "request": {
+    "function": "tag",
+    "options": {
+      "labels": [
+        "bad\u0000label"
+      ]
+    },
+    "question": {
+      "type": "inline",
+      "value": "Which?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

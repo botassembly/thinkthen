@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Reject newer native dependencies anywhere in a delivered platform folder."""
+import hashlib
+import io
+import json
+from pathlib import Path
+import re
+import posixpath
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+
+from runtime_floors import FLOORS
+from runtime_floor_macos import versions as mac_versions, dependencies as mac_dependencies
+
+
+def version(value):
+    return tuple(map(int, value.split('.')))
+
+
+def contents(data, name):
+    """Inspect archive member bytes, including wheels nested in prerequisites."""
+    fat_magic = {b'\xca\xfe\xba\xbe': 'big', b'\xca\xfe\xba\xbf': 'big', b'\xbe\xba\xfe\xca': 'little', b'\xbf\xba\xfe\xca': 'little'}
+    fat = data[:4] in fat_magic and len(data) >= 8 and 0 < int.from_bytes(data[4:8], fat_magic[data[:4]]) <= 32
+    if data[:4] == b'\x7fELF' or data[:4] in (b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf') or fat:
+        yield name, data
+    elif data.startswith(b'!<arch>\n'):
+        offset = 8
+        while offset + 60 <= len(data):
+            header = data[offset:offset + 60]
+            size = int(header[48:58])
+            member = data[offset + 60:offset + 60 + size]
+            label = header[:16].decode().strip()
+            if label.startswith('#1/'):
+                length = int(label[3:])
+                label, member = member[:length].decode().rstrip('\0'), member[length:]
+            yield from contents(member, name + '/' + label)
+            offset += 60 + size + size % 2
+    elif data[:2] == b'PK':
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            for member in archive.infolist():
+                if not member.is_dir():
+                    yield from contents(archive.read(member), name + '/' + member.filename)
+    elif data[:2] == b'\x1f\x8b' or name.endswith(('.tar', '.gem')):
+        try:
+            archive = tarfile.open(fileobj=io.BytesIO(data))
+        except tarfile.ReadError:
+            return
+        with archive:
+            for member in archive:
+                if member.isfile():
+                    yield from contents(archive.extractfile(member).read(), name + '/' + member.name)
+
+
+def check(folder):
+    requirements = json.loads((folder / 'requirements.json').read_text())
+    build = json.loads((folder / 'build.json').read_text())
+    mac = build['platform'] == 'macos-arm64'
+    checked = {}
+    objects = {}
+    for path in sorted(folder.rglob("*")):
+        if path.is_file():
+            objects.update((posixpath.normpath(name), data) for name, data in contents(path.read_bytes(), str(path.relative_to(folder))))
+    count = 0
+    with tempfile.TemporaryDirectory() as scratch:
+        binary = Path(scratch) / 'object'
+        for name, data in objects.items():
+            swift = name.startswith(('swift/', 'checks/swift/', 'prerequisites/swift-runtime/'))
+            floor = FLOORS['linux']['swift_glibc' if swift else 'glibc']
+            cxx_floor = FLOORS['linux']['swift_glibcxx' if swift else 'glibcxx']
+            identity = (hashlib.sha256(data).digest(), swift)
+            if identity not in checked:
+                binary.write_bytes(data)
+                if mac:
+                    output = subprocess.check_output(['otool', '-arch', 'all', '-l', binary], text=True)
+                    targets = mac_versions(output)
+                    assert targets, f'{name}: no macOS deployment target'
+                    assert all(version(t) <= version(FLOORS['macos']) for t in targets), (name, targets)
+                else:
+                    output = subprocess.check_output(['readelf', '--version-info', binary], text=True)
+                    for kind, maximum in (('GLIBC', floor), ('GLIBCXX', cxx_floor)):
+                        values = re.findall(r'\b' + kind + r'_([0-9]+(?:\.[0-9]+)+)', output)
+                        assert all(version(v) <= version(maximum) for v in values), (name, kind, sorted(set(values)), maximum)
+                checked[identity] = output
+                count += 1
+            if mac:
+                mac_dependencies(name, checked[identity], objects)
+    for name, requirement in requirements.items():
+        if mac:
+            assert requirement['macos'] == FLOORS['macos'], (name, requirement)
+        else:
+            expected = FLOORS['linux']['swift_glibc' if name == 'swift' else 'glibc']
+            assert requirement['supported_glibc'] == expected, (name, requirement)
+    assert count, 'no native artifacts were checked'
+    print(f'runtime floors: {count} distinct native artifacts pass')
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        sys.exit('usage: runtime-floor-check PLATFORM_DIRECTORY')
+    check(Path(sys.argv[1]).resolve())

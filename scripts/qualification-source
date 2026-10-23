@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Refuse release sources outside main before preparing tools or packages."""
+import subprocess
+import sys
+
+
+def git(*args):
+    return subprocess.check_output(['git', *args], text=True).strip()
+
+
+try:
+    revision = git('rev-parse', 'HEAD^{commit}')
+    main = git('rev-parse', 'refs/remotes/origin/main^{commit}')
+    subprocess.run(['git', 'merge-base', '--is-ancestor', revision, main], check=True)
+    if sys.argv[1:2] == ['--dispatch'] and len(sys.argv) in (2, 3):
+        # A draft may name a version whose tag has not been created. An existing
+        # tag must still name this qualified source, even when dispatch uses main.
+        tag = sys.argv[2] if len(sys.argv) == 3 else None
+        selected = subprocess.run(['git', 'rev-parse', '--verify', '--quiet', 'refs/tags/' + tag + '^{commit}'],
+                                  capture_output=True, text=True) if tag else None
+        if selected is not None and selected.returncode == 0 and selected.stdout.strip() != revision:
+            raise ValueError('release tag does not name the checked-out source')
+    elif len(sys.argv) == 2:
+        if git('rev-parse', '--verify', 'refs/tags/' + sys.argv[1] + '^{commit}') != revision:
+            raise ValueError('release tag does not name the checked-out source')
+    else:
+        raise ValueError('usage: qualification-source TAG | --dispatch [TAG]')
+except (ValueError, subprocess.CalledProcessError) as error:
+    sys.exit('qualification-source: source must be a commit on origin/main: ' + str(error))
+print('release source: checked-out revision belongs to main')

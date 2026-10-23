@@ -1,0 +1,76 @@
+#!/bin/sh
+# Fetch the exact native database prerequisite separately from offline gates.
+set -eu
+deps=$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3
+mkdir -p "$deps/lib"
+verify() {
+    actual=$(shasum -a 256 "$1" | cut -d ' ' -f 1)
+    test "$actual" = "$2"
+}
+if [ ! -f "$deps/source.tar.gz" ]; then
+    curl -fsSL https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3 -o "$deps/source.tar.gz"
+fi
+verify "$deps/source.tar.gz" b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64
+if [ ! -d "$deps/duckdb-1.4.3" ]; then tar -xzf "$deps/source.tar.gz" -C "$deps"; fi
+case $(uname -sm) in
+    'Darwin arm64') platform=osx-universal; checksum=efd0c2424589f0d5743ffdc0de22ce84b99bf307c330752f44277cffa3406e43 ;;
+    'Linux x86_64') platform=linux-amd64; checksum=3c7bb8d586d39ccce56442c3f6bafa97f53d7b6bb5405dac827442fcb31494aa ;;
+    'Linux aarch64') platform=linux-arm64; checksum=2882ed153f620a7f185b232d13694d481db3458ad1e4c04a4775d97b60567b4a ;;
+    *) exit 2 ;;
+esac
+if [ ! -f "$deps/lib.zip" ]; then
+    curl -fsSL "https://github.com/duckdb/duckdb/releases/download/v1.4.3/libduckdb-$platform.zip" -o "$deps/lib.zip"
+fi
+verify "$deps/lib.zip" "$checksum"
+unzip -qo "$deps/lib.zip" -d "$deps/lib"
+printf '%s\n' "$deps"
+
+# Official hosts are test prerequisites, never package contents.
+case $(uname -sm) in
+    'Darwin arm64')
+        cli=osx-universal; cli_sum=f44e488b1c67d007b6b12af9f1ad9122fad0f63a606caf2bfb10ca945042a3f6
+        wheel_path=c4/19/57af0cc66ba2ffb8900f567c9aec188c6ab2a7b3f2260e9c6c3c5f9b57b1
+        wheel=duckdb-1.4.3-cp313-cp313-macosx_11_0_arm64.whl
+        wheel_sum=1e5457dda91b67258aae30fb1a0df84183a9f6cd27abac1d5536c0d876c6dfa1 ;;
+    'Linux x86_64')
+        cli=linux-amd64; cli_sum=7a9e36141a71a353f54dfbeed607a5218c3425ce2d417610da08443259a12f7c
+        wheel_path=c6/5f/87e43af2e4a0135f9675449563e7c2f9b6f1fe6a2d1691c96b091f3904dd
+        wheel=duckdb-1.4.3-cp314-cp314-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl
+        wheel_sum=1b35491db98ccd11d151165497c084a9d29d3dc42fc80abea2715a6c861ca43d ;;
+    'Linux aarch64')
+        cli=linux-arm64; cli_sum=6893c384ecd182bce637e18a715f750e8c79b8650504f5d61865c702ee523d9a
+        wheel_path=73/dd/23152458cf5fd51e813fadda60b9b5f011517634aa4bb9301f5f3aa951d8
+        wheel=duckdb-1.4.3-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl
+        wheel_sum=006aca6a6d6736c441b02ff5c7600b099bb8b7f4de094b8b062137efddce42df ;;
+esac
+if [ ! -f "$deps/cli.zip" ]; then
+    curl -fsSL "https://github.com/duckdb/duckdb/releases/download/v1.4.3/duckdb_cli-$cli.zip" -o "$deps/cli.zip"
+fi
+verify "$deps/cli.zip" "$cli_sum"
+mkdir -p "$deps/cli"
+unzip -qo "$deps/cli.zip" -d "$deps/cli"
+if [ ! -f "$deps/$wheel" ]; then
+    curl -fsSL "https://files.pythonhosted.org/packages/$wheel_path/$wheel" -o "$deps/$wheel"
+fi
+verify "$deps/$wheel" "$wheel_sum"
+printf '%s\n' "$wheel" > "$deps/python-wheel"
+# Upstream's C++ distribution embeds its static library so local Python loads work.
+case $(uname -sm) in
+    'Darwin arm64') static_platform=osx-arm64; static_sum=1a1c7ca34530ef7df7cafc268235e5a8ca30fbb578025253ba0cff4d24c1740f ;;
+    'Linux x86_64') static_platform=linux-amd64; static_sum=1da8521060ebf1cb13a93cf37bf276761c9289f9c0b19dbd0f22e90bbde68830 ;;
+    'Linux aarch64') static_platform=linux-arm64; static_sum=5040f7df6ac7ba27eede6046bbdca37319e5ddb6cd328a37b10bd38f8dd1600b ;;
+esac
+if [ ! -f "$deps/static.zip" ]; then
+    curl -fsSL "https://github.com/duckdb/duckdb/releases/download/v1.4.3/static-libs-$static_platform.zip" -o "$deps/static.zip"
+fi
+verify "$deps/static.zip" "$static_sum"
+mkdir -p "$deps/static"
+unzip -qo "$deps/static.zip" -d "$deps/static"
+if [ "$(uname -sm)" = 'Linux x86_64' ]; then
+    # Portable CMake runs inside the prepared glibc 2.39 build environment.
+    if [ ! -f "$deps/cmake.tar.gz" ]; then
+        curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz -o "$deps/cmake.tar.gz"
+    fi
+    verify "$deps/cmake.tar.gz" 5a1133ff103c71eb5120e2cc3de922733e7d8a26a98ae716397e8676adb367bf
+    if [ ! -d "$deps/cmake-3.31.6-linux-x86_64" ]; then tar -xzf "$deps/cmake.tar.gz" -C "$deps"; fi
+fi

@@ -1,0 +1,84 @@
+{
+  "annotations-13.0/COPYRIGHT": {
+    "member": "org/intellij/lang/annotations/Flow.java",
+    "selection": "initial copyright comment",
+    "sha256": "dba2766a90c9dcd2e89995f436014438e8cbcd052b220fa4fee02d95ad82048e",
+    "source": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0-sources.jar",
+    "source_sha256": "42a5e144b8e81d50d6913d1007b695e62e614705268d8cf9f13dbdc478c2c68e"
+  },
+  "annotations-13.0/LICENSE": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+  },
+  "jsonlite-2.0.0/LICENSE": {
+    "sha256": "008725198f645358cbb93366529f71300cdc33586bbd0f071e5879a16bacbdb1",
+    "source": "jsonlite_2.0.0.tar.gz/jsonlite/LICENSE"
+  },
+  "jsonlite-2.0.0/YAJL-LICENSE": {
+    "sha256": "24cd40d2348b726ad5f51e92819371b39309321c5a41489d9aec3057f275c531",
+    "source": "jsonlite_2.0.0.tar.gz/jsonlite/src/yajl/yajl_lex.c"
+  },
+  "jspecify-1.0.0/COPYRIGHT": {
+    "member": "org/jspecify/annotations/NonNull.java",
+    "selection": "initial copyright comment",
+    "sha256": "e9631375020efcdf59a4036b80017a1ef153ade053d7879c1fd6f77bae3531bc",
+    "source": "https://repo.maven.apache.org/maven2/org/jspecify/jspecify/1.0.0/jspecify-1.0.0-sources.jar",
+    "source_sha256": "adf0898191d55937fb3192ba971826f4f294292c4a960740f3c27310e7b70296"
+  },
+  "jspecify-1.0.0/LICENSE": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source": "https://raw.githubusercontent.com/jspecify/jspecify/v1.0.0/LICENSE"
+  },
+  "kotlin-stdlib-2.2.21/COPYRIGHT.txt": {
+    "sha256": "8f1a1700adb5490604c6094fb137bf73f6c28d3ee554b58f3ff8ef975a79672d",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/COPYRIGHT.txt"
+  },
+  "kotlin-stdlib-2.2.21/LICENSE.txt": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/LICENSE.txt"
+  },
+  "kotlin-stdlib-2.2.21/NOTICE.txt": {
+    "sha256": "0b09a83d3ef7795c7dec65e815866597c066c53898f2852a76599b8f5552941a",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/NOTICE.txt"
+  },
+  "kotlin-stdlib-2.2.21/README.md": {
+    "sha256": "840537e4de746f51866d71b2b0aa264d8c061e4654b4c7e217cea7f4e80be1cb",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/README.md"
+  },
+  "kotlin-stdlib-2.2.21/third_party/boost_LICENSE.txt": {
+    "sha256": "8d8291caf1cee26d23acf3eb67c9f9a2d58f1c681b16a4fbe8cbfb9e3c0b5a9b",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/third_party/boost_LICENSE.txt"
+  },
+  "kotlin-stdlib-2.2.21/third_party/guava_license.txt": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/third_party/guava_license.txt"
+  },
+  "kotlin-stdlib-2.2.21/third_party/gwt_license.txt": {
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/third_party/gwt_license.txt"
+  },
+  "kotlin-stdlib-2.2.21/third_party/threetenbp_license.txt": {
+    "sha256": "d1bc53b493a3ab387b42717ed5c4b1976a5048996f81154278100bff86d39331",
+    "source": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.2.21/license/third_party/threetenbp_license.txt"
+  },
+  "kotlinx-coroutines-core-jvm-1.10.2/LICENSE.txt": {
+    "sha256": "b1febe6399dffb10d19d35e7663ab16300c93cb0476a94115df1cc0097a8ffd8",
+    "source": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.10.2/LICENSE.txt"
+  },
+  "kotlinx-coroutines-core-jvm-1.10.2/license/NOTICE.txt": {
+    "sha256": "1ab6de67ef738bffae63f9aa6a8798a35e87341c83ea28d09c8dc8ca6993232a",
+    "source": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.10.2/license/NOTICE.txt"
+  },
+  "swift-icu/COPYRIGHT": {
+    "sha256": "7fbc1bcafced35001d2ac4aaa17719996757486106cc70fb5ac045a02378b074",
+    "source": "https://raw.githubusercontent.com/swiftlang/swift-foundation-icu/swift-6.3.2-RELEASE/icuSources/common/udata.cpp"
+  },
+  "swift-icu/LICENSE-APACHE": {
+    "sha256": "2245a990b635558be210fb3eb4f8a6f7a49aebc0fefbf5859146a65ddc7ddcf3",
+    "source": "https://raw.githubusercontent.com/swiftlang/swift-foundation-icu/swift-6.3.2-RELEASE/LICENSE.md"
+  },
+  "swift-icu/LICENSE-UNICODE": {
+    "sha256": "e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96",
+    "source": "https://www.unicode.org/license.txt"
+  }
+}

@@ -1,0 +1,19 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId><version>0.2.0</version><packaging>pom</packaging>
+  <name>ThinkThen JVM</name><description>Typed questions about evidence through ten functions.</description>
+  <url>https://github.com/botassembly/thinkthen</url>
+  <licenses><license><name>MIT</name><url>https://opensource.org/license/mit</url></license></licenses>
+  <developers><developer><id>imaurer</id><name>Ian Maurer</name></developer></developers>
+  <scm><connection>scm:git:https://github.com/botassembly/thinkthen.git</connection><developerConnection>scm:git:ssh://git@github.com/botassembly/thinkthen.git</developerConnection><url>https://github.com/botassembly/thinkthen</url></scm>
+  <modules><module>library</module><module>../kotlin</module></modules>
+  <properties><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><project.build.outputTimestamp>2000-01-01T00:00:00Z</project.build.outputTimestamp><maven.compiler.release>22</maven.compiler.release><kotlin.version>2.2.21</kotlin.version><kotlin.compiler.daemon>false</kotlin.compiler.daemon></properties>
+  <build><pluginManagement><plugins>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.1</version><configuration><compilerArgs><arg>-Xlint:all</arg><arg>-Werror</arg></compilerArgs></configuration></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.5.4</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-install-plugin</artifactId><version>3.1.4</version></plugin>
+    <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.8.1</version></plugin>
+  </plugins></pluginManagement></build>
+</project>

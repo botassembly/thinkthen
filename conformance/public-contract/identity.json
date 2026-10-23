@@ -1,0 +1,375 @@
+[
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        "alpha"
+      ]
+    },
+    "p": 0.47,
+    "answer": false
+  },
+  {
+    "canonical": "[\"filter\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "3dd511759be19743ce5815517d80f4a703daa8b1519a420fe82392a6f3088a4a",
+    "request": {
+      "function": "filter",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"choose\",{\"options\":[{\"description\":null,\"label\":\"red\"},{\"description\":null,\"label\":\"green\"},{\"description\":null,\"label\":\"blue\"}],\"question\":\"Pick a color\",\"threshold\":\"0.5\"}]",
+    "identity": "33002d14fc83064ccf061b6281e1056058460e507c80313294cb5427017c5259",
+    "request": {
+      "function": "choose",
+      "question": {
+        "type": "inline",
+        "value": "Pick a color"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "options": [
+          "red",
+          "green",
+          "blue"
+        ]
+      }
+    },
+    "p": 1.0,
+    "answer": "green"
+  },
+  {
+    "canonical": "[\"tag\",{\"labels\":[\"red\",\"green\"],\"question\":\"Topics?\",\"threshold\":\"0.5\"}]",
+    "identity": "bddbd1a7f45698c0ef5092cec0593f4ffeba930eee2f0e4024964e8c452bf736",
+    "request": {
+      "function": "tag",
+      "question": {
+        "type": "inline",
+        "value": "Topics?"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "labels": [
+          "red",
+          "green"
+        ]
+      }
+    }
+  },
+  {
+    "canonical": "[\"score\",{\"levels\":[\"low\",\"high\"],\"question\":\"How much?\"}]",
+    "identity": "6b7eb38e96d8570df5483f48c3245266a5ed62072ebbfdbb8afdb4986b930daa",
+    "request": {
+      "function": "score",
+      "question": {
+        "type": "inline",
+        "value": "How much?"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "levels": [
+          "low",
+          "high"
+        ]
+      }
+    }
+  },
+  {
+    "canonical": "[\"find\",{\"question\":\"Where?\",\"threshold\":\"0.5\"}]",
+    "identity": "28c2547f3a34e5ec81dc7daac2b6e8040838279466ea7a68f222065325746cce",
+    "request": {
+      "function": "find",
+      "question": {
+        "type": "inline",
+        "value": "Where?"
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"recognize\",{\"kinds\":[{\"description\":null,\"label\":\"person\"}],\"threshold\":\"0.5\"}]",
+    "identity": "f86f17579e0088c9cc73ab661a68b16ae8b7f142de12daabb8d86bfe8e6c8469",
+    "request": {
+      "function": "recognize",
+      "question": {
+        "type": "inline",
+        "value": [
+          "person"
+        ]
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"relate\",{\"rules\":[{\"either\":false,\"name\":\"knows\",\"reads\":\"knows\",\"source\":\"person\",\"target\":\"person\"}],\"threshold\":\"0.5\"}]",
+    "identity": "a1cbc508f636ede89b026914ecbee163157d9d6a2faf887a863c92e70b6a7df2",
+    "request": {
+      "function": "relate",
+      "question": {
+        "type": "inline",
+        "value": [
+          {
+            "either": false,
+            "name": "knows",
+            "reads": "knows",
+            "source": "person",
+            "target": "person"
+          }
+        ]
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"rank\",{\"question\":[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]}]",
+    "identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99",
+    "request": {
+      "function": "rank",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"rank\",{\"question\":[\"score\",{\"levels\":[\"low\",\"high\"],\"question\":\"How much?\"}]}]",
+    "identity": "0b0ccc5f8c55be7fcdfcd109301bafca31d9c879ccd309e6702b974d6e566e87",
+    "request": {
+      "function": "rank",
+      "question": {
+        "type": "inline",
+        "value": "How much?"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "levels": [
+          "low",
+          "high"
+        ]
+      }
+    }
+  },
+  {
+    "canonical": "[\"annotate\",{\"questions\":{\"ready\":[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]}}]",
+    "identity": "b34e0aec35be4225f60e27484ecef49e77f471e702a19d45336df660e9560347",
+    "request": {
+      "function": "annotate",
+      "question": {
+        "type": "inline",
+        "value": {
+          "questions": {
+            "ready": {
+              "decide": "Ready?"
+            }
+          }
+        }
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"x\\u0000suffix\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "2d3fa83fdbd7c42f9912fc9ab1b010ac2da6c16b624e99a5c55ca8ef8b902566",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "x\u0000suffix"
+      },
+      "records": [
+        "alpha"
+      ]
+    },
+    "p": 0.97,
+    "answer": true
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        {
+          "body": "different evidence",
+          "id": 77
+        }
+      ],
+      "options": {
+        "threshold": 0.5
+      }
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        {
+          "body": "different evidence",
+          "id": 77
+        }
+      ],
+      "options": {
+        "threshold": "0.50"
+      }
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        {
+          "body": "different evidence",
+          "id": 77
+        }
+      ],
+      "options": {
+        "threshold": "5e-1"
+      }
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        {
+          "body": "different evidence",
+          "id": 77
+        }
+      ],
+      "options": {
+        "on": "/body"
+      }
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "raw_request": "{\"records\":[\"beta\"],\"question\":{\"name\":\"other\",\"value\":{\"questions\":{\"other\":{\"threshold\":\"0.500\",\"decide\":\"Ready?\"}}},\"type\":\"toolbox\"},\"function\":\"decide\"}"
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4",
+    "raw_request": "{\"function\":\"decide\",\"question\":{\"type\":\"toolbox\",\"value\":{\"questions\":{\"renamed\":{\"decide\":\"Ready?\",\"threshold\":\"0.50\"}}},\"name\":\"renamed\"},\"records\":[\"beta\"]}"
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.25:0.75\",\"yes\":null}]",
+    "identity": "f9c3eebcc6ef5f267d8bcbf4dc9a84ee366199027843e611887f52171258e341",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "threshold": "0.250:7.5e-1"
+      }
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Ready?\",\"threshold\":\"0.0000001\",\"yes\":null}]",
+    "identity": "560cfe682b1331cb8d38a99ea20264be1d0d5192eaafe08454245f22e0fe9e74",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Ready?"
+      },
+      "records": [
+        "alpha"
+      ],
+      "options": {
+        "threshold": "1e-7"
+      }
+    }
+  },
+  {
+    "canonical": "[\"relate\",{\"rules\":[{\"either\":false,\"name\":\"knows\",\"reads\":\"knows\",\"source\":\"person\",\"target\":\"person\"}],\"threshold\":\"0.5\"}]",
+    "identity": "a1cbc508f636ede89b026914ecbee163157d9d6a2faf887a863c92e70b6a7df2",
+    "request": {
+      "function": "relate",
+      "question": {
+        "type": "inline",
+        "value": [
+          {
+            "target": "person",
+            "source": "person",
+            "name": "knows"
+          }
+        ]
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  },
+  {
+    "canonical": "[\"decide\",{\"no\":null,\"question\":\"Prêt? 😀\",\"threshold\":\"0.5\",\"yes\":null}]",
+    "identity": "7e44d136de728a7b5746a6f6818c5d85e6caed1d68c13c0884de4d682ec835ec",
+    "request": {
+      "function": "decide",
+      "question": {
+        "type": "inline",
+        "value": "Prêt? 😀"
+      },
+      "records": [
+        "alpha"
+      ]
+    }
+  }
+]

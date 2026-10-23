@@ -1,0 +1,25 @@
+#!/bin/sh
+# Install the C++ headers with the shared release native asset.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-build-env
+if [ "$#" -ne 1 ]; then echo 'usage: scripts/cpp-package OUTPUT_DIRECTORY' >&2; exit 2; fi
+mkdir -p "$1"
+output=$(cd "$1" && pwd)
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+native=$(scripts/native-prepare)
+case "$(uname -s)" in
+    Darwin) asset=libthinkthen_ffi.dylib; rid=osx-arm64 ;;
+    Linux) asset=libthinkthen_ffi.so; rid=$(python3 scripts/native_platform.py rid) ;;
+    *) echo 'unsupported C++ package platform' >&2; exit 1 ;;
+esac
+cp "$native/$rid/$asset" "$scratch/$asset"
+if [ "$rid" = osx-arm64 ]; then install_name_tool -id "@rpath/$asset" "$scratch/$asset"; fi
+cmake -S sdk/cpp -B "$scratch/build" -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_PREFIX_PATH="$HOME/.local/share/thinkthen-build-tools/nlohmann-json/3.11.3" \
+    -DCMAKE_INSTALL_PREFIX="$output/prefix" -DTHINKTHEN_FFI_LIBRARY="$scratch/$asset" \
+    -DTHINKTHEN_FFI_INCLUDE_DIR="$PWD/crates/thinkthen-ffi/include"
+cmake --install "$scratch/build"
+cmp "$scratch/$asset" "$output/prefix/lib/$asset"
+tar -czf "$output/thinkthen-cpp-$rid.tar.gz" -C "$output/prefix" .

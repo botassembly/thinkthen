@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Check installed Go and Java consumers with a non-executable system temp.
+
+Usage: loader-noexec-check PLATFORM_DIRECTORY JDK_DIRECTORY
+Uses prepared local packages and an existing baseline image without a network.
+"""
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+root = Path(__file__).resolve().parent.parent
+candidate, jdk = map(lambda value: Path(value).resolve(), sys.argv[1:])
+job = os.environ.get('PM_JOB', '').split() or ['local']
+with tempfile.TemporaryDirectory(prefix='thinkthen-loader-') as temporary:
+    work = Path(temporary)
+    module = work / 'module'
+    module.mkdir()
+    with tarfile.open(next((candidate / 'go').glob('*.tar.gz'))) as package:
+        package.extractall(module, filter='data')
+    for source in (root / 'sdk/go').iterdir():
+        if source.suffix in ('.go', '.c', '.h'):
+            shutil.copy2(source, module / source.name)
+    shutil.copytree(root / 'sdk/go/tests', work / 'consumer')
+    shutil.copytree(candidate / 'java', work / 'java')
+    shutil.copy2(candidate / 'checks/jvm/consumer.jar', work / 'consumer.jar')
+    shutil.copy2(root / 'construction/stub.json', work / 'stub.json')
+    shutil.copytree(root / 'sdk/java/library/src/main/java', work / 'java-source')
+    command = '''set -eu
+mkdir -p /work/home /work/build-tmp /work/classes
+export HOME=/work/home XDG_CACHE_HOME=/work/home/.cache GOTMPDIR=/work/build-tmp
+export GOCACHE=/work/go-cache GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
+cd /work/consumer
+go mod edit -replace=github.com/botassembly/thinkthen/sdk/go=/work/module
+go test -c -o /work/go-consumer
+/jdk/bin/javac --release 22 -cp '/work/java/dependencies/*' -d /work/classes $(find /work/java-source -name '*.java')
+/jdk/bin/jar --update --file /work/java/thinkthen-java-0.2.0.jar -C /work/classes .
+# Independent processes publish into one cold cache, then reuse it read-only.
+go_case() { THINKTHEN_STUB_CASES=/work/stub.json /work/go-consumer -test.run='^TestSharedStub$'; }
+java_case() { /jdk/bin/java -Duser.home=/work/home --enable-native-access=ALL-UNNAMED -cp '/work/consumer.jar:/work/java/*:/work/java/dependencies/*' ConsumerCases /work/stub.json --stub-only; }
+status=0
+go_case & first=$!
+go_case & second=$!
+java_case & third=$!
+java_case & fourth=$!
+for child in "$first" "$second" "$third" "$fourth"; do wait "$child" || status=1; done
+test "$status" = 0
+chmod -R a-w /work/home/.cache
+trap 'chmod -R u+w /work/home/.cache' EXIT
+go_case
+java_case
+# Unpacked Java resources need no writable extraction directory.
+cd /work/classes
+/jdk/bin/jar --extract --file /work/java/thinkthen-java-0.2.0.jar
+XDG_CACHE_HOME=/dev/null /jdk/bin/java -Duser.home=/work/home --enable-native-access=ALL-UNNAMED -cp '/work/classes:/work/consumer.jar:/work/java/dependencies/*' ConsumerCases /work/stub.json --stub-only
+
+chmod -R u+w /work/home/.cache
+for asset in /work/home/.cache/thinkthen/native/*/*; do printf invalid > "$asset"; done
+expect_failure() {
+    if "$@" > /work/rejected.log 2>&1; then cat /work/rejected.log; exit 1; fi
+}
+expect_failure go_case
+grep -qi 'checksum mismatch' /work/rejected.log
+expect_failure java_case
+grep -qi 'checksum mismatch' /work/rejected.log
+printf blocked > /work/not-directory
+export XDG_CACHE_HOME=/work/not-directory/cache
+expect_failure go_case
+expect_failure java_case
+printf 'Installed loaders reject corrupt cache bytes and unavailable cache directories\n'
+
+'''
+    subprocess.run(['docker', 'run', '--rm', '--network', 'none',
+                    '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + job[0],
+                    '--user', f'{os.getuid()}:{os.getgid()}',
+                    '--tmpfs', '/tmp:rw,noexec,nosuid', '-v', f'{work}:/work',
+                    '-v', f'{jdk}:/jdk:ro', 'thinkthen-floor-build:glibc2.28',
+                    'sh', '-c', command], check=True)

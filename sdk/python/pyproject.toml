@@ -1,0 +1,35 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "build_backend"
+backend-path = ["."]
+
+[project]
+name = "thinkthen"
+version = "0.2.0"
+description = "Typed questions about evidence for Python"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.urls]
+Repository = "https://github.com/botassembly/thinkthen"
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.2"]
+polars = ["polars>=1.0"]
+
+[tool.maturin]
+manifest-path = "native/Cargo.toml"
+module-name = "thinkthen._native"
+python-source = "."
+include = [{ path = "thinkthen/_relation.py", format = ["sdist", "wheel"] }, { path = "build_backend.py", format = "sdist" }, { path = "relation_type.py", format = "sdist" }]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

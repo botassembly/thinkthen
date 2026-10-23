@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Prepare one host's release native asset; --path only prints its shared cache.
+
+Output is one path. Cache diagnostics go to stderr. Run on each supported builder,
+then copy the missing platform directory between their matching cache paths.
+"""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import tomllib
+from native_platform import ARM_BASE, HOSTS
+
+from runtime_floors import FLOORS
+from release_images import image
+
+ROOT = Path(__file__).resolve().parent.parent
+# Routine SDK gates use the Linux x64/Mac pair; releases also build Linux arm64.
+PLATFORMS = {row[3]: (row[1], row[2], 'libthinkthen_ffi.' + row[5])
+             for row in HOSTS.values() if row[0] != 'linux-arm64'}
+BUILD = ["--offline", "--locked", "--release", "-p", "thinkthen-ffi"]
+
+
+def output(*args):
+    return subprocess.check_output(args, cwd=ROOT, text=True)
+
+
+def cache_path():
+    os.environ["MACOSX_DEPLOYMENT_TARGET"] = os.environ.get("MACOSX_DEPLOYMENT_TARGET") or FLOORS["macos"]
+    metadata = json.loads(output("cargo", "metadata", "--offline", "--locked", "--format-version=1"))
+    packages = {p["id"]: p for p in metadata["packages"]}
+    nodes = {n["id"]: n for n in metadata["resolve"]["nodes"]}
+    pending = [p["id"] for p in packages.values() if p["name"] == "thinkthen-ffi"]
+    reachable = set()
+    while pending:
+        package = pending.pop()
+        if package in reachable:
+            continue
+        reachable.add(package)
+        pending.extend(d["pkg"] for d in nodes[package]["deps"]
+                       if any(k["kind"] != "dev" for k in d["dep_kinds"]))
+    lock = tomllib.loads((ROOT / "Cargo.lock").read_text())
+    checksums = {(p["name"], p["version"], p.get("source")): p.get("checksum")
+                 for p in lock["package"]}
+    inputs = {}
+    for identity in reachable:
+        p = packages[identity]
+        label = f'{p["name"]}@{p["version"]}:{p["source"] or "local"}'
+        inputs[label] = {"features": nodes[identity]["features"],
+                         "checksum": checksums[(p["name"], p["version"], p["source"]) ]}
+        if p["source"] is None:
+            folder = Path(p["manifest_path"]).parent.relative_to(ROOT)
+            for name in output("git", "ls-files", "--", str(folder)).splitlines():
+                inputs[name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
+    manifest = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    manifest["workspace"].pop("members", None)
+    manifest["workspace"].pop("default-members", None)
+    # Resolved packages and features above own dependency identity. An unused
+    # workspace dependency can belong solely to an unrelated consumer.
+    manifest["workspace"].pop("dependencies", None)
+    inputs["workspace"] = manifest
+    inputs["deployment"] = {"macos": FLOORS["macos"], "linux_glibc": FLOORS["linux"]["glibc"]}
+    # The immutable manylinux base identifies GCC and libc for the Linux pair.
+    inputs["linux_compiler_image"] = next(line for line in (ROOT / "scripts/floors/Dockerfile").read_text().splitlines() if line.startswith("FROM "))
+    if output('rustc', '-vV').split('host: ')[1].splitlines()[0] == 'aarch64-unknown-linux-gnu':
+        inputs['linux_arm_compiler_image'] = ARM_BASE
+    if sys.platform == "linux" or "THINKTHEN_FLOOR_IMAGE" in os.environ:
+        inputs["prepared_compiler_image"] = image("floor")
+    inputs["toolchain"] = (ROOT / "rust-toolchain.toml").read_text()
+    inputs["compiler"] = [line for line in output("rustc", "-vV").splitlines()
+                          if not line.startswith("host:")]
+    inputs["targets"] = sorted(PLATFORMS)
+    inputs["build"] = BUILD
+    def build_variable(name):
+        return (name in ("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "RUSTC", "CC", "CFLAGS", "AR", "MACOSX_DEPLOYMENT_TARGET")
+                or name.startswith(("CARGO_BUILD_", "CARGO_PROFILE_", "CARGO_TARGET_", "CC_", "CFLAGS_", "AR_"))) and name not in ("CARGO_TARGET_DIR", "CARGO_BUILD_JOBS", "CARGO_BUILD_TARGET_DIR")
+
+    inputs["environment"] = {k: v for k, v in os.environ.items() if build_variable(k)}
+    cargo_home = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    for name in ("config", "config.toml"):
+        config = cargo_home / name
+        if config.exists():
+            data = tomllib.loads(config.read_text())
+            # Wrapper locations and cache sizes do not change native behavior.
+            build = data.get("build", {}).copy()
+            for field in ("rustc-wrapper", "rustc-workspace-wrapper", "target-dir", "jobs", "incremental"):
+                build.pop(field, None)
+            inputs[f"cargo-{name}"] = {"build": build, "target": data.get("target", {}),
+                                       "profile": data.get("profile", {}),
+                                       "env": {k: v for k, v in data.get("env", {}).items()
+                                               if build_variable(k)}}
+    for name in output("git", "ls-files", "--", ".cargo").splitlines():
+        inputs[name] = (ROOT / name).read_text()
+    digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    return Path.home() / ".local/share/thinkthen-build-tools/native" / digest
+
+
+def main():
+    if sys.argv[1:] not in ([], ["--path"]):
+        sys.exit("usage: scripts/native-prepare [--path]")
+    if not sys.argv[1:] and os.environ.get("LLVM_PROFILE_FILE"):
+        sys.exit("native-prepare keeps release assets; coverage builds stay in the job target")
+    cache = cache_path()
+    if sys.argv[1:]:
+        print(cache)
+        return
+    host = output("rustc", "-vV").split("host: ")[1].splitlines()[0]
+    platforms = {row[3]: (row[1], row[2], 'libthinkthen_ffi.' + row[5]) for row in HOSTS.values()}
+    rid, _, library = platforms[host]
+    cache.mkdir(parents=True, exist_ok=True)
+    with (cache / f"{host}.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        destination = cache / rid / library
+        archive = cache / rid / "libthinkthen_ffi.a"
+        if destination.exists() and archive.exists():
+            print(f"native cache hit: {host}", file=sys.stderr)
+        else:
+            print(f"native cache miss: {host}", file=sys.stderr)
+            target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+            with tempfile.TemporaryFile(mode="w+") as messages:
+                subprocess.run(([str(ROOT / "scripts/runtime-floor-build")] if sys.platform == "linux" else []) + ["cargo", "build", *BUILD, "--target", host,
+                                "--message-format=json-render-diagnostics"], cwd=ROOT,
+                               check=True, stdout=messages)
+                messages.seek(0)
+                subprocess.run([sys.executable, "scripts/package-profile", "-",
+                                str(target / host / "release" / library), "release"],
+                               cwd=ROOT, stdin=messages, stdout=sys.stderr, check=True)
+            destination.parent.mkdir(exist_ok=True)
+            temporary = destination.with_suffix(".partial")
+            shutil.copy2(target / host / "release" / library, temporary)
+            temporary.replace(destination)
+            archive_temporary = archive.with_suffix(".partial")
+            shutil.copy2(target / host / "release" / archive.name, archive_temporary)
+            archive_temporary.replace(archive)
+        for asset_rid, jvm, _ in platforms.values():
+            alias = cache / "jvm" / jvm
+            alias.parent.mkdir(exist_ok=True)
+            asset = cache / asset_rid
+            if not asset.is_dir():
+                continue
+            if not alias.is_symlink() and not alias.exists():
+                alias.symlink_to(Path("..") / asset_rid, target_is_directory=True)
+        shutil.copy2(ROOT / "crates/thinkthen-ffi/include/thinkthen.h", cache / "thinkthen.h")
+    print(cache)
+
+
+if __name__ == "__main__":
+    main()
