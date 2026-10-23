@@ -104,11 +104,11 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: gate-linux-x86_64
-          path: gate-assets
+          path: ${{ runner.temp }}/gate-assets
       - name: Run the full declared gate
         run: |
           . scripts/native-tools-env
-          scripts/native-pair import gate-assets/pair.json gate-assets/assets
+          scripts/native-pair import "$RUNNER_TEMP/gate-assets/pair.json" "$RUNNER_TEMP/gate-assets/assets"
           THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image)
           export THINKTHEN_FLOOR_IMAGE
           scripts/native-prepare >/dev/null
