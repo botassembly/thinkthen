@@ -11,6 +11,13 @@ import threading
 from release_workflow import ROOT, run, version
 
 
+def java_arguments(path, *arguments):
+    """Keep complete JVM arguments outside the operating system command line."""
+    path.write_text('\n'.join(json.dumps(str(argument), ensure_ascii=False) for argument in arguments) + '\n',
+                    encoding='utf-8')
+    return '@' + str(path)
+
+
 def node_install(packages, node, scratch, isolated):
     """Serve the staged tarball through npm's normal by-name registry contract."""
     archive, = (packages / 'npm').glob('*.tgz')
@@ -89,8 +96,8 @@ def install(packages, scratch):
     run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', pom, 'package', env=isolated)
     jars = [consumer / 'target/classes'] + list(repository.rglob('*.jar'))
     for main in ('ConsumerCases', 'KotlinCasesKt'):
-        run('java', '--enable-native-access=ALL-UNNAMED', '-cp', os.pathsep.join(map(str, jars)),
-            main, ROOT / 'construction/stub.json', '--stub-only', env=isolated)
+        run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
+            '-cp', os.pathsep.join(map(str, jars)), main, ROOT / 'construction/stub.json', '--stub-only'), env=isolated)
     print('registry: clean npm, NuGet and JVM consumers pass the shared stub cases')
 
 

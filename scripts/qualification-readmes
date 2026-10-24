@@ -16,7 +16,7 @@ import tarfile
 import tempfile
 import zipfile
 
-from release_registry_check import environment
+from release_registry_check import environment, java_arguments
 from release_workflow import ROOT, version
 
 if os.name == 'nt':
@@ -146,8 +146,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
     classpath = os.pathsep.join(map(str, jars))
     tools = Path.home() / '.local/share/thinkthen-build-tools/jvm/m2'
     compiler = os.pathsep.join(str(path) for path in tools.rglob('*.jar'))
-    run('java', '-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
-        '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source)
+    run('java', java_arguments(scratch / 'kotlin-compiler.args', '-cp', compiler,
+        'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
+        '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source))
     run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
     print('README: Kotlin passes', flush=True)
 
