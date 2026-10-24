@@ -73,7 +73,7 @@ thinkthen decide 'Does the customer ask for money back?' --adapter stub \
   --csv --input messages.csv --column Body --into refund
 ```
 
-The output is `messages.thinkthen.csv`. Use `--tsv` or `--xlsx` for the other formats, repeat `--column` to select several columns, and use `--sheet` to select an Excel worksheet. `--output` names a new destination. `--in-place` keeps a backup before replacing the source. The [file guide](crates/thinkthen/src/files/README.md) describes cell handling and write behavior.
+The output is `messages.thinkthen.csv`. Use `--tsv` or `--excel` for the other formats, repeat `--column` to select several columns, and use `--sheet` to select an Excel worksheet. `--output` names a new destination. `--in-place` keeps a backup before replacing the source. The [file guide](crates/thinkthen/src/files/README.md) describes cell handling and write behavior.
 
 ## Backends
 
