@@ -21,6 +21,24 @@ def zig_version():
     return re.search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
 
 
+def swift_version():
+    return re.search(r'swift/([0-9.]+)-ubuntu', (ROOT / 'scripts/floors/prepare-swift').read_text())[1]
+
+
+def swift_components(env):
+    version = swift_version()
+    for base in (Path(env['LOCALAPPDATA']) / 'Programs/Swift', Path(env['PROGRAMFILES']) / 'Swift'):
+        toolchain = base / f'Toolchains/{version}+Asserts/usr/bin'
+        if not (toolchain / 'swift.exe').is_file():
+            continue
+        runtime = base / f'Runtimes/{version}/usr/bin'
+        sdk = base / f'Platforms/{version}/Windows.platform/Developer/SDKs/Windows.sdk'
+        if not runtime.is_dir() or not sdk.is_dir():
+            raise ValueError('Pinned Swift installation is incomplete: ' + str(base))
+        return toolchain, runtime, sdk
+    return None
+
+
 def native_run(command, *arguments, env, **options):
     # Windows executable lookup cannot use subprocess's supplied env PATH.
     # https://docs.python.org/3/library/subprocess.html#popen-constructor
@@ -45,9 +63,12 @@ def environment():
         if env.get(variable):
             paths.append(Path(env[variable]) / 'bin')
             break
-    for base, pattern in [(Path(env['LOCALAPPDATA']) / 'Programs/Swift', '**/usr/bin'),
-                          (Path(env['PROGRAMFILES']) / 'R', 'R-4.6*/bin/x64')]:
-        paths.extend(sorted(base.glob(pattern), reverse=True)[:1])
+    swift = swift_components(env)
+    if swift is not None:
+        toolchain, runtime, sdk = swift
+        paths.extend((toolchain, runtime))
+        env['SDKROOT'] = str(sdk)
+    paths.extend(sorted((Path(env['PROGRAMFILES']) / 'R').glob('R-4.6*/bin/x64'), reverse=True)[:1])
     env['PATH'] = os.pathsep.join(map(str, paths)) + os.pathsep + env['PATH']
     return env
 
@@ -72,16 +93,17 @@ def native():
         zig.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(next((folder / 'zig').iterdir()), zig)
     env = environment()
-    if not shutil.which('swift', path=env['PATH']):
+    if swift_components(env) is None:
         # Official signed installer; its version matches the Linux Swift closure.
-        recipe = (ROOT / 'scripts/floors/prepare-swift').read_text()
-        version = re.search(r'swift/([0-9.]+)-ubuntu', recipe)[1]
+        version = swift_version()
         name = f'swift-{version}-RELEASE-windows10.exe'
         installer = fetch(f'https://download.swift.org/swift-{version}-release/windows10/swift-{version}-RELEASE/{name}', folder / name)
         run('powershell', '-NoProfile', '-Command',
             'if ((Get-AuthenticodeSignature -LiteralPath $args[0]).Status -ne "Valid") {exit 1}', installer)
         run(installer, '-quiet', '-norestart')
         env = environment()
+        if swift_components(env) is None:
+            raise ValueError('Pinned Swift installation is missing after preparation')
     # The runner provides MSYS2. Install its UCRT compiler for Go's cgo consumer.
     run('C:/msys64/usr/bin/bash.exe', '-lc', 'pacman --noconfirm -S --needed mingw-w64-ucrt-x86_64-gcc')
     sqlite = binary / 'sqlite3.exe'
