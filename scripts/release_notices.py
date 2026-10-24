@@ -53,6 +53,7 @@ def package_terms(folder, name, license_file=None, root=ROOT):
 
 
 def inputs(root):
+    root = Path(root).resolve()
     members = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']['members']
     manifests = {path for member in members for path in root.glob(member + '/Cargo.toml')}
     patched_files = [p for entry in patched(root).values() for p in entry['folder'].rglob('*') if p.is_file()]

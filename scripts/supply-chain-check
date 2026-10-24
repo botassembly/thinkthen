@@ -16,7 +16,8 @@ from release_notice_check import verify
 from release_notice_packages import apply, wheel_notices, zip_update
 from release_wheel import python_wheel
 
-with tempfile.TemporaryDirectory(prefix='thinkthen-supply-chain-') as temporary:
+with tempfile.TemporaryDirectory(prefix='thinkthen-supply-chain-',
+                                 dir='/var/tmp' if sys.platform == 'darwin' else None) as temporary:
     work = Path(temporary)
     source = work / 'input'
     source.write_bytes(b'release input')
@@ -65,6 +66,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-supply-chain-') as temporary:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, destination)
     check(ROOT)
+    assert inputs(copied) == inputs(ROOT), 'copied notice input identity differs'
     with (copied / 'Cargo.lock').open('a') as stream: stream.write('\n# changed\n')
     try: check(copied)
     except ValueError as error: assert 'stale' in str(error)
