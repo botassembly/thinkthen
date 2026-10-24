@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('target')
 parser.add_argument('candidate', type=Path)
 parser.add_argument('sha')
+parser.add_argument('--caller-owned', action='store_true', help=argparse.SUPPRESS)
 args = parser.parse_args()
 package = args.candidate.resolve() / version() / args.target
 validate(package, args.target, args.sha)
@@ -55,6 +56,11 @@ elif args.target == 'windows-x86_64':
         sys.exit('Windows package qualification requires native Windows')
     if sys.getwindowsversion().build != FLOORS['windows']['build']:
         sys.exit('Windows qualification requires the named Windows Server OS floor')
+    if not args.caller_owned:
+        from windows_caller_process import launch
+        launch([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:], '--caller-owned'],
+               cwd=Path.cwd(), env=dict(os.environ))
+        sys.exit(0)
     from release_windows_host import environment
     native = environment()
     subprocess.run([sys.executable, 'scripts/release-check', str(package)], check=True, env=native)

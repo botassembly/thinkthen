@@ -54,7 +54,8 @@ def environment(scratch):
     keep = {'PATH', 'SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR', 'COMSPEC', 'PROGRAMFILES',
             'PROGRAMFILES(X86)', 'PROGRAMDATA', 'INCLUDE', 'LIB', 'LIBPATH',
             'VCINSTALLDIR', 'VCTOOLSINSTALLDIR', 'WINDOWSSDKDIR', 'WINDOWSSDKVERSION',
-            'UCRTVERSION', 'UCRTCONTENTROOT', 'SDKROOT', 'SWIFT_DEVELOPER_DIR', 'CC', 'CXX'}
+            'UCRTVERSION', 'UCRTCONTENTROOT', 'SDKROOT', 'SWIFT_DEVELOPER_DIR', 'CC', 'CXX',
+            'DOTNET_ROOT', 'DOTNET_ROOT_X64'}
     env = {key: value for key, value in os.environ.items() if key.upper() in keep}
     for name, folder in [('HOME', 'home'), ('USERPROFILE', 'home'), ('APPDATA', 'roaming'),
                          ('LOCALAPPDATA', 'local'), ('TEMP', 'tmp'), ('TMP', 'tmp')]:
@@ -67,6 +68,8 @@ def environment(scratch):
                DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                DOTNET_GENERATE_ASPNET_CERTIFICATE='false', R_LIBS_SITE='', R_ENVIRON_USER='NUL',
                R_PROFILE_USER='NUL', LC_ALL='C', LANG='C')
+    from release_windows_cache import prepare_cache
+    prepare_cache(scratch / 'local', env)
     return env
 
 
@@ -83,9 +86,11 @@ def runtime_environment(scratch, prepared):
     # may also contain javac, swiftc or another compiler, so it never enters PATH.
     # Swift and cgo consumers need their ordinary runtime DLLs for lookup.
     folders = set()
-    for name in ('swift', 'gcc'):
-        executable = shutil.which(name, path=prepared['PATH'])
-        if executable: folders.add(Path(executable).parent)
+    executable = shutil.which('gcc', path=prepared['PATH'])
+    if executable: folders.add(Path(executable).parent)
+    # Swift's compiler bin has different host dispatch/Blocks DLLs. Only its
+    # runtime component contains swiftCore and belongs in consumer lookup.
+    # https://github.com/swiftlang/swift/blob/swift-6.3.2-RELEASE/docs/WindowsToolchain.md
     for entry in prepared['PATH'].split(os.pathsep):
         folder = Path(entry)
         if entry and (folder / 'swiftCore.dll').is_file(): folders.add(folder)
@@ -103,10 +108,15 @@ def runtime_environment(scratch, prepared):
     return env
 
 
-def full(folder, build):
+def full(folder, build, *, caller_owned=False):
     if os.name != 'nt':
         raise RuntimeError('All installed Windows SDK checks require a native Windows runner')
     folder = Path(folder).resolve()
+    if not caller_owned:
+        from windows_caller_process import launch
+        launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', folder],
+               cwd=folder, env=dict(os.environ))
+        return
     packages = {name: folder / path for name, path in build['packages'].items()}
     cases = json.loads((folder / 'checks/stub.json').read_text())
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-sdks-') as temporary:
@@ -167,7 +177,8 @@ def full(folder, build):
             ET.SubElement(sources, 'add', key=name, value=value)
         ET.ElementTree(config).write(consumer / 'NuGet.Config', encoding='unicode')
         single = scratch / 'single-file'
-        build_consumer('dotnet', 'publish', project, '--configfile', consumer / 'NuGet.Config',
+        build_consumer('dotnet', 'publish', project, '--disable-build-servers',
+                       '--configfile', consumer / 'NuGet.Config',
                        '-r', 'win-x64', '-p:PublishSingleFile=true', '-p:SelfContained=false',
                        '--artifacts-path', scratch / 'dotnet-artifacts', '-o', single,
                        extra={'NUGET_PACKAGES': str(scratch / 'nuget-packages')})
@@ -254,3 +265,10 @@ def swift_and_zig(build_consumer, execute, packages, checks, fixture, scratch):
     build_consumer('zig', 'build', '-j2', '-Dtarget=x86_64-windows-msvc', '-Doptimize=ReleaseSafe', cwd=zig / 'consumer')
     execute(sys.executable, checks / 'zig.py', zig / 'consumer/zig-out/bin/consumer.exe', fixture)
     print('candidate Windows Zig: installed shared stub cases pass', flush=True)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3 or sys.argv[1] != '--caller-owned':
+        raise SystemExit('Use the installed candidate checker')
+    folder = Path(sys.argv[2]).resolve()
+    full(folder, json.loads((folder / 'build.json').read_text()), caller_owned=True)

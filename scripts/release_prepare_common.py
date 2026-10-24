@@ -6,9 +6,10 @@ import sys
 import tempfile
 
 from release_downloads import fetch
+from release_home import checked_home
 
 ROOT = Path(__file__).resolve().parent.parent
-TOOLS = Path.home() / '.local/share/thinkthen-build-tools'
+TOOLS = checked_home() / '.local/share/thinkthen-build-tools'
 PINS = json.loads((ROOT / 'scripts/release-tools.json').read_text())
 def run(*args, **options):
     options.setdefault('cwd', ROOT)

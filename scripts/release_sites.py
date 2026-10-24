@@ -9,7 +9,7 @@ import zipfile
 
 from release_workflow import ROOT, run, version
 
-CRATES = ('thinkthen-core', 'thinkthen', 'thinkthen-files', 'thinkthen-runs', 'thinkthen-cli')
+CRATES = ('thinkthen',)
 
 
 def sources(staged, scratch):

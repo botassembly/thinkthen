@@ -3,7 +3,7 @@
 use std::num::NonZeroUsize;
 use std::str::FromStr;
 
-use thinkthen_core::{Error, ErrorKind};
+use crate::core::{Error, ErrorKind};
 
 /// The variable that holds the batch size.
 const BATCH_VARIABLE: &str = "THINKTHEN_BATCH";

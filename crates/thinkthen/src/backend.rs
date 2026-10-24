@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use thinkthen_core::{Adapter, Error, ErrorKind};
+use crate::core::{Adapter, Error, ErrorKind};
 
 pub(crate) const DEFAULT_BACKEND: &str = "systemone";
 

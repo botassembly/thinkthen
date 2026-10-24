@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Check release HOME placement through release commands, without tool downloads."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def main():
+    # The job checkout is disk-backed; only the rejected HOME fixture uses /tmp.
+    with tempfile.TemporaryDirectory(prefix='.release-home-', dir=ROOT) as folder, \
+            tempfile.TemporaryDirectory(prefix='thinkthen-rejected-home-', dir='/tmp') as rejected:
+        scratch = Path(folder)
+        safe = scratch / 'home'
+        safe.mkdir()
+        alias = scratch / 'alias'
+        alias.symlink_to(rejected, target_is_directory=True)
+        marker = scratch / 'tools-called'
+        binary = safe / '.local/bin'
+        binary.mkdir(parents=True)
+        uv = binary / 'uv'
+        uv.write_text(f'#!{sys.executable}\nfrom pathlib import Path\nPath({str(marker)!r}).touch()\n')
+        uv.chmod(0o755)
+        env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'],
+                   PM_JOB='0106 release-home-test', PYTHONDONTWRITEBYTECODE='1')
+        commands = [
+            ['release-workflow', 'prepare', target] for target in
+            ('linux-x86_64', 'linux-arm64', 'macos-arm64', 'windows-x86_64')]
+        commands += [['release-workflow', 'prepare-registry'],
+                     ['release-workflow', 'build', 'linux-x86_64', str(scratch / 'output'), 'unused'],
+                     ['release-candidate', str(scratch / 'output')],
+                     ['release-candidate', '--windows', str(scratch / 'output')]]
+        for home in (Path(rejected), alias, Path('/private/tmp/thinkthen-rejected-home')):
+            for command in commands:
+                result = subprocess.run([sys.executable, str(ROOT / 'scripts' / command[0]), *command[1:]],
+                                        env=dict(env, HOME=str(home)), capture_output=True, text=True)
+                assert result.returncode != 0, command
+                assert 'release HOME' in result.stderr and str(home.resolve()) in result.stderr, (command, result.stderr)
+                assert not marker.exists() and not (scratch / 'output').exists(), command
+        assert not list(Path(rejected).iterdir()), 'rejected HOME gained build inputs'
+        result = subprocess.run([sys.executable, str(ROOT / 'scripts/release-workflow'), 'prepare-registry'],
+                                env=dict(env, HOME=str(safe)), capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        assert marker.exists(), 'safe job HOME did not reach preparation'
+        print('release HOME: temporary paths and aliases stop before preparation/build; job HOME reaches preparation')
+
+
+if __name__ == '__main__':
+    main()

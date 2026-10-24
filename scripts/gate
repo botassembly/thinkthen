@@ -15,6 +15,7 @@ scripts/bindings-schema
 scripts/notices --check
 scripts/supply-chain-check
 cargo fmt --all --check
+scripts/core-check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 if [ -f scripts/c-gate ]; then scripts/c-gate; fi
 cargo test --workspace --locked

@@ -38,9 +38,13 @@ pub fn linkNative(b: *std.Build, dependency: *std.Build.Dependency, executable: 
         else => @panic("ThinkThen supports Linux x86-64/arm64 glibc and macOS arm64"),
     };
     executable.each_lib_rpath = false;
-    executable.root_module.addLibraryPath(dependency.path(b.fmt("native/{s}", .{platform})));
-    executable.root_module.linkSystemLibrary("thinkthen_ffi", .{ .use_pkg_config = .no });
-    if (target.os.tag != .windows) executable.root_module.addRPathSpecial(search);
+    if (target.os.tag == .windows) {
+        executable.root_module.addObjectFile(dependency.path("native/win-x64/thinkthen_ffi.lib"));
+    } else {
+        executable.root_module.addLibraryPath(dependency.path(b.fmt("native/{s}", .{platform})));
+        executable.root_module.linkSystemLibrary("thinkthen_ffi", .{ .use_pkg_config = .no });
+        executable.root_module.addRPathSpecial(search);
+    }
     const library = b.addInstallFileWithDir(dependency.path(b.fmt("native/{s}/{s}", .{ platform, name })), installed.dest_dir.?, name);
     installed.step.dependOn(&library.step);
 }

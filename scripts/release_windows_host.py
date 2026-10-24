@@ -21,6 +21,15 @@ def zig_version():
     return re.search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
 
 
+def native_run(command, *arguments, env, **options):
+    # Windows executable lookup cannot use subprocess's supplied env PATH.
+    # https://docs.python.org/3/library/subprocess.html#popen-constructor
+    executable = shutil.which(str(command), path=env['PATH'])
+    if executable is None:
+        raise ValueError('native Windows tool is missing: ' + str(command))
+    return run(executable, *arguments, env=env, **options)
+
+
 def environment():
     if os.name != 'nt':
         raise ValueError('installed Windows checks require native Windows')
@@ -31,7 +40,7 @@ def environment():
     vcvars = Path(installation) / 'VC/Auxiliary/Build/vcvars64.bat'
     selected = subprocess.check_output(f'call "{vcvars}" >nul && set', shell=True, text=True)
     env.update((key.upper(), value) for line in selected.splitlines() if '=' in line and not line.startswith('=') for key, value in [line.split('=', 1)])
-    paths = [TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
+    paths = [TOOLS / 'windows/R-4.6.1/bin/x64', TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
     for variable in ('JAVA_HOME_25_X64', 'JAVA_HOME_22_X64'):
         if env.get(variable):
             paths.append(Path(env[variable]) / 'bin')
@@ -44,6 +53,8 @@ def environment():
 
 
 def native():
+    from release_windows_r import runtime
+    runtime()
     pins = selections()['INPUTS']
     folder = TOOLS / 'windows-check'
     folder.mkdir(parents=True, exist_ok=True)
@@ -80,7 +91,7 @@ def native():
             with zipfile.ZipFile(fetch(url, folder / 'sqlite.zip', digest)) as archive:
                 archive.extractall(temporary)
             source = next(Path(temporary).iterdir())
-            run('clang-cl', '/nologo', '/O2', '/D_CRT_SECURE_NO_WARNINGS',
+            native_run('clang-cl', '/nologo', '/O2', '/D_CRT_SECURE_NO_WARNINGS',
                 source / 'shell.c', source / 'sqlite3.c', '/Fe:' + str(sqlite),
                 '/link', 'advapi32.lib', 'user32.lib', env=env, cwd=temporary)
     for command in ('node', 'npm', 'ruby', 'gem', 'Rscript', 'java', 'dotnet', 'go', 'gcc', 'clang-cl', 'swift', 'zig', 'sqlite3', 'duckdb'):
@@ -91,18 +102,24 @@ def native():
                                  ('java', 'java', ['--version']), ('go', 'go', ['version']),
                                  ('swift', 'swift', ['--version']), ('zig', 'zig', ['version'])]:
         minimum = re.search(r'[0-9]+(?:\.[0-9]+)*', requirements[key])[0]
-        actual = run(name, *arguments, env=env, capture_output=True, text=True).stdout
+        actual = native_run(name, *arguments, env=env, capture_output=True, text=True).stdout
         found = re.search(r'[0-9]+(?:\.[0-9]+)*', actual)[0]
         if tuple(map(int, found.split('.'))) < tuple(map(int, minimum.split('.'))):
             raise ValueError(name + ' version is below ' + minimum)
-    runtimes = run('dotnet', '--list-runtimes', env=env, capture_output=True, text=True).stdout
+    runtimes = native_run('dotnet', '--list-runtimes', env=env, capture_output=True, text=True).stdout
     if not re.search(r'^Microsoft.NETCore.App ' + re.search(r'[0-9]+', requirements['csharp'])[0] + r'\.', runtimes, re.M):
         raise ValueError('missing required .NET runtime')
-    r_version = run('Rscript', '--version', env=env, capture_output=True, text=True)
+    r_version = native_run('Rscript', '--version', env=env, capture_output=True, text=True)
     required_r = next(name.split('-')[1] for name in pins if name.startswith('R-')).rsplit('.', 1)[0]
     if required_r not in r_version.stdout + r_version.stderr:
         raise ValueError('R runtime does not match the candidate binary package')
     print('release: native Windows runtime preparation complete; installed checks remain mandatory')
+
+
+def prepare_wine():
+    # Wine runs only the x64 command and C smoke consumers.
+    run('sudo', 'apt-get', 'update')
+    run('sudo', 'apt-get', 'install', '-y', '--no-install-recommends', 'wine64', 'wine', 'cmake', 'ninja-build')
 
 
 def prepare():
@@ -121,8 +138,7 @@ def prepare():
         run('sudo', 'tee', '/etc/apt/sources.list.d/thinkthen-llvm.list', input='deb [signed-by=/usr/share/keyrings/thinkthen-llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-21 main\n', text=True)
         run('sudo', 'apt-get', 'update')
         run('sudo', 'apt-get', 'install', '-y', 'clang-21', 'lld-21', 'llvm-21', 'llvm-21-tools')
-    if not shutil.which('wine'):
-        run('sudo', 'apt-get', 'install', '-y', 'wine64', 'wine', 'cmake', 'ninja-build')
+    prepare_wine()
     prepared('sh', '-eu', '-c', 'for tool in clang-cl lld-link llvm-readobj llvm-lib-21 llvm-rc-21; do command -v "$tool"; done')
     pins = selections()
     prepared('scripts/release-windows-prepare', 'inputs')

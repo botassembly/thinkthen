@@ -7,10 +7,12 @@ import re
 import subprocess
 import tomllib
 
+from release_patched import patched
+
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {'linux-x86_64': 'x86_64-unknown-linux-gnu', 'linux-arm64': 'aarch64-unknown-linux-gnu',
            'macos-arm64': 'aarch64-apple-darwin', 'windows-x86_64': 'x86_64-pc-windows-msvc'}
-SURFACES = {'command': 'thinkthen-cli', 'python': 'thinkthen-python',
+SURFACES = {'command': 'thinkthen', 'python': 'thinkthen-python',
             'typescript': 'thinkthen-node', 'r': 'thinkthen-r'}
 NOTICE = 'THIRD-PARTY-NOTICES'
 
@@ -20,8 +22,10 @@ def digest(data):
 
 
 def locked(root):
-    return {p['name'] + '-' + p['version']: p['checksum']
-            for p in tomllib.loads((root / 'Cargo.lock').read_text())['package'] if 'source' in p}
+    result = {p['name'] + '-' + p['version']: p['checksum']
+              for p in tomllib.loads((root / 'Cargo.lock').read_text())['package'] if 'source' in p}
+    result.update({name + '-' + entry['version']: entry['checksum'] for name, entry in patched(root).items()})
+    return result
 
 
 @cache
@@ -33,7 +37,8 @@ def metadata(root, target=None):
 
 def license_files(folder):
     return sorted(p for p in folder.rglob('*') if p.is_file() and
-                  re.match(r'(?i)^(licen[cs]e|copying|copyright|notice)(?:[._-]|$)', p.name))
+                  (re.match(r'(?i)^(licen[cs]e|copying|copyright|notice)(?:[._-]|$)', p.name)
+                   or (p.name.upper() == 'AUTHORS' and p.read_text().startswith('LICENSE:'))))
 
 
 def package_terms(folder, name, license_file=None, root=ROOT):
@@ -50,20 +55,22 @@ def package_terms(folder, name, license_file=None, root=ROOT):
 def inputs(root):
     members = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']['members']
     manifests = {path for member in members for path in root.glob(member + '/Cargo.toml')}
+    patched_files = [p for entry in patched(root).values() for p in entry['folder'].rglob('*') if p.is_file()]
     return {str(p.relative_to(root)): digest(p.read_bytes()) for p in
-            [root / 'Cargo.lock', root / 'Cargo.toml', *sorted(manifests)]}
+            [root / 'Cargo.lock', root / 'Cargo.toml', *sorted(manifests), *sorted(patched_files)]}
 
 
 def refresh(root=ROOT):
     """Copy license texts from Cargo's checksum-verified source cache."""
     catalog = {}
+    changes = patched(root)
     destination = root / 'licenses/crates'
     wanted = locked(root)
     selected = set().union(*(resolve(root, target, family) for target in TARGETS
                              for family in [*SURFACES, 'ffi']))
     wanted = {name: checksum for name, checksum in wanted.items() if name in selected}
     for package in metadata(root)['packages']:
-        if package['source'] is None: continue
+        if package['source'] is None and package['name'] not in changes: continue
         name = package['name'] + '-' + package['version']
         if name not in wanted: continue
         folder = Path(package['manifest_path']).parent
@@ -71,6 +78,7 @@ def refresh(root=ROOT):
         if not package['license']:
             raise ValueError('missing license declaration or text: ' + name)
         entry = {'checksum': wanted[name], 'license': package['license'].replace('/', ' OR '), 'files': {}}
+        if package['name'] in changes: entry['patch_sha256'] = changes[package['name']]['patch_sha256']
         for relative, data in texts.items():
             target = destination / name / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -93,14 +101,17 @@ def check(root=ROOT):
     if (json.loads((root / 'licenses/inputs.json').read_text()) != inputs(root) or
             any(entry['checksum'] != checksums.get(name) for name, entry in catalog.items())):
         raise ValueError('crate notices are stale; run scripts/notices refresh after cargo fetch --locked')
+    changes = patched(root)
     declarations = {p['name'] + '-' + p['version']: p['license'].replace('/', ' OR ')
-                    for p in metadata(root)['packages'] if p['source'] and p['license']}
+                    for p in metadata(root)['packages'] if (p['source'] or p['name'] in changes) and p['license']}
     selected = set().union(*(resolve(root, target, family) for target in TARGETS
                              for family in [*SURFACES, 'ffi']))
     if set(catalog) != selected:
         raise ValueError('crate notice inventory differs from resolved target dependencies')
     expected = set()
     for name, entry in catalog.items():
+        expected_patch = next((p['patch_sha256'] for n, p in changes.items() if n + '-' + p['version'] == name), None)
+        if entry.get('patch_sha256') != expected_patch: raise ValueError('crate patch identity differs: ' + name)
         if entry['license'] != declarations.get(name):
             raise ValueError('crate license declaration differs: ' + name)
         for relative, checksum in entry['files'].items():
@@ -125,12 +136,13 @@ def resolve(root, target, family):
     pending = [p['id'] for p in data['packages'] if p['name'] == start]
     if len(pending) != 1: raise ValueError('missing notice root: ' + start)
     visited, selected = set(), set()
+    changes = patched(root)
     while pending:
         identity = pending.pop()
         if identity in visited: continue
         visited.add(identity)
         package = packages[identity]
-        if package['source'] is not None:
+        if package['source'] is not None or package['name'] in changes:
             selected.add(package['name'] + '-' + package['version'])
         pending.extend(dep['pkg'] for dep in nodes[identity]['deps']
                        if any(kind['kind'] is None for kind in dep['dep_kinds'])
@@ -161,13 +173,17 @@ def license_expression(entries):
 def source_bundle(vendor, root=ROOT):
     """A source package redistributes all vendored crates, including build tools."""
     entries, files = {}, {'LICENSE': (root / 'LICENSE').read_bytes()}
-    for manifest in sorted(vendor.glob('*/Cargo.toml')):
+    changes = patched(root)
+    manifests = [*sorted(vendor.glob('*/Cargo.toml')), *(entry['folder'] / 'Cargo.toml' for entry in changes.values())]
+    for manifest in manifests:
         package = tomllib.loads(manifest.read_text())['package']
         name = package['name'] + '-' + package['version']
         texts = package_terms(manifest.parent, name, package.get('license-file'), root)
-        entry = {'checksum': json.loads((manifest.parent / '.cargo-checksum.json').read_text())['package'],
+        checksum = changes[package['name']]['checksum'] if package['name'] in changes else json.loads((manifest.parent / '.cargo-checksum.json').read_text())['package']
+        entry = {'checksum': checksum,
                  'license': package['license'].replace('/', ' OR '),
                  'files': {relative: digest(data) for relative, data in texts.items()}}
+        if package['name'] in changes: entry['patch_sha256'] = changes[package['name']]['patch_sha256']
         entries[name] = entry
         files.update({NOTICE + '/' + name + '/' + relative: data for relative, data in texts.items()})
     if not entries: raise ValueError('source package has no vendored dependencies')
@@ -192,7 +208,8 @@ def compiled_names(target, messages, root=ROOT):
     """Compare notice resolution with the shared producer's target library outputs."""
     selected = set().union(*(resolve(root, target, family) for family in [*SURFACES, 'ffi']))
     data = metadata(root, TARGETS[target])
-    identities = {p['id']: p['name'] + '-' + p['version'] for p in data['packages'] if p['source']}
+    changes = patched(root)
+    identities = {p['id']: p['name'] + '-' + p['version'] for p in data['packages'] if p['source'] or p['name'] in changes}
     actual = set()
     for line in Path(messages).read_text().splitlines():
         item = json.loads(line)

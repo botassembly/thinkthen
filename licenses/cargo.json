@@ -182,7 +182,8 @@
     "files": {
       "LICENSE": "fb9c2cccbdcb61ea51e0d553a6474297031544104985279c5c32d25c5c99977e"
     },
-    "license": "MIT"
+    "license": "MIT",
+    "patch_sha256": "e80d2fdae4030acf9ac557c7312b70341d149018c2a79e95dc06e65a40b32c03"
   },
   "fastrand-2.5.0": {
     "checksum": "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223",

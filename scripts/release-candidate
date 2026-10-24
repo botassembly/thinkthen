@@ -5,6 +5,7 @@ Prepared compilers/dependencies are build inputs, never distribution contents.
 The command prints one line per package and the resulting platform directory.
 A failed tool prints its last thirty output lines.
 """
+from release_home import checked_home
 from release_images import image
 import hashlib
 import email
@@ -531,6 +532,11 @@ def database_packages(out, version, host, rid, cache):
 
 def main():
     global ROOT
+    if sys.argv[1:] not in (['--help'], ['-h']):
+        try:
+            checked_home()
+        except ValueError as error:
+            sys.exit(str(error))
     if len(sys.argv) == 3 and sys.argv[1] == "--windows":
         from release_windows import candidate
         candidate(Path(sys.argv[2]).resolve())

@@ -178,7 +178,7 @@ fn one_records_labels_span_the_adapters_question_limit() {
 #[test]
 fn an_omitted_request_reply_fails_instead_of_reading_incomplete_answers() {
     use std::num::NonZeroUsize;
-    use thinkthen_core::{Adapter, Decide, NextRound, Packer};
+    use thinkthen::core::{Adapter, Decide, NextRound, Packer};
 
     let question = Decide::new("Is it relevant?").unwrap();
     let batch = NonZeroUsize::new(1).unwrap();

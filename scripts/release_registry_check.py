@@ -57,6 +57,11 @@ def environment(scratch):
                        DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_GENERATE_ASPNET_CERTIFICATE='false')
     for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH'):
         environment.pop(name, None)
+    if os.name == 'nt':
+        from release_windows_cache import prepare_cache
+        cache = scratch / 'cache'
+        environment.update(LOCALAPPDATA=str(cache), LocalAppData=str(cache))
+        prepare_cache(cache, environment)
     return environment
 
 

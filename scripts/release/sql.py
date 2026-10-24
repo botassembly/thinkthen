@@ -1,5 +1,6 @@
 """Run shared construction rows through standard database commands."""
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -68,5 +69,12 @@ for case in cases:
             if item is not None or name == 'answer': value[name] = item
         actual.append(value)
     expected = [{key: value for key, value in row.items() if key != 'id'} for row in case['expected']]
+    if kind == 'sqlite':
+        # SQLite 3.41 CLI decimal round trips can differ by one binary64 step.
+        # Keep row counts and every other field exact.
+        for row, wanted in zip(actual, expected, strict=True):
+            if 'p' in row and 'p' in wanted:
+                assert math.isclose(row['p'], wanted['p'], rel_tol=0, abs_tol=math.ulp(wanted['p'])), (kind, function, row, wanted)
+                row['p'] = wanted['p']
     assert actual == expected, (kind, function, actual, expected)
 print(f'candidate {kind}: {len(cases)} stub cases pass')

@@ -8,7 +8,7 @@ use std::sync::mpsc::{Receiver, sync_channel};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::thread;
 
-use thinkthen_core::{
+use crate::core::{
     Annotate, Chunk, Decide, Function, NextRound, Packer, Record, Request, RequestAnswers, Row,
 };
 
@@ -105,7 +105,7 @@ impl Engine {
         records: impl IntoIterator<Item = Record>,
         mut sink: impl FnMut(Row),
     ) -> Result<(), Error> {
-        let source = thinkthen_core::Source {
+        let source = crate::core::Source {
             question_identity: self
                 .operation
                 .map_or_else(|| question.identity(), |name| question.identity_as(name)),
@@ -204,7 +204,7 @@ impl Engine {
         mut sink: impl FnMut(T),
     ) -> Result<(), Error> {
         self.filter_rows(question, records, |original, row| {
-            if thinkthen_core::passes(row.outcome()) {
+            if crate::core::passes(row.outcome()) {
                 sink(original);
             }
         })

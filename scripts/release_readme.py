@@ -44,9 +44,10 @@ def readme(name, out, artifact):
                                   if not re.search(r'\b(?:API|PACKAGING)\.md\b|\bexamples/|\bscripts/', p))
     body = ''.join(parts)
     version = json.loads((out / 'build.json').read_text())['version']
-    body = body.replace('pip install thinkthen', f'python3 -m pip install --no-index ./{artifact.name}')
-    body = body.replace('npm install thinkthen', f'npm install --offline ./{artifact.name}')
     requirements = json.loads((out / 'requirements.json').read_text())[name]
+    python = 'python' if requirements.get('platform') == 'windows-x86_64' else 'python3'
+    body = body.replace('pip install thinkthen', f'{python} -m pip install --no-index ./{artifact.name}')
+    body = body.replace('npm install thinkthen', f'npm install --offline ./{artifact.name}')
     support = (FLOORS['windows']['support'].rstrip('.') if requirements.get('platform') == 'windows-x86_64' else f'macOS {requirements["macos"]}' if 'macos' in requirements else
                f'Linux glibc >= {requirements["supported_glibc"]}')
     intro = (f'# ThinkThen {version}: {name}\n\n'

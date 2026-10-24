@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Compile the pure core module without access to engine or command dependencies."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import tomllib
+
+root = Path(__file__).resolve().parent.parent
+workspace = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']
+# This allowlist is the no-I/O dependency boundary.
+pure = ('schemars', 'serde', 'serde_json', 'sha2', 'thiserror', 'unicode-general-category')
+with tempfile.TemporaryDirectory(prefix='thinkthen-core-') as temporary:
+    stage = Path(temporary)
+    shutil.copytree(root / 'crates/thinkthen/src/core', stage / 'src/core')
+    shutil.copy2(stage / 'src/core/clippy.toml', stage / 'clippy.toml')
+    (stage / 'src/lib.rs').write_text('pub mod core;\n')
+    manifest = ['[package]', 'name="thinkthen-pure-check"', 'version="0.0.0"',
+                'edition=' + json.dumps(workspace['package']['edition']), '[dependencies]']
+    for name in pure:
+        dependency = workspace['dependencies'][name]
+        if isinstance(dependency, str): dependency = {'version': dependency}
+        dependency = dict(dependency)
+        if name == 'serde_json': dependency['features'] = ['raw_value']
+        fields = ', '.join(key + '=' + json.dumps(value) for key, value in dependency.items())
+        manifest.append(name + '={' + fields + '}')
+    (stage / 'Cargo.toml').write_text('\n'.join(manifest) + '\n')
+    # Reuse exactly the workspace's resolved registry versions, then update only
+    # the synthetic root record offline.
+    shutil.copy2(root / 'Cargo.lock', stage / 'Cargo.lock')
+    subprocess.run(['cargo', 'clippy', '--offline', '--manifest-path', str(stage / 'Cargo.toml'),
+                    '--', '-D', 'warnings', '-F', 'unsafe_code'], check=True,
+                   env=dict(os.environ, CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))))
+print('core: isolated pure module compiles with I/O and dynamic JSON bans')

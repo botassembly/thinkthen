@@ -42,4 +42,4 @@ unwrap_used = "deny"
 
 [[test]]
 name = "transport_logging"
-path = "../thinkthen-cli/tests/transport_logging.rs"
+path = "../thinkthen/tests/cli_transport_logging.rs"

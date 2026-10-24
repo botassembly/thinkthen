@@ -10,6 +10,8 @@ import subprocess
 import tarfile
 import tempfile
 
+from release_home import checked_home
+
 ROOT = Path(__file__).resolve().parent.parent
 TARGETS = {
     'linux-x86_64': 'ubuntu-24.04',
@@ -206,6 +208,8 @@ def main():
     command.add_argument('release', type=Path)
     command.add_argument('sha')
     args = parser.parse_args()
+    if args.command in ('prepare', 'prepare-registry', 'build'):
+        checked_home()
     if args.command == 'resolve': resolve(args.tag)
     elif args.command == 'prepare-registry':
         from release_registry_prepare import prepare

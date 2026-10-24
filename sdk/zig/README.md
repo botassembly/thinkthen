@@ -206,6 +206,8 @@ zig build
 ./zig-out/bin/example
 ```
 
+On Windows, build with `zig build -Dtarget=x86_64-windows-msvc` and run `.\zig-out\bin\example.exe`.
+
 Here `@import("thinkthen")` in the build file imports the dependency's build helper. The application's import resolves the module added above. No native path override, downloader or runtime asset search runs.
 
 The build imports the header through target-matched `zig translate-c` output in the build cache. No generated declarations are committed and no private ABI declarations are maintained. [Zig's C translation reference](https://ziglang.org/documentation/0.17.0/#C-Translation-CLI) requires matching translation and compilation targets. The installed archive must be sufficient for an offline clean-cache build; no Rust compiler, C compiler installation, Jansson or other language runtime is required by consumers. Zig provides compilation and header translation. Building the matching engine from source remains a separate Rust release task.
