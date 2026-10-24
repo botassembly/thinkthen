@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
     if WINDOWS:
         output = run('powershell', '-NoProfile', '-NonInteractive', '-Command',
             "$ErrorActionPreference = 'Stop'\n" + shell +
-            '\nif ($LASTEXITCODE -notin @(0,1,3)) { exit $LASTEXITCODE }')
+            '\nif ($LASTEXITCODE -notin @(0,1,3)) { exit $LASTEXITCODE }; exit 0')
     else:
         # The README explicitly directs arm64 Linux and Mac users to the matching archive.
         shell, replacements = re.subn(r'(?<=tar -xzf )[^\s]+', shlex.quote(artifact.name), shell)
