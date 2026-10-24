@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run every SDK present in this checkout, under the caller's instrumentation.
+set -eu
+cd "$(dirname "$0")/.."
+for gate in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate zig-sdk-gate swift-gate go-gate jvm-gate csharp-gate duckdb-gate sqlite-gate postgres-gate; do
+    if [ -f "scripts/$gate" ]; then "scripts/$gate"; fi
+done

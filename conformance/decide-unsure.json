@@ -1,0 +1,40 @@
+{
+  "client": {},
+  "expected": [
+    {
+      "answer": null,
+      "detail": {
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "3e205120a9de4b8cd5f23b131b3b9d4755c5ccc11bd13bf1a5ffddbf4342a05c"
+        }
+      },
+      "id": 1,
+      "p": 0.5,
+      "status": "unsure"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "noul": 0.5,
+        "type": "noul"
+      }
+    }
+  ],
+  "request": {
+    "function": "decide",
+    "options": {
+      "threshold": "0.2:0.8"
+    },
+    "question": {
+      "type": "inline",
+      "value": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 1
+}

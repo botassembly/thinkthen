@@ -1,0 +1,33 @@
+[package]
+name = "thinkthen-node"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[dependencies]
+log.workspace = true
+thinkthen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+napi = { version = "=2.16.17", default-features = false, features = ["napi8", "compat-mode"] }
+napi-derive = "=2.16.13"
+
+[build-dependencies]
+napi-build = "=2.5.0"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+loopback.workspace = true
+
+[[test]]
+name = "transport_logging"
+path = "../../../crates/thinkthen/tests/cli_transport_logging.rs"

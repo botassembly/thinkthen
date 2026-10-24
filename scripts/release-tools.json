@@ -1,0 +1,30 @@
+{
+  "python_frames": {
+    "pandas": "2.2.0",
+    "numpy": "1.26.4",
+    "polars": "1.0.0",
+    "python-dateutil": "2.9.0.post0",
+    "pytz": "2026.5",
+    "tzdata": "2026.5",
+    "six": "1.17.0"
+  },
+  "r_sources": {
+    "R6_2.6.1.tar.gz": "59c6eba8b1b912eb7e104f65053235604be853425ee67c152ac4e86a1f2073b4",
+    "cli_3.6.6.tar.gz": "b2b58d6dd82f5798b335e39c00591686a01fd3e94399ef898e146173e36f18f9",
+    "data.table_1.18.6.1.tar.gz": "f2846f45fbbdfe886f05fa7489314a56ae0f3352ae5bc1070b0cdd4f44ffa1f5",
+    "dplyr_1.2.1.tar.gz": "18d66fe2f24cda8b619c177326d39dd015229ab99695fa67d3fa31e4569390e0",
+    "generics_0.1.4.tar.gz": "bbe95a097792d38fc3b7e677738af1b95b66ea5e5017e33b8beac6a6088d0801",
+    "glue_1.8.1.tar.gz": "1c55905d3efc3d5c199ceb0bd12218e97f0d4c64df6038ff41ecef415478a122",
+    "lifecycle_1.0.5.tar.gz": "61841e3e6edba056a88355a3f1d6698ab8d5d9cb3c05f2af0ec5a44ab516f8ee",
+    "magrittr_2.0.5.tar.gz": "3f5b5b1d4e6d12807a95c50b6c88cb1d8af2c5eb5213f08bfe58f278eca2ed23",
+    "pillar_1.11.1.tar.gz": "056ce154238c9b5b8d5dcbcb52e1bc51d33870ce08c8a9ca9496478bd59f4653",
+    "pkgconfig_2.0.3.tar.gz": "330fef440ffeb842a7dcfffc8303743f1feae83e8d6131078b5a44ff11bc3850",
+    "rlang_1.3.0.tar.gz": "80aa537d49e72265f443a15e8936128af583caa5e572086518b503cbf064279c",
+    "tibble_3.3.1.tar.gz": "fb309f8a1939021b237c7e85ff7ad6e8ff5acd57a6230d220a452094b492b28f",
+    "tidyselect_1.2.1.tar.gz": "169e97ba0bbfbcdf4a80534322751f87a04370310c40e27f04aac6525d45903c",
+    "utf8_1.2.6.tar.gz": "4589f8b72291329e70b7f3a8c20f2feb4e7764eebad2e6976bc9a3eee7686ce9",
+    "vctrs_0.7.3.tar.gz": "b45078413e06ac624dddb7221a3a43908b405c8abec09822cb86638d30b0435b",
+    "withr_3.0.3.tar.gz": "d86c6454164fc85678bfc85e2a6cce42f7461d45fa9a87de71f376e7956c991e"
+  },
+  "uv": "0.11.14"
+}

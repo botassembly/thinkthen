@@ -1,0 +1,34 @@
+#!/bin/sh
+# Install the vendored source package and test only the installed public API.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+export CARGO_NET_OFFLINE=true
+export R_HOME="$(R RHOME)"
+case "${CARGO_TARGET_DIR:-target}" in
+  /*) ;;
+  *) CARGO_TARGET_DIR="$root/${CARGO_TARGET_DIR:-target}" ;;
+esac
+export CARGO_TARGET_DIR
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+mkdir "$scratch/library" "$scratch/home"
+# Copy the prepared dependency artifact before isolating the consumer library.
+jsonlite=$(Rscript --vanilla -e 'cat(find.package("jsonlite"))')
+cp -R "$jsonlite" "$scratch/library/jsonlite"
+scripts/r-package "$scratch"
+if ! R CMD INSTALL --library="$scratch/library" "$scratch"/thinkthen_*.tar.gz >"$scratch/install.log" 2>&1; then
+  tail -80 "$scratch/install.log"
+  exit 1
+fi
+tail -3 "$scratch/install.log"
+profile=release
+if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then profile=debug; fi
+python3 scripts/package-profile "$CARGO_TARGET_DIR/thinkthen-r-artifacts.json" \
+    "$CARGO_TARGET_DIR/$profile/libthinkthen_r.a" "$profile" "$scratch/install.log"
+cargo build -p loopback --bin loopback --locked
+cp "$scratch/library/thinkthen/libs/thinkthen.so" "$CARGO_TARGET_DIR/debug/thinkthen-r.so"
+export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
+# The driver copies prepared dependencies before isolating its consumer library.
+unset R_LIBS THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+python3 sdk/r/tests/driver.py --root "$root" --library "$scratch/library" --scratch "$scratch"

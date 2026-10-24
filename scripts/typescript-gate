@@ -1,0 +1,29 @@
+#!/bin/sh
+# Build the addon once, then test the installed tarball in an empty environment.
+set -eu
+version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
+cd "$(dirname "$0")/.."
+cargo build --locked -p thinkthen-node -p loopback
+build_target=${CARGO_TARGET_DIR:-target}
+case "$build_target" in
+  /*) ;;
+  *) build_target="$(pwd)/$build_target" ;;
+esac
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+case "$(uname -s)" in
+  Darwin) addon="$build_target"/debug/libthinkthen_node.dylib ;;
+  Linux) addon="$build_target"/debug/libthinkthen_node.so ;;
+  *) exit 1 ;;
+esac
+cp "$addon" sdk/typescript/thinkthen.node
+cp LICENSE sdk/typescript/LICENSE
+trap 'rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE' EXIT HUP INT TERM
+npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
+(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js --max-warnings 0)
+(cd sdk/typescript && npm pack --pack-destination "$stage" --ignore-scripts --quiet)
+mkdir "$stage/consumer"
+npm --prefix "$stage/consumer" install --offline --ignore-scripts --no-audit --no-fund "$stage/thinkthen-$version.tgz"
+sed 's|"../index.js"|"thinkthen"|' sdk/typescript/tests/types.ts > "$stage/consumer/types.mts"
+sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 "$stage/consumer/types.mts"
+THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test sdk/typescript/tests/*.test.js

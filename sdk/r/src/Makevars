@@ -1,0 +1,28 @@
+CARGO_TARGET_DIR ?= $(CURDIR)/engine/target
+PROFILE = release
+CARGO_PROFILE = --release
+ifneq ($(THINKTHEN_COVERAGE_ROOT),)
+PROFILE = debug
+CARGO_PROFILE =
+endif
+STATLIB = $(CARGO_TARGET_DIR)/$(PROFILE)/libthinkthen_r.a
+PKG_LIBS = $(STATLIB) $(THINKTHEN_COVERAGE_LIBS)
+
+all: $(SHLIB)
+
+.PHONY: $(STATLIB)
+
+$(SHLIB): $(STATLIB)
+
+$(STATLIB):
+	mkdir -p engine/.cargo "$(CARGO_TARGET_DIR)"
+	cp engine/vendor-config.toml engine/.cargo/config.toml
+	cd engine && \
+	if [ -n "$${THINKTHEN_COVERAGE_ROOT:-}" ]; then \
+	  if [ -n "$${CARGO_ENCODED_RUSTFLAGS:-}" ]; then \
+	    separator=$$(printf '\037'); \
+	    export CARGO_ENCODED_RUSTFLAGS="$${CARGO_ENCODED_RUSTFLAGS}$$separator--remap-path-prefix=$$(pwd)=$$THINKTHEN_COVERAGE_ROOT"; \
+	  else \
+	    export RUSTFLAGS="$${RUSTFLAGS:-} --remap-path-prefix=$$(pwd)=$$THINKTHEN_COVERAGE_ROOT"; \
+	  fi; \
+	fi && CARGO_NET_OFFLINE=true cargo build -p thinkthen-r --locked $(CARGO_PROFILE) --target-dir "$(CARGO_TARGET_DIR)" --message-format=json-render-diagnostics >"$(CARGO_TARGET_DIR)/thinkthen-r-artifacts.json"

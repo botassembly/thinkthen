@@ -1,0 +1,12 @@
+#!/bin/sh
+# Online prerequisite preparation; installed checks run without network access.
+set -eu
+cd "$(dirname "$0")/.."
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT HUP INT TERM
+if ! docker build --label pm.repo=thinkthen \
+    -t thinkthen-postgres-build:18.6 -f extensions/postgres/prepare.Dockerfile . >"$log" 2>&1; then
+    tail -80 "$log"
+    exit 1
+fi
+docker image inspect thinkthen-postgres-build:18.6 --format '{{.Id}}'

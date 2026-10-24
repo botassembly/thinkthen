@@ -1,0 +1,36 @@
+#!/bin/sh
+# Prepare the full gate's offline dependencies after release host preparation.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+rustup component add rustfmt clippy
+npm --prefix sdk/typescript ci --ignore-scripts --no-audit --no-fund
+python3 - <<'PY'
+import platform
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import tarfile
+sys.path.insert(0, 'scripts')
+from release_prepare_common import TOOLS, fetch
+
+# The SDK gate owns its dependency list; preparation only warms that same uv run.
+text = Path('scripts/python-gate').read_text()
+text = text.replace("\\" + "\n", "")
+args = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
+args = args[:args.index('--')]
+args.remove('--offline')
+subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
+
+version = re.search(r'gitleaks/([0-9.]+)/', Path('scripts/secrets').read_text())[1]
+folder = TOOLS / 'gitleaks' / version
+if not (folder / 'gitleaks').is_file():
+    name = f'gitleaks_{version}_darwin_arm64.tar.gz'
+    base = f'https://github.com/gitleaks/gitleaks/releases/download/v{version}/'
+    archive = fetch(base + name, TOOLS / 'sources' / name)
+    folder.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(archive) as source:
+        source.extractall(folder, filter='data')
+PY

@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Build one offline-installable R source archive from this checkout."""
+import os
+import pathlib
+import re
+import shutil
+import shlex
+import subprocess
+import sys
+import tempfile
+import tomllib
+
+from release_metadata import check
+
+root = pathlib.Path(__file__).resolve().parent.parent
+source_only = sys.argv[1] == "--source"
+out = pathlib.Path(sys.argv[2] if source_only else sys.argv[1]).resolve()
+out.mkdir(parents=True, exist_ok=True)
+with tempfile.TemporaryDirectory() as temporary:
+    stage = pathlib.Path(temporary) / "thinkthen"
+    shutil.copytree(root / "sdk/r", stage, ignore=shutil.ignore_patterns("native", "tests"))
+    description = stage / "DESCRIPTION"
+    version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+    check(root)
+    engine = stage / "src/engine"
+    engine.mkdir()
+    for name in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "clippy.toml", "LICENSE", "README.md"):
+        shutil.copy2(root / name, engine / name)
+    for name in ("thinkthen",):
+        shutil.copytree(root / "crates" / name, engine / "crates" / name)
+    shutil.copytree(root / "sdk/r/native", engine / "sdk/r/native")
+    manifest = engine / "Cargo.toml"
+    lines = manifest.read_text().splitlines()
+    lines = ['members = ["crates/thinkthen", "sdk/r/native"]' if line.startswith("members =") else line for line in lines]
+    # The library's unpublished test fixture is not part of the package build.
+    for name in ("crates/thinkthen/Cargo.toml", "sdk/r/native/Cargo.toml"):
+        package_manifest = engine / name
+        package_manifest.write_text(re.sub(
+            r"(?ms)^\[dev-dependencies\]\n.*?(?=^\[|\Z)|^\[\[test\]\]\n.*?(?=^\[|\Z)",
+            "", package_manifest.read_text()))
+    manifest.write_text("\n".join(lines) + "\n")
+    tar = pathlib.Path(temporary) / "package-tar"
+    tar.write_text("#!/bin/sh\nexec " + shlex.quote(shutil.which("tar")) + ' --no-xattrs --no-acls "$@"\n')
+    tar.chmod(0o755)
+    environment = dict(os.environ, CARGO_NET_OFFLINE="true", R_BUILD_TAR=str(tar))
+    subprocess.run(["cargo", "metadata", "--offline", "--format-version", "1"], cwd=engine, env=environment, check=True, stdout=subprocess.DEVNULL)
+    vendor = subprocess.run(["cargo", "vendor", "--offline", "--locked", "--versioned-dirs", "vendor"], cwd=engine, env=environment, check=True, capture_output=True, text=True)
+    (engine / "vendor-config.toml").write_text(vendor.stdout)
+    if source_only:
+        shutil.copytree(stage, out, dirs_exist_ok=True)
+    else:
+        subprocess.run(["R", "CMD", "build", "--no-build-vignettes", "--no-manual", str(stage)], cwd=out, check=True, env=environment)

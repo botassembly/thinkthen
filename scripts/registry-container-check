@@ -1,0 +1,27 @@
+#!/bin/sh
+# Install registry packages in an isolated Linux container using prepared tools.
+set -eu
+cd "$(dirname "$0")/.."
+: "${PM_JOB:?Run through pm job}"
+. scripts/native-tools-env
+input=$(realpath "$1")
+node_prefix=$(dirname "$(dirname "$(realpath "$(command -v node)")")")
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+mkdir "$scratch/home"
+docker run --rm --network none --label pm.repo=thinkthen --label "pm.ticket=${PM_JOB%% *}" \
+    --tmpfs /tmp:rw,exec,mode=1777 --user "$(id -u):$(id -g)" \
+    -v "$node_prefix:/tools/node:ro" -v "$PWD:/src:ro" -v "$input:/inputs.tar.gz:ro" -v "$scratch:/work" \
+    -v "$HOME/.local/share/thinkthen-build-tools:/tools/home/.local/share/thinkthen-build-tools:ro" \
+    -e HOME=/tools/home -e TMPDIR=/work -e DOTNET_CLI_HOME=/work/home -e NUGET_PACKAGES=/work/nuget \
+    -e DOTNET_CLI_TELEMETRY_OPTOUT=1 -e DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+    -e DOTNET_GENERATE_ASPNET_CERTIFICATE=false -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+    -e npm_config_cache=/work/npm -e npm_config_update_notifier=false \
+    -w /src thinkthen-floor-build:glibc2.28 sh -eu -c '
+        PATH=/opt/python/cp313-cp313/bin:/usr/local/bin:/usr/bin:/bin
+        export PATH
+        . scripts/native-tools-env
+        PATH=/tools/node/bin:$PATH
+        export PATH
+        scripts/registry-check /inputs.tar.gz
+    '

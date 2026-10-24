@@ -1,0 +1,29 @@
+#!/bin/sh
+# Manual all-ten check against the packaged runtime. --stub makes no requests.
+set -eu
+bundle=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+LD_LIBRARY_PATH="$bundle/runtime/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH
+case "${1:-}" in
+    --stub) settings='{"adapter":"stub"}' ;;
+    '') settings='{}' ;;
+    *) echo 'usage: run-live [--stub]' >&2; exit 2 ;;
+esac
+scratch=$(mktemp -d)
+running=false
+cleanup() {
+    if "$running"; then "$bundle/runtime/bin/pg_ctl" -D "$scratch/data" -m fast -w stop >/dev/null; fi
+    rm -rf "$scratch"
+}
+trap cleanup EXIT HUP INT TERM
+"$bundle/runtime/bin/initdb" -D "$scratch/data" -A trust -U thinkthen --no-locale -E UTF8 >/dev/null
+"$bundle/runtime/bin/pg_ctl" -D "$scratch/data" -l "$scratch/server.log" \
+    -o "-k $scratch -c listen_addresses=''" -w start >/dev/null
+running=true
+{
+    printf 'CREATE EXTENSION thinkthen;\nSET thinkthen.settings = '\''%s'\'';\n' "$settings"
+    if [ "${1:-}" = --stub ]; then
+        printf '%s\n' "SET thinkthen.allowed_backends = '{\"stub\":[\"stub\"]}';"
+    fi
+    cat "$bundle/all-ten.sql"
+} | "$bundle/runtime/bin/psql" -X -h "$scratch" -U thinkthen -d postgres -v ON_ERROR_STOP=1

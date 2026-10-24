@@ -1,0 +1,10 @@
+allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+
+# Test timing and ports belong to the loopback fixture crate.
+disallowed-methods = [
+  { path = "std::thread::sleep", reason = "Use the loopback fixture's event coordination." },
+  { path = "std::net::TcpListener::bind", reason = "Use the loopback fixture's owned listener." },
+]

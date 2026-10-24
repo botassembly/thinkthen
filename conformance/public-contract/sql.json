@@ -1,0 +1,26 @@
+[
+  {
+    "settings": "{\"url\":null,\"key_source\":null}",
+    "code": "usage.settings",
+    "message": "SQL settings do not accept field `url`"
+  },
+  {
+    "settings": "{\"key_source\":null}",
+    "code": "usage.settings",
+    "message": "SQL settings do not accept field `key_source`"
+  },
+  {
+    "settings": "{",
+    "code": "usage.settings"
+  },
+  {
+    "settings": "{}",
+    "policy": "{",
+    "code": "usage.sql-policy"
+  },
+  {
+    "settings": "{}",
+    "policy": "{}",
+    "code": "usage.sql-selection"
+  }
+]

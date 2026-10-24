@@ -1,0 +1,6 @@
+**
+!scripts/
+!scripts/release_downloads.py
+!scripts/release-downloads.json
+!scripts/floors/
+!scripts/floors/Dockerfile

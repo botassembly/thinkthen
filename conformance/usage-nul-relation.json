@@ -1,0 +1,24 @@
+{
+  "client": {},
+  "expected": {
+    "error": "usage.name"
+  },
+  "replies": [],
+  "request": {
+    "function": "relate",
+    "question": {
+      "type": "inline",
+      "value": [
+        {
+          "name": "bad\u0000relation",
+          "source": "person",
+          "target": "organization"
+        }
+      ]
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "requests": 0
+}

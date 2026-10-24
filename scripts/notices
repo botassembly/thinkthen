@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Check vendored crate notices or refresh them from checksum-verified Cargo sources."""
+import sys
+from release_notices import check, refresh, compiled
+if sys.argv[1:] == ['refresh']:
+    refresh()
+elif len(sys.argv) == 4 and sys.argv[1] == '--compiled':
+    compiled(sys.argv[2], sys.argv[3])
+elif len(sys.argv) == 3 and sys.argv[1] == '--packages':
+    from release_notice_check import candidate
+    from pathlib import Path
+    candidate(Path(sys.argv[2]))
+elif sys.argv[1:] == ['--check']:
+    check()
+else:
+    sys.exit('usage: scripts/notices --check|refresh|--compiled TARGET MESSAGES|--packages DIRECTORY')
+print('crate notices: complete and current')

@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Exercise the coverage command with real Rust regions and test binaries."""
+
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parent.parent
+with tempfile.TemporaryDirectory(prefix="unreached-") as temporary:
+    fixture = Path(temporary)
+    for directory in ("src", "tests", "scripts", "crates/loopback/src"):
+        (fixture / directory).mkdir(parents=True)
+    shutil.copy2(root / "scripts/unreached", fixture / "scripts/unreached")
+    shutil.copy2(root / "rust-toolchain.toml", fixture / "rust-toolchain.toml")
+    (fixture / "Cargo.toml").write_text(
+        '[package]\nname="coverage-proof"\nversion="0.0.0"\nedition="2024"\n'
+        '[workspace]\nmembers=["crates/loopback"]\n'
+    )
+    (fixture / "src/lib.rs").write_text(
+        'pub fn uncalled(value: Option<u32>) -> u32 { value.unwrap_or_else(|| std::hint::black_box(99)) }\n'
+        'pub fn shared<T>(value: Option<u32>, _: T) -> u32 { value.unwrap_or_else(|| std::hint::black_box(99)) }\n'
+    )
+    for name, argument in (("first", "Some(1), 0u8"), ("second", "None, 0u16")):
+        (fixture / f"tests/{name}.rs").write_text(
+            '#![cfg(test)]\n#[test]\nfn exercise() {\n'
+            'assert_eq!(coverage_proof::uncalled(Some(1)), 1);\n'
+            f'let _ = coverage_proof::shared({argument});\n}}\n'
+            '#[allow(dead_code)]\nfn ignored() { panic!("not called"); }\n'
+        )
+    (fixture / "crates/loopback/Cargo.toml").write_text(
+        '[package]\nname="loopback"\nversion="0.0.0"\nedition="2024"\n'
+    )
+    (fixture / "crates/loopback/src/lib.rs").write_text(
+        'pub fn ignored() -> u32 { 42 }\n'
+    )
+    (fixture / "scripts/sdk-gates").write_text("#!/bin/sh\nexit 0\n")
+    (fixture / "scripts/sdk-gates").chmod(0o755)
+    env = dict(os.environ, CARGO_NET_OFFLINE="true")
+    subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=fixture, env=env, check=True)
+    run = subprocess.run(["scripts/unreached"], cwd=fixture, env=env, text=True, capture_output=True)
+    print(run.stdout)
+    print(run.stderr)
+    assert run.returncode == 0, "uncovered regions must not fail the command"
+    lines = run.stdout.splitlines()
+    missing = [line for line in lines if re.search(r"src/lib\.rs:1:\d+-1:\d+$", line)]
+    assert missing, "the uncalled closure on an executed line was hidden"
+    assert len(missing) == len(set(missing)), "duplicate regions were printed"
+    assert not any(re.search(r"src/lib\.rs:2:", line) for line in lines), "a region reached by another binary was reported"
+    assert not any("/tests/" in line or "/crates/loopback/" in line for line in lines), "ignored files were reported"
+    with (fixture / "tests/first.rs").open("a") as test:
+        test.write('\n#[test]\nfn failure() { panic!("intentional test failure"); }\n')
+    failed = subprocess.run(["scripts/unreached"], cwd=fixture, env=env, text=True, capture_output=True)
+    assert failed.returncode != 0, "a failed test must fail the command"
+    assert "intentional test failure" in failed.stdout, "the failure proof did not reach the test"
+    print("unreached: real closure, cross-binary regions, ignores, and test failure passed")

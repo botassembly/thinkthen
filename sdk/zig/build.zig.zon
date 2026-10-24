@@ -1,0 +1,7 @@
+.{
+    .name = .thinkthen,
+    .version = "0.2.0",
+    .fingerprint = 0x9a6362d74aae0b9a,
+    .minimum_zig_version = "0.17.0",
+    .paths = .{ "build.zig", "build.zig.zon", "src", "include", "native", "LICENSE", "THIRD-PARTY-NOTICES", "README.md" },
+}

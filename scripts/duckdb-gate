@@ -1,0 +1,54 @@
+#!/bin/sh
+# Load the staged native extension and drive the shared cases through SQL.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-build-env
+root=$PWD
+scripts/sql-bridge-gate
+build_target=${CARGO_TARGET_DIR:-target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+export THINKTHEN_DUCKDB_DEPS="$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # sql-bridge-gate already built the current instrumented host archive.
+    THINKTHEN_SQL_ARCHIVE="$build_target/debug/libthinkthen_ffi.a"
+else
+    cache=$(scripts/native-prepare --path)
+    case $(uname -s) in Darwin) platform=osx-arm64 ;; Linux) platform=linux-x64 ;; esac
+    THINKTHEN_SQL_ARCHIVE="$cache/$platform/libthinkthen_ffi.a"
+    test -f "$THINKTHEN_SQL_ARCHIVE"
+fi
+export THINKTHEN_SQL_ARCHIVE
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+THINKTHEN_DUCKDB_OUTPUT="$scratch/package" scripts/duckdb-build
+# Round-trip the delivered package before testing the official hosts.
+mkdir "$scratch/installed"
+tar -czf "$scratch/duckdb.tar.gz" -C "$scratch/package" .
+tar -xzf "$scratch/duckdb.tar.gz" -C "$scratch/installed"
+python3 databases/duckdb/tests/official-hosts.py "$scratch/installed" "$THINKTHEN_DUCKDB_DEPS"
+# The native lifecycle runner and runtime are test fixtures, outside the package.
+source=$THINKTHEN_DUCKDB_DEPS/duckdb-1.4.3
+case $(uname -s) in
+    Darwin) library=$THINKTHEN_DUCKDB_DEPS/lib/libduckdb.dylib; rpath='@loader_path' ;;
+    Linux) library=$THINKTHEN_DUCKDB_DEPS/lib/libduckdb.so; rpath='$ORIGIN' ;;
+esac
+mkdir "$scratch/consumer"
+cp "$scratch/installed/thinkthen.duckdb_extension" "$library" "$scratch/consumer/"
+c++ -std=c++17 -Wall -Wextra -Werror -Wno-unused-parameter \
+    -I "$source/src/include" -I "$source/third_party/yyjson/include" \
+    databases/duckdb/tests/runner.cpp "$THINKTHEN_DUCKDB_DEPS/static/libduckdb_yyjson.a" \
+    "$library" -Wl,-rpath,"$rpath" -o "$scratch/consumer/sql"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # Keep per-consumer attribution inside the one merged instrumentation target.
+    export LLVM_PROFILE_FILE="$build_target/duckdb-%p-%m.profraw"
+fi
+python3 databases/duckdb/tests/run.py "$scratch/consumer" "$build_target/debug/loopback"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # Retain the actual static consumer for cargo-llvm-cov object discovery.
+    cp "$scratch/installed/thinkthen.duckdb_extension" "$build_target/debug/thinkthen-sql.so"
+fi
+if [ -n "${THINKTHEN_DUCKDB_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_DUCKDB_ARTIFACT_DIR"
+    cp "$scratch/installed/"* "$THINKTHEN_DUCKDB_ARTIFACT_DIR/"
+    cp "$scratch/package/"*-LICENSE "$THINKTHEN_DUCKDB_ARTIFACT_DIR/"
+fi

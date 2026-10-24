@@ -1,0 +1,45 @@
+#!/bin/sh
+# Lists product code regions no test runs. Uncovered code does not fail the run.
+set -eu
+cd "$(dirname "$0")/.."
+# rustup's toolchain carries llvm-tools from rust-toolchain.toml, so the user's
+# cargo home comes first.
+PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+cargo llvm-cov --version >/dev/null 2>&1 || cargo install --locked cargo-llvm-cov
+cargo llvm-cov clean --workspace
+export CARGO_TARGET_DIR="$PWD/target/llvm-cov-target"
+eval "$(cargo llvm-cov show-env --export-prefix)"
+if [ -f scripts/c-gate ]; then scripts/c-gate; fi
+cargo test --workspace --locked
+THINKTHEN_COVERAGE_ROOT="$PWD" scripts/sdk-gates
+# The R gate retains its installed shared object under the workspace crate name,
+# so cargo-llvm-cov discovers it alongside the other instrumented targets.
+report=$(mktemp)
+trap 'rm -f "$report"' EXIT HUP INT TERM
+cargo llvm-cov report --json --output-path "$report" \
+  --ignore-filename-regex '(/tests/|/crates/loopback/)'
+python3 - "$report" <<'PY'
+import json
+import sys
+
+# LLVM exports function-local filenames and source coordinates for each region:
+# https://llvm.org/docs/CommandGuide/llvm-cov.html#export-command
+with open(sys.argv[1]) as source:
+    coverage = json.load(source)
+regions = {}
+for data in coverage["data"]:
+    # The export's file list already applies cargo-llvm-cov's product exclusions.
+    files = {file["filename"] for file in data["files"]}
+    for function in data["functions"]:
+        for start, column, end, end_column, count, file_id, _, kind in function["regions"]:
+            filename = function["filenames"][file_id]
+            if filename not in files or kind != 0:
+                continue
+            location = (filename, start, column, end, end_column)
+            # One generic region may occur in several test binaries or instances.
+            regions[location] = regions.get(location, 0) + count
+print("Uncovered code regions (file:start line:column-end line:column):")
+for (filename, start, column, end, end_column), count in sorted(regions.items()):
+    if count == 0:
+        print(f"{filename}:{start}:{column}-{end}:{end_column}")
+PY

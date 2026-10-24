@@ -1,0 +1,12 @@
+#!/bin/sh
+# Source from the repository root before compiling native package components.
+MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-$(python3 scripts/runtime_floors.py macos)}
+export MACOSX_DEPLOYMENT_TARGET
+tools="$HOME/.local/share/thinkthen-build-tools"
+case "$(uname -s)" in
+    Darwin) THINKTHEN_RUNTIME_PREFIX="$tools/floors/macos$MACOSX_DEPLOYMENT_TARGET" ;;
+    Linux) THINKTHEN_RUNTIME_PREFIX="$tools/floors/linux-glibc$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from runtime_floors import FLOORS; print(FLOORS["linux"]["glibc"])')" ;;
+esac
+THINKTHEN_JANSSON_ROOT="$THINKTHEN_RUNTIME_PREFIX/jansson"
+export THINKTHEN_RUNTIME_PREFIX THINKTHEN_JANSSON_ROOT
+unset tools

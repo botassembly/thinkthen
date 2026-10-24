@@ -1,0 +1,9 @@
+prefix=${pcfiledir}/../..
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+Name: ThinkThen C
+Description: Ten functions through the shared ThinkThen engine
+Version: 0.2.0
+Requires: jansson
+Libs: -L${libdir} -lthinkthen_c -Wl,-rpath,${libdir}
+Cflags: -I${includedir}

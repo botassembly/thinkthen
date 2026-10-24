@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+"""Prove that only main's commits can reach release preparation."""
+from pathlib import Path
+import subprocess
+import tempfile
+
+source = Path(__file__).with_name('qualification-source').resolve()
+with tempfile.TemporaryDirectory(prefix='thinkthen-release-source-') as temporary:
+    root = Path(temporary)
+
+    def git(*args):
+        return subprocess.run(['git', *args], cwd=root, check=True, capture_output=True, text=True).stdout.strip()
+
+    git('init', '--quiet', '-b', 'main')
+    git('config', 'user.name', 'Release test')
+    git('config', 'user.email', 'release@example.invalid')
+    (root / 'file').write_text('main')
+    git('add', 'file')
+    git('commit', '--quiet', '-m', 'Create main')
+    git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+    git('tag', 'v0.2.0')
+    subprocess.run([str(source), 'v0.2.0'], cwd=root, check=True)
+    subprocess.run([str(source), '--dispatch'], cwd=root, check=True)
+    subprocess.run([str(source), '--dispatch', 'v0.2.0'], cwd=root, check=True)
+    subprocess.run([str(source), '--dispatch', 'v0.9.0'], cwd=root, check=True)
+    git('checkout', '--quiet', '-b', 'off-main')
+    (root / 'file').write_text('off main')
+    git('commit', '--quiet', '-am', 'Change a branch')
+    git('tag', 'v0.3.0')
+    for selection in ('v0.3.0', '--dispatch', 'v0.2.0'):
+        refused = subprocess.run([str(source), selection], cwd=root, capture_output=True, text=True)
+        assert refused.returncode != 0, selection
+        assert 'source must be a commit on origin/main' in refused.stderr, refused.stderr
+    git('checkout', '--quiet', 'main')
+    refused = subprocess.run([str(source), 'v0.3.0'], cwd=root, capture_output=True, text=True)
+    assert refused.returncode != 0, 'a mismatching tag reached release preparation'
+    refused = subprocess.run([str(source), '--dispatch', 'v0.3.0'], cwd=root, capture_output=True, text=True)
+    assert refused.returncode != 0, 'dispatch on main accepted an off-main tag'
+print('release source: main passes; off-main and mismatching tags are refused')

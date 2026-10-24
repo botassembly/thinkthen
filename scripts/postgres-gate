@@ -1,0 +1,52 @@
+#!/bin/sh
+# Load the archive in a fresh PostgreSQL installation inside an offline container.
+set -eu
+cd "$(dirname "$0")/.."
+case "${1:-all}" in all|native) ;; *) echo 'usage: scripts/postgres-gate [all|native]' >&2; exit 2 ;; esac
+if [ "$(uname -s)" != Linux ]; then
+    echo 'PostgreSQL package targets Linux; its installed gate runs on the Linux builder'
+    exit 0
+fi
+job=${PM_JOB:-local}
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/postgres-package "$scratch/built"
+cargo build --offline --locked -p loopback --bin loopback
+target=${CARGO_TARGET_DIR:-target}
+case "$target" in /*) ;; *) target="$root/$target" ;; esac
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    LLVM_PROFILE_FILE="$target/postgres-%p-%m.profraw"
+fi
+docker run --rm --network none --label pm.repo=thinkthen --label "pm.ticket=${job%% *}" \
+    -v "$root:/src:ro" -v "$scratch:/work" -v "$target/debug/loopback:/loopback:ro" \
+    -v "$scratch/built/build:/work/build" -v "$target:$target" \
+    thinkthen-postgres-build:18.6 sh -eu -c '
+        sharedir=$(pg_config --sharedir)
+        pkglibdir=$(pg_config --pkglibdir)
+        mkdir -p "$sharedir/extension"
+        mkdir /work/installed
+        tar -xzf /work/built/thinkthen-postgres-18-linux-x86_64.tar.gz -C /work/installed
+        cp /work/installed/lib/* "$pkglibdir/"
+        cp /work/installed/share/extension/* "$sharedir/extension/"
+        chown -R "$1:$2" /work/installed
+        mkdir /work/bundle
+        cp -R /opt/thinkthen-pg18 /work/bundle/runtime
+        cp /src/extensions/postgres/examples/run-live /src/extensions/postgres/examples/all-ten.sql /work/bundle/
+        chown -R "$1:$2" /work/bundle
+        if ! getent passwd "$1" >/dev/null; then
+            printf 'thinkthen-%s:x:%s:%s::/work/built/home:/bin/sh\n' "$1" "$1" "$2" >> /etc/passwd
+        fi
+        exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/built/home \
+            PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin LANG=C.UTF-8 LLVM_PROFILE_FILE="$3" \
+            python3 /src/extensions/postgres/tests/run.py /src /loopback "$4"
+    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    cp "$scratch/installed/lib/thinkthen_postgres.so" "$target/debug/thinkthen-sql-postgres.so"
+fi
+if [ -n "${THINKTHEN_POSTGRES_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_POSTGRES_ARTIFACT_DIR"
+    cp "$scratch/built"/*.tar.gz "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
+    cp -R "$scratch/built/build" "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
+    cp -R "$scratch/bundle" "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
+fi

@@ -1,0 +1,10 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(nlohmann_json 3.11.3 CONFIG REQUIRED)
+if(NOT TARGET ThinkThen::Engine)
+    add_library(ThinkThen::Engine SHARED IMPORTED)
+    set_target_properties(ThinkThen::Engine PROPERTIES
+        IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@THINKTHEN_FFI_NAME@"
+        IMPORTED_NO_SONAME TRUE)
+endif()
+include("${CMAKE_CURRENT_LIST_DIR}/ThinkThenCppTargets.cmake")

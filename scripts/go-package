@@ -1,0 +1,22 @@
+#!/bin/sh
+# Stage a local Go module with the native asset from this build.
+set -eu
+cd "$(dirname "$0")/.."
+output=$1
+profile=${2:-release}
+if [ -e "$output" ]; then echo "package output already exists" >&2; exit 1; fi
+build_target=${CARGO_TARGET_DIR:-target}
+case "$(uname -sm)" in
+  'Linux x86_64'|'Linux aarch64') library="$build_target/$profile/libthinkthen_ffi.so" ;;
+  'Darwin arm64') library="$build_target/$profile/libthinkthen_ffi.dylib" ;;
+  *) echo 'unsupported Go package target' >&2; exit 1 ;;
+esac
+mkdir -p "$output/native"
+cp sdk/go/*.go sdk/go/*.c sdk/go/*.h sdk/go/go.mod sdk/go/README.md "$output/"
+cp crates/thinkthen-ffi/include/thinkthen.h "$output/thinkthen.h"
+cp LICENSE "$output/LICENSE"
+cp "$library" "$output/native/library"
+case "$(uname -s)" in
+ Linux) ldd "$library" > "$output/native/dependencies.txt" ;;
+ Darwin) otool -L "$library" | tail -n +2 > "$output/native/dependencies.txt" ;;
+esac

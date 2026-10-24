@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+"""Run by hand against the default backend: scripts/live /path/to/thinkthen."""
+
+import json
+import math
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def probability(value):
+    return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1
+
+
+def span(value, text):
+    require(isinstance(value, dict), "expected a text span")
+    start, end = value.get("start"), value.get("end")
+    require(type(start) is int and type(end) is int, "expected integer offsets")
+    require(0 <= start < end <= len(text), "span offsets are outside the input")
+    require(value.get("text") == text[start:end], "span text differs from the input")
+
+
+def name(value, text):
+    span(value, text)
+    require(value.get("kind") in ("person", "company"), "unexpected name kind")
+
+
+def answer(function, row, text):
+    require(isinstance(row, dict), "expected a result row")
+    status = row.get("status")
+    require(status != "failed", "command returned a failed row")
+    require(status in ("answered", "unsure"), "expected a result status")
+    if status == "unsure":
+        require(function in ("decide", "filter", "choose", "find"), "unexpected unsure status")
+        require(probability(row.get("p")), "expected an unsure probability")
+        require("answer" in row and row["answer"] is None, "unsure row must contain a null answer")
+        return
+    require("answer" in row, "answered row has no answer")
+    value = row["answer"]
+    if function in ("decide", "filter"):
+        require(type(value) is bool, "expected a boolean answer")
+    elif function == "choose":
+        require(value in ("billing", "shipping"), "expected one offered option")
+    elif function == "tag":
+        require(isinstance(value, list), "expected a list of labels")
+        require(all(label in ("refund", "delivery") for label in value), "unexpected label")
+        require(len(value) == len(set(value)), "duplicate labels")
+    elif function == "score":
+        require(probability(value), "expected a score from zero to one")
+    elif function == "rank":
+        require(type(value) is int and value > 0, "expected a positive rank")
+    elif function == "find":
+        if value is not None:
+            span(value, text)
+    elif function == "annotate":
+        require(isinstance(value, dict) and set(value) == {"refund", "topic"},
+                "expected both named annotations")
+        answer("decide", value["refund"], text)
+        answer("choose", value["topic"], text)
+    elif function == "recognize":
+        require(isinstance(value, list), "expected a list of names")
+        for item in value:
+            name(item, text)
+            require(probability(item.get("p")), "expected a name probability")
+    elif function == "relate":
+        require(isinstance(value, list), "expected a list of relations")
+        for item in value:
+            require(isinstance(item, dict), "expected a relation object")
+            require(item.get("relation") == "works_for", "unexpected relation")
+            require(probability(item.get("p")), "expected a relation probability")
+            name(item.get("source"), text)
+            name(item.get("target"), text)
+            require(item["source"]["kind"] == "person"
+                    and item["target"]["kind"] == "company", "unexpected relation kinds")
+    if function in ("decide", "filter", "choose"):
+        require(probability(row.get("p")), "expected an answer probability")
+
+
+def run(binary, args, text, count=1):
+    command = [binary, *args, "--details"]
+    print("$ " + shlex.join(command), flush=True)
+    print("stdin: " + json.dumps(text), flush=True)
+    result = subprocess.run(command, input=text, text=True, capture_output=True, check=False)
+    print("stdout:\n" + result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    print("stderr:\n" + result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+    print(f"exit: {result.returncode}", flush=True)
+    function = args[0]
+    try:
+        require(result.returncode in (0, 1, 3), "command failed")
+        rows = [json.loads(line) for line in result.stdout.splitlines()]
+        require(len(rows) == count, f"expected {count} result rows")
+        for row in rows:
+            answer(function, row, text)
+        expected = 0
+        if function in ("decide", "choose", "find"):
+            if rows[0]["status"] == "unsure":
+                expected = 3
+            elif rows[0]["answer"] is False or rows[0]["answer"] is None:
+                expected = 1
+        require(result.returncode == expected, "exit code disagrees with the answer")
+        if function == "rank":
+            require([row["answer"] for row in rows] == list(range(1, count + 1)),
+                    "expected consecutive ranks")
+    except (ValueError, TypeError, KeyError) as error:
+        print(f"FAIL {function}: {error}", flush=True)
+        return False
+    print(f"PASS {function}", flush=True)
+    return True
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: scripts/live /path/to/thinkthen", file=sys.stderr)
+        return 2
+    binary = str(Path(sys.argv[1]).resolve())
+    # Leave the key inherited and unread. An address override must not redirect a live check.
+    os.environ.pop("THINKTHEN_BASE_URL", None)
+    refund = "Please refund my order."
+    people = "Ada works for Acme."
+    toolbox = json.dumps({"questions": {
+        "refund": {"decide": "Does the customer ask for money back?"},
+        "topic": {"choose": "What is the message about?", "options": ["billing", "shipping"]},
+    }})
+    cases = [
+        (["decide", "Does the customer ask for money back?"], refund, 1),
+        (["choose", "What is the message about?", "--option", "billing", "--option", "shipping"], refund, 1),
+        (["tag", "Which topics apply?", "--label", "refund", "--label", "delivery"], refund, 1),
+        (["score", "How urgent is the message?", "--level", "not urgent", "--level", "urgent"], refund, 1),
+        (["filter", "Does the customer ask for money back?", "--lines"], refund + "\nThanks for the delivery.\n", 2),
+        (["rank", "Does the customer ask for money back?", "--lines"], refund + "\nThanks for the delivery.\n", 2),
+        (["find", "Which line asks for money back?"], "Thanks for the delivery.\n" + refund, 1),
+        (["annotate", toolbox], refund, 1),
+        (["recognize", "person", "company"], people, 1),
+        (["relate", "works_for=person:company"], people, 1),
+    ]
+    passed = [run(binary, args, text, count) for args, text, count in cases]
+    return 0 if all(passed) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,44 @@
+# Clippy reads only the nearest clippy.toml, so this repeats the test allowances.
+allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+
+# The core touches no file, environment, network, process or clock.
+disallowed-methods = [
+  "std::thread::sleep",
+  "std::env::args",
+  "std::env::current_dir",
+  "std::env::var",
+  "std::env::var_os",
+  "std::env::vars",
+  "std::fs::metadata",
+  "std::path::Path::is_file",
+  "std::fs::rename",
+  "std::io::stderr",
+  "std::thread::spawn",
+  "std::fs::read",
+  "std::fs::read_to_string",
+  "std::fs::write",
+  "std::fs::File::create",
+  "std::fs::File::open",
+  "std::fs::OpenOptions::open",
+  "std::fs::create_dir_all",
+  "std::fs::read_dir",
+  "std::fs::remove_file",
+  "std::io::stdin",
+  "std::io::stdout",
+  "std::net::TcpListener::bind",
+  "std::net::UdpSocket::bind",
+  "std::net::TcpStream::connect",
+  "std::process::Command::new",
+  "std::process::exit",
+  "std::time::Instant::now",
+  "std::time::SystemTime::now",
+]
+
+# Wire bodies decode into typed structs.
+disallowed-types = [
+  "serde_json::Map",
+  "serde_json::Value",
+]

@@ -1,0 +1,49 @@
+#!/bin/sh
+# Build an installable C prefix and archive from this tree's native engine.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-build-env
+if [ "$#" -ne 1 ]; then echo 'usage: scripts/c-package OUTPUT_DIRECTORY' >&2; exit 2; fi
+mkdir -p "$1"
+output=$(cd "$1" && pwd)
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+profile=release
+if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then profile=debug; fi
+case "$(uname -s)" in
+    Darwin) asset=libthinkthen_ffi.dylib; platform=macos; rid=osx-arm64 ;;
+    Linux) asset=libthinkthen_ffi.so; platform=linux; rid=$(python3 scripts/native_platform.py rid) ;;
+    *) echo 'unsupported C package platform' >&2; exit 1 ;;
+esac
+if [ "$profile" = release ]; then
+    # The shared preparation validates Cargo's real artifact profile before caching.
+    native=$(scripts/native-prepare)
+    engine="$native/$rid/$asset"
+else
+    cargo build --locked -p thinkthen-ffi --message-format=json-render-diagnostics >"$scratch/artifacts.json"
+    build_target=${CARGO_TARGET_DIR:-target}
+    case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+    engine="$build_target/debug/$asset"
+    python3 scripts/package-profile "$scratch/artifacts.json" "$engine" debug
+fi
+mkdir "$scratch/engine"
+cp "$engine" "$scratch/engine/$asset"
+if [ "$platform" = macos ]; then
+    install_name_tool -id "@rpath/$asset" "$scratch/engine/$asset"
+fi
+cmake -S sdk/c -B "$scratch/build" \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_PREFIX="$output/prefix" \
+    -DJANSSON_ROOT="$(pkg-config --variable=prefix jansson)" \
+    -DTHINKTHEN_FFI_LIBRARY="$scratch/engine/$asset" \
+    -DTHINKTHEN_FFI_INCLUDE_DIR="$root/crates/thinkthen-ffi/include"
+cmake --build "$scratch/build" --parallel 2
+cmake --install "$scratch/build"
+cmp "$scratch/engine/$asset" "$output/prefix/lib/$asset"
+COPYFILE_DISABLE=1 tar -czf "$output/thinkthen-c-$platform-$(uname -m).tar.gz" -C "$output/prefix" .
+if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$output"/*.tar.gz
+else
+    shasum -a 256 "$output"/*.tar.gz
+fi

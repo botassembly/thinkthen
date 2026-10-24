@@ -1,0 +1,35 @@
+[package]
+name = "thinkthen-python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "_native"
+crate-type = ["cdylib"]
+test = false
+doctest = false
+
+[dependencies]
+log.workspace = true
+thinkthen.workspace = true
+serde_json.workspace = true
+pyo3 = { version = "=0.29.3", features = ["extension-module", "abi3-py310"] }
+
+[build-dependencies]
+pyo3-build-config = "=0.29.3"
+
+[target.'cfg(windows)'.dependencies]
+pyo3 = { version = "=0.29.3", features = ["generate-import-lib"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+loopback.workspace = true
+
+[[test]]
+name = "transport_logging"
+path = "../../../crates/thinkthen/tests/cli_transport_logging.rs"

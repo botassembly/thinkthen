@@ -1,0 +1,584 @@
+#!/usr/bin/env python3
+"""Build and check this host's local candidate. Usage: release-candidate OUTPUT.
+
+Prepared compilers/dependencies are build inputs, never distribution contents.
+The command prints one line per package and the resulting platform directory.
+A failed tool prints its last thirty output lines.
+"""
+from release_home import checked_home
+from release_images import image
+import hashlib
+import email
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import zipfile
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import tomllib
+
+from jvm_repository import seed as seed_maven, verify as verify_jvm
+from release_install import finish
+from release_native import prepare as prepare_native
+from release_wheel import python_wheel
+from runtime_floors import FLOORS, requirements as floor_requirements
+from native_platform import current, HOSTS as NATIVE_HOSTS
+
+ROOT = Path(__file__).resolve().parent.parent
+TOOLS = Path.home() / '.local/share/thinkthen-build-tools'
+def host_info():
+    host = current()
+    return host['platform'], host['rid'], host['jvm'], host['suffix']
+
+
+def run(*arguments, **options):
+    options.setdefault('cwd', ROOT)
+    options.setdefault('capture_output', True)
+    options.setdefault('text', True)
+    try:
+        result = subprocess.run(list(map(str, arguments)), check=True, **options)
+        if platform.system() == 'Darwin':
+            assert not re.search(r'built for newer macOS|building for macOS[^\n]+but linking', (result.stdout or '') + (result.stderr or '')), result.stderr
+        return result
+    except subprocess.CalledProcessError as error:
+        output = (error.stdout or '') + (error.stderr or '')
+        print('\n'.join(output.splitlines()[-30:]), file=sys.stderr)
+        raise
+
+
+def native_run(*arguments, **options):
+    if platform.system() == 'Linux':
+        arguments = (ROOT / 'scripts/runtime-floor-build', *arguments)
+    return run(*arguments, **options)
+
+
+def native_text(*arguments):
+    return native_run(*arguments).stdout.strip()
+
+
+def text(*arguments):
+    return run(*arguments, capture_output=True, text=True).stdout.strip()
+
+
+def copy(source, destination):
+    destination = Path(destination)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
+def archive(source, destination):
+    with tarfile.open(destination, 'w:gz') as output:
+        for path in sorted(Path(source).iterdir()):
+            output.add(path, arcname=path.name)
+
+
+def metadata(version):
+    from release_metadata import check
+    check(ROOT)
+
+
+def jvm(out, checks, version, jvm_platform, library, native):
+    # One asset now; the resource directory still accepts several for publication.
+    resource = ROOT / 'sdk/java/library/target/classes/io/thinkthen/native' / jvm_platform
+    resource.mkdir(parents=True)
+    copy(native, resource / library)
+    cache = TOOLS / 'jvm'
+    java = cache / ('jdk-22.0.2+9/Contents/Home' if platform.system() == 'Darwin' else 'jdk-22.0.2+9')
+    env = dict(os.environ, JAVA_HOME=str(java), PATH=f'{java}/bin:{cache}/apache-maven-3.9.11/bin:' + os.environ['PATH'])
+    scratch = tempfile.TemporaryDirectory(prefix='thinkthen-maven-')
+    repository = seed_maven(cache / 'm2', Path(scratch.name) / 'm2')
+    def mvn(*args):
+        run('mvn', '-o', '-B', '-q', f'-Dmaven.repo.local={repository}', *args, env=env)
+    mvn('-f', 'sdk/java/pom.xml', 'install', '-DskipTests')
+    for name, folder in [('java', 'sdk/java/library'), ('kotlin', 'sdk/kotlin')]:
+        package = out / name
+        package.mkdir()
+        copy(ROOT / folder / f'target/thinkthen-{name}-{version}.jar', package / f'thinkthen-{name}-{version}.jar')
+        copy(ROOT / folder / 'pom.xml', package / f'thinkthen-{name}-{version}.pom')
+        copy(ROOT / 'LICENSE', package / 'LICENSE')
+        copy(ROOT / ('sdk/java' if name == 'java' else folder) / 'README.md', package / 'README.md')
+        copy(ROOT / 'sdk/java/pom.xml', package / f'thinkthen-jvm-parent-{version}.pom')
+        mvn('-f', folder + '/pom.xml', 'dependency:copy-dependencies', '-DincludeScope=runtime', f'-DoutputDirectory={package}/dependencies')
+    # Compile against the packages just built, then keep only the consumer JAR.
+    classpath = Path(scratch.name) / 'classpath'
+    mvn('-f', 'sdk/java/consumer/pom.xml', 'package', '-DskipTests',
+        'dependency:build-classpath', f'-Dmdep.outputFile={classpath}')
+    verify_jvm(ROOT, classpath.read_text().strip().split(':'), resource.parent, jvm_platform, native)
+    copy(ROOT / f'sdk/java/consumer/target/thinkthen-consumer-{version}.jar', checks / 'jvm/consumer.jar')
+    for package in (out / 'java', out / 'kotlin'):
+        jars = list(package.glob('*.jar')) + list((package / 'dependencies').glob('*.jar'))
+        # Java has no Kotlin dependency; verify both selected artifacts together.
+        jars += list((out / 'kotlin').glob('thinkthen-kotlin-*.jar')) if package.name == 'java' else []
+        verify_jvm(ROOT, jars, resource.parent, jvm_platform, native)
+    scratch.cleanup()
+    return str(java / 'bin/java')
+
+
+def csharp(out, checks, rid, native):
+    env = dict(os.environ, DOTNET_CLI_HOME=str(ROOT / '.dotnet-home'),
+               DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+               DOTNET_GENERATE_ASPNET_CERTIFICATE='false', NUGET_PACKAGES=str(ROOT / '.nuget'))
+    config = ROOT / 'NuGet.Config'
+    config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+    prop = {'osx-arm64': 'MacNative', 'linux-x64': 'LinuxNative', 'linux-arm64': 'LinuxArm64Native', 'win-x64': 'WindowsNative'}[rid]
+    package = out / 'csharp'
+    run('dotnet', 'pack', 'sdk/csharp/ThinkThen.csproj', '-c', 'Release', '--configfile', config,
+        '-o', package, f'-p:{prop}={native}', '-p:DebugType=None', '-p:DebugSymbols=false', env=env)
+    run('dotnet', 'build', 'sdk/csharp/tests/Consumer.csproj', '-c', 'Release', '--source', package,
+        '-o', ROOT / 'consumer-dotnet', '-p:DebugType=None', '-p:DebugSymbols=false', env=env)
+    for suffix in ('dll', 'runtimeconfig.json', 'deps.json'):
+        copy(ROOT / f'consumer-dotnet/Consumer.{suffix}', checks / f'csharp/Consumer.{suffix}')
+
+
+def r_binary(out, rust):
+    # R --build produces an installed binary, not the vendored build recipe.
+    package = out / 'r'
+    package.mkdir()
+    shutil.copytree(ROOT / 'sdk/r', package / 'source', ignore=shutil.ignore_patterns('native', 'tests'))
+    (package / 'source/src/Makevars').write_text('PKG_LIBS = ' + str(rust / 'libthinkthen_r.a') + '\n')
+    commands = '''set -eu
+mkdir -p "$1/source" "$1/library"
+R CMD INSTALL --build --strip --library="$1/library" "$1/source" >"$1/install.log" 2>&1 || { tail -80 "$1/install.log"; exit 1; }
+Rscript --vanilla -e 'a <- commandArgs(TRUE); p <- find.package("jsonlite"); old <- setwd(dirname(p)); on.exit(setwd(old)); utils::tar(a[[1]], "jsonlite", compression="gzip", tar="internal")' "$1/jsonlite-binary.tar.gz"
+'''
+    if platform.system() == 'Darwin':
+        run('sh', '-c', commands, 'r-binary', package, cwd=ROOT)
+        generated = list(ROOT.glob('thinkthen_*.tgz')) + list(ROOT.glob('thinkthen_*.tar.gz'))
+        assert len(generated) == 1, generated
+        shutil.move(generated[0], package / generated[0].name)
+        r_version = text('Rscript', '--vanilla', '-e', 'cat(as.character(getRversion()))')
+    else:
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0],
+            '--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{ROOT}:/src', '-v', f'{package}:/package',
+            '-v', f'{rust}:{rust}:ro',
+            '-v', f'{Path(os.environ["THINKTHEN_RUNTIME_PREFIX"]) / "r-frames/library"}:/r-dependencies:ro',
+            image('floor'), 'sh', '-c',
+            'cd /src; export PATH=/opt/R/bin:/opt/python/cp313-cp313/bin:/opt/rh/gcc-toolset-14/root/usr/bin:/usr/local/bin:/usr/bin:/bin HOME=/package/home CARGO_HOME=/cargo RUSTUP_HOME=/rustup RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_NET_OFFLINE=true CARGO_TARGET_DIR=/package/target LANG=C.UTF-8 R_LIBS_USER=/r-dependencies R_LIBS_SITE=; mkdir -p /package/home; ' + commands +
+            '\nmv /src/thinkthen_*.tar.gz /package/; Rscript --vanilla -e \'cat(as.character(getRversion()))\' > /package/r-version; getconf GNU_LIBC_VERSION > /package/libc-version', 'r-binary', '/package')
+        r_version = (package / 'r-version').read_text().strip()
+    assert str(rust / 'libthinkthen_r.a') in (package / 'install.log').read_text(), 'R did not link the shared Rust archive'
+    (package / 'install.log').unlink()
+    shutil.rmtree(package / 'source')
+    shutil.rmtree(package / 'library')
+    shutil.rmtree(package / 'target', ignore_errors=True)
+    shutil.rmtree(package / 'home', ignore_errors=True)
+    (package / 'r-version').write_text(r_version + '\n')
+    return r_version
+
+
+def language_packages(out, version, cache, rust):
+    host, rid, jvm_platform, suffix = host_info()
+    library = f'libthinkthen_ffi.{suffix}'
+    checks = out / 'checks'
+    checks.mkdir()
+    copy(ROOT / 'construction/stub.json', checks / 'stub.json')
+    for path in (ROOT / 'scripts/release').iterdir():
+        if path.is_file(): copy(path, checks / path.name)
+    copy(ROOT / 'scripts/release-check', out / 'check')
+    copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
+    copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
+    native = cache / rid / library
+    stage = ROOT / '.command'
+    stage.mkdir()
+    copy(rust / 'thinkthen', stage / 'thinkthen')
+    copy(ROOT / 'LICENSE', stage / 'LICENSE')
+    archive(stage, out / f'thinkthen-{version}-{host}.tar.gz')
+    print('candidate: command', flush=True)
+    tag = 'macosx_' + FLOORS['macos'].replace('.', '_') + '_arm64' if platform.system() == 'Darwin' else 'manylinux_2_28_' + platform.machine()
+    python_wheel(ROOT / '.python-wheel', out, version, rust / ('lib_native.' + suffix), 'cp310-abi3-' + tag)
+    print('candidate: Python', flush=True)
+    copy(rust / f'libthinkthen_node.{suffix}', ROOT / 'sdk/typescript/thinkthen.node')
+    copy(ROOT / 'LICENSE', ROOT / 'sdk/typescript/LICENSE')
+    (out / 'typescript').mkdir()
+    run('npm', 'pack', '--offline', '--ignore-scripts', '--quiet', '--pack-destination', out / 'typescript', cwd=ROOT / 'sdk/typescript')
+    print('candidate: TypeScript', flush=True)
+    # go-package expects the ordinary target/release layout, sharing this build.
+    go_target = ROOT / '.go-target'
+    copy(native, go_target / 'release' / library)
+    run('scripts/go-package', ROOT / '.go-module', env=dict(os.environ, CARGO_TARGET_DIR=str(go_target)))
+    (out / 'go').mkdir()
+    archive(ROOT / '.go-module', out / f'go/thinkthen-go-{version}-{host}.tar.gz')
+    consumer = ROOT / '.go-consumer'
+    shutil.copytree(ROOT / 'sdk/go/tests', consumer)
+    with tarfile.open(next((out / 'go').glob('*.tar.gz'))) as package:
+        package.extractall(ROOT / '.go-installed', filter='data')
+    run('go', 'mod', 'edit', f'-replace=github.com/botassembly/thinkthen/sdk/go={ROOT}/.go-installed', cwd=consumer)
+    native_run('go', 'test', '-c', '-o', checks / 'go-consumer', cwd=consumer,
+        env=dict(os.environ, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', CGO_ENABLED='1'))
+    print('candidate: Go', flush=True)
+    java = jvm(out, checks, version, jvm_platform, library, native)
+    print('candidate: Java and Kotlin', flush=True)
+    csharp(out, checks, rid, native)
+    print('candidate: C#', flush=True)
+    r_version = r_binary(out, rust)
+    copy(ROOT / 'sdk/r/tests/run.R', checks / 'run.R')
+    copy(ROOT / 'sdk/r/tests/frames.R', checks / 'r-frame-cases.R')
+    print('candidate: R', flush=True)
+    native_run('scripts/c-package', ROOT / '.c-package')
+    (out / 'c').mkdir()
+    for path in (ROOT / '.c-package').glob('*.tar.gz'):
+        copy(path, out / f'c/thinkthen-c-{version}-{host}.tar.gz')
+    installed = ROOT / '.c-package/prefix'
+    flags = [flag for flag in text('pkg-config', '--cflags', '--libs', str(installed / 'lib/pkgconfig/thinkthen-c.pc')).split() if not flag.startswith('-Wl,-rpath,')]
+    origin = '@loader_path' if platform.system() == 'Darwin' else '$ORIGIN'
+    flags.append(f'-Wl,-rpath,{origin}/../c/lib')
+    native_run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread', 'sdk/c/tests/consumer.c', *flags, '-o', checks / 'c-consumer')
+    print('candidate: C', flush=True)
+    return host, rid, cache, java, r_version
+
+
+def cpp_package(out, version, host):
+    native_run('scripts/cpp-package', ROOT / '.cpp-package')
+    package = out / 'cpp'
+    package.mkdir()
+    bundle = next((ROOT / '.cpp-package').glob('*.tar.gz'))
+    copy(bundle, package / f'thinkthen-cpp-{version}-{host}.tar.gz')
+    dependencies = package / 'dependencies/nlohmann-json'
+    shutil.copytree(TOOLS / 'nlohmann-json/3.11.3', dependencies)
+    copy(ROOT / 'sdk/cpp/JSON-LICENSE', dependencies / 'LICENSE')
+    # The upstream install writes an absolute build-machine include directory.
+    pkgconfig = dependencies / 'share/pkgconfig/nlohmann_json.pc'
+    pkgconfig.write_text(pkgconfig.read_text().replace(
+        str(TOOLS / 'nlohmann-json/3.11.3/include'), '${pcfiledir}/../../include'))
+    installed = ROOT / '.cpp-installed'
+    with tarfile.open(bundle) as source:
+        source.extractall(installed, filter='data')
+    origin = '@loader_path' if platform.system() == 'Darwin' else '$ORIGIN'
+    native_run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-UNDEBUG', '-pthread',
+        '-I', installed / 'include', '-I', dependencies / 'include',
+        'sdk/cpp/tests/consumer.cpp', '-L', installed / 'lib', '-lthinkthen_ffi',
+        f'-Wl,-rpath,{origin}/../cpp/lib', '-o', out / 'checks/cpp-consumer')
+    print('candidate: C++', flush=True)
+
+
+def ruby_package(out):
+    ruby_platform = current()['ruby']
+    run('scripts/ruby-package', ROOT / '.ruby-package')
+    gem = next((ROOT / '.ruby-package').glob(f'*-{ruby_platform}.gem'))
+    copy(gem, out / 'ruby' / gem.name)
+    dependency = next((TOOLS / 'ruby/packages').glob(f'ffi-*-{ruby_platform}*.gem'))
+    copy(dependency, out / 'ruby/dependencies' / dependency.name)
+    print('candidate: Ruby', flush=True)
+
+
+def zig_package(out, version, host):
+    run('scripts/zig-package', ROOT / '.zig-package')
+    bundle = next((ROOT / '.zig-package').glob('*.tar.gz'))
+    copy(bundle, out / f'zig/thinkthen-zig-{version}-{host}.tar.gz')
+    zig_consumer(out, bundle)
+    print('candidate: Zig', flush=True)
+
+
+def zig_consumer(out, bundle):
+    os.environ['THINKTHEN_CANDIDATE_OUT'] = str(out)
+    with tempfile.TemporaryDirectory(prefix='.zig-consumer-', dir=ROOT) as temporary:
+        installed = Path(temporary)
+        with tarfile.open(bundle) as source: source.extractall(installed, filter='data')
+        (installed / 'thinkthen').rename(installed / 'package')
+        consumer = installed / 'consumer'
+        consumer.mkdir()
+        for path in (ROOT / 'sdk/zig/tests').glob('*.zig*'): copy(path, consumer / path.name)
+        release = re.search(r'minimum_zig_version = "([^"]+)"', (installed / 'package/build.zig.zon').read_text())[1]
+        target = f'aarch64-macos.{FLOORS["macos"]}' if platform.system() == 'Darwin' else f'{"aarch64" if platform.machine() == "aarch64" else "x86_64"}-linux-gnu.{FLOORS["linux"]["glibc"]}'
+        native_run(TOOLS / f'zig/{release}/zig', 'build', '-j2', '-Doptimize=ReleaseSafe', '-Dtarget=' + target, '-Dcpu=baseline',
+            '--cache-dir', ROOT / '.zig-cache', cwd=consumer)
+        copy(consumer / 'zig-out/bin/consumer', out / 'checks/zig/consumer')
+
+
+def swift_package(out, version, host, rid, cache):
+    swift = ROOT / '.swift-installed/ThinkThen'
+    run('scripts/swift-package', swift, env=dict(os.environ, THINKTHEN_SWIFT_NATIVE_ASSETS=str(cache)))
+    for path in (swift / 'Sources/ThinkThen/Native').iterdir():
+        if path.name != rid: shutil.rmtree(path)
+    (swift / 'VERSION').write_text(version + '\n')
+    (out / 'swift').mkdir()
+    bundle = out / f'swift/thinkthen-swift-{version}-{host}.tar.gz'
+    archive(swift, bundle)
+    shutil.rmtree(swift)
+    swift.mkdir()
+    with tarfile.open(bundle) as source: source.extractall(swift, filter='data')
+    consumer = swift.parent / 'Consumer'
+    consumer.mkdir()
+    for path in (ROOT / 'sdk/swift/tests').glob('*.swift'): copy(path, consumer / path.name)
+    run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
+    destination = out / 'checks/swift'
+    destination.mkdir()
+    commands = '''set -eu
+swift build --package-path "$1" -c release --jobs 2 --disable-sandbox -Xswiftc -warnings-as-errors
+swift --version > "$2/compiler-version"
+cp "$1/.build/release/Consumer" "$2/"
+for resource in "$1/.build/release/"*.resources "$1/.build/release/"*.bundle; do
+    [ ! -d "$resource" ] || cp -R "$resource" "$2/"
+done
+'''
+    if platform.system() == 'Darwin':
+        run('sh', '-c', commands, 'swift-consumer', consumer, destination)
+    else:
+        toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+            '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
+            '-v', f'{ROOT}:/src', '-v', f'{out}:/candidate', '-v', f'{toolchain}:/opt/swift:ro',
+            image('swift'), 'sh', '-c',
+            'mkdir -p /tmp/home; export HOME=/tmp/home PATH=/opt/swift/usr/bin:/usr/bin:/bin; ' + commands +
+            '\nldd "$2/Consumer" > "$2/linked-libraries"', 'swift-consumer', '/src/.swift-installed/Consumer', '/candidate/checks/swift')
+        linked = (destination / 'linked-libraries').read_text()
+        assert 'not found' not in linked, linked
+        runtime = out / 'prerequisites/swift-runtime/linux'
+        for library in set(re.findall(r'=> /opt/swift/usr/lib/swift/linux/(\S+)', linked)):
+            copy(toolchain / 'usr/lib/swift/linux' / library, runtime / library)
+        copy(toolchain / 'usr/share/swift/LICENSE.txt', runtime.parent / 'LICENSE.txt')
+        (destination / 'linked-libraries').unlink()
+    print('candidate: Swift', flush=True)
+
+
+def extra_languages(out, version, host, rid, cache):
+    ruby_package(out)
+    zig_package(out, version, host)
+    swift_package(out, version, host, rid, cache)
+
+def frame_dependencies(out, r_version):
+    shutil.copytree(TOOLS / 'python-frames/cp310', out / 'prerequisites/python-frames-cp310')
+    target = out / 'prerequisites/r-frames'
+    target.mkdir()
+    if platform.system() == 'Darwin':
+        expression = '''db <- installed.packages(); roots <- trimws(strsplit(read.dcf(commandArgs(TRUE)[[1]])[1,"Suggests"],",")[[1]]);
+deps <- tools::package_dependencies(roots, db=db, which=c("Depends","Imports","LinkingTo"), recursive=TRUE);
+names <- unique(c(roots,unlist(deps,use.names=FALSE))); names <- names[!names %in% db[!is.na(db[,"Priority"]),"Package"]];
+cat(jsonlite::toJSON(setNames(lapply(names,find.package),names),auto_unbox=TRUE))'''
+        packages = json.loads(text('Rscript', '--vanilla', '-e', expression, ROOT / 'sdk/r/DESCRIPTION'))
+        for name, path in packages.items():
+            with tarfile.open(target / f'{name}-binary.tar.gz', 'w:gz') as bundle:
+                bundle.add(path, arcname=name)
+    else:
+        for path in (TOOLS / 'floors/linux-glibc2.28/r-frames/packages').glob('*.tar.gz'):
+            copy(path, target / path.name)
+    inventory = {}
+    for path in sorted(target.glob('*.tar.gz')):
+        with tarfile.open(path) as bundle:
+            metadata = email.message_from_bytes(bundle.extractfile(next(p for p in bundle.getmembers() if p.name.count('/') == 1 and p.name.endswith('/DESCRIPTION'))).read())
+        assert metadata['Built'].startswith('R ' + r_version + ';'), (path, metadata['Built'])
+        dependencies = set()
+        for field in ('Depends', 'Imports', 'LinkingTo'):
+            dependencies.update(re.findall(r'(?:^|,)\s*([A-Za-z][A-Za-z0-9.]*)', metadata.get(field, '')))
+        inventory[metadata['Package']] = {'file': path.name, 'version': metadata['Version'],
+            'license': metadata['License'], 'dependencies': sorted(dependencies),
+            'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+    order = []
+    while len(order) < len(inventory):
+        ready = sorted(name for name in inventory if name not in order and
+            not (set(inventory[name]['dependencies']) & inventory.keys()) - set(order))
+        assert ready, inventory
+        order.extend(ready)
+    (target / 'inventory.json').write_text(json.dumps({'r': r_version, 'packages': inventory,
+        'install_order': [inventory[name]['file'] for name in order]}, indent=2) + '\n')
+
+
+def build(out, version):
+    from release_sites import crates
+    crates(out)
+    if platform.system() == 'Linux':
+        for name in ('floor', 'swift'): image(name)
+    with prepare_native(ROOT, run, native_run) as (cache, rust):
+        from release_notices import compiled_names
+        target = host_info()[0]
+        names = compiled_names(target, rust.parent / 'artifacts.json', ROOT)
+        (out / 'compiled-crates.json').write_text(json.dumps({'target': target, 'crates': names}, indent=2) + '\n')
+        host, rid, cache, java, r_version = language_packages(out, version, cache, rust)
+        cpp_package(out, version, host)
+        extra_languages(out, version, host, rid, cache)
+        frame_dependencies(out, r_version)
+        database_packages(out, version, host, rid, cache)
+        copy(ROOT / 'LICENSE', out / 'LICENSE')
+        return finalize(out, version, java, r_version)
+
+
+def finalize(out, version, java, r_version):
+    host = host_info()[0]
+    identities = {'version': version, 'platform': host, 'revision': text('git', 'rev-parse', 'HEAD'),
+                  'rust': native_text('rustc', '--version'), 'go': native_text('go', 'version'),
+                  'r': r_version, 'java': java}
+    # Runtime paths are passed directly to the check; never persist builder paths.
+    identities['java'] = text(java, '--version').splitlines()[0]
+    identities['node'] = text('node', '--version')
+    identities['dotnet'] = text('dotnet', '--version')
+    identities['ruby'] = text('ruby', '--version')
+    identities['python'] = sys.version.splitlines()[0]
+    identities['swift'] = (out / 'checks/swift/compiler-version').read_text().splitlines()[0]
+    zig = re.search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
+    identities['zig'] = native_text(TOOLS / f'zig/{zig}/zig', 'version')
+    identities['c'] = native_text('cc', '--version').splitlines()[0]
+    if platform.system() == 'Linux':
+        identities['prepared_images'] = {name: image(name) for name in ('floor', 'swift')}
+    identities['dependencies'] = json.loads((ROOT / 'licenses/inputs.json').read_text())
+    identities['dependency_inventory'] = 'compiled-crates.json'
+    (out / 'build.json').write_text(json.dumps(identities, indent=2) + '\n')
+    requirements = {'command': 'operating system', 'python': 'Python >=3.10 with its pip/venv installer',
+                    'typescript': 'Node >=22', 'go': 'Go >=1.22 and C compiler to build; OS runtime thereafter',
+                    'java': 'Java >=22; bundled Jackson/JSpecify jars',
+                    'kotlin': 'Java >=22; bundled Java, Kotlin stdlib and coroutine jars',
+                    'csharp': '.NET10', 'r': f'R {r_version}; bundled matching jsonlite binary',
+                    'c': 'C compiler to build; bundled Jansson headers/archive and wrapper/engine libraries',
+                    'cpp': 'C++17 compiler to build; bundled nlohmann_json 3.11.3 headers and CMake metadata; standard C++ runtime thereafter',
+                    'ruby': 'CRuby >=3.3 and RubyGems; bundled precompiled ffi gem',
+                    'zig': 'Zig 0.17.0 compiler to build; operating-system runtime thereafter',
+                    'swift': 'Swift 6.3 toolchain to build; Swift 6.3.2 runtime, bundled Linux runtime libraries',
+                    'sqlite': 'sqlite3 command >=3.41 with extension loading',
+                    'duckdb': 'official DuckDB1.4.3 command or Python package'}
+    if platform.system() == 'Linux': requirements['postgres'] = 'PostgreSQL18 ' + host
+    runtime = {name: {'runtime': value, 'platform': host} for name, value in requirements.items()}
+    runtime['python']['optional_frames'] = json.loads((out / 'prerequisites/python-frames-cp310/inventory.json').read_text())['scope']
+    if platform.system() == 'Darwin':
+        for value in runtime.values():
+            value['macos'] = FLOORS['macos']
+    for family in runtime:
+        packages = list((out / family).rglob('*')) if family != 'command' else list(out.glob('thinkthen-*.tar.gz'))
+        symbols = native_requirements(packages)
+        if platform.system() == 'Linux':
+            runtime[family]['glibc_symbols'] = symbols
+            runtime[family]['tested_glibc'] = platform.libc_ver()[1]
+            runtime[family]['supported_glibc'] = platform.libc_ver()[1]
+    if platform.system() == 'Linux':
+        runtime['r']['tested_glibc'] = (out / 'r/libc-version').read_text().split()[-1]
+        runtime['r']['supported_glibc'] = runtime['r']['tested_glibc']
+        runtime['postgres']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+        runtime['postgres']['supported_glibc'] = runtime['postgres']['tested_glibc']
+        runtime['duckdb']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('floor'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+        runtime['zig']['tested_glibc'] = runtime['duckdb']['tested_glibc']
+        runtime['swift']['tested_glibc'] = text('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], image('swift'), 'getconf', 'GNU_LIBC_VERSION').split()[-1]
+    runtime = floor_requirements(runtime, platform.system())
+    for family, value in runtime.items():
+        destination = out / ('command-requirements.json' if family == 'command' else f'{family}/requirements.json')
+        destination.write_text(json.dumps(value, indent=2) + '\n')
+    (out / 'requirements.json').write_text(json.dumps(runtime, indent=2) + '\n')
+    from release_notice_packages import distribute
+    distribute(out, host, ROOT)
+    finish(out)
+    run('scripts/runtime-floor-check', out)
+    return java
+
+
+def native_requirements(packages):
+    """Inspect the delivered native objects, including resources inside packages."""
+    versions = set()
+    with tempfile.TemporaryDirectory() as temporary:
+        folder = Path(temporary)
+        pending = [p for p in packages if p.is_file()]
+        sequence = 0
+        while pending:
+            path = pending.pop()
+            unpacked = folder / str(sequence)
+            sequence += 1
+            if zipfile.is_zipfile(path):
+                with zipfile.ZipFile(path) as bundle: bundle.extractall(unpacked)
+                pending.extend(p for p in unpacked.rglob('*') if p.is_file())
+            elif tarfile.is_tarfile(path):
+                with tarfile.open(path) as bundle: bundle.extractall(unpacked, filter='data')
+                pending.extend(p for p in unpacked.rglob('*') if p.is_file())
+            else:
+                with path.open('rb') as stream: magic = stream.read(8)
+                archive = magic == b'!<arch>\n'
+                if magic.startswith(b'\x7fELF') or (archive and platform.system() == 'Linux'):
+                    sections = text('readelf', '--sections', path)
+                    assert not re.search(r'\.(?:z?debug)_', sections), f'packaged debug info: {path.name}'
+                    versions.update(re.findall(r'GLIBC_(\d+\.\d+)', text('readelf', '--version-info', path)))
+                elif magic[:4] in (b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf'):
+                    assert '__DWARF' not in text('otool', '-l', path), f'packaged debug info: {path.name}'
+                elif archive and platform.system() == 'Darwin':
+                    assert 'DW_TAG_compile_unit' not in text('dwarfdump', '--debug-info', path), f'packaged debug info: {path.name}'
+    return max(versions, key=lambda v: tuple(map(int, v.split('.')))) if versions else None
+
+
+def database_packages(out, version, host, rid, cache):
+    duck = ROOT / '.duck-package'
+    run('scripts/duckdb-build', env=dict(os.environ,
+        THINKTHEN_DUCKDB_DEPS=str(Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / 'duckdb/1.4.3'),
+        THINKTHEN_SQL_ARCHIVE=str(cache / rid / 'libthinkthen_ffi.a'),
+        THINKTHEN_DUCKDB_OUTPUT=str(duck), PM_TICKET=os.environ['PM_JOB'].split()[0]))
+    (out / 'duckdb').mkdir()
+    copy(ROOT / 'databases/duckdb/README.md', out / 'duckdb/README.md')
+    archive(duck, out / f'duckdb/thinkthen-duckdb-{version}-{host}.tar.gz')
+    # Official database runtimes are prerequisites, separate from the extension.
+    prerequisite = out / 'prerequisites/duckdb'
+    deps = Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / 'duckdb/1.4.3'
+    copy(deps / 'cli/duckdb', prerequisite / 'duckdb')
+    copy(duck / 'DUCKDB-LICENSE', prerequisite / 'LICENSE')
+    source = deps / 'duckdb-1.4.3'
+    for path in (source / 'third_party').rglob('*'):
+        if path.is_file() and ('LICENSE' in path.name.upper() or path.name.upper() in ('COPYING', 'NOTICE')):
+            copy(path, prerequisite / 'notices' / path.relative_to(source))
+    wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
+    copy(deps / wheel, prerequisite / wheel)
+    host_version = text(prerequisite / 'duckdb', '--version')
+    (prerequisite / 'identity.json').write_text(json.dumps({'version': host_version,
+        'sha256': hashlib.sha256((prerequisite / 'duckdb').read_bytes()).hexdigest()}, indent=2) + '\n')
+    print('candidate: DuckDB', flush=True)
+    native_run('scripts/sqlite-package', ROOT / '.sqlite-package')
+    (out / 'sqlite').mkdir()
+    for path in (ROOT / '.sqlite-package').glob('*.tar.gz'):
+        copy(path, out / f'sqlite/thinkthen-sqlite-{version}-{host}.tar.gz')
+    print('candidate: SQLite', flush=True)
+    if platform.system() == 'Linux':
+        run('scripts/postgres-package', ROOT / '.pg-package')
+        (out / 'postgres').mkdir()
+        for path in (ROOT / '.pg-package').glob('*.tar.gz'):
+            copy(path, out / f'postgres/thinkthen-postgres-{version}-18-{host}.tar.gz')
+        print('candidate: PostgreSQL', flush=True)
+
+
+def main():
+    global ROOT
+    if sys.argv[1:] not in (['--help'], ['-h']):
+        try:
+            checked_home()
+        except ValueError as error:
+            sys.exit(str(error))
+    if len(sys.argv) == 3 and sys.argv[1] == "--windows":
+        from release_windows import candidate
+        candidate(Path(sys.argv[2]).resolve())
+        return
+    if sys.argv[1:] in (['--help'], ['-h']):
+        print(__doc__)
+        return
+    if len(sys.argv) != 2 or sys.argv[1].startswith('-'):
+        sys.exit('usage: scripts/release-candidate OUTPUT_DIRECTORY')
+    if (platform.system(), platform.machine()) not in NATIVE_HOSTS:
+        sys.exit('candidate supports macOS arm64 and Linux x86-64/arm64')
+    if not os.environ.get('PM_JOB', '').split():
+        sys.exit('Run candidate builds through pm job so containers have a ticket owner')
+    version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+    out = Path(sys.argv[1]).resolve() / version / host_info()[0]
+    out.mkdir(parents=True, exist_ok=False)
+    os.environ['THINKTHEN_CANDIDATE_OUT'] = str(out)
+    source = ROOT
+    os.environ.setdefault('CARGO_TARGET_DIR', str(source / 'target'))
+    os.environ['COPYFILE_DISABLE'] = '1'
+    # Assemble from an unchanged source checkout.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-build-') as temporary:
+        ROOT = Path(temporary) / 'source'
+        run('git', 'clone', '--quiet', '--local', '--no-hardlinks', source, ROOT, cwd=source)
+        run('git', 'checkout', '--quiet', text_at(source, 'git', 'rev-parse', 'HEAD'))
+        metadata(version)
+        java = build(out, version)
+    # The build checkout is gone before any consumer can run.
+    ROOT = source
+    wheel = next((out / 'prerequisites/duckdb').glob('*.whl'))
+    tag = wheel.name.split('-')[2]
+    python = text('uv', 'python', 'find', '--offline', f'{tag[2]}.{tag[3:]}')
+    sqlite = str(TOOLS / 'sqlite-3.41.0/bin/sqlite3')
+    env = dict(os.environ, THINKTHEN_CHECK_JAVA=java, THINKTHEN_CHECK_SQLITE=sqlite, THINKTHEN_CHECK_DUCKDB_PYTHON=python, THINKTHEN_CHECK_PYTHON=text('uv', 'python', 'find', '--offline', '3.10'))
+    result = run(sys.executable, out / 'check', out, cwd=out, env=env)
+    print(result.stdout, end='')
+    print(out)
+
+
+def text_at(directory, *arguments):
+    return subprocess.check_output(arguments, cwd=directory, text=True).strip()
+
+
+if __name__ == '__main__':
+    main()

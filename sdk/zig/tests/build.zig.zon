@@ -1,0 +1,7 @@
+.{
+    .name = .consumer,
+    .version = "0.0.0",
+    .fingerprint = 0x705b37274c896ddb,
+    .dependencies = .{ .thinkthen = .{ .path = "../package" } },
+    .paths = .{""},
+}

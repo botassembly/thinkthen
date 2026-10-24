@@ -1,0 +1,102 @@
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Final native-assets version tag approved after draft review
+        required: true
+        type: string
+      checksum:
+        description: PM-approved SHA256SUMS file SHA-256
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: package-sites-${{ inputs.tag }}
+  cancel-in-progress: false
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+jobs:
+  upload:
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        site: [npm, pypi, rubygems, nuget, maven, crates]
+    permissions: {contents: read, id-token: write}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: '${{ inputs.tag }}', persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: matrix.site == 'npm'
+        with: {node-version: '22'}
+      - name: Prepare npm trusted publisher client
+        if: matrix.site == 'npm'
+        run: npm install --global npm@11.11.0
+      - name: Download and verify the approved draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_CHECKSUM: ${{ inputs.checksum }}
+        run: python3 scripts/release_upload.py download '${{ matrix.site }}' "$RELEASE_TAG" "$RELEASE_CHECKSUM" approved
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        if: matrix.site == 'pypi'
+        with: {packages-dir: approved/registries/pypi/}
+      - uses: rubygems/configure-rubygems-credentials@f5a32efa94076b80b28556b2d3b04cb3707b6df1
+        if: matrix.site == 'rubygems'
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
+        if: matrix.site == 'nuget'
+        id: nuget
+        with: {user: '${{ vars.NUGET_USER }}'}
+      - uses: rust-lang/crates-io-auth-action@22f31735a55cd45813f26e2edc31c7531e1fb4ed
+        if: matrix.site == 'crates'
+        id: crates
+      - name: Upload fixed packages
+        if: matrix.site != 'pypi'
+        env:
+          RELEASE_SITE: ${{ matrix.site }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates.outputs.token }}
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_CENTRAL_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}
+          MAVEN_CENTRAL_GPG_PASSPHRASE: ${{ secrets.MAVEN_CENTRAL_GPG_PASSPHRASE }}
+        run: |
+          python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'
+
+  homebrew:
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: '${{ inputs.tag }}', persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Download and verify the approved draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_CHECKSUM: ${{ inputs.checksum }}
+        run: python3 scripts/release_upload.py download homebrew "$RELEASE_TAG" "$RELEASE_CHECKSUM" approved
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: botassembly/homebrew-thinkthen
+          path: tap
+          ssh-key: ${{ secrets.TAP_DEPLOY_KEY }}
+      - name: Update the tap from the reviewed formula
+        run: |
+          cp approved/registries/homebrew/thinkthen.rb tap/Formula/thinkthen.rb
+          git -C tap config user.name 'ThinkThen release'
+          git -C tap config user.email 'imaurer@users.noreply.github.com'
+          git -C tap add Formula/thinkthen.rb
+          git -C tap diff --cached --quiet && exit 0
+          git -C tap commit -m 'Publish ThinkThen package formula'
+          git -C tap push

@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Qualify installed packages on the OS floor before release publication."""
+import argparse
+import os
+from pathlib import Path
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from release_workflow import prepared, validate, version
+from runtime_floors import FLOORS
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('target')
+parser.add_argument('candidate', type=Path)
+parser.add_argument('sha')
+parser.add_argument('--caller-owned', action='store_true', help=argparse.SUPPRESS)
+args = parser.parse_args()
+package = args.candidate.resolve() / version() / args.target
+validate(package, args.target, args.sha)
+os.environ.setdefault('PM_JOB', 'release-' + os.environ.get('GITHUB_RUN_ID', 'qualification'))
+if args.target.startswith('linux-'):
+    if platform.system() != 'Linux':
+        sys.exit('Linux package qualification requires native Linux')
+    prepared('scripts/qualification-linux', package)
+    if not os.environ.get('THINKTHEN_SWIFT_IMAGE'):
+        os.environ['THINKTHEN_SWIFT_IMAGE'] = subprocess.check_output(
+            ['docker', 'image', 'inspect', 'thinkthen-qualification:swift-source', '--format', '{{.Id}}'], text=True).strip()
+elif args.target == 'macos-arm64':
+    actual = platform.mac_ver()[0]
+    if platform.machine() != 'arm64' or actual.split('.')[0] != FLOORS['macos'].split('.')[0]:
+        sys.exit('macOS qualification requires the named native arm64 OS floor')
+    # Consumers see language runtimes alone. No compiler or build cache enters
+    # the installed-package test; source package builds run separately below.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-runtime-path-') as temporary:
+        binary = Path(temporary)
+        python = subprocess.check_output(['uv', 'python', 'find', '--offline', '3.10'], text=True).strip()
+        (binary / 'python3.10').symlink_to(python)
+        for name in ('python3', 'node', 'npm', 'ruby', 'gem', 'Rscript', 'R', 'java', 'dotnet', 'sqlite3', 'sh', 'bash', 'tar', 'gzip', 'uname', 'dirname', 'sed', 'awk', 'mkdir', 'cp', 'rm', 'ln', 'tr', 'head', 'cut', 'which'):
+            executable = shutil.which(name)
+            if not executable:
+                sys.exit('missing package runtime: ' + name)
+            (binary / name).symlink_to(executable)
+        python = subprocess.check_output(['uv', 'python', 'find', '--offline', '3.10'], text=True).strip()
+        wheel = next((package / 'prerequisites/duckdb').glob('*.whl'))
+        abi = wheel.name.split('-')[2][2:]
+        duck_python = subprocess.check_output(['uv', 'python', 'find', '--offline', f'{abi[0]}.{abi[1:]}'], text=True).strip()
+        env = dict(os.environ, PATH=str(binary), THINKTHEN_CHECK_PYTHON=python,
+                   THINKTHEN_CHECK_DUCKDB_PYTHON=duck_python)
+        subprocess.run([sys.executable, 'scripts/release-check', str(package)], check=True, env=env)
+elif args.target == 'windows-x86_64':
+    if os.name != 'nt':
+        sys.exit('Windows package qualification requires native Windows')
+    if sys.getwindowsversion().build != FLOORS['windows']['build']:
+        sys.exit('Windows qualification requires the named Windows Server OS floor')
+    if not args.caller_owned:
+        from windows_caller_process import launch
+        launch([sys.executable, str(Path(__file__).resolve()), *sys.argv[1:], '--caller-owned'],
+               cwd=Path.cwd(), env=dict(os.environ))
+        sys.exit(0)
+    from release_windows_host import environment
+    native = environment()
+    subprocess.run([sys.executable, 'scripts/release-check', str(package)], check=True, env=native)
+    # Source SDKs use their ordinary compiler toolchains in an isolated home.
+    os.environ.update(native)
+else:
+    sys.exit('unsupported qualification target')
+zig = re.search(r'minimum_zig_version = "([^"]+)"', (Path('sdk/zig/build.zig.zon')).read_text())[1]
+os.environ['PATH'] = str(Path.home() / '.local/share/thinkthen-build-tools/zig' / zig) + os.pathsep + os.environ['PATH']
+subprocess.run([sys.executable, 'scripts/source-install-check', str(package), '--readmes'], check=True)
+if args.target.startswith('linux-'):
+    prepared('scripts/runtime-floor-build', 'sh', '-eu', '-c', '. scripts/native-tools-env; exec python3 scripts/qualification-readmes "$1"', 'readmes', package)
+else:
+    subprocess.run([sys.executable, 'scripts/qualification-readmes', str(package)], check=True)
+print('release qualification: native floor and clean package installs pass: ' + args.target)

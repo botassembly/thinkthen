@@ -1,0 +1,243 @@
+name: native package qualification
+
+on:
+  workflow_call:
+    inputs:
+      revision: {required: true, type: string}
+      matrix: {required: true, type: string}
+
+permissions: {contents: read}
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
+jobs:
+  native-gate-inputs:
+    runs-on: ubuntu-24.04
+    outputs:
+      floor_image: ${{ steps.native.outputs.floor_image }}
+    timeout-minutes: 180
+    permissions: {contents: read}
+    env:
+      PM_JOB: release-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/uv
+            ~/.local/share/uv
+            ~/.local/share/thinkthen-build-tools
+          key: release-tools-linux-x86_64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-linux-x86_64-
+      - name: Prepare Linux gate native inputs
+        id: native
+        env:
+          RELEASE_TARGET: linux-x86_64
+        run: |
+          scripts/release-workflow prepare "$RELEASE_TARGET"
+          . scripts/native-tools-env
+          THINKTHEN_FLOOR_IMAGE=$(docker image inspect thinkthen-floor-build:glibc2.28 --format '{{.Id}}')
+          export THINKTHEN_FLOOR_IMAGE
+          native=$(scripts/native-prepare)
+          echo "floor_image=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "THINKTHEN_FLOOR_IMAGE=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_ENV"
+          mkdir gate-assets
+          scripts/native-pair export gate-assets/pair.json
+          python3 - "$native" <<'PYTHON'
+          import json
+          from pathlib import Path
+          import shutil
+          import sys
+          source = Path(sys.argv[1])
+          for name in json.loads(Path('gate-assets/pair.json').read_text())['assets']:
+              destination = Path('gate-assets/assets') / name
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(source / name, destination)
+          PYTHON
+      - name: Run the Linux-only SDK gate
+        run: |
+          . scripts/native-tools-env
+          scripts/postgres-prepare
+          scripts/postgres-gate
+      # Workflow artifacts transport gate inputs; they are never release assets.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gate-linux-x86_64
+          path: gate-assets/
+          if-no-files-found: error
+          retention-days: 1
+
+  gate:
+    needs: native-gate-inputs
+    runs-on: macos-15
+    timeout-minutes: 180
+    permissions: {contents: read}
+    env:
+      PM_JOB: release-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/uv
+            ~/.local/share/uv
+            ~/.local/share/thinkthen-build-tools
+          key: release-tools-macos-arm64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+      - name: Prepare offline gate dependencies
+        run: |
+          scripts/release-workflow prepare macos-arm64
+          scripts/qualification-gate-prepare
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: gate-linux-x86_64
+          path: ${{ runner.temp }}/gate-assets
+      - name: Run the full declared gate
+        run: |
+          . scripts/native-tools-env
+          scripts/native-pair import "$RUNNER_TEMP/gate-assets/pair.json" "$RUNNER_TEMP/gate-assets/assets"
+          THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image)
+          export THINKTHEN_FLOOR_IMAGE
+          scripts/native-prepare >/dev/null
+          . scripts/native-env
+          scripts/gate
+
+
+  windows-r:
+    needs: [native-gate-inputs, gate]
+    runs-on: windows-2022
+    timeout-minutes: 90
+    permissions: {contents: read}
+    env:
+      PM_JOB: release-${{ github.run_id }}
+    defaults: {run: {shell: bash}}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Prepare pinned native Windows R inputs
+        run: python3 scripts/release_windows_r.py prepare
+      - name: Build the Windows R binary with native R
+        run: python3 scripts/release_windows_r.py build windows-r
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: native-windows-r
+          path: windows-r/
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    needs: [native-gate-inputs, gate, windows-r]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    # Initial cap; replace with measurements from the first approved run.
+    timeout-minutes: 180
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/uv
+            ~/.local/share/uv
+            ~/.local/share/thinkthen-build-tools
+          key: release-tools-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-${{ matrix.target }}-
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: matrix.target == 'windows-x86_64'
+        with:
+          name: native-windows-r
+          path: ${{ runner.temp }}/native-windows-r
+      - name: Select the exact-source native Windows R package
+        if: matrix.target == 'windows-x86_64'
+        run: echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/native-windows-r" >> "$GITHUB_ENV"
+      - name: Select the paired Linux compiler identity for Windows cross builds
+        if: matrix.target == 'windows-x86_64'
+        env:
+          FLOOR_IMAGE: ${{ needs.native-gate-inputs.outputs.floor_image }}
+        run: echo "THINKTHEN_FLOOR_IMAGE=$FLOOR_IMAGE" >> "$GITHUB_ENV"
+      - name: Prepare tools and dependencies
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: scripts/release-workflow prepare "$RELEASE_TARGET"
+      - name: Prepare runtime-only Linux qualification images
+        if: startsWith(matrix.target, 'linux-')
+        env:
+          PM_JOB: release-${{ github.run_id }}
+        run: scripts/qualification-linux --prepare
+      - name: Build and check installed packages against the stub
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: scripts/release-workflow build "$RELEASE_TARGET" release-files "$RELEASE_SHA"
+      - name: Qualify packages on their native runtime floors
+        if: matrix.target != 'windows-x86_64'
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: |
+          . scripts/native-tools-env
+          scripts/qualification-candidate "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
+      # Candidate transport is permitted before Windows native qualification.
+      # Bundle, draft and package publication require every native check below.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: platform-${{ matrix.target }}
+          path: release-files/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  windows-check:
+    needs: build
+    runs-on: windows-2022
+    timeout-minutes: 60
+    permissions: {contents: read}
+    defaults: {run: {shell: bash}}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: platform-windows-x86_64
+          path: windows-candidate
+      - name: Prepare the independent Windows C dependency
+        run: python3 scripts/qualification-windows-prepare
+      - name: Prepare installed package runtimes
+        run: scripts/release-workflow prepare windows-x86_64
+      - name: Prepare Kotlin README compiler dependencies
+        run: mvn -B -q -f sdk/java/pom.xml "-Dmaven.repo.local=$HOME/.local/share/thinkthen-build-tools/jvm/m2" dependency:go-offline
+      - name: Check every installed Windows SDK against the stub
+        env:
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: |
+          python3 -c 'import glob, tarfile; tarfile.open(glob.glob("windows-candidate/*.tar.gz")[0]).extractall("windows-installed", filter="data")'
+          python3 scripts/qualification-candidate windows-x86_64 windows-installed "$RELEASE_SHA"

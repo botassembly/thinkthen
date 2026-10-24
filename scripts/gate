@@ -1,0 +1,22 @@
+#!/bin/sh
+# The gate: formatting, lint with warnings denied, then every test.
+set -eu
+cd "$(dirname "$0")/.."
+python3 scripts/release_metadata.py
+for tool in R Rscript; do
+    if ! "$tool" --version >/dev/null 2>&1; then
+        printf 'gate: %s is missing or cannot run on %s\n' "$tool" "$(hostname)" >&2
+        exit 1
+    fi
+done
+scripts/words ${THINKTHEN_PRIVATE_PATTERNS:+"$THINKTHEN_PRIVATE_PATTERNS"}
+scripts/secrets
+scripts/bindings-schema
+scripts/notices --check
+scripts/supply-chain-check
+cargo fmt --all --check
+scripts/core-check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+if [ -f scripts/c-gate ]; then scripts/c-gate; fi
+cargo test --workspace --locked
+scripts/sdk-gates

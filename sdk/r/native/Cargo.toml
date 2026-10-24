@@ -1,0 +1,28 @@
+[package]
+name = "thinkthen-r"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "thinkthen_r"
+crate-type = ["staticlib", "rlib"]
+test = false
+doctest = false
+
+[dependencies]
+log.workspace = true
+thinkthen.workspace = true
+extendr-api = "=0.8.2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+loopback.workspace = true
+
+[[test]]
+name = "transport_logging"
+path = "../../../crates/thinkthen/tests/cli_transport_logging.rs"

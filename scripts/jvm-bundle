@@ -1,0 +1,23 @@
+#!/bin/sh
+# Bundle the compiled consumers and a host runtime, then prove both offline.
+set -eu
+version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
+cd "$(dirname "$0")/.."
+. scripts/jvm-env
+out=${1:?usage: jvm-bundle ARTIFACT_FOLDER}
+case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
+test -f "$out/lib/thinkthen-java-$version.jar"
+test -f "$out/lib/thinkthen-kotlin-$version.jar"
+classpath=$(find "$out/lib" -name '*.jar' -print | paste -sd: -)
+modules=$("$JAVA_HOME/bin/jdeps" --ignore-missing-deps --multi-release 22 --recursive --print-module-deps --class-path "$classpath" "$out/lib/thinkthen-consumer-$version.jar" "$out/lib/thinkthen-java-$version.jar" "$out/lib/thinkthen-kotlin-$version.jar")
+python3 - "$out/runtime" <<'PY'
+import pathlib, shutil, sys
+p = pathlib.Path(sys.argv[1])
+if p.exists(): shutil.rmtree(p)
+PY
+"$JAVA_HOME/bin/jlink" --add-modules "$modules" --strip-debug --no-header-files --no-man-pages --output "$out/runtime"
+"$out/run-stub" java
+"$out/run-stub" kotlin
+archive="$out-$jvm_platform.tar.gz"
+tar -czf "$archive" -C "$(dirname "$out")" "$(basename "$out")"
+shasum -a 256 "$archive"

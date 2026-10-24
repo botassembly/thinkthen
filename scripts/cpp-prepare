@@ -1,0 +1,14 @@
+#!/bin/sh
+# Prepare the C++ JSON dependency separately from offline package checks.
+set -eu
+cache="$HOME/.local/share/thinkthen-build-tools/nlohmann-json/3.11.3"
+if [ -f "$cache/share/cmake/nlohmann_json/nlohmann_jsonConfig.cmake" ]; then exit 0; fi
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+curl -fL --retry 2 https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz -o "$scratch/json.tar.xz"
+expected=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+if command -v sha256sum >/dev/null 2>&1; then actual=$(sha256sum "$scratch/json.tar.xz"); else actual=$(shasum -a 256 "$scratch/json.tar.xz"); fi
+[ "${actual%% *}" = "$expected" ] || { echo 'JSON dependency archive checksum differs' >&2; exit 1; }
+tar -xf "$scratch/json.tar.xz" -C "$scratch"
+cmake -S "$scratch/json" -B "$scratch/build" -DJSON_BuildTests=OFF -DJSON_MultipleHeaders=OFF -DCMAKE_INSTALL_PREFIX="$cache"
+cmake --install "$scratch/build"

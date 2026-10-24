@@ -1,0 +1,16 @@
+#!/bin/sh
+# The routine gate requires the paired assets after selecting prepared tools.
+. scripts/native-tools-env
+THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image) || return
+export THINKTHEN_FLOOR_IMAGE
+thinkthen_native_cache=$(scripts/native-prepare --path) || return
+for thinkthen_native_asset in linux-x64/libthinkthen_ffi.so osx-arm64/libthinkthen_ffi.dylib; do
+    if [ ! -f "$thinkthen_native_cache/$thinkthen_native_asset" ]; then
+        echo 'Prepare both native platforms with scripts/native-prepare before running SDK gates' >&2
+        return 1
+    fi
+done
+THINKTHEN_CSHARP_NATIVE_ASSETS=$thinkthen_native_cache
+THINKTHEN_JVM_NATIVE_ASSETS=$thinkthen_native_cache/jvm
+export THINKTHEN_CSHARP_NATIVE_ASSETS THINKTHEN_JVM_NATIVE_ASSETS
+unset thinkthen_native_cache thinkthen_native_asset

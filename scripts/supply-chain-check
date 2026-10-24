@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Exercise input rejection, stale notices and independently installed package terms."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+
+from release_notices import ROOT, TARGETS, NOTICE, bundle, check, inputs
+from release_notice_check import verify
+from release_notice_packages import apply, wheel_notices, zip_update
+from release_wheel import python_wheel
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-supply-chain-',
+                                 dir='/var/tmp' if sys.platform == 'darwin' else None) as temporary:
+    work = Path(temporary)
+    source = work / 'input'
+    source.write_bytes(b'release input')
+    shutil.copy2(ROOT / 'scripts/release_downloads.py', work)
+    pins = work / 'release-downloads.json'
+    pins.write_text(json.dumps({source.as_uri(): '0' * 64}))
+    result = subprocess.run([sys.executable, work / 'release_downloads.py', source.as_uri(), work / 'download'], capture_output=True, text=True)
+    assert result.returncode and 'checksum differs' in result.stderr, result
+    assert not (work / 'download').exists() and not (work / 'download.partial').exists()
+    pins.write_text(json.dumps({source.as_uri(): hashlib.sha256(source.read_bytes()).hexdigest()}))
+    subprocess.run([sys.executable, work / 'release_downloads.py', source.as_uri(), work / 'download'], check=True)
+    assert (work / 'download').read_bytes() == source.read_bytes()
+    # A modified cached archive is rejected as well as a new download.
+    (work / 'download').write_bytes(b'changed')
+    result = subprocess.run([sys.executable, work / 'release_downloads.py', source.as_uri(), work / 'download'], capture_output=True, text=True)
+    assert result.returncode and 'checksum differs' in result.stderr
+    # Both writers finish downloading before either may publish its verified input.
+    tools = work / 'bin'
+    tools.mkdir()
+    curl = tools / 'curl'
+    curl.write_text('#!' + sys.executable + '\n'
+                    'from pathlib import Path\nimport sys\n'
+                    'Path(sys.argv[-1]).write_bytes(b"release input")\n'
+                    'print("download ready", flush=True)\ninput()\n')
+    curl.chmod(0o755)
+    destination = work / 'concurrent'
+    writers = [subprocess.Popen([sys.executable, work / 'release_downloads.py', source.as_uri(), destination],
+                                env=dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH']),
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               for _ in range(2)]
+    try:
+        for writer in writers: assert writer.stdout.readline() == 'download ready\n'
+        results = [writer.communicate('\n') + (writer.returncode,) for writer in writers]
+        assert all(result[2] == 0 for result in results), results
+        assert destination.read_bytes() == source.read_bytes()
+        assert not list(work.glob('concurrent*.partial'))
+    finally:
+        for writer in writers:
+            if writer.poll() is None: writer.kill()
+            writer.wait()
+    copied = work / 'source'
+    shutil.copytree(ROOT / 'licenses', copied / 'licenses')
+    for relative in inputs(ROOT):
+        path = ROOT / relative
+        destination = copied / path.relative_to(ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+    check(ROOT)
+    assert inputs(copied) == inputs(ROOT), 'copied notice input identity differs'
+    with (copied / 'Cargo.lock').open('a') as stream: stream.write('\n# changed\n')
+    try: check(copied)
+    except ValueError as error: assert 'stale' in str(error)
+    else: raise AssertionError('stale notices passed')
+    for target in TARGETS:
+        notices = bundle(target, 'command')
+        expected = json.loads(notices[NOTICE + '/index.json'])
+        path = work / (target + '.tar.gz')
+        with tarfile.open(path, 'w:gz') as archive: archive.add(source, arcname='thinkthen')
+        apply(path, notices)
+        verify(path, expected)
+        tag = {'linux-x86_64': 'manylinux_2_28_x86_64', 'linux-arm64': 'manylinux_2_28_aarch64',
+               'macos-arm64': 'macosx_15_0_arm64', 'windows-x86_64': 'win_amd64'}[target]
+        wheel = python_wheel(work / target, work / 'packages' / target, '0.2.0', source, 'cp310-abi3-' + tag)
+        obsolete = 'thinkthen-0.2.0.dist-info/licenses/obsolete/LICENSE'
+        zip_update(wheel, {obsolete: b'obsolete dependency terms'})
+        wheel_notices(wheel, bundle(target, 'python'))
+        verify(wheel, json.loads(bundle(target, 'python')[NOTICE + '/index.json']))
+        with zipfile.ZipFile(wheel) as archive: assert obsolete not in archive.namelist()
+    # Nested terms must survive packaging, and omission must fail the artifact check.
+    with zipfile.ZipFile(wheel) as archive:
+        files = {name: archive.read(name) for name in archive.namelist()}
+    omitted = next(name for name in files if '/ring-' in name and '/src/polyfill/once_cell/LICENSE-MIT' in name)
+    del files[omitted]
+    with zipfile.ZipFile(wheel, 'w') as archive:
+        for name, data in files.items(): archive.writestr(name, data)
+    try: verify(wheel)
+    except KeyError: pass
+    else: raise AssertionError('missing nested license passed')
+print('supply chain: wrong hashes, stale notices, four target archives and wheel terms pass')

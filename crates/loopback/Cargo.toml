@@ -1,0 +1,15 @@
+[package]
+name = "loopback"
+description = "A loopback backend for tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+serde_json.workspace = true
+socket2 = "0.6"
+
+[lints]
+workspace = true

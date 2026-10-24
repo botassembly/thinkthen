@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Exercise release refusal and retry boundaries against local fixture services."""
+import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import io
+import json
+import os
+from pathlib import Path
+import shutil
+import struct
+import subprocess
+import sys
+import tarfile
+import tempfile
+import threading
+import urllib.parse
+import urllib.request
+
+import release_crates
+import release_upload
+from release_workflow import ROOT, TARGETS, collect, version
+from release_install import checksums
+from runtime_floors import FLOORS, requirements
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as temporary:
+    scratch = Path(temporary)
+    registry = scratch / 'registry'
+    (registry / 'crates').mkdir(parents=True)
+    (registry / 'rubygems').mkdir()
+    crate = registry / f'crates/thinkthen-{version()}.crate'
+    manifest = f'[package]\nname="thinkthen"\nversion="{version()}"\ndescription="Typed evidence"\nlicense="MIT"\n'.encode()
+    with tarfile.open(crate, 'w:gz') as archive:
+        entry = tarfile.TarInfo(crate.stem + '/Cargo.toml')
+        entry.size = len(manifest)
+        archive.addfile(entry, io.BytesIO(manifest))
+    info = release_crates.metadata(crate)
+    crate.with_suffix('.json').write_text(json.dumps(info))
+    package = crate.read_bytes()
+    state = {'crate': package, 'gem': b'gem-package', 'writes': []}
+
+    class Service(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_GET(self):
+            if self.path.endswith('/download'):
+                body = state['crate']
+            elif self.path.startswith('/downloads/'):
+                body = state['gem']
+            else:
+                body = json.dumps({'vers': version()}).encode()
+            self.send_response(404 if body is None else 200)
+            self.end_headers()
+            if body is not None:
+                self.wfile.write(body)
+
+        def do_PUT(self):
+            body = self.rfile.read(int(self.headers['Content-Length']))
+            length, = struct.unpack('<I', body[:4])
+            metadata = json.loads(body[4:4 + length])
+            start = 4 + length
+            size, = struct.unpack('<I', body[start:start + 4])
+            uploaded = body[start + 4:]
+            assert size == len(uploaded) and uploaded == package
+            assert metadata == info and self.headers['Authorization'] == 'registry-contract-fixture'
+            state['writes'].append(uploaded)
+            state['crate'] = uploaded
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{}')
+
+    service = ThreadingHTTPServer(('127.0.0.1', 0), Service)
+    thread = threading.Thread(target=service.serve_forever)
+    thread.start()
+    original = urllib.request.urlopen
+
+    def local(request, *args, **kwargs):
+        if isinstance(request, str):
+            request = urllib.request.Request(request)
+        parsed = urllib.parse.urlsplit(request.full_url)
+        target = f'http://127.0.0.1:{service.server_port}' + parsed.path
+        routed = urllib.request.Request(target, request.data, dict(request.header_items()), method=request.get_method())
+        return original(routed, *args, **kwargs)
+
+    urllib.request.urlopen = local
+    os.environ['CARGO_REGISTRY_TOKEN'] = 'registry-contract-fixture'
+    try:
+        release_crates.upload(crate)
+        assert not state['writes'], 'matching published crate must be skipped'
+        state['crate'] = None
+        release_crates.upload(crate)
+        assert state['writes'] == [package], 'new crate must upload the approved bytes once'
+        release_crates.upload(crate)
+        assert state['writes'] == [package], 'retry must reuse the matching immutable crate'
+        state['crate'] = b'conflicting-package'
+        try:
+            release_crates.upload(crate)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('conflicting published crate must fail')
+        gem = registry / 'rubygems/thinkthen-0.2.0-linux.gem'
+        gem.write_bytes(state['gem'])
+        release_upload.upload('rubygems', registry)
+        state['gem'] = b'conflicting-package'
+        try:
+            release_upload.upload('rubygems', registry)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('conflicting published gem must fail')
+    finally:
+        urllib.request.urlopen = original
+        os.environ.pop('CARGO_REGISTRY_TOKEN', None)
+        service.shutdown()
+        service.server_close()
+        thread.join()
+
+    # The public notes summarize platforms while offline guides stay in archives.
+    archives = scratch / 'archives'
+    archives.mkdir()
+    revision = 'a' * 40
+    for target in TARGETS:
+        package = scratch / 'packages' / version() / target
+        package.mkdir(parents=True)
+        (package / 'build.json').write_text(json.dumps({
+            'version': version(), 'platform': target, 'revision': revision}))
+        runtime = {name: {'runtime': value} for name, value in
+                   dict(command='operating system', swift=FLOORS['runtimes']['swift'], r='R 4.6',
+                        sqlite='SQLite >=3.41 with extension loading', duckdb='DuckDB 1.4.3').items()}
+        if target.startswith('linux-'):
+            runtime['postgres'] = {'runtime': 'PostgreSQL18 ' + target}
+        if target != 'windows-x86_64':
+            runtime = requirements(runtime, 'Darwin' if target == 'macos-arm64' else 'Linux')
+        (package / 'requirements.json').write_text(json.dumps(runtime))
+        (package / 'INSTALL.md').write_text('Offline installation for ' + target)
+        checksums(package)
+        with tarfile.open(archives / f'thinkthen-{version()}-{target}-packages.tar.gz', 'w:gz') as archive:
+            archive.add(package, arcname=f'{version()}/{target}')
+    release = scratch / 'release'
+    collect(archives, release, revision, TARGETS)
+    notes = (release / 'INSTALL.md').read_text()
+    assert notes.startswith(f'# ThinkThen {version()}\n\nAsk typed questions')
+    assert 'bundled Java' not in notes, 'dependency text must not imply a supplied Java runtime'
+    assert 'Swift >=6.3 toolchain to build; Swift 6.3.2 runtime' in notes
+    assert f'Select version `{version()}` with Swift Package Manager' in notes
+    assert 'Offline installation for' not in notes
+    assert 'Swift Package Index' not in notes
+    assert notes.count('| linux-x86_64 |') == 1 and notes.count('| linux-arm64 |') == 1
+    assert f'glibc {FLOORS["linux"]["glibc"]}, GLIBCXX {FLOORS["linux"]["glibcxx"]}' in notes
+    assert f'macOS {FLOORS["macos"]}' in notes and FLOORS['windows']['support'] in notes
+    for text in ('Python', 'TypeScript', 'R data frames', 'Go', 'Java', 'Kotlin', 'C#', 'C++',
+                 'Swift', 'Zig', 'Ruby', 'DuckDB', 'SQLite', 'PostgreSQL', 'pandas', 'Polars',
+                 'CSV', 'TSV', 'Excel', 'thinkthen run', '0.x APIs', 'PyPI', 'npm', 'NuGet',
+                 'Maven Central', 'Homebrew', 'r-universe', 'Swift Package Manager', 'crates.io'):
+        assert text in notes, text
+    with tarfile.open(release / f'thinkthen-{version()}-linux-x86_64-packages.tar.gz') as archive:
+        assert archive.extractfile(f'{version()}/linux-x86_64/INSTALL.md').read() == b'Offline installation for linux-x86_64'
+    print(notes)
+
+    source = scratch / 'source'
+    shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', 'target'))
+    provenance = {'revision': 'a' * 40, 'version': version()}
+    (source / 'release-source.json').write_text(json.dumps(provenance))
+    draft = scratch / 'draft'
+    draft.mkdir()
+    with tarfile.open(draft / f'thinkthen-{version()}-registries.tar.gz', 'w:gz') as archive:
+        content = json.dumps(provenance).encode()
+        entry = tarfile.TarInfo('source.json')
+        entry.size = len(content)
+        archive.addfile(entry, io.BytesIO(content))
+    (draft / 'SHA256SUMS').write_text(''.join(
+        f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in draft.iterdir()))
+    checksum = hashlib.sha256((draft / 'SHA256SUMS').read_bytes()).hexdigest()
+    binary = scratch / 'bin'
+    binary.mkdir()
+    fake = binary / 'gh'
+    fake.write_text('#!/usr/bin/env python3\nimport json,os,pathlib,shutil,sys\n'
+                    'if sys.argv[2] == "view": print(json.dumps({"tagName":"review-v' + version() + '"}))\n'
+                    'else:\n p=pathlib.Path(sys.argv[sys.argv.index("--dir")+1]);p.mkdir()\n'
+                    ' for f in pathlib.Path(os.environ["FIXTURE_DRAFT"]).iterdir(): shutil.copy2(f,p/f.name)\n')
+    fake.chmod(0o755)
+    environment = {key: value for key, value in os.environ.items() if not key.endswith(('_TOKEN', '_API_KEY'))}
+    environment.update(PATH=str(binary) + os.pathsep + os.environ['PATH'], FIXTURE_DRAFT=str(draft),
+                       GITHUB_REF='refs/tags/v' + version())
+
+    def download(name, digest):
+        return subprocess.run([sys.executable, source / 'scripts/release_upload.py', 'download', 'npm',
+            'v' + version(), digest, scratch / name], env=environment, capture_output=True).returncode
+
+    assert download('accepted', checksum) == 0
+    assert download('bad-checksum', '0' * 64) != 0
+    provenance['revision'] = 'b' * 40
+    (source / 'release-source.json').write_text(json.dumps(provenance))
+    assert download('bad-source', checksum) != 0
+    print('registry: approved bytes, metadata framing, retry and refusal boundaries pass')

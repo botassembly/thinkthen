@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SdkSettings",
+  "description": "Immutable settings captured when a host creates its client.",
+  "type": "object",
+  "properties": {
+    "adapter": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "batch": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "format": "double"
+    },
+    "key_source": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mode": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Mode"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "embedded",
+        "proxy"
+      ]
+    }
+  }
+}

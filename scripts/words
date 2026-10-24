@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Reject private infrastructure and implementation history in tracked text."""
+
+import json
+import pathlib
+import re
+import subprocess
+import sys
+
+root = pathlib.Path(__file__).resolve().parent.parent
+paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).split(b"\0")
+forbidden = re.compile(
+    r"legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project",
+    re.IGNORECASE,
+)
+if len(sys.argv) > 2:
+    sys.exit('usage: scripts/words [PRIVATE_PATTERN_FILE]')
+private = None
+if len(sys.argv) == 2:
+    pattern = pathlib.Path(sys.argv[1]).read_text().strip()
+    if not pattern:
+        sys.exit('private pattern file must not be empty')
+    private = re.compile(pattern, re.IGNORECASE)
+failed = False
+for entry in paths:
+    if not entry:
+        continue
+    path = pathlib.Path(entry.decode())
+    if path.as_posix() in {"scripts/words"}:
+        continue
+    data = (root / path).read_bytes()
+    if path.as_posix() == "sdlc/pm.json":
+        settings = json.loads(data)
+        settings.pop("mailroom", None)
+        data = json.dumps(settings).encode()
+    if b"\0" in data:
+        continue
+    for number, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), 1):
+        # Microsoft names this CRT library and its stem in linker inputs.
+        checked = re.sub(r"\blegacy_stdio_definitions(?:\.lib)?\b", "", line)
+        if forbidden.search(checked) or (private is not None and private.search(checked)):
+            print(f"{path}:{number}: forbidden private or implementation reference", file=sys.stderr)
+            failed = True
+sys.exit(1 if failed else 0)

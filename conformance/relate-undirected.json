@@ -1,0 +1,116 @@
+{
+  "client": {},
+  "expected": [
+    {
+      "answer": [
+        {
+          "p": 0.8,
+          "relation": "works_for",
+          "source": {
+            "end": 3,
+            "kind": "person",
+            "start": 0,
+            "text": "Ada"
+          },
+          "target": {
+            "end": 8,
+            "kind": "company",
+            "start": 4,
+            "text": "Acme"
+          },
+          "either": true
+        }
+      ],
+      "detail": {
+        "probabilities": [
+          {
+            "p": 0.8,
+            "relation": "works_for",
+            "source": {
+              "end": 3,
+              "kind": "person",
+              "start": 0,
+              "text": "Ada"
+            },
+            "target": {
+              "end": 8,
+              "kind": "company",
+              "start": 4,
+              "text": "Acme"
+            },
+            "either": true
+          }
+        ],
+        "source": {
+          "backend": "systemone",
+          "model": "jev-1.13.0",
+          "question_identity": "f79e74663d4c4c36091ab62dee32987a8156605b234391089f688f70aa5f14e3"
+        }
+      },
+      "id": 1,
+      "status": "answered"
+    }
+  ],
+  "replies": [
+    {
+      "answer": {
+        "probabilities": {
+          "BEGIN": 0,
+          "END": 0,
+          "INSIDE": 0,
+          "OUT": 0,
+          "SINGLE": 1
+        },
+        "type": "choice"
+      },
+      "criterion": "BEGIN"
+    },
+    {
+      "answer": {
+        "probabilities": {
+          "company": 0,
+          "none of these": 0,
+          "person": 1
+        },
+        "type": "choice"
+      },
+      "contains": "[[Ada]]",
+      "criterion": "person"
+    },
+    {
+      "answer": {
+        "probabilities": {
+          "company": 1,
+          "none of these": 0,
+          "person": 0
+        },
+        "type": "choice"
+      },
+      "criterion": "person"
+    },
+    {
+      "answer": {
+        "noul": 0.8,
+        "type": "noul"
+      }
+    }
+  ],
+  "request": {
+    "function": "relate",
+    "question": {
+      "type": "inline",
+      "value": [
+        {
+          "name": "works_for",
+          "source": "person",
+          "target": "company",
+          "either": true
+        }
+      ]
+    },
+    "records": [
+      "Ada Acme"
+    ]
+  },
+  "requests": 3
+}

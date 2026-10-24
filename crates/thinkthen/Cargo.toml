@@ -1,0 +1,50 @@
+[package]
+name = "thinkthen"
+description = "Ask typed questions about evidence and branch on the answer"
+readme = "../../README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "thinkthen"
+path = "src/cli/main.rs"
+required-features = ["command"]
+
+[features]
+default = ["command"]
+command = ["dep:log", "dep:ctrlc", "dep:clap", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
+
+[dependencies]
+sha2.workspace = true
+thiserror.workspace = true
+unicode-general-category.workspace = true
+log = { workspace = true, optional = true }
+ctrlc = { version = "3.5", optional = true }
+clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context"], optional = true }
+command-group = { version = "5.0.1", default-features = false, optional = true }
+quick-xml = { version = "=0.39.4", optional = true }
+zip = { version = "=0.6.6", default-features = false, features = ["deflate"], optional = true }
+tempfile = { version = "=3.23.0", optional = true }
+schemars.workspace = true
+serde.workspace = true
+serde_json = { workspace = true, features = ["raw_value"] }
+ureq.workspace = true
+
+[dev-dependencies]
+csv = "=1.4.0"
+tempfile = "=3.23.0"
+zip = { version = "=0.6.6", default-features = false, features = ["deflate"] }
+jsonschema = { version = "0.46", default-features = false }
+loopback.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
+
+[[test]]
+name = "cli_transport_logging"
+path = "tests/cli_transport_logging.rs"
+required-features = ["command"]

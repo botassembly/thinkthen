@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Install the sole Rust release package and test its command and lean library."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+from release_workflow import ROOT, run, version
+from release_sites import CRATES
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('crates', type=Path)
+parser.add_argument('--container-image', help='prepared Linux image containing Cargo and the required compiler')
+parser.add_argument('--container', action='store_true', help='use an empty, network-free Linux container')
+args = parser.parse_args()
+assert CRATES == ('thinkthen',), 'the release must publish exactly one Rust crate'
+with tempfile.TemporaryDirectory(prefix='thinkthen-crate-install-') as temporary:
+    scratch = Path(temporary)
+    vendor = scratch / 'vendor'
+    run('cargo', 'vendor', '--offline', '--locked', '--quiet', vendor, stdout=subprocess.DEVNULL)
+    archive = args.crates / f'thinkthen-{version()}.crate'
+    with tarfile.open(archive) as source:
+        source.extractall(vendor, filter='data')
+    package = vendor / archive.stem
+    files = {str(path.relative_to(package)): hashlib.sha256(path.read_bytes()).hexdigest()
+             for path in package.rglob('*') if path.is_file()}
+    (package / '.cargo-checksum.json').write_text(json.dumps({
+        'package': hashlib.sha256(archive.read_bytes()).hexdigest(), 'files': files}))
+    shutil.copy2(ROOT / 'scripts/crate_consumer.py', scratch / 'consumer.py')
+    if args.container:
+        from release_images import image
+        command = ['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+                   '--label', 'pm.ticket=0128', '--user', f'{os.getuid()}:{os.getgid()}',
+                   '-v', f'{scratch}:/work', '-e', 'HOME=/work/home', '-e', 'CARGO_HOME=/work/cargo',
+                   '-e', 'CARGO_TARGET_DIR=/work/target']
+        if args.container_image:
+            selected = args.container_image
+        else:
+            compiler = Path(subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()).parent.parent
+            command += ['-v', f'{compiler}:/toolchain:ro',
+                        '-e', 'PATH=/toolchain/bin:/opt/python/cp313-cp313/bin:/usr/local/bin:/usr/bin:/bin']
+            selected = image('floor')
+        run(*command, selected, 'python3', '/work/consumer.py', '/work', version())
+    else:
+        run(sys.executable, scratch / 'consumer.py', scratch, version())

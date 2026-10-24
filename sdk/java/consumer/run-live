@@ -1,0 +1,8 @@
+#!/bin/sh
+# A manual ten-function check; never called by a gate.
+set -eu
+cd "$(dirname "$0")"
+case "${1:-}" in java) main=JavaLive ;; kotlin) main=KotlinLiveKt ;; *) echo 'usage: run-live java|kotlin' >&2; exit 2 ;; esac
+jvm_java=java
+if [ -x runtime/bin/java ]; then jvm_java=./runtime/bin/java; fi
+exec "$jvm_java" --enable-native-access=ALL-UNNAMED -cp 'lib/*' "$main"

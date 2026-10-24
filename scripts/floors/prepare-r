@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Compile the prepared R dependency sources once for the approved baseline."""
+import email
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tarfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from native_platform import current
+
+root = Path(__file__).resolve().parents[2]
+prefix = Path(os.environ['THINKTHEN_RUNTIME_PREFIX'])
+sources = (Path.home() / '.local/share/thinkthen-build-tools/floors/r-sources/sources'
+           if sys.platform == 'darwin' else Path.home() / f'.local/share/thinkthen-build-tools/r-frames/4.3.3-{current()["platform"]}/sources')
+output = prefix / 'r-frames'
+library = output / 'library'
+packages = output / 'packages'
+library.mkdir(parents=True, exist_ok=True)
+packages.mkdir(exist_ok=True)
+env = dict(os.environ, R_LIBS_USER=str(library), R_LIBS_SITE='', MAKEFLAGS='-j2')
+metadata = {}
+for path in [*sources.glob('*.tar.gz'), prefix / 'sources/jsonlite_2.0.0.tar.gz']:
+    with tarfile.open(path) as archive:
+        member = next(p for p in archive if p.name.count('/') == 1 and p.name.endswith('/DESCRIPTION'))
+        description = email.message_from_bytes(archive.extractfile(member).read())
+    dependencies = set()
+    for field in ('Depends', 'Imports', 'LinkingTo'):
+        dependencies.update(re.findall(r'(?:^|,)\s*([A-Za-z][A-Za-z0-9.]*)', description.get(field, '')))
+    metadata[description['Package']] = (path, dependencies)
+installed = set()
+while len(installed) < len(metadata):
+    ready = sorted(name for name, (_, deps) in metadata.items() if name not in installed and not (deps & metadata.keys()) - installed)
+    assert ready, metadata
+    for name in ready:
+        log = output / (name + '.log')
+        with log.open('w') as stream:
+            result = subprocess.run(['R', 'CMD', 'INSTALL', '--build', '--strip', '--library=' + str(library), metadata[name][0]], cwd=packages, env=env, stdout=stream, stderr=subprocess.STDOUT)
+        if result.returncode:
+            sys.exit('\n'.join(log.read_text().splitlines()[-60:]))
+        installed.add(name)
+        print('baseline R dependency: ' + name, flush=True)
+# jsonlite is the base package prerequisite, packaged separately from frames.
+for path in packages.glob('jsonlite_*'):
+    path.unlink()
+print(output)

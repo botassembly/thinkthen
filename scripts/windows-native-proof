@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Build current Windows packages and run their installed public consumers."""
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tomllib
+import xml.etree.ElementTree as ET
+import zipfile
+
+from release_windows_cache import check_cache
+from release_windows_sdks import environment, run, runtime_environment
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def build(*arguments, cwd, env):
+    command = list(map(str, arguments))
+    executable = shutil.which(command[0], path=env['PATH'])
+    if executable is None:
+        raise RuntimeError('Missing build tool: ' + command[0])
+    command[0] = executable
+    subprocess.run(command, cwd=cwd, env=env, check=True)
+
+
+def copy(source, destination):
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
+def nuget_config(path, feeds=()):
+    config = ET.Element('configuration')
+    sources = ET.SubElement(config, 'packageSources')
+    ET.SubElement(sources, 'clear')
+    for index, feed in enumerate(feeds):
+        ET.SubElement(sources, 'add', key=str(index), value=str(feed))
+    ET.ElementTree(config).write(path, encoding='unicode')
+
+
+def go(scratch, native, env, runtime):
+    package = scratch / 'package'
+    shutil.copytree(ROOT / 'sdk/go', package, ignore=shutil.ignore_patterns('tests'))
+    copy(native, package / 'native/library')
+    copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'thinkthen.h')
+    copy(ROOT / 'LICENSE', package / 'LICENSE')
+    archive = scratch / 'thinkthen-go.zip'
+    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as output:
+        for path in sorted(package.rglob('*')):
+            if path.is_file(): output.write(path, path.relative_to(package))
+    shutil.rmtree(package)
+    with zipfile.ZipFile(archive) as source:
+        source.extractall(package)
+    consumer = scratch / 'consumer'
+    shutil.copytree(ROOT / 'sdk/go/tests', consumer)
+    build('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go=' + str(package), cwd=consumer, env=env)
+    binary = scratch / 'Consumer.exe'
+    build('go', 'test', '-mod=mod', '-c', '-o', binary, cwd=consumer, env=env)
+    check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v'],
+                scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json')}, 'library.dll')
+
+
+def jvm(scratch, native, env, runtime):
+    source = scratch / 'source/sdk'
+    for name in ('java', 'kotlin'):
+        shutil.copytree(ROOT / 'sdk' / name, source / name, ignore=shutil.ignore_patterns('target'))
+    copy(native, source / 'java/library/target/classes/io/thinkthen/native/windows-amd64/thinkthen_ffi.dll')
+    repository = scratch / 'm2'
+    def mvn(*args):
+        build('mvn', '-B', '-q', '-Dmaven.repo.local=' + str(repository), *args, cwd=scratch, env=env)
+    mvn('-f', source / 'java/pom.xml', 'install', '-DskipTests')
+    classpath = scratch / 'classpath'
+    mvn('-f', source / 'java/consumer/pom.xml', 'package', '-DskipTests',
+        'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath))
+    # The external consumer resolves installed JARs from the private Maven repository.
+    version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+    jars = classpath.read_text().strip().split(os.pathsep)
+    java_package, = [Path(path) for path in jars if Path(path).name == f'thinkthen-java-{version}.jar']
+    with zipfile.ZipFile(java_package) as package:
+        assert package.read('io/thinkthen/native/windows-amd64/thinkthen_ffi.dll') == native.read_bytes()
+    installed = scratch / 'consumer.jar'
+    copy(source / f'java/consumer/target/thinkthen-consumer-{version}.jar', installed)
+    classes = os.pathsep.join([str(installed), *jars])
+    java = shutil.which('java', path=env['PATH'])
+    for name in ('ConsumerCases', 'KotlinCasesKt'):
+        check_cache([java, '--enable-native-access=ALL-UNNAMED', '-cp', classes,
+                     name, ROOT / 'construction/stub.json', '--stub-only'],
+                    scratch / (name + '-cache-proof'), runtime, 'thinkthen_ffi.dll')
+
+
+def csharp(scratch, native, env, runtime):
+    # Prepare ordinary RID and task dependencies before the isolated restore.
+    feed = scratch / 'prepared-feed'
+    prepare = scratch / 'Prepare.csproj'
+    prepare.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup></Project>')
+    build('dotnet', 'restore', prepare, '--runtime', 'win-x64', '--packages', feed,
+          '--source', 'https://api.nuget.org/v3/index.json', cwd=scratch, env=env)
+    source = scratch / 'library'
+    shutil.copytree(ROOT / 'sdk/csharp', source, ignore=shutil.ignore_patterns('tests', 'obj', 'bin'))
+    config = scratch / 'NuGet.Config'
+    nuget_config(config)
+    packages = scratch / 'candidate'
+    cold = env | {'NUGET_PACKAGES': str(scratch / 'cold-packages')}
+    build('dotnet', 'pack', source / 'ThinkThen.csproj', '--configfile', config,
+          '--artifacts-path', scratch / 'pack-artifacts', '-o', packages,
+          '-p:WindowsNative=' + str(native), cwd=scratch, env=cold)
+    consumer = scratch / 'consumer'
+    shutil.copytree(ROOT / 'sdk/csharp/tests', consumer)
+    nuget_config(config, (packages, feed))
+    single = scratch / 'single-file'
+    # A distinct empty cache prevents pack or preparation from warming this restore.
+    cold['NUGET_PACKAGES'] = str(scratch / 'consumer-packages')
+    build('dotnet', 'publish', consumer / 'Consumer.csproj', '--configfile', config,
+          '-r', 'win-x64', '-p:PublishSingleFile=true', '-p:SelfContained=false',
+          '--artifacts-path', scratch / 'publish-artifacts', '-o', single, cwd=scratch, env=cold)
+    assert not (single / 'Consumer.dll').exists(), 'managed consumer was not bundled'
+    assert (single / 'thinkthen_ffi.dll').read_bytes() == native.read_bytes(), 'single-file native asset differs from this build'
+    print(run(single / 'Consumer.exe', ROOT / 'construction/stub.json', '--stub-only',
+              cwd=scratch, env=runtime, resolve_path=env['PATH']), end='')
+
+
+def main():
+    if os.name != 'nt':
+        raise SystemExit('This proof requires native Windows')
+    arguments = sys.argv[1:]
+    isolated = arguments[:1] == ['--caller-owned']
+    if isolated: arguments = arguments[1:]
+    if arguments == ['probe']:
+        from windows_caller_process import probe
+        probe(ROOT, dict(os.environ))
+        return
+    phase, folder = arguments
+    if phase in ('go', 'jvm') and not isolated:
+        from windows_caller_process import launch
+        launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', phase, folder],
+               cwd=ROOT, env=dict(os.environ))
+        return
+    output = Path(folder).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    native = output / 'target/x86_64-pc-windows-msvc/release/thinkthen_ffi.dll'
+    if phase == 'native':
+        channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+        env = dict(os.environ, CARGO_TARGET_DIR=str(output / 'target'), CARGO_BUILD_JOBS='2',
+                   RUSTUP_TOOLCHAIN=channel, RUSTFLAGS='-C target-feature=+crt-static')
+        env.pop('CARGO_ENCODED_RUSTFLAGS', None)
+        build('rustup', 'toolchain', 'install', channel, '--profile', 'minimal', cwd=ROOT, env=env)
+        build('cargo', 'build', '--locked', '--release', '--target', 'x86_64-pc-windows-msvc',
+              '-p', 'thinkthen-ffi', cwd=ROOT, env=env)
+        assert native.is_file(), 'native producer did not create the engine'
+        return
+    scratch = output / phase
+    scratch.mkdir()
+    env = environment(scratch)
+    # Maven's Windows launcher and the single-file apphost need runtime locations.
+    for name in ('JAVA_HOME', 'DOTNET_ROOT', 'DOTNET_ROOT_X64'):
+        if name in os.environ: env[name] = os.environ[name]
+    runtime = runtime_environment(scratch, env)
+    {'go': go, 'jvm': jvm, 'csharp': csharp}[phase](scratch, native, env, runtime)
+    print('Windows installed ' + phase + ': proof passed', flush=True)
+
+
+if __name__ == '__main__':
+    main()

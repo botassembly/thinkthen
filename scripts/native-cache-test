@@ -1,0 +1,65 @@
+#!/bin/sh
+# Exercise the build recipe against a prepared pair and an isolated source copy.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+cache=$(scripts/native-prepare --path)
+test -f "$cache/linux-x64/libthinkthen_ffi.so"
+test -f "$cache/osx-arm64/libthinkthen_ffi.dylib"
+test -f "$cache/linux-x64/libthinkthen_ffi.a"
+test -f "$cache/osx-arm64/libthinkthen_ffi.a"
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+# A closed job's target is gone; both concurrent consumers still reuse the pair.
+mkdir "$scratch/closed-target"
+rmdir "$scratch/closed-target"
+CARGO_TARGET_DIR="$scratch/closed-target" scripts/native-prepare > "$scratch/first" &
+first=$!
+CARGO_TARGET_DIR="$scratch/closed-target" scripts/native-prepare > "$scratch/second" &
+second=$!
+wait "$first"
+wait "$second"
+test ! -e "$scratch/closed-target"
+test "$(cat "$scratch/first")" = "$cache"
+test "$(cat "$scratch/second")" = "$cache"
+# A new shared cache creates usable JVM aliases while retaining seeded assets.
+export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}" RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
+fresh=$(HOME="$scratch/home" scripts/native-prepare --path)
+mkdir -p "$fresh"
+cp -Rp "$cache/linux-x64" "$cache/osx-arm64" "$fresh/"
+HOME="$scratch/home" scripts/native-prepare > "$scratch/fresh"
+test "$(cat "$scratch/fresh")" = "$fresh"
+test "$(find -L "$fresh/jvm" -type f -name 'libthinkthen_ffi.*' | wc -l)" -eq 4
+git clone --quiet --shared "$root" "$scratch/source"
+cd "$scratch/source"
+test "$(scripts/native-prepare --path)" = "$cache"
+printf '\n// Native cache input regression.\n' >> crates/thinkthen-ffi/src/lib.rs
+changed=$(scripts/native-prepare --path)
+test "$changed" != "$cache"
+test ! -d "$changed"
+git checkout -- crates/thinkthen-ffi/src/lib.rs
+changed=$(CARGO_PROFILE_RELEASE_OVERFLOW_CHECKS=false scripts/native-prepare --path)
+test "$changed" != "$cache"
+test ! -d "$changed"
+changed=$(CARGO_BUILD_RUSTFLAGS='--cfg cache_settings_regression' scripts/native-prepare --path)
+test "$changed" != "$cache"
+test ! -d "$changed"
+if [ "$(uname -s)" = Linux ]; then
+    changed=$(THINKTHEN_FLOOR_IMAGE=sha256:0000000000000000000000000000000000000000000000000000000000000000 scripts/native-prepare --path)
+    test "$changed" != "$cache"
+    test ! -d "$changed"
+fi
+# Cargo owns dependency resolution; an independent workspace member is irrelevant.
+mkdir -p crates/cache-consumer/src
+printf '[package]\nname="cache-consumer"\nversion="0.0.0"\nedition="2024"\n' > crates/cache-consumer/Cargo.toml
+printf '' > crates/cache-consumer/src/lib.rs
+python3 - <<'PY'
+from pathlib import Path
+p = Path('Cargo.toml')
+s = p.read_text().replace('members = [', 'members = ["crates/cache-consumer", ', 1)
+s = s.replace('[workspace.dependencies]', '[workspace.dependencies]\ncache-consumer = { path = "crates/cache-consumer" }', 1)
+p.write_text(s)
+PY
+cargo metadata --offline --format-version=1 >/dev/null
+test "$(scripts/native-prepare --path)" = "$cache"
+echo 'native cache: no restoration or build after target cleanup; source/settings miss; unrelated member hit'

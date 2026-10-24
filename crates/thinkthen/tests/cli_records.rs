@@ -1,0 +1,258 @@
+#![cfg(feature = "command")]
+#![cfg(test)]
+//! `thinkthen decide` over a record stream: framing, rows, batch and exit codes.
+
+mod support;
+
+use std::fs::File;
+use std::io::Write;
+use std::process::{Output, Stdio};
+
+use loopback::{KEY, Loopback, Reply};
+use serde_json::{Value, json};
+use support::reported;
+
+fn run(server: &Loopback, args: &[&str], batch: Option<&str>, input: &[u8]) -> Output {
+    let mut command = support::command();
+    command
+        .arg("decide")
+        .arg("Is it a refund request?")
+        .args(args)
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", KEY)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    if let Some(batch) = batch {
+        command.env("THINKTHEN_BATCH", batch);
+    }
+    let mut child = command.spawn().unwrap();
+    // A command that refuses its arguments may exit before it reads the input.
+    let _ = child.stdin.take().unwrap().write_all(input);
+    child.wait_with_output().unwrap()
+}
+
+fn rows(output: &Output) -> Vec<Value> {
+    String::from_utf8(output.stdout.clone())
+        .unwrap()
+        .lines()
+        .map(|line| loopback::without_source(serde_json::from_str(line).unwrap()))
+        .collect()
+}
+
+fn yes(id: Value) -> Value {
+    json!({"id": id, "status": "answered", "answer": true, "p": 0.9})
+}
+
+fn no(id: Value) -> Value {
+    json!({"id": id, "status": "answered", "answer": false, "p": 0.1})
+}
+
+#[test]
+fn each_record_prints_one_row() {
+    // (arguments, input, rows printed, evidence sent)
+    type Case = (
+        &'static [&'static str],
+        &'static [u8],
+        Vec<Value>,
+        &'static [&'static str],
+    );
+    let cases: [Case; 4] = [
+        (
+            &["--lines"],
+            b"refund one\r\nparcel two\n\n  \nrefund three",
+            vec![yes(json!(1)), no(json!(2)), yes(json!(3))],
+            &["refund one", "parcel two", "refund three"],
+        ),
+        (
+            &["--jsonl", "--on", "/body"],
+            b"{\"id\":\"a\",\"body\":\"refund\"}\r\n{\"body\":\"parcel\"}\n",
+            vec![yes(json!("a")), no(json!(2))],
+            &["refund", "parcel"],
+        ),
+        (
+            &["--jsonl"],
+            b"\"refund\"\n",
+            vec![yes(json!(1))],
+            &["refund"],
+        ),
+        (&["--lines"], b"", vec![], &[]),
+    ];
+    for (args, input, expected, evidence) in cases {
+        let server = Loopback::refunds().unwrap();
+        let output = run(&server, args, None, input);
+        assert_eq!(rows(&output), expected, "{args:?}");
+        assert_eq!(output.status.code(), Some(0), "{args:?}");
+        let sent: Vec<String> = server
+            .requests()
+            .iter()
+            .flat_map(|request| {
+                let body = request.json().unwrap();
+                let questions = body["questions"].as_object().unwrap().clone();
+                questions.into_values()
+            })
+            .map(|question| question["instructions"].as_str().unwrap().to_owned())
+            .collect();
+        let quoted: Vec<String> = evidence
+            .iter()
+            .map(|text| {
+                format!(
+                    "The text is {}. Is it a refund request?",
+                    serde_json::to_string(text).unwrap()
+                )
+            })
+            .collect();
+        assert_eq!(sent, quoted, "{args:?}");
+    }
+}
+
+#[test]
+fn the_exit_code_is_the_family_of_the_first_failed_row() {
+    // (backend status, input, exit code, failed row codes)
+    type Case = (u16, &'static [u8], i32, &'static [Option<&'static str>]);
+    let cases: [Case; 4] = [
+        (
+            200,
+            b"{\"body\":\"a\"}\n{\"body\":\"b\"}\n",
+            0,
+            &[None, None],
+        ),
+        (
+            200,
+            b"{\"body\":\"a\"}\n{\"text\":\"b\"}\n",
+            2,
+            &[None, Some("usage.missing")],
+        ),
+        (
+            503,
+            b"{\"text\":\"a\"}\n{\"body\":\"b\"}\n",
+            2,
+            &[Some("usage.missing"), Some("backend.status")],
+        ),
+        (
+            503,
+            b"{\"body\":\"a\"}\n{\"text\":\"b\"}\n",
+            4,
+            &[Some("backend.status"), Some("usage.missing")],
+        ),
+    ];
+    for (status, input, code, failed) in cases {
+        let server = Loopback::start(move |request| {
+            let body = request.json().unwrap();
+            let answers: serde_json::Map<String, Value> = body["questions"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(|name| (name.clone(), json!({"type": "noul", "noul": 0.9})))
+                .collect();
+            Reply::json(status, &json!({"answers": answers}))
+        })
+        .unwrap();
+        let output = run(&server, &["--jsonl", "--on", "/body"], None, input);
+        assert_eq!(output.status.code(), Some(code), "{status}");
+        let got: Vec<Option<String>> = rows(&output)
+            .iter()
+            .map(|row| row["error"]["code"].as_str().map(str::to_owned))
+            .collect();
+        let want: Vec<Option<String>> = failed.iter().map(|c| c.map(str::to_owned)).collect();
+        assert_eq!(got, want, "{status}");
+    }
+}
+
+#[test]
+fn the_batch_option_beats_the_variable() {
+    let cases = [(Some("2"), None, 3), (None, Some("3"), 2)];
+    for (flag, variable, requests) in cases {
+        let server = Loopback::noul(0.9).unwrap();
+        let mut args = vec!["--lines"];
+        if let Some(flag) = flag {
+            args.extend(["--batch", flag]);
+        }
+        let output = run(&server, &args, variable, b"a\nb\nc\nd\ne\nf\n");
+        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(rows(&output).len(), 6);
+        assert_eq!(server.count(), requests, "{flag:?} {variable:?}");
+    }
+}
+
+#[test]
+fn a_usage_error_exits_2_and_sends_nothing() {
+    // (arguments, the code reported, or None when the argument parser refuses)
+    let cases: [(&[&str], Option<&str>); 5] = [
+        (&["--lines", "--jsonl"], None),
+        (&["--on", "/body"], None),
+        (&["--lines", "--on", "/body"], None),
+        (&["--jsonl", "--on", "body"], Some("usage.pointer")),
+        (&["--lines", "--batch", "0"], Some("usage.batch")),
+    ];
+    for (args, code) in cases {
+        let server = Loopback::noul(0.9).unwrap();
+        let output = run(&server, args, None, b"{\"body\":\"a\"}\n");
+        assert_eq!(output.status.code(), Some(2), "{args:?}");
+        assert_eq!(server.count(), 0, "{args:?}");
+        if let Some(code) = code {
+            assert_eq!(reported(&output), code, "{args:?}");
+        }
+    }
+}
+
+#[test]
+fn a_line_that_is_not_utf8_ends_the_stream_with_exit_5() {
+    let server = Loopback::noul(0.9).unwrap();
+    let output = run(&server, &["--lines"], None, b"refund\ncaf\xe9\nmore\n");
+    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(reported(&output), "local.io");
+    assert_eq!(rows(&output), vec![yes(json!(1))]);
+}
+
+#[test]
+fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
+    for args in [&[][..], &["--lines"][..]] {
+        let server = Loopback::noul(0.9).unwrap();
+        // Reading a directory fails on every platform the tests run on.
+        let output = support::command()
+            .args(["decide", "Is it?"])
+            .args(args)
+            .env("THINKTHEN_BASE_URL", server.base())
+            .env("THINKTHEN_API_KEY", KEY)
+            .stdin(File::open(".").unwrap())
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(5), "{args:?}");
+        assert_eq!(reported(&output), "local.io", "{args:?}");
+        assert_eq!(server.count(), 0, "{args:?}");
+    }
+}
+
+#[test]
+fn an_output_write_error_stops_the_reading() {
+    let (stdout, inherited_reader) = support::closed_output();
+    let server = Loopback::noul(0.9).unwrap();
+    let mut child = support::command()
+        .args(["decide", "Is it?", "--lines", "--batch", "1"])
+        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_API_KEY", KEY)
+        .stdin(Stdio::piped())
+        .stdout(stdout)
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let input: String = (1..=1000).map(|n| format!("message {n}\n")).collect();
+    // The command may stop reading before it takes every line.
+    let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
+    let output = child.wait_with_output().unwrap();
+    drop(inherited_reader);
+    let diagnostic = format!(
+        "mode=decide --lines --batch 1, status={}, stderr={}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.status.code(), Some(5), "{diagnostic}");
+    assert_eq!(reported(&output), "local.io", "{diagnostic}");
+    // Four workers each hold one request, and the open request goes out at the end.
+    assert!(
+        server.count() <= 5,
+        "{} requests; {diagnostic}",
+        server.count()
+    );
+}

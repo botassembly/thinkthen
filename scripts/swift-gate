@@ -1,0 +1,33 @@
+#!/bin/sh
+# Build an external Swift 6 consumer with packaged native resources, offline.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+swift format lint --strict --recursive sdk/swift
+export CARGO_NET_OFFLINE=true
+if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --locked -p loopback; fi
+build_target=${CARGO_TARGET_DIR:-$root/target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/swift-package "$scratch/ThinkThen"
+mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp"
+cp sdk/swift/tests/*.swift "$scratch/consumer/"
+python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
+# SwiftPM has no remote dependencies to resolve. The separate consumer checks
+# normal dependency eligibility rather than only building the library itself.
+swift build --package-path "$scratch/consumer" --disable-sandbox -Xswiftc -warnings-as-errors
+mkdir "$scratch/installed"
+cp "$scratch/consumer/.build/debug/Consumer" "$scratch/consumer/.build/debug/Readme" "$scratch/installed/"
+for resources in "$scratch/consumer/.build/debug/"*.resources "$scratch/consumer/.build/debug/"*.bundle; do
+    test ! -d "$resources" || cp -R "$resources" "$scratch/installed/"
+done
+python3 sdk/swift/tests/options.py "$scratch/consumer" construction/options.json
+rm -rf "$scratch/ThinkThen" "$scratch/consumer"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+export HOME="$scratch/home" TMPDIR="$scratch/tmp"
+python3 sdk/swift/tests/run.py "$scratch/installed/Consumer" "$root" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"
+if [ -n "${THINKTHEN_SWIFT_OUTPUT:-}" ]; then
+    mkdir -p "$THINKTHEN_SWIFT_OUTPUT"
+    cp -R "$scratch/installed/." "$THINKTHEN_SWIFT_OUTPUT/"
+fi

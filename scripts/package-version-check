@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Check that the ordinary gate refuses a stale package version."""
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from release_metadata import ROOT, version
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-version-') as temporary:
+    source = Path(temporary) / 'source'
+    shutil.copytree(ROOT, source, ignore=shutil.ignore_patterns('.git', 'target', '.build', 'node_modules'))
+    command = [sys.executable, str(source / 'scripts/release_metadata.py')]
+    subprocess.run(command, check=True)
+    manifest = source / 'sdk/python/pyproject.toml'
+    text = manifest.read_text()
+    manifest.write_text(text.replace('version = "' + version() + '"', 'version = "0.0.0"', 1))
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode != 0 and 'sdk/python/pyproject.toml' in result.stderr, result
+    print('release: the gate refuses a planted manifest mismatch')

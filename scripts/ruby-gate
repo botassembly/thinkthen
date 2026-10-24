@@ -1,0 +1,40 @@
+#!/bin/sh
+# Install the platform gem with its prepared dependency before testing its API.
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+for source in sdk/ruby/lib/thinkthen.rb sdk/ruby/lib/thinkthen/*.rb sdk/ruby/tests/*.rb sdk/ruby/thinkthen.gemspec; do
+    ruby -wc "$source"
+done
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+# Package before isolating HOME: native-prepare reads the prepared shared cache.
+scripts/ruby-package "$scratch/packages"
+cargo build --offline --locked -p loopback --bin loopback
+build_target=${CARGO_TARGET_DIR:-$root/target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+case "$(uname -s):$(uname -m)" in
+    Darwin:arm64) platform=arm64-darwin ;;
+    Linux:x86_64) platform=x86_64-linux ;;
+    *) echo 'Ruby supports macOS arm64 and glibc Linux x86-64' >&2; exit 1 ;;
+esac
+dependency=$(find "$HOME/.local/share/thinkthen-build-tools/ruby/packages" -name "ffi-*-$platform*.gem" -print)
+test -f "$dependency"
+mkdir -p "$scratch/home" "$scratch/tmp" "$scratch/gems"
+export HOME="$scratch/home" TMPDIR="$scratch/tmp" GEM_HOME="$scratch/gems" GEM_PATH="$scratch/gems"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH RUBYLIB RUBYOPT BUNDLE_GEMFILE
+export THINKTHEN_RUBY_COVERAGE="$build_target/ruby-coverage.json"
+export THINKTHEN_LOOPBACK="$build_target/debug/loopback" THINKTHEN_CASES="$root/conformance" THINKTHEN_STUB_CASES="$root/construction/stub.json"
+gem install --local --no-document "$dependency" "$scratch/packages"/*"-$platform.gem"
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+    # Keep the actual installed image discoverable after the temporary gem home
+    # is removed. cargo-llvm-cov recognizes the workspace crate's library name.
+    mkdir -p "$build_target/ruby-installed"
+    cp "$GEM_HOME"/gems/thinkthen-*/lib/thinkthen/libthinkthen_ffi.* "$build_target/ruby-installed/"
+fi
+cd "$scratch"
+ruby -w "$root/sdk/ruby/tests/run.rb"
+if [ -n "${THINKTHEN_RUBY_ARTIFACT_DIR:-}" ]; then
+    mkdir -p "$THINKTHEN_RUBY_ARTIFACT_DIR"
+    cp "$scratch/packages"/*.gem "$THINKTHEN_RUBY_ARTIFACT_DIR/"
+fi

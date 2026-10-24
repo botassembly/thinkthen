@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Rehearse every site format with explicitly supplied qualified native inputs."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+import tarfile
+import tempfile
+
+from release_registry import package_sites, attach
+from release_workflow import ROOT, TARGETS, checksums, run, version
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-sites-') as temporary:
+    scratch = Path(temporary)
+    inputs = scratch / 'inputs'
+    with tarfile.open(sys.argv[1]) as archive:
+        archive.extractall(inputs, filter='data')
+    platforms = {target: inputs / target for target in TARGETS}
+    staged = scratch / 'registries'
+    package_sites(platforms, staged, scratch)
+    # A rehearsal cannot be mistaken for a qualified source release.
+    (staged / 'source.json').write_text(json.dumps({'revision': 'rehearsal', 'version': version()}))
+    from release_source import archive_source
+    archive_source(scratch / 'tag-source', staged / 'tag-source.tar.gz')
+    release = scratch / 'release'
+    release.mkdir()
+    attach(staged, release, 'rehearsal')
+    checksums(release)
+    for package in platforms.values():
+        for artifact in (package / 'duckdb').iterdir():
+            if artifact.name.endswith(('.tar.gz', '.zip')):
+                assert hashlib.sha256(artifact.read_bytes()).digest() == hashlib.sha256((release / artifact.name).read_bytes()).digest()
+    source = scratch / 'tag-source'
+    consumer = scratch / 'go-consumer'
+    shutil.copytree(ROOT / 'sdk/go/tests', consumer)
+    run('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go=' + str(source / 'sdk/go'), cwd=consumer)
+    environment = dict(os.environ, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local',
+                       THINKTHEN_STUB_CASES=str(ROOT / 'construction/stub.json'))
+    run('go', 'test', '-run=^TestSharedStub$', cwd=consumer, env=environment)
+    consumer = scratch / 'swift-consumer'
+    shutil.copytree(ROOT / 'sdk/swift/tests', consumer, ignore=shutil.ignore_patterns('*.py'))
+    run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
+    manifest = consumer / 'Package.swift'
+    manifest.write_text(manifest.read_text().replace('../ThinkThen', str(source)).replace('package: "ThinkThen"', 'package: "tag-source"'))
+    if sys.platform == 'darwin':
+        run('swift', 'build', '--package-path', consumer, '-c', 'release', '--jobs', '2', '--disable-sandbox',
+            '-Xswiftc', '-warnings-as-errors')
+        run(sys.executable, ROOT / 'scripts/release/swift.py', consumer / '.build/release/Consumer', ROOT / 'construction/stub.json')
+    else:
+        from release_images import image
+        tools = Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'
+        run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
+            '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
+            '-v', f'{scratch}:{scratch}', '-v', f'{ROOT}:{ROOT}:ro', '-v', f'{tools}:/opt/swift:ro',
+            '-e', 'HOME=' + str(scratch / 'home'), '-e', 'PATH=/opt/swift/usr/bin:/usr/bin:/bin',
+            image('swift'), 'sh', '-eu', '-c',
+            'swift build --package-path "$1" -c release --jobs 2 --disable-sandbox -Xswiftc -warnings-as-errors; '
+            'python3 "$2" "$1/.build/release/Consumer" "$3"', 'swift-check', consumer,
+            ROOT / 'scripts/release/swift.py', ROOT / 'construction/stub.json')
+    print('registry: every site format, checksums, DuckDB copy and staged Go/Swift consumers pass')

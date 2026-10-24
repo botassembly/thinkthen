@@ -1,0 +1,20 @@
+#!/bin/sh
+# Stage a self-contained SwiftPM source package using the prepared native pair.
+set -eu
+cd "$(dirname "$0")/.."
+output=${1:?provide the package output directory}
+assets=${THINKTHEN_SWIFT_NATIVE_ASSETS:-${THINKTHEN_CSHARP_NATIVE_ASSETS:?provide the matching prepared native pair}}
+mkdir -p "$output/Sources/CThinkThen/include" "$output/Sources/ThinkThen/Native"
+cp sdk/swift/Package.swift sdk/swift/README.md LICENSE "$output/"
+cp sdk/swift/Sources/CThinkThen/anchor.c "$output/Sources/CThinkThen/"
+cp sdk/swift/Sources/CThinkThen/include/*.h "$output/Sources/CThinkThen/include/"
+cp crates/thinkthen-ffi/include/thinkthen.h "$output/Sources/CThinkThen/include/"
+cp sdk/swift/Sources/ThinkThen/*.swift "$output/Sources/ThinkThen/"
+host=$(python3 scripts/native_platform.py rid)
+test -d "$assets/$host"
+for platform in linux-x64 linux-arm64 osx-arm64; do
+    case "$platform" in linux-*) library=libthinkthen_ffi.so ;; osx-arm64) library=libthinkthen_ffi.dylib ;; esac
+    [ -f "$assets/$platform/$library" ] || continue
+    mkdir -p "$output/Sources/ThinkThen/Native/$platform"
+    cp "$assets/$platform/$library" "$output/Sources/ThinkThen/Native/$platform/"
+done

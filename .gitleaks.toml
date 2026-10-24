@@ -1,0 +1,26 @@
+# Keep every upstream detector. This literal is a public loopback-test fixture.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exact synthetic key used by the JVM and TypeScript loopback tests"
+regexTarget = "secret"
+regexes = ['''^sk-test-0123456789$''']
+
+# These exact public source digests are verified by the dependency provenance check.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Exact SHA256 of tracked patched extendr-ffi source"
+condition = "AND"
+paths = ['''^licenses/inputs\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"sdk/r/native/vendor/extendr\-ffi/src/non_api\.rs"\s*:\s*"db38e3d3814ed2b075656626055a47fb73d390c23960f4fd1ec18d5ca8239471"\s*,?\s*$''']
+
+[[rules.allowlists]]
+description = "Exact SHA256 of checksum-verified upstream extendr-ffi source"
+condition = "AND"
+paths = ['''^sdk/r/native/vendor/extendr\-ffi/UPSTREAM\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"src/non_api\.rs"\s*:\s*"8ce0a5116095e91da81aadceb3ea0ef5c93176d964506911bbf433eb93c251dd"\s*,?\s*$''']

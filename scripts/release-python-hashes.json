@@ -1,0 +1,88 @@
+{
+  "numpy": {
+    "numpy-1.26.4-cp310-cp310-macosx_10_9_x86_64.whl": "9ff0f4f29c51e2803569d7a51c2304de5554655a60c5d776e35b4a41413830d0",
+    "numpy-1.26.4-cp310-cp310-macosx_11_0_arm64.whl": "2e4ee3380d6de9c9ec04745830fd9e2eccb3e6cf790d39d7b98ffd19b0dd754a",
+    "numpy-1.26.4-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "d209d8969599b27ad20994c8e41936ee0964e6da07478d6c35016bc386b66ad4",
+    "numpy-1.26.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "ffa75af20b44f8dba823498024771d5ac50620e6915abac414251bd971b4529f",
+    "numpy-1.26.4-cp310-cp310-musllinux_1_1_aarch64.whl": "62b8e4b1e28009ef2846b4c7852046736bab361f7aeadeb6a5b89ebec3c7055a",
+    "numpy-1.26.4-cp310-cp310-musllinux_1_1_x86_64.whl": "a4abb4f9001ad2858e7ac189089c42178fcce737e4169dc61321660f1a96c7d2",
+    "numpy-1.26.4-cp310-cp310-win32.whl": "bfe25acf8b437eb2a8b2d49d443800a5f18508cd811fea3181723922a8a82b07",
+    "numpy-1.26.4-cp310-cp310-win_amd64.whl": "b97fe8060236edf3662adfc2c633f56a08ae30560c56310562cb4f95500022d5",
+    "numpy-1.26.4-cp311-cp311-macosx_10_9_x86_64.whl": "4c66707fabe114439db9068ee468c26bbdf909cac0fb58686a42a24de1760c71",
+    "numpy-1.26.4-cp311-cp311-macosx_11_0_arm64.whl": "edd8b5fe47dab091176d21bb6de568acdd906d1887a4584a15a9a96a1dca06ef",
+    "numpy-1.26.4-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "7ab55401287bfec946ced39700c053796e7cc0e3acbef09993a9ad2adba6ca6e",
+    "numpy-1.26.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "666dbfb6ec68962c033a450943ded891bed2d54e6755e35e5835d63f4f6931d5",
+    "numpy-1.26.4-cp311-cp311-musllinux_1_1_aarch64.whl": "96ff0b2ad353d8f990b63294c8986f1ec3cb19d749234014f4e7eb0112ceba5a",
+    "numpy-1.26.4-cp311-cp311-musllinux_1_1_x86_64.whl": "60dedbb91afcbfdc9bc0b1f3f402804070deed7392c23eb7a7f07fa857868e8a",
+    "numpy-1.26.4-cp311-cp311-win32.whl": "1af303d6b2210eb850fcf03064d364652b7120803a0b872f5211f5234b399f20",
+    "numpy-1.26.4-cp311-cp311-win_amd64.whl": "cd25bcecc4974d09257ffcd1f098ee778f7834c3ad767fe5db785be9a4aa9cb2",
+    "numpy-1.26.4-cp312-cp312-macosx_10_9_x86_64.whl": "b3ce300f3644fb06443ee2222c2201dd3a89ea6040541412b8fa189341847218",
+    "numpy-1.26.4-cp312-cp312-macosx_11_0_arm64.whl": "03a8c78d01d9781b28a6989f6fa1bb2c4f2d51201cf99d3dd875df6fbd96b23b",
+    "numpy-1.26.4-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "9fad7dcb1aac3c7f0584a5a8133e3a43eeb2fe127f47e3632d43d677c66c102b",
+    "numpy-1.26.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "675d61ffbfa78604709862923189bad94014bef562cc35cf61d3a07bba02a7ed",
+    "numpy-1.26.4-cp312-cp312-musllinux_1_1_aarch64.whl": "ab47dbe5cc8210f55aa58e4805fe224dac469cde56b9f731a4c098b91917159a",
+    "numpy-1.26.4-cp312-cp312-musllinux_1_1_x86_64.whl": "1dda2e7b4ec9dd512f84935c5f126c8bd8b9f2fc001e9f54af255e8c5f16b0e0",
+    "numpy-1.26.4-cp312-cp312-win32.whl": "50193e430acfc1346175fcbdaa28ffec49947a06918b7b92130744e81e640110",
+    "numpy-1.26.4-cp312-cp312-win_amd64.whl": "08beddf13648eb95f8d867350f6a018a4be2e5ad54c8d8caed89ebca558b2818",
+    "numpy-1.26.4-cp39-cp39-macosx_10_9_x86_64.whl": "7349ab0fa0c429c82442a27a9673fc802ffdb7c7775fad780226cb234965e53c",
+    "numpy-1.26.4-cp39-cp39-macosx_11_0_arm64.whl": "52b8b60467cd7dd1e9ed082188b4e6bb35aa5cdd01777621a1658910745b90be",
+    "numpy-1.26.4-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "d5241e0a80d808d70546c697135da2c613f30e28251ff8307eb72ba696945764",
+    "numpy-1.26.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "f870204a840a60da0b12273ef34f7051e98c3b5961b61b0c2c1be6dfd64fbcd3",
+    "numpy-1.26.4-cp39-cp39-musllinux_1_1_aarch64.whl": "679b0076f67ecc0138fd2ede3a8fd196dddc2ad3254069bcb9faf9a79b1cebcd",
+    "numpy-1.26.4-cp39-cp39-musllinux_1_1_x86_64.whl": "47711010ad8555514b434df65f7d7b076bb8261df1ca9bb78f53d3b2db02e95c",
+    "numpy-1.26.4-cp39-cp39-win32.whl": "a354325ee03388678242a4d7ebcd08b5c727033fcff3b2f536aea978e15ee9e6",
+    "numpy-1.26.4-cp39-cp39-win_amd64.whl": "3373d5d70a5fe74a2c1bb6d2cfd9609ecf686d47a2d7b1d37a8f3b6bf6003aea",
+    "numpy-1.26.4-pp39-pypy39_pp73-macosx_10_9_x86_64.whl": "afedb719a9dcfc7eaf2287b839d8198e06dcd4cb5d276a3df279231138e83d30",
+    "numpy-1.26.4-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "95a7476c59002f2f6c590b9b7b998306fba6a5aa646b1e22ddfeaf8f78c3a29c",
+    "numpy-1.26.4-pp39-pypy39_pp73-win_amd64.whl": "7e50d0a0cc3189f9cb0aeb3a6a6af18c16f59f004b866cd2be1c14b36134a4a0"
+  },
+  "pandas": {
+    "pandas-2.2.0-cp310-cp310-macosx_10_9_x86_64.whl": "8108ee1712bb4fa2c16981fba7e68b3f6ea330277f5ca34fa8d557e986a11670",
+    "pandas-2.2.0-cp310-cp310-macosx_11_0_arm64.whl": "736da9ad4033aeab51d067fc3bd69a0ba36f5a60f66a527b3d72e2030e63280a",
+    "pandas-2.2.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "38e0b4fc3ddceb56ec8a287313bc22abe17ab0eb184069f08fc6a9352a769b18",
+    "pandas-2.2.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "20404d2adefe92aed3b38da41d0847a143a09be982a31b85bc7dd565bdba0f4e",
+    "pandas-2.2.0-cp310-cp310-musllinux_1_1_aarch64.whl": "7ea3ee3f125032bfcade3a4cf85131ed064b4f8dd23e5ce6fa16473e48ebcaf5",
+    "pandas-2.2.0-cp310-cp310-musllinux_1_1_x86_64.whl": "f9670b3ac00a387620489dfc1bca66db47a787f4e55911f1293063a78b108df1",
+    "pandas-2.2.0-cp310-cp310-win_amd64.whl": "5a946f210383c7e6d16312d30b238fd508d80d927014f3b33fb5b15c2f895430",
+    "pandas-2.2.0-cp311-cp311-macosx_10_9_x86_64.whl": "a1b438fa26b208005c997e78672f1aa8138f67002e833312e6230f3e57fa87d5",
+    "pandas-2.2.0-cp311-cp311-macosx_11_0_arm64.whl": "8ce2fbc8d9bf303ce54a476116165220a1fedf15985b09656b4b4275300e920b",
+    "pandas-2.2.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "2707514a7bec41a4ab81f2ccce8b382961a29fbe9492eab1305bb075b2b1ff4f",
+    "pandas-2.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "85793cbdc2d5bc32620dc8ffa715423f0c680dacacf55056ba13454a5be5de88",
+    "pandas-2.2.0-cp311-cp311-musllinux_1_1_aarch64.whl": "cfd6c2491dc821b10c716ad6776e7ab311f7df5d16038d0b7458bc0b67dc10f3",
+    "pandas-2.2.0-cp311-cp311-musllinux_1_1_x86_64.whl": "a146b9dcacc3123aa2b399df1a284de5f46287a4ab4fbfc237eac98a92ebcb71",
+    "pandas-2.2.0-cp311-cp311-win_amd64.whl": "fbc1b53c0e1fdf16388c33c3cca160f798d38aea2978004dd3f4d3dec56454c9",
+    "pandas-2.2.0-cp312-cp312-macosx_10_9_x86_64.whl": "a41d06f308a024981dcaa6c41f2f2be46a6b186b902c94c2674e8cb5c42985bc",
+    "pandas-2.2.0-cp312-cp312-macosx_11_0_arm64.whl": "159205c99d7a5ce89ecfc37cb08ed179de7783737cea403b295b5eda8e9c56d1",
+    "pandas-2.2.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "eb1e1f3861ea9132b32f2133788f3b14911b68102d562715d71bd0013bc45440",
+    "pandas-2.2.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "761cb99b42a69005dec2b08854fb1d4888fdf7b05db23a8c5a099e4b886a2106",
+    "pandas-2.2.0-cp312-cp312-musllinux_1_1_aarch64.whl": "a20628faaf444da122b2a64b1e5360cde100ee6283ae8effa0d8745153809a2e",
+    "pandas-2.2.0-cp312-cp312-musllinux_1_1_x86_64.whl": "f5be5d03ea2073627e7111f61b9f1f0d9625dc3c4d8dda72cc827b0c58a1d042",
+    "pandas-2.2.0-cp312-cp312-win_amd64.whl": "a626795722d893ed6aacb64d2401d017ddc8a2341b49e0384ab9bf7112bdec30",
+    "pandas-2.2.0-cp39-cp39-macosx_10_9_x86_64.whl": "9f66419d4a41132eb7e9a73dcec9486cf5019f52d90dd35547af11bc58f8637d",
+    "pandas-2.2.0-cp39-cp39-macosx_11_0_arm64.whl": "57abcaeda83fb80d447f28ab0cc7b32b13978f6f733875ebd1ed14f8fbc0f4ab",
+    "pandas-2.2.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl": "e60f1f7dba3c2d5ca159e18c46a34e7ca7247a73b5dd1a22b6d59707ed6b899a",
+    "pandas-2.2.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "eb61dc8567b798b969bcc1fc964788f5a68214d333cade8319c7ab33e2b5d88a",
+    "pandas-2.2.0-cp39-cp39-musllinux_1_1_aarch64.whl": "52826b5f4ed658fa2b729264d63f6732b8b29949c7fd234510d57c61dbeadfcd",
+    "pandas-2.2.0-cp39-cp39-musllinux_1_1_x86_64.whl": "bde2bc699dbd80d7bc7f9cab1e23a95c4375de615860ca089f34e7c64f4a8de7",
+    "pandas-2.2.0-cp39-cp39-win_amd64.whl": "3de918a754bbf2da2381e8a3dcc45eede8cd7775b047b923f9006d5f876802ae"
+  },
+  "polars": {
+    "polars-1.0.0-cp38-abi3-macosx_10_12_x86_64.whl": "cf454ee75a2346cd7f44fb536cc69af7a26d8a243ea58bda50f6c810742c76ad",
+    "polars-1.0.0-cp38-abi3-macosx_11_0_arm64.whl": "8191d8b5cf68d5ebaf9efb497120ff6d7e607a57a116bcce43618d50a536fe1c",
+    "polars-1.0.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl": "f5b58575fd7ddc12bc53adfde933da3b40c2841fdc5396fecbd85e80dfc9332e",
+    "polars-1.0.0-cp38-abi3-manylinux_2_24_aarch64.whl": "44475877179f261f4ce1a6cfa0fc955392798b9987c17fc2b1a4b294602ace8a",
+    "polars-1.0.0-cp38-abi3-win_amd64.whl": "bd483045c0629afced9e9ebc83b58550640022db5924d553a068a57621260a22"
+  },
+  "python-dateutil": {
+    "python_dateutil-2.9.0.post0-py2.py3-none-any.whl": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
+  },
+  "pytz": {
+    "pytz-2026.5-py2.py3-none-any.whl": "e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03"
+  },
+  "six": {
+    "six-1.17.0-py2.py3-none-any.whl": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
+  },
+  "tzdata": {
+    "tzdata-2026.5-py2.py3-none-any.whl": "b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac"
+  }
+}

@@ -1,0 +1,46 @@
+#!/bin/sh
+# Build an installed NuGet consumer with prepared native artifacts and no network.
+set -eu
+version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
+cd "$(dirname "$0")/.."
+root=$PWD
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+export PATH="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}:$PATH"
+export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
+export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+export CARGO_NET_OFFLINE=true
+cargo build -p loopback --bin loopback --locked
+native=${CARGO_TARGET_DIR:-$root/target}/debug
+case "$native" in /*) ;; *) native="$root/$native" ;; esac
+assets=${THINKTHEN_CSHARP_NATIVE_ASSETS:?provide the prepared matching release asset directory}
+linux="$assets/linux-x64/libthinkthen_ffi.so"
+mac="$assets/osx-arm64/libthinkthen_ffi.dylib"
+# Coverage uses the instrumented current-host library from this tree. The other
+# asset remains packaged but cannot load on this host.
+if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+  cargo build -p thinkthen-ffi --locked
+  case $(uname -s) in
+    Darwin) mac="$native/libthinkthen_ffi.dylib" ;;
+    Linux) linux="$native/libthinkthen_ffi.so" ;;
+  esac
+fi
+printf '<configuration><packageSources><clear /></packageSources></configuration>\n' > "$stage/NuGet.Config"
+dotnet pack sdk/csharp/ThinkThen.csproj --configfile "$stage/NuGet.Config" --artifacts-path "$stage/artifacts" -o "$stage/feed" -p:LinuxNative="$linux" -p:MacNative="$mac"
+mkdir "$stage/consumer"
+cp sdk/csharp/tests/Consumer.csproj sdk/csharp/tests/*.cs "$stage/consumer/"
+printf '<configuration><packageSources><clear /><add key="local" value="%s" /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "$stage/feed" "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/consumer/NuGet.Config"
+dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/bin"
+cd "$stage"
+export THINKTHEN_API_KEY=construction-only
+dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"
+dotnet publish "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/single" -p:PublishSingleFile=true -p:SelfContained=false
+"$stage/single/Consumer" "$root/construction/stub.json" --stub-only
+if [ -n "${THINKTHEN_CSHARP_OUTPUT:-}" ]; then
+  mkdir -p "$THINKTHEN_CSHARP_OUTPUT"
+  cp "$stage/feed/Botassembly.ThinkThen.$version.nupkg" "$THINKTHEN_CSHARP_OUTPUT/"
+  mkdir -p "$THINKTHEN_CSHARP_OUTPUT/consumer"
+  cp -R "$stage/bin/." "$THINKTHEN_CSHARP_OUTPUT/consumer/"
+fi

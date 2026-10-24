@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Prepare Windows inputs online, separately from offline candidate builds.
+
+Usage: release-windows-prepare inputs
+       release-windows-prepare msvc SDK_VERSION CRT_VERSION
+
+The msvc action obtains Microsoft's SDK and CRT through cargo-xwin. Run it only
+when the Microsoft build-tool terms have been authorized. It requires explicit
+versions and never selects the latest SDK or CRT implicitly.
+
+The reviewed Visual Studio selectors are REVIEWED_SDK and REVIEWED_CRT below.
+cargo-xwin verifies their package hashes from Microsoft's release manifest.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import urllib.request
+import zipfile
+
+from release_home import checked_home
+
+ROOT = Path(__file__).resolve().parent.parent
+TOOLS = checked_home() / '.local/share/thinkthen-build-tools'
+WINDOWS = TOOLS / 'windows'
+REVIEWED_SDK = '10.0.26100'
+REVIEWED_CRT = '14.44.17.14'
+INPUTS = {
+    'R-4.6.1-win.exe': ('https://cloud.r-project.org/bin/windows/base/R-4.6.1-win.exe', 'c5424c40cd70ef85765a55d2ff96bb602b5f30ed536938ff004f14db5db3c2df'),
+    # CRAN's Windows 4.6 binary: Built R 4.6.1, 2026-10-21 01:07:16 UTC.
+    'jsonlite_2.0.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/jsonlite_2.0.0.zip', '062aeffa1f311b2cbef49075bf3b592339da63d12ea6d67c40612330e29538e9'),
+    'ffi-1.17.4-x64-mingw-ucrt.gem': ('https://rubygems.org/downloads/ffi-1.17.4-x64-mingw-ucrt.gem', 'f6ff9618cfccc494138bddade27aa06c74c6c7bc367a1ea1103d80c2fcb9ed35'),
+    'duckdb-cli.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/duckdb_cli-windows-amd64.zip', '6af7c45f38d764d1c8345f1cb1b1f2d07d779e11125ddf5dca7f2dfdf50efc7e'),
+    'duckdb-lib.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/libduckdb-windows-amd64.zip', '4b26f7febc5e300c642d1a45d2fbc3ab51fd3c80e5f82023c90a3260a4949e13'),
+    'jansson-2.14.1.tar.gz': ('https://github.com/akheron/jansson/releases/download/v2.14.1/jansson-2.14.1.tar.gz', '2521cd51a9641d7a4e457f7215a4cd5bb176f690bc11715ddeec483e85d9e2b3'),
+    'duckdb-1.4.3.tar.gz': ('https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3', 'b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64'),
+    'sqlite-amalgamation-3410000.zip': ('https://www.sqlite.org/2023/sqlite-amalgamation-3410000.zip', '146ce189b67fdbefbf2d72cdc81e198d07ff643614cc9102e9bf063255e8e7e1'),
+}
+
+
+def run(*arguments, **options):
+    subprocess.run(list(map(str, arguments)), check=True, cwd=ROOT, **options)
+
+
+def inputs():
+    WINDOWS.mkdir(parents=True, exist_ok=True)
+    for name, (url, digest) in INPUTS.items():
+        path = WINDOWS / name
+        if not path.exists():
+            partial = path.with_suffix('.partial')
+            urllib.request.urlretrieve(url, partial)
+            partial.replace(path)
+        if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise SystemExit('Windows prerequisite checksum differs: ' + name)
+    for name in ('duckdb-cli', 'duckdb-lib'):
+        with zipfile.ZipFile(WINDOWS / (name + '.zip')) as archive: archive.extractall(WINDOWS / name)
+    for name in ('jansson-2.14.1', 'duckdb-1.4.3'):
+        destination = WINDOWS if name.startswith('jansson') else TOOLS / 'duckdb/1.4.3'
+        destination.mkdir(parents=True, exist_ok=True)
+        if not (destination / name).exists():
+            with tarfile.open(WINDOWS / (name + '.tar.gz')) as archive:
+                archive.extractall(destination, filter='data')
+    with zipfile.ZipFile(WINDOWS / 'sqlite-amalgamation-3410000.zip') as archive:
+        folder = TOOLS / 'sqlite-3.41.0'
+        folder.mkdir(exist_ok=True)
+        for name in ('sqlite3.h', 'sqlite3ext.h'):
+            (folder / name).write_bytes(archive.read('sqlite-amalgamation-3410000/' + name))
+    run('scripts/cpp-prepare')
+    run('scripts/jvm-prepare')
+    run('scripts/csharp-prepare')
+    print('Windows runtime and source inputs are ready; Microsoft SDK preparation is separate')
+
+
+def prepare_xwin():
+    """Restore the pinned executable when a cached uv receipt outlives its bin."""
+    run('uv', 'tool', 'install', 'cargo-xwin==0.23.1')
+    if shutil.which('cargo-xwin') is None:
+        run('uv', 'tool', 'install', '--reinstall', 'cargo-xwin==0.23.1')
+    version = subprocess.check_output(['cargo', 'xwin', '--version'], cwd=ROOT, text=True).strip()
+    if version != 'cargo-xwin-xwin 0.23.1':
+        raise ValueError('Prepared cargo-xwin differs from pinned version: ' + version)
+
+
+def msvc(sdk, crt):
+    if not sdk or not crt: raise SystemExit('Specify both SDK and CRT versions')
+    prepare_xwin()
+    from release_rust import prepare as prepare_rust
+    prepare_rust('x86_64-pc-windows-msvc')
+    run('cargo', 'fetch', '--locked', '--target', 'x86_64-pc-windows-msvc')
+    cache = TOOLS / 'windows-msvc'
+    env = dict(os.environ, XWIN_CACHE_DIR=str(cache), XWIN_ARCH='x86_64',
+               XWIN_VERSION='17', XWIN_SDK_VERSION=sdk, XWIN_CRT_VERSION=crt)
+    run('cargo', 'xwin', 'cache', 'xwin', env=env)
+    (cache / 'versions.json').write_text(json.dumps({'sdk': sdk, 'crt': crt, 'cargo_xwin': '0.23.1'}, indent=2) + '\n')
+    print('Windows target SDK and CRT are cached for offline builds')
+
+
+def main():
+    if sys.argv[1:] in (['--help'], ['-h']):
+        print(__doc__)
+        return
+    if sys.argv[1:] == ['inputs']:
+        inputs()
+    elif len(sys.argv) == 4 and sys.argv[1] == 'msvc':
+        msvc(*sys.argv[2:])
+    else:
+        raise SystemExit(__doc__)
+
+
+if __name__ == '__main__': main()

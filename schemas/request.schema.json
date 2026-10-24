@@ -1,0 +1,634 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SdkRequest",
+  "description": "A request parsed at the host boundary, before question validation.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "decide"
+        },
+        "options": {
+          "$ref": "#/$defs/DecisionOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "choose"
+        },
+        "options": {
+          "$ref": "#/$defs/ChoiceOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "tag"
+        },
+        "options": {
+          "$ref": "#/$defs/TagOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "score"
+        },
+        "options": {
+          "$ref": "#/$defs/ScaleOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "filter"
+        },
+        "options": {
+          "$ref": "#/$defs/DecisionOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "rank"
+        },
+        "options": {
+          "$ref": "#/$defs/RankOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "find"
+        },
+        "options": {
+          "$ref": "#/$defs/DecisionOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "annotate"
+        },
+        "options": {
+          "$ref": "#/$defs/AnnotationOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged2"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "recognize"
+        },
+        "options": {
+          "$ref": "#/$defs/DecisionOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged3"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "function": {
+          "type": "string",
+          "const": "relate"
+        },
+        "options": {
+          "$ref": "#/$defs/DecisionOptions"
+        },
+        "question": {
+          "$ref": "#/$defs/Tagged4"
+        },
+        "records": {
+          "type": "array",
+          "default": [],
+          "items": true
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question"
+      ]
+    }
+  ],
+  "$defs": {
+    "AnnotationOptions": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChoiceOptions": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "options": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "threshold": true
+      },
+      "additionalProperties": false
+    },
+    "DecisionOptions": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threshold": true
+      },
+      "additionalProperties": false
+    },
+    "RankOptions": {
+      "type": "object",
+      "properties": {
+        "levels": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "top": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ScaleOptions": {
+      "type": "object",
+      "properties": {
+        "levels": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TagOptions": {
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "on": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "threshold": true
+      },
+      "additionalProperties": false
+    },
+    "Tagged": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "inline"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "toolbox"
+            },
+            "value": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "reference"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name"
+          ]
+        }
+      ]
+    },
+    "Tagged2": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "inline"
+            },
+            "value": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "toolbox"
+            },
+            "value": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "reference"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name"
+          ]
+        }
+      ]
+    },
+    "Tagged3": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "inline"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "toolbox"
+            },
+            "value": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "reference"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name"
+          ]
+        }
+      ]
+    },
+    "Tagged4": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "inline"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "toolbox"
+            },
+            "value": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "reference"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "name"
+          ]
+        }
+      ]
+    }
+  }
+}
