@@ -1,6 +1,9 @@
 package io.thinkthen;
 
 import java.io.IOException;
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.ValueLayout;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -61,15 +64,17 @@ final class NativeAsset {
     private static void secure(Path path, boolean directory) throws IOException {
         var attributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         var owner = Files.getOwner(path, LinkOption.NOFOLLOW_LINKS);
-        var user = path.getFileSystem().getUserPrincipalLookupService()
-            .lookupPrincipalByName(System.getProperty("user.name"));
-        boolean unsafe = !owner.equals(user) || attributes.isSymbolicLink() || attributes.isOther()
+        boolean unsafe = attributes.isSymbolicLink() || attributes.isOther()
             || (directory ? !attributes.isDirectory() : !attributes.isRegularFile());
         var posix = Files.getFileAttributeView(path, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (posix != null) {
+            unsafe |= (Integer) Files.getAttribute(path, "unix:uid", LinkOption.NOFOLLOW_LINKS) != effectiveUid();
             var permissions = posix.readAttributes().permissions();
             unsafe |= permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE);
         } else {
+            var user = path.getFileSystem().getUserPrincipalLookupService()
+                .lookupPrincipalByName(System.getProperty("user.name"));
+            unsafe |= !owner.equals(user);
             var acl = Files.getFileAttributeView(path, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             if (acl == null) throw new IOException("Cannot verify ThinkThen native cache permissions: " + path);
             var writes = Set.of(AclEntryPermission.WRITE_DATA, AclEntryPermission.APPEND_DATA,
@@ -84,6 +89,15 @@ final class NativeAsset {
             }
         }
         if (unsafe) throw new IOException("Unsafe ThinkThen native cache owner or permissions: " + path);
+    }
+    @SuppressWarnings("restricted")
+    private static int effectiveUid() throws IOException {
+        var linker = Linker.nativeLinker();
+        var symbol = linker.defaultLookup().find("geteuid")
+            .orElseThrow(() -> new IOException("Cannot verify ThinkThen native cache process UID"));
+        var function = linker.downcallHandle(symbol, FunctionDescriptor.of(ValueLayout.JAVA_INT));
+        try { return (int) function.invokeExact(); }
+        catch (Throwable error) { throw new IOException("Cannot verify ThinkThen native cache process UID", error); }
     }
     private static void verify(Path file, byte[] expected) throws IOException {
         secure(file, false);
