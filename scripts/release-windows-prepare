@@ -75,9 +75,19 @@ def inputs():
     print('Windows runtime and source inputs are ready; Microsoft SDK preparation is separate')
 
 
+def prepare_xwin():
+    """Restore the pinned executable when a cached uv receipt outlives its bin."""
+    run('uv', 'tool', 'install', 'cargo-xwin==0.23.1')
+    if shutil.which('cargo-xwin') is None:
+        run('uv', 'tool', 'install', '--reinstall', 'cargo-xwin==0.23.1')
+    version = subprocess.check_output(['cargo', 'xwin', '--version'], cwd=ROOT, text=True).strip()
+    if version != 'cargo-xwin-xwin 0.23.1':
+        raise ValueError('Prepared cargo-xwin differs from pinned version: ' + version)
+
+
 def msvc(sdk, crt):
     if not sdk or not crt: raise SystemExit('Specify both SDK and CRT versions')
-    run('uv', 'tool', 'install', 'cargo-xwin==0.23.1')
+    prepare_xwin()
     from release_rust import prepare as prepare_rust
     prepare_rust('x86_64-pc-windows-msvc')
     run('cargo', 'fetch', '--locked', '--target', 'x86_64-pc-windows-msvc')
