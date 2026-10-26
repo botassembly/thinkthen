@@ -18,7 +18,7 @@ fn sql_settings_preserve_codes_and_forbidden_field_precedence() {
             thinkthen_sql::client(settings, variable)
         }
         .unwrap_err();
-        assert_eq!(error.kind().code(), case["code"], "{case}");
+        assert_eq!(error.code().as_str(), case["code"], "{case}");
         if let Some(expected) = case.get("message") {
             assert_eq!(error.to_string(), expected.as_str().unwrap());
         }

@@ -1,108 +1,29 @@
-# C# public API proposal
+# C# API
 
-These declarations describe the API for review. They are not source files. All types use the `ThinkThen` namespace. Public DTOs are immutable; collection inputs are copied at admission and collection outputs cannot be mutated, including through a cast to an array or mutable collection. Every retained `JsonElement`, including records, questions, identifiers and answers, owns its backing data independently of a caller's `JsonDocument`. Lazy detail decoding retains its owned JSON data for the row's lifetime and is safe for concurrent readers.
+The `ThinkThen` namespace targets .NET 10. Create `ThinkThenClient` with `ThinkThenOptions`, or register a singleton with `services.AddThinkThen(options => ...)`. The client snapshots settings and serializer options. Dispose it with `await using`. An optional `ILogger<ThinkThenClient>` receives lifecycle events without request bodies, settings or credentials.
 
-```csharp
-public sealed class ThinkThenClient : IDisposable
-{
-    public ThinkThenClient(ClientSettings? settings = null);
+Settings use `Backend`, `Model`, `Url`, `ApiKey`, `Batch`, `Retry` and `Json`. Construct a direct key with `ApiKey.From(value)`. Diagnostics and serialized settings redact the key. Settings JSON admits keys through the engine. `RetryOptions` uses `MaxRetries`, `InitialBackoff` and `AttemptTimeout`. Durations must represent whole milliseconds.
 
-    public Task<ResultRow<bool?>> DecideAsync(Question question, Record record, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<string>> ChooseAsync(Question question, Record record, IReadOnlyList<string>? options = null, CallOptions? settings = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<IReadOnlyList<string>>> TagAsync(Question question, Record record, IReadOnlyList<string>? labels = null, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<double?>> ScoreAsync(Question question, Record record, IReadOnlyList<string>? levels = null, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public IAsyncEnumerable<Record> FilterAsync(Question question, IAsyncEnumerable<Record> records, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public IAsyncEnumerable<ResultRow<long?>> RankAsync(Question question, IAsyncEnumerable<Record> records, RankOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<TextSpan>> FindAsync(Question question, Record record, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<JsonElement?>> AnnotateAsync(JsonElement toolbox, Record record, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<IReadOnlyList<RecognizedName>>> RecognizeAsync(Question question, Record record, CallOptions? options = null, CancellationToken cancellationToken = default);
-    public Task<ResultRow<IReadOnlyList<RelationEdge>>> RelateAsync(Question question, Record record, CallOptions? options = null, CancellationToken cancellationToken = default);
-}
-```
+Single calls return `Task<Row<TAnswer,TDetail>>`. Streams take `IAsyncEnumerable<TRecord>` and return `IAsyncEnumerable<Row<TAnswer,TDetail>>`. Each operation accepts an optional execution `name` and a final `CancellationToken`. `WithCancellation` also reaches the input enumerator and native operation.
 
-Choose, tag and score omit the domain override when its argument is omitted or null. This lets a saved question supply its own domain. `RankOptions.Levels` passes inline rank levels to the engine.
+`DecideAsync`, `ChooseAsync`, `TagAsync`, `ScoreAsync`, `FindAsync`, `RecognizeAsync`, `RelateAsync` and `AnnotateAsync` have matching `StreamAsync` methods. Choose requires choices; tag requires labels; score and rank require levels; recognize requires kinds; relate requires relation rules. Recognize and relate take their domains without an invented question prompt. Each function has its own options record. Evidence uses `Pointer.From(value)`. Decide, choose and filter accept `Threshold.Cut(value)` or `Threshold.Band(low,high)`; the numeric-only functions accept `Cut.From(value)`.
 
-The eight single-record methods also have `DecideStreamAsync`, `ChooseStreamAsync`, `TagStreamAsync`, `ScoreStreamAsync`, `FindStreamAsync`, `AnnotateStreamAsync`, `RecognizeStreamAsync` and `RelateStreamAsync` forms. Each replaces `Record record` with `IAsyncEnumerable<Record> records` and returns `IAsyncEnumerable<ResultRow<TAnswer>>` with its corresponding answer type. These methods forward into one internal call driver. No separate session or request builder is public. Cancellation tokens also follow `WithCancellation` at enumeration. When the method token and enumeration token differ, the driver links them for the operation and source; either can cancel, and the linked token source is disposed with the operation.
+Each method accepts either convenience arguments or its admitted typed question. For example, `ChooseQuestion.Create(question, choices, options)` snapshots the choices and options. Typed question overloads accept the question and records without replacement options. Questions and result unions are closed to external derivation.
 
-```csharp
-public sealed record ClientSettings
-{
-    public string? Mode { get; init; }
-    public string? Adapter { get; init; }
-    public string? Url { get; init; }
-    public string? KeySource { get; init; }
-    public string? Model { get; init; }
-    public double? Batch { get; init; }
-}
+`Row<TAnswer,TDetail>` has three cases:
 
-public record CallOptions
-{
-    public Threshold? Threshold { get; init; }
-    public string? On { get; init; }
-}
-public sealed record RankOptions : CallOptions
-{
-    public double? Top { get; init; }
-    public IReadOnlyList<string>? Levels { get; init; }
-}
+- `Answered<TAnswer,TDetail>` exposes `Answer`, optional `Probability` and typed `Detail`.
+- `Unsure<TAnswer,TDetail>` exposes `Probability` and typed `Detail`.
+- `Failed<TAnswer,TDetail>` exposes `RowError`.
 
-public readonly record struct Threshold
-{
-    public static implicit operator Threshold(double value);
-    public static implicit operator Threshold(string value);
-}
+Every row exposes `Function`, `Position`, optional `RecordId`, `Source` and `Status`. IDs preserve strings and signed or unsigned 64-bit integers. Source identifies the attempted question, backend, model and optional execution name. Supplying a name changes question identity while preserving the answer. Toolbox selection supplies no execution name. Rows own their data after a call or client closes. Serialization preserves the shared row shape, full probability precision and exact IDs.
 
-public sealed class Record
-{
-    public static Record Text(string value);
-    public static Record Json(JsonElement value);
-    public static implicit operator Record(string value);
-    public bool IsText { get; }
-    public string? TextValue { get; }
-    public JsonElement? JsonValue { get; }
-}
+Details use immutable `LabelsDetail`, `LevelsDetail`, `RecognizeDetail` or `RelateDetail`. Entity and relation endpoints use `Mention` and `TextSpan`. Span offsets count UTF-16 units with an exclusive end. Annotate returns an immutable map of typed `AnnotationEntry` cases. Their `EntryOutcome<TAnswer,TDetail>` contains answered, unsure or failed entry data without outer row metadata.
 
-public sealed class Question
-{
-    public static Question Inline(string text);
-    public static Question Kinds(params string[] kinds);
-    public static Question Relations(IReadOnlyList<RelationRule> rules);
-    public static Question Toolbox(JsonElement value, string? name = null);
-    public static Question Reference(string name);
-    public static implicit operator Question(string text);
-}
-public sealed record RelationRule(string Name, string Source, string Target,
-    string? Reads = null, bool? Either = null);
+`FilterAsync` yields `FilterItem<TRecord>` for every input row. `Item` preserves the original managed item; `Kept` is true only for an answered true. `RankAsync` yields `RankedItem<TRecord>` in engine order. Its row's rank answer remains distinct from its original input position. `RankOptions.Top` restricts successful rows while retaining failures.
 
-public enum RowStatus { Answered, Unsure, Failed }
-public sealed class ResultRow<TAnswer>
-{
-    public JsonElement Id { get; }
-    public RowStatus Status { get; }
-    public TAnswer? Answer { get; }
-    public double? P { get; }
-    public ThinkThenError? Error { get; }
-    public JsonElement? Detail { get; }
-}
-public sealed record ThinkThenError(string Code, string Message);
-public sealed class ThinkThenException : Exception
-{
-    public string Code { get; }
-}
-public sealed record TextSpan(string Text, int Start, int End);
-public sealed record RecognizedName(string Text, int Start, int End,
-    string Kind, double P);
-public sealed record RelationName(string Text, int Start, int End, string Kind);
-public sealed record RelationEdge(RelationName Source, RelationName Target,
-    string Relation, double P, bool? Either);
-```
+`Toolbox.Parse(json)` delegates the flat question map to engine admission. Typed selectors return admitted questions with their required lists. `Toolbox.Create` accepts named `ToolboxQuestion` values, including rank. `AnnotationQuestions` accepts the narrower `AnnotationQuestion` union. Use it with `AnnotateAsync`, `AnnotateStreamAsync` or `client.Toolbox(questions)`. A general toolbox and rank cannot enter annotation through the typed API.
 
-`Threshold` stores the supplied number or band text and serializes it without validation. The engine owns admissibility. Numeric settings retain the contract's numeric domain and fail there with its code. Question factories only choose the contract's tagged representation. Relation endpoints follow the row schema as immutable names. Annotate answers remain plain JSON because each toolbox defines its keys and answer types. For its value-type answer, `ResultRow<JsonElement?>` uses null for an unsure or failed answer, just like the other answer types. An answered annotate result holds its ordinary JSON object. The nullable value types in the method signatures are intentional: an unconstrained generic `TAnswer?` alone does not turn a value type into `Nullable<TAnswer>`. `Status` distinguishes an unsure row from a failed row.
+Record strings remain raw text; structured values use the snapshotted `JsonSerializerOptions`. Every record-taking overload also accepts `JsonTypeInfo<TRecord>`. A trimmed or Native AOT application supplies generated metadata or a generated resolver. Reflection serialization overloads carry the corresponding trimming and dynamic-code annotations.
 
-`ThinkThenException` represents engine operation failures with their original dotted code and message. Failed stream rows contain `ThinkThenError`. Host failures such as missing native assets use the corresponding .NET loader exceptions. Cancellation associated with a caller's token uses `OperationCanceledException`; a native cancellation with no cancelled caller token retains the engine's coded exception. Calling a disposed client uses `ObjectDisposedException`.
-
-## Driver and ownership
-
-P/Invoke declarations follow the shipped C header. A SafeHandle owns each client and call. One asynchronous driver serializes each call: run blocking native pulls on a worker thread, send one record after `NeedsInput`, close input when exhausted, and drain output. Source enumeration uses `GetAsyncEnumerator` with the effective cancellation token; it never blocks a worker thread waiting synchronously on `MoveNextAsync`. Initial records are not duplicated into both the request and the source. The driver sends text as counted UTF-16 for shared strict decoding and supplies the UTF-16 offset unit. It uses native position and selection metadata to retain filter object identity without recomputing any selection or failure rule.
-
-A cancellation registration may call native cancel while a pull blocks. It also wakes an asynchronous wait for a source record. If a source ignores its token, cancellation stops awaiting its pending `MoveNextAsync`, cancels and releases the native call, and returns to the caller without waiting for that source. The pending source task remains observed and its enumerator is disposed when that advance finishes; disposal never races an active advance. The library cannot force arbitrary source code to terminate. Normal completion, source failure and an early loop break dispose the source once; any asynchronous source disposal receives the same cancellation treatment. A source or disposal failure propagates unchanged when it is the first failure and never replaces an earlier failure. Cleanup unregisters cancellation, waits for the host driver to leave native operations, then frees the call. It does not wait for backend workers. Every native row/error buffer is copied and freed once in a finally block. Normal fields deserialize once; detail bytes wait until `Detail` is read. No engine thread calls managed code. The source advances only when the engine requests input. SafeHandle references keep the client alive across call admission and keep the call alive across native operations and cancellation callbacks. Client disposal cannot race admission into a freed native pointer. The native asset remains loaded for the process lifetime.
+Record and backend failures return failed rows. Null records use the engine's missing-record operation. Usage, setup and internal failures throw `ThinkThenException` with typed `ErrorCode`, optional HTTP status and an original host cause when available. The `Family()` extension exposes each code's family. Cancellation throws `OperationCanceledException`. Disposing the client cancels active operations, waits for native work to finish and rejects new admission. A paused stream cannot retain a native allocation after disposal. An uncooperative input advance remains observed and disposes after it returns.

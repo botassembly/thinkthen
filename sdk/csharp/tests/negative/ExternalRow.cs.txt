@@ -1,0 +1,6 @@
+using ThinkThen;
+
+public sealed record ForeignRow : Row<bool, NoDetail>
+{
+    public ForeignRow(Row<bool, NoDetail> source) : base(source) { }
+}

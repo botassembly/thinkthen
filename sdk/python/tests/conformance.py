@@ -7,7 +7,9 @@ import json
 import os
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from dataclasses import fields, is_dataclass
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -56,138 +58,186 @@ class Loopback:
         self.close()
 
 
-def row_json(row: tt.Row[object]) -> dict[str, Any]:
-    result: dict[str, Any] = {"id": row.id, "status": row.status}
+def plain(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if is_dataclass(value) and hasattr(value, "status"):
+        return outcome_json(value)
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            field.name: plain(getattr(value, field.name))
+            for field in fields(value)
+            if (field.name != "name" or getattr(value, field.name) is not None)
+            and (field.name != "either" or getattr(value, field.name))
+        }
+    if isinstance(value, Mapping):
+        return {key: plain(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [plain(item) for item in value]
+    return value
+
+
+def outcome_json(row: Any) -> dict[str, Any]:
+    result: dict[str, Any] = {"function": row.function, "status": row.status}
+    if row.status == "answered":
+        result["answer"] = plain(row.answer)
     if row.error is not None:
-        result["error"] = {"code": row.error.code}
-    else:
-        result["answer"] = row.answer
-    if row.p is not None:
-        result["p"] = row.p
+        result["error"] = {"code": row.error.code, "message": row.error.message}
+        if row.error.http_status is not None:
+            result["error"]["http_status"] = row.error.http_status
+    if row.probability is not None:
+        result["probability"] = row.probability
     if row.detail is not None:
-        result["detail"] = row.detail
-    if isinstance(row.answer, dict) and row.status == "answered":
-        for entry in row.answer.values():
-            if isinstance(entry, dict) and isinstance(entry.get("error"), dict):
-                entry["error"].pop("message", None)
+        result["detail"] = plain(row.detail)
     return result
 
 
-def run_case(
-    case: dict[str, Any], url: str, toolbox_path: Path
-) -> list[dict[str, Any]] | dict[str, str]:
-    request = case["request"]
-    settings = case.get("client", {})
-    options = request.get("options", {})
-    question = request["question"]["value"]
-    records = request["records"]
-    cancel = tt.Cancel()
-    rows: list[dict[str, Any]] = []
-    if case.get("cancelled"):
-        cancel.cancel()
-    try:
-        client = tt.Client(
-            url=url,
-            model=settings.get("model"),
-            batch=int(settings["batch"]) if "batch" in settings else None,
+def row_json(row: Any) -> dict[str, Any]:
+    result = outcome_json(row)
+    result.update(position=row.position, source=plain(row.source))
+    if row.id is not None:
+        result["id"] = row.id
+    return result
+
+
+def admitted(value: dict[str, Any]) -> Any:
+    fields = dict(value)
+    function = fields.pop("function")
+    if function == "relate":
+        fields["rules"] = [tt.RelationRule(**rule) for rule in fields["rules"]]
+    if isinstance(fields.get("threshold"), dict):
+        band = fields["threshold"]
+        fields["threshold"] = tt.Band(band["low"], band["high"])
+    question = fields.pop("question", None)
+    return (
+        getattr(tt, function.capitalize() + "Question")(**fields)
+        if question is None
+        else getattr(tt, function.capitalize() + "Question")(question, **fields)
+    )
+
+
+def request_stream(client: tt.Client, request: dict[str, Any]) -> tt.RowStream[Any]:
+    definition = request["question"]
+    function = definition["function"]
+    records = request.get("records", [])
+    if function == "annotate":
+        return client.annotate_stream(
+            tt.AnnotationQuestions(
+                {
+                    name: admitted(value)
+                    for name, value in definition["questions"].items()
+                }
+            ),
+            records,
+            evidence=definition.get("evidence"),
         )
-        on = options.get("on")
-        cut = options.get("threshold")
-        function = request["function"]
-        stream: tt.Stream[tt.Row[object]]
-        if function == "rank":
-            stream = client.rank(
-                question,
-                records,
-                levels=options.get("levels"),
-                top=options.get("top"),
-                on=on,
-                cancel=cancel,
+    question = admitted(definition)
+    if function in {"filter", "rank"}:
+        return cast(tt.RowStream[Any], getattr(client, function)(question, records))
+    if function in {"recognize", "relate"}:
+        return cast(
+            tt.RowStream[Any],
+            getattr(client, function + "_stream")(question, records),
+        )
+    return cast(
+        tt.RowStream[Any], getattr(client, function + "_stream")(question, records)
+    )
+
+
+def assert_expected(actual: Any, expected: Any) -> None:
+    """Shared cases omit messages and source, but every declared value is exact."""
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert set(actual) - set(expected) <= {"source", "message"}
+        for name, value in expected.items():
+            assert name in actual
+            assert_expected(actual[name], value)
+    elif isinstance(expected, list):
+        assert isinstance(actual, list) and len(actual) == len(expected)
+        for item, wanted in zip(actual, expected, strict=False):
+            assert_expected(item, wanted)
+    else:
+        assert actual == expected
+
+
+def admission_cases(directory: Path) -> None:
+    cases = json.loads(
+        (directory / "public-contract" / "usage-admission.json").read_text()
+    )
+    for case in cases:
+        if case["kind"] != "admission":
+            continue
+        value = case["input"]
+        message = case["message"]
+        if case["boundary"] == "settings":
+            print(
+                f"Admission unsupported: {case['name']}: retry fields convert before admission"
             )
-        elif function == "annotate":
-            stream = client.annotate_stream(question, records, on=on, cancel=cancel)
-        elif function == "filter":
-            stream = (
-                tt.Toolbox({"filter": question} | options)
-                .question()
-                .stream(records, on=on, cancel=cancel)
-            )
-        elif function == "decide":
-            stream = client.decide_stream(
-                question, records, threshold=cut, on=on, cancel=cancel
-            )
-        elif function == "choose":
-            stream = client.choose_stream(
-                question,
-                records,
-                options=options["options"],
-                threshold=cut,
-                on=on,
-                cancel=cancel,
-            )
-        elif function == "tag":
-            stream = client.tag_stream(
-                question,
-                records,
-                labels=options["labels"],
-                threshold=cut,
-                on=on,
-                cancel=cancel,
-            )
-        elif function == "score":
-            stream = client.score_stream(
-                question,
-                records,
-                levels=options["levels"],
-                on=on,
-                cancel=cancel,
-            )
-        elif function == "find":
-            stream = client.find_stream(
-                question, records, threshold=cut, on=on, cancel=cancel
-            )
-        elif function == "recognize":
-            stream = client.recognize_stream(
-                records,
-                kinds=question,
-                threshold=cut,
-                on=on,
-                cancel=cancel,
-            )
+            continue
+        projection = case["boundary"] == "question" and "tags" in value
+        if projection:
+            # TagQuestion rejects unknown keywords before entering the library.
+            value = {"entries": {"fixture": {"question": value}}}
+            message = "toolbox.entries.[0]." + message
+        route = "public projection (saved entry)" if projection else "direct"
+        try:
+            if case["boundary"] == "toolbox" or projection:
+                tt.Toolbox.from_json(json.dumps(value))
+            else:
+                admitted(value)
+        except tt.ThinkThenError as error:
+            assert error.code.value == case["code"], case["name"]
+            assert str(error) == message, (case["name"], str(error), message)
+            assert "secret-placeholder" not in str(error)
         else:
-            stream = client.relate_stream(
-                records, rules=question, threshold=cut, on=on, cancel=cancel
-            )
-        with stream:
-            for row in stream:
-                rows.append(row_json(row))
-        return rows
-    except KeyboardInterrupt:
-        return {"error": "local.cancelled"}
-    except tt.ThinkThenError as error:
-        return {"error": error.code}
-    finally:
-        if "expected_rows" in case:
-            assert rows == case["expected_rows"], (rows, case["expected_rows"])
+            raise AssertionError(f"admitted malformed fixture: {case['name']}")
+        print(f"Admission {route}: {case['name']}")
 
 
 def run_all(directory: Path, scratch: Path) -> None:
-    paths = sorted(directory.glob("*.json"))
-    assert paths
-    for path in paths:
-        case = cast(dict[str, Any], json.loads(path.read_text()))
-        toolbox = scratch / "questions.json"
-        request = case["request"]
-        question = request["question"]["value"]
-        if request["function"] != "annotate":
-            question = {request["function"]: question} | request.get("options", {})
-        toolbox.write_text(json.dumps(question))
-        with Loopback(path) as server:
-            os.environ["THINKTHEN_BASE_URL"] = server.url
-            actual = run_case(case, server.url, toolbox)
-            assert actual == case["expected"], (path.name, actual, case["expected"])
-            assert server.count() == case["requests"], path.name
-    print(f"Installed wheel: {len(paths)} shared conformance cases passed")
+    admission_cases(directory.parent if directory.name == "typed" else directory)
+    if not (directory / "manifest.json").exists():
+        directory = directory / "typed"
+    manifest = json.loads((directory / "manifest.json").read_text())
+    count = 0
+    for backend in manifest["backends"]:
+        for filename in manifest["cases"]:
+            path = directory / filename
+            case = json.loads(path.read_text())
+            # Defaults and credential policy remain engine-owned. Keys are synthetic.
+            settings = (
+                manifest["client"]
+                | case.get("client", {})
+                | {"backend": backend, "api_key": "synthetic-loopback-key"}
+            )
+            with Loopback(path) as server:
+                client = tt.Client(
+                    backend=settings["backend"],
+                    api_key=settings["api_key"],
+                    url=server.url,
+                    model=settings["model"],
+                    batch=settings["batch"],
+                )
+                actual: Any = []
+                try:
+                    with request_stream(client, case["request"]) as stream:
+                        for row in stream:
+                            actual.append(row_json(row))
+                except tt.ThinkThenError as error:
+                    assert not actual, (filename, actual)
+                    actual = {"error": error.code.value}
+                assert_expected(actual, case["expected"])
+                for row in actual if isinstance(actual, list) else []:
+                    assert set(row["source"]) == {
+                        "backend",
+                        "model",
+                        "question_identity",
+                    }
+                    assert row["source"]["backend"] == backend
+                    assert row["source"]["model"] == settings["model"]
+                assert server.count() == case["requests"], (backend, filename)
+                count += 1
+    print(f"Installed wheel: {count} canonical backend cases passed")
 
 
 def main(arguments: Iterable[str]) -> None:

@@ -16,7 +16,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-pg-') as temporary:
     subprocess.run(['pg_ctl', '-D', data, '-l', home / 'server.log', '-o', '-k ' + temporary + ' -c listen_addresses=', '-w', 'start'], check=True)
     try:
         env = dict(os.environ, PGHOST=temporary, PGUSER='thinkthen', PGDATABASE='postgres')
-        sql = 'CREATE ROLE application_role;\n' + blocks[0] + '\n' + blocks[1]
+        sql = blocks[0]
         result = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
                                 capture_output=True, env=env, check=True)
         assert '(2 rows)' in result.stdout, result.stdout

@@ -6,84 +6,97 @@
 #include "duckdb/planner/operator/logical_extension_operator.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/execution/physical_plan_generator.hpp"
-#include "thinkthen.h"
+#include "thinkthen_sql.h"
 #include "yyjson.hpp"
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <cmath>
+#include <map>
 
 namespace {
 using namespace duckdb;
 using namespace duckdb_yyjson;
 using ClientOwner = std::shared_ptr<thinkthen_client>;
-using CallOwner = std::unique_ptr<thinkthen_sql_call, decltype(&thinkthen_sql_free)>;
+using CallOwner = std::unique_ptr<thinkthen_sql_call, decltype(&thinkthen_sql_call_free)>;
 struct RowOwner {
     thinkthen_row value{};
+    RowOwner() { value.struct_size = sizeof(value); }
     ~RowOwner() { thinkthen_row_free(&value); }
 };
-struct BufferOwner {
-    thinkthen_buffer value{};
-    ~BufferOwner() { thinkthen_buffer_free(&value); }
+struct ErrorOwner {
+    thinkthen_error value{};
+    ErrorOwner() { value.struct_size = sizeof(value); }
+    ~ErrorOwner() { thinkthen_error_free(&value); }
 };
 using Document = std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)>;
 
 const uint8_t *Bytes(const string &value) { return reinterpret_cast<const uint8_t *>(value.data()); }
 string Text(const thinkthen_buffer &value) { return string(reinterpret_cast<const char *>(value.data), value.len); }
-Document Parse(const thinkthen_buffer &value) {
-    Document doc(yyjson_read(reinterpret_cast<const char *>(value.data), value.len, 0), yyjson_doc_free);
-    if (!doc) throw InvalidInputException("cannot read native result JSON");
-    return doc;
-}
-void Checked(int32_t result, BufferOwner &error) {
+#include "values.hpp"
+void Checked(int32_t result, ErrorOwner &error) {
     if (result != THINKTHEN_ERROR) return;
-    auto doc = Parse(error.value);
-    auto root = yyjson_doc_get_root(doc.get());
-    throw InvalidInputException("%s: %s", yyjson_get_str(yyjson_obj_get(root, "code")),
-                               yyjson_get_str(yyjson_obj_get(root, "message")));
+    auto code = thinkthen_code_name(error.value.code);
+    if (!code) throw InvalidInputException("usage.abi: unknown engine error code");
+    try { Value(code).DefaultCastAs(CodeType()); }
+    catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
+    throw InvalidInputException("%s: %s", code, Text(error.value.message).c_str());
 }
 ClientOwner Client(const string &settings) {
     thinkthen_client *client = nullptr;
-    BufferOwner error;
+    ErrorOwner error;
     Checked(thinkthen_sql_client_open(Bytes(settings), settings.size(), &client, &error.value), error);
     return ClientOwner(client, thinkthen_client_free);
 }
 struct Session : ClientContextState {
     std::mutex mutex;
-    string settings;
+    std::map<string, string> settings;
     ClientOwner client;
     ClientOwner Current() {
         std::lock_guard<std::mutex> lock(mutex);
-        if (!client) { client = Client("{}"); settings = "{}"; }
+        if (!client) client = Client("{}");
         return client;
     }
-    void Configure(string value) {
+    void Configure(const string &key, const Value &value) {
         std::lock_guard<std::mutex> lock(mutex);
-        if (client && settings == value) return;
-        auto replacement = Client(value);
-        settings = std::move(value);
-        client = std::move(replacement);
+        auto replacement = settings;
+        replacement[key] = Encode(value);
+        string json = "{";
+        string retry = "{";
+        for (auto &item : replacement) {
+            auto &target = item.first == "backend" || item.first == "model" || item.first == "batch" ? json : retry;
+            if (target.size() > 1) target += ",";
+            target += Quote(item.first) + ":" + item.second;
+        }
+        if (retry.size() > 1) { if (json.size() > 1) json += ","; json += "\"retry\":" + retry + "}"; }
+        auto admitted = Client(json + "}");
+        settings = std::move(replacement); client = std::move(admitted);
     }
 };
-void Configure(ClientContext &context, SetScope scope, Value &value) {
-    if (scope == SetScope::GLOBAL) throw InvalidInputException("thinkthen_settings is session-only");
-    if (value.IsNull()) throw InvalidInputException("thinkthen_settings must be client-settings JSON");
-    auto session = context.registered_state->GetOrCreate<Session>("thinkthen");
-    session->Configure(value.GetValue<string>());
+template <int Option> void Configure(ClientContext &context, SetScope scope, Value &value) {
+    static const char *keys[] = {"backend", "model", "batch", "max_retries", "initial_backoff_ms", "attempt_timeout_ms"};
+    if (scope == SetScope::GLOBAL) throw InvalidInputException("ThinkThen settings are session-only");
+    if (value.IsNull()) throw InvalidInputException("usage.settings: ThinkThen settings cannot be SQL NULL");
+    context.registered_state->GetOrCreate<Session>("thinkthen")->Configure(keys[Option], value);
 }
+using QuestionOwner = std::shared_ptr<thinkthen_question>;
 struct Binding : FunctionData {
-    string function, question, options;
-    bool json;
-    Binding(string function_p, string question_p, string options_p, bool json_p)
-        : function(std::move(function_p)), question(std::move(question_p)), options(std::move(options_p)), json(json_p) {}
-    unique_ptr<FunctionData> Copy() const override { return make_uniq<Binding>(function, question, options, json); }
+    string function, identity, name;
+    bool json, has_name = false;
+    idx_t record;
+    vector<LogicalType> types;
+    QuestionOwner question;
+    unique_ptr<FunctionData> Copy() const override { return make_uniq<Binding>(*this); }
     bool Equals(const FunctionData &other) const override {
         auto &value = other.Cast<Binding>();
-        return function == value.function && question == value.question && options == value.options && json == value.json;
+        return identity == value.identity && json == value.json && record == value.record && types == value.types;
     }
 };
 struct Invocation : LocalTableFunctionState {
-    CallOwner call{nullptr, thinkthen_sql_free};
+    CallOwner call{nullptr, thinkthen_sql_call_free};
     bool submitted = false, ended = false;
+    uint64_t position = 0;
+    std::map<uint64_t, vector<Value>> retained;
 };
 unique_ptr<LocalTableFunctionState> Init(ExecutionContext &context, TableFunctionInitInput &input,
                                        GlobalTableFunctionState *) {
@@ -91,9 +104,9 @@ unique_ptr<LocalTableFunctionState> Init(ExecutionContext &context, TableFunctio
     auto client = context.client.registered_state->GetOrCreate<Session>("thinkthen")->Current();
     auto state = make_uniq<Invocation>();
     thinkthen_sql_call *call = nullptr;
-    BufferOwner error;
-    Checked(thinkthen_sql_open(client.get(), Bytes(bind.function), bind.function.size(), Bytes(bind.question),
-                              bind.question.size(), Bytes(bind.options), bind.options.size(), &call, &error.value), error);
+    ErrorOwner error;
+    thinkthen_text name{Bytes(bind.name), bind.name.size()};
+    Checked(thinkthen_sql_call_open_question(client.get(), bind.question.get(), bind.has_name ? &name : nullptr, &call, &error.value), error);
     state->call.reset(call);
     return state;
 }
@@ -101,27 +114,36 @@ uint8_t Interrupted(void *context) { return static_cast<ClientContext *>(context
 void CheckInterrupt(ClientContext &context, Invocation &state) {
     if (context.interrupted) { state.call.reset(); throw InterruptException(); }
 }
-Value Json(yyjson_val *value) {
-    if (!value) return Value(LogicalType::JSON());
-    std::unique_ptr<char, decltype(&std::free)> bytes(yyjson_val_write(value, 0, nullptr), std::free);
-    if (!bytes) throw std::bad_alloc();
-    return Value(string(bytes.get())).DefaultCastAs(LogicalType::JSON());
-}
-void Emit(DataChunk &output, idx_t index, const thinkthen_row &row) {
-    auto doc = Parse(row.fields);
-    auto root = yyjson_doc_get_root(doc.get());
-    output.SetValue(0, index, Value::UBIGINT(row.position));
-    output.SetValue(1, index, Value(yyjson_get_str(yyjson_obj_get(root, "status"))));
-    output.SetValue(2, index, Json(yyjson_obj_get(root, "answer")));
-    auto probability = yyjson_obj_get(root, "p");
-    output.SetValue(3, index, probability ? Value::DOUBLE(yyjson_get_num(probability)) : Value(LogicalType::DOUBLE));
-    output.SetValue(4, index, Json(yyjson_obj_get(root, "error")));
-    output.SetValue(5, index, row.detail.data ? Value(Text(row.detail)).DefaultCastAs(LogicalType::JSON()) : Value(LogicalType::JSON()));
-    output.SetValue(6, index, Value::BOOLEAN(row.kept != 0));
+void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &state, const Binding &bind) {
+    auto original = state.retained.find(row.position);
+    if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
+    idx_t col = 0;
+    for (auto &value : original->second) output.SetValue(col++, index, value);
+    state.retained.erase(original);
+    auto put = [&](Value value) { output.SetValue(col++, index, value); };
+    put(Value::UBIGINT(row.position));
+    put(Project(LogicalType::JSON(), row.id));
+    const char *status = row.status == THINKTHEN_STATUS_ANSWERED ? "answered" : row.status == THINKTHEN_STATUS_UNSURE ? "unsure" : row.status == THINKTHEN_STATUS_FAILED ? "failed" : nullptr;
+    if (!status) throw InvalidInputException("usage.abi: unknown engine status");
+    put(Value(status).DefaultCastAs(StatusType()));
+    put(std::isnan(row.probability) ? Value(LogicalTypeId::DOUBLE) : Value::DOUBLE(row.probability));
+    if (row.error_code) {
+        auto code = thinkthen_code_name(row.error_code);
+        try { put(Value(code).DefaultCastAs(CodeType())); }
+        catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
+    } else put(Value(CodeType()));
+    auto error = row.error.data ? Parse(Text(row.error)) : Document(nullptr, yyjson_doc_free);
+    auto root = error ? yyjson_doc_get_root(error.get()) : nullptr;
+    put(Project(LogicalTypeId::VARCHAR, root ? yyjson_obj_get(root, "message") : nullptr));
+    put(Project(LogicalTypeId::BIGINT, root ? yyjson_obj_get(root, "http_status") : nullptr));
+    put(Project(SourceType(), row.source));
+    put(Project(bind.types[col], row.detail));
+    put(Project(bind.types[col], row.answer));
+    if (bind.function == "filter") put(Value::BOOLEAN(row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0));
 }
 int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row) {
-    BufferOwner error;
-    auto result = thinkthen_sql_poll(state.call.get(), 20, Interrupted, &context, &row.value, &error.value);
+    ErrorOwner error;
+    auto result = thinkthen_sql_call_poll(state.call.get(), 20, Interrupted, &context, &row.value, &error.value);
     CheckInterrupt(context, state);
     Checked(result, error);
     return result;
@@ -133,23 +155,26 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row);
-        if (result == THINKTHEN_OK) Emit(output, count++, row.value);
+        if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
         else if (result == THINKTHEN_NEEDS_INPUT) {
             if (state.submitted) { state.submitted = false; output.SetCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
             vector<string> values;
             values.reserve(input.size());
-            vector<thinkthen_sql_record> records;
+            vector<thinkthen_sql_input> records;
             records.reserve(input.size());
             for (idx_t i = 0; i < input.size(); ++i) {
                 CheckInterrupt(context.client, state);
-                auto value = input.GetValue(0, i);
-                if (value.IsNull()) throw InvalidInputException("source record cannot be SQL NULL");
+                vector<Value> retained;
+                for (idx_t column = 0; column < input.ColumnCount(); ++column) retained.push_back(input.GetValue(column, i));
+                auto value = retained[bind.record];
+                state.retained.emplace(++state.position, std::move(retained));
+                if (value.IsNull()) { records.push_back({THINKTHEN_RECORD_MISSING, nullptr, 0}); continue; }
                 values.push_back(value.GetValue<string>());
-                records.push_back({bind.json ? THINKTHEN_SQL_JSON : THINKTHEN_SQL_TEXT,
+                records.push_back({bind.json ? THINKTHEN_RECORD_JSON : THINKTHEN_RECORD_TEXT,
                                    Bytes(values.back()), values.back().size()});
             }
-            BufferOwner error;
-            Checked(thinkthen_sql_send_chunk(state.call.get(), records.data(), records.size(), &error.value), error);
+            ErrorOwner error;
+            Checked(thinkthen_sql_call_send_chunk(state.call.get(), records.data(), records.size(), &error.value), error);
             state.submitted = true;
         } else if (result == THINKTHEN_END) {
             output.SetCardinality(count); return OperatorResultType::FINISHED;
@@ -160,12 +185,13 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
 }
 OperatorFinalizeResultType Final(ExecutionContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = data.local_state->Cast<Invocation>();
-    if (!state.ended) { thinkthen_sql_end_input(state.call.get()); state.ended = true; }
+    auto &bind = data.bind_data->Cast<Binding>();
+    if (!state.ended) { thinkthen_sql_call_end_input(state.call.get()); state.ended = true; }
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row);
-        if (result == THINKTHEN_OK) Emit(output, count++, row.value);
+        if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
         else if (result == THINKTHEN_END) {
             output.SetCardinality(count); return OperatorFinalizeResultType::FINISHED;
         }
@@ -192,39 +218,7 @@ struct LogicalSequential : LogicalExtensionOperator {
         auto &op = planner.Make<Sequential>(types); op.children.push_back(child); return op;
     }
 };
-unique_ptr<LogicalOperator> Bind(ClientContext &, TableFunctionBindInput &input, idx_t index, vector<string> &names) {
-    if (input.input_table_types.size() != 1 || !StringUtil::CIEquals(input.input_table_names[0], "record") ||
-        input.input_table_types[0].id() != LogicalTypeId::VARCHAR) {
-        throw BinderException("ThinkThen input must have one VARCHAR or JSON column named record");
-    }
-    if (input.inputs[1].IsNull()) throw BinderException("ThinkThen question cannot be SQL NULL");
-    string options = "{}";
-    auto option = input.named_parameters.find("options");
-    if (option != input.named_parameters.end()) {
-        if (option->second.IsNull()) throw BinderException("ThinkThen options cannot be SQL NULL");
-        options = option->second.GetValue<string>();
-    }
-    auto bind = make_uniq<Binding>(input.table_function.name.substr(10), input.inputs[1].GetValue<string>(),
-                                 options, input.input_table_types[0] == LogicalType::JSON());
-    names = {"position", "status", "answer", "p", "error", "detail", "kept"};
-    vector<LogicalType> types{LogicalType::UBIGINT, LogicalType::VARCHAR, LogicalType::JSON(), LogicalType::DOUBLE,
-                              LogicalType::JSON(), LogicalType::JSON(), LogicalType::BOOLEAN};
-    auto fn = input.table_function; fn.bind_operator = nullptr;
-    auto get = make_uniq<LogicalGet>(index, std::move(fn), std::move(bind), types, names);
-    get->input_table_types = input.input_table_types; get->input_table_names = input.input_table_names;
-    for (idx_t i = 0; i < types.size(); ++i) get->AddColumnId(i);
-    return make_uniq<LogicalSequential>(std::move(get));
-}
-void Load(ExtensionLoader &loader) {
-    DBConfig::GetConfig(loader.GetDatabaseInstance()).AddExtensionOption("thinkthen_settings", "ThinkThen client settings",
-        LogicalType::VARCHAR, Value("{}"), Configure, SetScope::SESSION);
-    for (auto function : {"decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"}) {
-        TableFunction fn(string("thinkthen_") + function, {LogicalType::TABLE, LogicalType::VARCHAR}, nullptr);
-        fn.named_parameters["options"] = LogicalType::VARCHAR;
-        fn.bind_operator = Bind; fn.init_local = Init; fn.in_out_function = Run; fn.in_out_function_final = Final;
-        loader.RegisterFunction(std::move(fn));
-    }
-}
+#include "binding.hpp"
 } // namespace
 extern "C" {
 DUCKDB_CPP_EXTENSION_ENTRY(thinkthen, loader) { Load(loader); }

@@ -1,65 +1,40 @@
-//! Counted foreign views over the single shared SQL host.
+//! Counted foreign views over the single canonical SQL driver.
 #![allow(
     unsafe_code,
-    reason = "SQL exports borrow counted C inputs and publish owned handles"
+    reason = "SQL borrows counted views and publishes owned sized outputs"
 )]
-
-use std::ffi::c_void;
-use std::time::Duration;
-
-use crate::exports::operation;
-use crate::memory::text;
-use crate::{Buffer, ClientHandle, HostRow};
-use thinkthen::{Error, ErrorKind};
+use crate::{ClientHandle, HostError, HostRow, QuestionHandle, builders::TextView};
+use crate::{
+    exports::{END, NEEDS_INPUT, OK, operation},
+    memory::{bytes, row_size, text},
+};
+use std::{ffi::c_void, ptr, time::Duration};
+use thinkthen::{Request, native};
 use thinkthen_sql::{SqlCall, SqlEvent, SqlRecord};
-
-/// Statement-owned SQL host; no database pointer is retained.
+/// No event arrived during this bounded SQL wait.
+pub const THINKTHEN_PENDING: i32 = 3;
+/// One statement's driver; no database handle enters the engine.
 #[derive(Debug)]
-pub struct SqlHandle(SqlCall);
-
-/// Borrowed UTF-8 record bytes copied by chunk submission.
-#[derive(Debug)]
+pub struct SqlHandle {
+    call: SqlCall,
+    error_reported: bool,
+}
+/// Counted input copied before a database cursor advances.
 #[repr(C)]
+#[derive(Debug)]
 pub struct SqlInput {
-    /// Zero for raw text, one for structured JSON.
+    /// Generated record kind; missing and invalid need no byte view.
     pub kind: u32,
-    /// Readable bytes for `len`, or NULL at zero length.
+    /// Readable bytes, or NULL at zero length.
     pub data: *const u8,
-    /// Byte length, without a terminating NUL.
+    /// Byte length without a terminator.
     pub len: usize,
 }
-
-/// Read a native interrupt flag without throwing or calling the driver.
+/// Read native interrupt state without throwing, unwinding or reentering.
 pub type InterruptProbe = Option<unsafe extern "C" fn(*mut c_void) -> u8>;
-
-/// Admit SQL settings before resolving process-owned backend configuration.
+/// Admit SQL settings and optional administrator policy before resolving keys.
 /// # Safety
-/// Settings are counted readable bytes; out and error are distinct writable
-/// empty slots. Input is admitted before return, and no foreign view is retained.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_client_open(
-    settings: *const u8,
-    len: usize,
-    out: *mut *mut ClientHandle,
-    error: *mut Buffer,
-) -> i32 {
-    // SAFETY: required output is exclusive and owns no client.
-    unsafe { out.write(std::ptr::null_mut()) };
-    // SAFETY: counted settings and output slots remain valid through return.
-    unsafe {
-        operation(error, || {
-            let client =
-                thinkthen_sql::client(text(settings, len)?, |name| std::env::var(name).ok())?;
-            out.write(Box::into_raw(Box::new(ClientHandle(client))));
-            Ok(0)
-        })
-    }
-}
-
-/// Admit SQL settings under an administrator's backend/model policy.
-/// # Safety
-/// Counted inputs are readable; out and error are distinct writable empty slots.
-/// A NULL policy with zero length selects the default-only policy.
+/// Counted inputs are readable; out/error are distinct empty writable slots.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
     settings: *const u8,
@@ -67,78 +42,178 @@ pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
     allowed: *const u8,
     allowed_len: usize,
     out: *mut *mut ClientHandle,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: required output is exclusive and owns no client.
-    unsafe { out.write(std::ptr::null_mut()) };
-    // SAFETY: counted inputs and output slots remain valid through return.
+    // SAFETY: caller lends counted inputs and exclusive supported outputs.
     unsafe {
         operation(error, || {
-            let allowed = if allowed.is_null() && allowed_len == 0 {
+            out.write(ptr::null_mut());
+            let policy = if allowed.is_null() && allowed_len == 0 {
                 None
             } else {
                 Some(text(allowed, allowed_len)?)
             };
-            let client =
-                thinkthen_sql::client_with_policy(text(settings, len)?, allowed, |name| {
-                    std::env::var(name).ok()
-                })?;
-            out.write(Box::into_raw(Box::new(ClientHandle(client))));
-            Ok(0)
+            let engine = thinkthen_sql::client_with_policy(text(settings, len)?, policy, |name| {
+                std::env::var(name).ok()
+            })?;
+            out.write(Box::into_raw(Box::new(ClientHandle(engine))));
+            Ok(OK)
         })
     }
 }
-
-/// Admit native SQL arguments using the shared shorthand and request grammar.
+/// Admit SQL settings without an administrator backend/model restriction.
 /// # Safety
-/// Inputs are readable counted bytes; client is live; output slots are distinct,
-/// writable and empty. All bytes are copied or admitted before return.
+/// Counted settings are readable; out/error are distinct empty writable slots.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_open(
-    client: *const ClientHandle,
-    function: *const u8,
-    function_len: usize,
-    question: *const u8,
-    question_len: usize,
-    options: *const u8,
-    options_len: usize,
-    out: *mut *mut SqlHandle,
-    error: *mut Buffer,
+pub unsafe extern "C" fn thinkthen_sql_client_open(
+    settings: *const u8,
+    len: usize,
+    out: *mut *mut ClientHandle,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: the required output slot is exclusive and owns no call.
-    unsafe { out.write(std::ptr::null_mut()) };
-    // SAFETY: the host retains the client and all counted inputs through return.
+    // SAFETY: caller lends counted inputs and exclusive supported outputs.
     unsafe {
         operation(error, || {
-            let options = if options.is_null() && options_len == 0 {
-                None
-            } else {
-                Some(text(options, options_len)?)
-            };
-            let request = thinkthen_sql::request(
-                text(function, function_len)?,
-                text(question, question_len)?,
-                options,
-            )?;
-            let call = SqlCall::open(&(*client).0, &request)?;
-            out.write(Box::into_raw(Box::new(SqlHandle(call))));
-            Ok(0)
+            out.write(ptr::null_mut());
+            let engine =
+                thinkthen_sql::client(text(settings, len)?, |name| std::env::var(name).ok())?;
+            out.write(Box::into_raw(Box::new(ClientHandle(engine))));
+            Ok(OK)
         })
     }
 }
-
-/// Copy one current chunk after the host requested input.
+/// Open a SQL call from a copied typed question snapshot.
 /// # Safety
-/// The sole driver owns the live call and error slot. The array and its counted
-/// byte views are readable for this operation; NULL is allowed for zero count.
+/// Handles are live; output/error are distinct empty writable slots.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_send_chunk(
+pub unsafe extern "C" fn thinkthen_sql_call_open_question(
+    client: *const ClientHandle,
+    question: *const QuestionHandle,
+    name: *const TextView,
+    out: *mut *mut SqlHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: caller retains all handles and grants exclusive outputs.
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let mut request = Request::new((*question).0.build()?);
+            if !name.is_null() {
+                request = request.named(text((*name).data, (*name).len)?)?;
+            }
+            out.write(Box::into_raw(Box::new(SqlHandle {
+                call: SqlCall::open(&(*client).0, &request)?,
+                error_reported: false,
+            })));
+            Ok(OK)
+        })
+    }
+}
+/// Admit a structured SQL question with the shared per-function contract.
+/// This consumes a question value, never a settings envelope or file reference.
+/// # Safety
+/// Counted input is readable; output/error are distinct empty writable slots.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_question_from_json(
+    data: *const u8,
+    len: usize,
+    out: *mut *mut QuestionHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: caller lends the complete input and exclusive outputs until return.
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let question = native::sql_question(text(data, len)?)?;
+            out.write(Box::into_raw(Box::new(QuestionHandle(
+                native::QuestionBuilder::snapshot(&question),
+            ))));
+            Ok(OK)
+        })
+    }
+}
+/// Admit SQL's optional cut or paired band without overriding conflicting inputs.
+/// # Safety
+/// Builder/error are exclusive; each non-NULL number pointer is readable.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_question_set_threshold(
+    question: *mut QuestionHandle,
+    cut: *const f64,
+    low: *const f64,
+    high: *const f64,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the caller grants a live builder and readable optional number views.
+    unsafe {
+        operation(error, || {
+            native::sql_threshold(
+                &mut (*question).0,
+                cut.as_ref().copied(),
+                low.as_ref().copied(),
+                high.as_ref().copied(),
+            )?;
+            Ok(OK)
+        })
+    }
+}
+/// Open an explicit canonical JSON request without an argument translation layer.
+/// # Safety
+/// Client/input remain live; output/error are distinct empty writable slots.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_open_json(
+    client: *const ClientHandle,
+    data: *const u8,
+    len: usize,
+    out: *mut *mut SqlHandle,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: caller lends counted input and exclusive outputs.
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let request = Request::from_json(text(data, len)?)?;
+            out.write(Box::into_raw(Box::new(SqlHandle {
+                call: SqlCall::open(&(*client).0, &request)?,
+                error_reported: false,
+            })));
+            Ok(OK)
+        })
+    }
+}
+/// Copy one current chunk after NEEDS_INPUT. Bad host text becomes a failed row.
+/// # Safety
+/// The sole driver owns call/error. The array lends count readable records.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_send_chunk(
     call: *mut SqlHandle,
     records: *const SqlInput,
     count: usize,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: all foreign extents live through this synchronous operation.
+    // SAFETY: the driver retains every borrowed view for the shared send operation.
+    unsafe { send_chunk(call, records, count, error, false) }
+}
+/// Send PostgreSQL input with shared zero-byte JSON representation admission.
+/// # Safety
+/// The sole driver owns the call/error and borrows count readable input records.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_send_chunk_postgres(
+    call: *mut SqlHandle,
+    records: *const SqlInput,
+    count: usize,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the driver retains every borrowed view for the shared send operation.
+    unsafe { send_chunk(call, records, count, error, true) }
+}
+unsafe fn send_chunk(
+    call: *mut SqlHandle,
+    records: *const SqlInput,
+    count: usize,
+    error: *mut HostError,
+    postgres: bool,
+) -> i32 {
+    // SAFETY: caller lends every counted view through this operation.
     unsafe {
         operation(error, || {
             let records = if count == 0 {
@@ -149,73 +224,172 @@ pub unsafe extern "C" fn thinkthen_sql_send_chunk(
             let chunk = records
                 .iter()
                 .map(|record| {
-                    let value = text(record.data, record.len)?.to_owned();
-                    match record.kind {
-                        0 => Ok(SqlRecord::Text(value)),
-                        1 => Ok(SqlRecord::Json(value)),
-                        _ => Err(Error::new(ErrorKind::Record, "invalid SQL record kind")),
+                    use thinkthen::records::RecordKind;
+                    match RecordKind::from_abi(record.kind) {
+                        Some(RecordKind::Missing) => Ok(SqlRecord::Missing),
+                        Some(RecordKind::Invalid) => Ok(SqlRecord::Invalid),
+                        Some(RecordKind::Text) => {
+                            Ok(match std::str::from_utf8(bytes(record.data, record.len)) {
+                                Ok(text) => SqlRecord::Text(text.to_owned()),
+                                Err(_) => SqlRecord::Invalid,
+                            })
+                        }
+                        Some(RecordKind::Json) => {
+                            Ok(match std::str::from_utf8(bytes(record.data, record.len)) {
+                                Ok(text) if postgres => SqlRecord::PostgresJson(text.to_owned()),
+                                Ok(text) => SqlRecord::Json(text.to_owned()),
+                                Err(_) => SqlRecord::Invalid,
+                            })
+                        }
+                        _ => Err(native::abi_error()),
                     }
                 })
-                .collect::<Result<Vec<_>, Error>>()?;
-            (*call).0.send_chunk(chunk)?;
-            Ok(0)
+                .collect::<Result<Vec<_>, _>>()?;
+            (*call).call.send_chunk(chunk)?;
+            Ok(OK)
         })
     }
 }
-
-/// Close the source; only this operation ends input and flushes its final batch.
+/// End the source and flush its final partial batch.
 /// # Safety
-/// The sole driver owns the live call, with no operation or free concurrent.
+/// The sole driver owns a live call with no concurrent free.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_end_input(call: *mut SqlHandle) {
-    // SAFETY: the host grants the driver exclusive call access.
-    unsafe { (*call).0.end_input() };
+pub unsafe extern "C" fn thinkthen_sql_call_end_input(call: *mut SqlHandle) {
+    // SAFETY: caller grants exclusive access.
+    unsafe { (*call).call.end_input() };
 }
-
-/// Poll one SQL host event and probe interruption on this execution thread.
+/// Poll on the database thread and probe interruption around the wait.
 /// # Safety
-/// The sole driver owns call and distinct empty outputs. The optional probe and
-/// context live through return and cannot throw, unwind, longjmp or reenter.
+/// The sole driver owns call, sized row/error and optional callback context.
+/// The probe cannot throw, unwind, longjmp or reenter.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_poll(
+pub unsafe extern "C" fn thinkthen_sql_call_poll(
     call: *mut SqlHandle,
     timeout_ms: u32,
     interrupted: InterruptProbe,
     context: *mut c_void,
     out: *mut HostRow,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: the row slot is exclusive writable storage with no live row.
-    unsafe { out.write(HostRow::default()) };
-    // SAFETY: only this driver accesses the call and invokes the caller's probe.
+    // SAFETY: the caller grants the same ownership as the shared polling operation.
+    unsafe { poll(call, timeout_ms, interrupted, context, out, error, false) }
+}
+/// Poll a PostgreSQL row after shared zero-byte representation admission.
+/// # Safety
+/// The sole driver owns call and supported row/error outputs and borrows the probe.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_poll_postgres(
+    call: *mut SqlHandle,
+    timeout_ms: u32,
+    interrupted: InterruptProbe,
+    context: *mut c_void,
+    out: *mut HostRow,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the caller grants the same ownership as the shared polling operation.
+    unsafe { poll(call, timeout_ms, interrupted, context, out, error, true) }
+}
+unsafe fn poll(
+    call: *mut SqlHandle,
+    timeout_ms: u32,
+    interrupted: InterruptProbe,
+    context: *mut c_void,
+    out: *mut HostRow,
+    error: *mut HostError,
+    postgres: bool,
+) -> i32 {
+    // SAFETY: supported sizes precede any writes or driver work.
     unsafe {
         operation(error, || {
-            let call = &mut (*call).0;
-            let event = call.poll(Duration::from_millis(u64::from(timeout_ms)), || {
+            let size = row_size(out)?;
+            out.write(HostRow::empty(size));
+            let handle = &mut *call;
+            let call = &mut handle.call;
+            match call.poll(Duration::from_millis(u64::from(timeout_ms)), || {
                 interrupted.is_some_and(|probe| probe(context) != 0)
-            })?;
-            match event {
-                Some(SqlEvent::NeedsChunk) => Ok(2),
+            })? {
+                Some(SqlEvent::NeedsChunk) => Ok(NEEDS_INPUT),
                 Some(SqlEvent::Row(row)) => {
-                    out.write(row.into());
-                    Ok(0)
+                    let row = if postgres {
+                        native::sql_postgres_row(row)?
+                    } else {
+                        row
+                    };
+                    out.write(HostRow::from_row(size, row)?);
+                    Ok(OK)
                 }
                 Some(SqlEvent::Finished) => {
-                    call.final_error().map_or(Ok(1), |error| Err(error.clone()))
+                    if handle.error_reported {
+                        return Ok(END);
+                    }
+                    handle.error_reported = true;
+                    call.final_error()
+                        .map_or(Ok(END), |error| Err(error.clone()))
                 }
-                None => Ok(3),
+                None => Ok(THINKTHEN_PENDING),
             }
         })
     }
 }
-
-/// Cancel and release without joining an unfinished engine worker.
+/// Copy a selected PostgreSQL id, or replace an unrepresentable id with a failed row.
+/// A NULL view preserves the engine id; a present JSON null remains an explicit id.
 /// # Safety
-/// NULL or a unique live owner after all driver operations have returned.
+/// Row/error are live exclusive supported outputs; an optional id view is readable.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_sql_free(call: *mut SqlHandle) {
+pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
+    row: *mut HostRow,
+    id: *const TextView,
+    error: *mut HostError,
+) -> i32 {
+    // SAFETY: the caller owns the row and lends its optional selected JSON value.
+    unsafe {
+        operation(error, || {
+            row_size(row)?;
+            if id.is_null() {
+                return Ok(OK);
+            }
+            let value = text((*id).data, (*id).len)?;
+            let failure = native::sql_postgres_id_error(value)?;
+            let row = &mut *row;
+            row.id.release();
+            if let Some(failure) = failure {
+                row.answer.release();
+                row.detail.release();
+                row.error.release();
+                row.status = thinkthen::results::Status::Failed.abi();
+                row.error_code = failure.code().abi();
+                row.probability = f64::NAN;
+                row.answer_bool = 0;
+                row.rank = 0;
+                row.number = 0.0;
+                row.error = crate::Buffer::new(
+                    serde_json::to_string(&failure).map_err(|_| native::internal_error())?,
+                );
+            } else {
+                row.id = crate::Buffer::new(value.to_owned());
+            }
+            Ok(OK)
+        })
+    }
+}
+/// Cancel and free without joining the backend worker.
+/// # Safety
+/// NULL or a unique live owner after driver operations finish.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
     if !call.is_null() {
-        // SAFETY: the host transfers its unique allocation after active readers.
+        // SAFETY: caller transfers this unique allocation.
         drop(unsafe { Box::from_raw(call) });
+    }
+}
+
+/// Request cancellation on the statement's owning database thread.
+/// # Safety
+/// The sole driver owns the live call with no concurrent operation or free.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_sql_call_cancel(call: *mut SqlHandle) {
+    // SAFETY: caller retains the live statement handle.
+    unsafe {
+        (*call).call.cancel();
     }
 }

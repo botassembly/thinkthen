@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import io.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: ToolboxRejectsNestedAnnotate. This expression must fail after the positive consumer compiles.
+suspend fun rejectedToolboxRejectsNestedAnnotate(client: ThinkThen) {
+    Toolbox(mapOf("nested" to Annotate(AnnotationQuestions(mapOf("ready" to Decide("Ready?"))))))
+}

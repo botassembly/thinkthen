@@ -3,10 +3,15 @@
 
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Engine, Key, Recognize, Record, Relate, RelationRule};
+use thinkthen::{BackendName, Engine, Key, Recognize, Record, Relate, RelationRule, Settings};
 
 fn engine(server: &Loopback) -> Engine {
-    Engine::new(Backend::new(server.base(), Key::new(KEY).unwrap(), "test"))
+    Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .model("test")
+        .engine(|_| None)
+        .unwrap()
 }
 
 fn single() -> Value {
@@ -17,15 +22,20 @@ fn single() -> Value {
 fn a_long_recognition_round_keeps_every_name_in_text_order() {
     let words: Vec<_> = (0..2000).map(|n| format!("Name{n}")).collect();
     let text = words.join(" ");
-    let server = Loopback::answering(|_| single()).unwrap();
+    let server = Loopback::answering(|q| {
+        if q["criteria"].get("BEGIN").is_some() {
+            single()
+        } else {
+            json!({"type":"choice","probabilities":{"ENTITY":1.0,"none of these":0.0}})
+        }
+    })
+    .unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
-            &Recognize::new(Vec::<String>::new()).unwrap(),
-            [Record::text(&text)],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap();
+        .rows(&Recognize::new(["ENTITY"]).unwrap(), [Record::text(&text)])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["status"], "answered");
     let names = rows[0]["answer"].as_array().unwrap();
@@ -34,7 +44,7 @@ fn a_long_recognition_round_keeps_every_name_in_text_order() {
     for (name, word) in names.iter().zip(words) {
         assert_eq!(
             name,
-            &json!({"text":word,"start":offset,"end":offset+word.len(),"kind":"ENTITY","p":1.})
+            &json!({"text":word,"start":offset,"end":offset+word.len(),"kind":"ENTITY","probability":1.})
         );
         offset += word.len() + 1;
     }
@@ -66,10 +76,10 @@ fn a_pair_round_spanning_two_requests_keeps_every_relation() {
     .unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(&question, [Record::text(words.join(" "))], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap();
+        .rows(&question, [Record::text(words.join(" "))])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows[0]["status"], "answered");
     let relations = rows[0]["answer"].as_array().unwrap();
     let expected: Vec<_> = words
@@ -85,7 +95,7 @@ fn a_pair_round_spanning_two_requests_keeps_every_relation() {
         .iter()
         .map(|relation| {
             assert_eq!(relation["relation"], "knows");
-            assert_eq!(relation["p"], 0.9);
+            assert_eq!(relation["probability"], 0.9);
             (
                 relation["source"]["text"].as_str().unwrap(),
                 relation["target"]["text"].as_str().unwrap(),
@@ -115,11 +125,11 @@ fn one_oversized_ask_fails_its_row_before_the_round_sends() {
         thinkthen::Tag::new("What applies?", ["short".to_owned(), "x".repeat(96_000)]).unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(&question, [Record::text("one")], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap_err();
-    assert_eq!(rows[0]["error"]["code"], "backend.limit");
+        .rows(&question, [Record::text("one")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+    assert_eq!(rows[0]["error"]["code"], "record.too-large");
     assert_eq!(server.count(), 0);
 }
 
@@ -132,12 +142,10 @@ fn a_failed_fragment_fails_its_record_after_collecting_the_round() {
         .join(" ");
     let mut rows = Vec::new();
     engine(&server)
-        .call(
-            &Recognize::new(Vec::<String>::new()).unwrap(),
-            [Record::text(text)],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap_err();
+        .rows(&Recognize::new(["ENTITY"]).unwrap(), [Record::text(text)])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["error"]["code"], "backend.status");
     assert!(server.count() > 1);
@@ -152,14 +160,19 @@ fn one_records_labels_span_the_adapters_question_limit() {
     }).unwrap();
     let labels: Vec<_> = (0..401).map(|n| format!("label{n}")).collect();
     let question = thinkthen::Tag::new("What applies?", labels.clone()).unwrap();
-    let backend = Backend::new(server.base(), Key::new(KEY).unwrap(), "test")
-        .adapter(thinkthen::Adapter::OpenAi);
-    let mut rows = Vec::new();
-    Engine::new(backend)
-        .call(&question, [Record::text("one")], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
+    let engine = Settings::default()
+        .with_backend(BackendName::OpenAi)
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .model("test")
+        .engine(|_| None)
         .unwrap();
+    let mut rows = Vec::new();
+    engine
+        .rows(&question, [Record::text("one")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows[0]["status"], "answered");
     assert_eq!(rows[0]["answer"], json!(labels));
     let sizes: Vec<_> = server
@@ -177,34 +190,12 @@ fn one_records_labels_span_the_adapters_question_limit() {
 
 #[test]
 fn an_omitted_request_reply_fails_instead_of_reading_incomplete_answers() {
-    use std::num::NonZeroUsize;
-    use thinkthen::core::{Adapter, Decide, NextRound, Packer};
-
-    let question = Decide::new("Is it relevant?").unwrap();
-    let batch = NonZeroUsize::new(1).unwrap();
-    let mut packer = Packer::new(
-        &question,
-        Adapter::SystemOne,
-        "local",
-        "test",
-        batch,
-        thinkthen::Limits {
-            request_bytes: NonZeroUsize::new(96_000).unwrap(),
-            questions: None,
-            options: NonZeroUsize::new(255),
-        },
-    );
-    assert!(packer.push(Record::text("evidence")).is_none());
-    let chunk = packer.finish().unwrap();
-    assert_eq!(chunk.requests().len(), 1);
-    let rounds = chunk.advance(Vec::new(), "local", batch);
-    assert_eq!(rounds.len(), 1);
-    let NextRound::Ready(rows) = &rounds[0] else {
-        panic!("an omitted reply must finish with a failure");
-    };
-    assert_eq!(rows.len(), 1);
-    let row = serde_json::to_value(&rows[0]).unwrap();
-    assert_eq!(row["status"], "failed");
-    assert_eq!(row["error"]["code"], "backend.reply");
-    assert!(row.get("answer").is_none());
+    let server = Loopback::start(|_| Reply::json(200, &json!({"answers":{}}))).unwrap();
+    let question = thinkthen::Decide::new("Is it relevant?").unwrap();
+    let row = engine(&server)
+        .run(&question, Record::text("evidence"))
+        .unwrap();
+    assert_eq!(row.error().unwrap().code().as_str(), "backend.reply");
+    assert_eq!(server.count(), 1);
+    assert!(serde_json::to_value(row).unwrap().get("answer").is_none());
 }

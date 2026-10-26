@@ -5,7 +5,7 @@ use std::process::Command;
 
 use loopback::{KEY, Loopback, Reply, UnavailableBackend};
 use serde_json::json;
-use thinkthen::{Backend, Decide, Engine, Key, Outcome, Record};
+use thinkthen::{Decide, Key, Outcome, Record, Settings};
 
 #[test]
 fn local_plain_http_bypasses_environment_proxies() {
@@ -59,16 +59,21 @@ fn proxy_child_call() {
         return;
     };
     let answered = std::env::var("THINKTHEN_TEST_ANSWERED").unwrap() == "true";
-    let backend = Backend::new(url, Key::new(KEY).unwrap(), "model");
-    let mut count = 0;
-    let result = Engine::new(backend).call(
-        &Decide::new("Ready?").unwrap(),
-        [Record::text("evidence")],
-        |row| {
-            count += 1;
-            assert_eq!(matches!(row.outcome(), Outcome::Answered { .. }), answered);
-        },
+    let engine = Settings::default()
+        .url(url)
+        .api_key(Key::new(KEY).unwrap())
+        .model("model")
+        .engine(|_| None)
+        .unwrap();
+    let rows = engine
+        .rows(&Decide::new("Ready?").unwrap(), [Record::text("evidence")])
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        matches!(rows[0].outcome(), Outcome::Answered { .. }),
+        answered
     );
-    assert_eq!(result.is_ok(), answered);
-    assert_eq!(count, 1);
+    assert_eq!(rows[0].error().is_none(), answered);
 }

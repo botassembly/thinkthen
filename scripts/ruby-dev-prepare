@@ -1,0 +1,8 @@
+#!/bin/sh
+# Prepare pinned development tools before running the offline Ruby gate.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+cache=${THINKTHEN_RUBY_DEV_GEMS:-$HOME/.local/share/thinkthen-build-tools/ruby/dev}
+gem install --no-document --install-dir "$cache" steep --version 2.1.0
+gem install --no-document --install-dir "$cache" async --version 2.23.1

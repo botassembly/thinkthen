@@ -1,0 +1,48 @@
+{
+  "name": "filter-rows",
+  "request": {
+    "question": {
+      "function": "filter",
+      "question": "Ready?"
+    },
+    "records": [
+      "refund",
+      "parcel",
+      null
+    ]
+  },
+  "replies": [
+    {
+      "contains": "\"refund\"",
+      "probability": 0.9
+    },
+    {
+      "probability": 0.1
+    }
+  ],
+  "expected": [
+    {
+      "function": "filter",
+      "position": 1,
+      "answer": true,
+      "probability": 0.9,
+      "status": "answered"
+    },
+    {
+      "function": "filter",
+      "position": 2,
+      "answer": false,
+      "probability": 0.1,
+      "status": "answered"
+    },
+    {
+      "function": "filter",
+      "position": 3,
+      "status": "failed",
+      "error": {
+        "code": "record.missing"
+      }
+    }
+  ],
+  "requests": 1
+}

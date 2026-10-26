@@ -1,0 +1,225 @@
+#!/usr/bin/env python3
+"""Feature: sanitizer dispatch retains workload checks without claiming growth.
+
+Local protocol fakes exercise flag dispatch only. They execute no instrumented
+library and deliberately omit checkpoints, which ordinary full mode must reject.
+"""
+import json
+import os
+from pathlib import Path
+import runpy
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+with tempfile.TemporaryDirectory(prefix='stress-dispatch-') as temporary:
+    root = Path(temporary)
+    (root / 'scripts').mkdir()
+    (root / 'conformance/typed').mkdir(parents=True)
+    for name in ('stress-adapters.py', 'stress_resources.py', 'stress_monitor.py', 'stress-checkpoint', 'stress-resource-test'):
+        shutil.copy2(ROOT / 'scripts' / name, root / 'scripts' / name)
+    table = json.loads((ROOT / 'conformance/stress.json').read_text())
+    table['records'] = dict(table['records'], smoke=1, full=2, soak_rounds=4)
+    (root / 'conformance/stress.json').write_text(json.dumps(table))
+    shutil.copy2(ROOT / 'conformance/typed/manifest.json', root / 'conformance/typed/manifest.json')
+    fixture = root / 'fixture'
+    fixture.write_text('''#!/usr/bin/env python3
+import socket,sys
+with socket.socket() as listener:
+    listener.bind(('127.0.0.1',0))
+    listener.listen()
+    print(listener.getsockname()[1],flush=True)
+    for line in sys.stdin:
+        event=line.strip()
+        if event=='shutdown': break
+        print(event,flush=True)
+''')
+    fixture.chmod(0o755)
+    adapter = root / 'adapter.py'
+    adapter.write_text('''import json,os,sys
+from pathlib import Path
+case=json.loads(Path(os.environ['THINKTHEN_STRESS_CASE']).read_text())
+if case['cancel']: assert sys.stdin.readline().strip()=='cancel'
+calls=case['concurrency']*case['rounds']
+rows=0 if case['cancel'] else calls*case['records']
+print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
+''')
+    env = dict(os.environ, THINKTHEN_LOOPBACK=str(fixture))
+    command = [sys.executable, str(root / 'scripts/stress-adapters.py'), '--surface', 'fixture', '--full']
+    for mode in ('address', 'thread'):
+        result = subprocess.run([*command, '--sanitizer', mode, '--', sys.executable, str(adapter)],
+                                env=env, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        report = json.loads(result.stdout)
+        assert report['sanitizer'] == mode
+        assert report['resource_growth'] == 'not measured under sanitizer instrumentation'
+        assert all('resources' not in case for case in report['cases'])
+        assert {case['concurrency'] for case in report['cases']} == {1, 2}
+        assert {case['rounds'] for case in report['cases']} == {1, 4}
+        assert any(case['cancelled'] for case in report['cases'])
+        assert any(case['failed'] > 0 for case in report['cases'])
+        assert all(case['identifiers']['observed_widths'] == ([] if case['cancelled'] else [15]) for case in report['cases'])
+        assert all(not case['identifiers']['width_changed'] for case in report['cases'])
+    changing = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=dict(env, BAD_IDENTIFIER_WIDTH='1'), capture_output=True, text=True)
+    assert changing.returncode != 0 and 'actual stress identifiers changed width: [15, 16]' in changing.stderr, changing.stderr
+    ordinary = subprocess.run([*command, '--', sys.executable, str(adapter)],
+                              env=env, capture_output=True, text=True)
+    assert ordinary.returncode != 0 and 'no completed-round samples' in ordinary.stderr, ordinary.stderr
+    # Feature: long adapter commands keep compact context through the real monitor.
+    table['records']['soak_rounds'] = 8
+    (root / 'conformance/stress.json').write_text(json.dumps(table))
+    original_adapter = adapter.read_text()
+    adapter.write_text(original_adapter.replace('import json,os,sys', 'import json,os,sys,subprocess').replace(
+        'print(json.dumps(', "if os.environ.get('THINKTHEN_STRESS_CHECKPOINT'):\n    for _ in range(case['rounds']):\n        subprocess.run(os.environ['THINKTHEN_STRESS_CHECKPOINT_COMMAND'],shell=True,check=True)\nprint(json.dumps("))
+    long_argument = 'classpath-entry-' * 300
+    long_command = [sys.executable, str(adapter), long_argument]
+    completed = subprocess.run([*command, '--', *long_command], env=env,
+                               capture_output=True, text=True)
+    assert completed.returncode == 0, completed.stderr[-1000:]
+    long_report = json.loads(completed.stdout)
+    assert len(long_report['cases']) == 20, long_report
+    assert all(case['command'] == shlex.join(long_command) for case in long_report['cases']), long_report
+    soaks = [case for case in long_report['cases'] if 'resources' in case]
+    assert len(soaks) == 2, long_report
+    for case in soaks:
+        group = case['resources']['groups']['workload']
+        assert len(group['round_samples']) == 8, group
+        memory = group['growth']['metrics']['memory_bytes']
+        assert memory['verified_records_between_checkpoints'] == case['rows'] // case['rounds'] * 3, group
+        for context in group['context']:
+            assert set(context) == {'surface', 'backend', 'case'}, context
+            assert context['surface'] == case['surface'] == 'fixture', context
+            assert context['backend'] == case['backend'] and context['case'] == case['case'], context
+            # Include the checkpoint envelope in this conservative size bound.
+            assert len(json.dumps(dict(pid=999999999, required_pid=999999999,
+                backend_port='65535', group='workload', concurrency='1', context=context)).encode()) + 1 <= 1024, context
+    assert [json.loads(line) for line in completed.stderr.splitlines()] == long_report['cases']
+    # Feature: checkpoints from a different case cannot borrow verified totals.
+    matching_adapter = adapter.read_text()
+    adapter.write_text(matching_adapter.replace('        subprocess.run(',
+        "        os.environ['THINKTHEN_STRESS_CONTEXT']='{}'\n        subprocess.run("))
+    mismatched = subprocess.run([*command, '--', *long_command], env=env, capture_output=True, text=True)
+    assert mismatched.returncode == 1, mismatched.stderr
+    mismatch = json.loads(mismatched.stdout)['cases'][-1]['resources']['growth']
+    assert mismatch['verdict'] == 'unverifiable', mismatch
+    adapter.write_text(matching_adapter)
+    # Feature: observer access loss remains unverifiable through the case runner.
+    adapter.write_text(adapter.read_text().replace('import json,os,sys,subprocess',
+        'import json,os,sys,subprocess,ctypes').replace("for _ in range(case['rounds']):",
+        "for round_index in range(case['rounds']):").replace('        subprocess.run(',
+        '        if round_index == 1: assert ctypes.CDLL(None).prctl(4, 0, 0, 0, 0) == 0\n        subprocess.run('))
+    denied = subprocess.run([*command, '--', *long_command], env=env, capture_output=True, text=True)
+    assert denied.returncode == 1, denied.stderr
+    denied_report = json.loads(denied.stdout)
+    failed_case = denied_report['cases'][-1]
+    assert len(denied_report['cases']) > 1 and all('error' not in case for case in denied_report['cases'][:-1]), denied_report
+    assert failed_case['error'].startswith('resource use is unverifiable'), failed_case
+    assert failed_case['resources']['growth']['verdict'] == 'unverifiable', failed_case
+    group = failed_case['resources']['groups']['workload']
+    assert group['growth']['passed'] is False, group
+    assert group['observation_failures'][0]['process']['pid'] in group['required_live_pids'], group
+    assert [json.loads(line) for line in denied.stderr.splitlines()] == denied_report['cases']
+    # Feature: a proven process exit keeps the parent's resource verdict.
+    adapter.write_text(original_adapter.replace('import json,os,sys', 'import json,os,sys,runpy').replace(
+        'print(json.dumps(', "if os.environ.get('THINKTHEN_STRESS_CHECKPOINT'):\n    runpy.run_path(" +
+        repr(str(root / 'scripts/stress-resource-test')) + ")['teardown']()\nprint(json.dumps("))
+    exited = subprocess.run([*command, '--', *long_command], env=env, capture_output=True, text=True)
+    assert exited.returncode == 0, exited.stderr[-2000:]
+    exited_report = json.loads(exited.stdout)
+    assert all('error' not in case for case in exited_report['cases']), exited_report
+    exit_events = [event for case in exited_report['cases'] if 'resources' in case
+                   for event in case['resources']['process_events'] if event['event'] == 'access_denied']
+    # A completed exit need not expose an fd denial to this sample.
+    assert all(event['disposition'] == 'process_exit' for event in exit_events), exited_report
+    assert all(case['resources']['growth']['passed'] for case in exited_report['cases'] if 'resources' in case), exited_report
+    assert [json.loads(line) for line in exited.stderr.splitlines()] == exited_report['cases']
+    adapter.write_text(original_adapter)
+    # Feature: terminal case reports survive a later validation or setup failure.
+    table['scenarios'] = table['scenarios'][:2]
+    (root / 'conformance/stress.json').write_text(json.dumps(table))
+    original_adapter = adapter.read_text()
+    for mode in ('validation', 'exit', 'cancel-validation', 'setup'):
+        counter = root / 'starts'
+        counter.unlink(missing_ok=True)
+        if mode == 'validation':
+            adapter.write_text(original_adapter.replace("calls=case['concurrency']*case['rounds']",
+                "calls=case['concurrency']*case['rounds'] if case['scenario']['name']=='healthy' else 99"))
+        elif mode == 'exit':
+            adapter.write_text(original_adapter.replace("if case['cancel']:", "if case['scenario']['name']!='healthy': sys.exit(23)\nif case['cancel']:"))
+        elif mode == 'cancel-validation':
+            adapter.write_text(original_adapter.replace("failed=rows if case['scenario']['status']=='failed' else 0,",
+                "**({} if case['cancel'] else dict(failed=rows if case['scenario']['status']=='failed' else 0)),"))
+        else:
+            adapter.write_text(original_adapter)
+            fixture.write_text(fixture.read_text().replace('import socket,sys',
+                "import socket,sys\nfrom pathlib import Path\np=Path(" + repr(str(counter)) + ")\nn=int(p.read_text()) if p.exists() else 0\np.write_text(str(n+1))\nif n: sys.exit(17)"))
+        result = subprocess.run([sys.executable, str(root / 'scripts/stress-adapters.py'),
+            '--surface', 'fixture', '--', sys.executable, str(adapter)], env=env, capture_output=True, text=True)
+        assert result.returncode != 0, result
+        report = json.loads(result.stdout)
+        assert len(report['cases']) == (4 if mode == 'cancel-validation' else 2), report
+        passed, failed = report['cases'][0], report['cases'][-1]
+        assert passed['scenario'] == 'healthy' and passed['rows'] == 1, passed
+        assert passed['backend'] == failed['backend'] == 'systemone', report
+        assert failed['scenario'] == ('healthy' if mode == 'cancel-validation' else table['scenarios'][1]['name']), failed
+        assert failed['surface'] == passed['surface'] == 'fixture', report
+        assert failed['command'] == passed['command'] and str(adapter) in failed['command'], report
+        assert failed['case'] != passed['case'] and failed['error'], failed
+        if mode == 'validation':
+            assert failed['calls'] == 99 and failed['exit_code'] == 0, failed
+        elif mode == 'exit':
+            assert failed['exit_code'] == 23, failed
+        elif mode == 'cancel-validation':
+            assert failed['cancelled'] and "'failed'" in failed['error'], failed
+            assert report['calls'] == sum(case['calls'] for case in report['cases'][:-1]), report
+            assert report['rows'] == sum(case['rows'] for case in report['cases'][:-1]), report
+        terminals = [json.loads(line) for line in result.stderr.splitlines()]
+        assert terminals == report['cases'], (terminals, report)
+print('sanitizer dispatch and terminal reporting: completed cases and failure identity retained')
+
+# Feature: the Linux build boundary keeps the requested workload and drops keys.
+with tempfile.TemporaryDirectory(prefix='stress-floor-dispatch-') as temporary:
+    environment = dict(HOME=temporary, PATH=os.environ['PATH'],
+        THINKTHEN_FLOOR_IMAGE='sha256:' + '0' * 64, THINKTHEN_STRESS_FULL='1',
+        THINKTHEN_API_KEY='synthetic-secret', OPENAI_API_KEY='synthetic-secret')
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    try:
+        with patch.dict(os.environ, environment, clear=True), \
+                patch.object(sys, 'argv', ['runtime-floor-build', 'scripts/c-sdk-gate']), \
+                patch.object(Path, 'mkdir'), patch.object(subprocess, 'run') as launch:
+            runpy.run_path(str(ROOT / 'scripts/runtime-floor-build'), run_name='__main__')
+        command = launch.call_args.args[0]
+        assert 'THINKTHEN_STRESS_FULL=1' in command, command
+        assert not any('synthetic-secret' in argument for argument in command), command
+    finally:
+        sys.path.pop(0)
+print('Linux build dispatch: full workload retained; credentials excluded')
+
+# Feature: a SQLite consumer failure retains the child's exit and diagnostic.
+with tempfile.TemporaryDirectory(prefix='sqlite-stress-exit-') as temporary:
+    root = Path(temporary)
+    case = root / 'case.json'
+    case.write_text(json.dumps(dict(client=dict(model='stress-model', url='http://127.0.0.1:1/v1',
+                                                api_key='loopback-only'))))
+    consumer = root / 'consumer.py'
+    consumer.write_text('''import json,os,signal,sys
+command=json.loads(sys.stdin.readline())
+assert command['parameters']==['model','stress-model'],command
+print('consumer-startup-diagnostic',file=sys.stderr,flush=True)
+if sys.argv[1]=='signal': os.kill(os.getpid(),signal.SIGTERM)
+sys.exit(27)
+''')
+    for mode, diagnostic in [('exit', 'returncode=27'), ('signal', 'returncode=-15 (SIGTERM)')]:
+        result = subprocess.run([sys.executable, str(ROOT / 'extensions/sqlite/tests/stress.py'),
+            sys.executable, str(consumer), mode], capture_output=True, text=True,
+            env=dict(os.environ, THINKTHEN_STRESS_CASE=str(case)))
+        assert result.returncode != 0, result
+        assert diagnostic in result.stderr, result.stderr
+        assert 'consumer-startup-diagnostic' in result.stderr, result.stderr
+        assert 'During handling of the above exception' not in result.stderr, result.stderr
+print('SQLite stress startup: child exits and signals retain their diagnostics')

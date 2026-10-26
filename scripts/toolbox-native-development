@@ -1,0 +1,35 @@
+#!/bin/sh
+# Focused debug proof for saved toolboxes; no release assets or full SDK gates.
+set -eu
+. scripts/native-tools-env
+PATH="$HOME/.local/share/thinkthen-build-tools/zig/0.17.0:$PATH"
+export PATH
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+cargo build --offline --locked -p thinkthen-ffi -j2
+native_target=${CARGO_TARGET_DIR:-target}
+case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
+engine="$native_target/debug/libthinkthen_ffi.dylib"
+cc -std=c11 -Wall -Wextra -Werror -I crates/thinkthen-ffi/include \
+    sdk/c/tests/consumer.c "$engine" -Wl,-rpath,"$native_target/debug" -o "$scratch/c-consumer"
+c++ -std=c++17 -Wall -Wextra -Werror -I crates/thinkthen-ffi/include -I sdk/cpp/include \
+    sdk/cpp/tests/typed_consumer.cpp "$engine" -Wl,-rpath,"$native_target/debug" -o "$scratch/cpp-consumer"
+"$scratch/cpp-consumer"
+mkdir -p "$scratch/assets/osx-arm64"
+cp "$engine" "$scratch/assets/osx-arm64/"
+THINKTHEN_SWIFT_NATIVE_ASSETS="$scratch/assets" scripts/swift-package "$scratch/ThinkThen"
+mkdir "$scratch/consumer"
+cp sdk/swift/tests/*.swift "$scratch/consumer/"
+python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
+swift build --package-path "$scratch/consumer" --disable-sandbox -j 2 -Xswiftc -warnings-as-errors
+THINKTHEN_ZIG_DEBUG_NATIVE=1 THINKTHEN_ZIG_NATIVE_FILE="$engine" scripts/zig-package "$scratch/zig-archive"
+mv "$scratch/zig-archive/thinkthen" "$scratch/package"
+mkdir "$scratch/zig-consumer"
+cp sdk/zig/tests/*.zig sdk/zig/tests/build.zig sdk/zig/tests/build.zig.zon "$scratch/zig-consumer/"
+(cd "$scratch/zig-consumer" && zig build -j2 --cache-dir "$scratch/zig-cache")
+"$scratch/zig-consumer/zig-out/bin/public-api"
+python3 sdk/c/tests/toolbox.py "$scratch/c-consumer" "$root" "$scratch/cpp-consumer" \
+    "$scratch/consumer/.build/debug/Consumer" "$scratch/zig-consumer/zig-out/bin/consumer"
+swift format lint --strict --recursive sdk/swift
+zig fmt --check sdk/zig/src sdk/zig/tests

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Compare every canonical schema, native discriminator and generated shape case.
+set -eu
+cd "$(dirname "$0")/.."
+cargo run --quiet -p thinkthen --example schema --locked -- --check
+scripts/conformance-shapes --check
+cargo run --quiet -p thinkthen --example construction --locked -- --check
+cargo run --quiet -p thinkthen-ffi --example headers --locked -- --check

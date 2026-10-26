@@ -3,9 +3,7 @@
 pub(crate) mod annotate;
 pub(crate) mod choose;
 pub(crate) mod decide;
-pub(crate) mod filter;
 pub(crate) mod find;
-pub(crate) mod identity;
 pub(crate) mod rank;
 pub(crate) mod recognize;
 pub(crate) mod relate;
@@ -17,16 +15,6 @@ pub(crate) mod tag;
 fn quoted(text: &str, question: &str) -> String {
     let text = serde_json::to_string(text).expect("a string serializes");
     format!("The text is {text}. {question}")
-}
-
-#[expect(
-    clippy::expect_used,
-    reason = "admitted built-in question fields serialize infallibly"
-)]
-pub(crate) fn identity(function: &str, question: &impl serde::Serialize) -> String {
-    use sha2::{Digest, Sha256};
-    let bytes = serde_json::to_vec(&(function, question)).expect("admitted question serializes");
-    format!("{:x}", Sha256::digest(bytes))
 }
 
 pub(crate) fn stub_key(identity: &str, evidence: &str, round: usize, position: usize) -> [u8; 32] {
@@ -45,22 +33,7 @@ pub(crate) fn stub_key(identity: &str, evidence: &str, round: usize, position: u
 }
 
 /// A question that prepares rounds and reads the answers for one record.
-pub trait Function: Sync + Sized {
-    /// The caller-visible function name.
-    const NAME: &'static str;
-
-    /// Content identity independent of backend, model and internal prompt wording.
-    #[must_use]
-    fn identity(&self) -> String {
-        self.identity_as(Self::NAME)
-    }
-
-    /// Content identity with the caller's operation, such as filtering.
-    /// Implementations hash caller-visible wording, options and thresholds;
-    /// routing and internal prompt templates must not enter the identity.
-    #[must_use]
-    fn identity_as(&self, function: &str) -> String;
-
+pub(crate) trait Function: Sync + Sized {
     /// Deterministic caller-test key for one ask in this question's local round.
     /// Composite questions delegate to the member's own content and evidence.
     #[must_use]
@@ -119,7 +92,7 @@ pub trait Function: Sync + Sized {
 /// let forged = FunctionAnswers::new(&question, &record, &[]);
 /// ```
 #[derive(Debug)]
-pub struct FunctionAnswers<'a, F: Function> {
+pub(crate) struct FunctionAnswers<'a, F: Function> {
     question: &'a F,
     record: &'a crate::core::AdmittedRecord,
     answers: &'a [Result<crate::core::AskAnswer, crate::core::Error>],
@@ -140,18 +113,18 @@ impl<'a, F: Function> FunctionAnswers<'a, F> {
 
     /// The original question, with the configuration used to prepare the asks.
     #[must_use]
-    pub const fn question(&self) -> &'a F {
+    pub(crate) const fn question(&self) -> &'a F {
         self.question
     }
 
     /// The admitted record that supplied the evidence.
     #[must_use]
-    pub const fn record(&self) -> &'a crate::core::AdmittedRecord {
+    pub(crate) const fn record(&self) -> &'a crate::core::AdmittedRecord {
         self.record
     }
 
     /// One decoded answer or error for every ask, in round order.
-    pub const fn answers(&self) -> &'a [Result<crate::core::AskAnswer, crate::core::Error>] {
+    pub(crate) const fn answers(&self) -> &'a [Result<crate::core::AskAnswer, crate::core::Error>] {
         self.answers
     }
 

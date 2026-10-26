@@ -17,6 +17,15 @@ def seed(prepared, destination):
     return destination
 
 
+def consumer(root, destination):
+    """Stage the same Java and Kotlin consumer sources for every build."""
+    root, destination = Path(root), Path(destination)
+    shutil.copytree(root / 'sdk/java/consumer', destination, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('target', 'kotlin-tests'))
+    shutil.copytree(root / 'sdk/kotlin/tests', destination / 'kotlin-tests')
+    return destination
+
+
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -27,6 +36,8 @@ def verify(root, jars, resources, native_platform, native_input):
     for name, folder in [('java', 'sdk/java/library'), ('kotlin', 'sdk/kotlin')]:
         built, = (root / folder / 'target').glob(f'thinkthen-{name}-*.jar')
         selected, = [Path(p) for p in jars if Path(p).name == built.name]
+        from package_inventory import check
+        check(name, selected, set())
         assert digest(selected) == digest(built), f'JVM artifact differs from this build: {selected}'
         if name == 'java':
             with zipfile.ZipFile(selected) as jar:
@@ -43,7 +54,9 @@ def verify(root, jars, resources, native_platform, native_input):
 if __name__ == '__main__':
     if sys.argv[1] == 'seed':
         seed(Path(sys.argv[2]), Path(sys.argv[3]))
+    elif sys.argv[1] == 'consumer':
+        consumer(sys.argv[2], sys.argv[3])
     elif sys.argv[1] == 'verify':
         verify(sys.argv[2], Path(sys.argv[3]).read_text().strip().split(':'), sys.argv[4], sys.argv[5], sys.argv[6])
     else:
-        raise SystemExit('Usage: jvm_repository.py seed PREPARED DESTINATION | verify ROOT CLASSPATH RESOURCES PLATFORM NATIVE_INPUT')
+        raise SystemExit('Usage: jvm_repository.py seed PREPARED DESTINATION | consumer ROOT DESTINATION | verify ROOT CLASSPATH RESOURCES PLATFORM NATIVE_INPUT')

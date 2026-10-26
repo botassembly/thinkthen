@@ -4,72 +4,134 @@
   result <- .Call(paste0("wrap__", name), ..., PACKAGE = "thinkthen")
   if (!is.null(result$error)) {
     error <- result$error
-    stop(structure(
-      list(message = error$message, call = NULL, code = error$code),
-      class = c(paste0("thinkthen_", error$family, "_error"),
-                "thinkthen_error", "error", "condition")
-    ))
+    family <- if (identical(error$code, "local.cancelled")) "cancelled" else {
+      switch(error$family, local = "setup", backend = "setup", error$family)
+    }
+    rlang::abort(error$message,
+      class = c(paste0("thinkthen_", family, "_error"), "thinkthen_error"),
+      code = error$code, call = NULL, trace = rlang::trace_back(bottom = globalenv()))
   }
   result
 }
 
 .tt_dots <- function(...) {
-  if (length(list(...))) stop("unused arguments", call. = FALSE)
+  values <- rlang::enquos(..., .ignore_empty = "none")
+  if (length(values) && (is.null(names(values)) || anyNA(names(values)) || any(!nzchar(names(values))))) {
+    .tt_native("r_question_conversion_error")
+  }
+  list(...)
 }
 
 .tt_json <- function(value) {
   as.character(jsonlite::toJSON(value, auto_unbox = TRUE, null = "null",
-                               na = "null", digits = NA, force = FALSE))
+                               na = "null", digits = I(17), force = FALSE))
 }
 
-.tt_options <- function(...) {
-  values <- list(...)
-  values[!vapply(values, is.null, logical(1))]
-}
-
-tt_client <- function(adapter = NULL, ..., mode = NULL, url = NULL,
-                      key_source = NULL, model = NULL, batch = NULL) {
-  .tt_dots(...)
-  settings <- .tt_options(adapter = adapter, mode = mode, url = url,
-                          key_source = key_source, model = model, batch = batch)
-  if (!length(settings)) settings <- structure(list(), names = character())
-  .tt_native("r_client", .tt_json(settings))$value
-}
-
-# R vectors in domain fields represent JSON arrays even at length one.
-.tt_toolbox <- function(toolbox) {
-  definition <- function(value) {
-    if (!is.list(value)) return(value)
-    for (field in intersect(c("options", "labels", "levels", "recognize", "relate"), names(value))) {
-      if (is.atomic(value[[field]]) && !is.null(value[[field]])) value[[field]] <- I(value[[field]])
-    }
-    value
+# Configuration cannot use JSON null as a replacement for a missing or nonfinite R value.
+.tt_json_finite <- function(value) {
+  if (anyNA(names(value))) return(FALSE)
+  if (is.list(value)) return(all(vapply(unclass(value), .tt_json_finite, logical(1))))
+  if (is.atomic(value)) {
+    value <- unclass(value)
+    return(!anyNA(value) && (!is.numeric(value) || all(is.finite(value))))
   }
-  if (!is.list(toolbox)) return(toolbox)
-  if (is.list(toolbox$questions)) {
-    toolbox$questions <- lapply(toolbox$questions, definition)
-    toolbox
-  } else definition(toolbox)
+  TRUE
 }
 
-tt_question <- function(toolbox, name = NULL) {
-  structure(.tt_options(type = "toolbox", value = .tt_toolbox(toolbox), name = name),
-            class = "thinkthen_question")
-}
-
-tt_reference <- function(name) {
-  structure(list(type = "reference", name = name), class = "thinkthen_question")
-}
-
-tt_detail <- function(rows) {
-  lapply(rows$detail, function(value) {
-    if (is.na(value)) NULL else jsonlite::fromJSON(value, simplifyVector = FALSE)
+.tt_conversion <- function(helper, code) {
+  tryCatch(force(code), error = function(error) {
+    if (inherits(error, "thinkthen_error")) stop(error)
+    .tt_native(helper)
   })
 }
 
+.tt_context_json <- function(value, helper) {
+  force(value)
+  .tt_conversion(helper, {
+    if (!.tt_json_finite(value)) .tt_native(helper)
+    .tt_json(value)
+  })
+}
+
+.tt_options <- function(..., .dots = list()) {
+  values <- list(...)
+  c(values[!vapply(values, is.null, logical(1))], .dots)
+}
+
+tt_client <- function(backend = NULL, ..., api_key = NULL, url = NULL,
+                      model = NULL, batch = NULL, retry = NULL) {
+  .tt_check_abi()
+  dots <- .tt_dots(...)
+  force(backend); force(api_key); force(url); force(model); force(batch); force(retry)
+  if (is.character(backend) && length(backend) == 1L && !is.na(backend)) {
+    tryCatch(rlang::arg_match(backend, values = unname(.tt_backend_names)),
+             error = function(error) .tt_native("r_client", .tt_json(list(backend = backend))))
+  }
+  if (inherits(retry, "tt_retry")) retry <- .tt_snapshot_value(retry)
+  settings <- .tt_options(backend = backend, api_key = api_key, url = url,
+                          model = model, batch = batch, retry = retry, .dots = dots)
+  if (!length(settings)) settings <- structure(list(), names = character())
+  structure(.tt_native("r_client", .tt_context_json(settings, "r_settings_conversion_error"))$value,
+            class = "tt_client")
+}
+
+tt_client_from_env <- function(...) tt_client(...)
+print.tt_client <- function(x, ...) { cat("<tt_client>\n"); invisible(x) }
+tt_close <- function(client) {
+  .Call("wrap__r_client_close", client, PACKAGE = "thinkthen")
+  invisible(NULL)
+}
+
+local_tt_client <- function(client, .env = parent.frame()) {
+  previous <- .tt_state$client
+  .tt_state$client <- client
+  restore <- function() .tt_state$client <- previous
+  eval(call("on.exit", as.call(list(restore)), add = TRUE), envir = .env)
+  invisible(client)
+}
+
+with_tt_client <- function(client, code) {
+  previous <- .tt_state$client
+  on.exit(.tt_state$client <- previous)
+  .tt_state$client <- client
+  force(code)
+}
+
+tt_retry <- function(..., max_retries = NULL, initial_backoff_ms = NULL,
+                     attempt_timeout_ms = NULL) {
+  dots <- .tt_dots(...)
+  retry <- .tt_options(max_retries = max_retries, initial_backoff_ms = initial_backoff_ms,
+                       attempt_timeout_ms = attempt_timeout_ms, .dots = dots)
+  if (!length(retry)) retry <- structure(list(), names = character())
+  canonical <- .tt_native("r_admit",
+    .tt_context_json(list(retry = retry), "r_settings_conversion_error"), 1L)$value
+  value <- jsonlite::fromJSON(canonical, simplifyVector = FALSE)$retry
+  .tt_snapshot(.tt_json(value), "tt_retry")
+}
+
+.tt_check_abi <- function() {
+  compatible <- tryCatch({
+    symbols <- names(getDLLRegisteredRoutines("thinkthen")$.Call)
+    if (!.tt_abi_version_export %in% symbols || !all(.tt_abi_exports %in% symbols)) {
+      FALSE
+    } else {
+      actual <- .Call(.tt_abi_version_export, PACKAGE = "thinkthen")
+      typeof(actual) == "integer" && length(actual) == 1L && !is.na(actual) &&
+        bitwShiftR(actual, 16L) == bitwShiftR(.tt_abi_version, 16L) &&
+        bitwAnd(actual, 65535L) >= bitwAnd(.tt_abi_version, 65535L)
+    }
+  }, error = function(error) FALSE)
+  if (!isTRUE(compatible)) .tt_check_abi_failure()
+
+  invisible(NULL)
+}
+
+.onLoad <- function(libname, pkgname) .tt_check_abi()
+
 .tt_restore <- function(original, selected) {
   attrs <- attributes(original)
-  for (name in intersect(names(attrs), c("names", "row.names", "dim", "dimnames"))) {
+  for (name in union(setdiff(names(attributes(selected)), "class"),
+                     intersect(names(attrs), c("names", "row.names", "dim", "dimnames")))) {
     attrs[name] <- list(attr(selected, name))
   }
   attributes(selected) <- attrs
@@ -90,129 +152,3 @@ tt_detail <- function(rows) {
   selected
 }
 
-.tt_frame <- function(rows, detail, function_name) {
-  scalar <- function(key, missing, convert = identity) {
-    vapply(rows, function(row) {
-      value <- row[[key]]
-      if (is.null(value)) missing else convert(value)
-    }, missing)
-  }
-  answers <- switch(function_name,
-    decide = scalar("answer", NA),
-    choose = scalar("answer", NA_character_),
-    score = scalar("answer", NA_real_, as.double),
-    rank = scalar("answer", NA_integer_, as.integer),
-    tag = lapply(rows, function(row) {
-      if (is.null(row$answer)) NULL else as.character(unlist(row$answer, use.names = FALSE))
-    }),
-    lapply(rows, `[[`, "answer")
-  )
-  structure(list(id = lapply(rows, `[[`, "id"),
-                 status = scalar("status", NA_character_),
-                 answer = answers,
-                 p = scalar("p", NA_real_, as.double),
-                 error = lapply(rows, `[[`, "error"),
-                 detail = detail),
-            class = "data.frame", row.names = .set_row_names(length(rows)),
-            .thinkthen_function = function_name)
-}
-
-.tt_run <- function(x, function_name, question, options, client) {
-  if (is.null(client)) {
-    if (is.null(.tt_state$client)) .tt_state$client <- tt_client()
-    client <- .tt_state$client
-  }
-  if (!inherits(question, "thinkthen_question")) {
-    if (function_name == "annotate") question <- .tt_toolbox(question)
-    question <- list(type = "inline", value = question)
-  } else {
-    question <- unclass(question)
-  }
-  if (!length(options)) options <- structure(list(), names = character())
-  request <- .tt_json(list(`function` = function_name, question = question, options = options))
-  call <- .tt_native("r_open", client, request)$value
-  on.exit(.Call("wrap__r_close", call, PACKAGE = "thinkthen"))
-  size <- if (is.data.frame(x)) nrow(x) else length(x)
-  position <- 0
-  rows <- list()
-  detail <- character()
-  kept <- numeric()
-  repeat {
-    event <- .tt_native("r_poll", call)
-    if (event$event == "input") {
-      if (position == size) {
-        .Call("wrap__r_end", call, PACKAGE = "thinkthen")
-      } else {
-        position <- position + 1L
-        if (is.character(x) && !is.na(x[[position]])) {
-          .tt_native("r_text", call, enc2utf8(x[[position]]))
-        } else {
-          value <- if (is.data.frame(x)) {
-            encoded <- .tt_json(x[position, , drop = FALSE])
-            substr(encoded, 2L, nchar(encoded) - 1L)
-          } else .tt_json(x[[position]])
-          .tt_native("r_json", call, value)
-        }
-      }
-    } else if (event$event == "row") {
-      if (function_name == "filter") {
-        if (event$kept) kept <- c(kept, event$position)
-      } else {
-        rows[[length(rows) + 1L]] <- jsonlite::fromJSON(event$json, simplifyVector = FALSE)
-        detail <- c(detail, if (is.null(event$detail)) NA_character_ else event$detail)
-      }
-    } else if (event$event == "finished") break
-  }
-  if (function_name == "filter") .tt_subset(x, kept) else .tt_frame(rows, detail, function_name)
-}
-
-tt_decide <- function(x, question, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "decide", question, .tt_options(threshold = threshold, on = on), client)
-}
-
-tt_choose <- function(x, question, options = NULL, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "choose", question, .tt_options(options = if (!is.null(options)) I(options), threshold = threshold, on = on), client)
-}
-
-tt_tag <- function(x, question, labels = NULL, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "tag", question, .tt_options(labels = if (!is.null(labels)) I(labels), threshold = threshold, on = on), client)
-}
-
-tt_score <- function(x, question, levels = NULL, ..., on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "score", question, .tt_options(levels = if (!is.null(levels)) I(levels), on = on), client)
-}
-
-tt_filter <- function(x, question, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "filter", question, .tt_options(threshold = threshold, on = on), client)
-}
-
-tt_rank <- function(x, question, ..., levels = NULL, top = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "rank", question, .tt_options(levels = if (!is.null(levels)) I(levels), top = top, on = on), client)
-}
-
-tt_find <- function(x, question, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "find", question, .tt_options(threshold = threshold, on = on), client)
-}
-
-tt_annotate <- function(x, toolbox, ..., on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "annotate", toolbox, .tt_options(on = on), client)
-}
-
-tt_recognize <- function(x, kinds = character(), ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "recognize", if (inherits(kinds, "thinkthen_question") || is.null(kinds)) kinds else I(kinds),
-          .tt_options(threshold = threshold, on = on), client)
-}
-
-tt_relate <- function(x, rules, ..., threshold = NULL, on = NULL, client = NULL) {
-  .tt_dots(...)
-  .tt_run(x, "relate", rules, .tt_options(threshold = threshold, on = on), client)
-}

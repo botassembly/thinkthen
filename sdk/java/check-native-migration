@@ -1,0 +1,44 @@
+#!/bin/sh
+# Check the current Java facade against canonical rows and native ABI fixtures.
+set -eu
+cd "$(dirname "$0")/../.."
+root=$PWD
+. scripts/native-tools-env
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH CLASSPATH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+cargo build --offline --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+native_target=${CARGO_TARGET_DIR:-target}
+case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
+mkdir -p "$scratch/consumer" "$scratch/home"
+export THINKTHEN_LOOPBACK="$native_target/debug/loopback"
+export XDG_CACHE_HOME="$scratch/home/.cache"
+resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+rm -rf sdk/java/library/target/classes
+mkdir -p "$resource"
+cp "$native_target/debug/$jvm_library" "$resource/"
+python3 scripts/jvm-generated
+mvn -o -B -q -f sdk/java/pom.xml -pl library -am -Dmaven.repo.local="$scratch/m2" install -DskipTests
+version=$(python3 scripts/release_metadata.py --version)
+jar_file="$scratch/m2/io/github/botassembly/thinkthen-java/$version/thinkthen-java-$version.jar"
+classpath="$jar_file"
+for dependency in $(rg --files "$scratch/m2" | rg '/(jackson-[^/]+|jspecify)/[^/]+/[^/]+\.jar$'); do classpath="$classpath:$dependency"; done
+javac -Xlint:all -Werror --release 22 -cp "$classpath" -d "$scratch/consumer" sdk/java/consumer/src/main/java/ConsumerCases.java sdk/java/consumer/src/main/java/ConformanceCases.java sdk/java/consumer/src/main/java/BackendFixture.java
+java --enable-native-access=ALL-UNNAMED "-Duser.home=$scratch/home" -cp "$scratch/consumer:$classpath" ConformanceCases "$root/conformance/typed"
+python3 scripts/native-fixtures --engine "$native_target/debug/$jvm_library" --output "$scratch/fixtures"
+python3 - "$scratch/fixtures/manifest.json" "$jar_file" "$jvm_platform" "$jvm_library" "$scratch" "$classpath" "$JAVA_HOME/bin/java" <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import sys
+import zipfile
+manifest, jar, platform, library, scratch, classpath, java = sys.argv[1:]
+for case in json.loads(Path(manifest).read_text())['cases']:
+    replacement = Path(scratch) / (case['name'] + '.jar')
+    with zipfile.ZipFile(jar) as source, zipfile.ZipFile(replacement, 'w') as target:
+        for entry in source.infolist():
+            target.writestr(entry, Path(case['library']).read_bytes() if entry.filename == f'io/thinkthen/native/{platform}/{library}' else source.read(entry))
+    subprocess.run([java, '--enable-native-access=ALL-UNNAMED', f'-Duser.home={scratch}/home', '-cp', f'{scratch}/consumer:' + classpath.replace(jar, str(replacement)), 'ConformanceCases', 'abi', str(case['accept']).lower()], check=True)
+print('Java ABI migration: all shared ABI fixture cases passed')
+PY

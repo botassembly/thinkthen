@@ -1,0 +1,10 @@
+using ThinkThen;
+
+public static class InvalidInput
+{
+    public static async Task Call(ThinkThenClient client, ChooseQuestion question)
+    {
+        await Task.CompletedTask;
+        await client.ScoreAsync("Urgent?", "alpha");
+    }
+}

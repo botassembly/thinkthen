@@ -1,0 +1,39 @@
+language = "C"
+include_guard = "THINKTHEN_H"
+cpp_compat = true
+usize_is_size_t = true
+documentation = true
+style = "both"
+sys_includes = ["stddef.h", "stdint.h"]
+[export]
+exclude = ["OK", "END", "NEEDS_INPUT", "ERROR"]
+[export.rename]
+Buffer = "thinkthen_buffer"
+HostError = "thinkthen_error"
+HostRow = "thinkthen_row"
+ClientHandle = "thinkthen_client"
+CallHandle = "thinkthen_call"
+SettingsHandle = "thinkthen_settings"
+QuestionHandle = "thinkthen_question"
+ToolboxHandle = "thinkthen_toolbox"
+TextView = "thinkthen_text"
+RuleInput = "thinkthen_rule"
+RecordInput = "thinkthen_record_input"
+RecordView = "thinkthen_record_view"
+ValueHandle = "thinkthen_value"
+SpanView = "thinkthen_span"
+NameView = "thinkthen_name"
+EndpointView = "thinkthen_endpoint"
+RelationView = "thinkthen_relation"
+ProbabilityView = "thinkthen_probability"
+SourceView = "thinkthen_source"
+IdView = "thinkthen_id"
+SqlHandle = "thinkthen_sql_call"
+SqlInput = "thinkthen_sql_input"
+InterruptProbe = "thinkthen_interrupt_probe"
+FixtureHandle = "thinkthen_fixture_routes"
+[defines]
+"feature = fixture-routing" = "THINKTHEN_TEST_FIXTURE"
+"debug_assertions" = "THINKTHEN_TEST_BUILD"
+[fn]
+prefix = "THINKTHEN_API"

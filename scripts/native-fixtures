@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Build the shared ABI refusal and forwarding libraries once for native consumers."""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+MANIFEST = ROOT / 'conformance/native/manifest.json'
+
+
+def parameters(declaration, name):
+    arguments = declaration.split(name + '(', 1)[1].rsplit(')', 1)[0].strip()
+    if arguments in ('', 'void'):
+        return []
+    return [re.search(r'([A-Za-z_]\w*)$', item.strip()).group(1) for item in arguments.split(',')]
+
+
+def source(case, registry, engine):
+    pieces = ['#define THINKTHEN_API\n#include "thinkthen.h"\n#include <stdlib.h>\n'
+              '#ifdef _WIN32\n#define THINKTHEN_FIXTURE_API __declspec(dllexport)\n'
+              '#else\n#define THINKTHEN_FIXTURE_API __attribute__((visibility("default")))\n#endif\n']
+    if case['forward']:
+        pieces.append('''
+#ifdef _WIN32
+#include <windows.h>
+static INIT_ONCE once = INIT_ONCE_STATIC_INIT;
+static HMODULE engine;
+static BOOL CALLBACK open_engine(PINIT_ONCE ignored, PVOID parameter, PVOID *context) {
+    (void)ignored; (void)parameter; (void)context;
+    engine = LoadLibraryA(ENGINE_PATH); if (!engine) abort(); return TRUE;
+}
+static void *resolve(const char *name) {
+    InitOnceExecuteOnce(&once, open_engine, NULL, NULL);
+    void *symbol = (void *)GetProcAddress(engine, name); if (!symbol) abort(); return symbol;
+}
+#else
+#include <dlfcn.h>
+#include <pthread.h>
+static pthread_once_t once = PTHREAD_ONCE_INIT;
+static void *engine;
+static void open_engine(void) { engine = dlopen(ENGINE_PATH, RTLD_NOW | RTLD_LOCAL); if (!engine) abort(); }
+static void *resolve(const char *name) {
+    pthread_once(&once, open_engine);
+    void *symbol = dlsym(engine, name); if (!symbol) abort(); return symbol;
+}
+#endif
+'''.replace('ENGINE_PATH', json.dumps(str(engine))))
+    for export in registry['exports']:
+        name, declaration = export['name'], export['declaration'].rstrip(';')
+        if name == case.get('missing'):
+            continue
+        prefix, arguments = declaration.split(name, 1)
+        names = parameters(declaration, name)
+        if name == 'thinkthen_abi_version':
+            body = f'return {case["version"]}u;'
+        elif case['forward']:
+            result = '' if prefix.strip() == 'void' else 'return '
+            body = f'typedef {prefix} (*fixture_target){arguments}; fixture_target fixture_function = (fixture_target)resolve("{name}"); {result}fixture_function({", ".join(names)});'
+        elif name == 'thinkthen_abi_compatible':
+            body = 'return (uint8_t)((required >> 16) == (actual >> 16) && (actual & 65535u) >= (required & 65535u));'
+        else:
+            body = ' '.join('(void)' + name + ';' for name in names) + ' abort();'
+        pieces.append('THINKTHEN_FIXTURE_API ' + declaration + ' { ' + body + ' }\n')
+    return ''.join(pieces)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--engine', required=True, type=Path)
+    parser.add_argument('--output', required=True, type=Path)
+    args = parser.parse_args()
+    from header_contract import check
+    check(ROOT)
+    engine = args.engine.resolve(strict=True)
+    manifest = json.loads(MANIFEST.read_text())
+    registry = json.loads((MANIFEST.parent / manifest['abi']).read_text())
+    destination = args.output.resolve()
+    destination.mkdir(parents=True, exist_ok=True)
+    suffix = '.dll' if sys.platform == 'win32' else '.dylib' if sys.platform == 'darwin' else '.so'
+    artifacts = []
+    for case in manifest['cases']:
+        filename = destination / (case['name'] + suffix)
+        code = destination / (case['name'] + '.c')
+        code.write_text(source(case, registry, engine))
+        command = [os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra', '-Werror',
+                   '-I', str(ROOT / 'crates/thinkthen-ffi/include'), str(code), '-o', str(filename)]
+        command += ['-dynamiclib', '-pthread'] if sys.platform == 'darwin' else ['-shared']
+        if sys.platform not in ('darwin', 'win32'):
+            command += ['-fPIC', '-pthread', '-ldl']
+        subprocess.run(command, check=True)
+        code.unlink()
+        artifacts.append({**case, 'library': str(filename)})
+    (destination / 'manifest.json').write_text(json.dumps({**manifest, 'cases': artifacts}, indent=2) + '\n')
+    print(f'native fixtures: built {len(artifacts)} shared ABI cases')
+
+
+if __name__ == '__main__':
+    main()

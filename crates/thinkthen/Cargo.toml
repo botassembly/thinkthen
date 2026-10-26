@@ -10,20 +10,28 @@ repository.workspace = true
 
 [[bin]]
 name = "thinkthen"
-path = "src/cli/main.rs"
+path = "src/command.rs"
 required-features = ["command"]
 
 [features]
 default = ["command"]
-command = ["dep:log", "dep:ctrlc", "dep:clap", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
+native = []
+schema = []
+fixture-routing = []
+stream = ["dep:futures-core"]
+command = ["dep:log", "dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
 
 [dependencies]
+futures-core = { version = "0.3", optional = true }
 sha2.workspace = true
 thiserror.workspace = true
 unicode-general-category.workspace = true
+unicode-normalization.workspace = true
 log = { workspace = true, optional = true }
 ctrlc = { version = "3.5", optional = true }
-clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context"], optional = true }
+clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "color", "suggestions", "string"], optional = true }
+clap_complete = { version = "4.5", optional = true }
+clap_mangen = { version = "0.2", optional = true }
 command-group = { version = "5.0.1", default-features = false, optional = true }
 quick-xml = { version = "=0.39.4", optional = true }
 zip = { version = "=0.6.6", default-features = false, features = ["deflate"], optional = true }
@@ -32,6 +40,7 @@ schemars.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 ureq.workspace = true
+rustls = { version = "0.23", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 csv = "=1.4.0"

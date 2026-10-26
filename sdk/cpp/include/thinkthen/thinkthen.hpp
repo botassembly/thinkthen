@@ -1,292 +1,208 @@
 #ifndef THINKTHEN_CPP_HPP
 #define THINKTHEN_CPP_HPP
-
-#include <thinkthen.h>
 #include <thinkthen/answers.hpp>
-#include <functional>
 #include <iterator>
-#include <memory>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <utility>
-#include <vector>
-
-namespace thinkthen {
-using records = std::vector<json>;
-using record_source = std::function<std::optional<json>()>;
-
-class error : public std::runtime_error {
-    std::string code_;
-public:
-    error(std::string code, std::string message)
-        : std::runtime_error(std::move(message)), code_(std::move(code)) {}
-    const std::string& code() const noexcept { return code_; }
-};
-
+namespace thinkthen { inline namespace v0_2 {
 namespace detail {
-struct buffer {
-    thinkthen_buffer value{};
-    ~buffer() { thinkthen_buffer_free(&value); }
-    buffer() = default;
-    buffer(const buffer&) = delete;
-    buffer& operator=(const buffer&) = delete;
-};
-inline json parse(const thinkthen_buffer& value) {
-    return json::parse(value.data, value.data + value.len);
+inline record borrowed(const owned_record& r) {
+    return std::visit([](const auto& value) -> record {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, owned_text>) return text{value.value};
+        else if constexpr (std::is_same_v<T, owned_json_text>) return json_text{value.value};
+        else return missing_record{};
+    }, r);
 }
-inline error failure(const json& value) {
-    return error(value.at("code").get<std::string>(),
-                 value.at("message").get<std::string>());
+inline owned_record owned(record r) {
+    return std::visit([](const auto& value) -> owned_record {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, text>) return owned_text{std::string(value.value)};
+        else if constexpr (std::is_same_v<T, json_text>) return owned_json_text{std::string(value.value)};
+        else return missing_record{};
+    }, r);
 }
-inline void check(int32_t result, const buffer& diagnostic) {
-    if (result == THINKTHEN_ERROR) throw failure(parse(diagnostic.value));
+inline thinkthen_record_input input(record r) {
+    thinkthen_record_input result{};
+    result.struct_size = sizeof result;
+    std::visit([&](const auto& value) {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (std::is_same_v<T, missing_record>) result.kind = THINKTHEN_RECORD_MISSING;
+        else {
+            result.kind = std::is_same_v<T, text> ? THINKTHEN_RECORD_TEXT : THINKTHEN_RECORD_JSON;
+            result.data = bytes(value.value); result.len = value.value.size();
+        }
+    }, r);
+    return result;
 }
-struct native_row {
-    thinkthen_row value{};
-    ~native_row() { thinkthen_row_free(&value); }
-    native_row() = default;
-    native_row(const native_row&) = delete;
-    native_row& operator=(const native_row&) = delete;
-};
+inline thinkthen_record_input input(const owned_record& r) {
+    if (const auto* json = std::get_if<owned_json_text>(&r); json && record_encoding::invalid(*json)) {
+        thinkthen_record_input value{};
+        value.struct_size = sizeof value; value.kind = THINKTHEN_RECORD_INVALID;
+        return value;
+    }
+    return input(borrowed(r));
+}
+
 struct call_state {
     thinkthen_call* call;
     explicit call_state(thinkthen_call* value) : call(value) {}
-    ~call_state() { thinkthen_free(call); }
+    ~call_state() { thinkthen_call_free(call); }
     call_state(const call_state&) = delete;
     call_state& operator=(const call_state&) = delete;
 };
 }
-
-template<class Row> class basic_stream;
-template<class Answer> class typed_row;
-
-class row {
-    struct data {
-        json fields;
-        std::optional<std::string> detail;
-        std::optional<thinkthen::error> failure;
-        std::size_t position;
-        bool kept;
-        explicit data(const thinkthen_row& value)
-            : fields(detail::parse(value.fields)), position(value.position),
-              kept(value.kept != 0) {
-            if (value.detail.len != 0)
-                detail.emplace(reinterpret_cast<const char*>(value.detail.data), value.detail.len);
-            if (fields.contains("error")) failure.emplace(detail::failure(fields.at("error")));
-        }
-    };
-    std::shared_ptr<const data> data_;
-    template<class Answer> friend class typed_row;
-    explicit row(const thinkthen_row& value) : data_(std::make_shared<data>(value)) {}
-    template<class Row> friend class basic_stream;
-    const json* member(const char* name) const {
-        auto found = data_->fields.find(name);
-        return found == data_->fields.end() ? nullptr : &*found;
-    }
-public:
-    thinkthen::status status() const {
-        const auto& value = data_->fields.at("status");
-        if (value == "answered") return thinkthen::status::answered;
-        if (value == "unsure") return thinkthen::status::unsure;
-        return thinkthen::status::failed;
-    }
-    const json* id() const { return member("id"); }
-    const json* answer() const { return member("answer"); }
-    const json* raw_answer() const { return member("answer"); }
-    std::optional<double> probability() const {
-        const auto* value = member("p");
-        return value ? std::optional<double>(value->get<double>()) : std::nullopt;
-    }
-    const thinkthen::error* error() const noexcept {
-        return data_->failure ? &*data_->failure : nullptr;
-    }
-    std::optional<json> detail() const {
-        return data_->detail ? std::optional<json>(json::parse(*data_->detail)) : std::nullopt;
-    }
-    std::size_t position() const noexcept { return data_->position; }
-    bool kept() const noexcept { return data_->kept; }
-};
-
 class cancel_handle {
     std::weak_ptr<detail::call_state> state_;
     explicit cancel_handle(const std::shared_ptr<detail::call_state>& state) : state_(state) {}
-    template<class Row> friend class basic_stream;
+    template<class Q> friend class stream;
 public:
+    cancel_handle() = default;
     void request_cancel() const noexcept {
-        if (auto state = state_.lock()) thinkthen_cancel(state->call);
+        if (auto state = state_.lock()) thinkthen_call_cancel(state->call);
     }
+    void cancel() const noexcept { request_cancel(); }
 };
-
-template<class Answer> class typed_row : public row {
-    template<class Row> friend class basic_stream;
-    explicit typed_row(const thinkthen_row& value) : row(value) {}
-public:
-    std::optional<Answer> answer() const {
-        const auto* value = raw_answer();
-        return !value || value->is_null() ? std::nullopt : std::optional<Answer>(value->template get<Answer>());
-    }
-};
-
-template<class Row> class basic_stream {
+template<class Q> class stream {
     std::shared_ptr<detail::call_state> state_;
     record_source source_;
     bool started_ = false;
-    basic_stream(thinkthen_call* call, record_source source) : source_(std::move(source)) {
-        // Preserve ownership if allocating the shared control block fails.
-        std::unique_ptr<thinkthen_call, decltype(&thinkthen_free)> owner(call, thinkthen_free);
+    stream(thinkthen_call* call, record_source source) : source_(std::move(source)) {
+        detail::owner<thinkthen_call, thinkthen_call_free> owner(call, thinkthen_call_free);
         state_ = std::make_shared<detail::call_state>(call);
         owner.release();
     }
     friend class client;
-    std::optional<Row> pull() {
+    std::optional<row<Q>> pull() {
         if (!state_) return std::nullopt;
-        // Keep native free away from every active driver operation and cancel.
         auto state = state_;
         try {
             for (;;) {
                 detail::native_row result;
-                detail::buffer diagnostic;
-                auto event = thinkthen_next(state->call, &result.value, &diagnostic.value);
+                detail::diagnostic diagnostic;
+                auto event = thinkthen_call_next(state->call, &result.value, &diagnostic.value);
                 detail::check(event, diagnostic);
-                if (event == THINKTHEN_OK) return Row(result.value);
+                if (event == THINKTHEN_OK) {
+                    return row<Q>(result.value);
+                }
                 if (event == THINKTHEN_END) { close(); return std::nullopt; }
-                auto record = source_ ? source_() : std::nullopt;
-                if (!record) {
-                    thinkthen_end_input(state->call);
-                    source_ = {};
-                } else if (record->is_string()) {
-                    const auto& text = record->template get_ref<const std::string&>();
-                    detail::check(thinkthen_send_text(state->call,
-                        reinterpret_cast<const uint8_t*>(text.data()), text.size(),
-                        &diagnostic.value), diagnostic);
+                if (event != THINKTHEN_NEEDS_INPUT) detail::incompatible();
+                auto r = source_ ? source_() : std::nullopt;
+                if (!r) {
+                    thinkthen_call_end_input(state->call); source_ = {};
                 } else {
-                    auto bytes = record->dump();
-                    detail::check(thinkthen_send_json(state->call,
-                        reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(),
-                        &diagnostic.value), diagnostic);
+                    const auto input = detail::input(*r);
+                    if (input.kind == THINKTHEN_RECORD_TEXT) detail::invoke(thinkthen_call_send_text, state->call, input.data, input.len);
+                    else if (input.kind == THINKTHEN_RECORD_JSON) detail::invoke(thinkthen_call_send_json, state->call, input.data, input.len);
+                    else if (input.kind == THINKTHEN_RECORD_MISSING) detail::invoke(thinkthen_call_send_missing, state->call);
+                    else detail::invoke(thinkthen_call_send_invalid, state->call);
                 }
             }
         } catch (...) { close(); throw; }
     }
 public:
-    basic_stream(const basic_stream&) = delete;
-    basic_stream& operator=(const basic_stream&) = delete;
-    basic_stream(basic_stream&&) noexcept = default;
-    basic_stream& operator=(basic_stream&&) noexcept = default;
-    ~basic_stream() { close(); }
-    void close() noexcept {
-        if (state_) thinkthen_cancel(state_->call);
-        state_.reset();
-        source_ = {};
-    }
-    thinkthen::cancel_handle cancel_handle() const { return thinkthen::cancel_handle(state_); }
-    std::optional<Row> next() { return pull(); }
-    class iterator {
-        basic_stream* stream_ = nullptr;
-        std::optional<Row> current_;
-        explicit iterator(basic_stream* value) : stream_(value), current_(value->pull()) {
-            if (!current_) stream_ = nullptr;
+    stream(const stream&) = delete;
+    stream& operator=(const stream&) = delete;
+    stream(stream&& other) noexcept : state_(std::move(other.state_)), source_(std::move(other.source_)),
+        started_(other.started_) { other.started_ = false; }
+    stream& operator=(stream&& other) noexcept {
+        if (this != &other) {
+            close(); state_ = std::move(other.state_); source_ = std::move(other.source_);
+            started_ = other.started_; other.started_ = false;
         }
-        friend class basic_stream;
+        return *this;
+    }
+    ~stream() { close(); }
+    void close() noexcept {
+        if (state_) thinkthen_call_cancel(state_->call);
+        state_.reset(); source_ = {};
+    }
+    void cancel() const noexcept { if (state_) thinkthen_call_cancel(state_->call); }
+    thinkthen::cancel_handle cancel_handle() const noexcept { return thinkthen::cancel_handle(state_); }
+    std::optional<row<Q>> next() { return pull(); }
+    class iterator {
+        stream* stream_ = nullptr;
+        std::optional<row<Q>> current_;
+        explicit iterator(stream* value) : stream_(value), current_(value->pull()) { if (!current_) stream_ = nullptr; }
+        friend class stream;
     public:
         using iterator_category = std::input_iterator_tag;
-        using value_type = Row;
+        using value_type = row<Q>;
         using difference_type = std::ptrdiff_t;
-        using reference = const Row&;
-        using pointer = const Row*;
+        using reference = const row<Q>&;
+        using pointer = const row<Q>*;
         iterator() = default;
         reference operator*() const { return *current_; }
         pointer operator->() const { return &*current_; }
-        iterator& operator++() {
-            current_ = stream_->pull();
-            if (!current_) stream_ = nullptr;
-            return *this;
-        }
+        iterator& operator++() { current_ = stream_->pull(); if (!current_) stream_ = nullptr; return *this; }
         iterator operator++(int) { auto old = *this; ++*this; return old; }
-        friend bool operator==(const iterator& left, const iterator& right) {
-            return left.stream_ == right.stream_;
-        }
-        friend bool operator!=(const iterator& left, const iterator& right) { return !(left == right); }
+        friend bool operator==(const iterator& a, const iterator& b) { return a.stream_ == b.stream_; }
+        friend bool operator!=(const iterator& a, const iterator& b) { return !(a == b); }
     };
     iterator begin() {
+        if (!state_) return {};
         if (started_) throw std::logic_error("a stream can be iterated only once");
         started_ = true;
-        return state_ ? iterator(this) : iterator();
+        return iterator(this);
     }
     iterator end() const { return {}; }
 };
-
-using stream = basic_stream<row>;
-template<class Answer> using typed_stream = basic_stream<typed_row<Answer>>;
-struct tagged_question { json value; };
-
 class client {
-    struct deleter { void operator()(thinkthen_client* value) const { thinkthen_client_free(value); } };
-    std::unique_ptr<thinkthen_client, deleter> value_;
-    template<class Row = row> basic_stream<Row> start(const json& request, record_source source) const {
-        auto bytes = request.dump();
-        thinkthen_call* call = nullptr;
-        detail::buffer diagnostic;
-        detail::check(thinkthen_call_open(value_.get(),
-            reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size(),
-            THINKTHEN_UTF8, &call, &diagnostic.value), diagnostic);
-        return basic_stream<Row>(call, std::move(source));
+    detail::owner<thinkthen_client, thinkthen_client_free> value_{nullptr, thinkthen_client_free};
+    void live() const { if (!value_) throw std::logic_error("the client was moved from"); }
+    template<class Q> stream<Q> start(const Q& question, record_source source, std::optional<std::string_view> name) const {
+        live();
+        thinkthen_text named = name ? detail::view(*name) : thinkthen_text{};
+        auto* call = detail::get<thinkthen_call*>(thinkthen_call_open_question, value_.get(), question.native_handle(),
+            name ? &named : nullptr, THINKTHEN_OFFSET_UTF8);
+        return stream<Q>(call, std::move(source));
     }
-    template<class Answer> typed_stream<Answer> named(const char* function, tagged_question question,
-                 record_source input, json options) const {
-        return start<typed_row<Answer>>({{"function", function},
-                      {"question", std::move(question.value)},
-                      {"options", std::move(options)}}, std::move(input));
+    template<class Q> stream<Q> start(const Q& question, std::vector<owned_record> records, std::optional<std::string_view> name) const {
+        live();
+        std::vector<thinkthen_record_input> inputs;
+        inputs.reserve(records.size());
+        for (const auto& r : records) inputs.push_back(detail::input(r));
+        thinkthen_text named = name ? detail::view(*name) : thinkthen_text{};
+        auto* call = detail::get<thinkthen_call*>(thinkthen_call_open_records_question, value_.get(), question.native_handle(),
+            name ? &named : nullptr, inputs.data(), inputs.size(), sizeof(thinkthen_record_input), THINKTHEN_OFFSET_UTF8);
+        return stream<Q>(call, {});
     }
-    static record_source source(records input) {
-        return [input = std::move(input), index = std::size_t{}]() mutable -> std::optional<json> {
-            if (index == input.size()) return std::nullopt;
-            return std::move(input[index++]);
-        };
+    template<class Q> row<Q> one(const Q& question, record r, std::optional<std::string_view> name) const {
+        auto rows = start(question, std::vector<owned_record>{detail::owned(r)}, name);
+        auto value = rows.next();
+        if (!value || rows.next()) detail::incompatible();
+        return std::move(*value);
     }
 public:
-    explicit client(const json& settings = json::object()) {
-        auto bytes = settings.dump();
-        thinkthen_client* value = nullptr;
-        detail::buffer diagnostic;
-        detail::check(thinkthen_client_open(reinterpret_cast<const uint8_t*>(bytes.data()),
-            bytes.size(), &value, &diagnostic.value), diagnostic);
-        value_.reset(value);
+    explicit client(const settings& settings = {}) {
+        detail::check_abi();
+        detail::owner<thinkthen_settings, thinkthen_settings_free> s(
+            detail::get<thinkthen_settings*>(thinkthen_settings_new), thinkthen_settings_free);
+        detail::invoke(thinkthen_settings_set_backend, s.get(), static_cast<std::uint32_t>(settings.backend));
+        if (settings.model) detail::invoke(thinkthen_settings_set_model, s.get(), detail::bytes(*settings.model), settings.model->size());
+        if (settings.url) detail::invoke(thinkthen_settings_set_url, s.get(), detail::bytes(*settings.url), settings.url->size());
+        if (settings.api_key.value_) detail::invoke(thinkthen_settings_copy_api_key, s.get(), settings.api_key.value_.get());
+        if (settings.batch) detail::invoke(thinkthen_settings_set_batch, s.get(), *settings.batch);
+        if (settings.retry) {
+            const auto& r = *settings.retry;
+            if (r.initial_backoff.count() < 0 || r.attempt_timeout.count() < 0) detail::invoke(thinkthen_settings_conversion_error);
+            detail::invoke(thinkthen_settings_set_retry, s.get(), r.max_retries,
+                static_cast<std::uint64_t>(r.initial_backoff.count()), static_cast<std::uint64_t>(r.attempt_timeout.count()));
+        }
+        value_.reset(detail::get<thinkthen_client*>(thinkthen_client_open, s.get()));
     }
     client(const client&) = delete;
     client& operator=(const client&) = delete;
     client(client&&) noexcept = default;
     client& operator=(client&&) noexcept = default;
-    stream open(const json& request) const {
-        auto result = start(request, {});
-        thinkthen_end_input(result.state_->call);
-        return result;
-    }
-#define THINKTHEN_CPP_FUNCTION(name, question_type, answer_type) \
-    typed_stream<answer_type> name(question_type question, records input, json options = json::object()) const { \
-        return name(tagged_question{json{{"type", "inline"}, {"value", std::move(question)}}}, source(std::move(input)), std::move(options)); \
-    } \
-    typed_stream<answer_type> name(question_type question, record_source input, json options = json::object()) const { \
-        return name(tagged_question{json{{"type", "inline"}, {"value", std::move(question)}}}, std::move(input), std::move(options)); \
-    } \
-    typed_stream<answer_type> name(tagged_question question, records input, json options = json::object()) const { \
-        return name(std::move(question), source(std::move(input)), std::move(options)); \
-    } \
-    typed_stream<answer_type> name(tagged_question question, record_source input, json options = json::object()) const { \
-        return named<answer_type>(#name, std::move(question), std::move(input), std::move(options)); \
-    }
-    THINKTHEN_CPP_FUNCTION(decide, std::string, bool)
-    THINKTHEN_CPP_FUNCTION(choose, std::string, std::string)
-    THINKTHEN_CPP_FUNCTION(tag, std::string, std::vector<std::string>)
-    THINKTHEN_CPP_FUNCTION(score, std::string, double)
-    THINKTHEN_CPP_FUNCTION(filter, std::string, bool)
-    THINKTHEN_CPP_FUNCTION(rank, std::string, std::size_t)
-    THINKTHEN_CPP_FUNCTION(find, std::string, span)
-    THINKTHEN_CPP_FUNCTION(annotate, json, annotations)
-    THINKTHEN_CPP_FUNCTION(recognize, std::vector<std::string>, std::vector<thinkthen::name>)
-    THINKTHEN_CPP_FUNCTION(relate, json, std::vector<relation>)
+#define THINKTHEN_CPP_FUNCTION(Q) \
+    row<thinkthen::Q> Q(const thinkthen::Q& question, record r, std::optional<std::string_view> name = {}) const { return one(question, r, name); } \
+    stream<thinkthen::Q> Q##_each(const thinkthen::Q& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); } \
+    stream<thinkthen::Q> Q##_each(const thinkthen::Q& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    THINKTHEN_CPP_FUNCTION(decide) THINKTHEN_CPP_FUNCTION(choose)
+    THINKTHEN_CPP_FUNCTION(tag) THINKTHEN_CPP_FUNCTION(score)
+    THINKTHEN_CPP_FUNCTION(filter) THINKTHEN_CPP_FUNCTION(rank)
+    THINKTHEN_CPP_FUNCTION(find) THINKTHEN_CPP_FUNCTION(recognize)
+    THINKTHEN_CPP_FUNCTION(relate) THINKTHEN_CPP_FUNCTION(annotate)
 #undef THINKTHEN_CPP_FUNCTION
 };
-}
+}}
 #endif

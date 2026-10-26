@@ -22,7 +22,7 @@ polars = ["polars>=1.0"]
 manifest-path = "native/Cargo.toml"
 module-name = "thinkthen._native"
 python-source = "."
-include = [{ path = "thinkthen/_relation.py", format = ["sdist", "wheel"] }, { path = "build_backend.py", format = "sdist" }, { path = "relation_type.py", format = "sdist" }]
+include = [{ path = "thinkthen/_codes.py", format = ["sdist", "wheel"] }, { path = "build_backend.py", format = "sdist" }, { path = "relation_type.py", format = "sdist" }]
 
 [tool.ruff]
 target-version = "py310"

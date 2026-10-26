@@ -62,10 +62,17 @@ def candidate(folder):
         verify(path, expected)
     from release_jvm_notices import check as jvm_notices
     jvm_notices(folder)
-    for path in [*(folder / 'r').glob('jsonlite-*'), *(folder / 'prerequisites/r').glob('jsonlite_*')]:
-        files = contents(path)
-        for name, data in runtime_files('jsonlite-2.0.0').items():
-            if files['jsonlite/' + name] != data: raise ValueError('jsonlite runtime terms differ')
+    from release_r_dependencies import directories, terms, metadata
+    from release_notices import ROOT
+    for directory in directories(folder):
+        inventory = json.loads((directory / 'inventory.json').read_text())
+        for filename in inventory['install_order']:
+            path = directory / filename
+            verify(path)
+            files = contents(path)
+            for name, data in terms(path, ROOT).items():
+                if files[metadata(path)['Package'] + '/' + name] != data:
+                    raise ValueError('R dependency terms differ: ' + filename)
     if (folder / 'prerequisites/swift-runtime').is_dir():
         for name, data in runtime_files('swift-icu').items():
             if (folder / 'prerequisites/swift-runtime' / name).read_bytes() != data:

@@ -10,14 +10,7 @@ use tempfile::TempDir;
 
 fn excel(input: &Path, extra: &[&str]) -> Output {
     support::command()
-        .args([
-            "decide",
-            "Ready?",
-            "--adapter",
-            "stub",
-            "--excel",
-            "--input",
-        ])
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
         .arg(input)
         .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
         .args(extra)
@@ -29,8 +22,8 @@ fn excel(input: &Path, extra: &[&str]) -> Output {
 fn excel_widens_filters_and_spans_and_inserts_before_row_extensions() {
     let directory = TempDir::new().unwrap();
     for (prefixed, last_column, expected_column, expected_span) in [
-        (false, "B", "G", 7),
-        (true, "B", "G", 7),
+        (false, "B", "H", 8),
+        (true, "B", "H", 8),
         (false, "Z", "Z", 26),
     ] {
         let input = directory
@@ -76,7 +69,7 @@ fn excel_widens_filters_and_spans_and_inserts_before_row_extensions() {
                 .next()
                 .unwrap();
             assert!(
-                row_xml.find("r=\"G").unwrap()
+                row_xml.find("r=\"H").unwrap()
                     < row_xml.find(&format!("<{prefix}extLst>")).unwrap(),
                 "{row_xml}"
             );
@@ -107,7 +100,7 @@ fn styled_empty_header_cells_leave_append_positions_intact() {
     ))
     .unwrap();
     assert!(sheet.contains("<c r=\"D1\" s=\"1\"/>"));
-    assert!(sheet.contains("<c r=\"E2\" t=\"b\"><v>0</v></c>"));
+    assert!(sheet.contains("<c r=\"E2\" t=\"b\"><v>1</v></c>"));
 }
 
 #[test]
@@ -128,14 +121,7 @@ fn formula_caches_require_values_except_for_saved_empty_strings() {
             sheet.replace("<c r=\"B2\" s=\"1\"><f>1+2</f><v>3</v></c>", cell)
         });
         let output = support::command()
-            .args([
-                "decide",
-                "Ready?",
-                "--adapter",
-                "stub",
-                "--excel",
-                "--input",
-            ])
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
             .arg(&input)
             .args([
                 "--sheet", "Intake", "--column", "Formula", "--into", "ready",
@@ -176,29 +162,33 @@ fn extensions_ignore_case_and_unsupported_workbooks_explain_conversion() {
 }
 
 #[test]
-fn whole_annotation_failure_publishes_nothing() {
+fn oversized_annotation_records_publish_failed_cells() {
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("annotation.csv");
     fs::write(&input, "Body\nalpha\n").unwrap();
-    let toolbox =
-        json!({"questions":{"first":{"decide":"q".repeat(96_000)},"second":{"decide":"Other?"}}});
+    let toolbox = json!({"first":{"function":"decide","question":"q".repeat(96_000)},"second":{"function":"decide","question":"Other?"}});
+    let definition = directory.path().join("questions.json");
+    fs::write(&definition, json!({"questions":toolbox}).to_string()).unwrap();
     let output = support::command()
         .args([
             "annotate",
-            &toolbox.to_string(),
-            "--adapter",
+            definition.to_str().unwrap(),
+            "--backend",
             "stub",
-            "--csv",
-            "--input",
+            "--from",
+            "csv",
         ])
         .arg(&input)
         .args(["--column", "Body"])
         .output()
         .unwrap();
-    assert_eq!(output.status.code(), Some(4), "{output:?}");
-    assert!(output.stdout.is_empty());
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
     assert_eq!(fs::read_to_string(&input).unwrap(), "Body\nalpha\n");
-    assert!(!directory.path().join("annotation.thinkthen.csv").exists());
+    let rows = table(&directory.path().join("annotation.thinkthen.csv"), b',');
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[1][0], "alpha");
+    assert!(rows[1].iter().any(|cell| cell.contains("record.too-large")));
+    assert!(rows[1].iter().any(|cell| cell == "failed"));
 }
 
 #[test]
@@ -207,17 +197,19 @@ fn details_flag_keeps_file_details_in_their_columns() {
     let input = directory.path().join("details.csv");
     fs::write(&input, "Body\nalpha\n").unwrap();
     let output = support::command()
-        .args(["decide", "Ready?", "--adapter", "stub", "--csv", "--input"])
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
         .arg(&input)
-        .args(["--column", "Body", "--into", "ready", "--details"])
+        .args(["--column", "Body", "--into", "ready", "--format", "text"])
         .output()
         .unwrap();
     assert!(output.status.success(), "{output:?}");
     let rows = table(&directory.path().join("details.thinkthen.csv"), b',');
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0][5], "ready_detail");
-    let detail: Value = serde_json::from_str(&rows[1][5]).unwrap();
-    assert_eq!(detail["source"]["backend"], "stub");
+    assert!(rows[1][5].is_empty());
+    assert_eq!(rows[0][6], "ready_source");
+    let source: Value = serde_json::from_str(&rows[1][6]).unwrap();
+    assert_eq!(source["backend"], "stub");
 }
 
 #[cfg(unix)]
@@ -235,7 +227,7 @@ fn new_files_use_the_callers_creation_mode() {
             .env_clear()
             .args(["-c", "umask \"$1\"; shift; exec \"$@\"", "file-mode", mask])
             .arg(command.get_program())
-            .args(["decide", "Ready?", "--adapter", "stub", "--csv", "--input"])
+            .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
             .arg(&input)
             .args(["--column", "Body", "--into", "ready", "--output"])
             .arg(&output)
@@ -264,27 +256,115 @@ fn unrepresentable_excel_answers_and_details_become_failed_cells() {
             let rows: String = (3..=21).map(|row| format!("<row r=\"{row}\"><c r=\"A{row}\" t=\"inlineStr\"><is><t>evidence {row}</t></is></c></row>")).collect();
             sheet.replace("</sheetData>", &format!("{rows}</sheetData>"))
         });
+        let bad_label = bad.clone();
+        let choose = function == "choose";
+        let server = loopback::Loopback::answering(move |question| {
+            if choose {
+                let good = question["instructions"].as_str().unwrap().contains("evidence 3");
+                json!({"type":"choice","probabilities":{(bad_label.clone()):if good {0.0} else {1.0},"good":if good {1.0} else {0.0}}})
+            } else { json!({"type":"noul","noul":0.1}) }
+        }).unwrap();
         let mut command = support::command();
         command
-            .args([function, "Pick", "--adapter", "stub", "--excel", "--input"])
+            .args([function, "Pick", "--url", server.base(), "--from", "xlsx"])
+            .env("THINKTHEN_API_KEY", loopback::KEY)
             .arg(&input)
             .args(["--sheet", "Intake", "--column", "Body", "--into", "result"]);
         if function == "choose" {
-            command.args(["--option", &bad, "--option", "good"]);
+            command.args(["--choice", &bad, "--choice", "good"]);
         } else {
             command.args(["--label", &bad, "--threshold", "1"]);
         }
         let result = command.output().unwrap();
-        assert_eq!(result.status.code(), Some(5), "{name}: {result:?}");
+        assert_eq!(result.status.code(), Some(6), "{name}: {result:?}");
         let output = directory.path().join(format!("{name}.thinkthen.xlsx"));
         let sheet = String::from_utf8(member(&output, "xl/worksheets/sheet1.xml")).unwrap();
         assert_eq!(sheet.matches("<row ").count(), 21);
         assert!(sheet.contains("local.io"), "{name}: {sheet}");
         assert!(sheet.contains(">failed</t>"));
-        if function == "choose" {
-            assert!(sheet.contains(">good</t>"));
-            assert!(sheet.contains(">answered</t>"));
-        }
+        // Complete choice detail retains every label even when the selected answer fits.
+        assert!(sheet.contains(">alpha</t>"));
+        assert!(sheet.contains(">evidence 3</t>"));
+        assert!(server.count() > 0);
         assert!(!sheet.contains(&bad));
     }
+}
+
+#[test]
+fn invalid_annotation_admission_publishes_nothing() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("invalid.csv");
+    fs::write(&input, "Body\nalpha\n").unwrap();
+    let definition = directory.path().join("questions.json");
+    fs::write(
+        &definition,
+        r#"{"questions":{"bad":{"function":"choose","question":"Which?","choices":["only"]}}}"#,
+    )
+    .unwrap();
+    let output = support::command()
+        .args([
+            "annotate",
+            definition.to_str().unwrap(),
+            "--backend",
+            "stub",
+            "--from",
+            "csv",
+        ])
+        .arg(&input)
+        .args(["--column", "Body"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!directory.path().join("invalid.thinkthen.csv").exists());
+    assert_eq!(fs::read_to_string(input).unwrap(), "Body\nalpha\n");
+}
+
+#[test]
+fn unrepresentable_annotation_cells_preserve_successful_sibling_columns() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("siblings.xlsx");
+    workbook(&input);
+    let bad = "x".repeat(32_768);
+    let invalid = bad.clone();
+    let server = loopback::Loopback::answering(move |question| {
+        if question["type"] == "choice" {
+            json!({"type":"choice","probabilities":{(invalid.clone()):1.0,"good":0.0}})
+        } else {
+            json!({"type":"noul","noul":0.9})
+        }
+    })
+    .unwrap();
+    let questions = json!({
+        "bad":{"function":"choose","question":"Which?","choices":[bad,"good"],"evidence":"/Body"},
+        "ready":{"function":"decide","question":"Ready?","evidence":"/Body"}
+    });
+    let definition = directory.path().join("questions.json");
+    fs::write(&definition, json!({"questions":questions}).to_string()).unwrap();
+    let result = support::command()
+        .args([
+            "annotate",
+            definition.to_str().unwrap(),
+            "--url",
+            server.base(),
+            "--from",
+            "xlsx",
+        ])
+        .arg(&input)
+        .args(["--sheet", "Intake", "--column", "Body"])
+        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(6), "{result:?}");
+    let sheet = String::from_utf8(member(
+        &directory.path().join("siblings.thinkthen.xlsx"),
+        "xl/worksheets/sheet1.xml",
+    ))
+    .unwrap();
+    assert!(sheet.contains(">alpha</t>"));
+    assert!(sheet.contains("<c r=\"B2\" s=\"1\"><f>1+2</f><v>3</v></c>"));
+    assert!(sheet.contains("local.io"));
+    assert!(sheet.contains(">failed</t>"));
+    assert!(sheet.contains(">answered</t>"));
+    assert!(sheet.contains("<c r=\"I2\" t=\"b\"><v>1</v></c>"));
+    assert!(!sheet.contains(&bad));
 }

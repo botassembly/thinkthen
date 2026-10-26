@@ -3,32 +3,22 @@
 
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
-use thinkthen::{
-    Adapter, Backend, ChoiceOption, Choose, Decide, Engine, Function, Record, Score, Tag,
-};
+use thinkthen::{BackendName, Choose, Decide, Engine, Function, Key, Record, Score, Settings, Tag};
 
-fn backend(server: &Loopback) -> Backend {
-    Backend::resolve_adapter(Adapter::OpenAi, Some(server.base()), None, |name| {
-        (name == "OPENAI_API_KEY").then(|| KEY.to_owned())
-    })
-    .unwrap()
+fn engine(server: &Loopback) -> Engine {
+    Settings::default()
+        .with_backend(BackendName::OpenAi)
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
-
 fn call(question: &impl Function, answers: Value) -> (Value, Vec<loopback::Request>) {
     let server = Loopback::start(move |_| Reply::json(200, &json!({"answers": answers}))).unwrap();
-    let mut rows = Vec::new();
-    let result = Engine::new(backend(&server)).call(
-        question,
-        [Record::text("Say \"now\"\nplease")],
-        |row| {
-            rows.push(serde_json::to_value(row).unwrap());
-        },
-    );
-    assert_eq!(
-        result.err().map(|error| error.kind().code()),
-        rows.iter().find_map(|row| row["error"]["code"].as_str())
-    );
-    (rows.pop().unwrap(), server.requests())
+    let row = engine(&server)
+        .run(question, Record::text("Say \"now\"\nplease"))
+        .unwrap();
+    (serde_json::to_value(row).unwrap(), server.requests())
 }
 
 #[test]
@@ -38,11 +28,15 @@ fn predicates_send_quoted_evidence_and_return_the_same_verdict() {
         &question,
         json!([{"type":"predicate","name":null,"probability":0.9}]),
     );
+    assert_eq!(row["position"], 1);
+    assert_eq!(row["status"], "answered");
+    assert_eq!(row["answer"], true);
+    assert_eq!(row["probability"], 0.9);
+    assert_eq!(row["source"]["backend"], "openai");
+    assert_eq!(row["source"]["model"], "gpt-6-luna");
     assert_eq!(
-        row,
-        json!({"id":1,"status":"answered","answer":true,"p":0.9,
-            "detail":{"source":{"question_identity":question.identity(),
-                "backend":"openai","model":"gpt-6-luna"}}})
+        row["source"]["question_identity"].as_str().unwrap().len(),
+        64
     );
     assert_eq!(requests[0].path, "/v1/decisions");
     assert_eq!(
@@ -60,15 +54,8 @@ fn predicates_send_quoted_evidence_and_return_the_same_verdict() {
 }
 
 #[test]
-fn choices_match_typed_values_and_preserve_descriptions() {
-    let question = Choose::new(
-        "Which?",
-        [
-            ChoiceOption::new("z").unwrap().description("First"),
-            ChoiceOption::new("a").unwrap(),
-        ],
-    )
-    .unwrap();
+fn choices_match_typed_values_and_preserve_caller_order() {
+    let question = Choose::new("Which?", ["z", "a"]).unwrap();
     let (row, requests) = call(
         &question,
         json!([{"type":"choice","probabilities":[
@@ -76,11 +63,11 @@ fn choices_match_typed_values_and_preserve_descriptions() {
         ]}]),
     );
     assert_eq!(row["answer"], "a");
-    assert_eq!(row["p"], 0.8);
+    assert_eq!(row["probability"], 0.8);
     assert_eq!(
         requests[0].json().unwrap()["questions"][0]["choices"],
         json!([
-            {"value":"z","description":"First"},{"value":"a"}
+            {"value":"z"},{"value":"a"}
         ])
     );
 }
@@ -114,7 +101,7 @@ fn scores_use_level_probabilities_in_caller_order() {
         ]}]),
     );
     assert_eq!(row["answer"], 0.8);
-    assert_eq!(row["detail"]["probabilities"], json!([0.2, 0.8]));
+    assert_eq!(row["detail"]["levels"], json!([0.2, 0.8]));
     assert_eq!(
         requests[0].json().unwrap()["questions"][0]["levels"],
         json!([
@@ -149,29 +136,20 @@ fn malformed_answers_fail_only_their_asks_without_exposing_reply_text() {
     })
     .unwrap();
     let mut rows = Vec::new();
-    Engine::new(backend(&server))
-        .call(
-            &question,
-            [Record::text("one"), Record::text("two")],
-            |row| {
-                rows.push(serde_json::to_value(row).unwrap());
-            },
-        )
-        .unwrap_err();
+    engine(&server)
+        .rows(&question, [Record::text("one"), Record::text("two")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| {
+            rows.push(serde_json::to_value(row).unwrap());
+        });
     assert_eq!(rows[0]["error"]["code"], "backend.reply");
     assert_eq!(rows[1]["answer"], true);
 }
 
 #[test]
 fn distributions_reject_missing_duplicate_unknown_and_invalid_values() {
-    let choice = Choose::new(
-        "Which?",
-        [
-            ChoiceOption::new("a").unwrap(),
-            ChoiceOption::new("b").unwrap(),
-        ],
-    )
-    .unwrap();
+    let choice = Choose::new("Which?", ["a", "b"]).unwrap();
     for probabilities in [
         json!([{"value":"a","probability":0.9}]),
         json!([{"value":"a","probability":0.5},{"value":"a","probability":0.5}]),
@@ -200,25 +178,6 @@ fn distributions_reject_missing_duplicate_unknown_and_invalid_values() {
 }
 
 #[test]
-fn described_verdicts_use_boolean_choices() {
-    let question = Decide::new("Is it urgent?").unwrap().yes("Now").no("Later");
-    let (row, requests) = call(
-        &question,
-        json!([{"type":"choice","probabilities":[
-            {"value":false,"probability":0.1},{"value":true,"probability":0.9}
-        ]}]),
-    );
-    assert_eq!(row["answer"], true);
-    assert_eq!(row["p"], 0.9);
-    assert_eq!(
-        requests[0].json().unwrap()["questions"][0]["choices"],
-        json!([
-            {"value":true,"description":"Now"},{"value":false,"description":"Later"}
-        ])
-    );
-}
-
-#[test]
 fn adapter_selection_keeps_explicit_settings_and_rejects_missing_keys() {
     let server = Loopback::start(|_| {
         Reply::json(
@@ -229,44 +188,42 @@ fn adapter_selection_keeps_explicit_settings_and_rejects_missing_keys() {
         )
     })
     .unwrap();
-    let key = thinkthen::Key::new(KEY).unwrap();
-    let backend = Backend::new(server.base(), key, "chosen-model").adapter(Adapter::OpenAi);
-    assert!(!format!("{backend:?}").contains(KEY));
-    Engine::new(backend)
-        .call(
-            &Decide::new("Is it?").unwrap(),
-            [Record::text("text")],
-            |_| {},
-        )
+    let settings = Settings::default()
+        .with_backend(BackendName::OpenAi)
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .model("chosen-model");
+    assert!(!format!("{settings:?}").contains(KEY));
+    settings
+        .engine(|_| None)
+        .unwrap()
+        .run(&Decide::new("Is it?").unwrap(), Record::text("text"))
         .unwrap();
     assert_eq!(
         server.requests()[0].json().unwrap()["model"],
         "chosen-model"
     );
     for value in [None, Some(" ")] {
-        let error = Backend::resolve_adapter(Adapter::OpenAi, Some(server.base()), None, |_| {
-            value.map(str::to_owned)
-        })
-        .unwrap_err();
-        assert_eq!(error.kind().code(), "usage.key-missing");
+        let error = Settings::default()
+            .with_backend(BackendName::OpenAi)
+            .url(server.base())
+            .engine(|_| value.map(str::to_owned))
+            .unwrap_err();
+        assert_eq!(error.code().as_str(), "usage.key-missing");
     }
 }
 
 #[test]
 fn a_choice_above_the_protocol_limit_fails_before_sending() {
     let server = Loopback::start(|_| panic!("an invalid choice must not send")).unwrap();
-    let question = Choose::new(
-        "Which?",
-        (0..256).map(|i| ChoiceOption::new(i.to_string()).unwrap()),
-    )
-    .unwrap();
+    let question = Choose::new("Which?", (0..256).map(|i| i.to_string())).unwrap();
     let mut rows = Vec::new();
-    Engine::new(backend(&server))
-        .call(&question, [Record::text("text")], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap_err();
-    assert_eq!(rows[0]["error"]["code"], "backend.limit");
+    engine(&server)
+        .rows(&question, [Record::text("text")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+    assert_eq!(rows[0]["error"]["code"], "record.too-large");
     assert_eq!(server.count(), 0);
 }
 
@@ -286,14 +243,17 @@ fn the_adapter_limit_closes_requests_between_records() {
         })
         .unwrap();
         let mut rows = Vec::new();
-        Engine::new(backend(&server))
+        Settings::default()
+            .with_backend(BackendName::OpenAi)
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
             .batch("500".parse().unwrap())
-            .call(
-                &question,
-                (0..count).map(|i| Record::text(i.to_string())),
-                |row| rows.push(serde_json::to_value(row).unwrap()),
-            )
-            .unwrap();
+            .engine(|_| None)
+            .unwrap()
+            .rows(&question, (0..count).map(|i| Record::text(i.to_string())))
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows.len(), count);
         assert!(rows.iter().all(|row| row["answer"] == true));
         assert_eq!(server.count(), if count == 400 { 1 } else { 2 });

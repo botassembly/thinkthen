@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Generate JVM error types from the shared engine contract."""
+import json
+from pathlib import Path
+import sys
+
+root = Path(__file__).resolve().parent.parent
+codes = json.loads((root / 'schemas/contract.json').read_text())['codes']
+base = Path(sys.argv[1]) if len(sys.argv) > 1 else root / 'sdk/java'
+output = base / 'library/target/generated-sources/contracts/io/thinkthen'
+output.mkdir(parents=True, exist_ok=True)
+entries = []
+for code in codes:
+    name = code['name'].upper().replace('.', '_').replace('-', '_')
+    entries.append(f'    {name}({code["value"]}, "{code["name"]}", Family.{code["family"].upper()})')
+(output / 'ErrorCode.java').write_text('''package io.thinkthen;
+
+public enum ErrorCode {
+''' + ',\n'.join(entries) + ''';
+    public enum Family { USAGE, RECORD, BACKEND, LOCAL, INTERNAL }
+    private final int value;
+    private final String wireName;
+    private final Family family;
+    ErrorCode(int value, String wireName, Family family) { this.value = value; this.wireName = wireName; this.family = family; }
+    public int value() { return value; }
+    public String wireName() { return wireName; }
+    public Family family() { return family; }
+    public static ErrorCode fromWire(String name) {
+        for (var code : values()) if (code.wireName.equals(name)) return code;
+        throw new IllegalArgumentException("Unknown native error code");
+    }
+}
+''')
+(output / 'internal').mkdir(exist_ok=True)
+(output / 'internal/DriverCode.java').write_text('''package io.thinkthen.internal;
+
+public record DriverCode(int value, String name, String family) {
+    public static java.util.List<DriverCode> values() { return java.util.List.of(
+''' + ',\n'.join(f'        new DriverCode({code["value"]}, "{code["name"]}", "{code["family"]}")' for code in codes) + '); }\n}\n')
+
+# FFM layouts and signatures follow the generated C header, including padding.
+import re
+header = (root / 'crates/thinkthen-ffi/include/thinkthen.h').read_text()
+header = re.sub(r'/\*.*?\*/', '', header, flags=re.S)
+primitive = {
+    'uint8_t': ('ValueLayout.JAVA_BYTE', 1, 1),
+    'uint16_t': ('ValueLayout.JAVA_SHORT', 2, 2),
+    'uint32_t': ('ValueLayout.JAVA_INT', 4, 4),
+    'int32_t': ('ValueLayout.JAVA_INT', 4, 4),
+    'uint64_t': ('ValueLayout.JAVA_LONG', 8, 8),
+    'int64_t': ('ValueLayout.JAVA_LONG', 8, 8),
+    'size_t': ('ValueLayout.JAVA_LONG', 8, 8),
+    'double': ('ValueLayout.JAVA_DOUBLE', 8, 8),
+}
+layouts = dict(primitive)
+declarations = []
+for name in ('buffer', 'error', 'row', 'record_input'):
+    body = re.search(r'typedef struct thinkthen_' + name + r'\s*\{(.*?)\}', header, re.S).group(1)
+    offset, alignment, fields = 0, 1, []
+    for declaration in body.split(';'):
+        declaration = declaration.strip()
+        if not declaration:
+            continue
+        ctype, field = declaration.rsplit(None, 1)
+        if '*' in ctype or field.startswith('*'):
+            layout, size, align = 'ValueLayout.ADDRESS', 8, 8
+            field = field.lstrip('*')
+        else:
+            layout, size, align = layouts[ctype]
+        padding = (-offset) % align
+        if padding:
+            fields.append(f'MemoryLayout.paddingLayout({padding})')
+        fields.append(f'{layout}.withName("{field}")')
+        offset += padding + size
+        alignment = max(alignment, align)
+    padding = (-offset) % alignment
+    if padding:
+        fields.append(f'MemoryLayout.paddingLayout({padding})')
+    symbol = name.upper()
+    layouts['struct thinkthen_' + name] = (symbol, offset + padding, alignment)
+    declarations.append('    static final MemoryLayout ' + symbol + ' = MemoryLayout.structLayout(\n        ' + ',\n        '.join(fields) + ');')
+(output / 'internal/NativeLayouts.java').write_text('''package io.thinkthen.internal;
+
+import java.lang.foreign.MemoryLayout;
+import java.lang.foreign.ValueLayout;
+
+final class NativeLayouts {
+    private NativeLayouts() {}
+''' + '\n'.join(declarations) + '\n}\n')
+abi = json.loads((root / 'schemas/abi.json').read_text())
+functions = []
+for export in abi['exports']:
+    match = re.fullmatch(r'(.+?)(thinkthen_\w+)\((.*)\);', export['declaration'])
+    if not match:
+        continue
+    result, name, arguments = match.groups()
+    result = result.strip()
+    def layout(ctype):
+        return 'ValueLayout.ADDRESS' if '*' in ctype else primitive[ctype.strip()][0]
+    try:
+        args = [] if arguments == 'void' else [layout(argument.rsplit(None, 1)[0] if '*' not in argument else argument) for argument in arguments.split(',')]
+        signature = ('FunctionDescriptor.ofVoid(' if result == 'void' else 'FunctionDescriptor.of(' + layout(result) + (', ' if args else '')) + ', '.join(args) + ')'
+    except KeyError:
+        continue
+    functions.append(f'            case "{name.removeprefix("thinkthen_")}" -> {signature};')
+(output / 'internal/NativeSignatures.java').write_text('''package io.thinkthen.internal;
+
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.ValueLayout;
+
+final class NativeSignatures {
+    private NativeSignatures() {}
+    static FunctionDescriptor descriptor(String name) {
+        return switch (name) {
+''' + '\n'.join(functions) + '''
+            default -> throw new IllegalArgumentException("No generated native signature: " + name);
+        };
+    }
+}
+''')
+
+# Kotlin declarations use the same registry and remain build output.
+kotlin = base.parent / 'kotlin/target/generated-sources/contracts/io/thinkthen/kotlin'
+kotlin.mkdir(parents=True, exist_ok=True)
+families = list(dict.fromkeys(code['family'] for code in codes))
+family_entries = ', '.join(f'@SerialName("{family}") {family.upper()}("{family}")' for family in families)
+code_entries = ',\n'.join(f'    @SerialName("{code["name"]}") {code["name"].upper().replace(".","_").replace("-","_")}({code["value"]}, "{code["name"]}", ErrorFamily.{code["family"].upper()})' for code in codes)
+(kotlin / 'ErrorCode.kt').write_text('package io.thinkthen.kotlin\n\nimport kotlinx.serialization.Serializable\nimport kotlinx.serialization.SerialName\n\n@Serializable enum class ErrorFamily(val wireName: String) { ' + family_entries + ' }\n@Serializable enum class ErrorCode(val value: Int, val wireName: String, val family: ErrorFamily) {\n' + code_entries + ';\n    companion object { fun fromWire(name: String): ErrorCode = entries.single { it.wireName == name } }\n}\n')

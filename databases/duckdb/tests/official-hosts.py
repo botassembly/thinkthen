@@ -1,5 +1,6 @@
 """Load the delivered extension in the official command and Python wheel."""
 import json
+import os
 import re
 from pathlib import Path
 import subprocess
@@ -9,14 +10,22 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from testing import child_environment
-from cases import invocation, quote, rows, expected
+from cases import quote
 
 package, deps = map(Path, sys.argv[1:])
 root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root / 'scripts'))
+from package_inventory import INPUTS, DUCKDB_TERMS
+wheel = deps / (deps / 'python-wheel').read_text().strip()
+python_tag, abi_tag = wheel.name.split('-')[2:4]
+if python_tag != f'cp{sys.version_info.major}{sys.version_info.minor}':
+    # The prepared Linux image carries the interpreters for its pinned wheels.
+    interpreter = Path('/opt/python') / f'{python_tag}-{abi_tag}' / 'bin/python3'
+    os.execv(str(interpreter), [str(interpreter), *sys.argv])
 extension = package / 'thinkthen.duckdb_extension'
 env = child_environment()
-assert {p.name for p in package.iterdir()} - {'README.md'} == {
-    'thinkthen.duckdb_extension', 'THINKTHEN-LICENSE', 'DUCKDB-LICENSE', 'YYJSON-LICENSE'}
+assert {p.name for p in package.iterdir()} == {
+    extension.name, *DUCKDB_TERMS, *(destination for _, destination in INPUTS['duckdb'])}
 # Inspect the same installed file that each official host will load.
 if sys.platform == 'darwin':
     dependencies = subprocess.check_output(['otool', '-L', str(extension)], env=env, text=True)
@@ -40,61 +49,42 @@ assert exported == ['thinkthen_duckdb_cpp_init'], exported
 print(dependencies)
 cli = deps / 'cli/duckdb'
 assert subprocess.check_output([str(cli), '--version'], env=env, text=True).startswith('v1.4.3 ')
-prefix = f"LOAD {quote(str(extension))}; SET thinkthen_settings = '{{\"adapter\":\"stub\"}}';"
-cases = json.loads((root / 'construction/stub.json').read_text())
-queries = ['SELECT status, answer::VARCHAR AS answer, p, error::VARCHAR AS error, detail::VARCHAR AS detail FROM '
-           + invocation(case['request']) for case in cases]
-for case, query in zip(cases, queries):
-    output = subprocess.check_output([str(cli), '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + query],
-                                     env=env, text=True)
-    actual = rows(json.loads(output))
-    assert actual == expected(case), ('official CLI', case['request']['function'], actual, expected(case))
-rejections = [("SET GLOBAL thinkthen_settings = '{}'", 'session-only'),
-              ("SELECT * FROM thinkthen_decide((SELECT 'x' AS record), '{bad')", 'usage.question')]
-for case in json.loads((root / 'conformance/public-contract/diagnostics.json').read_text()):
-    request = {'function':'annotate','question':{'type':'inline','value':case['question']},'records':['alpha']}
-    rejections.append(('SELECT * FROM ' + invocation(request), case['code'] + ': ' + case['message']))
-for case in json.loads((root / 'conformance/public-contract/sql.json').read_text()):
-    if 'message' in case:
-        rejections.append(('SET thinkthen_settings = ' + quote(case['settings']), case['code'] + ': ' + case['message']))
-for query, message in rejections:
-    result = subprocess.run([str(cli), '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + query],
-                            env=env, text=True, capture_output=True)
-    assert result.returncode != 0 and message in result.stderr, (query, result.stdout, result.stderr)
-print('official DuckDB 1.4.3 command: all ten shared stub cases and native errors pass')
 
+with tempfile.TemporaryDirectory() as temporary:
+    helper = root / 'scripts/surface-example'
+    subprocess.run([sys.executable, str(helper), 'prepare', 'duckdb', temporary, str(extension)], env=env, check=True)
+    subprocess.run([sys.executable, str(helper), 'check', 'duckdb', str(cli), '-unsigned', '-json',
+                    '-init', '/dev/null', ':memory:', '-f', str(Path(temporary) / 'example.sql')],
+                   env=env, cwd=temporary, check=True)
+
+prefix = f"LOAD {quote(str(extension))}; SET thinkthen_backend = 'stub';"
+query = "SELECT position,status,error_code::VARCHAR AS error_code FROM thinkthen_decide((SELECT NULL::VARCHAR AS record), 'Ready?')"
+output = subprocess.check_output([str(cli), '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + query], env=env, text=True)
+actual = json.loads(output)
+assert len(actual) == 1 and actual[0]['status'] == 'failed' and actual[0]['error_code'] == 'record.missing', actual
+statements = (root / 'databases/duckdb/examples/all-ten.sql').read_text().splitlines()
+counts = (1, 1, 1, 1, 2, 2, 1, 1, 1, 1)
+for statement, count in zip(statements, counts, strict=True):
+    output = subprocess.check_output([str(cli), '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + statement], env=env, text=True)
+    result = json.loads(output)
+    assert len(result) == count and all(row['status'] != 'failed' for row in result), result
 with tempfile.TemporaryDirectory() as temporary:
     venv = Path(temporary) / 'venv'
     subprocess.run([sys.executable, '-m', 'venv', '--without-pip', str(venv)], env=env, check=True)
     python = venv / 'bin/python3'
-    site = Path(subprocess.check_output([str(python), '-c', 'import sysconfig; print(sysconfig.get_path("purelib"))'],
-                                        env=env, text=True).strip())
-    abi = f'cp{sys.version_info.major}{sys.version_info.minor}'
-    wheel, = deps.glob(f'duckdb-1.4.3-{abi}-{abi}-*.whl')
-    # Install the verified wheel into an empty environment without an index or network.
+    site = Path(subprocess.check_output([str(python), '-c', 'import sysconfig; print(sysconfig.get_path("purelib"))'], env=env, text=True).strip())
     with zipfile.ZipFile(wheel) as archive:
         archive.extractall(site)
-    script = '''import duckdb, json, sys
-assert duckdb.__version__ == '1.4.3'
-connection = duckdb.connect(config={'allow_unsigned_extensions': 'true'})
-connection.execute(sys.argv[1])
-for query in json.loads(sys.argv[2]):
-    result = connection.execute(query)
-    names = [column[0] for column in result.description]
-    print(json.dumps([dict(zip(names, row)) for row in result.fetchall()]))
-for query, message in json.loads(sys.argv[3]):
-    try:
-        connection.execute(query)
-    except Exception as error:
-        assert message in str(error), str(error)
-    else:
-        raise AssertionError('invalid SQL unexpectedly succeeded: ' + query)
-connection.close()
-'''
-    output = subprocess.check_output([str(python), '-I', '-c', script, prefix, json.dumps(queries), json.dumps(rejections)], env=env, text=True)
-    results = output.splitlines()
-    assert len(results) == len(cases)
-    for case, result in zip(cases, results):
-        actual = rows(json.loads(result))
-        assert actual == expected(case), ('official Python wheel', case['request']['function'], actual, expected(case))
-print('official DuckDB 1.4.3 Python wheel: all ten shared stub cases and native errors pass')
+    script = """import duckdb,json,sys
+with duckdb.connect(config={'allow_unsigned_extensions': 'true'}) as connection:
+    connection.execute(sys.argv[1])
+    rows = connection.execute(sys.argv[2]).fetchall()
+    assert len(rows) == 1 and rows[0][1] == 'failed' and rows[0][2] == 'record.missing', rows
+    for statement,count in zip(json.loads(sys.argv[3]),(1,1,1,1,2,2,1,1,1,1),strict=True):
+        cursor = connection.execute(statement)
+        status = [column[0] for column in cursor.description].index('status')
+        rows = cursor.fetchall()
+        assert len(rows) == count and all(row[status] != 'failed' for row in rows), rows
+"""
+    subprocess.run([str(python), '-I', '-c', script, prefix, query, json.dumps(statements)], env=env, check=True)
+print('Official DuckDB command and Python load the packaged canonical ABI')

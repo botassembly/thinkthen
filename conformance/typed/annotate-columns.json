@@ -1,0 +1,220 @@
+{
+  "name": "annotate-columns",
+  "request": {
+    "question": {
+      "function": "annotate",
+      "evidence": "/body",
+      "questions": {
+        "ready": {
+          "function": "decide",
+          "question": "Ready?"
+        },
+        "topic": {
+          "function": "choose",
+          "question": "Which topic?",
+          "choices": [
+            "billing",
+            "shipping"
+          ]
+        },
+        "urgency": {
+          "function": "score",
+          "question": "How urgent?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        }
+      }
+    },
+    "records": [
+      {
+        "id": "r1",
+        "body": "alpha"
+      },
+      {
+        "id": "r2",
+        "body": "bravo"
+      },
+      {
+        "id": "r3",
+        "body": "charlie"
+      },
+      {
+        "id": "r4",
+        "body": "delta"
+      }
+    ]
+  },
+  "replies": [
+    {
+      "contains": "How urgent?",
+      "distribution": {
+        "low": 0.25,
+        "high": 0.75
+      }
+    },
+    {
+      "criterion": "billing",
+      "distribution": {
+        "billing": 0.8,
+        "shipping": 0.2
+      }
+    },
+    {
+      "probability": 0.1
+    }
+  ],
+  "expected": [
+    {
+      "function": "annotate",
+      "position": 1,
+      "status": "answered",
+      "answer": {
+        "ready": {
+          "function": "decide",
+          "status": "answered",
+          "answer": false,
+          "probability": 0.1
+        },
+        "topic": {
+          "function": "choose",
+          "status": "answered",
+          "answer": "billing",
+          "probability": 0.8,
+          "detail": {
+            "labels": {
+              "billing": 0.8,
+              "shipping": 0.2
+            }
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.75,
+          "detail": {
+            "levels": [
+              0.25,
+              0.75
+            ]
+          }
+        }
+      },
+      "id": "r1"
+    },
+    {
+      "function": "annotate",
+      "position": 2,
+      "status": "answered",
+      "answer": {
+        "ready": {
+          "function": "decide",
+          "status": "answered",
+          "answer": false,
+          "probability": 0.1
+        },
+        "topic": {
+          "function": "choose",
+          "status": "answered",
+          "answer": "billing",
+          "probability": 0.8,
+          "detail": {
+            "labels": {
+              "billing": 0.8,
+              "shipping": 0.2
+            }
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.75,
+          "detail": {
+            "levels": [
+              0.25,
+              0.75
+            ]
+          }
+        }
+      },
+      "id": "r2"
+    },
+    {
+      "function": "annotate",
+      "position": 3,
+      "status": "answered",
+      "answer": {
+        "ready": {
+          "function": "decide",
+          "status": "answered",
+          "answer": false,
+          "probability": 0.1
+        },
+        "topic": {
+          "function": "choose",
+          "status": "answered",
+          "answer": "billing",
+          "probability": 0.8,
+          "detail": {
+            "labels": {
+              "billing": 0.8,
+              "shipping": 0.2
+            }
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.75,
+          "detail": {
+            "levels": [
+              0.25,
+              0.75
+            ]
+          }
+        }
+      },
+      "id": "r3"
+    },
+    {
+      "function": "annotate",
+      "position": 4,
+      "status": "answered",
+      "answer": {
+        "ready": {
+          "function": "decide",
+          "status": "answered",
+          "answer": false,
+          "probability": 0.1
+        },
+        "topic": {
+          "function": "choose",
+          "status": "answered",
+          "answer": "billing",
+          "probability": 0.8,
+          "detail": {
+            "labels": {
+              "billing": 0.8,
+              "shipping": 0.2
+            }
+          }
+        },
+        "urgency": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.75,
+          "detail": {
+            "levels": [
+              0.25,
+              0.75
+            ]
+          }
+        }
+      },
+      "id": "r4"
+    }
+  ],
+  "requests": 1,
+  "exact_requests": true
+}

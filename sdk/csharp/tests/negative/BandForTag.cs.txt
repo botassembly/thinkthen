@@ -1,0 +1,10 @@
+using ThinkThen;
+
+public static class InvalidInput
+{
+    public static async Task Call(ThinkThenClient client, ChooseQuestion question)
+    {
+        await Task.CompletedTask;
+        await client.TagAsync("Which?", "alpha", ["label"], new TagOptions { Threshold = Threshold.Band(0.2, 0.8) });
+    }
+}

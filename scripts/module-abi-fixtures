@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Exercise stale generated requirements against actual installed native modules.
+
+The native module stays intact. Only the consumer's generated requirements change.
+C ABI library fixtures separately exercise changed native versions and symbols.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def replace(source, pattern, value):
+    source, count = re.subn(pattern, lambda _: value, source, count=1)
+    if count != 1:
+        raise ValueError("installed generated requirement is absent: " + pattern)
+    return source
+
+
+def requirements(path, language, case, version):
+    source = path.read_text()
+    if language == "python":
+        source = replace(source, r"ABI_VERSION = \d+", f"ABI_VERSION = {version}")
+        if case == "missing-version":
+            source = replace(source, r'ABI_VERSION_EXPORT = "[^"]+"', 'ABI_VERSION_EXPORT = "missing_contract_version"')
+        if case == "missing-symbol":
+            source += '\nABI_EXPORTS = (*ABI_EXPORTS, "missing_contract_export")\n'
+    else:
+        source = replace(source, r"export const ABI_VERSION = \d+;", f"export const ABI_VERSION = {version};")
+        if case == "missing-version":
+            source = replace(source, r'export const ABI_VERSION_EXPORT = "[^"]+";', 'export const ABI_VERSION_EXPORT = "missing_contract_version";')
+        if case == "missing-symbol":
+            source += '\nABI_EXPORTS.push("missing_contract_export");\n'
+    path.write_text(source)
+
+
+PYTHON = '''import sys
+sys.path.insert(0, sys.argv[1])
+expected, code, message = sys.argv[2:]
+try:
+    from thinkthen import Client
+    Client(backend="stub" if expected == "accept" else "invalid_fixture_backend")
+except Exception as error:
+    assert expected == "reject", repr(error)
+    assert getattr(error, "code", None) == code, repr(error)
+    assert str(error) == message, repr(error)
+else:
+    assert expected == "accept", "incompatible module reached client construction"
+'''
+NODE = '''import { pathToFileURL } from "node:url";
+const [path, expected, code, message] = process.argv.slice(2);
+try {
+  const { ThinkThen } = await import(pathToFileURL(path));
+  new ThinkThen({backend: expected === "accept" ? "stub" : "invalid_fixture_backend"});
+  if (expected !== "accept") throw new Error("incompatible module reached client construction");
+} catch (error) {
+  if (expected !== "reject" || error.code !== code || error.message !== message) throw error;
+}
+'''
+R = '''args <- commandArgs(TRUE)
+.libPaths(c(args[[1]], args[[2]], .libPaths()))
+ns <- loadNamespace("thinkthen")
+stopifnot(normalizePath(find.package("thinkthen")) == normalizePath(file.path(args[[1]], "thinkthen")))
+assignInNamespace(".tt_abi_version", as.integer(args[[4]]), ns="thinkthen")
+if (args[[3]] == "missing-version") assignInNamespace(".tt_abi_version_export", "missing_contract_version", ns="thinkthen")
+if (args[[3]] == "missing-symbol") assignInNamespace(".tt_abi_exports", c(get(".tt_abi_exports", ns), "missing_contract_export"), ns="thinkthen")
+error <- tryCatch({get("tt_client", ns)(backend=if(args[[5]] == "accept") "stub" else "invalid_fixture_backend"); NULL}, error=identity)
+if (args[[5]] == "accept") stopifnot(is.null(error)) else {
+  stopifnot(!is.null(error), identical(error$code,args[[6]]), identical(conditionMessage(error),args[[7]]))
+}
+'''
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("language", choices=("python", "typescript", "r"))
+    parser.add_argument("package", type=Path, help="actual installed thinkthen package directory")
+    parser.add_argument("--runtime", help="Python, Node or Rscript executable")
+    args = parser.parse_args()
+    package = args.package.resolve(strict=True)
+    abi = json.loads((ROOT / "schemas/abi.json").read_text())
+    manifest = json.loads((ROOT / "conformance/native/manifest.json").read_text())
+    required = abi["abi_version"]
+    runtime = args.runtime or {"python": "python3", "typescript": "node", "r": "Rscript"}[args.language]
+    if args.language == "python":
+        engine = next(package.glob("_native.*so"), None) or next(package.glob("_native.pyd"))
+        probe = [runtime, "-I", "-c", "import sys; sys.path.insert(0, sys.argv[1]); import thinkthen; thinkthen.Client(backend='stub')", str(package.parent)]
+    elif args.language == "typescript":
+        engine = package / "thinkthen.node"
+        probe = [runtime, "--input-type=module", "-e", "const {ThinkThen,ThinkThenError}=await import(process.argv[1]); try { new ThinkThen({backend:'stub'}); } catch(error) { if (!(error instanceof ThinkThenError) || error.code !== 'local.io') throw new Error('wrong load error type or code'); throw error; }", (package / "runtime.js").as_uri()]
+    else:
+        engine = next((package / "libs").rglob("thinkthen.*"))
+        probe = [runtime, "--vanilla", "-e", "library(thinkthen,lib.loc=commandArgs(TRUE)[1]); tt_client(backend='stub')", str(package.parent)]
+    attempted = ["--attempted", engine.name] if args.language == "r" else []
+    subprocess.run([str(ROOT / "scripts/loader-failure-check"), str(engine), *attempted, "--", *probe], check=True)
+    with tempfile.TemporaryDirectory(prefix="thinkthen-module-abi-") as temporary:
+        stage = Path(temporary)
+        for case in manifest["cases"]:
+            name = case["name"]
+            target = stage / name / "thinkthen"
+            shutil.copytree(package, target, ignore=shutil.ignore_patterns("__pycache__"))
+            version = required
+            if name == "wrong-major":
+                version += 1 << 16
+            elif name == "insufficient-minor":
+                version += 1
+            elif name == "newer-minor":
+                if not required & 0xFFFF:
+                    raise ValueError("newer-native-minor proof requires a positive current minor")
+                version -= 1
+            expected = "accept" if case["accept"] else "reject"
+            tail = [expected, abi["error"]["code"], abi["error"]["message"]]
+            if args.language == "python":
+                requirements(target / "_contract.py", args.language, name, version)
+                command = [runtime, "-I", "-c", PYTHON, str(target.parent), *tail]
+            elif args.language == "typescript":
+                requirements(target / "contract.js", args.language, name, version)
+                script = target.parent / "probe.mjs"
+                script.write_text(NODE)
+                command = [runtime, str(script), str(target / "runtime.js"), *tail]
+            else:
+                script = target.parent / "probe.R"
+                script.write_text(R)
+                command = [runtime, "--vanilla", str(script), str(target.parent), str(package.parent), name, str(version), *tail]
+            result = subprocess.run(command, text=True, capture_output=True, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+            if result.returncode:
+                raise SystemExit(f"{args.language} installed module {name}: refused proof\n{result.stdout}{result.stderr}")
+            print(f"{args.language} installed module: {name} {expected}", flush=True)
+
+
+if __name__ == "__main__":
+    main()

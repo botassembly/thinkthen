@@ -1,0 +1,85 @@
+#!/bin/sh
+# Separate native test artifacts; never use these as release assets.
+# Usage: c-abi-sanitizers address|thread [boundary|workload-smoke|workload-full]
+# Requires Linux x86-64, Clang's sanitizer runtime, nightly Rust and rust-src.
+# Setup (explicit; never changes the default compiler):
+# rustup toolchain install nightly-2026-08-24 --profile minimal --component rust-src
+# Rust guidance: https://doc.rust-lang.org/unstable-book/compiler-flags/sanitizer.html
+set -eu
+cd "$(dirname "$0")/.."
+case "${1:-}" in address|thread) sanitizer=$1 ;; *) echo 'usage: c-abi-sanitizers address|thread' >&2; exit 2 ;; esac
+mode=${2:-boundary}
+case "$mode" in boundary|workload-smoke|workload-full) ;;
+    *) echo 'expected boundary, workload-smoke or workload-full' >&2; exit 2 ;;
+esac
+[ "$(uname -sm)" = 'Linux x86_64' ] || { echo 'sanitizer mode requires Linux x86-64' >&2; exit 2; }
+. scripts/native-tools-env
+toolchain=${THINKTHEN_SANITIZER_TOOLCHAIN:-nightly-2026-08-24}
+compiler=${THINKTHEN_SANITIZER_CC:-clang}
+"$compiler" --version
+rustc +"$toolchain" --version --verbose
+# Use one external Clang runtime for C, Rust, dependencies and rebuilt Rust std.
+# --target keeps build scripts and procedural macros outside instrumentation.
+# Compiler-built C/assembly dependencies and system libraries may remain uninstrumented.
+base=${CARGO_TARGET_DIR:-$PWD/target}
+case "$base" in /*) ;; *) base="$PWD/$base" ;; esac
+CARGO_TARGET_DIR="$base/c-abi-sanitizers/$sanitizer"
+RUSTFLAGS="-Zsanitizer=$sanitizer -Zexternal-clangrt -Cforce-frame-pointers=yes -Clinker=$compiler -Clink-arg=-fsanitize=$sanitizer"
+export CARGO_TARGET_DIR RUSTFLAGS
+unset CARGO_ENCODED_RUSTFLAGS
+# Ring's C objects inherit the same mode. Its assembly and libc are not covered.
+CC="$compiler"
+CFLAGS="-fsanitize=$sanitizer -fno-omit-frame-pointer -g"
+export CC CFLAGS
+export ASAN_OPTIONS=halt_on_error=1:detect_leaks=1
+export TSAN_OPTIONS=halt_on_error=1
+printf 'C ABI sanitizer mode: %s; Rust/library/std and C caller instrumented\n' "$sanitizer"
+cargo_sanitized() {
+    command=$1
+    shift
+    cargo +"$toolchain" "$command" -Zbuild-std --locked \
+        --target x86_64-unknown-linux-gnu -p thinkthen-ffi "$@"
+}
+cargo_sanitized build
+output="$CARGO_TARGET_DIR/x86_64-unknown-linux-gnu/debug"
+"$compiler" -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread \
+    -O1 -g -fno-omit-frame-pointer "-fsanitize=$sanitizer" \
+    -I crates/thinkthen-ffi/include crates/thinkthen-ffi/tests/consumer.c \
+    -L "$output" -lthinkthen_ffi -Wl,-rpath,"$output" \
+    -o "$output/thinkthen-c-consumer"
+if [ "$mode" != boundary ]; then
+    # The shared adapter runner owns scenarios, counts, rounds and concurrency.
+    # Use an ordinary fixture process; only the caller and ABI need instrumentation.
+    env -u RUSTFLAGS -u CFLAGS -u CC CARGO_TARGET_DIR="$base/loopback" \
+        cargo build --locked -p loopback --bin loopback
+    THINKTHEN_LOOPBACK="$base/loopback/debug/loopback"
+    export THINKTHEN_LOOPBACK
+    case "$mode" in workload-full) set -- --full ;; *) set -- ;; esac
+    exec python3 scripts/stress-adapters.py --surface c "$@" --sanitizer "$sanitizer" -- \
+        python3 scripts/c-abi-workload.py "$output/thinkthen-c-consumer"
+fi
+# Nightly Cargo can place test binaries outside debug/deps. Resolve the artifact
+# rather than assuming a layout; the existing C harness looks two parents up.
+artifacts=$(mktemp)
+trap 'rm -f "$artifacts"' EXIT HUP INT TERM
+cargo_sanitized test --test consumer --no-run --message-format=json > "$artifacts"
+python3 - "$artifacts" "$output/thinkthen-c-consumer" <<'PYTHON'
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+for line in Path(sys.argv[1]).read_text().splitlines():
+    artifact = json.loads(line)
+    if (artifact.get('reason') == 'compiler-artifact'
+            and artifact['target']['name'] == 'consumer' and artifact.get('executable')):
+        executable = Path(artifact['executable'])
+        consumer = executable.parent.parent / 'thinkthen-c-consumer'
+        if consumer != Path(sys.argv[2]):
+            shutil.copy2(sys.argv[2], consumer)
+        subprocess.run([str(executable), '--test-threads=1'], check=True)
+        break
+else:
+    sys.exit('sanitizer consumer test artifact is missing')
+PYTHON

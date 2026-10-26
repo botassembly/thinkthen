@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
         auto load = connection.Query("LOAD '" + string(argv[1]) + "'");
         if (load->HasError()) { Print(*load); return 1; }
         if (argc > 2 && string(argv[2]) == "--cold") {
+            connection.Query("SET thinkthen_backend='stub'");
             auto setting = connection.Query("SET threads=4");
             if (setting->HasError()) { Print(*setting); return 1; }
             auto result = connection.Query("SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?') "
@@ -50,7 +51,7 @@ int main(int argc, char **argv) {
             return result->HasError() ? 1 : 0;
         }
         if (argc > 2 && string(argv[2]) == "--abandon") {
-            auto setting = connection.Query("SET thinkthen_settings='{\"adapter\":\"stub\"}'");
+            auto setting = connection.Query("SET thinkthen_backend='stub'");
             if (setting->HasError()) { Print(*setting); return 1; }
             auto result = connection.SendQuery("SELECT * FROM thinkthen_decide((SELECT range::VARCHAR AS record FROM range(8193)), 'Ready?')");
             if (result->HasError() || result->type != QueryResultType::STREAM_RESULT) return 1;
@@ -69,7 +70,7 @@ int main(int argc, char **argv) {
                     output.Reference(input.data[0]);
                 });
             CreateScalarFunctionInfo info(mark); connection.context->RegisterFunction(info);
-            for (auto sql : {"SET threads=4", "SET thinkthen_settings='{\"adapter\":\"stub\"}'",
+            for (auto sql : {"SET threads=4", "SET thinkthen_backend='stub'",
                             "CREATE TABLE evidence AS SELECT range AS i FROM range(500000)"}) {
                 auto result = connection.Query(sql);
                 if (result->HasError()) { Print(*result); return 1; }
@@ -82,15 +83,30 @@ int main(int argc, char **argv) {
             return 0;
         }
         if (argc > 2) {
-            std::thread work([&] { auto result = connection.Query("SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?')"); Print(*result); });
+            std::thread work([&] { auto result = connection.Query(argc > 3 ? argv[3] : "SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?')"); Print(*result); });
             if (std::cin.get() != 'c') return 2;
-            connection.Interrupt(); work.join(); return 0;
+            connection.Interrupt(); work.join();
+            auto recovered = connection.Query("SELECT 1 AS alive");
+            return recovered->HasError() ? 1 : 0;
         }
         Connection second(database);
         string query;
         while (std::getline(std::cin, query)) {
             std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)> message(yyjson_read(query.data(), query.size(), 0), yyjson_doc_free);
-            if (!message || !yyjson_is_str(yyjson_doc_get_root(message.get()))) return 2;
+            if (!message) return 2;
+            auto concurrent = yyjson_obj_get(yyjson_doc_get_root(message.get()), "concurrent");
+            if (concurrent) {
+                if (yyjson_arr_size(concurrent) != 2) return 2;
+                auto first = yyjson_arr_get(concurrent, 0), other = yyjson_arr_get(concurrent, 1);
+                if (!yyjson_is_str(first) || !yyjson_is_str(other)) return 2;
+                unique_ptr<MaterializedQueryResult> left, right;
+                std::thread worker([&] { left = connection.Query(yyjson_get_str(first)); });
+                right = second.Query(yyjson_get_str(other));
+                worker.join();
+                Print(*left); Print(*right);
+                continue;
+            }
+            if (!yyjson_is_str(yyjson_doc_get_root(message.get()))) return 2;
             auto value = yyjson_doc_get_root(message.get());
             query.assign(yyjson_get_str(value), yyjson_get_len(value));
             auto result = query.rfind("2:", 0) == 0 ? second.Query(query.substr(2)) : connection.Query(query);

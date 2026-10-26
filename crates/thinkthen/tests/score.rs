@@ -3,7 +3,7 @@
 
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Engine, Outcome, Record, Score};
+use thinkthen::{Key, Outcome, Record, Score, Settings};
 
 #[test]
 fn a_scale_returns_its_probability_weighted_position_and_detail() {
@@ -27,45 +27,35 @@ fn a_scale_returns_its_probability_weighted_position_and_detail() {
             move |_| json!({"type": "score", "probabilities": map, "score": 99}),
         )
         .unwrap();
-        let backend = Backend::resolve(Some(server.base()), None, |name| {
-            (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-        })
-        .unwrap();
+        let engine = Settings::default()
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
+            .unwrap();
         let question = Score::new("How urgent?", levels.iter().copied()).unwrap();
-        let mut rows = Vec::new();
-        let result =
-            Engine::new(backend).call(&question, [Record::text("Say \"now\"\nplease")], |row| {
-                rows.push(row)
-            });
-        assert_eq!(result.is_ok(), expected.is_some());
-        assert_eq!(rows.len(), 1);
-        let row = rows.pop().unwrap();
+        let row = engine
+            .run(&question, Record::text("Say \"now\"\nplease"))
+            .unwrap();
+        assert_eq!(row.error().is_none(), expected.is_some());
         let value = serde_json::to_value(&row).unwrap();
         match expected {
             Some(expected) => {
                 assert_eq!(value["status"], "answered");
                 assert!((value["answer"].as_f64().unwrap() - expected).abs() < 1e-12);
                 let Outcome::Answered {
-                    detail:
-                        Some(thinkthen::Detail::Sourced {
-                            probabilities: Some(detail),
-                            ..
-                        }),
+                    detail: Some(detail),
                     ..
                 } = row.outcome()
                 else {
                     panic!("expected scale probabilities");
                 };
-                let thinkthen::Detail::Levels(detail) = detail.as_ref() else {
-                    panic!("expected scale detail");
-                };
                 assert_eq!(
-                    detail.iter().map(|p| p.get()).collect::<Vec<_>>(),
+                    detail.levels().iter().map(|p| p.get()).collect::<Vec<_>>(),
                     probabilities
                 );
             }
             None => match row.outcome() {
-                Outcome::Failed { error } => assert_eq!(error.kind().code(), "backend.reply"),
+                Outcome::Failed { error } => assert_eq!(error.code().as_str(), "backend.reply"),
                 other => panic!("expected a failure, got {other:?}"),
             },
         }
@@ -91,18 +81,15 @@ fn malformed_scale_answers_fail_without_exposing_backend_text() {
     ];
     for answer in cases {
         let server = Loopback::answering(move |_| answer.clone()).unwrap();
-        let backend = Backend::resolve(Some(server.base()), None, |name| {
-            (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-        })
-        .unwrap();
+        let engine = Settings::default()
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
+            .unwrap();
         let question = Score::new("How urgent?", ["low", "high"]).unwrap();
-        let mut rows = Vec::new();
-        Engine::new(backend)
-            .call(&question, [Record::text("text")], |row| rows.push(row))
-            .unwrap_err();
-        assert_eq!(rows.len(), 1);
-        match rows[0].outcome() {
-            Outcome::Failed { error } => assert_eq!(error.kind().code(), "backend.reply"),
+        let row = engine.run(&question, Record::text("text")).unwrap();
+        match row.outcome() {
+            Outcome::Failed { error } => assert_eq!(error.code().as_str(), "backend.reply"),
             other => panic!("expected a failure, got {other:?}"),
         }
     }
@@ -118,7 +105,7 @@ fn a_scale_requires_a_question_and_two_distinct_nonblank_levels() {
         ("How urgent?", vec!["low", "low"]),
     ] {
         assert_eq!(
-            Score::new(text, levels).unwrap_err().kind().code(),
+            Score::new(text, levels).unwrap_err().code().as_str(),
             "usage.question"
         );
     }

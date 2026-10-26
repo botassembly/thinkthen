@@ -1,0 +1,6 @@
+using ThinkThen;
+
+public sealed record ForeignId : RecordId
+{
+    public ForeignId(RecordId source) : base(source) { }
+}

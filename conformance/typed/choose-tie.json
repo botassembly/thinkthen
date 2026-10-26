@@ -1,0 +1,40 @@
+{
+  "name": "choose-tie",
+  "request": {
+    "question": {
+      "function": "choose",
+      "question": "Which?",
+      "choices": [
+        "z",
+        "a"
+      ]
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "distribution": {
+        "a": 0.5,
+        "z": 0.5
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "choose",
+      "position": 1,
+      "status": "answered",
+      "answer": "z",
+      "probability": 0.5,
+      "detail": {
+        "labels": {
+          "z": 0.5,
+          "a": 0.5
+        }
+      }
+    }
+  ],
+  "requests": 1
+}

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
+[assembly: System.Runtime.CompilerServices.DisableRuntimeMarshalling]
 namespace ThinkThen;
 
 internal sealed class ClientHandle : SafeHandleZeroOrMinusOneIsInvalid
@@ -14,18 +15,44 @@ internal sealed class CallHandle : SafeHandleZeroOrMinusOneIsInvalid
     protected override bool ReleaseHandle() { Native.Free(handle); return true; }
 }
 
+internal sealed class QuestionHandle : SafeHandleZeroOrMinusOneIsInvalid
+{
+    internal QuestionHandle(nint value) : base(true) => SetHandle(value);
+    protected override bool ReleaseHandle() { Native.QuestionFree(handle); return true; }
+}
+internal sealed class ToolboxHandle : SafeHandleZeroOrMinusOneIsInvalid
+{
+    internal ToolboxHandle(nint value) : base(true) => SetHandle(value);
+    protected override bool ReleaseHandle() { Native.ToolboxFree(handle); return true; }
+}
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeText { internal nint Data; internal nuint Length; }
 [StructLayout(LayoutKind.Sequential)]
 internal struct Buffer { internal nint Data; internal nuint Length; }
 [StructLayout(LayoutKind.Sequential)]
+internal struct NativeError
+{
+    internal uint StructSize;
+    internal int Code;
+    internal ushort HttpStatus;
+    internal Buffer Message;
+    internal static NativeError Empty => new() { StructSize = (uint)Marshal.SizeOf<NativeError>() };
+}
+[StructLayout(LayoutKind.Sequential)]
 internal struct NativeRow
 {
-    internal Buffer Fields;
-    internal Buffer Detail;
-    internal nuint Position;
-    internal byte Kept;
+    internal uint StructSize, Function, Status;
+    internal ulong Position;
+    internal double Probability;
+    internal int ErrorCode;
+    internal byte AnswerBool;
+    internal ulong Rank;
+    internal double Number;
+    internal Buffer Id, Answer, Detail, Source, Error;
+    internal static NativeRow Empty => new() { StructSize = (uint)Marshal.SizeOf<NativeRow>() };
 }
 
-internal static class Native
+internal static partial class Native
 {
     private const string Library = "thinkthen_ffi";
     private static readonly Lazy<nint> Loaded = new(Load);
@@ -33,7 +60,7 @@ internal static class Native
     static Native() => NativeLibrary.SetDllImportResolver(typeof(Native).Assembly,
         (name, _, _) => name == Library ? Loaded.Value : nint.Zero);
 
-    private static nint Load()
+    private static unsafe nint Load()
     {
         string rid;
         string filename;
@@ -47,8 +74,21 @@ internal static class Native
         else throw new DllNotFoundException("The ThinkThen package has no native asset for this runtime.");
         string root = AppContext.BaseDirectory;
         string path = Path.Combine(root, "runtimes", rid, "native", filename);
-        if (!File.Exists(path)) path = Path.Combine(root, filename);
-        return NativeLibrary.Load(Path.GetFullPath(path));
+        if (!File.Exists(path) && File.Exists(Path.Combine(root, filename))) path = Path.Combine(root, filename);
+        nint library = NativeLibrary.Load(Path.GetFullPath(path));
+        try
+        {
+            var version = (delegate* unmanaged[Cdecl]<uint>)NativeLibrary.GetExport(library, "thinkthen_abi_version");
+            var compatible = (delegate* unmanaged[Cdecl]<uint, uint, byte>)NativeLibrary.GetExport(library, "thinkthen_abi_compatible");
+            if (compatible(Contract.AbiVersion, version()) == 0) throw new EntryPointNotFoundException();
+            foreach (string export in Contract.Exports) NativeLibrary.GetExport(library, export);
+            return library;
+        }
+        catch (EntryPointNotFoundException)
+        {
+            NativeLibrary.Free(library);
+            throw new ThinkThenException(new(ErrorCode.UsageAbi, Contract.AbiMessage));
+        }
     }
 
     internal static byte[] Copy(Buffer value)
@@ -58,26 +98,97 @@ internal static class Native
         return bytes;
     }
 
-    [DllImport(Library, EntryPoint = "thinkthen_client_open", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int ClientOpen(byte[] settings, nuint length, out nint client, out Buffer error);
-    [DllImport(Library, EntryPoint = "thinkthen_client_free", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void ClientFree(nint client);
-    [DllImport(Library, EntryPoint = "thinkthen_call_open", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int Open(ClientHandle client, byte[] request, nuint length, uint offsets, out nint call, out Buffer error);
-    [DllImport(Library, EntryPoint = "thinkthen_send_utf16", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-    internal static extern int SendText(CallHandle call, [In] char[] text, nuint length, out Buffer error);
-    [DllImport(Library, EntryPoint = "thinkthen_send_json", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int SendJson(CallHandle call, byte[] json, nuint length, out Buffer error);
-    [DllImport(Library, EntryPoint = "thinkthen_end_input", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void EndInput(CallHandle call);
-    [DllImport(Library, EntryPoint = "thinkthen_next", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern int Next(CallHandle call, out NativeRow row, out Buffer error);
-    [DllImport(Library, EntryPoint = "thinkthen_cancel", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void Cancel(CallHandle call);
-    [DllImport(Library, EntryPoint = "thinkthen_free", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void Free(nint call);
-    [DllImport(Library, EntryPoint = "thinkthen_buffer_free", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void BufferFree(ref Buffer buffer);
-    [DllImport(Library, EntryPoint = "thinkthen_row_free", CallingConvention = CallingConvention.Cdecl)]
-    internal static extern void RowFree(ref NativeRow row);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_settings_conversion_error")]
+    internal static partial int SettingsConversionError(ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_conversion_error")]
+    internal static partial int QuestionConversionError(ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_client_open_json")]
+    internal static partial int ClientOpen([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] settings, nuint length, out nint client, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_client_free")]
+    internal static partial void ClientFree(nint client);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_open_question")]
+    internal static partial int Open(ClientHandle client, QuestionHandle question, nint name, uint offsets, out nint call, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_send_utf16")]
+    internal static partial int SendText(CallHandle call, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] char[] text, nuint length, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_send_json")]
+    internal static partial int SendJson(CallHandle call, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] json, nuint length, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_end_input")]
+    internal static partial void EndInput(CallHandle call);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_next")]
+    internal static partial int Next(CallHandle call, ref NativeRow row, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_cancel")]
+    internal static partial void Cancel(CallHandle call);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_free")]
+    internal static partial void Free(nint call);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_error_free")]
+    internal static partial void ErrorFree(ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_code_name")]
+    internal static partial nint CodeName(int code);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_send_missing")]
+    internal static partial int SendMissing(CallHandle call, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_row_free")]
+    internal static partial void RowFree(ref NativeRow row);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_from_json")]
+    internal static partial int QuestionFromJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint question, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_free")]
+    internal static partial void QuestionFree(nint question);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_from_json")]
+    internal static partial int ToolboxFromJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint toolbox, ref NativeError error);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_from_definitions_json")]
+    internal static partial int ToolboxFromDefinitionsJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint toolbox, ref NativeError error);
+
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_to_json")]
+    internal static partial int ToolboxToJson(ToolboxHandle toolbox, out Buffer output, ref NativeError error);
+
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_definitions_json")]
+    internal static partial int ToolboxDefinitionsJson(ToolboxHandle toolbox, out Buffer output, ref NativeError error);
+
+    [LibraryImport(Library, EntryPoint = "thinkthen_buffer_free")]
+    internal static partial void BufferFree(ref Buffer buffer);
+
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_free")]
+    internal static partial void ToolboxFree(nint toolbox);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_send_invalid")]
+    internal static partial int SendInvalid(CallHandle call, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_new")]
+    internal static partial int QuestionNew(uint function, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] text, nuint length, out nint question, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_cut")]
+    internal static partial int SetCut(nint question, double value, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_band")]
+    internal static partial int SetBand(nint question, double low, double high, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_evidence")]
+    internal static partial int SetEvidence(nint question, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] data, nuint length, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_select_as")]
+    internal static partial int ToolboxSelectAs(ToolboxHandle toolbox, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] data, nuint length, uint function, out nint question, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_settings_from_json")]
+    internal static partial int SettingsFromJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint settings, ref NativeError error);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_settings_free")]
+    internal static partial void SettingsFree(nint settings);
 }

@@ -1,0 +1,53 @@
+{
+  "name": "backend-isolation",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      "good",
+      "bad",
+      "good again"
+    ]
+  },
+  "replies": [
+    {
+      "body": {},
+      "contains": "\"bad\"",
+      "status": 400
+    },
+    {
+      "probability": 0.9
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.9
+    },
+    {
+      "function": "decide",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "backend.status",
+        "http_status": 400
+      }
+    },
+    {
+      "function": "decide",
+      "position": 3,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.9
+    }
+  ],
+  "requests": 3,
+  "client": {
+    "batch": 1
+  }
+}

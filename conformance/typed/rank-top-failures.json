@@ -1,0 +1,69 @@
+{
+  "name": "rank-top-failures",
+  "request": {
+    "question": {
+      "function": "rank",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ],
+      "top": 1
+    },
+    "records": [
+      "a",
+      "b",
+      null,
+      {
+        "id": true,
+        "body": "ignored"
+      }
+    ]
+  },
+  "replies": [
+    {
+      "contains": "\"b\"",
+      "distribution": {
+        "low": 0.1,
+        "high": 0.9
+      }
+    },
+    {
+      "distribution": {
+        "low": 0.8,
+        "high": 0.2
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "rank",
+      "position": 2,
+      "status": "answered",
+      "answer": 1,
+      "detail": {
+        "levels": [
+          0.1,
+          0.9
+        ]
+      }
+    },
+    {
+      "function": "rank",
+      "position": 3,
+      "status": "failed",
+      "error": {
+        "code": "record.missing"
+      }
+    },
+    {
+      "function": "rank",
+      "position": 4,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    }
+  ],
+  "requests": 1
+}

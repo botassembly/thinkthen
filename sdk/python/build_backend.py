@@ -1,4 +1,4 @@
-"""Generate the schema-owned relation type when assembling a Python package."""
+"""Generate engine-owned error declarations when assembling a Python package."""
 
 from pathlib import Path
 

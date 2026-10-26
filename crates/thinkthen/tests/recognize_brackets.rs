@@ -3,7 +3,7 @@
 
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Engine, Recognize, Record};
+use thinkthen::{Key, Recognize, Record, Settings};
 
 #[test]
 fn names_complete_only_touching_brackets_opened_inside_the_span() {
@@ -153,18 +153,16 @@ fn names_complete_only_touching_brackets_opened_inside_the_span() {
                 json!({"type":"choice","probabilities":{"work":if category {0.} else {0.8},"none of these":if category {1.} else {0.2}}})
             }
         }).unwrap();
-        let backend = Backend::resolve(Some(server.base()), None, |name| {
-            (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-        })
-        .unwrap();
-        let mut rows = Vec::new();
-        Engine::new(backend)
-            .call(
-                &Recognize::new(["work"]).unwrap(),
-                [Record::text(text)],
-                |row| rows.push(serde_json::to_value(row).unwrap()),
-            )
+        let engine = Settings::default()
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
             .unwrap();
+        let rows: Vec<_> = engine
+            .rows(&Recognize::new(["work"]).unwrap(), [Record::text(text)])
+            .unwrap()
+            .map(|row| serde_json::to_value(row.unwrap()).unwrap())
+            .collect();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["status"], "answered");
         let names = rows[0]["answer"].as_array().unwrap();
@@ -173,10 +171,10 @@ fn names_complete_only_touching_brackets_opened_inside_the_span() {
         let end = start + expected.chars().count();
         assert_eq!(
             names[0],
-            json!({"text":expected,"start":start,"end":end,"kind":"work","p":0.8})
+            json!({"text":expected,"start":start,"end":end,"kind":"work","probability":0.8})
         );
         assert!(
-            rows[0]["detail"]["probabilities"]["names"]
+            rows[0]["detail"]["names"]
                 .as_array()
                 .unwrap()
                 .iter()

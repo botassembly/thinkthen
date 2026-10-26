@@ -4,14 +4,18 @@ use crate::core::{Error, ErrorKind};
 
 use crate::{Cancel, RetryPolicy};
 
+mod excerpt;
+mod response;
+mod scope;
 mod socket;
 
-pub(crate) fn agent(config: ureq::config::Config, cancel: Cancel) -> ureq::Agent {
+pub(crate) fn agent(config: ureq::config::Config) -> ureq::Agent {
     use ureq::unversioned::transport::{ConnectProxyConnector, Connector, RustlsConnector};
     let connector =
         ().chain(ConnectProxyConnector::default())
-            .chain(socket::SocketConnector(cancel))
-            .chain(RustlsConnector::default());
+            .chain(socket::SocketConnector)
+            .chain(RustlsConnector::default())
+            .chain(response::ResponseConnector);
     ureq::Agent::with_parts(
         config,
         connector,
@@ -26,9 +30,18 @@ pub(crate) struct Refused {
 }
 
 impl Refused {
-    fn transport() -> Self {
+    fn transport(cause: ureq::Error, backend: crate::BackendName) -> Self {
+        let mut error = Error::new(
+            ErrorKind::Transport,
+            format!(
+                "the {} backend could not be reached: {}",
+                backend.as_str(),
+                transport_cause(&cause)
+            ),
+        );
+        error.source = Some(std::sync::Arc::new(cause));
         Self {
-            error: Error::new(ErrorKind::Transport, "the backend could not be reached"),
+            error,
             too_large: false,
         }
     }
@@ -44,23 +57,27 @@ impl Refused {
 pub(crate) fn post(
     agent: &ureq::Agent,
     backend: &crate::backend::Remote,
+    name: crate::BackendName,
     url: &str,
     body: &[u8],
     policy: RetryPolicy,
     cancel: &Cancel,
 ) -> Result<Vec<u8>, Refused> {
+    let _exchange = scope::enter(cancel);
     let uri = crate::backend::validate_url(url).map_err(|error| Refused {
         error,
         too_large: false,
     })?;
     let mut retries = 0;
     let mut connection_retried = false;
+    let mut fresh = None;
     let mut delay = policy.initial_backoff;
     loop {
         if cancel.is_cancelled() {
             return Err(Refused::cancelled());
         }
-        let request = agent.post(url);
+        response::begin();
+        let request = fresh.as_ref().unwrap_or(agent).post(url);
         // Admission permits plaintext only on loopback. Its key must stay local.
         let request = if uri.scheme_str() == Some("http") {
             request.config().proxy(None).build()
@@ -77,11 +94,12 @@ pub(crate) fn post(
         let mut response = match sent {
             Ok(response) => response,
             Err(error) => {
-                if !connection_retried && before_send(&error) {
+                if !connection_retried && (before_send(&error) || response::stale(&error)) {
                     connection_retried = true;
+                    fresh = Some(self::agent(agent.config().clone()));
                     continue;
                 }
-                return Err(Refused::transport());
+                return Err(Refused::transport(error, name));
             }
         };
         let status = response.status().as_u16();
@@ -90,20 +108,21 @@ pub(crate) fn post(
             return if cancel.is_cancelled() {
                 Err(Refused::cancelled())
             } else {
-                body.map_err(|_| Refused::transport())
+                body.map_err(|error| Refused::transport(error, name))
             };
         }
+        let body = excerpt::capture(response.body_mut());
+        let excerpt = excerpt::clean(&body, backend.key.as_str());
+        let mut message = format!("the backend answered status {status}");
+        if !excerpt.is_empty() {
+            message.push_str(": ");
+            message.push_str(&excerpt);
+        }
+        let mut error = Error::new(ErrorKind::Status, message);
+        error.http_status = Some(status);
         let refused = Refused {
-            error: Error::new(
-                ErrorKind::Status,
-                format!("the backend answered status {status}"),
-            ),
-            too_large: status == 413
-                || (status == 400
-                    && response
-                        .body_mut()
-                        .read_to_vec()
-                        .is_ok_and(|body| backend.adapter.request_too_large(&body))),
+            error,
+            too_large: status == 413 || (status == 400 && backend.adapter.request_too_large(&body)),
         };
         if cancel.is_cancelled() {
             return Err(Refused::cancelled());
@@ -121,4 +140,41 @@ pub(crate) fn post(
 
 fn before_send(error: &ureq::Error) -> bool {
     matches!(error, ureq::Error::Io(error) if error.kind() == std::io::ErrorKind::ConnectionRefused)
+}
+
+// Classify typed failures only: error text can contain URLs or credentials.
+fn transport_cause(error: &ureq::Error) -> String {
+    match error {
+        ureq::Error::Timeout(_) => "timeout".to_owned(),
+        ureq::Error::HostNotFound => "hostname resolution failed".to_owned(),
+        ureq::Error::Tls(_) | ureq::Error::Rustls(_) | ureq::Error::TlsRequired => {
+            "TLS failure".to_owned()
+        }
+        ureq::Error::Io(error) => {
+            if error
+                .get_ref()
+                .is_some_and(|inner| inner.is::<rustls::Error>())
+            {
+                return "TLS failure".to_owned();
+            }
+            if let Some(inner) = error
+                .get_ref()
+                .and_then(|inner| inner.downcast_ref::<ureq::Error>())
+            {
+                return transport_cause(inner);
+            }
+            match error.kind() {
+                std::io::ErrorKind::ConnectionRefused => "connection refused".to_owned(),
+                std::io::ErrorKind::ConnectionReset => "connection reset".to_owned(),
+                std::io::ErrorKind::ConnectionAborted => "connection aborted".to_owned(),
+                std::io::ErrorKind::TimedOut => "timeout".to_owned(),
+                std::io::ErrorKind::UnexpectedEof => "connection closed unexpectedly".to_owned(),
+                std::io::ErrorKind::BrokenPipe => "connection broken".to_owned(),
+                kind => format!("I/O failure ({kind})"),
+            }
+        }
+        ureq::Error::Protocol(_) => "invalid HTTP response".to_owned(),
+        ureq::Error::ConnectProxyFailed(_) => "proxy connection failed".to_owned(),
+        _ => "HTTP transport failure".to_owned(),
+    }
 }

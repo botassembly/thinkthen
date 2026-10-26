@@ -14,7 +14,8 @@ doctest = false
 
 [dependencies]
 log.workspace = true
-thinkthen.workspace = true
+thinkthen = { workspace = true, features = ["native"] }
+serde_json.workspace = true
 extendr-api = "=0.8.2"
 
 [lints]

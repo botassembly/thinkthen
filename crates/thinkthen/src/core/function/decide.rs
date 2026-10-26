@@ -7,32 +7,26 @@ use crate::core::threshold::{Threshold, Verdict};
 
 /// A yes or no question and the threshold that reads its answer.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Decide {
-    text: String,
+pub(crate) struct Decide {
+    pub(crate) text: String,
     yes: Option<String>,
     no: Option<String>,
-    threshold: Threshold,
+    pub(crate) threshold: Threshold,
 }
 
 impl Decide {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::YesNo {
-            no: self.no.as_deref(),
-            question: &self.text,
-            threshold: self.threshold.canonical(),
-            yes: self.yes.as_deref(),
-        }
-    }
-
     /// The question `text`, read at the default threshold.
     ///
     /// # Errors
     ///
     /// `usage.question` when `text` is blank.
-    pub fn new(text: impl Into<String>) -> Result<Self, Error> {
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, Error> {
         let text = text.into();
         if text.trim().is_empty() {
-            return Err(Error::new(ErrorKind::Question, "the question is blank"));
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement("question", "nonblank text", "blank text"),
+            ));
         }
         Ok(Self {
             text,
@@ -41,37 +35,9 @@ impl Decide {
             threshold: Threshold::default(),
         })
     }
-
-    /// This question read at `threshold`.
-    #[must_use]
-    pub fn threshold(self, threshold: Threshold) -> Self {
-        Self { threshold, ..self }
-    }
-
-    /// This question with `description` saying what a yes means.
-    #[must_use]
-    pub fn yes(self, description: impl Into<String>) -> Self {
-        Self {
-            yes: Some(description.into()),
-            ..self
-        }
-    }
-
-    /// This question with `description` saying what a no means.
-    #[must_use]
-    pub fn no(self, description: impl Into<String>) -> Self {
-        Self {
-            no: Some(description.into()),
-            ..self
-        }
-    }
 }
 
 impl super::Function for Decide {
-    const NAME: &'static str = "decide";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     /// The ask this question makes about `evidence`.
     fn try_asks_record(
         &self,

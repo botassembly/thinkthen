@@ -132,9 +132,10 @@ impl<R: Read> CsvReader<R> {
     }
 
     fn bad(&self, line: usize, cause: &str) -> FileError {
-        FileError::Invalid(format!(
-            "CSV/TSV row {} (line {line}): {cause}",
-            self.row + 1
+        FileError::Invalid(crate::core::diagnostic::requirement(
+            &format!("CSV/TSV row {} (line {line})", self.row + 1),
+            "valid UTF-8 delimited fields",
+            cause,
         ))
     }
 }

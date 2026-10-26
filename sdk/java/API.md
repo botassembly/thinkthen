@@ -1,66 +1,48 @@
-# Java public API proposal
+# Java API
 
-This is an API outline, not source declarations. Package names are `io.thinkthen` for Java and `io.thinkthen.kotlin` for the Kotlin facade. Inline methods offer a default-options overload. Tagged question overloads take `CallOptions` explicitly. A public client builder admits settings once; calls carry no backend settings.
+The `io.thinkthen` module requires Java 22 or later. Java applications use `ThinkThen` and close it with try-with-resources. Module-path applications enable native access with `--enable-native-access=io.thinkthen`; classpath applications use `--enable-native-access=ALL-UNNAMED`.
 
-```java
-Client.builder()
-    .mode(String).adapter(String).url(String).keySource(String)
-    .model(String).batch(Number).build();
-Client implements AutoCloseable;
+`ThinkThen.builder()` accepts `backend(Backend)`, `model(String)`, `url(URI)`, `apiKey(String)`, `batch(int)`, `retry(RetryPolicy)` and `recordCodec(RecordCodec)`. The engine admits settings and resolves omitted defaults. `Backend` has `SYSTEMONE`, `OPENAI` and `STUB`. `RetryPolicy.builder()` accepts `maxRetries(int)`, `initialBackoff(Duration)` and `attemptTimeout(Duration)`. Credentials have no getters and never appear in representations or diagnostic logs.
 
-Question.inline(String text);
-Question.toolbox(JsonNode value, String name); // name may be null for one question
-Question.reference(String name);
-
-CallOptions.defaults();
-CallOptions.withOn(String pointer);
-CallOptions.withThreshold(String threshold);
-CallOptions.withTop(int top);
-CallOptions.withLevels(List<String> levels);
-CallOptions.withCancel(Cancel cancel);
-Cancel.cancel();
-```
-
-`CallOptions` is immutable; its `with` methods return a new value. They translate values without admitting them. The builder sends only explicitly set client fields and delegates defaults to the engine. Question factories construct tagged JSON without validating its semantics. There is no public generic function-name dispatcher.
-
-The ten named methods below belong to `Client`. `record` is an `Object` serialized as described in the README. The normal string forms below have overloads taking `Question` plus `CallOptions`. Those overloads also support named toolbox questions for every function, with no repeated choices, labels, levels, kinds or rules. String forms that need choices, labels or levels also offer a final `CallOptions` argument. Every single-record method has a corresponding `…Stream` method over `Iterable<?>`, with the same question arguments and row answer type.
+A record may be a text `String`, an immutable `JsonValue`, a string-keyed map, a list, a boxed JSON scalar or null. Other objects use the optional `RecordCodec`. A string remains text even when it contains JSON. Null and `JsonNull` produce failed missing-record rows. A caller's iterator or codec exception propagates unchanged. Malformed JSON from a codec produces a failed record.
 
 | Method | Result |
 | --- | --- |
-| `decide(String question, Object record)` | `Row<Boolean>` |
-| `choose(String question, Object record, List<String> choices)` | `Row<String>` |
-| `tag(String question, Object record, List<String> labels)` | `Row<List<String>>` |
-| `score(String question, Object record, List<String> levels)` | `Row<Double>` |
-| `find(String question, Object record)` | `Row<Span>` |
-| `recognize(Object record, List<String> kinds)` | `Row<List<Name>>` |
-| `relate(Object record, List<Rule> rules)` | `Row<List<Relation>>` |
-| `annotate(JsonNode toolbox, Object record)` | `Row<Map<String, JsonNode>>` |
-| `<T> filter(String question, Iterable<T> records)` | `Stream<T>` |
-| `rank(String question, Iterable<?> records)` | `Stream<Row<Long>>` |
+| `decide(String, Object)` | `Row<Boolean, NoDetail>` |
+| `choose(String, Object, List<String> choices)` | `Row<String, ChooseDetail>` |
+| `tag(String, Object, List<String> labels)` | `Row<List<String>, TagDetail>` |
+| `score(String, Object, List<String> levels)` | `Row<Double, ScoreDetail>` |
+| `find(String, Object)` | `Row<Optional<Span>, NoDetail>` |
+| `recognize(Object, List<String> kinds)` | `Row<List<Entity>, RecognizeDetail>` |
+| `relate(Object, List<RelationRule> rules)` | `Row<List<Relation>, RelateDetail>` |
+| `annotate(AnnotationQuestions, Object)` | `Row<Annotations, NoDetail>` |
+| `filter(String, Iterable<T>)` | `Stream<ItemRow<T, Boolean, NoDetail>>` |
+| `rank(String, Iterable<T>, List<String> levels)` | `Stream<ItemRow<T, Long, RankDetail>>` |
 
-Filter preserves each original Java object. Rank's `Question` overload accepts a selected toolbox question. Call options `top` and `levels` pass through unchanged. `withLevels` supports inline score ranking. Java consumes native kept/position metadata, failed rows and terminal errors; it does not derive them from answers or thresholds.
+Each method has a final options overload with its function's immutable options type. Each record method also has a `…Stream` counterpart over `Iterable<?>`. Options use `builder()` and `defaults()`. Every options builder accepts `evidence(Pointer)` and an optional execution `name(String)`. Decide, choose and filter accept `threshold(Threshold)`. Tag, find, recognize and relate accept only `Threshold.Cut` or a double convenience. Score and rank have no threshold. Rank accepts `top(int)`. The engine validates semantic values when a call opens.
 
-```java
-final class Row<A> {
-    JsonNode id();
-    Status status(); // ANSWERED, UNSURE, FAILED
-    A answer();     // nullable
-    Double p();     // nullable
-    ErrorInfo error(); // nullable
-    JsonNode detail(); // nullable, lazy
-}
-record ErrorInfo(String code, String message) {}
-record Span(String text, int start, int end) {}
-record Name(String text, int start, int end, String kind, double p) {}
-record RelationName(String text, int start, int end, String kind) {}
-record Relation(RelationName source, RelationName target,
-                String relation, double p, Boolean either) {}
-record Rule(String name, String source, String target, String reads, Boolean either) {}
-ThinkThenException.code(); // preserves the library's dotted code
-```
+`Threshold.cut(double)` and `Threshold.band(double, double)` construct typed thresholds. `Pointer.of(String)` constructs an evidence pointer. `RelationRule.builder(source, target, relation)` requires the three rule fields and accepts optional `reads(String)` and `either(boolean)`.
 
-Collection answers are unmodifiable snapshots. JSON leaves remain ordinary Jackson trees, but no accessor exposes a privately owned tree. The constructor snapshots JSON inputs; `id()` and `detail()` return defensive deep copies, and annotation `answer()` returns an unmodifiable map of deep-copied JSON values. Lazy detail initialization is thread-safe and keeps its decoded cache private. `Row` copies raw detail bytes and releases native buffers promptly; it decodes detail on demand. Nullable return values carry JSpecify annotations so Kotlin sees their nullability without a second row hierarchy. No surface type validates an engine rule.
+`Row<A,D extends Detail>` is sealed. Pattern matching exposes the payload appropriate to each status:
 
-A single private native driver owns client/call/buffer lifetimes and the input-request/pull loop. It reads the shipped [C header](../../crates/thinkthen-ffi/include/thinkthen.h), not an alternate interface. It sends strings as counted UTF-16 and structured records as JSON bytes, selects the native UTF-16 offset unit, copies row bytes, and releases each native owner once. No foreign callback runs on an engine thread. Only cancel may run concurrently with the call driver. A lifetime guard covers handle attachment, cancellation and detachment, including cancellation before call creation. It prevents every native operation from using a freed handle. A separate client guard serializes client close against native call-open; closing rejects later opens with Java `IllegalStateException` without inventing an engine error code. Calls already opened retain the engine independently. Operation-local FFM arenas release temporary arguments and output slots promptly. Call pointers accessed by cancellation or coroutine workers use a scope accessible from those threads; a confined arena never crosses workers. Only the symbol lookup has process lifetime.
+- `Answered<A,D>` has `answer()`, `OptionalDouble probability()` and `Optional<D> detail()`.
+- `Unsure<A,D>` has a probability and optional detail.
+- `Failed<A,D>` has a `RowError` with `ErrorCode`, engine message and optional HTTP status.
 
-The reviewable behavior proof will install the built Java and Kotlin JARs into an isolated consumer. One small driver runs the shared stub cases through each language's public calls. Host cases cover nullable answers, mutation isolation of JSON accessors, retained rows with lazy detail, Java stream closure and original filter objects, cancellation before handle attachment and concurrent client close/open, Kotlin suspension/Flow cancellation, native coded admission and backend errors, and a held loopback cancellation whose request must close. Tests use no credentials or external service. Core semantics are not duplicated in language tests.
+All rows expose typed `function()`, `status()`, input `position()`, optional exact JSON `id()` and optional typed `source()`. Source retains backend, model, question identity and optional execution name. A filter or rank `ItemRow` retains its exact original input object and its row. Filter returns every outcome, including false, unsure and failed. Rank's answer is separate from the original input position. Returned values and collections are immutable snapshots that survive client close. Text spans use UTF-16 offsets.
+
+`ChooseDetail` and `TagDetail` expose label probabilities. `ScoreDetail` and `RankDetail` expose ordered level probabilities. `RecognizeDetail` contains typed piece and kind probabilities. `RelateDetail` contains typed relations. No public answer, detail or error exposes a backend reply or a Jackson type.
+
+`Toolbox.builder().put(name, question).build()` and `Toolbox.parse(json)` create typed toolboxes. Function factories such as `ChooseQuestion.of(text, choices, options)` capture their required lists and options. A toolbox selector such as `choose(name)` returns an optional typed question. Pass that question to the matching client function. Its `named(String)` method returns a copy with an explicit execution name. Selecting an entry never assigns an execution name.
+
+Build `AnnotationQuestions` from eligible typed questions. Its builder excludes rank at compile time. A general toolbox may contain rank and cannot be passed to annotate. `Annotations` provides typed selectors and an immutable map of sealed `AnnotationEntry` values. Each `AnnotationOutcome` is answered, unsure or failed and retains its function's answer and detail types.
+
+Only call-level failures throw `ThinkThenException`. A single-record backend failure returns `Failed`. `Row.raiseForStatus()` explicitly throws for a failed row. Exceptions carry the generated `ErrorCode`, optional HTTP status and cause. Error names, values and families derive from the shared engine registry.
+
+Streams open their call on first traversal and cannot split. Collections snapshot at that first traversal and use the engine’s finite input entry point so host scheduling cannot split their batches. Other iterables supply records as the engine requests input. Exhaustion, traversal failure and close release the call. Use try-with-resources for short-circuit traversal. Closing a stream cancels an active call. Filter and rank retain original objects until their rows arrive; top-ranking may retain all consumed originals until ranked output begins. Closing clears those references. A cleaner supplies fallback reclamation.
+
+Interrupting a blocking caller requests cancellation, preserves its interrupt flag and throws `CancellationException`. Native blocking work runs on library-owned platform threads so virtual-thread callers can park. Client close cancels active operations and refuses later calls. Native resources remain owned until active operations finish.
+
+`client.async()` supplies `CompletableFuture` counterparts for single-record and typed-question calls. Both future cancellation forms cancel underlying work. Cancelling before execution starts prevents a native call. The async view shares client ownership. Java streams provide the streaming API.
+
+Diagnostic `System.Logger` messages contain lifecycle events and stable error codes. Applications configure logging. The internal JVM driver is shared with Kotlin and is exported only to the Kotlin module.

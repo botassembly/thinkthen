@@ -8,9 +8,9 @@ use crate::core::{
 
 /// A question selecting one nonblank line of each record.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Find {
-    text: String,
-    threshold: Threshold,
+pub(crate) struct Find {
+    pub(crate) text: String,
+    pub(crate) threshold: Threshold,
 }
 
 // Schema derives emit metadata maps in sibling impls, scoped to result values.
@@ -22,59 +22,38 @@ mod output {
 
     /// A chosen line and its Unicode scalar offsets in the record.
     #[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
-    pub struct Found {
+    pub(crate) struct Found {
         /// The line without its line ending.
-        pub text: String,
+        pub(crate) text: String,
         /// Inclusive start, counted in Unicode scalar values.
-        pub start: usize,
+        pub(crate) start: usize,
         /// Exclusive end, counted in Unicode scalar values.
-        pub end: usize,
+        pub(crate) end: usize,
     }
 }
-pub use output::Found;
+pub(crate) use output::Found;
 
 impl Find {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::Find {
-            question: &self.text,
-            threshold: self.threshold.canonical(),
-        }
-    }
-
-    /// Whether a curated selection is one whole admitted nonblank line.
-    #[must_use]
-    pub fn admits_found(evidence: &str, found: &Found) -> bool {
-        units(evidence).iter().any(|unit| unit == found)
-    }
-
     /// Create a nonblank question.
     ///
     /// # Errors
     /// Returns `usage.question` for a blank question.
-    pub fn new(text: impl Into<String>) -> Result<Self, Error> {
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, Error> {
         let text = text.into();
         if text.trim().is_empty() {
-            return Err(Error::new(ErrorKind::Question, "find needs a question"));
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement("question", "nonblank text", "blank text"),
+            ));
         }
         Ok(Self {
             text,
             threshold: Threshold::default(),
         })
     }
-
-    /// Accept a selected line only at this probability cut.
-    ///
-    /// # Errors
-    /// Returns `usage.threshold` for a band.
-    pub fn threshold(self, threshold: Threshold) -> Result<Self, Error> {
-        Ok(Self {
-            threshold: threshold.require_cut()?,
-            ..self
-        })
-    }
 }
 
-fn units(text: &str) -> Vec<Found> {
+pub(crate) fn units(text: &str) -> Vec<Found> {
     let mut start = 0;
     text.split_inclusive('\n')
         .filter_map(|part| {
@@ -96,10 +75,6 @@ fn units(text: &str) -> Vec<Found> {
 }
 
 impl super::Function for Find {
-    const NAME: &'static str = "find";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     #[expect(clippy::expect_used, reason = "generated option labels are nonblank")]
     fn try_asks_record(
         &self,

@@ -1,240 +1,311 @@
-"""One column operation over the existing client and owned row stream."""
+"""One eager operation supplies native records to the shared client."""
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
-from typing import Any, Generic, TypeVar, cast
+from collections.abc import Iterable
+from typing import Any, Generic, TypeVar, overload
 
 from ._client import Client, default_client
-from ._runtime import Cancel, Question, Toolbox, binding, row_from_json
-from ._types import JSONValue, RelationRule, Threshold
+from ._questions import (
+    AnnotateQuestion,
+    AnnotationQuestions,
+    ChooseQuestion,
+    DecideQuestion,
+    FilterQuestion,
+    FindQuestion,
+    RankQuestion,
+    RecognizeQuestion,
+    RelateQuestion,
+    ScoreQuestion,
+    TagQuestion,
+    Toolbox,
+)
+from ._runtime import Cancel
+from ._types import RelationRule, Strings, Threshold
 
-_Frame = TypeVar("_Frame")
+
+def annotation_definitions(question: object, rows: list[Any]) -> dict[str, Any]:
+    if isinstance(question, (Toolbox, AnnotationQuestions)):
+        return question._definitions()
+    if isinstance(question, AnnotateQuestion):
+        return dict(json.loads(question._native.definition)["questions"])
+    return {
+        name: {"function": value.function.value}
+        for row in rows
+        if row.answer is not None
+        for name, value in row.answer.items()
+    }
 
 
-class ColumnMethods(ABC, Generic[_Frame]):
-    """Share call translation while optional modules own their native columns."""
+F = TypeVar("F")
 
-    def __init__(self, series: Any) -> None:
-        self._series = series
+
+class ColumnMethods(ABC, Generic[F]):
+    def __init__(self, value: Any) -> None:
+        self._value = value
 
     @abstractmethod
-    def _missing(self, value: object) -> bool: ...
-
-    def _value(self, value: object) -> object:
-        return value
-
+    def _records(self) -> Iterable[Any]: ...
     @abstractmethod
-    def _frame(self, function: str, rows: list[dict[str, Any]]) -> _Frame: ...
-
+    def _frame(self, function: str, rows: list[Any], question: object) -> F: ...
     def _call(
         self,
         function: str,
         question: object,
         *,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
         **options: object,
-    ) -> _Frame:
+    ) -> F:
         selected = default_client() if client is None else client
-        positions: list[int] = []
-
-        def records() -> Iterable[object]:
-            for at, value in enumerate(self._series):
-                if not self._missing(value):
-                    positions.append(at)
-                    yield self._value(value)
-
-        toolbox = None
-        if function == "annotate":
-            toolbox = (
-                question
-                if isinstance(question, Toolbox)
-                else Toolbox(cast(dict[str, JSONValue], question))
-            )
-            question = None
-        native = selected._start(
+        with selected._rows(
             function,
             question,
-            records(),
-            keep_originals=False,
+            list(self._records()),
+            name=name,
             cancel=cancel,
-            toolbox=toolbox,
-            loaded=None,
             **options,
-        )
-        rows: list[dict[str, Any]] = [
-            {"position": at} for at in range(len(self._series))
-        ]
-        try:
-            while True:
-                raw = binding(native.receive)
-                if raw is None:
-                    break
-                row = row_from_json(raw[0], raw[1])
-                at = positions[raw[4] - 1]
-                failure = None
-                if row.error is not None:
-                    failure = {"code": row.error.code, "message": row.error.message}
-                rows[at].update(
-                    id=row.id,
-                    status=row.status,
-                    answer=row.answer,
-                    p=row.p,
-                    error=failure,
-                    detail=row.detail,
-                )
-                if function == "filter":
-                    rows[at]["kept"] = raw[2]
-        finally:
-            native.close()
-        return self._frame(function, rows)
+        ) as stream:
+            rows = stream.to_list()
+        return self._frame(function, rows, question)
 
+    @overload
     def decide(
         self,
-        question: str | Question[object],
+        question: DecideQuestion,
+        *,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    @overload
+    def decide(
+        self,
+        question: str,
         *,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "decide", question, threshold=threshold, on=on, client=client, cancel=cancel
-        )
+    ) -> F: ...
+    def decide(self, question: Any, **options: Any) -> F:
+        return self._call("decide", question, **options)
 
+    @overload
     def filter(
         self,
-        question: str | Question[object],
+        question: FilterQuestion,
+        *,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    @overload
+    def filter(
+        self,
+        question: str,
         *,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "filter", question, threshold=threshold, on=on, client=client, cancel=cancel
-        )
+    ) -> F: ...
+    def filter(self, question: Any, **options: Any) -> F:
+        return self._call("filter", question, **options)
 
+    @overload
     def choose(
         self,
-        question: str | Question[object],
+        question: ChooseQuestion,
         *,
-        options: Sequence[str] | None = None,
-        threshold: Threshold | None = None,
-        on: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "choose",
-            question,
-            options=options,
-            threshold=threshold,
-            on=on,
-            client=client,
-            cancel=cancel,
-        )
+    ) -> F: ...
+    @overload
+    def choose(
+        self,
+        question: str,
+        *,
+        choices: Strings,
+        threshold: Threshold | None = None,
+        evidence: str | None = None,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    def choose(self, question: Any, **options: Any) -> F:
+        return self._call("choose", question, **options)
 
+    @overload
     def tag(
         self,
-        question: str | Question[object],
+        question: TagQuestion,
         *,
-        labels: Sequence[str] | None = None,
-        threshold: Threshold | None = None,
-        on: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "tag",
-            question,
-            labels=labels,
-            threshold=threshold,
-            on=on,
-            client=client,
-            cancel=cancel,
-        )
+    ) -> F: ...
+    @overload
+    def tag(
+        self,
+        question: str,
+        *,
+        labels: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    def tag(self, question: Any, **options: Any) -> F:
+        return self._call("tag", question, **options)
 
+    @overload
     def score(
         self,
-        question: str | Question[object],
+        question: ScoreQuestion,
         *,
-        levels: Sequence[str] | None = None,
-        on: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "score", question, levels=levels, on=on, client=client, cancel=cancel
-        )
+    ) -> F: ...
+    @overload
+    def score(
+        self,
+        question: str,
+        *,
+        levels: Strings,
+        evidence: str | None = None,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    def score(self, question: Any, **options: Any) -> F:
+        return self._call("score", question, **options)
 
+    @overload
     def rank(
         self,
-        question: str | Question[JSONValue],
+        question: RankQuestion,
         *,
-        levels: Sequence[str] | None = None,
-        top: int | None = None,
-        on: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "rank",
-            question,
-            levels=levels,
-            top=top,
-            on=on,
-            client=client,
-            cancel=cancel,
-        )
+    ) -> F: ...
+    @overload
+    def rank(
+        self,
+        question: str,
+        *,
+        levels: Strings,
+        top: int | None = None,
+        evidence: str | None = None,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    def rank(self, question: Any, **options: Any) -> F:
+        return self._call("rank", question, **options)
 
+    @overload
     def find(
         self,
-        question: str | Question[object],
+        question: FindQuestion,
         *,
-        threshold: Threshold | None = None,
-        on: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "find", question, threshold=threshold, on=on, client=client, cancel=cancel
-        )
-
-    def annotate(
+    ) -> F: ...
+    @overload
+    def find(
         self,
-        toolbox: Toolbox | dict[str, JSONValue],
+        question: str,
         *,
-        on: str | None = None,
+        threshold: float | None = None,
+        evidence: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call("annotate", toolbox, on=on, client=client, cancel=cancel)
+    ) -> F: ...
+    def find(self, question: Any, **options: Any) -> F:
+        return self._call("find", question, **options)
 
+    @overload
+    def recognize(
+        self,
+        question: RecognizeQuestion,
+        *,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    @overload
     def recognize(
         self,
         *,
-        kinds: Sequence[str] | Question[object] = (),
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        kinds: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "recognize", kinds, threshold=threshold, on=on, client=client, cancel=cancel
-        )
+    ) -> F: ...
+    def recognize(self, question: Any = None, **options: Any) -> F:
+        return self._call("recognize", question, **options)
 
+    @overload
+    def relate(
+        self,
+        question: RelateQuestion,
+        *,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    @overload
     def relate(
         self,
         *,
-        rules: Sequence[RelationRule] | Question[object],
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        rules: list[RelationRule] | tuple[RelationRule, ...],
+        threshold: float | None = None,
+        evidence: str | None = None,
         client: Client | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> _Frame:
-        return self._call(
-            "relate", rules, threshold=threshold, on=on, client=client, cancel=cancel
+    ) -> F: ...
+    def relate(self, question: Any = None, **options: Any) -> F:
+        return self._call("relate", question, **options)
+
+    @overload
+    def annotate(
+        self,
+        question: AnnotateQuestion,
+        *,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    @overload
+    def annotate(
+        self,
+        toolbox: AnnotationQuestions,
+        *,
+        evidence: str | None = None,
+        client: Client | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> F: ...
+    def annotate(self, *args: Any, **options: Any) -> F:
+        question = (
+            args[0] if args else options.pop("question", options.pop("toolbox", None))
         )
+        return self._call("annotate", question, **options)
+
+
+__all__ = []

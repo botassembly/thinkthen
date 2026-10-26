@@ -9,11 +9,15 @@ from release_notices import ROOT, NOTICE
 
 
 def dependencies(folder, root=ROOT):
+    return terms(sorted(folder.glob('*.jar')), root)
+
+
+def terms(jars, root=ROOT):
     pins = {Path(url).name: digest.removeprefix('sha256:') for url, digest in
             json.loads((root / 'scripts/release-downloads.json').read_text()).items()
             if url.startswith('https://repo.maven.apache.org/') and url.endswith('.jar')}
     files, entries = {}, {}
-    for jar in sorted(folder.glob('*.jar')):
+    for jar in jars:
         if jar.name.startswith('thinkthen-'): continue
         digest = hashlib.sha256(jar.read_bytes()).hexdigest()
         if digest != pins.get(jar.name): raise ValueError('unlisted or changed runtime JAR: ' + jar.name)

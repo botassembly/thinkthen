@@ -8,8 +8,8 @@
   },
   "runtimes": {
     "python": "Python >=3.10 with its pip/venv installer",
-    "typescript": "Node >=22",
-    "go": "Go >=1.22 and C compiler to build; OS runtime thereafter",
+    "typescript": "Node >=22.12",
+    "go": "Go >=1.23 and C compiler to build; OS runtime thereafter",
     "java": "Java >=22; bundled Jackson/JSpecify jars",
     "kotlin": "Java >=22; bundled Java, Kotlin stdlib and coroutine jars",
     "csharp": ".NET10",

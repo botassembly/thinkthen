@@ -34,11 +34,17 @@ for platform, rid, library in platforms:
     with tempfile.TemporaryDirectory() as temporary:
         stage = pathlib.Path(temporary)
         shutil.copytree(ROOT / "sdk/ruby/lib", stage / "lib")
-        for source in (ROOT / "sdk/ruby/README.md", ROOT / "sdk/ruby/thinkthen.gemspec", ROOT / "LICENSE"):
+        shutil.copytree(ROOT / "sdk/ruby/sig", stage / "sig")
+        subprocess.run([str(ROOT / "scripts/ruby-code-types"), str(stage / "sig")], check=True)
+        for source in (ROOT / "sdk/ruby/README.md", ROOT / "sdk/ruby/API.md", ROOT / "sdk/ruby/thinkthen.gemspec", ROOT / "LICENSE"):
             shutil.copy2(source, stage / source.name)
         shutil.copy2(asset, stage / "lib/thinkthen" / library)
         (stage / "VERSION").write_text(version + "\n")
         (stage / "PLATFORM").write_text(platform + "\n")
+        # Package inputs are public even when the working directory is private.
+        for source in stage.rglob("*"):
+            if source.is_file():
+                source.chmod(source.stat().st_mode | 0o444)
         subprocess.run(["gem", "build", "--strict", "thinkthen.gemspec"], cwd=stage, check=True)
         archive = next(stage.glob("*.gem"))
         shutil.copy2(archive, output / archive.name)

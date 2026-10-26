@@ -26,5 +26,6 @@
     "vctrs_0.7.3.tar.gz": "b45078413e06ac624dddb7221a3a43908b405c8abec09822cb86638d30b0435b",
     "withr_3.0.3.tar.gz": "d86c6454164fc85678bfc85e2a6cce42f7461d45fa9a87de71f376e7956c991e"
   },
+  "staticcheck": "v0.6.1",
   "uv": "0.11.14"
 }

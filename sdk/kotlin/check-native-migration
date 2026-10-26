@@ -1,0 +1,93 @@
+#!/bin/sh
+# Check the existing Kotlin facade with one prepared debug engine and installed JVM artifacts.
+set -eu
+cd "$(dirname "$0")/../.."
+root=$PWD
+native_assets=${1:?usage: sdk/kotlin/check-native-migration PREPARED_NATIVE_DIRECTORY}
+. scripts/native-tools-env
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH CLASSPATH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+python3 - "$native_assets" "$jvm_library" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+base = Path(sys.argv[1])
+identity = json.loads((base / 'identity.json').read_text())
+assert identity['profile'] == 'debug' and not identity['production_native_pair']
+subprocess.run(['git', 'diff', '--exit-code', identity['revision'], '--',
+    'crates', 'schemas', 'conformance', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'], check=True)
+selected = ['loopback', 'feature-free/' + sys.argv[2], 'abi-fixtures/manifest.json']
+fixtures = json.loads((base / 'abi-fixtures/manifest.json').read_text())
+selected.extend(str(Path(case['library']).relative_to(base)) for case in fixtures['cases'])
+for relative in selected:
+    assert hashlib.sha256((base / relative).read_bytes()).hexdigest() == identity['assets'][relative], relative
+print('Reuse debug native inputs from ' + identity['revision'], flush=True)
+PY
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
+mkdir -p "$scratch/consumer" "$scratch/home"
+export THINKTHEN_LOOPBACK="$native_assets/loopback"
+export XDG_CACHE_HOME="$scratch/home/.cache"
+resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+rm -rf sdk/java/library/target/classes sdk/kotlin/target/classes
+mkdir -p "$resource"
+cp "$native_assets/feature-free/$jvm_library" "$resource/"
+python3 scripts/jvm-generated
+mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" install -DskipTests
+version=$(python3 scripts/release_metadata.py --version)
+java_jar="$scratch/m2/io/github/botassembly/thinkthen-java/$version/thinkthen-java-$version.jar"
+kotlin_jar="$scratch/m2/io/github/botassembly/thinkthen-kotlin/$version/thinkthen-kotlin-$version.jar"
+classpath="$java_jar:$kotlin_jar"
+for dependency in $(rg --files "$scratch/m2" | rg '/(jackson-[^/]+|jspecify|kotlin-stdlib|kotlinx-coroutines-core-jvm|annotations)/[^/]+/[^/]+\.jar$'); do classpath="$classpath:$dependency"; done
+printf '%s' "$classpath" > "$scratch/classpath"
+python3 scripts/jvm_repository.py verify "$root" "$scratch/classpath" sdk/java/library/target/classes/io/thinkthen/native "$jvm_platform" "$native_assets/feature-free/$jvm_library"
+javac -Xlint:all -Werror --release 22 -cp "$classpath" -d "$scratch/consumer" sdk/java/consumer/src/main/java/ConsumerCases.java sdk/java/consumer/src/main/java/ConformanceCases.java sdk/java/consumer/src/main/java/BackendFixture.java
+python3 - "$scratch" "$classpath" "$JAVA_HOME/bin/java" <<'PY'
+from pathlib import Path
+import re
+import subprocess
+import sys
+scratch, classpath, java = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+examples = re.findall(r'```kotlin\n(.*?)```', Path('sdk/kotlin/README.md').read_text(), flags=re.S)
+assert examples, 'No Kotlin README examples'
+imports = {'import kotlinx.coroutines.runBlocking'}
+bodies = []
+for example in examples:
+    lines = []
+    for line in example.splitlines():
+        if line.startswith('import '): imports.add(line)
+        else: lines.append(line)
+    bodies.append('\n'.join(lines))
+source = scratch / 'ReadmeExamples.kt'
+source.write_text('\n'.join(sorted(imports)) + '\n' + '\n'.join(bodies) +
+    '\nfun main() = runBlocking { routeMessage(); review() }\n')
+compiler = ':'.join(str(path) for path in sorted((scratch / 'm2').rglob('*.jar')))
+arguments = ['-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
+    '-jvm-target', '22', '-Werror', '-Xjspecify-annotations=strict', '-classpath',
+    str(scratch / 'consumer') + ':' + classpath, '-d', str(scratch / 'consumer'),
+    'sdk/java/consumer/src/main/kotlin/KotlinConformance.kt', str(source)]
+# Use an argument file as the shared README checker does.
+argfile = scratch / 'compiler.args'
+argfile.write_text('\n'.join('"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"' for value in arguments))
+subprocess.run([java, '@' + str(argfile)], check=True)
+PY
+java --enable-native-access=ALL-UNNAMED "-Duser.home=$scratch/home" -cp "$scratch/consumer:$classpath" KotlinConformanceKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED "-Duser.home=$scratch/home" -cp "$scratch/consumer:$classpath" ReadmeExamplesKt
+python3 - "$native_assets/abi-fixtures/manifest.json" "$java_jar" "$jvm_platform" "$jvm_library" "$scratch" "$classpath" "$JAVA_HOME/bin/java" <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import sys
+import zipfile
+manifest, jar, platform, library, scratch, classpath, java = sys.argv[1:]
+for case in json.loads(Path(manifest).read_text())['cases']:
+    replacement = Path(scratch) / (case['name'] + '.jar')
+    with zipfile.ZipFile(jar) as source, zipfile.ZipFile(replacement, 'w') as target:
+        for entry in source.infolist():
+            target.writestr(entry, Path(case['library']).read_bytes() if entry.filename == f'io/thinkthen/native/{platform}/{library}' else source.read(entry))
+    subprocess.run([java, '--enable-native-access=ALL-UNNAMED', f'-Duser.home={scratch}/home', '-cp',
+        f'{scratch}/consumer:' + classpath.replace(jar, str(replacement)), 'KotlinConformanceKt', 'abi', str(case['accept']).lower()], check=True)
+print('Kotlin migration: checked README examples and all shared ABI fixtures passed', flush=True)
+PY

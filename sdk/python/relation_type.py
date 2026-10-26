@@ -1,46 +1,31 @@
-"""Derive the Python relation fields from the engine row schema."""
+"""Generate typed error declarations from the shared engine registry."""
 
-import json
+import ast
 from pathlib import Path
 
 
 def relation_type(destination: Path) -> None:
-    schema = Path(__file__).resolve().parents[2] / "schemas/row.schema.json"
-    target = destination / "_relation.py"
-    if not schema.exists():
-        # Source archives already carry the type generated from their row schema.
-        target.read_text()
-        return
-    relation = json.loads(schema.read_text())["$defs"]["Relation"]
-    types = {
-        "boolean": "bool",
-        "string": "str",
-        "number": "float",
-        "#/$defs/Probability": "float",
-        "#/$defs/RelationName": "Entity",
-    }
-    fields = {
-        name: types[value.get("$ref", value.get("type"))]
-        for name, value in relation["properties"].items()
-    }
-    required = set(relation["required"])
+    (destination / "_relation.py").unlink(missing_ok=True)
+    contract = ast.parse((destination / "_contract.py").read_text())
+    codes = next(
+        ast.literal_eval(node.value)
+        for node in contract.body
+        if isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and node.target.id == "CODE_NAMES"
+    )
     lines = [
-        '"""Generated from the shared row schema during package assembly."""',
-        "from typing import TypedDict",
-        "from ._types import Entity",
+        '"""Generated from the engine error registry during package assembly."""',
+        "from enum import Enum",
         "",
-        "class _OptionalRelation(TypedDict, total=False):",
-        *[
-            f"    {name}: {value}"
-            for name, value in fields.items()
-            if name not in required
-        ],
-        "",
-        "class Relation(_OptionalRelation):",
-        *[f"    {name}: {value}" for name, value in fields.items() if name in required],
-        "",
+        "class ErrorCode(str, Enum):",
     ]
-    target.write_text("\n".join(lines))
+    lines.extend(
+        f'    {value.upper().replace(".", "_").replace("-", "_")} = "{value}"'
+        for value in codes.values()
+    )
+    lines.extend(["", '__all__ = ["ErrorCode"]', ""])
+    (destination / "_codes.py").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":

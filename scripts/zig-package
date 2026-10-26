@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Stage an offline Zig package with the matching prepared native asset."""
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -10,27 +11,40 @@ from native_platform import current
 root = Path(__file__).resolve().parent.parent
 if len(sys.argv) != 2:
     sys.exit("usage: scripts/zig-package OUTPUT_DIRECTORY")
+from header_contract import check
+check(root)
 output = Path(sys.argv[1]).resolve()
 output.mkdir()
 package = output / "thinkthen"
-shutil.copytree(root / "sdk/zig", package, ignore=shutil.ignore_patterns("tests", "examples"))
+from package_inventory import zig_paths
+package.mkdir(parents=True)
+for name in zig_paths((root / 'sdk/zig/build.zig.zon').read_text()):
+    source = root / 'sdk/zig' / name
+    if source.is_dir(): shutil.copytree(source, package / name)
+    elif source.is_file(): shutil.copy2(source, package / name)
 shutil.copy2(root / "LICENSE", package / "LICENSE")
 (package / "include").mkdir()
 shutil.copy2(root / "crates/thinkthen-ffi/include/thinkthen.h", package / "include/thinkthen.h")
-cache = Path(subprocess.check_output([str(root / "scripts/native-prepare"), "--path"], text=True).strip())
+from zig_codes import generate
+generate(root, package / "src/error_codes.zig")
+prepared = os.environ.get("THINKTHEN_ZIG_NATIVE_FILE")
+cache = None if prepared else Path(subprocess.check_output([str(root / "scripts/native-prepare"), "--path"], text=True).strip())
 host = current()
 platform, library = host['rid'], 'libthinkthen_ffi.' + host['suffix']
 destination = package / "native" / platform
 destination.mkdir(parents=True)
-shutil.copy2(cache / platform / library, destination / library)
+shutil.copy2(Path(prepared) if prepared else cache / platform / library, destination / library)
 if sys.platform == "darwin":
     subprocess.run(["install_name_tool", "-id", "@rpath/" + library,
                     str(destination / library)], check=True)
-from release_notices import bundle
-for name, data in bundle(host['platform'], 'ffi').items():
-    path = package / name
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+if os.environ.get("THINKTHEN_ZIG_DEBUG_CHECKPOINT") or os.environ.get("THINKTHEN_ZIG_DEBUG_NATIVE"):
+    print("Debug-only Zig consumer archive; release notices are not validated", file=sys.stderr)
+else:
+    from release_notices import bundle
+    for name, data in bundle(host['platform'], 'ffi').items():
+        path = package / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
 archive_path = output / f"thinkthen-zig-{platform}.tar.gz"
 with tarfile.open(archive_path, "w:gz") as archive:
     archive.add(package, arcname="thinkthen")

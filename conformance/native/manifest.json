@@ -1,0 +1,45 @@
+{
+  "abi": "../../schemas/abi.json",
+  "cases": [
+    {
+      "accept": true,
+      "forward": true,
+      "name": "current",
+      "version": 131073
+    },
+    {
+      "accept": true,
+      "forward": true,
+      "name": "newer-minor",
+      "version": 131074
+    },
+    {
+      "accept": false,
+      "forward": false,
+      "name": "wrong-major",
+      "version": 196609
+    },
+    {
+      "accept": false,
+      "forward": false,
+      "name": "insufficient-minor",
+      "version": 131072
+    },
+    {
+      "accept": false,
+      "forward": false,
+      "missing": "thinkthen_abi_version",
+      "name": "missing-version",
+      "version": 131073
+    },
+    {
+      "accept": false,
+      "forward": false,
+      "missing": "thinkthen_call_next",
+      "name": "missing-symbol",
+      "version": 131073
+    }
+  ],
+  "semantic": "../typed/manifest.json",
+  "shape": "../typed/shapes.json"
+}

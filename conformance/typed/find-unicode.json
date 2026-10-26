@@ -1,0 +1,35 @@
+{
+  "name": "find-unicode",
+  "request": {
+    "question": {
+      "function": "find",
+      "question": "Which line?"
+    },
+    "records": [
+      "\u00e9\ud83e\udd80\r\n \n \u7b54\ud83d\ude42 \r\n"
+    ]
+  },
+  "replies": [
+    {
+      "distribution": {
+        "none": 0,
+        "u1": 0.1,
+        "u2": 0.9
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "find",
+      "position": 1,
+      "answer": {
+        "end": 10,
+        "start": 6,
+        "text": " \u7b54\ud83d\ude42 "
+      },
+      "probability": 0.9,
+      "status": "answered"
+    }
+  ],
+  "requests": 1
+}

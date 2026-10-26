@@ -55,7 +55,7 @@ fn expanding_workbooks_and_oversized_grids_stop_before_requests() {
             loopback::Loopback::answering(|_| serde_json::json!({"type":"noul","noul":0.99}))
                 .unwrap();
         let output = support::command()
-            .args(["decide", "Ready?", "--excel", "--input"])
+            .args(["decide", "Ready?", "--from", "xlsx"])
             .arg(&input)
             .args([
                 "--sheet",
@@ -97,14 +97,7 @@ fn csv_and_tsv_field_counts_and_record_bytes_have_named_limits() {
         )
         .unwrap();
         let output = support::command()
-            .args([
-                "decide",
-                "Ready?",
-                "--adapter",
-                "stub",
-                &format!("--{format}"),
-                "--input",
-            ])
+            .args(["decide", "Ready?", "--backend", "stub", "--from", format])
             .arg(&input)
             .args(["--column", "Body", "--into", "ready"])
             .output()
@@ -125,7 +118,7 @@ fn csv_and_tsv_field_counts_and_record_bytes_have_named_limits() {
     file.write_all(b"x\n").unwrap();
     drop(file);
     let output = support::command()
-        .args(["decide", "Ready?", "--adapter", "stub", "--csv", "--input"])
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
         .arg(&input)
         .args(["--column", "Body", "--into", "ready"])
         .output()
@@ -157,7 +150,7 @@ fn cancel_during_snapshot_admission_stops_before_any_request() {
     let server =
         loopback::Loopback::answering(|_| serde_json::json!({"type":"noul","noul":0.99})).unwrap();
     let mut child = support::command()
-        .args(["decide", "Ready?", "--csv", "--input"])
+        .args(["decide", "Ready?", "--from", "csv"])
         .arg(&input)
         .args([
             "--column",

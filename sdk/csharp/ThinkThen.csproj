@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <IsAotCompatible>true</IsAotCompatible>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -17,6 +19,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src/*.cs" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <None Include="README.md" Pack="true" PackagePath="/" />
     <None Include="$(LinuxNative)" Pack="true" PackagePath="runtimes/linux-x64/native/libthinkthen_ffi.so" Condition="'$(LinuxNative)' != ''" />
     <None Include="$(WindowsNative)" Pack="true" PackagePath="runtimes/win-x64/native/thinkthen_ffi.dll" Condition="'$(WindowsNative)' != ''" />

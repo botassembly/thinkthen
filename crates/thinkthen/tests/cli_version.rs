@@ -8,8 +8,14 @@ mod support;
 fn version_prints_name_and_version() {
     let output = support::command().arg("--version").output().unwrap();
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(
-        String::from_utf8(output.stdout).unwrap(),
-        format!("thinkthen {}\n", env!("CARGO_PKG_VERSION"))
-    );
+    let banner = String::from_utf8(output.stdout).unwrap();
+    assert!(banner.starts_with(&format!(
+        "thinkthen {} (contract {}; backends ",
+        thinkthen::VERSION,
+        thinkthen::VERSION
+    )));
+    for backend in thinkthen::BackendName::ALL {
+        assert!(banner.contains(backend.as_str()));
+        assert!(banner.contains(&backend.default_model()));
+    }
 }

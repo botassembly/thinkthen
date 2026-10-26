@@ -129,14 +129,22 @@ pub(crate) fn admit(
         None => None,
     }
     .ok_or_else(|| {
-        invalid(&format!(
-            "select --sheet NAME from: {}",
-            sheets
-                .iter()
-                .map(|(n, _)| n.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
-        ))
+        let accepted: Vec<_> = sheets.iter().map(|(name, _)| name.as_str()).collect();
+        FileError::Invalid(match sheet_name {
+            Some(name) => crate::core::diagnostic::unknown("sheet", name, &accepted),
+            None => crate::core::diagnostic::requirement(
+                "sheet",
+                &format!(
+                    "one worksheet name selected with --sheet from: {}",
+                    accepted
+                        .iter()
+                        .map(|name| format!("`{name}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                "no sheet selection for a workbook without exactly one sheet",
+            ),
+        })
     })?;
     let mut part = None;
     let relations = xml_bytes(&mut zip, "xl/_rels/workbook.xml.rels", cancel)?;
@@ -302,13 +310,15 @@ pub(crate) fn admit(
                 b"row" if row_number == 1 => {
                     let mut positions = BTreeMap::new();
                     for (column, cell) in &row {
-                        let header = value(Some(cell), &shared, false, row_number)?;
+                        let header = value(Some(cell), &shared, false, row_number, &chosen.0)?;
                         if !header.is_empty() {
                             positions.insert(header.clone(), *column);
                             sheet.headers.push(header);
                         }
                     }
-                    crate::files::headers(&sheet.headers, selected)?;
+                    crate::files::headers(&sheet.headers, selected).map_err(|error| {
+                        context_error(error, &format!("sheet `{}` row 1", chosen.0))
+                    })?;
                     selected_positions = selected
                         .iter()
                         .map(|name| {
@@ -325,7 +335,7 @@ pub(crate) fn admit(
                     }
                     let values = selected_positions
                         .iter()
-                        .map(|c| value(row.get(c), &shared, true, row_number))
+                        .map(|c| value(row.get(c), &shared, true, row_number, &chosen.0))
                         .collect::<Result<Vec<_>, _>>()?;
                     row_sink(row_number, values)?;
                 }
@@ -363,35 +373,62 @@ fn value(
     shared: &[String],
     selected: bool,
     row: usize,
+    sheet: &str,
 ) -> Result<String, FileError> {
     let Some(cell) = cell else {
         return Ok(String::new());
     };
+    let field = format!(
+        "sheet `{sheet}` row {row} column {}",
+        column_name(cell.column)
+    );
     let missing_cache = !cell.saved || (cell.value.is_empty() && cell.kind != "str");
     if selected && (cell.kind == "e" || (cell.formula && missing_cache)) {
-        return Err(invalid(&format!(
-            "cell {}{row} has an error or a formula without a saved value; save the calculated workbook or select a plain text column",
-            column_name(cell.column)
+        return Err(FileError::Invalid(crate::core::diagnostic::requirement(
+            &field,
+            "a cell with a saved value; save the calculated workbook or select a plain text column",
+            if cell.kind == "e" {
+                "an error cell"
+            } else {
+                "a formula without a saved value"
+            },
         )));
     }
     match cell.kind.as_str() {
-        "s" => shared
-            .get(integer(&cell.value)?)
-            .cloned()
-            .ok_or_else(|| invalid("shared-string index is invalid; save a clean .xlsx copy")),
+        "s" => integer(&cell.value)
+            .and_then(|index| {
+                shared.get(index).cloned().ok_or_else(|| {
+                    invalid("shared-string index is invalid; save a clean .xlsx copy")
+                })
+            })
+            .map_err(|error| context_error(error, &field)),
         "b" => match cell.value.as_str() {
             "1" => Ok("TRUE".into()),
             "0" => Ok("FALSE".into()),
-            _ => Err(invalid("workbook boolean must be 0 or 1")),
+            _ => Err(FileError::Invalid(crate::core::diagnostic::expected(
+                &field,
+                "a workbook boolean encoded as 0 or 1",
+                &serde_json::Value::String(cell.value.clone()),
+            ))),
         },
         "" | "n" if !cell.value.is_empty() => {
-            let number = cell.value.parse::<f64>().map_err(local)?;
+            let number = cell.value.parse::<f64>().map_err(|_| {
+                FileError::Local(crate::core::diagnostic::expected(
+                    &field,
+                    "a finite workbook number",
+                    &serde_json::Value::String(cell.value.clone()),
+                ))
+            })?;
             if !number.is_finite() {
-                return Err(invalid("workbook numeric value is not finite"));
+                return Err(FileError::Invalid(crate::core::diagnostic::requirement(
+                    &field,
+                    "a finite workbook number",
+                    "a non-finite number",
+                )));
             }
             Ok(cell.value.clone())
         }
-        _ => decode_string(&cell.value),
+        _ => decode_string(&cell.value).map_err(|error| context_error(error, &field)),
     }
 }
 
@@ -731,8 +768,18 @@ fn xml_bytes(
     copy(&mut zip.by_name(name).map_err(local)?, &mut bytes, cancel)?;
     Ok(bytes)
 }
+fn context_error(error: FileError, field: &str) -> FileError {
+    match error {
+        FileError::Invalid(message) => FileError::Invalid(format!("{field} {message}")),
+        error => error,
+    }
+}
 fn invalid(message: &str) -> FileError {
-    FileError::Invalid(message.into())
+    FileError::Invalid(crate::core::diagnostic::requirement(
+        "workbook",
+        "a valid unsigned .xlsx workbook",
+        message,
+    ))
 }
 fn resolve(target: &str) -> Result<String, FileError> {
     let candidate = if target.starts_with('/') {

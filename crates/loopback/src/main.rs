@@ -1,11 +1,12 @@
 //! Run a canned, held or unavailable backend until standard input closes.
 
-use loopback::{HeldReply, Loopback, UnavailableBackend};
+use loopback::{HeldReply, Loopback, StressFixture, UnavailableBackend};
 use std::io::{BufRead, Write};
 use std::sync::mpsc::Receiver;
 
 enum Fixture {
     Case(Loopback),
+    Stress(StressFixture),
     Held {
         server: Loopback,
         arrived: Receiver<()>,
@@ -18,11 +19,15 @@ impl Fixture {
     fn open() -> Result<Self, Box<dyn std::error::Error>> {
         let mut args = std::env::args().skip(1);
         let first = args.next().ok_or(
-            "usage: loopback CASE.json | --held headers|body|refusal-body | --unavailable",
+            "usage: loopback CASE.json | --stress NAME | --held headers|body|refusal-body | --unavailable",
         )?;
         match first.as_str() {
+            "--stress" => Ok(Self::Stress(StressFixture::open(
+                &args.next().ok_or("expected stress scenario name")?,
+            )?)),
             "--held" => {
                 let reply = match args.next().as_deref() {
+                    Some("reset") => HeldReply::Reset,
                     Some("headers") => HeldReply::Headers,
                     Some("body") => HeldReply::Body,
                     Some("refusal-body") => HeldReply::RefusalBody,
@@ -47,11 +52,18 @@ impl Fixture {
         match self {
             Self::Case(server) | Self::Held { server, .. } => server.base(),
             Self::Unavailable(server) => server.base(),
+            Self::Stress(server) => server.base(),
         }
     }
 
     fn command(&self, command: &str) -> Result<String, Box<dyn std::error::Error>> {
         match (self, command) {
+            (Self::Stress(server), "stats") => Ok(server.stats().to_string()),
+            (Self::Stress(server), "count") => server
+                .stats()
+                .get("requests")
+                .map(ToString::to_string)
+                .ok_or_else(|| "stress statistics omitted request count".into()),
             (Self::Case(server) | Self::Held { server, .. }, "count") => {
                 Ok(server.count().to_string())
             }

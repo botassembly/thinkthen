@@ -11,7 +11,7 @@ use thinkthen::Cancel;
 struct Event {
     kind: &'static str,
     data: String,
-    reply: Sender<(bool, Result<String, thinkthen::Error>)>,
+    reply: Sender<Option<thinkthen::records::Record>>,
 }
 
 struct Bridge {
@@ -24,7 +24,7 @@ impl Bridge {
         &self,
         kind: &'static str,
         data: String,
-    ) -> Option<(bool, Result<String, thinkthen::Error>)> {
+    ) -> Option<Option<thinkthen::records::Record>> {
         if self.cancel.is_cancelled() && kind != "done" {
             return None;
         }
@@ -53,4 +53,7 @@ impl Bridge {
     reason = "napi emits undocumented class helpers in this module"
 )]
 mod exports;
-pub use exports::{Client, Operation, reject_non_finite_json};
+pub use exports::{
+    Client, Operation, abi_version, parse_toolbox, reject_cancellation, reject_non_finite_json,
+    reject_question_conversion, reject_settings_conversion, serialize_toolbox,
+};

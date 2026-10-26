@@ -3,12 +3,12 @@
 `thinkthen::files` reads UTF-8 CSV, UTF-8 TSV and `.xlsx` evidence and appends the existing ThinkThen outcomes to a new file. It preserves existing rows and workbook content. It performs file I/O outside the pure engine core.
 
 ```rust,no_run
-use thinkthen::{Cancel, Client, SdkRequest};
+use thinkthen::{Backend, Cancel, Request, Settings};
 use thinkthen::files::{FileFormat, FileJob, FileOutput};
 
-let client = Client::from_json(r#"{"adapter":"stub"}"#, |_| None)?;
-let request = SdkRequest::from_json(
-    r#"{"function":"decide","question":{"type":"inline","value":"Ready?"}}"#,
+let client = Settings::default().backend(Backend::Stub).engine(|_| None)?;
+let request = Request::from_json(
+    r#"{"question":{"function":"decide","question":"Ready?"}}"#,
 )?;
 let job = FileJob::new(
     "requests.csv".into(), FileFormat::Csv, None,
@@ -23,7 +23,7 @@ let receipt = job.execute(&request, &client, &Cancel::default())?;
 The command exposes the same operation:
 
 ```sh
-thinkthen decide 'Ready?' --adapter stub --csv --input requests.csv \
+thinkthen decide 'Ready?' --backend stub requests.csv \
   --column Body --into ready
 ```
 
@@ -31,6 +31,6 @@ Repeat `--column` to select several named evidence columns. A single selected co
 
 The default creates a `.thinkthen` sibling. `--output` selects another new file; existing destinations are refused. `--in-place` explicitly replaces the source after keeping a distinct backup. An exclusive transient lock serializes in-place operations. Close other spreadsheet writers before replacement. After a killed process, remove a leftover lock only after confirming that its owner has stopped.
 
-A completed engine stream publishes every outcome, including failed annotation entries; the receipt retains the first original failure. A top-level failed row fails the call after every row is delivered. An answer or detail that Excel cannot represent becomes a failed outcome with a `local.io` error cell; other rows continue. A final call failure, cancellation or file error publishes nothing. Cancellation removes provisional backups as well as temporary files. Formulas are read from saved results, never recalculated. Missing formula results and selected merged/error cells require a saved or plain-text evidence column. Worksheet filters and row spans widen to include new columns. Existing Excel table definitions remain unchanged. New files use the caller’s normal creation permissions. The `--details` flag keeps detail JSON in each answer’s `_detail` column.
+A completed engine stream publishes every outcome, including failed annotation entries; the receipt retains the first original failure. A top-level failed row fails the call after every row is delivered. An answer or detail that Excel cannot represent becomes a failed outcome with a `local.io` error cell; other rows continue. A final call failure, cancellation or file error publishes nothing. Cancellation removes provisional backups as well as temporary files. Formulas are read from saved results, never recalculated. Missing formula results and selected merged/error cells require a saved or plain-text evidence column. Worksheet filters and row spans widen to include new columns. Existing Excel table definitions remain unchanged. New files use the caller’s normal creation permissions. Each answer’s `_detail` column retains detail JSON when the result supplies it.
 
 CSV and TSV output preserves formula-like text literally. A spreadsheet program may interpret that text as a formula when it opens the file. Use text import settings when opening untrusted output in a spreadsheet program.

@@ -1,0 +1,26 @@
+#!/bin/sh
+# Compile one current debug engine and install C/C++ consumers in an empty prefix.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+cargo fmt --all -- --check
+cargo build --locked --offline -p thinkthen-ffi -p loopback
+cargo run --locked --offline -p thinkthen-ffi --example headers -- --check
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+root=$PWD
+build_target=${CARGO_TARGET_DIR:-target}
+case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
+case "$(uname -s)" in Darwin) library=libthinkthen_ffi.dylib ;; *) library=libthinkthen_ffi.so ;; esac
+cmake -S sdk/c -B "$scratch/c-build" -DCMAKE_INSTALL_LIBDIR=lib \
+    -DTHINKTHEN_FFI_LIBRARY="$build_target/debug/$library" \
+    -DTHINKTHEN_FFI_INCLUDE_DIR="$root/crates/thinkthen-ffi/include" -DCMAKE_INSTALL_PREFIX="$scratch/prefix"
+cmake --install "$scratch/c-build"
+cmake -S sdk/cpp -B "$scratch/cpp-build" -DCMAKE_PREFIX_PATH="$scratch/prefix" -DCMAKE_INSTALL_PREFIX="$scratch/prefix"
+cmake --install "$scratch/cpp-build"
+export PKG_CONFIG_PATH="$scratch/prefix/lib/pkgconfig"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/consumer.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/c-consumer"
+"$scratch/c-consumer"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/c-original"
+"$scratch/c-original"
+sdk/cpp/tests/check-installed "$scratch/prefix" "$build_target/debug/loopback" "$build_target/debug/$library"

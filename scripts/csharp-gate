@@ -27,17 +27,22 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     Linux) linux="$native/libthinkthen_ffi.so" ;;
   esac
 fi
-printf '<configuration><packageSources><clear /></packageSources></configuration>\n' > "$stage/NuGet.Config"
+printf '<configuration><packageSources><clear /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/NuGet.Config"
 dotnet pack sdk/csharp/ThinkThen.csproj --configfile "$stage/NuGet.Config" --artifacts-path "$stage/artifacts" -o "$stage/feed" -p:LinuxNative="$linux" -p:MacNative="$mac"
 mkdir "$stage/consumer"
 cp sdk/csharp/tests/Consumer.csproj sdk/csharp/tests/*.cs "$stage/consumer/"
 printf '<configuration><packageSources><clear /><add key="local" value="%s" /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "$stage/feed" "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/consumer/NuGet.Config"
 dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/bin"
+engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$mac")" -print)
+case $(uname -s) in Linux) engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$linux")" -print) ;; esac
+python3 scripts/loader-failure-check "$engine" -- dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
 cd "$stage"
 export THINKTHEN_API_KEY=construction-only
 dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"
 dotnet publish "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/single" -p:PublishSingleFile=true -p:SelfContained=false
 "$stage/single/Consumer" "$root/construction/stub.json" --stub-only
+python3 "$root/scripts/csharp_consumers.py" all "$stage"
+python3 "$root/scripts/csharp_consumers.py" abi "$stage"
 if [ -n "${THINKTHEN_CSHARP_OUTPUT:-}" ]; then
   mkdir -p "$THINKTHEN_CSHARP_OUTPUT"
   cp "$stage/feed/Botassembly.ThinkThen.$version.nupkg" "$THINKTHEN_CSHARP_OUTPUT/"

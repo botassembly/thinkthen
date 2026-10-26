@@ -8,45 +8,28 @@ use crate::core::{
 
 /// Every question in a toolbox, answered independently for each record.
 #[derive(Debug, serde::Serialize)]
-pub struct Annotate {
+pub(crate) struct Annotate {
     questions: Vec<(String, ToolboxQuestion)>,
+    #[serde(skip)]
+    complete_choices: bool,
 }
 
 impl Annotate {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::Annotation {
-            questions: self
-                .questions
-                .iter()
-                .map(|(name, question)| {
-                    (
-                        name.as_str(),
-                        (
-                            question.function().name(),
-                            question.function().definition_view(),
-                        ),
-                    )
-                })
-                .collect(),
-        }
-    }
-
-    /// Visit the admitted member definitions in their execution order.
-    pub fn definitions(&self) -> impl Iterator<Item = (&str, &crate::core::ToolboxFunction)> {
-        self.questions
-            .iter()
-            .map(|(name, question)| (name.as_str(), question.function()))
-    }
-
     /// Use every named question in the toolbox, in name order.
     #[must_use]
-    pub fn new(toolbox: &Toolbox) -> Self {
+    pub(crate) fn new(toolbox: &Toolbox) -> Self {
         Self {
+            complete_choices: false,
             questions: toolbox
                 .questions()
                 .map(|(name, question)| (name.to_owned(), question.clone()))
                 .collect(),
         }
+    }
+
+    pub(crate) fn complete_choices(mut self) -> Self {
+        self.complete_choices = true;
+        self
     }
 
     // The engine concatenates rounds. Replay each round's ask counts to recover
@@ -121,15 +104,6 @@ impl Annotate {
             }
         }
     }
-
-    /// Override each question's selected evidence pointer.
-    #[must_use]
-    pub fn on(mut self, on: &Pointer) -> Self {
-        for (_, question) in &mut self.questions {
-            question.override_on(on);
-        }
-        self
-    }
 }
 
 struct Entry<'a> {
@@ -146,10 +120,6 @@ fn evidence(question: &ToolboxQuestion, record: &Record) -> Result<String, Error
 }
 
 impl Function for Annotate {
-    const NAME: &'static str = "annotate";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     #[expect(
         clippy::expect_used,
         reason = "the packer passes a prepared ask's position"
@@ -168,7 +138,7 @@ impl Function for Annotate {
             .find_map(|entry| {
                 if position < entry.pending.len() {
                     Some(super::stub_key(
-                        &entry.question.identity(),
+                        entry.question.stub_identity(),
                         entry.text.evidence(),
                         entry.history.len(),
                         position,
@@ -225,14 +195,26 @@ impl Function for Annotate {
             .map(|entry| {
                 let outcome = match entry.error {
                     Some(error) => Outcome::Failed { error },
-                    None => Function::read_record(
-                        crate::core::FunctionAnswers::new(
-                            entry.question,
-                            &entry.text,
-                            &entry.history,
+                    None => match (question.complete_choices, entry.question.function()) {
+                        (true, crate::core::ToolboxFunction::Choose(choice)) => {
+                            crate::core::questions::complete_choice(
+                                crate::core::FunctionAnswers::new(
+                                    choice,
+                                    &entry.text,
+                                    &entry.history,
+                                ),
+                                limits,
+                            )
+                        }
+                        _ => Function::read_record(
+                            crate::core::FunctionAnswers::new(
+                                entry.question,
+                                &entry.text,
+                                &entry.history,
+                            ),
+                            limits,
                         ),
-                        limits,
-                    ),
+                    },
                 };
                 (entry.name.to_owned(), outcome)
             })

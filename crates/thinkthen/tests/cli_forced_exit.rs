@@ -27,7 +27,7 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
     .unwrap();
     let mut unrelated_process = Command::new("sleep").arg("300").spawn().unwrap();
     let mut run = support::command()
-        .args(["run", toolbox.to_str().unwrap(), "--adapter", "stub"])
+        .args(["run", toolbox.to_str().unwrap(), "--backend", "stub"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -75,15 +75,15 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
         .args([
             "decide",
             "Ready?",
-            "--csv",
-            "--input",
+            "--from",
+            "csv",
             input.to_str().unwrap(),
             "--column",
             "evidence",
             "--into",
             "ready",
             "--in-place",
-            "--adapter",
+            "--backend",
             "stub",
         ])
         .env("TMPDIR", &scratch)

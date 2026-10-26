@@ -1,27 +1,27 @@
-"""Exercise an installed C consumer with the shared backend fixture protocol."""
-
+"""Run installed C consumers against both canonical provider wire fixtures."""
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 from contextlib import contextmanager
-from pathlib import Path
 
-consumer, cases, loopback, driver, shared_cases = sys.argv[1:]
-# The installed consumers receive only host paths and a synthetic fixture key.
+consumer, loopback, driver, manifest_path, *offset_units = sys.argv[1:]
+assert offset_units in ([], ["utf8"])
+manifest_file = Path(manifest_path)
+manifest = json.loads(manifest_file.read_text())
+registry = json.loads((manifest_file.parent / manifest["registry"]).read_text())
+functions = {entry["value"]: entry["name"] for entry in registry["functions"]}
 names = ("PATH", "HOME", "SYSTEMROOT", "TMPDIR", "TEMP", "TMP", "LLVM_PROFILE_FILE")
 env = {name: os.environ[name] for name in names if name in os.environ}
-subprocess.run([consumer, cases], check=True, env=env)
-subprocess.run([driver, "options", str(Path(cases).with_name("options.json"))], check=True, env=env)
-network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key")
+subprocess.run([consumer], check=True, env=env)
 
 
 @contextmanager
-def fixture(*arguments):
-    with subprocess.Popen([loopback, *arguments], stdin=subprocess.PIPE,
+def fixture(path):
+    with subprocess.Popen([loopback, str(path)], stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE, text=True, env=env) as server:
         try:
-            assert server.stdout is not None and server.stdin is not None
             port = int(server.stdout.readline())
             yield server, f"http://127.0.0.1:{port}/v1"
             server.stdin.write("shutdown\n")
@@ -33,37 +33,26 @@ def fixture(*arguments):
                 server.wait()
 
 
-def command(server, value):
-    server.stdin.write(value + "\n")
-    server.stdin.flush()
-    return server.stdout.readline().strip()
-
-
-with fixture("--unavailable") as (server, url):
-    subprocess.run([consumer, "backend", url], check=True, env=network_env)
-    assert command(server, "count") == "0"
-for reply in ("headers", "body", "refusal-body"):
-    with fixture("--held", reply) as (server, url):
-        with subprocess.Popen([consumer, "cancel", url], stdin=subprocess.PIPE,
-                              env=network_env) as child:
-            try:
-                assert command(server, "arrived") == "arrived"
-                child.stdin.write(b"c")
-                child.stdin.flush()
-                assert command(server, "closed") == "closed"
-                assert child.wait() == 0
-                assert command(server, "count") == "1"
-            finally:
-                if child.poll() is None:
-                    child.kill()
-                    child.wait()
-print("installed C boundary passes without a service")
+def normalize(rows, backend):
+    for row in rows:
+        if isinstance(row.get("function"), int):
+            row["function"] = functions[row["function"]]
+        source = row.pop("source")
+        assert source["backend"] == backend
+        assert source["model"] == manifest["client"]["model"]
+        assert source["question_identity"]
+        if "error" in row:
+            row["error"].pop("message", None)
+        if row["function"] == "annotate" and isinstance(row.get("answer"), dict):
+            for entry in row["answer"].values():
+                if "error" in entry:
+                    entry["error"].pop("message", None)
 
 
 def byte_offsets(value, text):
-    """Shared fixtures count code points; the public C API counts UTF-8 bytes."""
     if isinstance(value, dict):
         if "start" in value and "end" in value:
+            assert isinstance(text, str), "span fixture needs explicit evidence text"
             for key in ("start", "end"):
                 value[key] = len(text[:value[key]].encode("utf-8"))
         for child in value.values():
@@ -73,26 +62,30 @@ def byte_offsets(value, text):
             byte_offsets(child, text)
 
 
-paths = sorted(Path(shared_cases).glob("*.json"))
-assert paths, "no shared cases"
-for path in paths:
+for name in manifest["cases"]:
+    path = manifest_file.parent / name
     case = json.loads(path.read_text())
-    expected = case["expected"]
-    request = case["request"]
-    if isinstance(expected, list) and request["function"] in ("find", "recognize", "relate"):
-        for row, record in zip(expected, request["records"]):
-            if isinstance(record, str):
-                # Offsets occur in both the answer and raw detail.
-                byte_offsets(row.get("answer"), record)
-                byte_offsets(row.get("detail"), record)
-    with fixture(str(path)) as (server, url):
-        # Jansson parses NUL string values but rejects object keys in JSON.
-        # Its counted public setter can construct that same input for the SDK.
-        arguments = ([consumer, "nul-key", url] if path.name == "usage-nul-question-name.json"
-                     else [driver, str(path), url])
-        result = subprocess.run(arguments, check=True, env=network_env,
-                                capture_output=True, text=True)
-        actual = json.loads(result.stdout)
-        assert actual == expected, (path.name, actual, expected)
-        assert int(command(server, "count")) == case["requests"], path.name
-print(f"installed C SDK: {len(paths)} shared conformance cases passed")
+    if offset_units and isinstance(case["expected"], list):
+        for row in case["expected"]:
+            record = case["request"]["records"][row["position"] - 1]
+            byte_offsets(row.get("answer"), record)
+            byte_offsets(row.get("detail"), record)
+    for backend in manifest["backends"]:
+        settings = dict(manifest["client"], **case.get("client", {}))
+        settings.update(backend=backend, api_key="synthetic-loopback-key")
+        with fixture(path) as (server, url):
+            settings["url"] = url
+            result = subprocess.run([driver, json.dumps(case["request"]), json.dumps(settings)],
+                                    env=env, check=True, capture_output=True, text=True)
+            actual = json.loads(result.stdout)
+            normalize(actual["rows"], backend)
+            if "error" in actual:
+                assert actual["rows"] == [], (name, actual)
+                actual = {"error": actual["error"]}
+            else:
+                actual = actual["rows"]
+            assert actual == case["expected"], (name, backend, actual, case["expected"])
+            server.stdin.write("count\n")
+            server.stdin.flush()
+            assert int(server.stdout.readline()) == case["requests"], (name, backend)
+print("installed consumer: canonical cases pass through both provider wires")

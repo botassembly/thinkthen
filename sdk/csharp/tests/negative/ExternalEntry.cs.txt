@@ -1,0 +1,6 @@
+using ThinkThen;
+
+public sealed record ForeignEntry : AnnotationEntry
+{
+    public ForeignEntry(AnnotationEntry source) : base(source) { }
+}

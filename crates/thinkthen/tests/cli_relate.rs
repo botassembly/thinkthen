@@ -10,7 +10,7 @@ fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
     let mut child = support::command()
         .arg("relate")
         .args(args)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -40,9 +40,13 @@ fn server(p: f64) -> Loopback {
 #[test]
 fn bare_output_has_one_relation_per_line_and_empty_success() {
     for (p, args, expected) in [
-        (0.8, vec!["works_for=person:company"], true),
-        (0.4, vec!["works_for=person:company"], false),
-        (0.8, vec!["works_for=person:company", "--either"], true),
+        (0.8, vec!["--rule", "works_for", "person", "company"], true),
+        (0.4, vec!["--rule", "works_for", "person", "company"], false),
+        (
+            0.8,
+            vec!["--rule", "works_for", "person", "company", "--either"],
+            true,
+        ),
     ] {
         let server = server(p);
         let output = run(&server, &args, "Ada joined Acme");
@@ -58,7 +62,7 @@ fn bare_output_has_one_relation_per_line_and_empty_success() {
             assert_eq!(relation["relation"], "works_for");
             assert_eq!(relation["source"]["text"], "Ada");
             assert_eq!(relation["target"]["text"], "Acme");
-            assert_eq!(relation["p"], p);
+            assert_eq!(relation["probability"], p);
             assert_eq!(
                 relation.get("either"),
                 args.contains(&"--either").then_some(&json!(true))
@@ -71,16 +75,20 @@ fn bare_output_has_one_relation_per_line_and_empty_success() {
 #[test]
 fn details_and_record_streams_keep_rows() {
     for (args, input, count) in [
-        (vec!["--details"], "Ada joined Acme", 1),
-        (vec!["--lines"], "Ada joined Acme\nnobody\n", 2),
+        (vec!["--json"], "Ada joined Acme", 1),
         (
-            vec!["--jsonl", "--on", "/body"],
+            vec!["--from", "lines", "--json"],
+            "Ada joined Acme\nnobody\n",
+            2,
+        ),
+        (
+            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
             "{\"body\":\"Ada joined Acme\"}\n",
             1,
         ),
     ] {
         let server = server(0.8);
-        let mut command = vec!["works_for=person:company"];
+        let mut command = vec!["--rule", "works_for", "person", "company"];
         command.extend(args);
         let output = run(&server, &command, input);
         assert_eq!(
@@ -95,24 +103,43 @@ fn details_and_record_streams_keep_rows() {
             .map(|line| serde_json::from_str(line).unwrap())
             .collect();
         assert_eq!(rows.len(), count);
-        assert!(rows[0].get("p").is_none());
+        assert!(rows[0].get("probability").is_none());
         assert_eq!(rows[0]["answer"][0]["relation"], "works_for");
-        assert_eq!(rows[0]["detail"]["probabilities"][0]["p"], 0.8);
+        assert_eq!(rows[0]["detail"]["pairs"][0]["probability"], 0.8);
     }
 }
 #[test]
 fn invalid_rules_fail_before_sending() {
     for args in [
         vec!["works_for"],
-        vec!["works_for=person:company", "works_for=person:company"],
         vec![
-            "works_for=person:company",
+            "--rule",
+            "works_for",
+            "person",
+            "company",
+            "--rule",
+            "works_for",
+            "person",
+            "company",
+        ],
+        vec![
+            "--rule",
+            "works_for",
+            "person",
+            "company",
             "also=company:person",
             "--threshold",
             "bad",
         ],
         vec!["works_for=*:company"],
-        vec!["works_for=person:company", "--threshold", "0.2:0.8"],
+        vec![
+            "--rule",
+            "works_for",
+            "person",
+            "company",
+            "--threshold",
+            "0.2:0.8",
+        ],
     ] {
         let server = self::server(0.8);
         let output = run(&server, &args, "Ada joined Acme");

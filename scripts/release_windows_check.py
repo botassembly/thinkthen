@@ -1,4 +1,5 @@
 """Check the Windows candidate's inventory and run its installed CLI and C stub cases."""
+from production_native import check as production_native
 import hashlib
 import json
 import os
@@ -21,6 +22,7 @@ def wine_executable():
 
 def pe(data, *, dll):
     """Require a complete x86-64 PE32+ image of the requested kind."""
+    production_native(data, "Windows PE image")
     assert len(data) >= 64 and data[:2] == b'MZ', 'not a Windows image'
     offset = struct.unpack_from('<I', data, 60)[0]
     assert offset + 26 <= len(data) and data[offset:offset + 4] == b'PE\0\0', 'incomplete PE header'
@@ -52,8 +54,9 @@ def inventory(folder):
         verify(folder / name)
     for jar in (folder / 'kotlin/dependencies').glob('thinkthen-java-*.jar'): verify(jar)
     with zipfile.ZipFile(folder / packages['command']) as archive:
-        assert {p for p in archive.namelist() if 'THIRD-PARTY-NOTICES' not in p.split('/')} == {'thinkthen.exe', 'README.md', 'LICENSE'}
+        assert {p for p in archive.namelist() if 'THIRD-PARTY-NOTICES' not in p.split('/')} == {'thinkthen.exe', 'thinkthen.1', 'README.md', 'LICENSE'}
         pe(archive.read('thinkthen.exe'), dll=False)
+        assert b'.TH' in archive.read('thinkthen.1')
     return build
 
 
@@ -80,23 +83,22 @@ def smoke(folder):
             assert result.returncode == code, (binary.name, result.returncode, result.stderr.decode(errors='replace')[-2000:])
             return result.stdout.decode()
         command = scratch / 'command/thinkthen.exe'
-        assert run(command, '--version').strip() == 'thinkthen ' + build['version']
+        assert run(command, '--version').startswith('thinkthen ' + build['version'] + ' (contract ')
         cases = json.loads((folder / 'checks/stub.json').read_text())
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('native_cases', folder / 'checks/native_cases.py')
+        native_cases = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(native_cases)
+        registry = json.loads((folder / 'checks/contract.json').read_text())
         for case in cases:
-            lines = run(scratch / 'c/bin/c-consumer.exe', payload=json.dumps(case['request']).encode()).splitlines()
-            rows = []
-            assert len(lines) % 2 == 0
-            for index in range(0, len(lines), 2):
-                row = json.loads(lines[index])
-                if lines[index + 1]: row['detail'] = json.loads(lines[index + 1])
-                rows.append(row)
-            assert rows == case['expected'], case['request']['function']
-        first = cases[0]
+            output = run(scratch / 'c/bin/c-consumer.exe', json.dumps(case['request']), json.dumps(case['client']))
+            native_cases.compare(output, case, registry)
+        first = next(case for case in cases if case['request']['question']['function'] == 'decide')
         request = first['request']
         record = request['records'][0]
-        question = request['question']['value']
+        question = request['question']['question']
         expected = first['expected'][0]
-        output = run(command, 'decide', '--adapter', 'stub', question, '--lines', '--details',
+        output = run(command, 'decide', '--backend', 'stub', question, '--from', 'lines', '--json',
                      payload=(record + '\n').encode())
         assert json.loads(output) == expected
     print('Windows candidate: checked inventory; installed CLI and C ABI shared stub cases pass')

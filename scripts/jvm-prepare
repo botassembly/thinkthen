@@ -26,3 +26,21 @@ export JAVA_HOME="$cache/$java_folder"
 export PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:$PATH"
 java -version
 mvn -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$cache/m2" dependency:go-offline
+# Maven's offline goal omits dependencies declared on compiler plugins.
+# Resolve their actual POM coordinates before the offline consumer builds.
+kotlin_plugin_dependencies=$(python3 - <<'PYTHON'
+import xml.etree.ElementTree as ET
+namespace = {'m': 'http://maven.apache.org/POM/4.0.0'}
+parent = ET.parse('sdk/java/pom.xml').getroot()
+properties = {item.tag.rsplit('}', 1)[-1]: item.text for item in parent.find('m:properties', namespace)}
+project = ET.parse('sdk/kotlin/pom.xml').getroot()
+for dependency in project.findall('m:build/m:plugins/m:plugin/m:dependencies/m:dependency', namespace):
+    coordinates = [dependency.find('m:' + name, namespace).text for name in ('groupId', 'artifactId', 'version')]
+    for name, value in properties.items():
+        coordinates = [part.replace('${' + name + '}', value) for part in coordinates]
+    print(':'.join(coordinates))
+PYTHON
+)
+for kotlin_plugin_dependency in $kotlin_plugin_dependencies; do
+    mvn -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$cache/m2" dependency:get "-Dartifact=$kotlin_plugin_dependency"
+done

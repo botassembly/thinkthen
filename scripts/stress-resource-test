@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""Feature: stress reports retained live growth and owns daemonized workers.
+
+A completed-round fixture retains memory, descriptors and a duplicated TCP socket.
+The leaky variant retains 16 KiB and a connection each round. A late memory step
+must pass, while a late connection leak must fail. No sleep or process-exit zero
+determines a verdict.
+"""
+import ctypes
+import json
+import mmap
+import os
+from pathlib import Path
+import socket
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent
+
+
+def fixture(mode):
+    os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps({} if mode == 'missing-counts' else dict(verified_records=32768 if mode == 'below-floor' else 8192))
+    if mode == 'invalid-counts':
+        os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps(dict(verified_records=True))
+    listener = socket.socket()
+    listener.bind(('127.0.0.1', 0))
+    listener.listen()
+    connections = []
+    allocations = []
+    # A daemon escaping the launched process's ancestry must remain accounted.
+    read_end, write_end = os.pipe()
+    ready_read, ready_write = os.pipe()
+    child = os.fork()
+    if child == 0:
+        os.close(write_end)
+        os.close(ready_read)
+        os.setsid()
+        if os.fork():
+            os._exit(0)
+        allocations.append(bytearray(12 * 1024 * 1024))
+        os.write(ready_write, b'1')
+        os.close(ready_write)
+        os.read(read_end, 1)
+        os._exit(0)
+    os.close(read_end)
+    os.close(ready_write)
+    os.waitpid(child, 0)
+    assert os.read(ready_read, 1) == b'1'
+    os.close(ready_read)
+    os.environ['THINKTHEN_STRESS_BACKEND_PORT'] = str(listener.getsockname()[1])
+    try:
+        for round_index in range(8):
+            if mode == 'variable-counts':
+                os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps(dict(verified_records=(round_index + 1) * 32768))
+            if round_index == 0 or (mode == 'step' and round_index == 4):
+                allocations.append(bytearray(8 * 1024 * 1024))
+            if mode in ('leak', 'below-floor', 'variable-counts'):
+                allocation = mmap.mmap(-1, 16 * 1024)
+                allocation[:] = b'\0' * len(allocation)
+                allocations.append(allocation)
+            if round_index == 0 or mode == 'leak' or (mode == 'connection-step' and round_index == 4):
+                client = socket.create_connection(listener.getsockname())
+                peer, _ = listener.accept()
+                connections += [client, client.dup(), peer]
+            if mode == 'access-loss':
+                os.environ['THINKTHEN_STRESS_GROUP'] = 'healthy'
+            subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+            if mode == 'grouped-missing-counts':
+                os.environ['THINKTHEN_STRESS_GROUP'] = 'missing-counts'
+                os.environ['THINKTHEN_STRESS_CONTEXT'] = '{}'
+                subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+                os.environ['THINKTHEN_STRESS_GROUP'] = 'workload'
+                os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps(dict(verified_records=8192))
+        if mode == 'access-loss':
+            os.environ['THINKTHEN_STRESS_GROUP'] = 'access-loss'
+            assert ctypes.CDLL(None, use_errno=True).prctl(4, 0, 0, 0, 0) == 0
+            # A real Linux access change, after healthy checkpoints were acknowledged.
+            subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+            assert ctypes.CDLL(None, use_errno=True).prctl(4, 1, 0, 0, 0) == 0
+            os.environ['THINKTHEN_STRESS_GROUP'] = 'incomplete'
+            subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+    finally:
+        os.close(write_end)
+        for connection in connections:
+            connection.close()
+        listener.close()
+
+
+def check(mode):
+    with tempfile.TemporaryDirectory(prefix='stress-verdict-test-'):
+        command = [sys.executable, str(ROOT / 'stress-sample.py'), '--rounds', '8', '--',
+                   sys.executable, __file__, 'fixture', mode]
+        run = subprocess.run(command, capture_output=True, text=True)
+        if run.returncode not in (0, 1):
+            raise AssertionError(run.stderr)
+        report = json.loads(run.stdout.splitlines()[-1])
+        fails = mode in ('leak', 'connection-step', 'missing-counts', 'invalid-counts')
+        assert run.returncode == int(fails), (mode, run.stderr, report)
+        assert report['growth']['passed'] is not fails, report
+        if mode in ('missing-counts', 'invalid-counts'):
+            assert report['growth']['verdict'] == 'unverifiable', report
+            assert report['growth']['metrics']['memory_bytes']['verdict'] == 'unverifiable', report
+            assert all(report['growth']['metrics'][key]['passed'] for key in ('descriptors', 'backend_connections', 'threads', 'processes')), report
+        if mode == 'leak':
+            assert all(not report['growth']['metrics'][key]['passed']
+                       for key in ('memory_bytes', 'descriptors', 'backend_connections')), report
+        if mode == 'connection-step':
+            assert report['growth']['metrics']['memory_bytes']['passed'], report
+            assert all(not report['growth']['metrics'][key]['passed']
+                       for key in ('descriptors', 'backend_connections')), report
+        assert report['first']['processes'] >= 2, report
+        assert report['first']['memory_bytes'] >= 20 * 1024 * 1024, report
+        assert report['first']['socket_descriptors'] > report['first']['distinct_sockets'], report
+        assert report['last']['processes'] >= 2, report
+        assert report['first']['backend_connections'] == 1, report
+        assert report['last']['backend_connections'] == {'leak': 8, 'connection-step': 2}.get(mode, 1), report
+        return report
+
+
+def zombies():
+    os.environ.setdefault('THINKTHEN_STRESS_CONTEXT', json.dumps(dict(verified_records=8192)))
+    os.environ['THINKTHEN_STRESS_BACKEND_PORT'] = '1'
+    children = []
+    try:
+        for _ in range(8):
+            child = os.fork()
+            if child == 0:
+                os._exit(0)
+            children.append(child)
+            os.waitid(os.P_PID, child, os.WEXITED | os.WNOWAIT)
+            subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+    finally:
+        for child in children:
+            os.waitpid(child, 0)
+
+
+def teardown():
+    """Sample the last round while an owned child's real address space exits."""
+    ready_read, ready_write = os.pipe()
+    exit_read, exit_write = os.pipe()
+    child = os.fork()
+    if child == 0:
+        os.close(ready_read)
+        os.close(exit_write)
+        allocation = mmap.mmap(-1, 256 * 1024 * 1024)
+        for offset in range(0, len(allocation), 4096):
+            allocation[offset] = 1
+        os.write(ready_write, b'1')
+        os.read(exit_read, 1)
+        os._exit(0)
+    os.close(ready_write)
+    os.close(exit_read)
+    assert os.read(ready_read, 1) == b'1'
+    os.close(ready_read)
+    os.environ.setdefault('THINKTHEN_STRESS_CONTEXT', json.dumps(dict(verified_records=8192)))
+    os.environ['THINKTHEN_STRESS_BACKEND_PORT'] = '1'
+    for _ in range(7):
+        subprocess.run([str(ROOT / 'stress-checkpoint')], check=True)
+    helper = os.fork()
+    if helper == 0:
+        os.write(exit_write, b'1')
+        # Observe the kernel's exit transition, without a timed sleep.
+        while True:
+            fields = Path(f'/proc/{child}/stat').read_text().rsplit(')', 1)[1].split()
+            if int(fields[6]) & 4 or fields[0] == 'Z':
+                break
+        with socket.socket(socket.AF_UNIX) as connection:
+            connection.connect(os.environ['THINKTHEN_STRESS_CHECKPOINT'])
+            connection.sendall(json.dumps(dict(pid=os.getpid(), required_pid=os.getppid(),
+                backend_port='1', context=json.loads(os.environ['THINKTHEN_STRESS_CONTEXT']))).encode() + b'\n')
+            assert connection.makefile('rb').readline() == b'sampled\n'
+        os._exit(0)
+    os.close(exit_write)
+    assert os.waitpid(helper, 0)[1] == 0
+    assert os.waitpid(child, 0)[1] == 0
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] == ['teardown']:
+        teardown()
+    elif sys.argv[1:] == ['zombies']:
+        zombies()
+    elif len(sys.argv) > 1:
+        fixture(sys.argv[2])
+    else:
+        zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)
+        zombie_report = json.loads(zombie_run.stdout.splitlines()[-1])
+        assert zombie_run.returncode == 1, zombie_report
+        assert not zombie_report['growth']['metrics']['processes']['passed'], zombie_report
+        denied = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--groups', 'healthy,access-loss,incomplete,not-started', '--',
+            sys.executable, __file__, 'fixture', 'access-loss'], capture_output=True, text=True)
+        assert denied.returncode == 1, denied.stderr
+        assert denied.stdout, denied.stderr
+        denied_report = json.loads(denied.stdout.splitlines()[-1])
+        assert denied_report['growth']['verdict'] == 'unverifiable', denied_report
+        assert denied_report['missing_checkpoint_groups'] == ['not-started'], denied_report
+        assert denied_report['groups']['healthy']['growth']['passed'], denied_report
+        incomplete = denied_report['groups']['incomplete']
+        assert len(incomplete['round_samples']) == 1 and incomplete['expected_rounds'] == 8, incomplete
+        assert incomplete['growth']['verdict'] == 'unverifiable', incomplete
+        lost = denied_report['groups']['access-loss']
+        assert lost['growth']['verdict'] == 'unverifiable', lost
+        failure = lost['observation_failures'][0]
+        assert failure['process']['pid'] in denied_report['groups']['healthy']['required_live_pids'], failure
+        assert failure['process']['name'] and failure['process']['start_time_ticks'], failure
+        assert failure['access'] == f"/proc/{failure['process']['pid']}/fd", failure
+        assert failure['error'] == 'PermissionError' and failure['errno'] == 13, failure
+        assert 'Traceback' not in denied.stderr, denied.stderr
+        exiting = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--', sys.executable, __file__, 'teardown'],
+            capture_output=True, text=True)
+        assert exiting.stdout, exiting.stderr
+        exit_report = json.loads(exiting.stdout.splitlines()[-1])
+        assert exiting.returncode == 0 and exit_report['growth']['passed'], exit_report
+        # Linux may finish exiting before sampling. Check any exposed denial,
+        # without requiring the scheduler to expose that transient state.
+        events = exit_report['process_events']
+        assert [event['event_sequence'] for event in events] == list(range(1, len(events) + 1)), events
+        assert [event['sequence'] for event in events] == sorted(event['sequence'] for event in events), events
+        for denial in (event for event in events if event['event'] == 'access_denied'):
+            assert denial['disposition'] == 'process_exit', denial
+            assert denial['phase'] in ('checkpoint', 'periodic', 'teardown') and denial['sequence'] > 0, denial
+            after = denial['state_after']
+            assert after['state'] == 'absent' or (
+                denial['process']['start_time_ticks'] == after['start_time_ticks'] and
+                (after['flags'] & 4 or after['state'] in ('Z', 'X', 'x'))), denial
+            assert any(event['event'] == 'process_exit' and event['process'] == denial['process'] and
+                       event['event_sequence'] > denial['event_sequence'] for event in events), events
+        assert exit_report['groups']['workload']['growth']['measured_rounds'] == 4, exit_report
+        healthy = check('healthy')
+        leaking = check('leak')
+        check('missing-counts')
+        check('invalid-counts')
+        variable = check('variable-counts')
+        assert variable['growth']['metrics']['memory_bytes']['verified_records_between_checkpoints'] == (6 + 7 + 8) * 32768, variable
+        grouped = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--groups', 'workload,missing-counts', '--',
+            sys.executable, __file__, 'fixture', 'grouped-missing-counts'], capture_output=True, text=True)
+        assert grouped.returncode == 1, grouped.stderr
+        grouped_report = json.loads(grouped.stdout.splitlines()[-1])
+        assert grouped_report['growth'].get('verdict') == 'unverifiable', grouped_report
+        assert grouped_report['groups']['workload']['growth']['passed'], grouped_report
+        assert grouped_report['groups']['missing-counts']['growth']['metrics']['memory_bytes']['verdict'] == 'unverifiable', grouped_report
+        below = check('below-floor')
+        metric = below['growth']['metrics']['memory_bytes']
+        assert all(a < b for a, b in zip(metric['late_window_maxima'], metric['late_window_maxima'][1:])), metric
+        assert 0 < metric['bytes_per_verified_record'] < 1, metric
+        assert metric['verified_records_between_checkpoints'] == 3 * 32768, metric
+        assert leaking['growth']['metrics']['memory_bytes']['bytes_per_verified_record'] >= 1, leaking
+        stepped = check('step')
+        connection_step = check('connection-step')
+        missing = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--groups', 'missing', '--', sys.executable, __file__, 'fixture', 'healthy'],
+            capture_output=True, text=True)
+        assert missing.returncode != 0 and 'expected checkpoint groups' in missing.stderr, missing.stderr
+        dead = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '8', '--', sys.executable, __file__, 'fixture', 'healthy'],
+            env=dict(os.environ, THINKTHEN_STRESS_REQUIRED_PID='1'), capture_output=True, text=True)
+        assert dead.returncode != 0 and 'required live workload PID 1 was not sampled' in dead.stderr, dead.stderr
+        inadequate = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
+            '--rounds', '7', '--', sys.executable, '-c', 'raise SystemExit(88)'],
+            capture_output=True, text=True)
+        assert inadequate.returncode == 2 and '--rounds must be at least' in inadequate.stderr, inadequate.stderr
+        print(json.dumps(dict(healthy=healthy['growth'], leaking=leaking['growth'],
+                              memory_step=stepped['growth'], connection_step=connection_step['growth'],
+                              missing_group='rejected', unowned_pid='rejected', inadequate_rounds='rejected')))

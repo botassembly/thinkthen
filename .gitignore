@@ -5,3 +5,6 @@
 /coverage/
 
 /sdk/python/thinkthen/_relation.py
+
+/sdk/typescript/errors.js
+/sdk/typescript/errors.d.ts

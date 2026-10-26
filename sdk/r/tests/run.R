@@ -1,65 +1,92 @@
-library(thinkthen)
-args <- commandArgs(TRUE)
-case <- jsonlite::fromJSON(args[[1]], simplifyVector = FALSE)
+source(file.path(dirname(sub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE))), "support.R"))
+case <- read_case(commandArgs(TRUE)[[1]])
 request <- case$request
 settings <- case$client
 if (is.null(settings)) settings <- list()
 settings$url <- Sys.getenv("THINKTHEN_TEST_URL")
 if (!nzchar(settings$url)) settings$url <- NULL
-question <- request$question
-if (question$type == "toolbox") {
-  question <- tt_question(question$value, question$name)
-} else if (question$type == "reference") {
-  question <- tt_reference(question$name)
-} else question <- question$value
 records <- request$records
-if (!length(records)) records <- character()
-if (length(records) && all(vapply(records, function(x) is.character(x) && length(x) == 1L, logical(1)))) {
-  records <- unlist(records, use.names = FALSE)
+for (index in names(case$integer_ids)) records[[as.integer(index)]]$id <- tt_id_integer(case$integer_ids[[index]])
+for (index in unlist(case$invalid_integer_ids, use.names = FALSE)) records[[index]]$id <- 2^53
+
+# Translate public typed R projections for comparison to the shared cases.
+record_fields <- function(x, i = 1L) {
+  fields <- setNames(lapply(vctrs::fields(x), function(field) {
+    value <- vctrs::field(x, field)
+    normal(if (is.list(value) && !inherits(value, "vctrs_rcrd")) value[[i]] else value[i])
+  }), vctrs::fields(x))
+  if (inherits(x, "tt_relation") && identical(fields$either, FALSE)) fields$either <- NULL
+  fields
 }
-options <- request$options
-if (is.null(options)) options <- list()
-for (key in intersect(c("options", "labels", "levels"), names(options))) {
-  options[[key]] <- unlist(options[[key]], use.names = FALSE)
+normal <- function(x) {
+  if (inherits(x, "tt_id_integer")) return(list(integer = format(x)))
+  if (inherits(x, "tt_piece") || inherits(x, "tt_name_detail") || inherits(x, "tt_name") || inherits(x, "tt_relation")) {
+    return(lapply(seq_along(x), function(i) record_fields(x, i)))
+  }
+  if (inherits(x, "vctrs_rcrd")) return(record_fields(x))
+  if (is.factor(x)) return(as.character(x))
+  if (is.list(x)) return(lapply(unclass(x), normal))
+  if (is.atomic(x) && !is.null(names(x))) return(as.list(x))
+  x
 }
-function_name <- request[["function"]]
-question_name <- switch(function_name, recognize = "kinds", relate = "rules", annotate = "toolbox", "question")
-if (function_name == "recognize" && !inherits(question, "thinkthen_question")) question <- as.character(unlist(question, use.names = FALSE))
-call_args <- c(list(x = records), setNames(list(question), question_name), options)
+answer_value <- function(x, verb, i = 1L) {
+  if (verb == "find") {
+    if (is.na(x[i])) NULL else record_fields(x, i)
+  } else if (verb %in% c("recognize", "relate")) {
+    value <- x[[i]]
+    if (is.null(value)) NULL else lapply(seq_along(value), function(j) record_fields(value, j))
+  } else if (verb == "tag") as.list(x[[i]]) else if (verb == "annotate") {
+    lapply(x[[i]], function(entry) {
+      child <- entry[["function"]]
+      result <- list(`function` = child, status = as.character(entry$status))
+      if (entry$status == "answered") result["answer"] <- list(answer_value(entry$answer, child))
+      if (!is.null(entry$probability)) result$probability <- entry$probability
+      if (!is.null(entry$error)) result$error <- normal(entry$error)
+      if (!is.null(entry$detail)) result$detail <- normal(entry$detail)
+      result
+    })
+  } else x[[i]]
+}
 result <- tryCatch({
   client <- do.call(tt_client, settings)
-  call_args$client <- client
-  output <- do.call(get(paste0("tt_", function_name)), call_args)
-  if (function_name == "filter") {
-    # JSON roundtrip describes the selected originals, not a second judgement API.
-    list(selected = as.list(output))
-  } else {
-    # Reuse the shared unsure reply to prove the host helpers preserve abstention.
-    if (basename(args[[1]]) == "decide-unsure.json") {
-      frame <- data.frame(body = records)
-      attached <- tt_bind(frame, output, "decision")
-      stopifnot(identical(tt_answer(output), NA), identical(attached$decision_answer, NA),
-                identical(attached$decision_status, "unsure"))
+  output <- invoke(records, request$question, client, request$name)
+  if (identical(case$name, "annotate-columns")) {
+    input <- as.data.frame(do.call(rbind, lapply(records, as.data.frame)), stringsAsFactors = FALSE)
+    attached <- tt_bind(input, output)
+    stopifnot(nrow(attached) == 4L, identical(attached[names(input)], input))
+    for (name in names(request$question$questions)) {
+      for (i in seq_len(nrow(attached))) {
+        child <- case$expected[[i]]$answer[[name]]
+        stopifnot(identical(attached[[name]][[i]], child$answer),
+                  as.character(attached[[paste0(name, "_status")]][[i]]) == child$status)
+        probability <- attached[[paste0(name, "_probability")]][[i]]
+        stopifnot(if (is.null(child$probability)) is.na(probability) else identical(probability, child$probability))
+      }
     }
-    detail <- tt_detail(output)
-    if (function_name == "find" && nrow(output) == 1L && !is.null(output$answer[[1]])) {
-      span <- output$answer[[1]]
-      stopifnot(identical(substr(records[[1]], span$start + 1L, span$end), span$text))
-    }
-    rows <- lapply(seq_len(nrow(output)), function(i) {
-      row <- list(id = output$id[[i]], status = output$status[[i]])
-      if (is.null(output$error[[i]])) {
-        answer <- if (is.list(output$answer)) output$answer[[i]] else output$answer[[i]]
-        if (!is.list(answer) && length(answer) == 1L && is.na(answer)) answer <- NULL
-        if (function_name == "tag" && !is.null(answer)) answer <- as.list(answer)
-        # Keep explicit JSON null when the R list is serialized below.
-        row["answer"] <- list(answer)
-      } else row$error <- list(code = output$error[[i]]$code)
-      if (!is.na(output$p[[i]])) row$p <- output$p[[i]]
-      if (!is.null(detail[[i]])) row$detail <- detail[[i]]
-      row
-    })
-    list(rows = rows)
   }
+  verb <- request$question[["function"]]
+  check_rows(output, verb, length(case$expected))
+  rows <- lapply(seq_len(nrow(output)), function(i) {
+    row <- list(`function` = verb, position = output$position[[i]],
+                status = as.character(output$status[[i]]), source = normal(output$source[[i]]))
+    if (!is.null(output$id[[i]])) row$id <- normal(output$id[[i]])
+    if (row$status == "failed") {
+      row$error <- list(code = as.character(output$error_code[[i]]), message = output$error_message[[i]])
+      if (!is.na(output$error_http_status[[i]])) row$error$http_status <- output$error_http_status[[i]]
+    } else {
+      if (row$status == "answered") row["answer"] <- list(answer_value(output$answer, verb, i))
+      if (!is.na(output$probability[[i]])) row$probability <- output$probability[[i]]
+      if (!is.null(output$detail[[i]])) row$detail <- normal(output$detail[[i]])
+    }
+    if (verb == "filter") {
+      stopifnot(identical(output$item[[i]], records[[output$position[[i]]]]),
+                identical(output$kept[[i]], isTRUE(row$answer)))
+    }
+    if (verb == "find" && !is.null(row$answer)) {
+      stopifnot(identical(substr(records[[output$position[[i]]]], row$answer$start, row$answer$end), row$answer$text))
+    }
+    row
+  })
+  list(rows = rows)
 }, thinkthen_error = function(error) list(error = error$code, family = class(error)[[1]]))
-cat(jsonlite::toJSON(result, auto_unbox = TRUE, null = "null", na = "null", digits = NA))
+writeLines(jsonlite::toJSON(result, auto_unbox = TRUE, null = "null", na = "null", digits = I(17)), useBytes = TRUE)

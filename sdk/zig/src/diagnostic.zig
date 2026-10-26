@@ -1,44 +1,52 @@
 const std = @import("std");
 const c = @import("c");
-
-pub const CallError = std.json.ParseError(std.json.Scanner) || error{EngineFailure};
-pub const FailureView = struct { code: []const u8, message: []const u8 };
-
+const native = @import("native.zig");
+pub const ErrorCode = @import("codes").ErrorCode;
+pub const Error = error{ OutOfMemory, Usage, Setup, Transport, Cancelled, EngineVersion, Internal, RecordSource };
+pub const Failure = struct { code: ErrorCode, message: []const u8, http_status: ?u16 = null };
+pub const Diagnostic = struct {
+    buffer: [4096]u8 = undefined,
+    code: ?ErrorCode = null,
+    http_status: ?u16 = null,
+    length: usize = 0,
+    truncated: bool = false,
+    pub fn message(self: *const Diagnostic) []const u8 {
+        return self.buffer[0..self.length];
+    }
+    pub fn clear(self: *Diagnostic) void {
+        self.code = null;
+        self.http_status = null;
+        self.length = 0;
+        self.truncated = false;
+    }
+    pub fn set(self: *Diagnostic, failure: Failure) void {
+        self.code = failure.code;
+        self.http_status = failure.http_status;
+        self.length = @min(self.buffer.len, failure.message.len);
+        self.truncated = failure.message.len > self.length;
+        @memcpy(self.buffer[0..self.length], failure.message[0..self.length]);
+    }
+};
+pub fn clear(diag: ?*Diagnostic) void {
+    if (diag) |d| d.clear();
+}
 pub fn bytes(buffer: c.thinkthen_buffer) []const u8 {
     return if (buffer.len == 0) "" else buffer.data[0..buffer.len];
 }
-
-/// Owns the original ABI error even when decoding runs out of memory.
-pub const Diagnostic = struct {
-    allocator: std.mem.Allocator,
-    raw: c.thinkthen_buffer = .{},
-    parsed: ?std.json.Parsed(FailureView) = null,
-
-    pub fn init(allocator: std.mem.Allocator) Diagnostic {
-        return .{ .allocator = allocator };
-    }
-
-    pub fn clear(self: *Diagnostic) void {
-        if (self.parsed) |value| value.deinit();
-        self.parsed = null;
-        c.thinkthen_buffer_free(&self.raw);
-    }
-
-    pub fn deinit(self: *Diagnostic) void {
-        self.clear();
-    }
-
-    pub fn failure(self: *const Diagnostic) ?FailureView {
-        return if (self.parsed) |value| value.value else null;
-    }
-
-    pub fn rawJson(self: *const Diagnostic) ?[]const u8 {
-        return if (self.raw.len == 0) null else bytes(self.raw);
-    }
-
-    pub fn capture(self: *Diagnostic, raw: c.thinkthen_buffer) CallError {
-        self.raw = raw;
-        self.parsed = std.json.parseFromSlice(FailureView, self.allocator, bytes(raw), .{ .allocate = .alloc_always }) catch |err| return err;
-        return error.EngineFailure;
-    }
-};
+pub fn emptyError() c.thinkthen_error {
+    return .{ .struct_size = @sizeOf(c.thinkthen_error) };
+}
+pub fn incompatible(diag: ?*Diagnostic) Error {
+    if (diag) |d| d.set(.{ .code = .usage_abi, .message = c.THINKTHEN_ABI_ERROR_MESSAGE });
+    return error.EngineVersion;
+}
+pub fn promote(failure: Failure, diag: ?*Diagnostic) Error {
+    if (diag) |d| d.set(failure);
+    return failure.code.operationError();
+}
+pub fn check(result: i32, err: *c.thinkthen_error, diag: ?*Diagnostic) Error!void {
+    if (result == c.THINKTHEN_OK) return;
+    defer native.function("thinkthen_error_free")(err);
+    const code = std.enums.fromInt(ErrorCode, err.code) orelse return error.Internal;
+    return promote(.{ .code = code, .message = bytes(err.message), .http_status = if (err.http_status == 0) null else err.http_status }, diag);
+}

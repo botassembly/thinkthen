@@ -42,7 +42,7 @@ def measure(binary, adapter, directory, url):
     for line in (directory / "cases.jsonl").read_text().splitlines():
         case = json.loads(line)
         function = case["function"]
-        command = [binary, function, *case["args"], "--adapter", adapter, "--details"]
+        command = [binary, function, *case["args"], "--backend", adapter, "--json"]
         if url:
             command.extend(["--url", url])
         result = subprocess.run(command, input=case["text"], text=True,
@@ -58,7 +58,7 @@ def measure(binary, adapter, directory, url):
         expected = Counter({match_key(function, item, case["text"]) for item in case["expected"]})
         scopes = [(function, predicted, expected)]
         if function == "recognize":
-            for kind in case["args"]:
+            for kind in case["args"][1::2]:
                 scopes.append((f"recognize:{kind}",
                                Counter({key: n for key, n in predicted.items() if key[0] == kind}),
                                Counter({key: n for key, n in expected.items() if key[0] == kind})))

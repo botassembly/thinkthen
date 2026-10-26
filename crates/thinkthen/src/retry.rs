@@ -1,14 +1,18 @@
 //! Retry limits and shared cancellation.
 
-use std::net::{Shutdown, TcpStream};
 use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
 use std::time::Duration;
 
 use crate::{Error, ErrorKind};
 
+pub(crate) const DEFAULT_RETRIES: u32 = 3;
+pub(crate) const DEFAULT_BACKOFF_MS: u64 = 500;
+pub(crate) const DEFAULT_TIMEOUT_MS: std::num::NonZeroU64 =
+    std::num::NonZeroU64::MIN.saturating_add(119_999);
+
 /// Limits for one request. Each split half gets its own retry budget.
 #[derive(Debug, Clone, Copy)]
-pub struct RetryPolicy {
+pub(crate) struct RetryPolicy {
     /// Maximum resends after retryable HTTP statuses.
     pub max_retries: usize,
     /// First status retry delay; subsequent status delays double.
@@ -20,44 +24,83 @@ pub struct RetryPolicy {
 impl Default for RetryPolicy {
     fn default() -> Self {
         Self {
-            max_retries: 3,
-            initial_backoff: Duration::from_millis(500),
-            attempt_timeout: Duration::from_secs(120),
+            max_retries: DEFAULT_RETRIES as usize,
+            initial_backoff: Duration::from_millis(DEFAULT_BACKOFF_MS),
+            attempt_timeout: Duration::from_millis(DEFAULT_TIMEOUT_MS.get()),
         }
     }
 }
 
 /// A shared signal that stops new sends, closes open sockets and interrupts retry waits.
 #[derive(Debug, Clone, Default)]
-pub struct Cancel(Arc<(Mutex<State>, Condvar)>);
+pub struct Cancel {
+    inner: Arc<(Mutex<State>, Condvar)>,
+    _parent: Option<Arc<ParentWake>>,
+}
+
+#[derive(Debug)]
+struct ParentWake(Weak<(Mutex<State>, Condvar)>);
+impl CancelWake for ParentWake {
+    fn wake_cancel(&self) {
+        if let Some(inner) = self.0.upgrade() {
+            Cancel {
+                inner,
+                _parent: None,
+            }
+            .cancel();
+        }
+    }
+}
 
 #[derive(Debug, Default)]
 struct State {
     cancelled: bool,
-    sockets: Vec<Weak<TcpStream>>,
+    listeners: Vec<Weak<dyn CancelWake>>,
 }
 
 impl Cancel {
+    /// A call owns its cancellation; an external signal forwards only inward.
+    pub(crate) fn child(&self) -> Self {
+        let mut child = Self::default();
+        let listener = Arc::new(ParentWake(Arc::downgrade(&child.inner)));
+        self.listen(listener.clone());
+        child._parent = Some(listener);
+        child
+    }
     /// Stop this call, close its open connections and wake retry waits. Repeated calls are harmless.
     pub fn cancel(&self) {
-        let (cancelled, wake) = &*self.0;
+        let (cancelled, wake) = &*self.inner;
         let mut state = cancelled.lock().unwrap_or_else(PoisonError::into_inner);
         state.cancelled = true;
-        for socket in state
-            .sockets
+        let listeners: Vec<_> = state
+            .listeners
             .drain(..)
-            .filter_map(|socket| socket.upgrade())
-        {
-            // A peer may already have closed. Either outcome leaves no open exchange.
-            let _ = socket.shutdown(Shutdown::Both);
+            .filter_map(|listener| listener.upgrade())
+            .collect();
+        drop(state);
+        for listener in listeners {
+            listener.wake_cancel();
         }
         wake.notify_all();
+    }
+
+    pub(crate) fn listen(&self, listener: Arc<dyn CancelWake>) {
+        let mut state = self.inner.0.lock().unwrap_or_else(PoisonError::into_inner);
+        state
+            .listeners
+            .retain(|listener| listener.strong_count() > 0);
+        if state.cancelled {
+            drop(state);
+            listener.wake_cancel();
+        } else {
+            state.listeners.push(Arc::downgrade(&listener));
+        }
     }
 
     /// Whether cancellation has been requested.
     #[must_use]
     pub fn is_cancelled(&self) -> bool {
-        self.0
+        self.inner
             .0
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -72,19 +115,8 @@ impl Cancel {
         }
     }
 
-    pub(crate) fn register(&self, socket: &Arc<TcpStream>) -> std::io::Result<()> {
-        let mut state = self.0.0.lock().unwrap_or_else(PoisonError::into_inner);
-        if state.cancelled {
-            socket.shutdown(Shutdown::Both)?;
-        } else {
-            state.sockets.retain(|socket| socket.strong_count() > 0);
-            state.sockets.push(Arc::downgrade(socket));
-        }
-        Ok(())
-    }
-
     pub(crate) fn wait(&self, delay: Duration) -> bool {
-        let (cancelled, wake) = &*self.0;
+        let (cancelled, wake) = &*self.inner;
         let guard = cancelled.lock().unwrap_or_else(PoisonError::into_inner);
         let (guard, _) = wake
             .wait_timeout_while(guard, delay, |state| !state.cancelled)
@@ -95,4 +127,8 @@ impl Cancel {
 
 pub(crate) fn cancelled() -> Error {
     Error::new(ErrorKind::Cancelled, "the call was cancelled")
+}
+
+pub(crate) trait CancelWake: std::fmt::Debug + Send + Sync {
+    fn wake_cancel(&self);
 }

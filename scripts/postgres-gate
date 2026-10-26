@@ -2,7 +2,7 @@
 # Load the archive in a fresh PostgreSQL installation inside an offline container.
 set -eu
 cd "$(dirname "$0")/.."
-case "${1:-all}" in all|native) ;; *) echo 'usage: scripts/postgres-gate [all|native]' >&2; exit 2 ;; esac
+case "${1:-all}" in all|native|ownership|conformance) ;; *) echo 'usage: scripts/postgres-gate [all|native|ownership|conformance]' >&2; exit 2 ;; esac
 if [ "$(uname -s)" != Linux ]; then
     echo 'PostgreSQL package targets Linux; its installed gate runs on the Linux builder'
     exit 0
@@ -10,18 +10,28 @@ fi
 job=${PM_JOB:-local}
 root=$PWD
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-scripts/postgres-package "$scratch/built"
-cargo build --offline --locked -p loopback --bin loopback
+cleanup() {
+    outcome=$?
+    if [ "$outcome" = 0 ]; then rm -rf "$scratch";
+    else printf 'PostgreSQL failed files: %s\n' "$scratch" >&2; fi
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
+THINKTHEN_SQL_TEST_ARCHIVE= scripts/postgres-package "$scratch/production"
+python3 databases/duckdb/tests/package-safety.py "$scratch/production/package/lib/thinkthen_postgres.so"
+THINKTHEN_SQL_TEST_ARCHIVE=$fixture_archive scripts/postgres-package "$scratch/built"
+if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --offline --locked -p loopback --bin loopback; fi
 target=${CARGO_TARGET_DIR:-target}
 case "$target" in /*) ;; *) target="$root/$target" ;; esac
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     LLVM_PROFILE_FILE="$target/postgres-%p-%m.profraw"
 fi
-docker run --rm --network none --label pm.repo=thinkthen --label "pm.ticket=${job%% *}" \
-    -v "$root:/src:ro" -v "$scratch:/work" -v "$target/debug/loopback:/loopback:ro" \
+test_image=$(docker image inspect "${THINKTHEN_POSTGRES_TEST_IMAGE:-thinkthen-postgres-build:18.6}" --format '{{.Id}}')
+docker run --pull=never --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
+    -v "$root:/src:ro" -v "$scratch:/work" -v "${THINKTHEN_LOOPBACK:-$target/debug/loopback}:/loopback:ro" \
     -v "$scratch/built/build:/work/build" -v "$target:$target" \
-    thinkthen-postgres-build:18.6 sh -eu -c '
+    "$test_image" sh -eu -c '
         sharedir=$(pg_config --sharedir)
         pkglibdir=$(pg_config --pkglibdir)
         mkdir -p "$sharedir/extension"
@@ -39,14 +49,24 @@ docker run --rm --network none --label pm.repo=thinkthen --label "pm.ticket=${jo
         fi
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/built/home \
             PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin LANG=C.UTF-8 LLVM_PROFILE_FILE="$3" \
-            python3 /src/extensions/postgres/tests/run.py /src /loopback "$4"
-    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}"
+            THINKTHEN_LOOPBACK=/loopback THINKTHEN_STRESS_FULL="$5" sh -eu -c '\''
+                python3 /src/extensions/postgres/tests/typed_api.py /loopback \
+                    --abi-mismatch-extension /work/built/build/thinkthen_postgres_mismatch.so \
+                    --systemone-url-env THINKTHEN_TEST_LOOPBACK_URL --openai-url-env THINKTHEN_TEST_LOOPBACK_URL --group "$1"
+                case "$1" in
+                    all) python3 /src/scripts/stress-adapters.py --surface postgres -- python3 /src/extensions/postgres/tests/stress.py ;;
+                esac
+                case "$1" in
+                    all|ownership) python3 /src/scripts/sql-stress-lifetime-test /src postgres /loopback ;;
+                esac
+            '\'' sh "$4"
+    ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}" "${THINKTHEN_STRESS_FULL:-}"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cp "$scratch/installed/lib/thinkthen_postgres.so" "$target/debug/thinkthen-sql-postgres.so"
 fi
 if [ -n "${THINKTHEN_POSTGRES_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_POSTGRES_ARTIFACT_DIR"
-    cp "$scratch/built"/*.tar.gz "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
+    cp "$scratch/production"/*.tar.gz "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
     cp -R "$scratch/built/build" "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
     cp -R "$scratch/bundle" "$THINKTHEN_POSTGRES_ARTIFACT_DIR/"
 fi

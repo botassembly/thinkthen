@@ -1,0 +1,88 @@
+{
+  "name": "tag-batching",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "What applies?",
+      "labels": [
+        "billing",
+        "refund",
+        "shipping"
+      ],
+      "threshold": 0.7
+    },
+    "records": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  "replies": [
+    {
+      "contains": "label \"billing\"",
+      "probability": 0.7
+    },
+    {
+      "contains": "label \"refund\"",
+      "probability": 0.69
+    },
+    {
+      "contains": "label \"shipping\"",
+      "probability": 0.9
+    }
+  ],
+  "expected": [
+    {
+      "function": "tag",
+      "position": 1,
+      "answer": [
+        "billing",
+        "shipping"
+      ],
+      "status": "answered",
+      "detail": {
+        "labels": {
+          "billing": 0.7,
+          "refund": 0.69,
+          "shipping": 0.9
+        }
+      }
+    },
+    {
+      "function": "tag",
+      "position": 2,
+      "answer": [
+        "billing",
+        "shipping"
+      ],
+      "status": "answered",
+      "detail": {
+        "labels": {
+          "billing": 0.7,
+          "refund": 0.69,
+          "shipping": 0.9
+        }
+      }
+    },
+    {
+      "function": "tag",
+      "position": 3,
+      "answer": [
+        "billing",
+        "shipping"
+      ],
+      "status": "answered",
+      "detail": {
+        "labels": {
+          "billing": 0.7,
+          "refund": 0.69,
+          "shipping": 0.9
+        }
+      }
+    }
+  ],
+  "requests": 2,
+  "client": {
+    "batch": 2
+  }
+}

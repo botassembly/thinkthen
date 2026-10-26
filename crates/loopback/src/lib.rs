@@ -5,7 +5,6 @@ use std::fmt;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex, PoisonError};
-use std::thread;
 use std::time::Duration;
 
 use serde_json::{Map, Value, json};
@@ -86,6 +85,8 @@ pub struct Reply {
     /// The body bytes.
     pub body: Vec<u8>,
     headers: Vec<(String, String)>,
+    delay: Duration,
+    announced_length: Option<usize>,
 }
 
 impl Reply {
@@ -96,6 +97,8 @@ impl Reply {
             status,
             body: value.to_string().into_bytes(),
             headers: Vec::new(),
+            delay: Duration::ZERO,
+            announced_length: None,
         }
     }
 
@@ -106,6 +109,8 @@ impl Reply {
             status,
             body: Vec::new(),
             headers: vec![("location".to_owned(), location.to_owned())],
+            delay: Duration::ZERO,
+            announced_length: None,
         }
     }
 }
@@ -118,6 +123,8 @@ type Chosen = dyn Fn(&Request) -> bool + Send + Sync;
 #[derive(Default)]
 struct State {
     seen: Vec<Request>,
+    requests: usize,
+    recording_limit: Option<usize>,
     delay: Option<(Duration, Arc<Chosen>)>,
     held: Option<Arc<held::Hold>>,
     keep_alive: bool,
@@ -133,11 +140,12 @@ impl fmt::Debug for State {
     }
 }
 
-/// A running loopback server. It stops when the test process ends.
+/// A running loopback server. Dropping it closes sockets and joins its workers.
 #[derive(Debug)]
 pub struct Loopback {
     base: String,
     state: Arc<Mutex<State>>,
+    owner: lifecycle::Owner,
 }
 
 impl Loopback {
@@ -153,15 +161,8 @@ impl Loopback {
         let base = format!("http://{}/v1", listener.local_addr()?);
         let state = Arc::new(Mutex::new(State::default()));
         let rule: Arc<Rule> = Arc::new(rule);
-        let recorder = Arc::clone(&state);
-        thread::spawn(move || {
-            for stream in listener.incoming().flatten() {
-                let rule = Arc::clone(&rule);
-                let recorder = Arc::clone(&recorder);
-                thread::spawn(move || serve(stream, rule.as_ref(), &recorder));
-            }
-        });
-        Ok(Self { base, state })
+        let owner = lifecycle::Owner::start(listener, Arc::clone(&state), rule)?;
+        Ok(Self { base, state, owner })
     }
 
     /// Start a System One server that answers each wire question with `rule`.
@@ -243,7 +244,7 @@ impl Loopback {
     /// How many requests arrived so far.
     #[must_use]
     pub fn count(&self) -> usize {
-        lock(&self.state).seen.len()
+        lock(&self.state).requests
     }
 }
 
@@ -251,24 +252,36 @@ fn lock(state: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
     state.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-fn serve(stream: TcpStream, rule: &Rule, state: &Mutex<State>) {
+fn serve(stream: TcpStream, rule: &Rule, state: &Mutex<State>, stop: &lifecycle::Stop) {
     lock(state).connections += 1;
     while let Some(request) = read(&stream) {
         let (delay, held, keep_alive) = {
             let mut state = lock(state);
-            state.seen.push(request.clone());
+            state.requests += 1;
+            if state
+                .recording_limit
+                .is_none_or(|limit| state.seen.len() < limit)
+            {
+                state.seen.push(request.clone());
+            }
             (state.delay.clone(), state.held.clone(), state.keep_alive)
         };
-        if let Some(held) = held {
+        if let Some(held) = held
+            && held.chosen(&request)
+        {
             held.serve(stream);
             return;
         }
         if let Some((by, chosen)) = delay
             && chosen(&request)
+            && stop.wait(by)
         {
-            thread::sleep(by);
+            return;
         }
         let reply = rule(&request);
+        if stop.wait(reply.delay) {
+            return;
+        }
         // A client that hung up needs no reply.
         if write(&stream, &reply, keep_alive).is_err() || !keep_alive {
             return;
@@ -307,11 +320,14 @@ fn read(stream: &TcpStream) -> Option<Request> {
 }
 
 fn write(mut stream: &TcpStream, reply: &Reply, keep_alive: bool) -> std::io::Result<()> {
+    if reply.status == 0 {
+        return Ok(());
+    }
     write!(
         stream,
         "HTTP/1.1 {} Reply\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: {}\r\n",
         reply.status,
-        reply.body.len(),
+        reply.announced_length.unwrap_or(reply.body.len()),
         if keep_alive { "keep-alive" } else { "close" }
     )?;
     for (name, value) in &reply.headers {
@@ -321,6 +337,9 @@ fn write(mut stream: &TcpStream, reply: &Reply, keep_alive: bool) -> std::io::Re
     stream.write_all(&reply.body)?;
     stream.flush()
 }
+
+mod closed;
+pub use closed::{CloseAt, ClosingPeer};
 
 mod case;
 
@@ -355,3 +374,10 @@ pub fn without_source(mut value: serde_json::Value) -> serde_json::Value {
 
 mod held;
 pub use held::HeldReply;
+
+mod tls;
+pub use tls::invalid_tls_reply;
+
+mod lifecycle;
+mod stress;
+pub use stress::{StressFixture, stress_table};

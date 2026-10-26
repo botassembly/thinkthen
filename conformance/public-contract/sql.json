@@ -2,12 +2,12 @@
   {
     "settings": "{\"url\":null,\"key_source\":null}",
     "code": "usage.settings",
-    "message": "SQL settings do not accept field `url`"
+    "message": "settings.url: expected settings selected by backend name; received a forbidden SQL credential or address field"
   },
   {
     "settings": "{\"key_source\":null}",
     "code": "usage.settings",
-    "message": "SQL settings do not accept field `key_source`"
+    "message": "settings.key_source: expected settings selected by backend name; received a forbidden SQL credential or address field"
   },
   {
     "settings": "{",
@@ -20,7 +20,7 @@
   },
   {
     "settings": "{}",
-    "policy": "{}",
+    "policy": "",
     "code": "usage.sql-selection"
   }
 ]

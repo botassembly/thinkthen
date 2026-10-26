@@ -18,7 +18,7 @@ fn run(server: &Loopback, args: &[&str], batch: Option<&str>, input: &[u8]) -> O
         .arg("decide")
         .arg("Is it a refund request?")
         .args(args)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -36,16 +36,24 @@ fn rows(output: &Output) -> Vec<Value> {
     String::from_utf8(output.stdout.clone())
         .unwrap()
         .lines()
-        .map(|line| loopback::without_source(serde_json::from_str(line).unwrap()))
+        .map(|line| {
+            let mut row: Value = serde_json::from_str(line).unwrap();
+            row.as_object_mut().unwrap().remove("source");
+            row
+        })
         .collect()
 }
 
 fn yes(id: Value) -> Value {
-    json!({"id": id, "status": "answered", "answer": true, "p": 0.9})
+    if id.is_string() {
+        json!({"function":"decide","position":1,"id":id,"status":"answered","answer":true,"probability":0.9})
+    } else {
+        json!({"function":"decide","position":id,"status":"answered","answer":true,"probability":0.9})
+    }
 }
 
 fn no(id: Value) -> Value {
-    json!({"id": id, "status": "answered", "answer": false, "p": 0.1})
+    json!({"function":"decide","position":id,"status":"answered","answer":false,"probability":0.1})
 }
 
 #[test]
@@ -59,31 +67,31 @@ fn each_record_prints_one_row() {
     );
     let cases: [Case; 4] = [
         (
-            &["--lines"],
+            &["--from", "lines", "--json"],
             b"refund one\r\nparcel two\n\n  \nrefund three",
             vec![yes(json!(1)), no(json!(2)), yes(json!(3))],
             &["refund one", "parcel two", "refund three"],
         ),
         (
-            &["--jsonl", "--on", "/body"],
+            &["--from", "jsonl", "--json", "--evidence", "/body"],
             b"{\"id\":\"a\",\"body\":\"refund\"}\r\n{\"body\":\"parcel\"}\n",
             vec![yes(json!("a")), no(json!(2))],
             &["refund", "parcel"],
         ),
         (
-            &["--jsonl"],
+            &["--from", "jsonl", "--json"],
             b"\"refund\"\n",
             vec![yes(json!(1))],
             &["refund"],
         ),
-        (&["--lines"], b"", vec![], &[]),
+        (&["--from", "lines", "--json"], b"", vec![], &[]),
     ];
     for (args, input, expected, evidence) in cases {
         let server = Loopback::refunds().unwrap();
         let output = run(&server, args, None, input);
         assert_eq!(rows(&output), expected, "{args:?}");
         assert_eq!(output.status.code(), Some(0), "{args:?}");
-        let sent: Vec<String> = server
+        let mut sent: Vec<String> = server
             .requests()
             .iter()
             .flat_map(|request| {
@@ -93,7 +101,7 @@ fn each_record_prints_one_row() {
             })
             .map(|question| question["instructions"].as_str().unwrap().to_owned())
             .collect();
-        let quoted: Vec<String> = evidence
+        let mut quoted: Vec<String> = evidence
             .iter()
             .map(|text| {
                 format!(
@@ -102,12 +110,14 @@ fn each_record_prints_one_row() {
                 )
             })
             .collect();
+        sent.sort();
+        quoted.sort();
         assert_eq!(sent, quoted, "{args:?}");
     }
 }
 
 #[test]
-fn the_exit_code_is_the_family_of_the_first_failed_row() {
+fn record_failures_keep_their_codes_and_exit_six() {
     // (backend status, input, exit code, failed row codes)
     type Case = (u16, &'static [u8], i32, &'static [Option<&'static str>]);
     let cases: [Case; 4] = [
@@ -120,20 +130,20 @@ fn the_exit_code_is_the_family_of_the_first_failed_row() {
         (
             200,
             b"{\"body\":\"a\"}\n{\"text\":\"b\"}\n",
-            2,
-            &[None, Some("usage.missing")],
+            6,
+            &[None, Some("record.missing")],
         ),
         (
             503,
             b"{\"text\":\"a\"}\n{\"body\":\"b\"}\n",
-            2,
-            &[Some("usage.missing"), Some("backend.status")],
+            6,
+            &[Some("record.missing"), Some("backend.status")],
         ),
         (
             503,
             b"{\"body\":\"a\"}\n{\"text\":\"b\"}\n",
-            4,
-            &[Some("backend.status"), Some("usage.missing")],
+            6,
+            &[Some("backend.status"), Some("record.missing")],
         ),
     ];
     for (status, input, code, failed) in cases {
@@ -148,7 +158,12 @@ fn the_exit_code_is_the_family_of_the_first_failed_row() {
             Reply::json(status, &json!({"answers": answers}))
         })
         .unwrap();
-        let output = run(&server, &["--jsonl", "--on", "/body"], None, input);
+        let output = run(
+            &server,
+            &["--from", "jsonl", "--json", "--evidence", "/body"],
+            None,
+            input,
+        );
         assert_eq!(output.status.code(), Some(code), "{status}");
         let got: Vec<Option<String>> = rows(&output)
             .iter()
@@ -161,29 +176,64 @@ fn the_exit_code_is_the_family_of_the_first_failed_row() {
 
 #[test]
 fn the_batch_option_beats_the_variable() {
-    let cases = [(Some("2"), None, 3), (None, Some("3"), 2)];
-    for (flag, variable, requests) in cases {
+    // Stdin remains an open-ended producer. An available partial batch can
+    // flush before the next line arrives, so request counts are not fixed.
+    let cases = [
+        (Some("2"), Some("0"), 2),
+        (None, Some("1"), 1),
+        (None, Some("3"), 3),
+    ];
+    for (flag, variable, batch) in cases {
         let server = Loopback::noul(0.9).unwrap();
-        let mut args = vec!["--lines"];
+        let mut args = vec!["--from", "lines", "--json"];
         if let Some(flag) = flag {
             args.extend(["--batch", flag]);
         }
         let output = run(&server, &args, variable, b"a\nb\nc\nd\ne\nf\n");
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(rows(&output).len(), 6);
-        assert_eq!(server.count(), requests, "{flag:?} {variable:?}");
+        let actual = rows(&output);
+        assert_eq!(actual.len(), 6);
+        assert_eq!(
+            actual
+                .iter()
+                .map(|row| row["position"].as_u64().unwrap())
+                .collect::<Vec<_>>(),
+            (1..=6).collect::<Vec<_>>()
+        );
+        let sizes: Vec<_> = server
+            .requests()
+            .iter()
+            .map(|request| {
+                request.json().unwrap()["questions"]
+                    .as_object()
+                    .unwrap()
+                    .len()
+            })
+            .collect();
+        assert_eq!(sizes.iter().sum::<usize>(), 6);
+        assert!(
+            sizes.iter().all(|size| *size <= batch),
+            "{flag:?} {variable:?}: {sizes:?}"
+        );
     }
 }
 
 #[test]
 fn a_usage_error_exits_2_and_sends_nothing() {
     // (arguments, the code reported, or None when the argument parser refuses)
-    let cases: [(&[&str], Option<&str>); 5] = [
-        (&["--lines", "--jsonl"], None),
-        (&["--on", "/body"], None),
-        (&["--lines", "--on", "/body"], None),
-        (&["--jsonl", "--on", "body"], Some("usage.pointer")),
-        (&["--lines", "--batch", "0"], Some("usage.batch")),
+    let cases: [(&[&str], Option<&str>); 3] = [
+        (
+            &["--from", "lines", "--json", "--from", "jsonl", "--json"],
+            None,
+        ),
+        (
+            &["--from", "jsonl", "--json", "--evidence", "body"],
+            Some("usage.pointer"),
+        ),
+        (
+            &["--from", "lines", "--json", "--batch", "0"],
+            Some("usage.batch"),
+        ),
     ];
     for (args, code) in cases {
         let server = Loopback::noul(0.9).unwrap();
@@ -199,21 +249,29 @@ fn a_usage_error_exits_2_and_sends_nothing() {
 #[test]
 fn a_line_that_is_not_utf8_ends_the_stream_with_exit_5() {
     let server = Loopback::noul(0.9).unwrap();
-    let output = run(&server, &["--lines"], None, b"refund\ncaf\xe9\nmore\n");
-    assert_eq!(output.status.code(), Some(5));
-    assert_eq!(reported(&output), "local.io");
-    assert_eq!(rows(&output), vec![yes(json!(1))]);
+    let output = run(
+        &server,
+        &["--from", "lines", "--json"],
+        None,
+        b"refund\ncaf\xe9\nmore\n",
+    );
+    assert_eq!(output.status.code(), Some(6));
+    let actual = rows(&output);
+    assert_eq!(actual.len(), 3);
+    assert_eq!(actual[0], yes(json!(1)));
+    assert_eq!(actual[1]["error"]["code"], "record.invalid");
+    assert_eq!(actual[2], yes(json!(3)));
 }
 
 #[test]
 fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
-    for args in [&[][..], &["--lines"][..]] {
+    for args in [&[][..], &["--from", "lines", "--json"][..]] {
         let server = Loopback::noul(0.9).unwrap();
         // Reading a directory fails on every platform the tests run on.
         let output = support::command()
             .args(["decide", "Is it?"])
             .args(args)
-            .env("THINKTHEN_BASE_URL", server.base())
+            .env("THINKTHEN_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(File::open(".").unwrap())
             .output()
@@ -229,8 +287,10 @@ fn an_output_write_error_stops_the_reading() {
     let (stdout, inherited_reader) = support::closed_output();
     let server = Loopback::noul(0.9).unwrap();
     let mut child = support::command()
-        .args(["decide", "Is it?", "--lines", "--batch", "1"])
-        .env("THINKTHEN_BASE_URL", server.base())
+        .args([
+            "decide", "Is it?", "--from", "lines", "--json", "--batch", "1",
+        ])
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(stdout)
@@ -243,12 +303,12 @@ fn an_output_write_error_stops_the_reading() {
     let output = child.wait_with_output().unwrap();
     drop(inherited_reader);
     let diagnostic = format!(
-        "mode=decide --lines --batch 1, status={}, stderr={}",
+        "mode=decide --from lines --batch 1, status={}, stderr={}",
         output.status,
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(output.status.code(), Some(5), "{diagnostic}");
-    assert_eq!(reported(&output), "local.io", "{diagnostic}");
+    assert_eq!(output.status.code(), Some(141), "{diagnostic}");
+    assert!(output.stderr.is_empty(), "{diagnostic}");
     // Four workers each hold one request, and the open request goes out at the end.
     assert!(
         server.count() <= 5,

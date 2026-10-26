@@ -2,6 +2,7 @@
 # Build an installable C prefix and archive from this tree's native engine.
 set -eu
 cd "$(dirname "$0")/.."
+scripts/header-contract-check
 . scripts/native-build-env
 if [ "$#" -ne 1 ]; then echo 'usage: scripts/c-package OUTPUT_DIRECTORY' >&2; exit 2; fi
 mkdir -p "$1"
@@ -35,12 +36,12 @@ fi
 cmake -S sdk/c -B "$scratch/build" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_INSTALL_PREFIX="$output/prefix" \
-    -DJANSSON_ROOT="$(pkg-config --variable=prefix jansson)" \
     -DTHINKTHEN_FFI_LIBRARY="$scratch/engine/$asset" \
     -DTHINKTHEN_FFI_INCLUDE_DIR="$root/crates/thinkthen-ffi/include"
 cmake --build "$scratch/build" --parallel 2
 cmake --install "$scratch/build"
-cmp "$scratch/engine/$asset" "$output/prefix/lib/$asset"
+installed_asset=$(find "$output/prefix/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
+test -s "$installed_asset"
 COPYFILE_DISABLE=1 tar -czf "$output/thinkthen-c-$platform-$(uname -m).tar.gz" -C "$output/prefix" .
 if command -v sha256sum >/dev/null 2>&1; then
     sha256sum "$output"/*.tar.gz

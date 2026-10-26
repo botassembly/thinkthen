@@ -1,48 +1,87 @@
-"""SQL translation shared by installed DuckDB host checks."""
+"""Map typed construction questions to native DuckDB arguments."""
 import json
 
 
 def quote(value):
-    return " || chr(0) || ".join("'" + part.replace("'", "''") + "'" for part in value.split("\0"))
+    return "'" + value.replace("'", "''") + "'"
+
+
+def scalar(value):
+    if value is None:
+        return 'NULL'
+    if isinstance(value, bool):
+        return str(value).lower()
+    return quote(value) if isinstance(value, str) else repr(value)
+
+
+def public_question(question):
+    question = json.loads(json.dumps(question))
+    if question['function'] == 'relate':
+        for rule in question['rules']:
+            rule['name'] = rule.pop('relation')
+    elif question['function'] == 'annotate':
+        question['questions'] = {name: public_question(child) for name, child in question['questions'].items()}
+    return question
+
+
+def arguments(question):
+    result = []
+    for key, value in question.items():
+        if key == 'function':
+            continue
+        if key == 'threshold' and isinstance(value, dict):
+            result.extend(bound + ' := ' + scalar(number) for bound, number in value.items())
+            continue
+        if key == 'questions':
+            value = public_question(question)['questions']
+            key, value = 'toolbox', quote(json.dumps(value)) + '::JSON'
+        elif key in ('choices', 'labels', 'levels', 'kinds'):
+            value = '[' + ','.join(map(scalar, value)) + ']'
+        elif key == 'rules':
+            rules = []
+            for rule in value:
+                # The public SQL contract names the relation rule's label name.
+                fields = {('name' if name == 'relation' else name): item for name, item in rule.items()}
+                rules.append('struct_pack(' + ','.join(name + ' := ' + scalar(item) for name, item in fields.items()) + ')')
+            value = '[' + ','.join(rules) + ']'
+        else:
+            value = scalar(value)
+        result.append(value if key == 'question' else key + ' := ' + value)
+    return result
 
 
 def invocation(request):
     records = request.get('records', [])
-    structured = any(not isinstance(record, str) for record in records)
-    if records:
-        values = ','.join(f'({i}, {quote(json.dumps(value) if structured else value)})'
-                          for i, value in enumerate(records))
-        cast = '::JSON' if structured else ''
-        source = f'(SELECT value{cast} AS record FROM (VALUES {values}) input(ordinal,value) ORDER BY ordinal)'
-    else:
-        source = '(SELECT NULL::VARCHAR AS record WHERE false)'
-    question = quote(json.dumps(request['question']))
-    options = quote(json.dumps(request.get('options', {})))
-    return f'thinkthen_{request["function"]}({source}, {question}, options := {options})'
+    values = ','.join(f'({index}, {quote(json.dumps(record))})' for index, record in enumerate(records))
+    source = ('SELECT value::JSON AS record FROM (VALUES ' + values + ') src(n,value) ORDER BY n'
+              if records else 'SELECT NULL::JSON AS record WHERE false')
+    return 'thinkthen_' + request['question']['function'] + '((' + source + ')' + ''.join(', ' + value for value in arguments(request['question'])) + ')'
 
 
-def rows(result):
-    answer = []
-    for row in result:
-        value = {'status': row['status']}
-        for name in ('answer', 'error', 'detail'):
-            if row[name] is not None:
-                value[name] = json.loads(row[name])
-        if row['p'] is not None:
-            value['p'] = float(row['p'])
-        answer.append(value)
-    return answer
+def canonical(row, function):
+    """Omit SQL NULL fields that represent absent optional contract fields."""
+    for key in ('answer', 'detail', 'source'):
+        if key in row:
+            row[key] = compact(row[key])
+    if function == 'annotate' and row['answer'] is not None:
+        row['answer'] = {key: canonical(child, child['function']) for key, child in row['answer'].items()}
+    if function == 'rank' and 'rank' in row:
+        row['answer'] = row.pop('rank')
+    if function == 'find' and 'found' in row:
+        row['answer'] = row.pop('found')
+    if row.get('error_code') is not None:
+        row['error'] = {key: row['error_' + key] for key in ('code', 'message', 'http_status') if row.get('error_' + key) is not None}
+    if row.get('error') is not None:
+        row['error'] = {key: value for key, value in row['error'].items() if value is not None}
+    return {key: value for key, value in row.items() if value is not None or (key == 'answer' and row['status'] == 'answered')}
 
 
-def scrub(value):
-    if isinstance(value, dict):
-        return {key: scrub(item) for key, item in value.items() if key != 'message'}
+def compact(value):
     if isinstance(value, list):
-        return [scrub(item) for item in value]
+        return [compact(child) for child in value]
+    if isinstance(value, dict):
+        if 'function' in value and 'status' in value:
+            return canonical(value, value['function'])
+        return {key: compact(child) for key, child in value.items()
+                if child is not None and not (key == 'either' and child is False)}
     return value
-
-
-def expected(case):
-    return [{key: value for key, value in row.items() if key != 'id'} for row in case['expected']]
-
-

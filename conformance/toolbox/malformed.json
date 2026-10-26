@@ -1,0 +1,7 @@
+[
+  "{\"entries\":{\"topic\":{\"question\":{\"function\":\"choose\",\"question\":\"Which?\",\"choices\":[\"one\"]}}}}",
+  "{\"entries\":{\"topic\":{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\"},\"records\":[]}}}",
+  "{\"entries\":{\"topic\":{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\"}},\"topic\":{\"question\":{\"function\":\"decide\",\"question\":\"Other?\"}}}}",
+  "{\"entries\":{\"local\":{\"run\":[{\"shell\":[\"true\"]}]}}}",
+  "{\"entries\":{\"topic\":{\"question\":{\"function\":\"annotate\",\"questions\":{\"ready\":{\"function\":\"decide\",\"question\":\"Ready?\"}}}}}}"
+]

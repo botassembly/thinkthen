@@ -1,57 +1,75 @@
-"""Caller type contracts checked by mypy with the installed API declarations."""
+"""Caller overloads and concrete results checked against the installed package."""
+
+from collections.abc import AsyncIterator, Iterator
 
 import pandas as pd
 import polars as pl
 from typing_extensions import assert_type
 
 import thinkthen as tt
+import thinkthen.pandas
+import thinkthen.polars
+from thinkthen import aio
 from thinkthen.pandas import ThinkThenAccessor
 from thinkthen.polars import ThinkThenNamespace
 
 
-def answer_types(
-    client: tt.Client, text: str
-) -> tuple[bool | None, str | None, float | None, str | None]:
-    decision: tt.Row[bool] = client.decide("Ready?", text)
-    choice: tt.Row[str] = client.choose("Which?", text, options=["a", "b"])
-    score: tt.Row[float] = client.score("How much?", text, levels=["low", "high"])
-    found: tt.Row[tt.Found] = client.find("Which line?", text)
-    found_text: str | None = found.answer["text"] if found.answer is not None else None
-    return decision.answer, choice.answer, score.answer, found_text
+def typed_rows(client: tt.Client, text: str) -> None:
+    assert_type(client.decide("Ready?", text), tt.DecideRow)
+    assert_type(client.choose("Which?", text, choices=["a", "b"]), tt.ChooseRow)
+    assert_type(client.tag("Which?", text, labels=("a", "b")), tt.TagRow)
+    assert_type(client.score("How much?", text, levels=["low", "high"]), tt.ScoreRow)
+    assert_type(client.find("Which line?", text), tt.FindRow)
+    assert_type(client.recognize(text, kinds=["person"]), tt.RecognizeRow)
+    rule = tt.RelationRule(source="person", target="person", relation="knows")
+    assert_type(client.relate(text, rules=[rule]), tt.RelateRow)
+    question = tt.ChooseQuestion("Which?", choices=["a", "b"])
+    toolbox = tt.Toolbox({"route": question})
+    assert_type(toolbox.choose("route"), tt.ChooseQuestion)
+    assert_type(client.choose(toolbox.choose("route"), text), tt.ChooseRow)
+    assert_type(tt.choose(question, text, client=client), tt.ChooseRow)
+    assert_type(
+        client.annotate(
+            tt.AnnotationQuestions({"ready": tt.DecideQuestion("Ready?")}), text
+        ),
+        tt.AnnotateRow,
+    )
+    assert_type(client.decide("Ready?", text).probability, float | None)
+    assert_type(client.decide("Ready?", text).status, tt.Status)
+    assert_type(client.decide("Ready?", text).id, str | int | None)
+    client.decide("Ready?", text, threshold=tt.Band(0.2, 0.8))
+    client.decide("Ready?", text, threshold=(0.2, 0.8))
 
 
-def filter_types(client: tt.Client, messages: list[str]) -> list[str]:
-    with client.filter("Ready?", messages) as kept:
-        return list(kept)
+def typed_iterators(client: tt.Client, records: list[str]) -> None:
+    assert_type(client.decide_stream("Ready?", records), tt.RowStream[tt.DecideRow])
+    with client.filter("Ready?", records) as rows:
+        row = next(rows)
+        assert_type(row, tt.FilterRow[str])
+        assert_type(row.item, str)
+        assert_type(row.kept, bool)
+        assert_type(rows.kept_items(), Iterator[str])
+    assert_type(
+        client.rank("How much?", records, levels=["low", "high"]),
+        tt.RowStream[tt.RankRow],
+    )
 
 
-def named_dictionary_inputs(client: tt.Client) -> list[dict[str, str]]:
-    messages: list[dict[str, str]] = [{"id": "a", "body": "Please review this order."}]
-    client.decide("Ready?", messages[0], on="/body")
-    with client.decide_stream("Ready?", messages, on="/body") as rows:
-        decisions: list[tt.Row[bool]] = list(rows)
-        if decisions:
-            decision: bool | None = decisions[0].answer
-            print(decision)
-    with client.filter("Ready?", messages, on="/body") as kept:
-        result: list[dict[str, str]] = list(kept)
-        return result
+async def typed_async(client: tt.AsyncClient, records: AsyncIterator[str]) -> None:
+    assert_type(await client.decide("Ready?", "body"), tt.DecideRow)
+    assert_type(await aio.decide("Ready?", "body", client=client), tt.DecideRow)
+    assert_type(
+        client.decide_stream("Ready?", records), tt.AsyncRowStream[tt.DecideRow]
+    )
+    assert_type(client.filter("Ready?", records).kept_items(), AsyncIterator[str])
+    async with client.choose_stream("Which?", records, choices=["a", "b"]) as rows:
+        async for row in rows:
+            assert_type(row, tt.ChooseRow)
+            assert_type(row.answer, str | None)
 
 
-def named_backend(backend: str) -> tt.Client:
-    return tt.Client(adapter=backend)
-
-
-def native_frame_types(pandas_series: pd.Series[str], polars_series: pl.Series) -> None:
+def typed_optional_frames(
+    pandas_series: pd.Series[str], polars_series: pl.Series
+) -> None:
     assert_type(ThinkThenAccessor(pandas_series).decide("Ready?"), pd.DataFrame)
-    assert_type(ThinkThenNamespace(polars_series).decide("Ready?"), pl.DataFrame)
-
-
-def saved_domain_types(client: tt.Client, question: tt.Question[tt.JSONValue]) -> None:
-    assert_type(client.choose(question, "alpha"), tt.Row[str])
-    assert_type(client.tag(question, "alpha"), tt.Row[list[str]])
-    assert_type(client.score(question, "alpha"), tt.Row[float])
-
-
-def relation_direction(relation: tt.Relation) -> bool:
-    return relation.get("either", False)
+    assert_type(ThinkThenNamespace(polars_series).decide("Ready?"), pl.Series)

@@ -16,7 +16,7 @@ fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
         .arg("score")
         .arg("How urgent?")
         .args(args)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -53,9 +53,11 @@ fn level_arguments_print_the_number_or_backend_failure() {
                 assert!((answer - expected).abs() < 1e-12);
             }
             None => {
-                assert_eq!(output.status.code(), Some(4));
-                assert_eq!(reported(&output), "backend.reply");
-                assert!(output.stdout.is_empty());
+                assert_eq!(output.status.code(), Some(6));
+                assert_eq!(
+                    serde_json::from_slice::<Value>(&output.stdout).unwrap()["error"]["code"],
+                    "backend.reply"
+                );
             }
         }
         assert_eq!(
@@ -68,9 +70,9 @@ fn level_arguments_print_the_number_or_backend_failure() {
 #[test]
 fn details_and_record_modes_print_score_rows() {
     for extra in [
-        &["--details"][..],
-        &["--lines"][..],
-        &["--jsonl", "--on", "/body"][..],
+        &["--json"][..],
+        &["--from", "lines", "--json"][..],
+        &["--from", "jsonl", "--json", "--evidence", "/body"][..],
     ] {
         let server = Loopback::answering(
             |_| json!({"type": "score", "probabilities": {"0": 0.2, "1": 0.8}}),
@@ -78,7 +80,7 @@ fn details_and_record_modes_print_score_rows() {
         .unwrap();
         let mut args = vec!["--level", "low", "--level", "high"];
         args.extend_from_slice(extra);
-        let input = if extra.contains(&"--jsonl") {
+        let input = if extra.contains(&"jsonl") {
             "{\"id\":\"a\",\"body\":\"now\"}\n"
         } else {
             "now\n"
@@ -87,8 +89,8 @@ fn details_and_record_modes_print_score_rows() {
         assert_eq!(output.status.code(), Some(0));
         let row: Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(row["answer"], 0.8);
-        assert_eq!(row["detail"]["probabilities"], json!([0.2, 0.8]));
-        assert!(row.get("p").is_none());
+        assert_eq!(row["detail"]["levels"], json!([0.2, 0.8]));
+        assert!(row.get("probability").is_none());
     }
 }
 

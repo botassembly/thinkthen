@@ -10,18 +10,26 @@ build_target=${CARGO_TARGET_DIR:-$root/target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-scripts/swift-package "$scratch/ThinkThen"
+if [ -n "${THINKTHEN_SWIFT_PACKAGE:-}" ]; then
+    cp -R "$THINKTHEN_SWIFT_PACKAGE" "$scratch/ThinkThen"
+else
+    scripts/swift-package "$scratch/ThinkThen"
+fi
 mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp"
 cp sdk/swift/tests/*.swift "$scratch/consumer/"
 python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
+python3 scripts/surface-example prepare swift "$scratch/consumer/Guide"
 # SwiftPM has no remote dependencies to resolve. The separate consumer checks
 # normal dependency eligibility rather than only building the library itself.
 swift build --package-path "$scratch/consumer" --disable-sandbox -Xswiftc -warnings-as-errors
+(cd "$scratch/consumer/Guide" && python3 "$root/scripts/surface-example" check swift "$scratch/consumer/.build/debug/Guide")
 mkdir "$scratch/installed"
 cp "$scratch/consumer/.build/debug/Consumer" "$scratch/consumer/.build/debug/Readme" "$scratch/installed/"
 for resources in "$scratch/consumer/.build/debug/"*.resources "$scratch/consumer/.build/debug/"*.bundle; do
     test ! -d "$resources" || cp -R "$resources" "$scratch/installed/"
 done
+swift_engine=$(find "$scratch/installed" -type f -name "libthinkthen_ffi.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)" -print)
+python3 scripts/loader-failure-check "$swift_engine" -- "$scratch/installed/Readme"
 python3 sdk/swift/tests/options.py "$scratch/consumer" construction/options.json
 rm -rf "$scratch/ThinkThen" "$scratch/consumer"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH

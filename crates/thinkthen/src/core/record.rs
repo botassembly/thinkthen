@@ -18,6 +18,11 @@ pub struct Pointer {
     tokens: Vec<String>,
 }
 
+pub(crate) static ROOT_POINTER: Pointer = Pointer {
+    text: String::new(),
+    tokens: Vec::new(),
+};
+
 impl FromStr for Pointer {
     type Err = Error;
 
@@ -25,8 +30,10 @@ impl FromStr for Pointer {
         let refused = || {
             Error::new(
                 ErrorKind::Pointer,
-                format!(
-                    "the pointer `{text}` is not a JSON Pointer as RFC 6901 defines it, such as /body"
+                crate::core::diagnostic::requirement(
+                    "evidence",
+                    "a JSON Pointer as RFC 6901 defines it, such as /body",
+                    "a string (contents redacted)",
                 ),
             )
         };
@@ -124,16 +131,24 @@ impl Serialize for Id {
 
 /// One record: the evidence its question judges, and its id when it names one.
 #[derive(Debug, Clone)]
-pub struct Record {
+pub(crate) struct Record {
     pub(crate) id: Option<Id>,
     pub(crate) evidence: Result<String, Error>,
     structured: Option<Box<RawValue>>,
 }
 
 impl Record {
+    pub(crate) fn failed(error: Error) -> Self {
+        Self {
+            id: None,
+            evidence: Err(error),
+            structured: None,
+        }
+    }
+
     /// A record whose evidence is `text`.
     #[must_use]
-    pub fn text(text: impl Into<String>) -> Self {
+    pub(crate) fn text(text: impl Into<String>) -> Self {
         Self {
             id: None,
             evidence: Ok(text.into()),
@@ -148,7 +163,7 @@ impl Record {
     /// A line that is not JSON fails with `usage.record`, and a pointer that finds
     /// nothing fails with `usage.missing`. Either fails only this record's row.
     #[must_use]
-    pub fn json(line: &str, on: &Pointer) -> Self {
+    pub(crate) fn json(line: &str, on: &Pointer) -> Self {
         let Ok(record) = serde_json::from_str::<&RawValue>(line) else {
             return Self {
                 id: None,
@@ -169,7 +184,7 @@ impl Record {
                 }
                 Ok(text_of(value))
             })
-            .unwrap_or_else(|| Err(missing(on)));
+            .unwrap_or_else(|| Err(missing(Some(record), on)));
         let structured = selected
             .filter(|value| value.get().starts_with(['{', '[']))
             .map(RawValue::to_owned);
@@ -186,7 +201,7 @@ impl Record {
     ///
     /// # Errors
     /// Returns the record's admission error, or `usage.missing` for an absent member.
-    pub fn evidence_at(&self, on: &Pointer) -> Result<String, Error> {
+    pub(crate) fn evidence_at(&self, on: &Pointer) -> Result<String, Error> {
         let text = self.evidence.as_ref().map_err(Clone::clone)?;
         if on.tokens.is_empty() {
             return Ok(text.clone());
@@ -195,15 +210,24 @@ impl Record {
             .as_deref()
             .and_then(|record| select(record, on))
             .map(text_of)
-            .ok_or_else(|| missing(on))
+            .ok_or_else(|| missing(self.structured.as_deref(), on))
     }
 }
 
-fn missing(on: &Pointer) -> Error {
-    Error::new(
-        ErrorKind::Missing,
-        format!("the record holds nothing at {on}"),
-    )
+fn missing(record: Option<&RawValue>, on: &Pointer) -> Error {
+    let object_field = on.tokens.first().is_some_and(|token| {
+        token != "-" && (token.is_empty() || !token.bytes().all(|byte| byte.is_ascii_digit()))
+    });
+    let values =
+        record.and_then(|record| serde_json::from_str::<Vec<&RawValue>>(record.get()).ok());
+    let message = match values {
+        Some(values) if object_field => format!(
+            "the record is an array of {} values and holds nothing at {on}. Use the stream form of the call to judge each value",
+            values.len()
+        ),
+        _ => format!("the record holds nothing at {on}"),
+    };
+    Error::new(ErrorKind::Missing, message)
 }
 
 fn select<'a>(record: &'a RawValue, on: &Pointer) -> Option<&'a RawValue> {
@@ -214,14 +238,14 @@ fn select<'a>(record: &'a RawValue, on: &Pointer) -> Option<&'a RawValue> {
 
 /// A record whose selected evidence passed admission.
 #[derive(Debug, Clone)]
-pub struct AdmittedRecord(Record);
+pub(crate) struct AdmittedRecord(Record);
 
 impl AdmittedRecord {
     /// Admit a record before preparing any question about it.
     ///
     /// # Errors
     /// Returns the record's parse or evidence-selection error.
-    pub fn new(record: Record) -> Result<Self, Error> {
+    pub(crate) fn new(record: Record) -> Result<Self, Error> {
         record.evidence.as_ref().map_err(Clone::clone)?;
         Ok(Self(record))
     }
@@ -232,17 +256,35 @@ impl AdmittedRecord {
         clippy::expect_used,
         reason = "admission rejects every record without evidence"
     )]
-    pub fn evidence(&self) -> &str {
+    pub(crate) fn evidence(&self) -> &str {
         self.0.evidence.as_deref().expect("admitted evidence")
     }
 
     /// The original record, including its selected JSON type.
     #[must_use]
-    pub const fn record(&self) -> &Record {
+    pub(crate) const fn record(&self) -> &Record {
         &self.0
     }
 
     pub(crate) fn text(text: impl Into<String>) -> Self {
         Self(Record::text(text))
+    }
+}
+
+impl serde::Serialize for Pointer {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.text)
+    }
+}
+impl schemars::JsonSchema for Pointer {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Pointer".into()
+    }
+    #[allow(
+        clippy::disallowed_types,
+        reason = "schema metadata describes a typed JSON Pointer"
+    )]
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({"type":"string", "format":"json-pointer"})
     }
 }

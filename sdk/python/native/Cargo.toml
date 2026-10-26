@@ -14,7 +14,7 @@ doctest = false
 
 [dependencies]
 log.workspace = true
-thinkthen.workspace = true
+thinkthen = { workspace = true, features = ["native"] }
 serde_json.workspace = true
 pyo3 = { version = "=0.29.3", features = ["extension-module", "abi3-py310"] }
 

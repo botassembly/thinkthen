@@ -4,13 +4,13 @@ Run saved ThinkThen function requests and explicit local commands. This Rust mod
 
 ```rust
 use std::sync::mpsc;
-use thinkthen::{Cancel, Client};
+use thinkthen::{Cancel, Settings};
 use thinkthen::runs::{RunCompletion, RunEntry, execute};
 
 let entry = RunEntry::from_bytes(
-    br#"{"function":"decide","question":{"type":"inline","value":"Ready?"}}"#,
+    br#"{"question":{"function":"decide","question":"Ready?"}}"#,
 )?;
-let client = Client::from_json(r#"{"adapter":"stub"}"#, |_| None)?;
+let client = Settings::from_json(r#"{"backend":"stub"}"#)?.engine(|_| None)?;
 let (send, input) = mpsc::sync_channel(1);
 send.send(Ok("\"alpha\"".to_owned()))?;
 drop(send);

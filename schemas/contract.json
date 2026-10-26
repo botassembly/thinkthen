@@ -1,0 +1,268 @@
+{
+  "abi_version": 131073,
+  "backends": [
+    {
+      "name": "systemone",
+      "value": 1
+    },
+    {
+      "name": "openai",
+      "value": 2
+    },
+    {
+      "name": "stub",
+      "value": 3
+    }
+  ],
+  "codes": [
+    {
+      "family": "usage",
+      "name": "usage.threshold",
+      "record": false,
+      "value": 1001
+    },
+    {
+      "family": "usage",
+      "name": "usage.question",
+      "record": false,
+      "value": 1002
+    },
+    {
+      "family": "usage",
+      "name": "usage.name",
+      "record": false,
+      "value": 1003
+    },
+    {
+      "family": "usage",
+      "name": "usage.settings",
+      "record": false,
+      "value": 1004
+    },
+    {
+      "family": "usage",
+      "name": "usage.backend",
+      "record": false,
+      "value": 1005
+    },
+    {
+      "family": "usage",
+      "name": "usage.url",
+      "record": false,
+      "value": 1006
+    },
+    {
+      "family": "usage",
+      "name": "usage.key-missing",
+      "record": false,
+      "value": 1007
+    },
+    {
+      "family": "usage",
+      "name": "usage.batch",
+      "record": false,
+      "value": 1008
+    },
+    {
+      "family": "usage",
+      "name": "usage.pointer",
+      "record": false,
+      "value": 1009
+    },
+    {
+      "family": "usage",
+      "name": "usage.sql-policy",
+      "record": false,
+      "value": 1010
+    },
+    {
+      "family": "usage",
+      "name": "usage.sql-selection",
+      "record": false,
+      "value": 1011
+    },
+    {
+      "family": "usage",
+      "name": "usage.abi",
+      "record": false,
+      "value": 1012
+    },
+    {
+      "family": "record",
+      "name": "record.json",
+      "record": true,
+      "value": 2001
+    },
+    {
+      "family": "record",
+      "name": "record.missing",
+      "record": true,
+      "value": 2002
+    },
+    {
+      "family": "record",
+      "name": "record.too-large",
+      "record": true,
+      "value": 2003
+    },
+    {
+      "family": "record",
+      "name": "record.invalid",
+      "record": true,
+      "value": 2004
+    },
+    {
+      "family": "backend",
+      "name": "backend.transport",
+      "record": true,
+      "value": 3001
+    },
+    {
+      "family": "backend",
+      "name": "backend.status",
+      "record": true,
+      "value": 3002
+    },
+    {
+      "family": "backend",
+      "name": "backend.reply",
+      "record": true,
+      "value": 3003
+    },
+    {
+      "family": "local",
+      "name": "local.cancelled",
+      "record": false,
+      "value": 4001
+    },
+    {
+      "family": "local",
+      "name": "local.io",
+      "record": false,
+      "value": 4002
+    },
+    {
+      "family": "local",
+      "name": "local.toolbox",
+      "record": false,
+      "value": 4003
+    },
+    {
+      "family": "internal",
+      "name": "internal.bug",
+      "record": false,
+      "value": 5001
+    }
+  ],
+  "functions": [
+    {
+      "name": "decide",
+      "value": 1
+    },
+    {
+      "name": "choose",
+      "value": 2
+    },
+    {
+      "name": "tag",
+      "value": 3
+    },
+    {
+      "name": "score",
+      "value": 4
+    },
+    {
+      "name": "filter",
+      "value": 5
+    },
+    {
+      "name": "find",
+      "value": 7
+    },
+    {
+      "name": "recognize",
+      "value": 8
+    },
+    {
+      "name": "relate",
+      "value": 9
+    },
+    {
+      "name": "rank",
+      "value": 6
+    },
+    {
+      "name": "annotate",
+      "value": 10
+    }
+  ],
+  "id_kinds": [
+    {
+      "name": "absent",
+      "value": 0
+    },
+    {
+      "name": "string",
+      "value": 1
+    },
+    {
+      "name": "signed",
+      "value": 2
+    },
+    {
+      "name": "unsigned",
+      "value": 3
+    }
+  ],
+  "offsets": [
+    {
+      "name": "utf8",
+      "value": 0
+    },
+    {
+      "name": "utf16",
+      "value": 1
+    },
+    {
+      "name": "code_points",
+      "value": 2
+    },
+    {
+      "name": "code_points_inclusive",
+      "value": 3
+    }
+  ],
+  "package_version": "0.2.0",
+  "record_kinds": [
+    {
+      "name": "text",
+      "value": 0
+    },
+    {
+      "name": "json",
+      "value": 1
+    },
+    {
+      "name": "missing",
+      "value": 2
+    },
+    {
+      "name": "invalid",
+      "value": 3
+    }
+  ],
+  "statuses": [
+    {
+      "name": "answered",
+      "value": 1
+    },
+    {
+      "name": "unsure",
+      "value": 2
+    },
+    {
+      "name": "failed",
+      "value": 3
+    }
+  ]
+}

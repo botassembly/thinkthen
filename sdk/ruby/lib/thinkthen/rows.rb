@@ -2,79 +2,25 @@
 
 module ThinkThen
   class Rows < Enumerator
-    # The owner pins a call across every FFI operation. Only cancellation may
-    # enter concurrently; close waits for an active host operation before free.
-    class Owner
-      def initialize(pointer)
-        @pointer = Native::CallPointer.new(pointer)
-        @mutex = Mutex.new
-        @idle = ConditionVariable.new
-        @active = false
-        @closing = false
-      end
 
-      def use
-        @mutex.synchronize do
-          raise IOError, "call is closed" if @closing || !@pointer
-          raise ThreadError, "call already has an active driver" if @active
-          @active = true
-        end
-        begin
-          yield @pointer
-        ensure
-          @mutex.synchronize do
-            @active = false
-            @idle.broadcast
-          end
-        end
-      end
-
-      def cancel
-        @mutex.synchronize { Native.thinkthen_cancel(@pointer) if @pointer }
-        nil
-      end
-
-      def close
-        Thread.handle_interrupt(Exception => :never) do
-          @mutex.synchronize do
-            return if !@pointer
-            @closing = true
-            Native.thinkthen_cancel(@pointer)
-            @idle.wait(@mutex) while @active
-            return unless @pointer
-            @pointer.free
-            @pointer = nil
-          end
-        end
-        nil
-      end
-
-      def closed?
-        @mutex.synchronize { !@pointer }
-      end
-    end
-    private_constant :Owner
-
-    def initialize(pointer, records, cancel)
-      @owner = Owner.new(pointer)
+    def initialize(client, request, records, cancel, filter)
+      @client, @filter, @items, @position = client, filter, {}, 0
+      initial = records.is_a?(Array) ? Array.new(records) : nil
+      @initial = initial
+      @owner = CallOwner.new(client.send(:admit, request, initial))
       @cancel = cancel
       @cancel&.attach(@owner)
-      @records = records.to_enum(:each)
+      # @type var input: untyped
+      input = initial ? [] : records
+      @records = input.to_enum(:each)
+      @reader = nil
       @driver = Mutex.new
-      super() do |yielder|
-        begin
-          while true
-            row = begin
-              pull
-            rescue StopIteration
-              break
-            end
-            yielder << row
-          end
-        ensure
-          close
-        end
-      end
+      @traversal = Mutex.new
+      # Steep crashes on super with this native Enumerator constructor block.
+      # Only the core initializer crosses this boundary; produce stays checked.
+      # @type var initializer: untyped
+      initializer = Enumerator.instance_method(:initialize)
+      initializer.bind_call(self) { |yielder| produce(yielder) }
     rescue Exception
       close if @owner
       raise
@@ -82,10 +28,12 @@ module ThinkThen
 
     def each
       return self unless block_given?
+      raise ThreadError, "call already has an active driver" unless @traversal.try_lock
       begin
         super { |row| yield row }
       ensure
         close
+        @traversal.unlock
       end
     end
 
@@ -93,6 +41,14 @@ module ThinkThen
     def close
       @owner.close
       @cancel&.detach(@owner)
+      @driver&.synchronize do
+        @reader&.close
+        @reader = nil
+        @initial = nil
+        @items.clear
+        @records = nil
+      end
+      @client.send(:forget, self)
       nil
     end
     def closed? = @owner.closed?
@@ -102,6 +58,21 @@ module ThinkThen
     end
 
     private
+
+    def produce(yielder)
+      begin
+        while true
+          row = begin
+            pull
+          rescue StopIteration
+            break
+          end
+          yielder << row
+        end
+      ensure
+        close
+      end
+    end
 
     def pull
       unless @driver.try_lock
@@ -119,7 +90,14 @@ module ThinkThen
         native = Native::Row.new
         begin
           status = blocking_next(native)
-          return Row.new(native) if status == 0
+          if status == 0
+            row = Row.decode(native)
+            if @filter
+              item = @initial ? @initial[row.position - 1] : @items.delete(row.position)
+              return FilterRow.new(item: item, row: row)
+            end
+            return row
+          end
           raise StopIteration if status == 1
         ensure
           Native.thinkthen_row_free(native)
@@ -131,21 +109,24 @@ module ThinkThen
     # Ruby can interrupt a thread wait; FFI cannot interrupt a foreign call.
     # Cancel before joining, then release row memory after the foreign call ends.
     def blocking_next(native)
-      worker = Thread.new do
-        Thread.handle_interrupt(Exception => :never) do
-          @owner.use do |pointer|
-            Native.checked { |error| Native.thinkthen_next(pointer, native, error) }
-          end
-        end
-      end
-      worker.report_on_exception = false
+      @reader ||= NativeReader.new(@owner)
+      read = @reader.start(native)
       begin
-        Thread.handle_interrupt(Exception => :immediate) { worker.value }
+        Thread.handle_interrupt(Exception => :immediate) { read.value }
+      rescue Interrupt => interruption
+        @owner.cancel
+        begin
+          read.value
+          Native.checked { |error| Native.thinkthen_cancelled_error(error) }
+        rescue Cancelled => error
+          raise error, cause: interruption
+        end
       rescue Exception
         @owner.cancel
         raise
       ensure
-        worker.join rescue nil # Preserve the caller interruption or original native error.
+        # Keep the row pinned until the native operation has stopped.
+        read.value rescue nil
       end
     end
 
@@ -153,18 +134,28 @@ module ThinkThen
       record = begin
         @records.next
       rescue StopIteration
-        @owner.use { |pointer| Native.thinkthen_end_input(pointer) }
+        @owner.use { |pointer| Native.thinkthen_call_end_input(pointer) }
         return
       end
-      text = record.is_a?(String)
-      value = text ? record : Native.dump(record)
+      @position += 1
+      @items[@position] = record if @filter
+      kind, value = Native.record_value(record)
+      if value.nil?
+        @owner.use do |pointer|
+          Native.checked do |error|
+            kind == "missing" ? Native.thinkthen_call_send_missing(pointer, error) : Native.thinkthen_call_send_invalid(pointer, error)
+          end
+        end
+        return
+      end
+      text = kind == "text"
       Native.bytes(value) do |bytes, length|
         @owner.use do |pointer|
           Native.checked do |error|
             if text
-              Native.thinkthen_send_text(pointer, bytes, length, error)
+              Native.thinkthen_call_send_text(pointer, bytes, length, error)
             else
-              Native.thinkthen_send_json(pointer, bytes, length, error)
+              Native.thinkthen_call_send_json(pointer, bytes, length, error)
             end
           end
         end

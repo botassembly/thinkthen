@@ -4,7 +4,7 @@
 use std::sync::Mutex;
 
 use loopback::{KEY, Loopback};
-use thinkthen::{Backend, Decide, Engine, Key, Outcome, Record};
+use thinkthen::{Decide, Key, Outcome, Record, Settings};
 
 struct HostLogger(Mutex<Vec<(String, String)>>);
 
@@ -30,18 +30,21 @@ fn final_artifacts_do_not_trace_backend_credentials() {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Trace);
     let server = Loopback::noul(0.9).unwrap();
-    let backend = Backend::new(server.base(), Key::new(KEY).unwrap(), "model");
-    let mut count = 0;
-    Engine::new(backend)
-        .call(
-            &Decide::new("Ready?").unwrap(),
-            [Record::text("evidence")],
-            |row| {
-                count += 1;
-                assert!(matches!(row.outcome(), Outcome::Answered { .. }));
-            },
-        )
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .model("model")
+        .engine(|_| None)
         .unwrap();
+    let mut count = 0;
+    engine
+        .rows(&Decide::new("Ready?").unwrap(), [Record::text("evidence")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| {
+            count += 1;
+            assert!(matches!(row.outcome(), Outcome::Answered { .. }));
+        });
     assert_eq!(count, 1);
     assert_eq!(server.count(), 1);
     assert!(server.requests()[0].header("authorization") == Some(format!("Bearer {KEY}").as_str()));

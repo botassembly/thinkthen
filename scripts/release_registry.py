@@ -2,6 +2,7 @@
 import json
 import os
 import html
+from csharp_dependencies import prepared_feed
 import hashlib
 from pathlib import Path
 import shutil
@@ -105,7 +106,7 @@ def native_libraries(packages, scratch):
 
 def nuget(libraries, destination, scratch, notices):
     config = scratch / 'NuGet.Config'
-    config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+    config.write_text('<configuration><packageSources><clear /><add key="prepared" value="' + str(prepared_feed()) + '" /></packageSources></configuration>')
     environment = dict(os.environ, HOME=str(scratch / 'dotnet-home'),
                        DOTNET_CLI_HOME=str(scratch / 'dotnet-home'),
                        NUGET_PACKAGES=str(scratch / 'nuget-cache'),
@@ -131,6 +132,7 @@ def jvm(libraries, destination, scratch, notices):
         shutil.copy2(library, path / library.name)
     repository = scratch / 'm2'
     shutil.copytree(Path.home() / '.local/share/thinkthen-build-tools/jvm/m2', repository)
+    run('python3', 'scripts/jvm-generated', source / 'java')
     run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository),
         '-f', source / 'java/pom.xml', 'install', '-DskipTests')
     parent = destination / 'io/github/botassembly/thinkthen-jvm-parent' / version()
@@ -154,19 +156,6 @@ def jvm(libraries, destination, scratch, notices):
                              html.escape(readme.read_text()) + '</pre>')
 
 
-def github_assets(package, destination):
-    """Stage the platform archives that users download from the release."""
-    for family in ('c', 'cpp', 'zig', 'sqlite', 'duckdb', 'postgres'):
-        for artifact in (package / family).glob('*'):
-            if not artifact.name.endswith(('.tar.gz', '.zip')):
-                continue
-            copy_unique(artifact, destination / artifact.name)
-    for artifact in package.glob('thinkthen-*'):
-        if not artifact.name.endswith(('.tar.gz', '.zip')):
-            continue
-        copy_unique(artifact, destination / artifact.name)
-
-
 def package_sites(packages, staged, scratch):
     """Create site formats from the admitted platform package directories."""
     for name in ('pypi', 'npm', 'rubygems', 'nuget', 'maven', 'github'):
@@ -174,7 +163,15 @@ def package_sites(packages, staged, scratch):
     for package in packages.values():
         for folder, pattern, site in [('ruby', '*.gem', 'rubygems')]:
             copy_unique(one(package / folder, pattern), staged / site / one(package / folder, pattern).name)
-        github_assets(package, staged / 'github')
+        for family in ('c', 'cpp', 'zig', 'duckdb', 'postgres'):
+            for artifact in (package / family).glob('*'):
+                if not artifact.name.endswith(('.tar.gz', '.zip')):
+                    continue
+                copy_unique(artifact, staged / 'github' / artifact.name)
+        for artifact in package.glob('thinkthen-*'):
+            if not artifact.name.endswith(('.tar.gz', '.zip')):
+                continue
+            copy_unique(artifact, staged / 'github' / artifact.name)
     python(packages, staged / 'pypi', scratch)
     node(packages, staged / 'npm', scratch)
     libraries = native_libraries(packages, scratch)

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Check only the mechanical C# migration against this revision's native artifacts.
+set -eu
+cd "$(dirname "$0")/../.."
+root=$PWD
+. scripts/native-tools-env
+export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
+export CARGO_NET_OFFLINE=true
+cargo build -p thinkthen-ffi -p loopback --locked
+native=${CARGO_TARGET_DIR:-$root/target}/debug
+case "$native" in /*) ;; *) native="$root/$native" ;; esac
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+case $(uname -s) in
+    Darwin) asset="$native/libthinkthen_ffi.dylib"; parameter=MacNative ;;
+    Linux) asset="$native/libthinkthen_ffi.so"; parameter=LinuxNative ;;
+    *) echo 'Run the C# migration check on a prepared Unix build host' >&2; exit 1 ;;
+esac
+printf '<configuration><packageSources><clear /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/NuGet.Config"
+dotnet pack sdk/csharp/ThinkThen.csproj --configfile "$stage/NuGet.Config" --artifacts-path "$stage/artifacts" -o "$stage/feed" "-p:$parameter=$asset"
+mkdir "$stage/consumer"
+cp sdk/csharp/tests/Consumer.csproj sdk/csharp/tests/*.cs "$stage/consumer/"
+printf '<configuration><packageSources><clear /><add key="candidate" value="%s" /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "$stage/feed" "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/consumer/NuGet.Config"
+dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/bin"
+dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"
+dotnet publish "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" --artifacts-path "$stage/consumer-artifacts" -o "$stage/single" -p:PublishSingleFile=true -p:SelfContained=false
+"$stage/single/Consumer" "$root/construction/stub.json" --stub-only
+python3 scripts/csharp_consumers.py all "$stage"
+scripts/native-fixtures --engine "$asset" --output "$stage/abi"
+THINKTHEN_NATIVE_FIXTURES="$stage/abi" python3 scripts/csharp_consumers.py abi "$stage"

@@ -30,7 +30,7 @@ fn cancellation_during_an_open_request_publishes_nothing() {
         let (server, received, closed) = Loopback::holding(HeldReply::Headers).unwrap();
         let mut command = support::command();
         command
-            .args(["decide", "Ready?", "--csv", "--input"])
+            .args(["decide", "Ready?", "--from", "csv"])
             .arg(&input)
             .args([
                 "--column",
@@ -90,7 +90,7 @@ fn cancellation_after_backup_removes_only_the_pending_publication() {
         })
         .unwrap();
         let child = support::command()
-            .args(["decide", "Ready?", "--csv", "--input"])
+            .args(["decide", "Ready?", "--from", "csv"])
             .arg(&input)
             .args([
                 "--column",

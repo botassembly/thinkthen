@@ -19,17 +19,17 @@ SOURCE = '''import io.thinkthen.*;
 import java.util.List;
 public class IsolationCase {
     public static void main(String[] args) {
-        try (var client = Client.builder().adapter("stub").build()) {
-            try (var rows = client.rank(Question.inline("Priority?"), List.of("record"), CallOptions.defaults().withTop(0))) {
+        try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
+            try (var rows = client.rank("Priority?", List.of("record"), List.of("low", "high"), RankOptions.builder().top(0).build())) {
                 System.out.println("rows=" + rows.count());
-            } catch (ThinkThenException error) { System.out.println("rejected=" + error.code()); }
-        }
+            }
+        } catch (ThinkThenException error) { System.out.println("rejected=" + error.code().wireName()); }
     }
 }
 '''
 
 
-def worker(connection, root, repository, native, expected):
+def worker(connection, root, repository, native):
     try:
         env = dict(os.environ, JAVA_HOME=str(JAVA), PATH=f'{JAVA}/bin:{CACHE}/apache-maven-3.9.11/bin:' + os.environ['PATH'])
         for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'CLASSPATH', 'THINKTHEN_API_KEY', 'OPENAI_API_KEY'):
@@ -43,21 +43,26 @@ def worker(connection, root, repository, native, expected):
         resource.mkdir(parents=True)
         shutil.copy2(native, resource / native.name)
         assert connection.recv() == 'install'
+        run(sys.executable, ROOT / 'scripts/jvm-generated', root / 'sdk/java')
         mvn('-f', 'sdk/java/pom.xml', 'install', '-DskipTests')
-        connection.send('installed')
-        assert connection.recv() == 'resolve'
         classpath_file = root / 'classpath'
         mvn('-f', 'sdk/java/consumer/pom.xml', 'dependency:build-classpath', f'-Dmdep.outputFile={classpath_file}')
-        classpath = classpath_file.read_text().strip()
         # Execute first so the negative control proves a wrong public result too.
         source = root / 'IsolationCase.java'
         source.write_text(SOURCE)
         home = root / 'home'
         home.mkdir()
-        result = run(JAVA / 'bin/java', f'-Duser.home={home}', '--enable-native-access=ALL-UNNAMED', '-cp', classpath, source).strip()
+        def outcome():
+            return run(JAVA / 'bin/java', f'-Duser.home={home}', '--enable-native-access=ALL-UNNAMED', '-cp', classpath_file.read_text().strip(), source).strip()
+        expected = outcome()
+        connection.send(('installed', expected))
+        assert connection.recv() == 'resolve'
+        mvn('-f', 'sdk/java/consumer/pom.xml', 'dependency:build-classpath', f'-Dmdep.outputFile={classpath_file}')
+        classpath = classpath_file.read_text().strip()
+        result = outcome()
         print(f'{root.name}: {result}', flush=True)
         failures = []
-        if not result.startswith(expected):
+        if result != expected:
             failures.append(f'expected {expected}, got {result}')
         try:
             verify(root, classpath.split(':'), resources, PLATFORM, native)
@@ -73,26 +78,28 @@ def worker(connection, root, repository, native, expected):
 def scenario(scratch, natives, shared):
     repository = seed(CACHE / 'm2', scratch / 'shared') if shared else None
     connections, processes = [], []
-    for label, native, expected in zip(('A', 'B'), natives, ('rejected=usage.question', 'rows=0')):
+    for label, native in zip(('A', 'B'), natives):
         root = scratch / label
         shutil.copytree(ROOT / 'sdk', root / 'sdk', ignore=shutil.ignore_patterns('target'))
         repo = repository or seed(CACHE / 'm2', scratch / f'm2-{label}')
         parent, child = multiprocessing.Pipe()
-        process = multiprocessing.Process(target=worker, args=(child, root, repo, native, expected))
+        process = multiprocessing.Process(target=worker, args=(child, root, repo, native))
         process.start()
         child.close()
         connections.append(parent)
         processes.append(process)
     try:
         # Signals force A install, B install, A resolve, B resolve while both live.
+        baselines = []
         for connection in connections:
             connection.send('install')
-            assert connection.poll(180), 'install timed out'
-            assert connection.recv() == 'installed'
+            installed = connection.recv()
+            assert isinstance(installed, tuple) and installed[0] == 'installed', installed
+            baselines.append(installed[1])
+        assert baselines[0] != baselines[1], f'engines need distinct public outcomes: {baselines}'
         results = []
         for connection in connections:
             connection.send('resolve')
-            assert connection.poll(180), 'resolve timed out'
             results.append(connection.recv())
         print(('shared control' if shared else 'private repositories') + ': ' + '; '.join(results), flush=True)
         assert results == ['passed', 'passed'] if not shared else 'expected rejected=' in results[0] and 'JVM artifact differs' in results[0] and results[1] == 'passed'

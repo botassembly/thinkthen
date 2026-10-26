@@ -4,7 +4,7 @@ use crate::core::probability::Probability;
 
 /// One question for the model. Adapters turn asks into request bodies.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Ask {
+pub(crate) enum Ask {
     /// A question whose request carries this shared evidence.
     WithState {
         /// The exact text shared by the request's questions.
@@ -75,7 +75,7 @@ impl Ask {
 /// Only adapters construct answers. They check the wire kind, option identities,
 /// probability ranges and count before exposing a value to a function.
 #[derive(Debug, Clone, PartialEq)]
-pub struct AskAnswer {
+pub(crate) struct AskAnswer {
     probabilities: Vec<Probability>,
 }
 
@@ -103,7 +103,7 @@ impl AskAnswer {
 
     /// The decoded probabilities, in the order of the original ask.
     #[must_use]
-    pub fn probabilities(&self) -> &[Probability] {
+    pub(crate) fn probabilities(&self) -> &[Probability] {
         &self.probabilities
     }
 
@@ -130,11 +130,25 @@ pub(crate) fn argmax(probabilities: &[Probability]) -> (usize, Probability) {
         .expect("nonempty choice")
 }
 
+/// Compare canonical forms only; admitted labels retain their original bytes.
+pub(crate) fn distinct_labels<'a>(labels: impl IntoIterator<Item = &'a str>) -> bool {
+    use unicode_normalization::UnicodeNormalization;
+
+    let mut seen = std::collections::HashSet::new();
+    labels
+        .into_iter()
+        .all(|label| seen.insert(label.nfc().collect::<String>()))
+}
+
 pub(crate) fn admit_name(name: &str) -> Result<(), crate::core::Error> {
     if name.contains('\0') {
         return Err(crate::core::Error::new(
             crate::core::ErrorKind::Name,
-            "a name cannot contain U+0000",
+            crate::core::diagnostic::requirement(
+                "name",
+                "text without U+0000",
+                "a string containing U+0000 (contents redacted)",
+            ),
         ));
     }
     Ok(())
@@ -142,7 +156,7 @@ pub(crate) fn admit_name(name: &str) -> Result<(), crate::core::Error> {
 
 /// One option in a choice question.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-pub struct ChoiceOption {
+pub(crate) struct ChoiceOption {
     label: String,
     description: Option<String>,
 }
@@ -152,13 +166,13 @@ impl ChoiceOption {
     ///
     /// # Errors
     /// Returns `usage.question` for a blank label or one containing U+0000.
-    pub fn new(label: impl Into<String>) -> Result<Self, crate::core::Error> {
+    pub(crate) fn new(label: impl Into<String>) -> Result<Self, crate::core::Error> {
         let label = label.into();
         admit_name(&label)?;
         if label.trim().is_empty() {
             return Err(crate::core::Error::new(
                 crate::core::ErrorKind::Question,
-                "an option label is blank",
+                crate::core::diagnostic::requirement("label", "nonblank text", "blank text"),
             ));
         }
         Ok(Self {
@@ -169,7 +183,7 @@ impl ChoiceOption {
 
     /// Describe when this option fits.
     #[must_use]
-    pub fn description(self, description: impl Into<String>) -> Self {
+    pub(crate) fn description(self, description: impl Into<String>) -> Self {
         Self {
             description: Some(description.into()),
             ..self
@@ -178,13 +192,13 @@ impl ChoiceOption {
 
     /// The option's label.
     #[must_use]
-    pub fn label(&self) -> &str {
+    pub(crate) fn label(&self) -> &str {
         &self.label
     }
 
     /// The optional description.
     #[must_use]
-    pub fn description_text(&self) -> Option<&str> {
+    pub(crate) fn description_text(&self) -> Option<&str> {
         self.description.as_deref()
     }
 }

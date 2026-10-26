@@ -1,228 +1,118 @@
-#include <thinkthen/thinkthen.hpp>
+#include <thinkthen/nlohmann.hpp>
 #include <cassert>
-#include <fstream>
 #include <iostream>
 #include <limits>
-#include <thread>
-#include <type_traits>
-
 namespace tt = thinkthen;
-using tt::json;
+using json = nlohmann::json;
+using any_question = std::variant<tt::decide, tt::choose, tt::tag, tt::score, tt::filter, tt::rank, tt::find, tt::recognize, tt::relate, tt::annotate>;
 
-static json read(const char* path) {
-    std::ifstream input(path);
-    return json::parse(input);
+template<class Q> Q options(Q q, const json& value) {
+    if (value.contains("evidence")) q = q.evidence(value.at("evidence").get<std::string>());
+    if constexpr (std::is_same_v<Q, tt::decide> || std::is_same_v<Q, tt::choose> || std::is_same_v<Q, tt::filter>) {
+        if (value.contains("threshold")) {
+            const auto& t = value.at("threshold");
+            q = q.cutoff(t.is_number() ? tt::threshold::cutoff(t.get<double>()) : tt::threshold::band(t.at("low"), t.at("high")));
+        }
+    } else if constexpr (std::is_same_v<Q, tt::tag> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
+        if (value.contains("threshold")) q = q.cutoff(value.at("threshold").get<double>());
+    } else if constexpr (std::is_same_v<Q, tt::rank>) {
+        if (value.contains("top")) q = q.top(value.at("top").get<std::size_t>());
+    }
+    return q;
 }
-static json encode(const tt::row& row) {
-    const char* state = row.status() == tt::status::answered ? "answered"
-        : row.status() == tt::status::unsure ? "unsure" : "failed";
-    json result = {{"status", state}};
-    if (row.id()) result["id"] = *row.id();
-    if (row.answer()) result["answer"] = *row.answer();
-    if (auto p = row.probability()) result["p"] = *p;
-    if (auto detail = row.detail()) result["detail"] = *detail;
-    if (auto error = row.error()) result["error"] = {{"code", error->code()}, {"message", error->what()}};
+static any_question question(const json& q) {
+    const std::string f = q.at("function");
+    const auto text = q.value("question", std::string{});
+    if (f == "decide") return options(tt::decide{text}, q);
+    if (f == "choose") return options(tt::choose{text, q.at("choices").get<std::vector<std::string>>()}, q);
+    if (f == "tag") return options(tt::tag{text, q.at("labels").get<std::vector<std::string>>()}, q);
+    if (f == "score") return options(tt::score{text, q.at("levels").get<std::vector<std::string>>()}, q);
+    if (f == "filter") return options(tt::filter{text}, q);
+    if (f == "rank") return options(tt::rank{text, q.at("levels").get<std::vector<std::string>>()}, q);
+    if (f == "find") return options(tt::find{text}, q);
+    if (f == "recognize") return options(tt::recognize{q.at("kinds").get<std::vector<std::string>>()}, q);
+    if (f == "relate") {
+        std::vector<tt::rule> rules;
+        for (const auto& r : q.at("rules")) rules.push_back({r.at("relation"), r.at("source"), r.at("target"),
+            r.contains("reads") ? std::optional<std::string>{r.at("reads").get<std::string>()} : std::nullopt, r.value("either", false)});
+        return options(tt::relate{rules}, q);
+    }
+    assert(f == "annotate");
+    tt::annotation_questions entries;
+    for (auto it = q.at("questions").begin(); it != q.at("questions").end(); ++it) {
+        std::visit([&](const auto& child) {
+            using Q = std::decay_t<decltype(child)>;
+            if constexpr (!std::is_same_v<Q, tt::rank> && !std::is_same_v<Q, tt::annotate>) entries.emplace(it.key(), child);
+            else assert(false);
+        }, question(it.value()));
+    }
+    return options(tt::annotate{entries}, q);
+}
+static tt::settings settings(const json& value) {
+    tt::settings result;
+    const std::string backend = value.value("backend", "systemone");
+    result.backend = backend == "stub" ? tt::backend::stub : backend == "openai" ? tt::backend::openai : tt::backend::systemone;
+    if (value.contains("model") && !value.at("model").is_null()) result.model = value.at("model");
+    if (value.contains("url") && !value.at("url").is_null()) result.url = value.at("url");
+    if (value.contains("api_key") && !value.at("api_key").is_null()) result.api_key = tt::api_key{value.at("api_key").get<std::string>()};
+    if (value.contains("batch") && !value.at("batch").is_null()) result.batch = value.at("batch");
+    if (value.contains("retry")) {
+        const auto& r = value.at("retry");
+        // Fixture-only scheduling bounds; these do not claim engine defaults.
+        result.retry = tt::retry_policy{r.at("max_retries"), std::chrono::milliseconds{r.value("initial_backoff_ms", std::int64_t{1})},
+            std::chrono::milliseconds{r.value("attempt_timeout_ms", std::int64_t{10000})}};
+    }
     return result;
 }
-template<class Answer> static json collect(tt::typed_stream<Answer> rows, const char* function) {
-    json result = json::array();
-    std::vector<tt::typed_row<Answer>> retained;
-    for (const auto& row : rows) {
-        assert(row.position() >= 1);
-        if (std::string(function) == "filter") assert(row.kept() == (*row.raw_answer() == true));
-        if (const auto answer = row.answer()) assert(json(*answer) == *row.raw_answer());
-        else assert(!row.raw_answer() || row.raw_answer()->is_null());
-        retained.push_back(row);
-    }
-    rows.close();
-    for (const auto& row : retained) result.push_back(encode(row));
-    return result;
-}
-static json named(const tt::client& client, const json& request) {
-    const auto& function = request.at("function");
-    tt::tagged_question question{request.at("question")};
-    auto input = request.at("records").get<tt::records>();
-    std::size_t reads = 0;
-    tt::record_source source = [&]() -> std::optional<json> {
-        if (reads == input.size()) return std::nullopt;
-        return input[reads++];
-    };
-    auto options = request.value("options", json::object());
-#define CALL(name, type) if (function == #name) { \
-    if (question.value.at("type") == "inline") return collect(client.name(question.value.at("value").get<type>(), source, options), #name); \
-    return collect(client.name(question, source, options), #name); }
-    CALL(decide, std::string); CALL(choose, std::string); CALL(tag, std::string);
-    CALL(score, std::string); CALL(filter, std::string); CALL(rank, std::string);
-    CALL(find, std::string); CALL(annotate, json);
-    CALL(recognize, std::vector<std::string>); CALL(relate, json);
-#undef CALL
-    throw std::logic_error("unknown fixture function");
-}
-static void construction(const char* path) {
-    for (const auto& test : read(path)) {
-        tt::client owner(test.at("client"));
-        assert(named(owner, test.at("request")) == test.at("expected"));
-    }
-}
-static void typed_answers() {
-    tt::client client(json{{"adapter", "stub"}});
-    auto surviving = [] {
-        tt::client owner(json{{"adapter", "stub"}});
-        return owner.decide("Ready?", {"alpha"});
-    }();
-    const auto verdict = surviving.next();
-    surviving.close();
-    static_assert(std::is_same_v<decltype(verdict->answer()), std::optional<bool>>);
-    assert(verdict && verdict->answer().has_value());
-    const auto found = client.find("Which line?", {"alpha\nbeta\ngamma"}).next();
-    assert(found && found->answer()->text == found->raw_answer()->at("text"));
-    std::size_t reads = 0;
-    auto call = client.choose(tt::tagged_question{json{{"type", "toolbox"},
-        {"name", "saved"}, {"value", {{"questions", {{"saved", {{"choose", "Pick a color"},
-        {"options", {"red", "green", "blue"}}}}}}}}}},
-        [&]() -> std::optional<json> { if (reads++ == 0) return "alpha"; return std::nullopt; });
-    assert(reads == 0);
-    auto row = call.next();
-    assert(row && row->answer() == client.choose("Pick a color", {"alpha"},
-        {{"options", {"red", "green", "blue"}}}).next()->answer());
-    assert(!call.next() && reads == 2);
-    auto annotated = client.annotate(json{{"questions", {{"ready", {{"decide", "Ready?"}}}}}}, {"alpha"}).next();
-    assert(annotated->answer()->at("ready").answer<bool>() == verdict->answer());
-    auto scaled = client.annotate(json{{"questions", {{"urgency", {{"score", "How urgent?"},
-        {"levels", {"low", "high"}}}}}}}, {"alpha"}).next();
-    assert(scaled && json(*scaled->answer()) == *scaled->raw_answer());
-}
-static void options(const char* path) {
-    for (const auto& test : read(path)) {
-        tt::client client(test.at("client"));
-        try {
-            const auto actual = named(client, test.at("request"));
-            assert(!test.contains("expected_error"));
-            const auto& equivalent = test.at("equivalent_request");
-            assert(actual.size() == equivalent.at("records").size());
-            assert(actual == named(client, equivalent));
-        } catch (const tt::error& error) {
-            assert(error.code() == test.at("expected_error"));
-        }
-    }
-}
-static void boundaries() {
-    static_assert(!std::is_copy_constructible_v<tt::client>);
-    static_assert(!std::is_copy_constructible_v<tt::stream>);
-    static_assert(std::is_same_v<decltype(std::declval<const tt::row>().answer()), const json*>);
-    tt::client initial(json{{"adapter", "stub"}});
-    tt::client client(std::move(initial));
-    auto key = std::string("a\0b", 3);
-    json id = {{key, std::numeric_limits<std::uint64_t>::max()}};
-    auto rows = client.decide("Ready?", {{{"id", id}, {"body", "evidence"}}});
-    auto stop = rows.cancel_handle();
-    auto moved = std::move(rows);
-    auto first = moved.next();
-    assert(first && first->id() && *first->id() == id);
-    assert(first->answer() && first->detail());
-    auto copy = *first;
-    moved.close();
-    stop.request_cancel(); // Retained weak handle after closure is safe.
-    assert(*copy.id() == id);
-    assert(copy.detail() == first->detail());
-    auto absent = client.decide("Ready?", {"evidence"}).next();
-    assert(absent && absent->id() && *absent->id() == 1);
-    assert(!absent->error());
-    for (const auto& row : client.decide("Ready?", {"alpha", "beta"})) {
-        assert(row.answer());
-        break; // Temporary stream cancels and releases on loop exit.
-    }
-    std::size_t calls = 0;
-    tt::record_source source = [&]() -> std::optional<json> {
-        if (calls++ == 0) return "evidence";
-        return std::nullopt;
-    };
-    std::size_t count = 0;
-    for (const auto& row : client.decide("Ready?", source)) { assert(row.answer()); ++count; }
-    assert(count == 1 && calls == 2);
-    tt::record_source throwing = []() -> std::optional<json> { throw std::domain_error("source"); };
-    try { client.decide("Ready?", throwing).next(); assert(false); }
-    catch (const std::domain_error& error) { assert(std::string(error.what()) == "source"); }
-    try {
-        client.decide("Ready?", {"evidence"}, {{"threshold", "broken"}});
-        assert(false);
-    } catch (const tt::error& error) { assert(error.code() == "usage.threshold"); }
-    auto empty = client.decide("Ready?", tt::records{});
-    assert(!empty.next());
-    assert(empty.begin() == empty.end());
-}
-static void backend(const char* url, bool cancel) {
-    tt::client client(json{{"url", url}, {"batch", 1}});
-    auto rows = client.decide("Ready?", {"evidence"}, json::object());
-    if (!cancel) {
-        auto row = rows.next();
-        assert(row && row->status() == tt::status::failed);
-        assert(!row->answer() && !row->probability() && !row->detail());
-        assert(row->error() && row->error()->code() == "backend.transport");
-        try { rows.next(); assert(false); }
-        catch (const tt::error& error) { assert(error.code() == "backend.transport"); }
-        return;
-    }
-    auto stop = rows.cancel_handle();
-    std::exception_ptr failure;
-    std::thread worker([&] {
-        try {
-            std::size_t count = 0;
-            while (auto row = rows.next()) {
-                assert(row->error() && row->error()->code() == "local.cancelled");
-                assert(++count <= 1);
-            }
-        }
-        catch (...) { failure = std::current_exception(); }
-    });
-    // The parent sends this byte after the held fixture observes the request.
-    assert(std::cin.get() == 'c');
-    stop.request_cancel();
-    worker.join();
-    assert(failure);
-    try { std::rethrow_exception(failure); }
-    catch (const tt::error& error) { assert(error.code() == "local.cancelled"); }
-}
-static void strip_error(json& value) {
-    if (value.contains("error")) value["error"].erase("message");
-}
-static json conformance(const char* path, const char* url) {
-    auto test = read(path);
-    json result = json::array();
-    try {
-        auto settings = test.value("client", json::object());
-        settings["url"] = url;
-        tt::client client(settings);
-        auto rows = client.open(test.at("request"));
-        bool cancel = test.value("cancelled", false);
-        if (cancel) rows.cancel_handle().request_cancel();
-        try {
-            for (const auto& row : rows) {
-                auto value = encode(row);
-                strip_error(value);
-                if (test["request"]["function"] == "annotate" && value.contains("answer")
-                    && value["answer"].is_object())
-                    for (auto& entry : value["answer"]) strip_error(entry);
-                result.push_back(std::move(value));
-            }
-        } catch (const tt::error& error) {
-            if (cancel) assert(error.code() == "local.cancelled" && result.empty());
-            throw;
-        }
-        return result;
-    } catch (const tt::error& error) {
-        if (test.contains("expected_rows")) assert(result == test.at("expected_rows"));
-        return {{"error", error.code()}};
-    }
-}
+#include "stress.hpp"
+
 int main(int argc, char** argv) {
-    assert(argc >= 3);
-    std::string mode = argv[1];
-    if (mode == "stub") {
-        construction(argv[2]); boundaries(); typed_answers();
-        std::cout << "candidate C++: ten shared stub cases and boundaries pass\n";
+    if (argc > 1 && std::string{argv[1]}.find("stress") == 0) return stress_main(argc, argv);
+    if (argc == 1) {
+        tt::settings config; config.backend = tt::backend::stub;
+        tt::client conversion_owner{config};
+        // Feature: optional JSON conversion keeps unrepresentable records as failed rows.
+        for (const auto& invalid : std::vector<json>{std::numeric_limits<double>::quiet_NaN(), std::string(1, static_cast<char>(0xff)),
+                json::binary({1, 2}), json::parse("invalid", nullptr, false),
+                json{{"body", json::binary({3})}}, json{{"body", json::parse("invalid", nullptr, false)}}}) {
+            auto rows = conversion_owner.decide_each(tt::decide{"Ready?"}, std::vector<tt::owned_record>{tt::json_record(invalid)});
+            auto failed = rows.next();
+            assert(failed && failed->status() == tt::status::failed && failed->failure()->code() == tt::errc::record_invalid);
+            assert(!rows.next());
+        }
+        tt::settings s; s.backend = tt::backend::stub;
+        auto row = tt::client{s}.decide(tt::decide{"Ready?"}, tt::missing_record{});
+        assert(row.failure() && row.failure()->code() == tt::errc::record_missing);
+        return 0;
     }
-    else if (mode == "options") options(argv[2]);
-    else if (mode == "backend" || mode == "cancel") backend(argv[2], mode == "cancel");
-    else { assert(mode == "case" && argc == 4); std::cout << conformance(argv[2], argv[3]) << '\n'; }
+    assert(argc == 3);
+    json rows = json::array();
+    try {
+        const auto request = json::parse(argv[1]);
+        tt::client owner{settings(json::parse(argv[2]))};
+        auto q = question(request.at("question"));
+        std::vector<tt::owned_record> records;
+        for (const auto& r : request.at("records")) {
+            if (r.is_null()) records.push_back(tt::missing_record{});
+            else if (r.is_string()) records.push_back(tt::owned_text{r.get<std::string>()});
+            else records.push_back(tt::json_record(r));
+        }
+        std::optional<std::string> name;
+        if (request.contains("name")) name = request.at("name");
+        std::optional<std::string_view> named = name ? std::optional<std::string_view>{*name} : std::nullopt;
+        std::visit([&](const auto& value) {
+            using Q = std::decay_t<decltype(value)>;
+#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) for (const auto& row : owner.QNAME##_each(value, records, named)) rows.push_back(row);
+            THINKTHEN_COLLECT(decide) THINKTHEN_COLLECT(choose)
+            THINKTHEN_COLLECT(tag) THINKTHEN_COLLECT(score)
+            THINKTHEN_COLLECT(filter) THINKTHEN_COLLECT(rank)
+            THINKTHEN_COLLECT(find) THINKTHEN_COLLECT(recognize)
+            THINKTHEN_COLLECT(relate) THINKTHEN_COLLECT(annotate)
+#undef THINKTHEN_COLLECT
+        }, q);
+    } catch (const tt::error& error) {
+        std::cout << json{{"rows", rows}, {"error", thinkthen_code_name(static_cast<int>(error.code()))}} << '\n';
+        return 0;
+    }
+    std::cout << json{{"rows", rows}} << '\n';
 }

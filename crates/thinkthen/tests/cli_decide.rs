@@ -19,7 +19,7 @@ fn run_on(server: &Loopback, args: &[&str], key: Option<&str>, input: &[u8]) -> 
     let mut command = support::command();
     command
         .args(args)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -38,11 +38,7 @@ fn text(bytes: &[u8]) -> String {
 
 #[test]
 fn the_answer_word_and_exit_code_follow_the_verdict() {
-    let cases: [(f64, &[&str], &str, i32); 3] = [
-        (0.9, &[], "true\n", 0),
-        (0.1, &[], "false\n", 1),
-        (0.5, &["--threshold", "0.2:0.8"], "unsure\n", 3),
-    ];
+    let cases: [(f64, &[&str], &str, i32); 2] = [(0.9, &[], "true\n", 0), (0.1, &[], "false\n", 0)];
     for (p, extra, stdout, code) in cases {
         let server = Loopback::noul(p).unwrap();
         let mut args = vec!["decide", "Is it a refund request?"];
@@ -56,12 +52,15 @@ fn the_answer_word_and_exit_code_follow_the_verdict() {
 #[test]
 fn details_print_the_row_as_json() {
     let server = Loopback::noul(0.9).unwrap();
-    let output = run(&server, &["decide", "Is it?", "--details"], Some(KEY));
-    let row: serde_json::Value =
-        loopback::without_source(serde_json::from_slice(&output.stdout).unwrap());
+    let output = run(&server, &["decide", "Is it?", "--json"], Some(KEY));
+    let row: serde_json::Value = {
+        let mut row: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        row.as_object_mut().unwrap().remove("source");
+        row
+    };
     assert_eq!(
         row,
-        json!({"id": 1, "status": "answered", "answer": true, "p": 0.9})
+        json!({"function":"decide","position": 1, "status": "answered", "answer": true, "probability": 0.9})
     );
     assert_eq!(output.status.code(), Some(0));
 }
@@ -72,7 +71,7 @@ fn the_url_option_beats_the_environment() {
     let mut command = support::command();
     let output = command
         .args(["decide", "Is it?", "--url", server.base()])
-        .env("THINKTHEN_BASE_URL", "http://127.0.0.1:9/v1")
+        .env("THINKTHEN_URL", "http://127.0.0.1:9/v1")
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::null())
         .output()
@@ -103,11 +102,14 @@ fn the_model_option_names_the_model_in_the_request() {
 }
 
 #[test]
-fn input_that_is_not_utf8_exits_5_and_sends_nothing() {
+fn input_that_is_not_utf8_returns_a_failed_record_and_sends_nothing() {
     let server = Loopback::noul(0.9).unwrap();
     let output = run_on(&server, &["decide", "Is it?"], Some(KEY), b"caf\xe9");
-    assert_eq!(output.status.code(), Some(5));
-    assert_eq!(reported(&output), "local.io");
+    assert_eq!(output.status.code(), Some(6));
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
+        "record.invalid"
+    );
     assert_eq!(server.count(), 0);
 }
 
@@ -121,18 +123,19 @@ fn a_missing_key_exits_2_and_sends_nothing() {
 }
 
 #[test]
-fn a_backend_failure_exits_4_and_never_prints_the_key() {
+fn a_backend_failure_exits_6_and_never_prints_the_key() {
     let server =
         Loopback::start(|_| Reply::json(401, &json!({"error": format!("bad key {KEY}")}))).unwrap();
     for args in [
         &["decide", "Is it?"][..],
-        &["decide", "Is it?", "--details"][..],
+        &["decide", "Is it?", "--json"][..],
     ] {
         let output = run(&server, args, Some(KEY));
-        assert_eq!(output.status.code(), Some(4), "{args:?}");
-        if !args.contains(&"--details") {
-            assert_eq!(reported(&output), "backend.status", "{args:?}");
-        }
+        assert_eq!(output.status.code(), Some(6), "{args:?}");
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
+            "backend.status"
+        );
         assert!(!text(&output.stdout).contains(KEY));
         assert!(!text(&output.stderr).contains(KEY));
     }

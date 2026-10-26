@@ -1,5 +1,6 @@
 """Prepare ordinary host runtimes before platform dependencies."""
 import json
+import os
 from pathlib import Path
 import platform
 import re
@@ -11,10 +12,11 @@ import tempfile
 import tomllib
 
 from release_prepare_common import ROOT, TOOLS, PINS, fetch, run, prepared
+from release_go import version as go_version, prepare as prepare_go, command as go_command
 
 IMAGE = (ROOT / 'scripts/floors/Dockerfile').read_text()
 HOST_PINS = {'node': re.search(r'node-v([0-9.]+)-linux-x64', IMAGE)[1],
-             'go': re.search(r'go([0-9.]+)\.linux-amd64', IMAGE)[1],
+             'go': go_version(),
              'ruby': re.search(r'ruby-([0-9.]+)\.tar.gz', IMAGE)[1]}
 
 
@@ -54,15 +56,18 @@ def host_languages():
         with tarfile.open(archive) as source:
             source.extractall(TOOLS, filter='data')
         (TOOLS / name).rename(TOOLS / 'node')
-    try:
-        go_version = re.search(r'go([0-9]+)\.([0-9]+)', prepared('go', 'version', capture_output=True, text=True).stdout)
-        go_ok = go_version and tuple(map(int, go_version.groups())) >= (1, 22)
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        go_ok = False
-    if not go_ok:
-        filename = f'go{HOST_PINS["go"]}.{system}-{"arm64" if arm else "amd64"}.tar.gz'
-        with tarfile.open(fetch('https://go.dev/dl/' + filename, TOOLS / 'sources' / filename)) as source:
-            source.extractall(TOOLS, filter='data')
+    if system == 'linux':
+        prepare_go()
+    else:
+        try:
+            go_version = re.search(r'go([0-9]+)\.([0-9]+)', prepared('go', 'version', capture_output=True, text=True).stdout)
+            go_ok = go_version and tuple(map(int, go_version.groups())) >= (1, 22)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            go_ok = False
+        if not go_ok:
+            filename = f'go{HOST_PINS["go"]}.{system}-{"arm64" if arm else "amd64"}.tar.gz'
+            with tarfile.open(fetch('https://go.dev/dl/' + filename, TOOLS / 'sources' / filename)) as source:
+                source.extractall(TOOLS, filter='data')
     try:
         prepared('ruby', '-e', 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3") ? 0 : 1)', capture_output=True)
         return
@@ -116,3 +121,24 @@ def install_macos_swift():
         temporary.write_text('#!/bin/sh\nexec "' + str(parent / 'macos/usr/bin' / name) + '" "$@"\n')
         temporary.chmod(0o755)
         temporary.replace(command)
+
+
+def source_tools():
+    """Prepare the pinned Go checker with the selected floor compiler."""
+    compiler = (Path(go_command()) if platform.system() == 'Linux' else
+                Path(os.environ.get('THINKTHEN_GO_HOME', TOOLS / ('go' + HOST_PINS['go']))) / 'bin/go')
+    cache = TOOLS / 'staticcheck' / PINS['staticcheck']
+    environment = dict(os.environ, GOTOOLCHAIN='local', CGO_ENABLED='0',
+                       GOPROXY='https://proxy.golang.org', GOSUMDB='sum.golang.org',
+                       GOPRIVATE='', GONOSUMDB='', GOBIN=str(Path.home() / '.local/bin'),
+                       GOPATH=str(cache), GOMODCACHE=str(cache / 'modules'))
+    actual = subprocess.check_output([compiler, 'env', 'GOVERSION'], env=environment, text=True).strip()
+    if actual != 'go' + HOST_PINS['go']:
+        raise ValueError('prepare staticcheck with the pinned Go floor compiler')
+    Path(environment['GOBIN']).mkdir(parents=True, exist_ok=True)
+    run(compiler, 'install', 'honnef.co/go/tools/cmd/staticcheck@' + PINS['staticcheck'], env=environment)
+    binary = Path(environment['GOBIN']) / 'staticcheck'
+    metadata = subprocess.check_output([compiler, 'version', '-m', binary], env=environment, text=True)
+    if '\tmod\thonnef.co/go/tools\t' + PINS['staticcheck'] + '\t' not in metadata:
+        raise ValueError('prepared staticcheck differs from the pinned module')
+    run(binary, '-version', env=environment)

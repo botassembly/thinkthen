@@ -1,11 +1,11 @@
 namespace ThinkThen;
 
 // An uncooperative producer may outlive a cancelled call, but never owns it.
-internal sealed class Source(IAsyncEnumerable<Record> records, CancellationToken token)
+internal sealed class Source<T>(IAsyncEnumerable<T> records, CancellationToken token)
 {
-    private readonly IAsyncEnumerator<Record> iterator = records.GetAsyncEnumerator(token);
+    private readonly IAsyncEnumerator<T> iterator = records.GetAsyncEnumerator(token);
     private Task<bool>? pending;
-    internal Record Current => iterator.Current;
+    internal T Current => iterator.Current;
     internal async Task<bool> Advance()
     {
         pending = iterator.MoveNextAsync().AsTask();
@@ -13,7 +13,7 @@ internal sealed class Source(IAsyncEnumerable<Record> records, CancellationToken
         pending = null;
         return result;
     }
-    internal async Task Finish(bool suppressFailure)
+    internal async Task Finish(bool suppressFailure, CancellationToken cleanupToken)
     {
         if (pending is not null)
         {
@@ -24,7 +24,7 @@ internal sealed class Source(IAsyncEnumerable<Record> records, CancellationToken
         try
         {
             disposal = iterator.DisposeAsync().AsTask();
-            await disposal.WaitAsync(token).ConfigureAwait(false);
+            await disposal.WaitAsync(cleanupToken).ConfigureAwait(false);
         }
         catch
         {

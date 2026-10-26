@@ -1,25 +1,28 @@
-"""Resource ownership at the Python boundary."""
+"""Native loading, conversion and cancellation at the Python boundary."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable, Iterator
-from dataclasses import dataclass
-from types import TracebackType
-from typing import Generic, Literal, TypeVar, cast
+from threading import Lock
+from typing import NoReturn, TypeVar, cast
+from weakref import WeakMethod
 
 from . import _native
+from ._contract import (
+    ABI_CODE,
+    ABI_EXPORTS,
+    ABI_MESSAGE,
+    ABI_VERSION,
+    ABI_VERSION_EXPORT,
+)
 from ._types import (
-    A_co,
-    BackendError,
-    JSONValue,
-    LocalError,
+    Cancelled,
+    ErrorCode,
+    InternalError,
     Record,
-    Row,
-    RowError,
-    T_co,
+    SetupError,
     ThinkThenError,
-    Threshold,
     UsageError,
 )
 
@@ -27,168 +30,108 @@ T = TypeVar("T")
 Raw = tuple[str, str | None, bool, object, int]
 
 
+def _export(path: str) -> object:
+    value: object = _native
+    for name in path.split("."):
+        value = getattr(value, name, None)
+        if value is None:
+            raise SetupError(ErrorCode(ABI_CODE), ABI_MESSAGE)
+    return value
+
+
+_version = _export(ABI_VERSION_EXPORT)
+if (
+    type(_version) is not int
+    or _version >> 16 != ABI_VERSION >> 16
+    or (_version & 0xFFFF) < (ABI_VERSION & 0xFFFF)
+):
+    raise SetupError(ErrorCode(ABI_CODE), ABI_MESSAGE)
+for _name in ABI_EXPORTS:
+    _export(_name)
+
+
 def binding(call: Callable[[], T]) -> T:
     try:
         return call()
+    except KeyboardInterrupt:
+        return binding(_native.reject_cancelled)
     except _native.Error as error:
         family, code, message = cast(tuple[str, str, str], error.args)
-        raise failure(family, RowError(code, message)) from None
+        try:
+            typed = ErrorCode(code)
+        except ValueError:
+            raise SetupError(ErrorCode(ABI_CODE), ABI_MESSAGE) from None
+        kind: type[ThinkThenError] = UsageError if family == "usage" else SetupError
+        if typed is ErrorCode.USAGE_ABI:
+            kind = SetupError
+        if typed is ErrorCode.LOCAL_CANCELLED:
+            kind = Cancelled
+        elif family == "internal":
+            kind = InternalError
+        raise kind(typed, message) from None
 
 
-def failure(family: str, error: RowError) -> ThinkThenError:
-    kind = {"usage": UsageError, "backend": BackendError, "local": LocalError}.get(
-        family, ThinkThenError
-    )
-    return kind(error.code, error.message)
+def _converted(convert: Callable[[], str]) -> str | None:
+    try:
+        value = convert()
+        value.encode("utf-8")
+        return value
+    except Exception:  # noqa: BLE001 - arbitrary caller conversion can raise.
+        return None
 
 
-def encode(value: object) -> str:
-    return json.dumps(value, ensure_ascii=False, allow_nan=False)
+def _json(value: object) -> str | None:
+    return _converted(lambda: json.dumps(value, ensure_ascii=False, allow_nan=False))
 
 
-def source(records: Iterable[Record]) -> Iterator[tuple[bool, str, object]]:
+def encode(value: object, reject: Callable[[], NoReturn]) -> str:
+    text = _json(value)
+    if text is None:
+        binding(reject)
+    return text
+
+
+def source(records: Iterable[Record]) -> Iterator[tuple[bool, str | None, object]]:
     for record in records:
-        yield (
-            isinstance(record, str),
-            record if isinstance(record, str) else encode(record),
-            record,
-        )
-
-
-def row_from_json(text: str, detail: str | None = None) -> Row[JSONValue]:
-    value = cast(dict[str, JSONValue], json.loads(text))
-    error = cast(dict[str, str] | None, value.get("error"))
-    row = Row[JSONValue](
-        id=value["id"],
-        status=cast(Literal["answered", "unsure", "failed"], value["status"]),
-        answer=value.get("answer"),
-        p=cast(float | None, value.get("p")),
-        error=RowError(error["code"], error["message"]) if error is not None else None,
-    )
-    object.__setattr__(row, "_detail_json", detail)
-    return row
+        if isinstance(record, str):
+            text = _converted(lambda: record)  # noqa: B023
+            yield text is not None, text, record
+        else:
+            yield False, _json(record), record
 
 
 class Cancel:
+    __slots__ = ("__weakref__", "_callbacks", "_cancelled", "_lock", "_native")
+
     def __init__(self) -> None:
         self._native = _native.NativeCancel()
+        self._callbacks: list[WeakMethod[Callable[[], None]]] = []
+        self._lock = Lock()
+        self._cancelled = False
+
+    def _child(self) -> Cancel:
+        child = Cancel()
+        child._native = self._native.child()
+        return child
+
+    def _watch(self, callback: Callable[[], None]) -> None:
+        with self._lock:
+            cancelled = self._cancelled
+            if not cancelled:
+                self._callbacks = [ref for ref in self._callbacks if ref() is not None]
+                self._callbacks.append(WeakMethod(callback))
+        if cancelled:
+            callback()
 
     def cancel(self) -> None:
         self._native.cancel()
+        with self._lock:
+            self._cancelled = True
+            callbacks, self._callbacks = self._callbacks, []
+        for ref in callbacks:
+            callback = ref()
+            if callback is not None:
+                callback()
 
 
-class _Skip:
-    pass
-
-
-SKIP = _Skip()
-
-
-class Stream(Iterator[T_co], Generic[T_co]):
-    """An iterator whose context owns one engine operation."""
-
-    def __init__(
-        self,
-        native: _native.NativeStream,
-        convert: Callable[[Raw], T_co | _Skip],
-    ) -> None:
-        self._native = native
-        self._convert = convert
-        self._closed = False
-
-    def __iter__(self) -> Stream[T_co]:
-        return self
-
-    def __next__(self) -> T_co:
-        if self._closed:
-            raise StopIteration
-        try:
-            while True:
-                item = binding(self._native.receive)
-                if item is None:
-                    self.close()
-                    raise StopIteration
-                value = self._convert(item)
-                if not isinstance(value, _Skip):
-                    return value
-        except BaseException:
-            self.close()
-            raise
-
-    def close(self) -> None:
-        if not self._closed:
-            self._closed = True
-            self._native.close()
-
-    def __enter__(self) -> Stream[T_co]:
-        return self
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
-    ) -> None:
-        self.close()
-
-    def __del__(self) -> None:
-        self.close()
-
-
-class Toolbox:
-    def __init__(self, definition: dict[str, JSONValue]) -> None:
-        self._native = binding(lambda: _native.NativeToolbox(encode(definition)))
-
-    def question(self, name: str | None = None) -> Question[JSONValue]:
-        return Question(binding(lambda: self._native.question(name)))
-
-
-@dataclass(frozen=True)
-class Question(Generic[A_co]):
-    _native: _native.NativeQuestion
-
-    def __call__(
-        self,
-        text: Record,
-        *,
-        threshold: Threshold | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Row[A_co]:
-        from ._client import default_client
-
-        return cast(
-            Row[A_co],
-            default_client()._single(
-                self._native.function,
-                None,
-                text,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-                loaded=self,
-            ),
-        )
-
-    def stream(
-        self,
-        records: Iterable[Record],
-        *,
-        threshold: Threshold | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Stream[Row[A_co]]:
-        from ._client import default_client
-
-        return cast(
-            Stream[Row[A_co]],
-            default_client()._rows(
-                self._native.function,
-                None,
-                records,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-                loaded=self,
-            ),
-        )
+__all__ = ["Cancel"]

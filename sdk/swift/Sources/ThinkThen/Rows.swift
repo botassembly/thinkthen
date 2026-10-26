@@ -1,75 +1,89 @@
 import Foundation
+import Synchronization
 
 // A single completion races cancellation against an asynchronous source. A late
 // source result has no native pointer and can only resolve this empty slot.
-private final class Completion<T: Sendable>: @unchecked Sendable {
-  private let lock = NSLock()
-  private var continuation: CheckedContinuation<T, any Error>?
-  private var result: Result<T, any Error>?
+private final class Completion<T: Sendable>: Sendable {
+  private struct State: Sendable {
+    var continuation: CheckedContinuation<T, any Error>?
+    var result: Result<T, any Error>?
+  }
+  private let state = Mutex(State())
   func install(_ value: CheckedContinuation<T, any Error>) {
-    let ready = lock.withLock { () -> Result<T, any Error>? in
-      if let result { return result }
-      continuation = value
+    let ready = state.withLock { state -> Result<T, any Error>? in
+      if let result = state.result { return result }
+      state.continuation = value
       return nil
     }
     if let ready { value.resume(with: ready) }
   }
   func finish(_ value: Result<T, any Error>) {
-    let waiter = lock.withLock { () -> CheckedContinuation<T, any Error>? in
-      guard result == nil else { return nil }
-      result = value
-      defer { continuation = nil }
-      return continuation
+    let waiter = state.withLock { state -> CheckedContinuation<T, any Error>? in
+      guard state.result == nil else { return nil }
+      state.result = value
+      defer { state.continuation = nil }
+      return state.continuation
     }
     waiter?.resume(with: value)
   }
 }
-protocol Source: Sendable { func next() async throws -> Record? }
-private actor SequenceSource<S: AsyncSequence & Sendable>: Source where S.Element == Record {
+protocol RecordSource: Sendable {
+  var finiteRecords: [Record]? { get }
+  func next() async throws -> Record?
+}
+extension RecordSource { var finiteRecords: [Record]? { nil } }
+private actor SequenceSource<S: AsyncSequence & Sendable>: RecordSource where S.Element == Record {
+  private let source: S
   var iterator: S.AsyncIterator?
-  init(_ source: S) { iterator = source.makeAsyncIterator() }
+  init(_ source: S) { self.source = source }
   func next() async throws -> Record? {
-    var current = iterator!
+    var current = iterator ?? source.makeAsyncIterator()
     iterator = nil
     defer { iterator = current }
     return try await current.next(isolation: self)
   }
 }
-private actor ArraySource: Source {
-  let records: [Record]
-  var index = 0
-  init(_ records: [Record]) { self.records = records }
+private actor SynchronousSource<S: Sequence & Sendable>: RecordSource where S.Element == Record {
+  let source: S
+  nonisolated var finiteRecords: [Record]? { source as? [Record] }
+  var iterator: S.Iterator?
+  init(_ source: S) { self.source = source }
   func next() -> Record? {
-    guard index < records.count else { return nil }
-    defer { index += 1 }
-    return records[index]
+    var current = iterator ?? source.makeIterator()
+    let value = current.next()
+    iterator = current
+    return value
   }
 }
-func source<S: AsyncSequence & Sendable>(_ input: S) -> any Source where S.Element == Record {
+func source<S: AsyncSequence & Sendable>(_ input: S) -> any RecordSource where S.Element == Record {
   SequenceSource(input)
 }
-func source(_ input: [Record]) -> any Source { ArraySource(input) }
+func source<S: Sequence & Sendable>(_ input: S) -> any RecordSource where S.Element == Record {
+  SynchronousSource(input)
+}
 
+// Only this private wrapper crosses worker boundaries with an imported handle.
+// Its owner serializes driving and frees only after the last queued operation.
+struct NativeHandle: @unchecked Sendable { let pointer: OpaquePointer }
 // The lock protects pointer lifetime against cancel. All other operations run
 // on queue. No caller waits synchronously for that queue or the backend.
-final class NativeCall: @unchecked Sendable {
-  private let lock = NSLock(), queue = DispatchQueue(label: "ThinkThen.call")
-  private var pointer: OpaquePointer?
+final class NativeCall: Sendable {
+  private let state: Mutex<NativeHandle?>
+  private let queue = DispatchQueue(label: "ThinkThen.call")
   private let native: Native
-  init(client: Client, request: Data) throws {
+  init(client: Client, request: Data, name: String?, records: [Record]?) throws {
     native = try Native.loaded.get()
-    pointer = try client.open(request)
+    state = Mutex(try client.open(request, name: name, records: records))
   }
-  func cancel() { lock.withLock { if let pointer { native.cancel(pointer) } } }
+  func cancel() { state.withLock { if let handle = $0 { native.cancel(handle.pointer) } } }
   func perform<T: Sendable>(_ operation: @escaping @Sendable (OpaquePointer, Native) throws -> T)
     async throws -> T
   {
     try await withCheckedThrowingContinuation { continuation in
       queue.async { [self] in
         do {
-          let pointer = lock.withLock { self.pointer }
-          guard let pointer else { throw CancellationError() }
-          continuation.resume(returning: try operation(pointer, native))
+          guard let handle = state.withLock({ $0 }) else { throw ThinkThenError.cancelled }
+          continuation.resume(returning: try operation(handle.pointer, native))
         } catch { continuation.resume(throwing: error) }
       }
     }
@@ -77,59 +91,84 @@ final class NativeCall: @unchecked Sendable {
   func close() async {
     await withCheckedContinuation { continuation in
       queue.async { [self] in
-        lock.withLock {
-          if let pointer {
-            native.free(pointer)
-            self.pointer = nil
-          }
+        state.withLock { handle in
+          if let handle { native.free(handle.pointer) }
+          handle = nil
         }
         continuation.resume()
       }
     }
   }
-  deinit { if let pointer { native.free(pointer) } }
+  deinit {
+    let handle = state.withLock { handle in
+      let value = handle
+      handle = nil
+      return value
+    }
+    if let handle {
+      let native = native
+      queue.async { native.free(handle.pointer) }
+    }
+  }
 }
-final class Driver<A: Sendable>: @unchecked Sendable {
-  private let lock = NSLock()
-  private var busy = false, cancelled = false, finished = false
-  private var call: NativeCall?
-  private var interruptInput: (@Sendable () -> Void)?
-  private let client: Client, request: Data, source: any Source
-  private let decode: @Sendable (Data) throws -> A
+final class Driver<A: Sendable>: Sendable {
+  private struct State: Sendable {
+    var busy = false, cancelled = false, finished = false
+    var call: NativeCall?
+    var interruptInput: (@Sendable () -> Void)?
+    var items: [UInt64: Record] = [:]
+    var accepted: UInt64 = 0
+  }
+  private let state = Mutex(State())
+  private let client: Client, request: Result<Data, any Error>, source: any RecordSource
+  private let name: String?
+  private let retainItems: Bool
+  private let decode: @Sendable (WireRow, Record?) throws -> A
   init(
-    client: Client, request: Data, source: any Source,
-    decode: @escaping @Sendable (Data) throws -> A
+    client: Client, request: Result<Data, any Error>, name: String?, source: any RecordSource,
+    retainItems: Bool,
+    decode: @escaping @Sendable (WireRow, Record?) throws -> A
   ) {
+    self.name = name
+    self.retainItems = retainItems
     self.client = client
     self.request = request
     self.source = source
     self.decode = decode
   }
   func cancel() {
-    lock.withLock {
-      cancelled = true
-      call?.cancel()
-      interruptInput?()
+    state.withLock { state in
+      state.cancelled = true
+      state.call?.cancel()
+      state.interruptInput?()
     }
   }
   func close() async {
     cancel()
-    let native = lock.withLock { call }
+    let native = state.withLock { state in state.call }
     await native?.close()
   }
   private func input() async throws -> Record? {
     let completion = Completion<Record?>()
     let source = self.source
-    let task = Task { completion.finish(await Result { try await source.next() }) }
-    lock.withLock {
+    let task = Task {
+      do { completion.finish(.success(try await source.next())) } catch {
+        completion.finish(
+          .failure(
+            error is CancellationError
+              ? ThinkThenError.cancelled
+              : ThinkThenError.recordSource(message: String(describing: error))))
+      }
+    }
+    state.withLock { state in
       let interrupt: @Sendable () -> Void = {
         task.cancel()
         completion.finish(.failure(CancellationError()))
       }
-      interruptInput = interrupt
-      if cancelled { interrupt() }
+      state.interruptInput = interrupt
+      if state.cancelled { interrupt() }
     }
-    defer { lock.withLock { interruptInput = nil } }
+    defer { state.withLock { state in state.interruptInput = nil } }
     return try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { completion.install($0) }
     } onCancel: {
@@ -137,43 +176,89 @@ final class Driver<A: Sendable>: @unchecked Sendable {
       completion.finish(.failure(CancellationError()))
     }
   }
-  func next() async throws -> Row<A>? {
-    let proceed = try lock.withLock { () -> Bool in
-      guard !busy else { throw RowsIterationError.concurrentNext }
-      if finished { return false }
-      busy = true
+  func next() async throws -> A? {
+    let proceed = try state.withLock { state -> Bool in
+      guard !state.busy else { throw ThinkThenError.iteration(.concurrentNext) }
+      if state.finished { return false }
+      state.busy = true
       return true
     }
     guard proceed else { return nil }
-    defer { lock.withLock { busy = false } }
+    defer { state.withLock { state in state.busy = false } }
     return try await withTaskCancellationHandler {
       do {
-        let native = try lock.withLock { () -> NativeCall in
-          if cancelled || Task.isCancelled { throw CancellationError() }
-          if let call { return call }
-          let opened = try NativeCall(client: client, request: request)
-          call = opened
-          return opened
+        if state.withLock({ $0.cancelled }) || Task.isCancelled { throw ThinkThenError.cancelled }
+        let native: NativeCall
+        if let call = state.withLock({ $0.call }) {
+          native = call
+        } else {
+          let bytes: Data
+          do { bytes = try request.get() } catch {
+            throw ThinkThenError.encoding(message: String(describing: error))
+          }
+          let records = source.finiteRecords
+          if retainItems, let records {
+            state.withLock {
+              $0.items = Dictionary(
+                uniqueKeysWithValues: records.enumerated().map {
+                  (UInt64($0.offset + 1), $0.element)
+                })
+            }
+          }
+          let opened: NativeCall = try await withCheckedThrowingContinuation { continuation in
+            let client = client
+            let name = name
+            DispatchQueue.global().async {
+              do {
+                continuation.resume(
+                  returning: try NativeCall(
+                    client: client, request: bytes, name: name, records: records))
+              } catch { continuation.resume(throwing: error) }
+            }
+          }
+          state.withLock {
+            $0.call = opened
+            if $0.cancelled { opened.cancel() }
+          }
+          native = opened
         }
         while true {
           try Task.checkCancellation()
           let event = try await native.perform { try $1.next($0) }
+          if Task.isCancelled || state.withLock({ $0.cancelled }) { throw ThinkThenError.cancelled }
           switch event {
           case .input:
             if let record = try await input() {
+              if Task.isCancelled || state.withLock({ $0.cancelled }) {
+                throw ThinkThenError.cancelled
+              }
+              if retainItems {
+                state.withLock {
+                  $0.accepted += 1
+                  $0.items[$0.accepted] = record
+                }
+              }
               try await native.perform { try $1.send($0, record) }
             } else {
               try await native.perform { $1.end($0) }
             }
-          case .row(let wire): return try wire.decode(decode)
+          case .row(let wire):
+            let item = state.withLock { $0.items.removeValue(forKey: wire.position) }
+            return try decode(wire, item)
           case .end:
-            lock.withLock { finished = true }
+            state.withLock { state in
+              state.finished = true
+              state.items.removeAll()
+            }
             await native.close()
             return nil
           }
         }
       } catch {
-        lock.withLock { finished = true }
+        state.withLock { state in
+          state.finished = true
+          state.items.removeAll()
+        }
         await close()
         if Task.isCancelled { throw CancellationError() }
         throw error
@@ -182,65 +267,58 @@ final class Driver<A: Sendable>: @unchecked Sendable {
       self.cancel()
     }
   }
-  deinit { call?.cancel() }
+  deinit { state.withLock { $0.call }?.cancel() }
 }
 
-// A second iterator does not acquire a call or any ownership of the first.
-private final class Traversal<A: Sendable>: @unchecked Sendable {
-  let lock = NSLock()
-  var claimed = false, cancelled = false
-  weak var driver: Driver<A>?
+// The stream holds the active driver weakly, so breaking iteration releases it.
+private final class Traversal<A: Sendable>: Sendable {
+  private struct State: Sendable {
+    var claimed = false, cancelled = false
+    weak var driver: Driver<A>?
+  }
+  private let state = Mutex(State())
   let make: @Sendable () -> Driver<A>
   init(_ make: @escaping @Sendable () -> Driver<A>) { self.make = make }
   func claim() -> Driver<A>? {
-    lock.withLock {
-      guard !claimed else { return nil }
-      claimed = true
-      let value = make()
-      driver = value
-      if cancelled { value.cancel() }
-      return value
+    state.withLock { state in
+      guard !state.claimed else { return nil }
+      state.claimed = true
+      let driver = make()
+      state.driver = driver
+      if state.cancelled { driver.cancel() }
+      return driver
     }
   }
   func cancel() {
-    lock.withLock {
-      cancelled = true
-      driver?.cancel()
+    state.withLock {
+      $0.cancelled = true
+      $0.driver?.cancel()
     }
   }
 }
-public struct Rows<Answer: Sendable>: AsyncSequence, Sendable {
-  public typealias Element = Row<Answer>
-  private let traversal: Traversal<Answer>
-  init(make: @escaping @Sendable () -> Driver<Answer>) { traversal = Traversal(make) }
-  public struct AsyncIterator: AsyncIteratorProtocol {
-    let driver: Driver<Answer>?
-    public mutating func next() async throws -> Row<Answer>? {
-      guard let driver else { throw RowsIterationError.alreadyIterated }
-      return try await driver.next()
+public final class Rows<Element: Sendable>: AsyncSequence, Sendable {
+  public typealias Failure = ThinkThenError
+  private let traversal: Traversal<Element>
+  init(make: @escaping @Sendable () -> Driver<Element>) { traversal = Traversal(make) }
+  public final class AsyncIterator: AsyncIteratorProtocol, Sendable {
+    public typealias Failure = ThinkThenError
+    private let driver: Driver<Element>?
+    fileprivate init(_ driver: Driver<Element>?) { self.driver = driver }
+    public func next() async throws(ThinkThenError) -> Element? {
+      guard let driver else { throw .iteration(.alreadyIterated) }
+      do { return try await driver.next() } catch { throw typedError(error) }
     }
+    public func next(isolation actor: isolated (any Actor)?) async throws(ThinkThenError)
+      -> Element?
+    { try await next() }
+    deinit { driver?.cancel() }
   }
-  public func makeAsyncIterator() -> AsyncIterator { AsyncIterator(driver: traversal.claim()) }
+  public func makeAsyncIterator() -> AsyncIterator { AsyncIterator(traversal.claim()) }
   public func cancel() { traversal.cancel() }
-  public func withRows<T>(
-    isolation: isolated (any Actor)? = #isolation,
-    _ body: (Rows<Answer>) async throws -> T
-  ) async throws -> T {
-    do {
-      let result = try await body(self)
-      let driver = traversal.lock.withLock { traversal.driver }
-      await driver?.close()
-      return result
-    } catch {
-      let driver = traversal.lock.withLock { traversal.driver }
-      await driver?.close()
-      throw error
-    }
-  }
-}
-
-extension Result where Failure == any Error {
-  fileprivate init(catching body: () async throws -> Success) async {
-    do { self = .success(try await body()) } catch { self = .failure(error) }
+  public func collect() async throws(ThinkThenError) -> [Element] {
+    let iterator = makeAsyncIterator()
+    var output: [Element] = []
+    while let element = try await iterator.next() { output.append(element) }
+    return output
   }
 }

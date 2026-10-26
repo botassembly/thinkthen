@@ -35,10 +35,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-sites-') as temporary:
     source = scratch / 'tag-source'
     consumer = scratch / 'go-consumer'
     shutil.copytree(ROOT / 'sdk/go/tests', consumer)
-    run('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go=' + str(source / 'sdk/go'), cwd=consumer)
+    go_command = (sys.executable, ROOT / 'scripts/go-build') if sys.platform == 'darwin' else ('go',)
+    run(*go_command, 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(source / 'sdk/go/thinkthen'), cwd=consumer)
     environment = dict(os.environ, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local',
                        THINKTHEN_STUB_CASES=str(ROOT / 'construction/stub.json'))
-    run('go', 'test', '-run=^TestSharedStub$', cwd=consumer, env=environment)
+    run(*go_command, 'test', '-run=^TestSharedStub$', cwd=consumer, env=environment)
     consumer = scratch / 'swift-consumer'
     shutil.copytree(ROOT / 'sdk/swift/tests', consumer, ignore=shutil.ignore_patterns('*.py'))
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')

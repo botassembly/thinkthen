@@ -41,7 +41,8 @@ def readme(name, out, artifact):
     for index in range(0, len(parts), 2):
         prose = re.sub(r'\[([^\]]+)\]\((?!https?://)[^)]+\)', r'\1', parts[index])
         parts[index] = '\n\n'.join(p for p in prose.split('\n\n')
-                                  if not re.search(r'\b(?:API|PACKAGING)\.md\b|\bexamples/|\bscripts/', p))
+                                  if not re.search(r'\b(?:API|PACKAGING)\.md\b|\bexamples/|\bscripts/',
+                                                   re.sub(r'https?://[^)\s]+', '', p)))
     body = ''.join(parts)
     version = json.loads((out / 'build.json').read_text())['version']
     requirements = json.loads((out / 'requirements.json').read_text())[name]

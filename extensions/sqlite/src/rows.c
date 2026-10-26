@@ -1,19 +1,14 @@
 #include "internal.h"
 #include <string.h>
+#include <math.h>
+#include <stdlib.h>
 
-int engine_error(thinkthen_buffer *error, char **diagnostic) {
-    json_error_t failure;
-    json_t *value = json_loadb((const char *)error->data, error->len, JSON_ALLOW_NUL, &failure);
-    if (value == NULL) {
-        thinkthen_buffer_free(error);
-        return SQLITE_NOMEM;
-    }
-    const char *code = json_string_value(json_object_get(value, "code"));
-    const char *message = json_string_value(json_object_get(value, "message"));
-    *diagnostic = sqlite3_mprintf("%s: %s", code, message);
-    json_decref(value);
-    thinkthen_buffer_free(error);
-    return *diagnostic == NULL ? SQLITE_NOMEM : SQLITE_ERROR;
+int engine_error(thinkthen_error *error, char **diagnostic) {
+    int result = error->code == THINKTHEN_CODE_LOCAL_CANCELLED ? SQLITE_INTERRUPT : SQLITE_ERROR;
+    *diagnostic = sqlite3_mprintf("%s: %.*s", thinkthen_code_name(error->code),
+        (int)error->message.len, (const char *)error->message.data);
+    thinkthen_error_free(error);
+    return *diagnostic == NULL ? SQLITE_NOMEM : result;
 }
 
 void connection_release(void *pointer) {
@@ -30,7 +25,7 @@ int connection_client(Connection *connection, const char *settings, size_t len,
     if (connection->client != NULL && connection->settings_len == len &&
         memcmp(connection->settings, settings, len) == 0) return SQLITE_OK;
     thinkthen_client *client = NULL;
-    thinkthen_buffer error = {0};
+    thinkthen_error error = { .struct_size = sizeof(error) };
     if (thinkthen_sql_client_open((const uint8_t *)settings, len, &client, &error) != THINKTHEN_OK)
         return engine_error(&error, diagnostic);
     char *copy = sqlite3_malloc64(len + 1);
@@ -49,17 +44,21 @@ int connection_client(Connection *connection, const char *settings, size_t len,
 }
 
 void cursor_clear(Cursor *cursor) {
-    thinkthen_sql_free(cursor->call);
+    thinkthen_sql_call_free(cursor->call);
     cursor->call = NULL;
     if (cursor->source != NULL) sqlite3_finalize(cursor->source);
     cursor->source = NULL;
     thinkthen_row_free(&cursor->row);
     json_decref(cursor->fields);
     cursor->fields = NULL;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < ARG_COUNT; ++i) {
         sqlite3_value_free(cursor->arguments[i]);
         cursor->arguments[i] = NULL;
     }
+    json_decref(cursor->answer);cursor->answer=NULL;
+    json_decref(cursor->error);cursor->error=NULL;
+    for(size_t n=0;n<cursor->ids_count;n++)sqlite3_value_free(cursor->ids[n]);
+    sqlite3_free(cursor->ids);cursor->ids=NULL;cursor->ids_count=cursor->ids_capacity=cursor->ids_start=0;cursor->ids_offset=0;
     cursor->eof = 1;
 }
 
@@ -77,20 +76,26 @@ static uint8_t interrupted(void *context) {
 
 int cursor_advance(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
+    if(cursor->row.position && cursor->row.function!=THINKTHEN_FUNCTION_RANK && cursor->row.position>cursor->ids_offset && cursor->row.position-cursor->ids_offset<=cursor->ids_count) {
+        size_t previous=(size_t)(cursor->row.position-cursor->ids_offset)-1;
+        sqlite3_value_free(cursor->ids[previous]);cursor->ids[previous]=NULL;cursor->ids_start=previous+1;
+    }
     thinkthen_row_free(&cursor->row);
     json_decref(cursor->fields);
     cursor->fields = NULL;
+    json_decref(cursor->answer);cursor->answer=NULL;
+    json_decref(cursor->error);cursor->error=NULL;
     for (;;) {
         if (sqlite3_is_interrupted(table->db))
             return cursor_error(cursor, SQLITE_INTERRUPT, "interrupted");
-        thinkthen_buffer error = {0};
-        int result = thinkthen_sql_poll(cursor->call, 10, interrupted, table->db,
+        thinkthen_error error = { .struct_size = sizeof(error) };
+        int result = thinkthen_sql_call_poll(cursor->call, 10, interrupted, table->db,
                                        &cursor->row, &error);
         if (sqlite3_is_interrupted(table->db)) {
-            thinkthen_buffer_free(&error);
+            thinkthen_error_free(&error);
             return cursor_error(cursor, SQLITE_INTERRUPT, "interrupted");
         }
-        if (result == THINKTHEN_WAIT) continue;
+        if (result == THINKTHEN_PENDING) continue;
         if (result == THINKTHEN_NEEDS_INPUT) {
             int code = source_chunk(cursor);
             if (code != SQLITE_OK) return code;
@@ -106,63 +111,67 @@ int cursor_advance(Cursor *cursor) {
         }
         if (result == THINKTHEN_END) {
             cursor->eof = 1;
-            thinkthen_sql_free(cursor->call);
+            thinkthen_sql_call_free(cursor->call);
             cursor->call = NULL;
             return SQLITE_OK;
         }
-        thinkthen_buffer columns = {0};
-        if (thinkthen_row_columns(&cursor->row, &columns, &error) != THINKTHEN_OK) {
-            char *message = NULL;
-            int code = engine_error(&error, &message);
-            code = cursor_error(cursor, code, message == NULL ? "out of memory" : message);
-            sqlite3_free(message);
-            return code;
-        }
-        json_error_t failure;
-        cursor->fields = json_loadb((const char *)columns.data, columns.len, JSON_ALLOW_NUL, &failure);
-        thinkthen_buffer_free(&columns);
-        if (cursor->fields == NULL)
-            return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
+        if(cursor->row.answer.data)cursor->answer=json_loadb((const char*)cursor->row.answer.data,cursor->row.answer.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
+        if(cursor->row.error.data)cursor->error=json_loadb((const char*)cursor->row.error.data,cursor->row.error.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
         cursor->eof = 0;
         ++cursor->rowid;
         return SQLITE_OK;
     }
 }
 
-static void result_raw_json(sqlite3_context *context, json_t *value) {
-    if (value == NULL) { sqlite3_result_null(context); return; }
-    sqlite3_result_text64(context, json_string_value(value), json_string_length(value),
+static void result_buffer(sqlite3_context *context, const thinkthen_buffer *value) {
+    if (value->data == NULL) { sqlite3_result_null(context); return; }
+    sqlite3_result_text64(context, (const char *)value->data, value->len,
                           SQLITE_TRANSIENT, SQLITE_UTF8);
 }
 
-int cursor_column(sqlite3_vtab_cursor *base, sqlite3_context *context, int column) {
-    Cursor *cursor = (Cursor *)base;
-    switch (column) {
-    case 0: sqlite3_result_int64(context, (sqlite3_int64)cursor->row.position); break;
-    case 1: {
-        const char *status = json_string_value(json_object_get(cursor->fields, "status"));
-        sqlite3_result_text(context, status, -1, SQLITE_TRANSIENT);
+static void json_value(sqlite3_context *context,json_t *value) {
+    if(!value || json_is_null(value))sqlite3_result_null(context);
+    else if(json_is_string(value))sqlite3_result_text64(context,json_string_value(value),json_string_length(value),SQLITE_TRANSIENT,SQLITE_UTF8);
+    else if(json_is_boolean(value))sqlite3_result_int(context,json_is_true(value));
+    else if(json_is_integer(value))sqlite3_result_int64(context,json_integer_value(value));
+    else if(json_is_real(value))sqlite3_result_double(context,json_real_value(value));
+    else {
+        char *encoded=json_dumps(value,JSON_COMPACT|JSON_ENCODE_ANY);
+        if(!encoded)sqlite3_result_error_nomem(context);
+        else {sqlite3_result_text(context,encoded,-1,SQLITE_TRANSIENT);free(encoded);}
+    }
+}
+int cursor_column(sqlite3_vtab_cursor *base,sqlite3_context *context,int column) {
+    Cursor *cursor=(Cursor*)base;Table *table=(Table*)base->pVtab;
+    if(column>=table->column_count) {
+        sqlite3_value *argument=cursor->arguments[table->arguments[column-table->column_count]];
+        if(argument)sqlite3_result_value(context,argument);else sqlite3_result_null(context);
+        return SQLITE_OK;
+    }
+    switch(table->columns[column]) {
+    case COL_POSITION:sqlite3_result_int64(context,(sqlite3_int64)cursor->row.position);break;
+    case COL_STATUS: {
+        const char *status=cursor->row.status==THINKTHEN_STATUS_ANSWERED?"answered":cursor->row.status==THINKTHEN_STATUS_UNSURE?"unsure":cursor->row.status==THINKTHEN_STATUS_FAILED?"failed":NULL;
+        if(!status)sqlite3_result_error(context,THINKTHEN_ABI_ERROR_CODE ": " THINKTHEN_ABI_ERROR_MESSAGE,-1);else sqlite3_result_text(context,status,-1,SQLITE_STATIC);break;
+    }
+    case COL_ANSWER:json_value(context,cursor->answer);break;
+    case COL_PROBABILITY:if(isnan(cursor->row.probability))sqlite3_result_null(context);else sqlite3_result_double(context,cursor->row.probability);break;
+    case COL_CODE:json_value(context,json_object_get(cursor->error,"code"));break;
+    case COL_MESSAGE:json_value(context,json_object_get(cursor->error,"message"));break;
+    case COL_HTTP:json_value(context,json_object_get(cursor->error,"http_status"));break;
+    case COL_DETAIL:result_buffer(context,&cursor->row.detail);break;
+    case COL_SOURCE:result_buffer(context,&cursor->row.source);break;
+    case COL_KEPT:sqlite3_result_int(context,cursor->row.status==THINKTHEN_STATUS_ANSWERED && cursor->row.answer_bool);break;
+    case COL_RANK:if(cursor->row.status==THINKTHEN_STATUS_ANSWERED)sqlite3_result_int64(context,(sqlite3_int64)cursor->row.rank);else sqlite3_result_null(context);break;
+    case COL_TEXT:json_value(context,json_object_get(cursor->answer,"text"));break;
+    case COL_START:json_value(context,json_object_get(cursor->answer,"start"));break;
+    case COL_END:json_value(context,json_object_get(cursor->answer,"end"));break;
+    case COL_ID: {
+        size_t index=(size_t)(cursor->row.position-cursor->ids_offset)-1;
+        if(index<cursor->ids_count && cursor->ids[index])sqlite3_result_value(context,cursor->ids[index]);
+        else result_buffer(context,&cursor->row.id);
         break;
     }
-    case 2: result_raw_json(context, json_object_get(cursor->fields, "answer")); break;
-    case 3: {
-        json_t *p = json_object_get(cursor->fields, "p");
-        if (p == NULL) sqlite3_result_null(context);
-        else sqlite3_result_double(context, json_number_value(p));
-        break;
-    }
-    case 4: result_raw_json(context, json_object_get(cursor->fields, "error")); break;
-    case 5:
-        if (cursor->row.detail.data == NULL) sqlite3_result_null(context);
-        else sqlite3_result_text64(context, (const char *)cursor->row.detail.data,
-                                  cursor->row.detail.len, SQLITE_TRANSIENT, SQLITE_UTF8);
-        break;
-    case 6: sqlite3_result_int(context, cursor->row.kept); break;
-    default:
-        if (cursor->arguments[column - 7] != NULL)
-            sqlite3_result_value(context, cursor->arguments[column - 7]);
-        else sqlite3_result_text(context, column == 9 ? "{}" : "[]", -1, SQLITE_STATIC);
-        break;
     }
     return SQLITE_OK;
 }

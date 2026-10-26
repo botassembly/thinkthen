@@ -1,30 +1,23 @@
-"""Run installed Zig public functions against shared fixtures and host edges."""
+"""Run the installed mechanical Zig bridge against canonical typed fixtures."""
+import copy
 import json
-import re
 from pathlib import Path
 import subprocess
 import sys
 from contextlib import contextmanager
 
-root = Path(sys.argv[2])
+consumer, root_arg, loopback = sys.argv[1:]
+root = Path(root_arg)
 sys.path.insert(0, str(root / "databases"))
 from testing import child_environment
 
-consumer, _, loopback = sys.argv[1:]
-if sys.platform == "linux":
-    dynamic = subprocess.check_output(["readelf", "-d", consumer], text=True)
-    search_paths = re.findall(r"\((?:RUNPATH|RPATH)\).*?\[(.*?)\]", dynamic)
-    assert search_paths == ["$ORIGIN"], search_paths
-else:
-    dynamic = subprocess.check_output(["otool", "-l", consumer], text=True)
-    search_paths = re.findall(r"cmd LC_RPATH\s+cmdsize \d+\s+path (\S+)", dynamic)
-    assert search_paths == ["@loader_path"], search_paths
 env = child_environment()
-env["THINKTHEN_API_KEY"] = "loopback-test-key"
+subprocess.run([sys.executable, str(root / "sdk/c/tests/toolbox.py"), consumer, str(root)], env=env, check=True)
+env["THINKTHEN_API_KEY"] = env["OPENAI_API_KEY"] = "loopback-test-key"
 
 @contextmanager
-def fixture(executable, *arguments):
-    with subprocess.Popen([executable, *arguments], stdin=subprocess.PIPE,
+def fixture(*arguments):
+    with subprocess.Popen([loopback, *arguments], stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE, text=True, env=env) as server:
         try:
             url = f"http://127.0.0.1:{int(server.stdout.readline())}/v1"
@@ -42,76 +35,115 @@ def command(server, value):
     server.stdin.flush()
     return server.stdout.readline().strip()
 
-def call(settings, request, cancelled=False):
+def call(settings, request):
     return json.loads(subprocess.check_output(
-        [consumer, "run", json.dumps(settings), json.dumps(request)] + (["cancelled"] if cancelled else []), env=env))
+        [consumer, "run", json.dumps(settings), json.dumps(request)], env=env))
 
-def clean(value, function):
-    if isinstance(value, list):
-        for row in value:
-            if isinstance(row.get("error"), dict):
-                row["error"].pop("message", None)
-            if function == "annotate" and isinstance(row.get("answer"), dict):
-                for entry in row["answer"].values():
-                    if isinstance(entry.get("error"), dict):
-                        entry["error"].pop("message", None)
-    return value
+def normalize(row, backend, model):
+    if "source" in row:
+        source = row.pop("source")
+        assert source["backend"] == backend, source
+        assert source["model"] == model, source
+        assert len(source["question_identity"]) == 64, source
+    if "error" in row:
+        row["error"].pop("message", None)
+    if row["function"] == "annotate" and isinstance(row.get("answer"), dict):
+        for child in row["answer"].values():
+            normalize(child, backend, model)
 
-def offsets(value, text):
+def byte_offsets(value, text):
     if isinstance(value, dict):
         if "start" in value and "end" in value:
-            for key in ("start", "end"):
-                value[key] = len(text[:value[key]].encode())
+            for field in ("start", "end"):
+                value[field] = len(text[:value[field]].encode("utf-8"))
         for child in value.values():
-            offsets(child, text)
+            byte_offsets(child, text)
     elif isinstance(value, list):
         for child in value:
-            offsets(child, text)
+            byte_offsets(child, text)
 
-for case in json.loads((root / "construction/stub.json").read_text()):
-    assert call({"adapter": "stub"}, case["request"]) == case["expected"]
-for case in json.loads((root / "construction/options.json").read_text()):
-    actual = call(case["client"], case["request"])
-    if "equivalent_request" in case:
-        expected = call(case["client"], case["equivalent_request"])
-        assert len(actual) == len(case["equivalent_request"]["records"]), case["name"]
-        assert actual == expected, case["name"]
-    else:
-        assert actual == {"error": case["expected_error"]}, (case["name"], actual)
+subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "zig", *(["--full"] if __import__("os").environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "zig", consumer], env=env | {"THINKTHEN_LOOPBACK": loopback}, check=True)
 subprocess.run([consumer, "ownership"], env=env, check=True)
-for path in sorted((root / "conformance").glob("*.json")):
-    case = json.loads(path.read_text())
-    expected = case["expected"]
-    request = case["request"]
-    if isinstance(expected, list) and request["function"] in ("find", "recognize", "relate"):
-        for row, record in zip(expected, request["records"]):
-            if isinstance(record, str):
-                offsets(row.get("answer"), record)
-                offsets(row.get("detail"), record)
-    with fixture(loopback, str(path)) as (server, url):
-        actual = call(dict(case.get("client", {}), url=url), request, case.get("cancelled", False))
-        if "expected_rows" in case:
-            assert clean(actual["rows"], request["function"]) == case["expected_rows"], (path.name, actual)
-        if isinstance(actual, dict):
-            actual.pop("rows", None)
-        assert clean(actual, request["function"]) == expected, (path.name, actual, expected)
-        assert int(command(server, "count")) == case["requests"], path.name
-with fixture(loopback, "--unavailable") as (server, url):
-    actual = call({"url": url}, {"function": "decide", "question": {"type": "inline", "value": "Ready?"}, "records": ["evidence"]})
-    assert actual["error"] == "backend.transport", actual
-    assert len(actual["rows"]) == 1 and actual["rows"][0]["error"]["code"] == "backend.transport", actual
+directory = root / "conformance/typed"
+manifest = json.loads((directory / "manifest.json").read_text())
+seen = set()
+for filename in manifest["cases"]:
+    case = json.loads((directory / filename).read_text())
+    seen.add(case["request"]["question"]["function"])
+    for backend in manifest["backends"]:
+        with fixture(str(directory / filename)) as (server, url):
+            settings = dict(manifest["client"], **case.get("client", {}))
+            settings.update(backend=backend, url=url)
+            actual = call(settings, case["request"])
+            for row in actual if isinstance(actual, list) else []:
+                normalize(row, backend, settings["model"])
+            expected = copy.deepcopy(case["expected"])
+            if case["request"]["question"]["function"] in ("find", "recognize", "relate"):
+                for row in expected:
+                    record = case["request"]["records"][row["position"] - 1]
+                    assert isinstance(record, str), (filename, "offset fixture must supply text")
+                    byte_offsets(row.get("answer"), record)
+                    byte_offsets(row.get("detail"), record)
+            assert actual == expected, (filename, backend, actual, expected)
+            assert int(command(server, "count")) == case["requests"], filename
+assert len(seen) == 10, seen
+case = json.loads((directory / "tag-batching.json").read_text())
+for backend in manifest["backends"]:
+    with fixture(str(directory / "tag-batching.json")) as (server, url):
+        settings = dict(manifest["client"], **case["client"], backend=backend, url=url)
+        actual = json.loads(subprocess.check_output(
+            [consumer, "finite-array", json.dumps(settings)], env=env))
+        for row in actual:
+            normalize(row, backend, settings["model"])
+        assert actual == case["expected"], ("finite array order", backend, actual)
+        assert int(command(server, "count")) == case["requests"], ("finite array batching", backend)
 for phase in ("headers", "body", "refusal-body"):
-    with fixture(loopback, "--held", phase) as (server, url):
-        with subprocess.Popen([consumer, "held", json.dumps({"url": url})], stdin=subprocess.PIPE, env=env) as child:
+    with fixture("--held", phase) as (server, url):
+        with subprocess.Popen([consumer, "held", json.dumps({"backend": "systemone", "url": url})], stdin=subprocess.PIPE, env=env) as child:
             try:
                 assert command(server, "arrived") == "arrived"
                 child.stdin.write(b"c")
                 child.stdin.flush()
                 assert command(server, "closed") == "closed"
-                assert child.wait() == 0
+                assert child.wait(timeout=30) == 0
                 assert command(server, "count") == "1"
             finally:
                 if child.poll() is None:
                     child.kill()
                     child.wait()
-print("installed Zig: all ten stub functions, shared cases, ownership, allocation and held cancellation passed")
+print("installed Zig: canonical typed cases on both wires, ownership and held cancellation passed")
+
+# Replace only the private installed runtime; the shared fixture bundle is immutable.
+import os
+import shutil
+import tempfile
+
+checkpoint = os.environ.get("THINKTHEN_ZIG_DEBUG_CHECKPOINT")
+abi_fixtures = os.environ.get("THINKTHEN_ZIG_ABI_FIXTURES")
+if abi_fixtures or checkpoint:
+    base = Path(abi_fixtures) if abi_fixtures else Path(checkpoint) / "abi-fixtures"
+    native_manifest = json.loads((base / "manifest.json").read_text())
+    runtime = next(Path(consumer).parent.glob("libthinkthen_ffi.*"))
+    request = {"question": {"function": "decide", "question": "Ready?"}, "records": []}
+
+    def replace_runtime(source):
+        # A loaded signed Mach-O must acquire a new inode when its bytes change.
+        replacement = runtime.with_name(runtime.name + ".replacement")
+        shutil.copy2(source, replacement)
+        os.replace(replacement, runtime)
+
+    with tempfile.TemporaryDirectory(prefix="zig-runtime-backup-") as temporary:
+        backup = Path(temporary) / runtime.name
+        shutil.copy2(runtime, backup)
+        try:
+            for case in native_manifest["cases"]:
+                replace_runtime(case["library"])
+                process = subprocess.run([consumer, "run", '{"backend":"stub"}', json.dumps(request)],
+                                         text=True, capture_output=True, env=env)
+                assert process.returncode == 0, (case["name"], process.returncode, process.stderr)
+                actual = json.loads(process.stdout)
+                expected = [] if case["accept"] else {"error": "usage.abi"}
+                assert actual == expected, (case["name"], actual, expected)
+        finally:
+            replace_runtime(backup)
+    print("installed Zig: all six shared ABI fixtures accept or refuse without entering incompatible engine operations")

@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+"""Prove a caller reports the attempted library path for missing and broken loads.
+
+Use only a private installed runtime. The original image is restored after each
+fresh process, including when an assertion fails. No native output is built.
+"""
+import argparse
+from pathlib import Path
+import subprocess
+import sys
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("engine", type=Path)
+parser.add_argument("--attempted", help="loader spelling when it differs from the installed path")
+split = sys.argv.index("--")
+args = parser.parse_args(sys.argv[1:split])
+command = sys.argv[split + 1:]
+engine = args.engine.absolute()
+backup = engine.with_name(engine.name + ".load-check-original")
+engine.rename(backup)
+try:
+    for failure in ("missing", "broken"):
+        if failure == "broken":
+            engine.write_bytes(b"not a shared library\n")
+        result = subprocess.run(command, text=True, capture_output=True)
+        output = result.stdout + result.stderr
+        assert result.returncode != 0, (failure, "unloadable engine accepted", output)
+        assert (args.attempted or str(engine)) in output, (failure, "attempted path absent", output)
+        lowered = output.lower()
+        assert any(word in lowered for word in ("load", "shared librar", "dll")), (failure, output)
+        assert "usage.abi" not in output and "incompatible" not in lowered and "EngineVersion" not in output, (failure, output)
+        print(f"loader failure: {command[0]} {failure} reports attempted path", flush=True)
+finally:
+    engine.unlink(missing_ok=True)
+    backup.rename(engine)

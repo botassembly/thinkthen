@@ -1,0 +1,29 @@
+package io.thinkthen;
+
+public final class AsyncThinkThen {
+    private final ThinkThen client;
+    AsyncThinkThen(ThinkThen client) { this.client = client; }
+    public java.util.concurrent.CompletableFuture<Row<Boolean,NoDetail>> decide(String question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.decide(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<Boolean,NoDetail>> decide(String question, @org.jspecify.annotations.Nullable Object record, DecideOptions options) { return client.submit(() -> client.decide(question, record, options)); }
+    public java.util.concurrent.CompletableFuture<Row<Boolean,NoDetail>> decide(DecideQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.decide(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<String,ChooseDetail>> choose(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> choices) { return client.submit(() -> client.choose(question, record, choices)); }
+    public java.util.concurrent.CompletableFuture<Row<String,ChooseDetail>> choose(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> choices, ChooseOptions options) { return client.submit(() -> client.choose(question, record, choices, options)); }
+    public java.util.concurrent.CompletableFuture<Row<String,ChooseDetail>> choose(ChooseQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.choose(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<String>,TagDetail>> tag(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> labels) { return client.submit(() -> client.tag(question, record, labels)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<String>,TagDetail>> tag(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> labels, TagOptions options) { return client.submit(() -> client.tag(question, record, labels, options)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<String>,TagDetail>> tag(TagQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.tag(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<Double,ScoreDetail>> score(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> levels) { return client.submit(() -> client.score(question, record, levels)); }
+    public java.util.concurrent.CompletableFuture<Row<Double,ScoreDetail>> score(String question, @org.jspecify.annotations.Nullable Object record, java.util.List<String> levels, ScoreOptions options) { return client.submit(() -> client.score(question, record, levels, options)); }
+    public java.util.concurrent.CompletableFuture<Row<Double,ScoreDetail>> score(ScoreQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.score(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.Optional<Span>,NoDetail>> find(String question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.find(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.Optional<Span>,NoDetail>> find(String question, @org.jspecify.annotations.Nullable Object record, FindOptions options) { return client.submit(() -> client.find(question, record, options)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.Optional<Span>,NoDetail>> find(FindQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.find(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Entity>,RecognizeDetail>> recognize(@org.jspecify.annotations.Nullable Object record, java.util.List<String> kinds) { return client.submit(() -> client.recognize(record, kinds)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Entity>,RecognizeDetail>> recognize(@org.jspecify.annotations.Nullable Object record, java.util.List<String> kinds, RecognizeOptions options) { return client.submit(() -> client.recognize(record, kinds, options)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Entity>,RecognizeDetail>> recognize(RecognizeQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.recognize(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Relation>,RelateDetail>> relate(@org.jspecify.annotations.Nullable Object record, java.util.List<RelationRule> rules) { return client.submit(() -> client.relate(record, rules)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Relation>,RelateDetail>> relate(@org.jspecify.annotations.Nullable Object record, java.util.List<RelationRule> rules, RelateOptions options) { return client.submit(() -> client.relate(record, rules, options)); }
+    public java.util.concurrent.CompletableFuture<Row<java.util.List<Relation>,RelateDetail>> relate(RelateQuestion question, @org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.relate(question, record)); }
+    public java.util.concurrent.CompletableFuture<Row<Annotations,NoDetail>> annotate(AnnotationQuestions questions,@org.jspecify.annotations.Nullable Object record) { return client.submit(() -> client.annotate(questions,record)); }
+    public java.util.concurrent.CompletableFuture<Row<Annotations,NoDetail>> annotate(AnnotationQuestions questions,@org.jspecify.annotations.Nullable Object record,AnnotateOptions options) { return client.submit(() -> client.annotate(questions,record,options)); }
+}

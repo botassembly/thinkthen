@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Check offline R binary dependency delivery using the installed R packages."""
+import ast
+import hashlib
+import json
+import re
+from pathlib import Path, PureWindowsPath
+import shutil
+import subprocess
+import sys
+import tempfile
+from unittest.mock import patch
+
+from release_r_dependencies import bundle, contents, metadata, names, terms, refresh
+from release_notice_packages import apply
+from release_notice_check import verify
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def run(*args):
+    return subprocess.check_output(list(map(str, args)), text=True)
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-r-closure-') as temporary:
+    stage = Path(temporary)
+    description = stage / 'DESCRIPTION'
+    # This case guards the runtime closure that an imported vctrs needs.
+    description.write_text(re.sub(r'^Imports:.*$', 'Imports: jsonlite, vctrs',
+                                  (ROOT / 'sdk/r/DESCRIPTION').read_text(), flags=re.M))
+    expression = '''a <- commandArgs(TRUE); db <- installed.packages();
+roots <- trimws(unlist(strsplit(read.dcf(a[[1]])[1,c("Imports","Suggests")],",")));
+deps <- tools::package_dependencies(roots, db=db, which=c("Depends","Imports","LinkingTo"), recursive=TRUE);
+standard <- db[!is.na(db[,"Priority"]),"Package"];
+writeLines(standard, file.path(a[[2]], "standard.txt"));
+packages <- setdiff(unique(c(roots,unlist(deps,use.names=FALSE))), standard);
+for (name in packages) {
+  p <- find.package(name); old <- setwd(dirname(p));
+  utils::tar(file.path(a[[2]], paste0(name,".tar.gz")), name, compression="gzip", tar="internal"); setwd(old)
+}
+file.copy(file.path(R.home("share"), "licenses"), a[[2]], recursive=TRUE);
+cat(as.character(getRversion()))'''
+    # file.copy prints its return value before the final version.
+    version = run('Rscript', '--vanilla', '-e', expression, description, stage).splitlines()[-1]
+    standard = (stage / 'standard.txt').read_text().splitlines()
+    folder = stage / 'candidate'
+    result = bundle(description, stage.glob('*.tar.gz'), folder, version, standard, suggests=True)
+    shutil.copytree(stage / 'licenses', folder / 'licenses')
+    assert {'jsonlite', 'vctrs'} <= result['packages'].keys()
+    position = {name: index for index, name in enumerate(result['packages'])}
+    for name, record in result['packages'].items():
+        for dependency in record['dependencies']:
+            if dependency in position:
+                assert position[dependency] < position[name], (name, dependency)
+    assert (folder / 'install-order.txt').read_text().splitlines() == result['install_order']
+    for record in result['packages'].values():
+        path = folder / record['file']
+        expected = terms(path, ROOT)
+        # Archive entry paths stay portable when the producer runs on Windows.
+        with patch('release_r_dependencies.Path', side_effect=lambda value:
+                   PureWindowsPath(value) if value == 'R' else Path(value)):
+            assert terms(path, ROOT) == expected
+        package = metadata(path)['Package']
+        apply(path, expected, package + '/')
+        verify(path)
+        assert terms(path, ROOT) == expected
+        assert all(contents(path)[package + '/' + name] == data for name, data in expected.items())
+    refresh(folder)
+    assert json.loads((folder / 'inventory.json').read_text())['install_order'] == result['install_order']
+    install = '''a <- commandArgs(TRUE); lib <- a[[2]]; dir.create(lib); .libPaths(c(lib,.Library));
+for (name in readLines(file.path(a[[1]],"install-order.txt"))) {
+  status <- system2(file.path(R.home("bin"),"R"), c("CMD","INSTALL",paste0("--library=",shQuote(lib)),shQuote(file.path(a[[1]],name))));
+  stopifnot(status == 0L)
+}
+library(vctrs); library(jsonlite);
+for (name in c("vctrs","jsonlite")) stopifnot(normalizePath(find.package(name)) == normalizePath(file.path(lib,name)))'''
+    run('Rscript', '--vanilla', '-e', install, folder, stage / 'library')
+    for missing in ('vctrs', 'rlang'):
+        try:
+            bundle(description, [p for p in stage.glob('*.tar.gz') if metadata(p)['Package'] != missing],
+                   stage / 'incomplete', version, standard)
+        except ValueError as error:
+            assert 'Missing pinned R binary dependency: ' + missing in str(error), error
+        else:
+            raise AssertionError('incomplete R dependency closure was accepted')
+    import release_windows_r
+    original = release_windows_r.ROOT
+    (stage / 'sdk/r').mkdir(parents=True)
+    shutil.copy2(description, stage / 'sdk/r/DESCRIPTION')
+    try:
+        release_windows_r.ROOT = stage
+        pinned = release_windows_r.pins()
+    finally:
+        release_windows_r.ROOT = original
+    if sys.argv[1:]:
+        inputs = Path(sys.argv[1])
+        archives = []
+        for name, (_, digest) in pinned.items():
+            if name.endswith('.zip'):
+                path = inputs / name
+                assert hashlib.sha256(path.read_bytes()).hexdigest() == digest, name
+                info = metadata(path)
+                assert info['Built'].endswith('windows'), name
+                archives.append(path)
+        windows = stage / 'windows'
+        result = bundle(description, archives, windows, version, standard)
+        shutil.copytree(stage / 'licenses', windows / 'licenses')
+        for name in result['install_order']:
+            path = windows / name
+            apply(path, terms(path, ROOT), metadata(path)['Package'] + '/')
+            verify(path)
+        print('Pinned Windows ZIP metadata, required Imports closure and dependency terms pass')
+for path in [*ROOT.joinpath('scripts').glob('release*'), ROOT / 'scripts/qualification-readmes']:
+    if path.is_file() and (path.suffix == '.py' or path.read_text().startswith('#!/usr/bin/env python3')):
+        ast.parse(path.read_text(), filename=str(path))
+run('Rscript', '--vanilla', '-e', 'for (p in commandArgs(TRUE)) parse(file=p)',
+    *ROOT.joinpath('scripts/release').glob('r*.R'))
+print('R binary closure, order, offline installation, dependency terms and incomplete-input refusal pass')

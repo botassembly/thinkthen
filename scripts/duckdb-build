@@ -2,18 +2,20 @@
 # Link Linux packages on their supported libc; macOS uses its native toolchain.
 set -eu
 cd "$(dirname "$0")/.."
+scripts/header-contract-check
 if [ "$(uname -s)" != Linux ]; then exec sh databases/duckdb/build.sh; fi
 : "${THINKTHEN_DUCKDB_DEPS:?Set the prepared DuckDB dependency directory}"
 : "${THINKTHEN_SQL_ARCHIVE:?Set the matching PIC Rust archive}"
 : "${THINKTHEN_DUCKDB_OUTPUT:?Set the staging directory}"
 mkdir -p "$THINKTHEN_DUCKDB_OUTPUT"
 output=$(cd "$THINKTHEN_DUCKDB_OUTPUT" && pwd)
-docker run --rm --network none --label pm.repo=thinkthen --label pm.ticket="${PM_TICKET:-0071}" \
+job=${PM_JOB:-${PM_TICKET:-local}}
+docker run --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
     -v "$PWD:/src:ro" -v "$THINKTHEN_DUCKDB_DEPS:/deps:ro" \
     -v "$THINKTHEN_SQL_ARCHIVE:/native/libthinkthen_ffi.a:ro" -v "$output:/out" \
     "$(python3 scripts/release_images.py floor)" sh -eu -c '
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/tmp \
             PATH=/opt/rh/gcc-toolset-14/root/usr/bin:/usr/local/bin:/opt/python/cp313-cp313/bin:/usr/bin:/bin \
             THINKTHEN_DUCKDB_DEPS=/deps THINKTHEN_SQL_ARCHIVE=/native/libthinkthen_ffi.a \
-            THINKTHEN_DUCKDB_OUTPUT=/out sh /src/databases/duckdb/build.sh
-    ' sh "$(id -u)" "$(id -g)"
+            THINKTHEN_DUCKDB_OUTPUT=/out THINKTHEN_SQL_TEST_BUILD="$3" sh /src/databases/duckdb/build.sh
+    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_SQL_TEST_BUILD:-OFF}"

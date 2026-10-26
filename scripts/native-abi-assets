@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""Prepare or verify one canonical ABI fixture directory before isolating consumers."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+import tempfile
+from native_platform import current
+
+ROOT = Path(__file__).resolve().parent.parent
+STORE = Path.home() / '.local/share/thinkthen-build-tools/native-abi'
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def identity():
+    cache = Path(subprocess.check_output([str(ROOT / 'scripts/native-prepare'), '--path'], text=True).strip())
+    host = current()
+    engine = cache / host['rid'] / ('libthinkthen_ffi.' + host['suffix'])
+    manifest = ROOT / 'conformance/native/manifest.json'
+    definition = json.loads(manifest.read_text())
+    inputs = {
+        'native_key': cache.name, 'engine': str(engine), 'engine_sha256': digest(engine),
+        'producer': digest(ROOT / 'scripts/native-fixtures'),
+        'header': digest(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h'),
+        'manifest': digest(manifest), 'registry': digest(manifest.parent / definition['abi']),
+        'compiler': subprocess.check_output([os.environ.get('CC', 'cc'), '--version'], text=True),
+    }
+    key = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    return STORE / host['rust'] / key, inputs, definition
+
+
+def verify(folder, inputs, definition, published=None):
+    identity = json.loads((folder / 'identity.json').read_text())
+    if identity['inputs'] != inputs:
+        raise ValueError('ABI fixture inputs differ from this checkout')
+    manifest = json.loads((folder / 'manifest.json').read_text())
+    expected = dict(definition)
+    actual = dict(manifest)
+    expected.pop('cases')
+    actual.pop('cases')
+    if actual != expected or len(manifest['cases']) != len(definition['cases']):
+        raise ValueError('ABI fixture manifest differs from the canonical definition')
+    files = {'manifest.json'}
+    for case, expected in zip(manifest['cases'], definition['cases']):
+        library = Path(case['library'])
+        if library.parent != (published or folder) or {key: value for key, value in case.items() if key != 'library'} != expected:
+            raise ValueError('ABI fixture case differs from the canonical definition')
+        files.add(library.name)
+    if set(identity['files']) != files:
+        raise ValueError('ABI fixture file inventory differs')
+    for name, checksum in identity['files'].items():
+        path = folder / name
+        if path.is_symlink() or digest(path) != checksum:
+            raise ValueError('ABI fixture checksum differs: ' + name)
+
+
+def prepare(folder, inputs, definition):
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    with folder.with_suffix('.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if folder.exists():
+            verify(folder, inputs, definition)
+            return
+        with tempfile.TemporaryDirectory(prefix='publish-', dir=folder.parent) as temporary:
+            stage = Path(temporary) / 'assets'
+            subprocess.run([str(ROOT / 'scripts/native-fixtures'), '--engine', inputs['engine'],
+                            '--output', str(stage)], cwd=ROOT, check=True)
+            manifest = json.loads((stage / 'manifest.json').read_text())
+            for case in manifest['cases']:
+                case['library'] = str(folder / Path(case['library']).name)
+            (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+            files = {'manifest.json', *(Path(case['library']).name for case in manifest['cases'])}
+            (stage / 'identity.json').write_text(json.dumps({
+                'inputs': inputs, 'files': {name: digest(stage / name) for name in files},
+            }, sort_keys=True, indent=2) + '\n')
+            verify(stage, inputs, definition, published=folder)
+            stage.rename(folder)
+
+
+def main():
+    if sys.argv[1:] not in (['prepare'], ['env']):
+        raise SystemExit('usage: scripts/native-abi-assets prepare|env')
+    folder, inputs, definition = identity()
+    if sys.argv[1] == 'prepare':
+        prepare(folder, inputs, definition)
+        print(folder)
+    else:
+        verify(folder, inputs, definition)
+        print('THINKTHEN_NATIVE_FIXTURES=' + shlex.quote(str(folder)))
+        print('export THINKTHEN_NATIVE_FIXTURES')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+        raise SystemExit('ABI fixtures: ' + str(error))

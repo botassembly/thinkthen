@@ -1,29 +1,18 @@
-"""Drive a moved installed Swift consumer with shared cases and fixture events."""
+"""Drive the installed Swift consumer with the authoritative typed manifest."""
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
-from contextlib import contextmanager
 
 consumer, root, loopback = sys.argv[1:]
 root = Path(root)
-env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE") if key in os.environ}
-network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key")
-
-
-def normalize(value):
-    if isinstance(value, dict):
-        error = value.get("error")
-        if isinstance(error, dict):
-            error.pop("message", None)
-        for child in value.values():
-            normalize(child)
-    elif isinstance(value, list):
-        for child in value:
-            normalize(child)
-    return value
+env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE", "SystemRoot") if key in os.environ}
+subprocess.run([sys.executable, str(root / "sdk/c/tests/toolbox.py"), consumer, str(root)], env=env, check=True)
+network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key", OPENAI_API_KEY="loopback-test-key")
 
 
 def command(server, text):
@@ -38,8 +27,7 @@ def fixture(*args):
     try:
         url = f"http://127.0.0.1:{int(server.stdout.readline())}/v1"
         yield server, url
-        server.stdin.write("shutdown\n")
-        server.stdin.flush()
+        assert command(server, "shutdown") == ""
         assert server.wait() == 0
     finally:
         if server.poll() is None:
@@ -47,42 +35,65 @@ def fixture(*args):
             server.wait()
 
 
+def normalize(row, backend, model):
+    row = dict(row)
+    source = row.pop("source", None)
+    if source is not None:
+        assert source["backend"] == backend and source["model"] == model, source
+        identity = source["question_identity"]
+        assert len(identity) == 64 and all(c in "0123456789abcdef" for c in identity), source
+    if row.get("error"):
+        row["error"].pop("message", None)
+    if row["function"] == "annotate" and row.get("answer"):
+        row["answer"] = {name: normalize(child, backend, model) for name, child in row["answer"].items()}
+    return row
+
+
 subprocess.run([str(Path(consumer).with_name("Readme"))], env=env, check=True, capture_output=True)
-
-stub = root / "construction/stub.json"
-result = subprocess.run([consumer, str(stub)], env=env, check=True, capture_output=True, text=True)
-actual = [json.loads(line) for line in result.stdout.splitlines()]
-expected = [case["expected"] for case in json.loads(stub.read_text())]
-assert normalize(actual) == normalize(expected), (actual, expected)
-# Typed options cannot express the refused threshold fixtures. Compare the
-# admitted public calls, including saved domains and rank levels, as whole rows.
+subprocess.run([sys.executable, str(root / "scripts/release/swift.py"), consumer,
+                str(root / "construction/stub.json")], env=env, check=True)
+manifest_path = root / "conformance/typed/manifest.json"
+manifest = json.loads(manifest_path.read_text())
 with tempfile.TemporaryDirectory() as folder:
-    path = Path(folder) / "options.json"
-    for case in json.loads((root / "construction/options.json").read_text()):
-        if "equivalent_request" not in case:
-            continue
-        pair = [{"client": case["client"], "request": case[key]}
-                for key in ("request", "equivalent_request")]
-        path.write_text(json.dumps(pair))
-        result = subprocess.run([consumer, str(path)], env=env, check=True, capture_output=True, text=True)
-        actual, equivalent = map(json.loads, result.stdout.splitlines())
-        assert isinstance(actual, list) and len(actual) == len(case["request"]["records"]), case["name"]
-        assert actual == equivalent, (case["name"], actual, equivalent)
+    request_path = Path(folder) / "case.json"
+    for entry in manifest["cases"]:
+        path = manifest_path.parent / entry
+        case = json.loads(path.read_text())
+        for backend in manifest["backends"]:
+            settings = {**manifest["client"], **case.get("client", {}), "backend": backend}
+            request_path.write_text(json.dumps({"client": settings, "request": case["request"]}))
+            with fixture(str(path)) as (server, url):
+                result = subprocess.run([consumer, str(request_path), url], env=network_env, check=True, capture_output=True, text=True)
+                actual = json.loads(result.stdout)
+                if isinstance(actual, dict):
+                    assert not actual.get("rows"), (entry, actual)
+                    actual = {"error": actual["error"]}
+                else:
+                    actual = [normalize(row, backend, settings["model"]) for row in actual]
+                assert actual == case["expected"], (entry, backend, actual, case["expected"])
+                assert int(command(server, "count")) == case["requests"], (entry, backend)
 
-for path in sorted((root / "conformance").glob("*.json")):
-    case = json.loads(path.read_text())
-    with fixture(str(path)) as (server, url):
-        result = subprocess.run([consumer, str(path), url], env=network_env, check=True, capture_output=True, text=True)
-        actual = normalize(json.loads(result.stdout))
-        if "expected_rows" in case:
-            assert actual["rows"] == normalize(case["expected_rows"]), (path.name, actual)
-        if isinstance(actual, dict):
-            actual.pop("rows", None)
-        assert actual == normalize(case["expected"]), (path.name, actual, case["expected"])
-        assert int(command(server, "count")) == case["requests"], path.name
-with fixture("--unavailable") as (server, url):
-    subprocess.run([consumer, "backend", url], env=network_env, check=True)
-    assert command(server, "count") == "0"
+# Finite array admission retains batching around an invalid structured record.
+case_path = manifest_path.parent / "tag-batching.json"
+case = json.loads(case_path.read_text())
+case["request"]["records"].insert(1, {"id": {"invalid": True}})
+with tempfile.TemporaryDirectory() as folder:
+    request_path = Path(folder) / "finite.json"
+    for backend in manifest["backends"]:
+        settings = {**manifest["client"], **case["client"], "backend": backend}
+        request_path.write_text(json.dumps({"client": settings, "request": case["request"]}))
+        with fixture(str(case_path)) as (server, url):
+            result = subprocess.run([consumer, str(request_path), url], env=network_env,
+                                    check=True, capture_output=True, text=True)
+            rows = [normalize(row, backend, settings["model"]) for row in json.loads(result.stdout)]
+            assert len(rows) == 4 and rows[1]["position"] == 2, rows
+            assert rows[1]["status"] == "failed" and rows[1]["error"]["code"] == "record.invalid", rows
+            good = rows[:1] + rows[2:]
+            for index, row in enumerate(good, 1):
+                row["position"] = index
+            assert good == case["expected"], good
+            assert int(command(server, "count")) == case["requests"]
+
 for stage in ("headers", "body", "refusal-body"):
     with fixture("--held", stage) as (server, url):
         child = subprocess.Popen([consumer, "cancel", url], stdin=subprocess.PIPE, env=network_env)
@@ -97,8 +108,30 @@ for stage in ("headers", "body", "refusal-body"):
             if child.poll() is None:
                 child.kill()
                 child.wait()
-result = subprocess.run([consumer, "surface"], env=env, check=True, capture_output=True, text=True)
-identifier, annotation = map(json.loads, result.stdout.splitlines())
-assert identifier == {"é": 1, "e\u0301": 2, "a\0b": 18446744073709551615}, identifier
-assert set(annotation) == {"é", "e\u0301"}, annotation
-print("Installed Swift consumer: all ten stub functions, shared conformance, task cancellation, source lifetime, traversal ownership and raw JSON pass")
+subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "swift", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "swift", consumer], env=network_env | {"THINKTHEN_LOOPBACK": loopback}, check=True)
+result = subprocess.run([consumer, "surface"], env=env, capture_output=True, text=True)
+assert result.returncode == 0, (result.stdout, result.stderr)
+assert result.stdout == "", result.stdout
+
+# The library has no path override. Replace the installed resource in each fresh
+# process, so refused fixtures abort if layout access precedes the handshake.
+fixture_path = os.environ["THINKTHEN_NATIVE_FIXTURES"]
+cases = json.loads((Path(fixture_path) / "manifest.json").read_text())["cases"]
+filename = "libthinkthen_ffi.dylib" if sys.platform == "darwin" else "thinkthen_ffi.dll" if sys.platform == "win32" else "libthinkthen_ffi.so"
+resources = list(Path(consumer).parent.rglob(filename))
+assert len(resources) == 1, resources
+library = resources[0]
+original = library.read_bytes()
+try:
+    for case in cases:
+        shutil.copyfile(case["library"], library)
+        result = subprocess.run([consumer, "abi"], env=env, capture_output=True, text=True, check=True)
+        if case["accept"]:
+            assert result.stdout.strip() == "accepted", (case["name"], result.stdout)
+        elif case.get("missing"):
+            assert case["missing"] in result.stdout, (case["name"], result.stdout)
+        else:
+            assert result.stdout.strip() == "version", (case["name"], result.stdout)
+finally:
+    library.write_bytes(original)
+print("Installed Swift consumer: typed manifest through both wires, exact IDs, cancellation, owned rows and ABI checks pass")

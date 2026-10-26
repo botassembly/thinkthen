@@ -41,105 +41,86 @@ mod output {
     use std::collections::BTreeMap;
     /// A name recognized in the original text.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct Name {
+    pub(crate) struct Name {
         /// The original text covered by the name.
-        pub text: String,
+        pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
-        pub start: usize,
+        pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
-        pub end: usize,
+        pub(crate) end: usize,
         /// The chosen kind, or ENTITY when kinds were omitted.
-        pub kind: String,
+        pub(crate) kind: String,
         /// The least member-piece membership multiplied by the chosen kind's probability.
         /// This support score is not the probability of exact name boundaries.
-        pub p: Probability,
+        pub(crate) p: Probability,
     }
 
     /// Backend probabilities for one original piece.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct PieceDetail {
+    pub(crate) struct PieceDetail {
         /// The original piece.
-        pub text: String,
+        pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
-        pub start: usize,
+        pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
-        pub end: usize,
+        pub(crate) end: usize,
         /// The five boundary tag probabilities.
-        pub tags: BTreeMap<String, Probability>,
+        pub(crate) tags: BTreeMap<String, Probability>,
     }
 
     /// Backend kind probabilities for one decoded name, including dropped names.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct KindDetail {
+    pub(crate) struct KindDetail {
         /// Inclusive Unicode scalar offset.
-        pub start: usize,
+        pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
-        pub end: usize,
+        pub(crate) end: usize,
         /// Each kind's probability, including none of these.
-        pub kinds: BTreeMap<String, Probability>,
+        pub(crate) kinds: BTreeMap<String, Probability>,
     }
 
     /// The underlying choice probabilities for name recognition.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct RecognizeDetail {
+    pub(crate) struct RecognizeDetail {
         /// Each piece's boundary probabilities in text order.
-        pub pieces: Vec<PieceDetail>,
+        pub(crate) pieces: Vec<PieceDetail>,
         /// Each decoded name's kind probabilities in text order.
-        pub names: Vec<KindDetail>,
+        pub(crate) names: Vec<KindDetail>,
     }
 }
-pub use output::{KindDetail, Name, PieceDetail, RecognizeDetail};
+pub(crate) use output::{KindDetail, Name, PieceDetail, RecognizeDetail};
 /// A name-recognition question with optional ordered kinds.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Recognize {
-    kinds: Vec<ChoiceOption>,
-    threshold: Threshold,
+pub(crate) struct Recognize {
+    pub(crate) kinds: Vec<ChoiceOption>,
+    pub(crate) threshold: Threshold,
 }
 
 impl Recognize {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::Names {
-            kinds: self.kinds.iter().map(Into::into).collect(),
-            threshold: self.threshold.canonical(),
-        }
-    }
-
     /// Recognize names of these kinds, or arbitrary names with an empty list.
     ///
     /// # Errors
     /// Returns usage.question for blank, duplicate or reserved kinds.
-    pub fn new(kinds: impl IntoIterator<Item = impl Into<String>>) -> Result<Self, Error> {
+    pub(crate) fn new(kinds: impl IntoIterator<Item = impl Into<String>>) -> Result<Self, Error> {
         let kinds = kinds
             .into_iter()
             .map(|kind| ChoiceOption::new(kind.into()))
             .collect::<Result<Vec<_>, _>>()?;
-        for (i, kind) in kinds.iter().enumerate() {
-            if kind.label() == "none of these"
-                || kinds
-                    .iter()
-                    .take(i)
-                    .any(|earlier| earlier.label() == kind.label())
-            {
-                return Err(Error::new(
-                    ErrorKind::Question,
-                    "recognize kinds must be distinct and cannot be none of these",
-                ));
-            }
+        if kinds.iter().any(|kind| kind.label() == "none of these")
+            || !crate::core::ask::distinct_labels(kinds.iter().map(ChoiceOption::label))
+        {
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement(
+                    "kinds",
+                    "distinct kinds excluding the reserved fallback label",
+                    "repeated or reserved kinds (contents redacted)",
+                ),
+            ));
         }
         Ok(Self {
             kinds,
             threshold: Threshold::default(),
-        })
-    }
-
-    /// Set the minimum combined membership support and kind score.
-    ///
-    /// # Errors
-    /// Returns usage.threshold when given a band.
-    pub fn threshold(self, threshold: Threshold) -> Result<Self, Error> {
-        Ok(Self {
-            threshold: threshold.require_cut()?,
-            ..self
         })
     }
 }
@@ -509,10 +490,6 @@ fn probability(value: f64) -> Probability {
 }
 
 impl super::Function for Recognize {
-    const NAME: &'static str = "recognize";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     fn try_asks_record(
         &self,
         record: &crate::core::AdmittedRecord,

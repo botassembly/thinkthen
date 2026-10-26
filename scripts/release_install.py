@@ -19,11 +19,9 @@ def r_archives(out):
                 member.pax_headers = {}
                 target.addfile(member, source.extractfile(member) if member.isfile() else None)
         temporary.replace(path)
-    path = out / 'prerequisites/r-frames/inventory.json'
-    inventory = json.loads(path.read_text())
-    for package in inventory['packages'].values():
-        package['sha256'] = hashlib.sha256((path.parent / package['file']).read_bytes()).hexdigest()
-    path.write_text(json.dumps(inventory, indent=2) + '\n')
+    from release_r_dependencies import directories, refresh
+    for folder in directories(out):
+        refresh(folder)
 
 
 def install_note(out):
@@ -34,13 +32,13 @@ def install_note(out):
     aliases = dict(zip(FIELDS, next(row for row in HOSTS.values() if row[0] == host)))
     rid, suffix = aliases['rid'], aliases['suffix']
     commands = {
-        'command': f'tar -xzf thinkthen-{version}-{host}.tar.gz && printf "evidence 5" | ./thinkthen decide --adapter stub "Ready?" --details',
+        'command': f'tar -xzf thinkthen-{version}-{host}.tar.gz && printf "evidence 5" | ./thinkthen decide --backend stub "Ready?" --json',
         'python': 'python3 -m venv .smoke-python && .smoke-python/bin/python -m pip install --no-index python/*.whl && .smoke-python/bin/python checks/python.py checks/stub.json',
         'typescript': 'npm install --offline --ignore-scripts --no-audit --no-fund ./typescript/*.tgz && cp checks/node.mjs .smoke-node.mjs && node .smoke-node.mjs checks/stub.json',
         'go': 'THINKTHEN_STUB_CASES="$PWD/checks/stub.json" ./checks/go-consumer -test.run=^TestSharedStub$ -test.v',
-        'c': 'tar -xzf c/*.tar.gz -C c && ./checks/c-consumer checks/stub.json',
-        'cpp': 'tar -xzf cpp/*.tar.gz -C cpp && ./checks/cpp-consumer stub checks/stub.json',
-        'java': 'java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:java/*:java/dependencies/*" ConsumerCases checks/stub.json --stub-only',
+        'c': 'tar -xzf c/*.tar.gz -C c && python3 checks/native_cases.py checks/c-consumer checks/stub.json checks/contract.json',
+        'cpp': 'tar -xzf c/*.tar.gz -C c && tar -xzf cpp/*.tar.gz -C cpp && python3 checks/native_cases.py checks/cpp-consumer checks/stub.json checks/contract.json utf8',
+        'java': 'java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:java/*:java/dependencies/*" ConsumerCases checks/stub.json --stub-only && java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:java/*:java/dependencies/*" JavaApiCases --stub-only',
         'kotlin': 'java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:kotlin/*:kotlin/dependencies/*" KotlinCasesKt checks/stub.json --stub-only',
         'csharp': 'python3 -c \'import glob,zipfile; zipfile.ZipFile(glob.glob("csharp/*.nupkg")[0]).extractall(".smoke-dotnet")\' && cp checks/csharp/* .smoke-dotnet/lib/net10.0/ && cp -R .smoke-dotnet/runtimes .smoke-dotnet/lib/net10.0/ && dotnet .smoke-dotnet/lib/net10.0/Consumer.dll checks/stub.json --stub-only',
         'ruby': 'mkdir -p .smoke-gems && export GEM_HOME="$PWD/.smoke-gems" GEM_PATH="$PWD/.smoke-gems" && gem install --local --no-document ruby/dependencies/*.gem ruby/*.gem && ruby checks/ruby.rb checks/stub.json',
@@ -56,8 +54,9 @@ def install_note(out):
 cp postgres/lib/* "$(pg_config --pkglibdir)/"
 cp postgres/share/extension/* "$(pg_config --sharedir)/extension/"
 psql -X -v ON_ERROR_STOP=1 <<'SQL'
-CREATE EXTENSION IF NOT EXISTS thinkthen;
-SELECT format('ALTER DATABASE %I SET thinkthen.allowed_backends = %L', current_database(), '{"stub":["stub"]}')
+CREATE SCHEMA IF NOT EXISTS thinkthen;
+CREATE EXTENSION IF NOT EXISTS thinkthen SCHEMA thinkthen;
+SELECT format('ALTER DATABASE %I SET thinkthen.allowed_backends = %L', current_database(), 'stub:*')
 \\gexec
 SQL
 python3 checks/sql.py postgres "$(command -v psql)" unused checks/stub.json"""
@@ -92,12 +91,8 @@ def release_note(version, platforms):
              'Ask typed questions about records from Python, TypeScript, R, Go, Java, Kotlin, C#, C, C++, Swift, Zig and Ruby. Use the `thinkthen` command or query DuckDB, SQLite and PostgreSQL. Work with pandas, Polars and R data frames. Read and write CSV, TSV and Excel files. Run saved questions and steps from toolboxes with `thinkthen run`.', '',
              '## Install', '',
              'Download the command, C, C++ and Zig archives from GitHub Releases. Verify SHA256SUMS before extracting an archive. The platform package archives also contain offline installation commands in INSTALL.md and package READMEs.', '',
-             'Package-site installation follows publication of 0.2.0 on each site. Use PyPI `thinkthen` for Python, npm `thinkthen` for TypeScript, RubyGems `thinkthen` for Ruby, NuGet `Botassembly.ThinkThen` for C#, and Maven Central `io.github.botassembly:thinkthen-java` or `io.github.botassembly:thinkthen-kotlin` for Java or Kotlin. Install the command through the Homebrew tap `botassembly/homebrew-thinkthen`. Install R `thinkthen` from `https://botassembly.r-universe.dev`. Use the Go module `github.com/botassembly/thinkthen/sdk/go` at `v' + version + '`. Select version `' + version + '` with Swift Package Manager. Rust users add the `thinkthen` library from crates.io with `cargo add thinkthen` and install its command with `cargo install thinkthen`.', '',
+             'Package-site installation follows publication of 0.2.0 on each site. Use PyPI `thinkthen` for Python, npm `thinkthen` for TypeScript, RubyGems `thinkthen` for Ruby, NuGet `Botassembly.ThinkThen` for C#, and Maven Central `io.github.botassembly:thinkthen-java` or `io.github.botassembly:thinkthen-kotlin` for Java or Kotlin. Install the command through the Homebrew tap `botassembly/homebrew-thinkthen`. Install R `thinkthen` from `https://botassembly.r-universe.dev`. Use the Go module `github.com/botassembly/thinkthen/sdk/go/thinkthen` at `v' + version + '`. Select version `' + version + '` with Swift Package Manager. Rust users add the `thinkthen` library from crates.io with `cargo add thinkthen` and install its command with `cargo install thinkthen`.', '',
              'Download the DuckDB and SQLite extensions from GitHub Releases. PostgreSQL ships for Linux in the platform package archives. PGXN installation and the DuckDB community listing are outside this release.', '',
-             '## For 0.1 users', '',
-             'Version 0.2.0 does not include the Ada, COBOL, Dart, Objective-C or PHP bindings.', '',
-             'The built-in backend names are now `systemone`, `openai` and `stub`. The 0.1.2 names `typesafe`, `liquid` and `ollama` are no longer built in. Select `systemone` for the default TypeSafe service and configure your client again for the selected backend.', '',
-             'Maven users replace `io.github.botassembly:thinkthen-jvm` with `io.github.botassembly:thinkthen-java` or `io.github.botassembly:thinkthen-kotlin`. The NuGet package remains `Botassembly.ThinkThen`, the name already used by 0.1.2. Rust users use the single `thinkthen` crate for both the library and command. Its default `command` feature replaces the old `cli` feature; the command installs with `cargo install thinkthen`.', '',
              '## Platforms and requirements', '',
              '| Platform | Minimum system libraries or operating system |',
              '| --- | --- |']
@@ -115,10 +110,7 @@ def release_note(version, platforms):
     for requirements in platforms.values():
         for name in ('sqlite', 'duckdb', 'postgres'):
             if name in requirements:
-                runtime = requirements[name]['runtime']
-                values = database_runtimes.setdefault(name, [])
-                if runtime not in values:
-                    values.append(runtime)
+                database_runtimes.setdefault(name, requirements[name]['runtime'])
     language_requirements = []
     for name, value in FLOORS['runtimes'].items():
         # Only Swift needs a separate runtime floor after its build requirement.
@@ -126,7 +118,7 @@ def release_note(version, platforms):
         language_requirements.append(('Kotlin: ' if name == 'kotlin' else '') + requirement)
     lines += ['', 'Language requirements: ' + '; '.join(language_requirements) + '.', '',
               f'R requires the {FLOORS["r"]["Linux"]} series on Linux and the {FLOORS["r"]["Darwin"]} series on macOS; Windows requires ' + platforms.get('windows-x86_64', {}).get('r', {}).get('runtime', 'the R version in its archive requirements.json').split(';')[0] + '. C needs a C compiler to build, and C++ needs C++17. See each archive’s requirements.json for its package requirements and supplied runtime dependencies.', '',
-              'Database requirements: ' + '; '.join(', '.join(values) for values in database_runtimes.values()) + '.', '',
+              'Database requirements: ' + '; '.join(database_runtimes.values()) + '.', '',
               'ThinkThen uses 0.x APIs. APIs may change between releases.', '']
     return '\n'.join(lines)
 

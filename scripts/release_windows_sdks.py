@@ -146,7 +146,7 @@ def full(folder, build, *, caller_owned=False):
         go = scratch / 'go'
         unpack(packages['go'], go / 'package')
         shutil.copytree(checks / 'go', go / 'consumer')
-        build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go=' + str(go / 'package'), cwd=go / 'consumer')
+        build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(go / 'package'), cwd=go / 'consumer')
         go_binary = go / 'consumer.exe'
         build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
         execute(go_binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v',
@@ -161,6 +161,8 @@ def full(folder, build, *, caller_owned=False):
             execute('java', '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
                     main, fixture, '--stub-only')
             if name == 'java':
+                execute('java', '--enable-native-access=ALL-UNNAMED', '-cp', classpath,
+                        'JavaApiCases', '--stub-only')
                 check_cache([shutil.which('java', path=env['PATH']), '--enable-native-access=ALL-UNNAMED',
                              '-cp', classpath, main, fixture, '--stub-only'],
                             scratch / 'java-cache-proof', runtime, 'thinkthen_ffi.dll')
@@ -210,43 +212,46 @@ def full(folder, build, *, caller_owned=False):
 def r_cases(execute, folder, scratch, package, cases):
     library = scratch / 'r-library'
     library.mkdir()
-    dependencies = sorted((folder / 'prerequisites/r').glob('jsonlite_*.zip'))
-    if len(dependencies) != 1: raise RuntimeError('Missing matching Windows jsonlite binary')
-    expression = 'a <- commandArgs(TRUE); .libPaths(c(a[[1]], .Library)); install.packages(a[-1], lib=a[[1]], repos=NULL, type="win.binary")'
-    r_env = {'R_LIBS_USER': str(library)}
-    execute('Rscript', '--vanilla', '-e', expression, library, *dependencies, package, extra=r_env)
-    for case in cases:
-        path = scratch / 'r-case.json'
-        path.write_text(json.dumps(case), encoding='utf-8')
-        actual = json.loads(execute('Rscript', '--vanilla', folder / 'checks/run.R', path, extra=r_env))
-        if case['request']['function'] == 'filter':
-            expected = [record for record, row in zip(case['request']['records'], case['expected']) if row.get('answer') is True]
-            assert actual == {'selected': expected}, ('R filter', actual, expected)
-        else:
-            assert actual == {'rows': case['expected']}, (case['request']['function'], actual)
+    directory = folder / 'prerequisites/r'
+    inventory = json.loads((directory / 'inventory.json').read_text())
+    dependencies = [directory / name for name in inventory['install_order']]
+    for dependency in dependencies:
+        import hashlib
+        record = next(record for record in inventory['packages'].values() if record['file'] == dependency.name)
+        if hashlib.sha256(dependency.read_bytes()).hexdigest() != record['sha256']:
+            raise RuntimeError('Windows R dependency checksum differs: ' + dependency.name)
+    expression = 'a <- commandArgs(TRUE); stopifnot(as.character(getRversion()) == a[[2]]); .libPaths(c(a[[1]], .Library)); install.packages(a[-c(1,2)], lib=a[[1]], repos=NULL, type="win.binary")'
+    r_env = {'R_LIBS_USER': str(library), 'R_LIBS_SITE': ''}
+    execute('Rscript', '--vanilla', '-e', expression, library, inventory['r'], *dependencies, package, extra=r_env)
+    execute('Rscript', '--vanilla', folder / 'checks/r-cases.R',
+            folder / 'checks/stub.json', extra=r_env)
 
 
 def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch, env):
     c = unpack(packages['c'], scratch / 'c')
-    jansson = Path(os.environ['JANSSON_ROOT']).resolve()
     c_output = scratch / 'c-consumer.exe'
     build_consumer('clang-cl', '/nologo', '/TC', '/std:c11', '/MD', '/W4', '/WX', '/UNDEBUG',
-            '/I' + str(c / 'include'), '/I' + str(jansson / 'include'),
+            '/I' + str(c / 'include'),
             '/I' + str(checks / 'c'), checks / 'c/conformance.c',
-            '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_c.lib', jansson / 'lib/jansson.lib')
-    c_env = {'PATH': os.pathsep.join((str(c / 'bin'), str(jansson / 'bin'), env['PATH']))}
+            '/Fe:' + str(c_output), '/link', c / 'lib/thinkthen_ffi.lib')
+    c_env = {'PATH': os.pathsep.join((str(c / 'bin'), env['PATH']))}
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('native_cases', checks / 'native_cases.py')
+    native_cases = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(native_cases)
+    registry = json.loads((checks / 'contract.json').read_text())
     for case in cases:
-        path = scratch / 'c-case.json'
-        path.write_text(json.dumps(case), encoding='utf-8')
-        rows = json.loads(execute(c_output, path, 'http://127.0.0.1:1', extra=c_env))
-        assert rows == case['expected'], ('C', case['request']['function'], rows)
+        rows = execute(c_output, json.dumps(case['request']), json.dumps(case['client']), extra=c_env)
+        native_cases.compare(rows, case, registry)
     print('candidate Windows C: installed shared stub cases pass', flush=True)
     cpp = unpack(packages['cpp'], scratch / 'cpp')
     binary = scratch / 'cpp-consumer.exe'
     build_consumer('clang-cl', '/nologo', '/std:c++17', '/EHsc', '/MD', '/W4', '/WX', '/UNDEBUG',
-            '/I' + str(cpp / 'include'), checks / 'cpp/consumer.cpp', '/Fe:' + str(binary), '/link',
-            cpp / 'native/win-x64/thinkthen_ffi.lib')
-    execute(binary, 'stub', fixture, extra={'PATH': str(cpp / 'native/win-x64') + os.pathsep + env['PATH']})
+            '/I' + str(cpp / 'include'), '/I' + str(c / 'include'), checks / 'cpp/consumer.cpp', '/Fe:' + str(binary), '/link',
+            c / 'lib/thinkthen_ffi.lib')
+    for case in cases:
+        output = execute(binary, json.dumps(case['request']), json.dumps(case['client']), extra={'PATH': str(c / 'bin') + os.pathsep + env['PATH']})
+        native_cases.compare(output, case, registry, 'utf8')
     print('candidate Windows C++: installed shared stub cases pass', flush=True)
 
 

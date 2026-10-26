@@ -4,43 +4,15 @@ use crate::core::{
     Answer, Ask, AskAnswer, ChoiceOption, Detail, Error, ErrorKind, Function, Name, Outcome,
     Recognize, Threshold, Verdict,
 };
-use serde::Deserialize;
 
 /// An ordered, typed relation rule.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct RelationRule {
-    name: String,
-    source: String,
-    target: String,
-    reads: String,
-    either: bool,
-}
-
-/// Strict toolbox representation of a relation rule.
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct RawRule {
-    name: String,
-    source: String,
-    target: String,
-    #[serde(default, deserialize_with = "read_words")]
-    reads: Option<String>,
-    #[serde(default)]
-    either: bool,
-}
-fn read_words<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Option<String>, D::Error> {
-    String::deserialize(deserializer).map(Some)
-}
-impl RawRule {
-    pub(crate) fn validate(self) -> Result<RelationRule, Error> {
-        let rule = RelationRule::new(self.name, self.source, self.target)?.either(self.either);
-        match self.reads {
-            Some(reads) => rule.reads(reads),
-            None => Ok(rule),
-        }
-    }
+pub(crate) struct RelationRule {
+    pub(crate) name: String,
+    pub(crate) source: String,
+    pub(crate) target: String,
+    pub(crate) reads: String,
+    pub(crate) either: bool,
 }
 
 fn label(text: String) -> Result<String, Error> {
@@ -48,7 +20,11 @@ fn label(text: String) -> Result<String, Error> {
     if text.contains(['*', '=', ':']) || text.chars().any(char::is_control) {
         return Err(Error::new(
             ErrorKind::Question,
-            "relation names and kinds must be concrete text without separators or controls",
+            crate::core::diagnostic::requirement(
+                "rules",
+                "concrete names and kinds without separators or controls",
+                "invalid relation text (contents redacted)",
+            ),
         ));
     }
     Ok(text)
@@ -58,7 +34,7 @@ impl RelationRule {
     ///
     /// # Errors
     /// Returns usage.question for blank or malformed names and kinds.
-    pub fn new(
+    pub(crate) fn new(
         name: impl Into<String>,
         source: impl Into<String>,
         target: impl Into<String>,
@@ -72,28 +48,9 @@ impl RelationRule {
             either: false,
         })
     }
-    /// Parse NAME=SOURCE:TARGET, with both concrete kinds required.
-    ///
-    /// # Errors
-    /// Returns usage.question for malformed rules.
-    pub fn parse(text: &str) -> Result<Self, Error> {
-        let (name, sides) = text.split_once('=').ok_or_else(|| {
-            Error::new(
-                ErrorKind::Question,
-                "a relation rule needs NAME=SOURCE:TARGET",
-            )
-        })?;
-        let (source, target) = sides.split_once(':').ok_or_else(|| {
-            Error::new(
-                ErrorKind::Question,
-                "a relation rule needs NAME=SOURCE:TARGET",
-            )
-        })?;
-        Self::new(name, source, target)
-    }
     /// Treat this rule as an unordered relation.
     #[must_use]
-    pub fn either(mut self, either: bool) -> Self {
+    pub(crate) fn either(mut self, either: bool) -> Self {
         self.either = either;
         self
     }
@@ -101,10 +58,13 @@ impl RelationRule {
     ///
     /// # Errors
     /// Returns usage.question for blank wording.
-    pub fn reads(mut self, reads: impl Into<String>) -> Result<Self, Error> {
+    pub(crate) fn reads(mut self, reads: impl Into<String>) -> Result<Self, Error> {
         let reads = reads.into();
         if reads.trim().is_empty() {
-            return Err(Error::new(ErrorKind::Question, "relation wording is blank"));
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement("reads", "nonblank text", "blank text"),
+            ));
         }
         self.reads = reads;
         Ok(self)
@@ -119,17 +79,26 @@ impl RelationRule {
 mod output {
     use crate::core::{Name, Probability};
     use serde::Serialize;
+    /// The complete recognized names and evaluated relation pairs.
+    #[derive(Debug, Clone, PartialEq, serde::Serialize, schemars::JsonSchema)]
+    pub(crate) struct RelateDetail {
+        /// Every admitted name, including names with no accepted relation.
+        pub(crate) names: Vec<Name>,
+        /// Every evaluated relation pair.
+        pub(crate) pairs: Vec<Relation>,
+    }
+
     /// A relation endpoint in the original text.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct RelationName {
+    pub(crate) struct RelationName {
         /// Original name text.
-        pub text: String,
+        pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
-        pub start: usize,
+        pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
-        pub end: usize,
+        pub(crate) end: usize,
         /// Recognized kind.
-        pub kind: String,
+        pub(crate) kind: String,
     }
     impl From<&Name> for RelationName {
         fn from(name: &Name) -> Self {
@@ -143,63 +112,45 @@ mod output {
     }
     /// One allowed pair and its probability of being stated in the text.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
-    pub struct Relation {
+    pub(crate) struct Relation {
         /// The first endpoint, or directed source.
-        pub source: RelationName,
+        pub(crate) source: RelationName,
         /// The second endpoint, or directed target.
-        pub target: RelationName,
+        pub(crate) target: RelationName,
         /// The rule name.
-        pub relation: String,
+        pub(crate) relation: String,
         /// Probability of yes for this pair.
-        pub p: Probability,
+        pub(crate) p: Probability,
         /// Present only for unordered rules.
         #[serde(skip_serializing_if = "std::ops::Not::not")]
-        pub either: bool,
+        pub(crate) either: bool,
     }
 }
-pub use output::{Relation, RelationName};
+pub(crate) use output::{RelateDetail, Relation, RelationName};
 /// Relations stated in a text, using shared recognition rounds.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Relate {
-    rules: Vec<RelationRule>,
+pub(crate) struct Relate {
+    pub(crate) rules: Vec<RelationRule>,
     #[serde(skip)]
     recognize: Recognize,
-    threshold: Threshold,
+    pub(crate) threshold: Threshold,
 }
 impl Relate {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::Relations {
-            rules: self
-                .rules
-                .iter()
-                .map(|rule| super::identity::RuleDefinition {
-                    either: rule.either,
-                    name: &rule.name,
-                    reads: &rule.reads,
-                    source: &rule.source,
-                    target: &rule.target,
-                })
-                .collect(),
-            threshold: self.threshold.canonical(),
-        }
-    }
-
     /// Construct a question from nonempty, distinctly named rules.
     ///
     /// # Errors
     /// Returns usage.question for empty or duplicate rules or invalid kinds.
-    pub fn new(rules: Vec<RelationRule>) -> Result<Self, Error> {
-        if rules.is_empty()
-            || rules.iter().enumerate().any(|(i, rule)| {
-                rules
-                    .iter()
-                    .take(i)
-                    .any(|earlier| earlier.name == rule.name)
-            })
+    pub(crate) fn new(rules: Vec<RelationRule>) -> Result<Self, Error> {
+        if rules.len() < crate::core::questions::MIN_RULES
+            || !crate::core::ask::distinct_labels(rules.iter().map(|rule| rule.name.as_str()))
         {
             return Err(Error::new(
                 ErrorKind::Question,
-                "relate needs nonempty, distinctly named rules",
+                crate::core::diagnostic::requirement(
+                    "rules",
+                    "a nonempty list with distinct names",
+                    "an empty list or repeated names (contents redacted)",
+                ),
             ));
         }
         let mut kinds = Vec::new();
@@ -216,15 +167,6 @@ impl Relate {
             threshold: Threshold::default(),
         })
     }
-    /// Set the relation probability cut.
-    ///
-    /// # Errors
-    /// Returns usage.threshold for a band.
-    pub fn threshold(mut self, threshold: Threshold) -> Result<Self, Error> {
-        self.threshold = threshold.require_cut()?;
-        Ok(self)
-    }
-
     fn recognized(
         &self,
         text: &str,
@@ -294,15 +236,14 @@ impl Relate {
         Ok(Outcome::Answered {
             answer: Answer::Relations(kept),
             p: None,
-            detail: Some(Detail::Relate(detail)),
+            detail: Some(Detail::Relate(RelateDetail {
+                names,
+                pairs: detail,
+            })),
         })
     }
 }
 impl Function for Relate {
-    const NAME: &'static str = "relate";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     fn try_asks_record(
         &self,
         record: &crate::core::AdmittedRecord,

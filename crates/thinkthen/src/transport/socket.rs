@@ -9,10 +9,10 @@ use ureq::unversioned::transport::{
     Buffers, ConnectionDetails, Connector, Either, LazyBuffers, NextTimeout, Transport,
 };
 
-use crate::Cancel;
+use super::scope;
 
 #[derive(Debug)]
-pub(super) struct SocketConnector(pub(super) Cancel);
+pub(super) struct SocketConnector;
 
 impl<In: Transport> Connector<In> for SocketConnector {
     type Out = Either<In, Socket>;
@@ -29,7 +29,7 @@ impl<In: Transport> Connector<In> for SocketConnector {
         let budget = details.timeout.not_zero().map(|duration| *duration);
         let mut failure = io::Error::from(io::ErrorKind::ConnectionRefused);
         for (index, address) in details.addrs.iter().enumerate() {
-            if self.0.is_cancelled() {
+            if scope::cancelled() {
                 return Err(io::Error::from(io::ErrorKind::Interrupted).into());
             }
             let connected = if let Some(budget) = budget {
@@ -51,7 +51,6 @@ impl<In: Transport> Connector<In> for SocketConnector {
                 Ok(stream) => {
                     stream.set_nodelay(details.config.no_delay())?;
                     let stream = Arc::new(stream);
-                    self.0.register(&stream)?;
                     return Ok(Some(Either::B(Socket {
                         stream,
                         buffers: LazyBuffers::new(
@@ -90,6 +89,7 @@ impl Transport for Socket {
         reason = "ureq passes only the output length it filled in this buffer"
     )]
     fn transmit_output(&mut self, amount: usize, timeout: NextTimeout) -> Result<(), ureq::Error> {
+        let _cancel = scope::register(&self.stream)?;
         self.stream
             .set_write_timeout(timeout.not_zero().map(|duration| *duration))?;
         let output = &self.buffers.output()[..amount];
@@ -97,6 +97,7 @@ impl Transport for Socket {
     }
 
     fn await_input(&mut self, timeout: NextTimeout) -> Result<bool, ureq::Error> {
+        let _cancel = scope::register(&self.stream)?;
         self.stream
             .set_read_timeout(timeout.not_zero().map(|duration| *duration))?;
         let count = timed(

@@ -2,13 +2,18 @@
 # Build the Linux PostgreSQL package against its prepared server and engine.
 set -eu
 cd "$(dirname "$0")/.."
+scripts/header-contract-check
 . scripts/native-build-env
 [ "$#" = 1 ] || { echo 'usage: scripts/postgres-package OUTPUT_DIRECTORY' >&2; exit 2; }
 job=${PM_JOB:-local}
 root=$PWD
 mkdir -p "$1"
 output=$(cd "$1" && pwd)
-if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+if [ -n "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
+    archive=$THINKTHEN_SQL_TEST_ARCHIVE
+elif [ -n "${THINKTHEN_SQL_ARCHIVE:-}" ]; then
+    archive=$THINKTHEN_SQL_ARCHIVE
+elif [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cargo build --offline --locked -p thinkthen-ffi
     target=${CARGO_TARGET_DIR:-target}
     case "$target" in /*) ;; *) target="$root/$target" ;; esac
@@ -18,16 +23,14 @@ else
     archive="$cache/$(python3 scripts/native_platform.py rid)/libthinkthen_ffi.a"
 fi
 [ -f "$archive" ] || { echo 'Prepare the shared Linux native archive first' >&2; exit 1; }
-jansson="$THINKTHEN_JANSSON_ROOT"
-[ -f "$jansson/lib/libjansson.a" ] || { echo 'Prepare the shared PIC Jansson library first' >&2; exit 1; }
-docker run --rm --network none --label pm.repo=thinkthen --label "pm.ticket=${job%% *}" \
-    -v "$root:/src:ro" -v "$output:/work" -v "$archive:/native/libthinkthen_ffi.a:ro" -v "$jansson:/jansson:ro" \
+docker run --pull=never --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
+    -v "$root:/src:ro" -v "$output:/work" -v "$archive:/native/libthinkthen_ffi.a:ro" \
     "$(python3 scripts/release_images.py floor)" sh -c '
         sharedir=$(pg_config --sharedir)
         pkglibdir=$(pg_config --pkglibdir)
         mkdir -p "$sharedir/extension"
         chmod -R a+rwX "$pkglibdir" "$sharedir/extension"
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/home \
-            PATH="$PATH" LANG=C.UTF-8 THINKTHEN_PG_CFLAGS="$3" LLVM_PROFILE_FILE="$4" \
+            PATH="$PATH" LANG=C.UTF-8 THINKTHEN_PG_CFLAGS="$3" LLVM_PROFILE_FILE="$4" THINKTHEN_SQL_TEST_BUILD="$5" \
             sh /src/extensions/postgres/package.sh
-    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_PG_CFLAGS:-}" "${LLVM_PROFILE_FILE:-}"
+    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_PG_CFLAGS:-}" "${LLVM_PROFILE_FILE:-}" "${THINKTHEN_SQL_TEST_ARCHIVE:+ON}"

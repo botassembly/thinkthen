@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Build, install and validate a Linux R binary. Usage: CHECK RUST_ARTIFACTS OUTPUT.
+
+Run through pm job with prepared native tools and the pinned floor image.
+OUTPUT must not exist; keep it after a failure for diagnosis.
+"""
+import os
+from pathlib import Path
+import platform
+import runpy
+import subprocess
+import sys
+
+from package_inventory import check
+from release_images import image
+from release_notice_packages import apply, runtime_files
+from release_readme import tar_bytes
+from release_r_dependencies import bundle
+
+ROOT = Path(__file__).resolve().parent.parent
+assert platform.system() == 'Linux', 'Linux R binary regression requires Linux'
+rust, output = (Path(value).resolve() for value in sys.argv[1:])
+output.mkdir(parents=True)
+producer = runpy.run_path(str(ROOT / 'scripts/release-candidate'))
+producer['r_binary'](output, rust)
+package, = (output / 'r').glob('thinkthen_*.tar.gz')
+# Exercise the same documentation and notice mutations as candidate finishing.
+package.write_bytes(tar_bytes(package.read_bytes(), {'thinkthen/README.md': (ROOT / 'sdk/r/README.md').read_bytes()}))
+apply(package, runtime_files('jsonlite-2.0.0'), 'thinkthen/')
+prepared = Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'r-frames/packages'
+bundle(ROOT / 'sdk/r/DESCRIPTION', [output / 'r/jsonlite-binary.tar.gz', *prepared.glob('*.tar.gz')],
+       output / 'r/dependencies', (output / 'r/r-version').read_text().strip(),
+       (output / 'r/standard-packages.txt').read_text().splitlines())
+commands = '''set -eu
+export PATH=/opt/R/bin:/usr/bin:/bin HOME=/package/home R_LIBS_USER=/package/installed R_LIBS_SITE=
+mkdir -p "$HOME" "$R_LIBS_USER"
+while IFS= read -r binary; do
+  R CMD INSTALL --library="$R_LIBS_USER" "/package/dependencies/$binary"
+done < /package/dependencies/install-order.txt
+R CMD INSTALL --library="$R_LIBS_USER" /package/thinkthen_*.tar.gz
+Rscript --vanilla /src/sdk/r/tests/release-cases.R /src/construction/stub.json
+'''
+subprocess.run(['docker', 'run', '--rm', '--network', 'none',
+                '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0],
+                '--user', f'{os.getuid()}:{os.getgid()}',
+                '-v', f'{ROOT}:/src:ro', '-v', f'{output / "r"}:/package',
+                image('floor'), 'sh', '-c', commands], check=True)
+check('r', package, [])
+print('Linux R binary build, offline install, shared stub cases and strict checksum inventory pass')

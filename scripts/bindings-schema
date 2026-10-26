@@ -1,180 +1,68 @@
 #!/usr/bin/env python3
-"""Compare binding declarations and serialized field names with the engine schemas."""
+"""Check the common binding contract before surface consumers run its fixtures."""
 
-import ast
 import json
-import pathlib
-import re
-import sys
+from pathlib import Path
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-errors = []
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def read(path):
-    return (ROOT / path).read_text()
+    return json.loads((ROOT / path).read_text())
 
 
-def matches(pattern, source):
-    values = re.findall(pattern, source, re.S)
-    if not values:
-        raise ValueError(f"binding declaration not found: {pattern}")
-    return values
+def require(condition, message):
+    if not condition:
+        raise SystemExit(message)
 
 
-def equal(label, actual, expected):
-    actual, expected = set(actual), set(expected)
-    if actual != expected:
-        errors.append(f"{label}: missing {sorted(expected - actual)}, extra {sorted(actual - expected)}")
+def names(entries):
+    return {entry["name"] for entry in entries}
 
 
-def snake(name):
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+registry = read("schemas/contract.json")
+abi = read("schemas/abi.json")
+request = read("schemas/request.schema.json")
+rows = read("schemas/row.schema.json")
+settings = read("schemas/client.schema.json")
+manifest = read("conformance/typed/manifest.json")
+functions = names(registry["functions"])
+codes = names(registry["codes"])
 
-
-def check():
-    client = json.loads(read("schemas/client.schema.json"))["properties"]
-    request = json.loads(read("schemas/request.schema.json"))
-    options = {
-        item["properties"]["function"]["const"]:
-        set(request["$defs"][item["properties"]["options"]["$ref"].split("/")[-1]]["properties"])
-        for item in request["oneOf"]
-    }
-    all_options = set().union(*options.values())
-
-    go = read("sdk/go/types.go")
-    settings = matches(r"type Settings struct \{(.*?)\n\}", go)[0]
-    equal("Go settings", matches(r'json:"([^",]+)', settings), client)
-    # Go's options map crosses the JSON boundary intact, with no field whitelist.
-    call = read("sdk/go/call.go")
-    if 'type Options map[string]any' not in go or not re.search(r'Options\s+Options\s+`json:"options,omitempty"`', call):
-        errors.append("Go options no longer pass through; compare their declarations with the request schema")
-
-    java = read("sdk/java/library/src/main/java/io/thinkthen/Client.java")
-    builder = matches(r"public static final class Builder \{(.*?)public Client build", java)[0]
-    settings = matches(r'settings.put\("([^"]+)", value\)', builder)
-    equal("Java settings", settings, client)
-    kotlin = read("sdk/kotlin/src/main/kotlin/io/thinkthen/kotlin/ThinkThen.kt")
-    delegated = matches(r'private val client = Client.builder\(\).apply \{(.*?)\}.build', kotlin)[0]
-    equal("Kotlin settings", map(snake, matches(r'\?\.let\(::(\w+)\)', delegated)), client)
-    common = read("sdk/java/library/src/main/java/io/thinkthen/CallOptions.java")
-    names = set(matches(r'return with\("([^"]+)"', common))
-    for function in ("choose", "tag", "score"):
-        fields = matches(r'(?:single|rows)\("' + function + r'"[^\n]*?Map.of\("([^"]+)"', java)
-        equal(f"Java {function} values", fields, options[function] - options["decide"])
-        names.update(fields)
-    equal("Java option names", names, all_options)
-
-    cs = read("sdk/csharp/src/Values.cs")
-    declaration = matches(r'record ClientSettings\s*\{(.*?)\n\}', cs)[0]
-    if "[" in declaration:
-        errors.append("C# settings attributes require checking their serialized names against the schema")
-    equal("C# settings", map(snake, matches(r'public \S+ (\w+) \{ get; init; \}', declaration)), client)
-    if "PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower" not in cs:
-        errors.append("C# settings serialization no longer uses the checked snake_case names")
-    cs = read("sdk/csharp/src/ThinkThenClient.cs")
-    names = set(matches(r'callOptions\["([^"]+)"\]', cs))
-    conditional = matches(r'callOptions\[function == "choose" \? "([^"]+)" : function == "tag" \? "([^"]+)" : "([^"]+)"\]', cs)[0]
-    for function, field in zip(("choose", "tag", "score"), conditional):
-        equal(f"C# {function} values", [field], options[function] - options["decide"])
-    equal("C# option names", names | set(conditional), all_options)
-
-    r = read("sdk/r/R/thinkthen.R")
-    settings = matches(r'settings <- \.tt_options\((.*?)\)\n', r)[0]
-    equal("R settings", matches(r'(\w+)\s*=', settings), client)
-    for function, expected in options.items():
-        body = matches(r'tt_' + function + r' <- function\(.*?\n\}', r)[0]
-        fields = matches(r'\.tt_options\((.*?)\), client', body)[0]
-        equal(f"R {function} options", matches(r'(\w+)\s*=', fields), expected)
-
-    tree = ast.parse(read("sdk/python/thinkthen/_client.py"))
-    cls = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "Client")
-    init = next(node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == "__init__")
-    settings = next(node for node in ast.walk(init) if isinstance(node, ast.Dict))
-    equal("Python settings", [key.value for key in settings.keys], client)
-    for method in cls.body:
-        if not isinstance(method, ast.FunctionDef) or method.name.removesuffix("_stream") not in options:
-            continue
-        function = method.name.removesuffix("_stream")
-        # These are the actual keyword arguments forwarded to _single/_rows/_start.
-        forwarded = next(node for node in ast.walk(method) if isinstance(node, ast.Call)
-                         and isinstance(node.func, ast.Attribute)
-                         and node.func.attr in {"_single", "_rows", "_start"})
-        fields = {kw.arg for kw in forwarded.keywords} - {"cancel", "loaded", "toolbox", "single", "keep_originals"}
-        equal(f"Python {method.name} options", fields, options[function])
-
-    ts = read("sdk/typescript/index.d.ts")
-    interfaces = {name: (base, set(re.findall(r'readonly (\w+)\??:', body)))
-                  for name, base, body in matches(r'export interface (\w+)(?: extends (\w+))? \{(.*?)\}', ts)}
-
-    def fields(name):
-        base, own = interfaces[name]
-        return own | (fields(base) if base else set())
-
-    equal("TypeScript settings", {"key_source" if name == "keySource" else name
-                                  for name in fields("ClientOptions")}, client)
-    runtime = read("sdk/typescript/runtime.js")
-    if 'encode({ ...clientOptions, key_source: keySource })' not in runtime:
-        errors.append("TypeScript settings serialization no longer matches the checked declarations")
-    declarations = matches(r'export declare function (\w+)(?:<[^>]+>)?\([^;]*?options\?: (\w+)\)', ts)
-    functions = set()
-    for method, interface in declarations:
-        function = method.removesuffix("Stream")
-        functions.add(function)
-        equal(f"TypeScript {method} options", fields(interface) - {"signal"}, options[function])
-    equal("TypeScript functions", functions, options)
-    if 'const { signal, ...questionOptions } = options;' not in runtime or 'options: questionOptions' not in runtime:
-        errors.append("TypeScript options no longer pass through; compare their serialization with the request schema")
-
-    swift = ROOT / "sdk/swift/Sources/ThinkThen/Values.swift"
-    if swift.exists():
-        values = swift.read_text()
-
-        def swift_fields(name):
-            body = matches(r'public struct ' + name + r'[^\{]*\{(.*?)\n\}', values)[0]
-            declared = set()
-            for line in matches(r'public let ([^\n]+)', body):
-                declared.update(matches(r'(\w+)\s*:', line))
-            if "func encode(" in body:
-                raise ValueError(f"Swift {name} custom encoding needs schema comparison")
-            if "CodingKeys" not in body:
-                return declared
-            coding = matches(r'enum CodingKeys: String, CodingKey \{(.*?)\n  \}', body)[0]
-            serialized = {}
-            for line in matches(r'case ([^\n]+)', coding):
-                for item in line.split(","):
-                    parts = item.strip().split("=")
-                    serialized[parts[0].strip()] = parts[1].strip().strip('"') if len(parts) == 2 else parts[0].strip()
-            equal(f"Swift {name} coding keys", serialized, declared)
-            return set(serialized.values())
-
-        equal("Swift settings", swift_fields("ClientSettings"), client)
-        functions = read("sdk/swift/Sources/ThinkThen/Functions.swift")
-        found = set()
-        for function, signature, body in matches(r'public func (\w+)(.*?)\{(.*?)\n  \}', functions):
-            found.add(function)
-            equal(f"Swift {function} dispatch", matches(r'function: "([^"]+)"', body), [function])
-            options_type = matches(r'(?:callOptions|options): (\w+)', signature)[0]
-            fields = swift_fields(options_type)
-            if "labelledOptions(" in body:
-                fields.update(matches(r'labelledOptions\(\w+, named: "([^"]+)"', body))
-            equal(f"Swift {function} options", fields, options[function])
-            if not re.search(r'JSONEncoder\(\).encode\(options\)|labelledOptions\(.*settings: callOptions\)', body):
-                errors.append(f"Swift {function} no longer serializes the checked options")
-        equal("Swift functions", found, options)
-
-    # C admits JSON objects directly. It has no setting or option field list to drift.
-    c = read("sdk/c/src/thinkthen_c.c")
-    for expression in ('json_dumps(settings, JSON_COMPACT | JSON_ENCODE_ANY)', '"options", options)'):
-        if expression not in c:
-            errors.append("C no longer passes settings/options JSON through; compare its mapping with the schemas")
-
-
-try:
-    check()
-except (ValueError, KeyError, StopIteration) as error:
-    errors.append(f"cannot read binding contract: {error}")
-if errors:
-    print("\n".join(errors), file=sys.stderr)
-    sys.exit(1)
-print("Binding settings and option names match the engine schemas.")
+require(abi["abi_version"] == registry["abi_version"], "native and wire registry versions differ")
+require(abi["error"]["code"] in codes, "native admission error is absent from the code registry")
+require(set(request["properties"]) == {"question", "name", "records"}, "request envelope changed")
+require(request["additionalProperties"] is False, "request envelope accepts unknown fields")
+questions = request["$defs"]["RawQuestion"]["oneOf"]
+require({item["properties"]["function"]["const"] for item in questions} == functions,
+        "question schema does not cover the function registry")
+for question in questions:
+    fields = question["properties"]
+    require(question["additionalProperties"] is False, "question accepts unknown fields")
+    require(not ({"options", "on", "ref", "mode"} & set(fields)), "question retains removed fields")
+    require("evidence" in fields, "question lacks shared evidence admission")
+children = request["$defs"]["RawAnnotatableQuestion"]["oneOf"]
+require({item["properties"]["function"]["const"] for item in children} == functions - {"rank", "annotate"},
+        "annotation child set differs from the admitted function set")
+require(not ({"adapter", "mode", "key_source"} & set(settings["properties"])),
+        "settings retain removed fields")
+require(settings["properties"]["backend"]["default"] == "systemone", "backend default differs")
+require(len(rows["oneOf"]) == len(functions), "row schema does not cover every function")
+require(set(manifest["backends"]) == names(registry["backends"]) - {"stub"},
+        "semantic corpus does not cover both remote wire formats")
+covered = set()
+for filename in manifest["cases"]:
+    case = read("conformance/typed/" + filename)
+    covered.add(case["request"]["question"]["function"])
+    require("expected" in case and "requests" in case, "semantic case lacks rows or call count")
+require(covered == functions, "semantic corpus does not cover every function")
+for filename in ("construction/stub.json", "construction/options.json"):
+    cases = read(filename)
+    for case in cases:
+        require("question" in case["request"] and "options" not in case["request"],
+                "construction case retains the removed request envelope")
+        require(case.get("expected_error", abi["error"]["code"]) in codes,
+                "construction case uses an unregistered error code")
+for entry in abi["exports"] + abi["sql_exports"]:
+    require(entry["name"] in entry["declaration"], "native symbol declaration differs from its name")
+print("Canonical binding registry, schemas, and shared consumer fixtures agree.")

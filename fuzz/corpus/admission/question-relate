@@ -1,0 +1,1 @@
+{"function": "relate", "rules": [{"source": "person", "target": "person", "relation": "knows"}]}

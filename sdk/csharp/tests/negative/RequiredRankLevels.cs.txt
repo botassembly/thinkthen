@@ -1,0 +1,11 @@
+using ThinkThen;
+
+public static class InvalidInput
+{
+    public static async Task Call(ThinkThenClient client, ChooseQuestion question)
+    {
+        await Task.CompletedTask;
+        await foreach (var row in client.RankAsync("Urgent?", Empty())) { }
+    }
+    private static async IAsyncEnumerable<string> Empty() { await Task.Yield(); yield break; }
+}

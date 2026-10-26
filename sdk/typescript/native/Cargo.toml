@@ -13,7 +13,7 @@ doctest = false
 
 [dependencies]
 log.workspace = true
-thinkthen.workspace = true
+thinkthen = { workspace = true, features = ["native"] }
 serde.workspace = true
 serde_json.workspace = true
 napi = { version = "=2.16.17", default-features = false, features = ["napi8", "compat-mode"] }

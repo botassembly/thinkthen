@@ -1,95 +1,76 @@
-# R public API and packaging
+# R API
 
-The R package provides a data-first API for character vectors, data frames and lists. R wraps the shared Rust client and pull call directly. It adds host value conversion and native conditions; it adds no engine rules.
-
-## Functions
-
-Arguments after `...` must be named. The functions accept no additional options in `...` and report ordinary R unused-argument errors.
+ThinkThen accepts a character vector, list of records or data frame. Each call returns a tibble. Arguments after `...` must be named. Unused arguments raise a `thinkthen_usage_error`.
 
 ```r
-tt_client(adapter = NULL, ..., mode = NULL, url = NULL,
-          key_source = NULL, model = NULL, batch = NULL)
-tt_question(toolbox, name = NULL)
-tt_reference(name)
-tt_detail(rows)
-tt_answer(rows)
-tt_bind(data, rows, prefix)
-
-tt_decide(x, question, ..., threshold = NULL, on = NULL, client = NULL)
-tt_choose(x, question, options = NULL, ..., threshold = NULL, on = NULL, client = NULL)
-tt_tag(x, question, labels = NULL, ..., threshold = NULL, on = NULL, client = NULL)
-tt_score(x, question, levels = NULL, ..., on = NULL, client = NULL)
-tt_filter(x, question, ..., threshold = NULL, on = NULL, client = NULL)
-tt_rank(x, question, ..., levels = NULL, top = NULL, on = NULL, client = NULL)
-tt_find(x, question, ..., threshold = NULL, on = NULL, client = NULL)
-tt_annotate(x, toolbox, ..., on = NULL, client = NULL)
-tt_recognize(x, kinds = character(), ..., threshold = NULL, on = NULL, client = NULL)
-tt_relate(x, rules, ..., threshold = NULL, on = NULL, client = NULL)
+client <- tt_client(backend = "stub")
+rows <- tt_choose(c("Refund please", "Where is my delivery?"),
+                  "Which team?", c("billing", "shipping"), client = client)
+tt_close(client)
 ```
 
-The `tt_` prefix avoids collisions with base R and table functions. Data comes first for R's native pipe. One named function handles a single record and a collection. Filter returns selected originals in the input's R shape. Other functions collect pulled rows into an ordinary data frame. There are no public call sessions, polling methods or stream variants in this API.
+## Calls
 
-`tt_client` admits configuration once and returns an opaque client handle. `adapter` passes a plain name to the library's adapter setting; R contains no closed selector list or provider defaults. `key_source` names a credential environment variable rather than carrying a credential. NULL client settings are omitted so Rust applies its defaults. A NULL `client` in a function selects the lazily created shared client. Per-call arguments contain no mode, backend, address or credential setting. Proxy mode remains an admitted client choice whose execution currently fails in Rust; the binding implements no proxy transport.
+The public functions take data first. Choose takes required `choices`, tag takes required `labels`, score and rank take required `levels`, recognize takes required `kinds`, and relate takes required `rules`. These domains follow the question. Recognize and relate use their domain in place of the question.
 
-A question string maps to an inline tagged question, including text containing a hash or ending in `.json`. Kinds and relation rules map to the corresponding inline array; annotate maps its toolbox list to the inline toolbox object. `tt_question` supplies a toolbox tagged question with an optional name. `tt_reference` supplies a reference tagged question. These helpers only express the caller's chosen representation. They do not validate, load files or execute references. They can occupy a function's question, kinds, rules or toolbox argument. Rust rejects incompatible forms and currently rejects reference execution.
+Every call accepts named `client`, `.progress`, `evidence` and `name`. `evidence` is a JSON Pointer. `name` is an optional execution name. Toolbox selection never supplies it. `tt_rank()` also accepts `top`, which limits successful rows and retains failed rows.
 
-Thresholds use numeric values or band strings; options, labels, levels and kinds use character vectors. Relation rules use lists of named lists. NULL question options are omitted so Rust applies toolbox inheritance and defaults. The binding does not parse bands, check duplicates or validate function-compatible options. It builds the tagged request once and Rust admits it once.
+Decide, choose and filter accept a numeric `threshold` or `c(low, high)`. Tag, find, recognize and relate accept a numeric cut. Score and rank have no threshold argument. The engine admits bounds, list contents and pointers.
 
-## Data frame helpers
+## Questions
 
-`tt_answer(rows)` extracts the typed answer vector or list from a complete result frame. Unsure or failed absent scalar answers remain typed NA; absent nested answers become NA list elements. Successfully answered null remains NULL, and empty nested collections remain empty. Ordinary input frames and filter output are rejected with ordinary R errors. Rank answers stay in rank order.
+The question constructors are `tt_decide_question()`, `tt_choose_question()`, `tt_tag_question()`, `tt_score_question()`, `tt_filter_question()`, `tt_rank_question()`, `tt_find_question()`, `tt_recognize_question()` and `tt_relate_question()`. They take the same question, required domain and question options as their call. They contain no client settings.
 
-`tt_bind(data, rows, prefix)` attaches answer, probability, status, error and raw detail columns to a copy of a base data frame or an ungrouped tibble. The new names are `<prefix>_answer`, `<prefix>_p`, `<prefix>_status`, `<prefix>_error` and `<prefix>_detail`. `prefix` must be one nonempty nonmissing string. A collision, a row count mismatch, rank output or filter output raises an ordinary R error. Rows are never recycled or joined on IDs. The caller supplies the same unchanged input rows that produced the result. The frame's original names, row names, classes, columns and attributes remain intact. Empty frames receive typed empty columns. Neither helper makes an engine call or reinterprets engine outcomes. The [table examples](README.md#data-frame-expressions) show base R, tibble, dplyr and data.table use.
+A matching admitted question can replace inline question text. Its domain travels with it, so the call omits that domain. A second domain or question option raises a usage condition.
 
-Result frames have a private producer attribute for the helper admission check. A filter selection clears that private result marker while retaining the original input's ordinary attributes. The package still imports only jsonlite; table packages are optional caller and test dependencies.
+```r
+route <- tt_choose_question("Which team?", c("billing", "shipping"))
+tools <- tt_toolbox(list(route = route))
+selected <- tt_question(tools, "route")
+questions <- tt_annotation_questions(list(route = selected))
+rules <- vctrs::list_of(tt_rule("person", "company", "works_for"))
+```
 
-## Input and operation
+`tt_toolbox()` admits a named list of questions. `tt_question()` selects one entry. The selected question survives collection of the toolbox. `tt_annotation_questions()` admits the narrower named collection accepted by `tt_annotate()`. It excludes rank and annotate. Relation rules use `tt_rule(source, target, relation, ..., reads = NULL, either = FALSE)` inside `vctrs::list_of()`.
 
-Character vectors provide raw UTF-8 text records, with no JSON quoting or wrapping, including strings that look like JSON. Data frames provide one JSON object per row. Lists provide one JSON record per element. Only structured values are serialized as JSON. A missing atomic record supplies JSON null and keeps its input position; it is not dropped or replaced by an empty string. `NULL` supplies an empty collection; `list(NULL)` supplies one JSON null record.
+## Clients
 
-Atomic fields of length one map to JSON scalars; longer or empty vectors map to arrays. Unnamed lists remain arrays even with one element, and named lists become objects. Nested one-element arrays stay arrays. Empty arrays, empty objects and null remain distinct. Standard factor and date fields follow jsonlite's documented class mappings, using factor labels and full available numeric precision. Unsupported objects raise R serialization errors. No engine admission rule is checked in R. The binding converts R text to UTF-8; the library owns invalid Unicode and evidence errors.
+`tt_client()` accepts `backend`, `api_key`, `url`, `model`, `batch` and `retry`. Backend names derive from the engine registry. Omitted settings use engine defaults. `tt_retry()` accepts named `max_retries`, `initial_backoff_ms` and `attempt_timeout_ms`. Counts and durations must be whole integers.
 
-For each function call, the client opens one shared `PullCall` from its admitted request. The host selects `OffsetUnit::CodePoints`. It services the call's input requests on R's thread, sends text or structured JSON through the corresponding shared operation, ends input, and drains rows. Input and output remain bounded by the shared call. R retains the original collection for filter and collects result rows for the other functions. Ranking retains the engine's existing behavior. There is no second worker, private queue protocol or callback into R from an engine thread.
+`tt_client_from_env()` uses the same engine resolution and accepts the same overrides. `local_tt_client(client)` installs a default for its calling scope. `with_tt_client(client, code)` installs one while evaluating `code`. Both restore the previous default on exit. Neither closes the borrowed client. An omitted client uses a lazily created package default.
 
-Every accepted input uses the shared completion policy, including one-element vectors and empty inputs. The binding drains all rows, then translates the call's final error and Rust error family into an R condition. A failed row is a final failure. An answered annotate row retains failed named entries in its answer. The binding neither scans rows to create that failure nor reimplements filter selection.
+`tt_close(client)` releases its engine and is idempotent. A call through a closed client raises a setup condition. Printing a client hides credentials. `options(thinkthen.verbose = TRUE)` prints function starts and failed positions. `.progress` controls cli progress in interactive sessions.
 
-## Results
+## Rows
 
-Except for filter, the same data-frame columns appear for empty and nonempty results:
+Every result inherits `tt_<function>_rows`, `tt_rows` and tibble classes. Columns contain `position`, `id`, `status`, `answer`, `probability`, `source`, `error_code`, `error_message`, `error_http_status` and `detail`. Status and error codes are factors drawn from the shared registry. Probability retains full double precision. Source entries have class `tt_source` and identify the question, backend, model and optional execution name.
 
-| Column | R value |
-| --- | --- |
-| `id` | List of JSON values |
-| `status` | Character vector |
-| `answer` | Function-specific vector or list column below |
-| `p` | Numeric vector, `NA_real_` when absent |
-| `error` | List of NULL or a named list with `code` and `message` |
-| `detail` | Character vector of raw JSON, `NA_character_` when absent |
+Decide and filter answers are logical, choose answers are character, score and rank answers are double, and tag answers are `list_of<character>`. Find answers are `tt_span` records. Recognize answers are list columns of `tt_name` records. Relate answers hold `tt_relation` records. Annotate answers contain named function and status classes under `tt_outcome`.
 
-| Function | `answer` column |
-| --- | --- |
-| decide | Logical vector |
-| choose | Character vector |
-| score | Numeric vector |
-| rank | Integer vector |
-| tag | List of character vectors |
-| find | List of NULL or named span lists |
-| annotate | List of named outcome lists |
-| recognize | List of lists of named span lists |
-| relate | List of lists of named relation lists |
+Span offsets count Unicode code points from one and include the end. `$text`, `$start` and `$end` expose the fields. `substr(text, span$start, span$end)` selects the original text. Names also expose kind and probability. Relations hold typed endpoints, relation, probability and either. Slicing and binding preserve record prototypes.
 
-Scalar null answers use typed NA. Nested nulls use NULL. Empty collections stay empty collections. Status preserves the difference between unsure, failed and answered-null. Results use ordinary R copy semantics, with no engine-backed mutable field. The binding parses the shared row's `id`, `status`, `answer`, `p` and `error`, and keeps the separately supplied detail text unparsed. `tt_detail(rows)` decodes only that column on request into a list of ordinary JSON values, without simplification or generated classes. A raw JSON `null` remains distinct from an absent detail in the raw column. The helper returns data; it modifies neither the frame nor the engine.
+Detail entries are typed per function. Label detail holds named probabilities. Scale detail holds probabilities in level order. Recognition detail holds piece and name record vectors. Relation detail holds relation pairs. No raw backend reply appears in rows.
 
-Span positions follow the code-point convention supplied by the shared call: zero-based Unicode scalar positions with an exclusive end. This applies consistently to spans in answers, nested annotate outcomes and detail. R performs no manual offset conversion and has no separate detail offset convention. Use `substr(text, span$start + 1L, span$end)` to extract a span. A native R one-based inclusive boundary would need a shared Rust capability before a binding could offer it; this proposal does not introduce one in R.
+`tt_filter()` returns every row, plus its original `item` and logical `kept`. Rank returns successful rows in rank order, then failures, with original input positions.
 
-Filter uses the shared row's `position` and `kept` values to subset the original collection. It does not compare IDs, inspect answers or evaluate thresholds. Character vectors retain their names and attributes; data frames retain row names and column classes; lists retain their names and elements. Empty selections preserve the input kind. Duplicate or structured IDs cannot change which original is selected. NULL input returns NULL. The call's final error prevents a partial selection from being returned as success.
+## Missing values and errors
 
-R conditions carry `code` and the library's message. The error-family name supplied by Rust selects the corresponding `thinkthen_*_error` condition class, under `thinkthen_error`, `error` and `condition`. The binding never parses a code prefix. Interruption signals the shared cancel handle, drops the call and propagates R's ordinary interrupt condition. Dropping does not join the engine worker or wait for the backend reply. Only R's main thread reads R objects, builds result objects and checks R interrupts between shared-call polls. The engine owns work that was already sent and its attempt timeout. No process-wide signal handler is installed.
+`NULL` as the collection means zero records. `list(NULL)` and atomic NA elements are missing records. They make no backend request and return failed rows with `record.missing`. Unsupported record conversion and invalid IDs retain their positions as failed rows. Failed scalar answers use typed NA. Failed list answers use NULL without losing rows. Answered empty collections retain their prototypes.
 
-## Package and proof
+Failed records return rows, including single-record calls. Call-level failures use rlang conditions under `thinkthen_error`, with classes `thinkthen_usage_error`, `thinkthen_setup_error`, `thinkthen_cancelled_error` or `thinkthen_internal_error`. Conditions carry the shared code and message. Escape and Ctrl-C cancel the engine call and raise `thinkthen_cancelled_error`. The package keeps native code loaded until process exit.
 
-The package lives at `sdk/r/`. DESCRIPTION, NAMESPACE, Rd help and the small named R wrappers are handwritten. One private extendr bridge wraps the public Rust client and pull call directly. It provides host conversion, resource ownership and interrupt integration. It contains no engine implementation or C ABI dependency. Registration glue holds no behavior. No generated wrapper or result source is committed. Namespace detachment does not unload the DLL: the package supplies no unload hook and never calls `library.dynam.unload` or `dyn.unload`. Its native code remains loaded until process exit, because cancelled shared workers may still be completing. Explicit manual DLL unloading is outside this lifetime contract.
+## Table helpers
 
-Runtime R dependencies remain limited to jsonlite. Extendr is the Rust bridge dependency, not a package the R caller must attach. Source packaging places engine source and locked Rust dependencies in a temporary package build tree and vendors dependencies for offline source installation. R headers, the compiler, make, the pinned toolchain and R dependencies must already be installed. The native library is linked into the package artifact. Package numbers remain 0.x and the release milestone sets the published number. There is no version negotiation, compatibility layer or separate native library installation. Publishing is outside this ticket.
+`tt_answer(rows)` projects existing answers. Every call also has a `_vec` helper. `tt_keep()` projects filter answers. These helpers emit one `thinkthen_failed_rows` cli warning when rows or annotation children fail. Their missing answers remain visible.
 
-The installed package's base R tests use one small driver over the shared construction and conformance cases through the public named functions. Expected filter answers determine the expected selected originals; no second public judgement mode exists just to reproduce fixture JSON. Other rows compare after the documented R representation changes, decoding detail only when requested. Tests do not reproduce stub arithmetic. Surface cases cover R value conversion, typed columns, original filter identity and attributes, collection error mapping for zero, one and several records, Unicode extraction with consistent answer/detail offsets, lazy detail decoding and interrupting a held loopback request. A backend event supplies readiness; there is no fixed sleep or short assertion timeout. Preparation and checks use the existing job gate and installed artifact. Live calls remain the PM's separate check.
+`tt_bind(data, rows, prefix)` attaches outcome columns to a copy. It supports base data frames, tibbles, grouped tibbles and data.table. It joins by input position and requires one result per original row. Complete rank results can bind in input order. Truncated rank results and name collisions raise a usage condition. Input IDs never act as joins.
+
+## Exact integer IDs
+
+Character IDs retain their string type. Every integer output ID is a size-one `tt_id_integer` record. `tt_id_integer()` accepts decimal character spellings and delegates bounds to the engine. `format()` returns their exact decimal text. Slicing and binding preserve the record. Implicit numeric and character casts fail.
+
+Ordinary integer IDs and safe whole doubles are accepted. Doubles beyond `2^53 - 1` in absolute value require a decimal-backed ID. Mixed IDs use list columns. A missing ID member differs from a present NULL or missing ID value. Invalid IDs return `record.invalid` without a backend call.
+
+## Package
+
+The package imports jsonlite, rlang, cli, vctrs and tibble. dplyr and data.table support their optional table classes. The source archive includes the engine and vendored Rust dependencies. An offline source installation needs these R dependencies, R headers, a C compiler, make and the pinned Rust toolchain.

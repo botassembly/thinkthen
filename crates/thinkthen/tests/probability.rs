@@ -3,10 +3,10 @@
 
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{Annotate, Backend, Decide, Engine, Outcome, Record, Toolbox};
+use thinkthen::{Batch, Decide, Key, OffsetUnit, Record, Request, Settings};
 
 #[test]
-fn serialized_rows_round_every_probability_without_changing_answers() {
+fn serialized_rows_preserve_every_probability_without_changing_answers() {
     let raw = 0.98999901;
     let span = 0.9421819849031113;
     let server = Loopback::answering(move |q| {
@@ -26,67 +26,60 @@ fn serialized_rows_round_every_probability_without_changing_answers() {
         }
     })
     .unwrap();
-    let backend = Backend::resolve(Some(server.base()), None, |name| {
-        (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-    })
-    .unwrap();
-    let engine = Engine::new(backend);
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .batch(Batch::default())
+        .engine(|_| None)
+        .unwrap();
     let decide = Decide::new("Ready?")
         .unwrap()
         .threshold("0.99".parse().unwrap());
-    engine
-        .call(&decide, [Record::text("Ada")], |row| {
-            let Outcome::Answered { p: Some(p), .. } = row.outcome() else {
-                panic!("expected a decision");
-            };
-            assert_eq!(p.get(), raw);
-            let row = serde_json::to_value(row).unwrap();
-            assert_eq!(row["p"], 0.99);
-            assert_eq!(row["answer"], false);
-        })
+    let row = engine.run(&decide, Record::text("Ada")).unwrap();
+    assert_eq!(row.probability().unwrap().get(), raw);
+    let row = serde_json::to_value(row).unwrap();
+    assert_eq!(row["probability"], raw);
+    assert_eq!(row["answer"], false);
+    let request = Request::from_json(&json!({"question":{"function":"annotate","questions":{
+        "decision":{"function":"decide","question":"Ready?","threshold":0.99},
+        "names":{"function":"recognize","kinds":["person"],"evidence":"/name"},
+        "relations":{"function":"relate","rules":[{"relation":"knows","source":"person","target":"person"}],"evidence":"/pair"},
+        "score":{"function":"score","question":"How much?","levels":["low","high"]},
+        "tags":{"function":"tag","question":"Which labels?","labels":["ready"]}
+    }},"records":[{"id":42,"name":"Ada","pair":"Ada meets Bob"}]}).to_string()).unwrap();
+    let call = engine
+        .open_request(&request, OffsetUnit::CodePoints)
         .unwrap();
-    let toolbox = Toolbox::from_bytes(
-        br#"{"questions":{
-            "decision":{"decide":"Ready?","threshold":"0.99"},
-            "names":{"recognize":[],"on":"/name"},
-            "relations":{"relate":[{"name":"knows","source":"person","target":"person"}],"on":"/pair"},
-            "score":{"score":"How much?","levels":["low","high"]},
-            "tags":{"tag":"Which labels?","labels":["ready"]}
-        }}"#,
-    )
-    .unwrap();
-    let mut rows = Vec::new();
-    engine
-        .annotate(
-            &Annotate::new(&toolbox),
-            [Record::json(
-                r#"{"id":42,"name":"Ada","pair":"Ada meets Bob"}"#,
-                &Default::default(),
-            )],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap();
-    let row = &rows[0];
+    call.sender().close();
+    let rows = call.rows().collect::<Result<Vec<_>, _>>().unwrap();
+    assert_eq!(rows.len(), 1);
+    let row = serde_json::to_value(&rows[0]).unwrap();
     assert_eq!(row["id"], 42);
     let entries = &row["answer"];
-    assert_eq!(entries["decision"]["p"], 0.99);
+    assert_eq!(entries["decision"]["probability"], raw);
     assert_eq!(entries["decision"]["answer"], false);
-    assert_eq!(entries["names"]["answer"][0]["p"], 0.94);
+    assert_eq!(entries["names"]["answer"][0]["probability"], span * raw);
     assert_eq!(entries["names"]["answer"][0]["start"], 0);
     assert_eq!(entries["names"]["answer"][0]["end"], 3);
     assert_eq!(
         entries["names"]["detail"]["pieces"][0]["tags"]["BEGIN"],
-        0.99
+        raw
     );
     assert_eq!(
         entries["names"]["detail"]["pieces"][0]["tags"]["SINGLE"],
-        0.94
+        span
     );
-    assert_eq!(entries["relations"]["answer"][0]["p"], 0.99);
-    assert_eq!(entries["relations"]["detail"][0]["p"], 0.99);
+    assert_eq!(entries["relations"]["answer"][0]["probability"], raw);
+    assert_eq!(
+        entries["relations"]["detail"]["pairs"][0]["probability"],
+        raw
+    );
     assert_eq!(entries["score"]["answer"], raw);
-    assert_eq!(entries["score"]["detail"], json!([0.01, 0.99]));
-    assert_eq!(entries["tags"]["detail"], json!({"ready":0.99}));
+    assert_eq!(
+        entries["score"]["detail"]["levels"],
+        json!([1.0 - raw, raw])
+    );
+    assert_eq!(entries["tags"]["detail"]["labels"], json!({"ready":raw}));
     assert!(
         entries
             .as_object()

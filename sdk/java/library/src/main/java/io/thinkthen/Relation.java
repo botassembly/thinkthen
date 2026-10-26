@@ -1,3 +1,3 @@
 package io.thinkthen;
-import org.jspecify.annotations.Nullable;
-public record Relation(RelationName source, RelationName target, String relation, double p, @Nullable Boolean either) {}
+
+public record Relation(Mention source, Mention target, String relation, double probability, java.util.Optional<Boolean> either) {}

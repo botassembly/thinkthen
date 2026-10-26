@@ -1,70 +1,61 @@
 #![cfg(test)]
-//! A caller drives one bounded operation and owns its terminal failure.
-
+//! Push input and typed pulled rows preserve record and cancellation boundaries.
 use loopback::{KEY, Loopback};
-use serde_json::{Value, json};
-use thinkthen::{Cancel, Client, OffsetUnit, PullEvent, SdkRequest};
+use serde_json::json;
+use thinkthen::{Decide, Engine, Filter, Key, OffsetUnit, Question, Record, Request, Settings};
 
-fn client(server: &Loopback) -> Client {
-    Client::from_json(
-        &json!({"url":server.base(),"batch":1}).to_string(),
-        |name| (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned()),
-    )
-    .unwrap()
+fn engine(server: &Loopback) -> Engine {
+    Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .batch("1".parse().unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
 
 #[test]
-fn pulled_records_preserve_raw_text_structured_ids_and_report_failure_after_all_rows() {
+fn pulled_records_preserve_raw_text_exact_ids_and_independent_record_failures() {
     let server = Loopback::noul(0.9).unwrap();
-    let client = client(&server);
-    let request = SdkRequest::from_json(r#"{"function":"decide","question":{"type":"inline","value":"Ready?"},"options":{"on":"/body"}}"#).unwrap();
-    let mut call = client
-        .open(&request, OffsetUnit::CodePoints, Cancel::default())
+    let call = engine(&server)
+        .open(
+            &Decide::new("Ready?")
+                .unwrap()
+                .evidence("/body".parse().unwrap()),
+        )
         .unwrap();
-    assert_eq!(
-        call.send_text("too early").unwrap_err().kind().code(),
-        "usage.record"
-    );
-    let mut sent = 0;
-    let mut rows = Vec::new();
-    loop {
-        match call.next_event() {
-            PullEvent::NeedsInput => {
-                match sent {
-                    0 => call.send_text("raw \"quoted\" 😀\n").unwrap(),
-                    1 => call
-                        .send_json(r#"{"id":{"start":4,"end":8},"body":"good"}"#)
-                        .unwrap(),
-                    2 => call.send_json(r#"{"wrong":"missing"}"#).unwrap(),
-                    _ => call.end_input(),
-                }
-                sent += 1;
-            }
-            PullEvent::Row(row) => rows.push(serde_json::from_str::<Value>(&row.json).unwrap()),
-            PullEvent::Finished => break,
-        }
-    }
-    assert_eq!(rows.len(), 3);
-    assert_eq!(rows[0]["answer"], true);
-    assert_eq!(rows[1]["id"], json!({"start":4,"end":8}));
-    assert_eq!(rows[2]["error"]["code"], "usage.missing");
-    assert_eq!(
-        call.final_error().map(|e| e.kind().code()),
-        Some("usage.missing")
-    );
-    call.cancel();
-    assert!(matches!(call.next_event(), PullEvent::Finished));
-    assert_eq!(
-        call.final_error().map(|e| e.kind().code()),
-        Some("usage.missing")
-    );
+    let sender = call.sender();
+    let worker = std::thread::spawn(move || {
+        sender.send(Record::text("raw \"quoted\" 😀\n")).unwrap();
+        sender
+            .send(Record::from_json(
+                r#"{"id":18446744073709551615,"body":"good"}"#,
+            ))
+            .unwrap();
+        sender
+            .send(Record::from_json(r#"{"wrong":"missing"}"#))
+            .unwrap();
+        sender.close();
+    });
+    let mut rows = call.rows();
+    let actual: Vec<_> = rows.by_ref().collect::<Result<Vec<_>, _>>().unwrap();
+    worker.join().unwrap();
+    assert_eq!(actual.len(), 3);
+    assert_eq!(actual[0].clone().into_result().unwrap(), Some(true));
+    assert_eq!(actual[1].id().unwrap().as_u64(), Some(u64::MAX));
+    assert_eq!(actual[2].error().unwrap().code().as_str(), "record.missing");
+    rows.cancel();
+    assert!(rows.next().is_none());
     assert_eq!(server.count(), 2);
 }
 
 #[test]
 fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointers() {
-    let server = Loopback::answering(|_| json!({"type":"choice","probabilities":{"BEGIN":0,"INSIDE":0,"END":0,"SINGLE":1,"OUT":0}})).unwrap();
-    let client = client(&server);
+    let server = Loopback::answering(|q| {
+        if q["criteria"].get("BEGIN").is_some() {
+            json!({"type":"choice","probabilities":{"BEGIN":0,"INSIDE":0,"END":0,"SINGLE":1,"OUT":0}})
+        } else { json!({"type":"choice","probabilities":{"person":1,"none of these":0}}) }
+    }).unwrap();
+    let engine = engine(&server);
     for (unit, start, end, emoji_end) in [
         (OffsetUnit::CodePoints, 2, 5, 1),
         (OffsetUnit::Utf16, 3, 6, 2),
@@ -72,112 +63,149 @@ fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointer
     ] {
         for annotate in [false, true] {
             let request = if annotate {
-                json!({"function":"annotate","question":{"type":"inline","value":{"questions":{"names":{"recognize":[],"on":"/body"}}}},"records":[{"body":"😀 Ada"}]})
+                json!({"function":"annotate","questions":{"names":{"function":"recognize","kinds":["person"],"evidence":"/body"}},"records":[{"body":"😀 Ada"}]})
             } else {
-                json!({"function":"recognize","question":{"type":"inline","value":[]},"records":["😀 Ada"]})
+                json!({"function":"recognize","kinds":["person"],"records":["😀 Ada"]})
             };
-            let mut call = client
-                .open(
-                    &SdkRequest::from_json(&request.to_string()).unwrap(),
-                    unit,
-                    Cancel::default(),
-                )
-                .unwrap();
-            let mut count = 0;
-            loop {
-                match call.next_event() {
-                    PullEvent::NeedsInput => call.end_input(),
-                    PullEvent::Row(row) => {
-                        count += 1;
-                        let value: Value = serde_json::from_str(&row.json).unwrap();
-                        let (answer, detail) = if annotate {
-                            (
-                                value["answer"]["names"]["answer"].clone(),
-                                value["answer"]["names"]["detail"].clone(),
-                            )
-                        } else {
-                            (
-                                value["answer"].clone(),
-                                serde_json::from_str::<Value>(row.detail.as_ref().unwrap())
-                                    .unwrap()["probabilities"]
-                                    .clone(),
-                            )
-                        };
-                        assert_eq!(answer.as_array().unwrap().len(), 1);
-                        assert_eq!(answer[0]["text"], "Ada");
-                        assert_eq!(answer[0]["start"], start);
-                        assert_eq!(answer[0]["end"], end);
-                        assert_eq!(detail["pieces"][0]["end"], emoji_end);
-                    }
-                    PullEvent::Finished => break,
-                }
-            }
-            assert_eq!(count, 1);
-            assert!(call.final_error().is_none());
+            let mut question = request.clone();
+            let records = question.as_object_mut().unwrap().remove("records").unwrap();
+            let request = Request::new(Question::from_json(&question.to_string()).unwrap())
+                .with_records(records.as_array().unwrap().clone());
+            let call = engine.open_request(&request, unit).unwrap();
+            call.sender().close();
+            let actual = call.rows().collect::<Result<Vec<_>, _>>().unwrap();
+            assert_eq!(actual.len(), 1);
+            let value = serde_json::to_value(&actual[0]).unwrap();
+            let row = if annotate {
+                &value["answer"]["names"]
+            } else {
+                &value
+            };
+            assert_eq!(row["answer"].as_array().unwrap().len(), 1);
+            assert_eq!(row["answer"][0]["text"], "Ada");
+            assert_eq!(row["answer"][0]["start"], start);
+            assert_eq!(row["answer"][0]["end"], end);
+            assert_eq!(row["detail"]["pieces"][0]["end"], emoji_end);
         }
     }
-    assert_eq!(server.count(), 6);
+    assert_eq!(server.count(), 12);
 }
 
 #[test]
-fn filters_keep_passing_records_before_reporting_failure_and_cancel_stops_pending_input() {
+fn filters_keep_rows_after_record_failure_and_cancel_wakes_pending_input() {
     let server = Loopback::noul(0.9).unwrap();
-    let client = client(&server);
-    let request = SdkRequest::from_json(r#"{"function":"filter","question":{"type":"inline","value":"Ready?"},"options":{"on":"/body"}}"#).unwrap();
-    let mut call = client
-        .open(&request, OffsetUnit::CodePoints, Cancel::default())
-        .unwrap();
-    let mut input = [r#"{"body":"first"}"#, r#"{}"#, r#"{"body":"last"}"#].into_iter();
-    let mut kept = Vec::new();
-    let mut count = 0;
-    loop {
-        match call.next_event() {
-            PullEvent::NeedsInput => match input.next() {
-                Some(record) => call.send_json(record).unwrap(),
-                None => call.end_input(),
-            },
-            PullEvent::Row(row) => {
-                count += 1;
-                if row.kept {
-                    kept.push(row.position);
-                }
-                assert!(call.final_error().is_none());
-            }
-            PullEvent::Finished => break,
+    let engine = engine(&server);
+    let question = Filter::new("Ready?")
+        .unwrap()
+        .evidence("/body".parse().unwrap());
+    let call = engine.open(&question).unwrap();
+    let sender = call.sender();
+    let worker = std::thread::spawn(move || {
+        for record in [r#"{"body":"first"}"#, r#"{}"#, r#"{"body":"last"}"#] {
+            sender.send(Record::from_json(record)).unwrap();
         }
-    }
-    assert_eq!(count, 3);
-    assert_eq!(kept, [1, 3]);
-    assert_eq!(call.final_error().unwrap().kind().code(), "usage.missing");
+        sender.close();
+    });
+    let actual = call.rows().collect::<Result<Vec<_>, _>>().unwrap();
+    worker.join().unwrap();
+    assert_eq!(actual.len(), 3);
     assert_eq!(
-        call.final_error().unwrap().kind().family().as_str(),
-        "usage"
+        actual
+            .iter()
+            .filter(|row| row.kept())
+            .map(|row| row.position())
+            .collect::<Vec<_>>(),
+        [1, 3]
     );
-    let mut pending = client
-        .open(&request, OffsetUnit::CodePoints, Cancel::default())
-        .unwrap();
-    assert!(matches!(pending.next_event(), PullEvent::NeedsInput));
-    assert!(pending.poll(std::time::Duration::ZERO).is_none());
-    pending.cancel();
-    assert!(matches!(pending.next_event(), PullEvent::Finished));
+    assert_eq!(actual[1].error().unwrap().code().as_str(), "record.missing");
+    let pending = engine.open(&question).unwrap();
+    let sender = pending.sender();
+    let mut rows = pending.rows();
+    rows.cancel();
     assert_eq!(
-        pending.final_error().unwrap().kind().code(),
+        rows.next().unwrap().unwrap_err().code().as_str(),
         "local.cancelled"
     );
+    assert!(rows.next().is_none());
     assert_eq!(
-        pending.final_error().unwrap().kind().family().as_str(),
-        "local"
+        sender
+            .send(Record::text("late"))
+            .unwrap_err()
+            .code()
+            .as_str(),
+        "local.cancelled"
     );
     assert_eq!(server.count(), 2);
 }
 
 #[test]
 fn host_utf16_admission_preserves_unicode_and_refuses_unpaired_surrogates() {
-    assert_eq!(thinkthen::utf16_text(&[0xd83d, 0xde00, 65]).unwrap(), "😀A");
+    let server = Loopback::noul(0.9).unwrap();
+    let question = Decide::new("Ready?").unwrap();
+    let engine = engine(&server);
+    let row = engine
+        .run(&question, Record::from_utf16(&[0xd83d, 0xde00, 65]))
+        .unwrap();
+    assert_eq!(row.into_result().unwrap(), Some(true));
+    assert!(
+        server.requests()[0]
+            .json()
+            .unwrap()
+            .to_string()
+            .contains("😀A")
+    );
     for invalid in [&[0xd800][..], &[0xdc00][..], &[0xd800, 65][..]] {
         assert_eq!(
-            thinkthen::utf16_text(invalid).unwrap_err().kind().code(),
-            "usage.record"
+            engine
+                .run(&question, Record::from_utf16(invalid))
+                .unwrap()
+                .error()
+                .unwrap()
+                .code()
+                .as_str(),
+            "record.invalid"
         );
     }
+    assert_eq!(server.count(), 1);
+}
+
+#[test]
+fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records() {
+    let server = Loopback::noul(0.9).unwrap();
+    let engine = engine(&server);
+    let array = r#"[{"text":"first"},{"text":"second"}]"#;
+    let question = Decide::new("Ready?").unwrap();
+    let row = engine
+        .run(
+            &question.clone().evidence("/text".parse().unwrap()),
+            Record::from_json(array),
+        )
+        .unwrap();
+    let error = row.error().unwrap();
+    assert_eq!(error.code().as_str(), "record.missing");
+    assert_eq!(
+        error.message(),
+        "the record is an array of 2 values and holds nothing at /text. Use the stream form of the call to judge each value"
+    );
+    assert_eq!(server.count(), 0);
+    for pointer in ["", "/0/text"] {
+        let row = engine
+            .run(
+                &question.clone().evidence(pointer.parse().unwrap()),
+                Record::from_json(array),
+            )
+            .unwrap();
+        assert!(row.error().is_none());
+    }
+    let row = engine
+        .run(
+            &question.evidence("/2".parse().unwrap()),
+            Record::from_json(array),
+        )
+        .unwrap();
+    assert_eq!(
+        row.error().unwrap().message(),
+        "the record holds nothing at /2"
+    );
+    assert_eq!(server.count(), 2);
 }

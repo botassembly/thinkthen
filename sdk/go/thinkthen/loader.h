@@ -1,0 +1,49 @@
+#ifndef THINKTHEN_GO_LOADER_H
+#define THINKTHEN_GO_LOADER_H
+#include "thinkthen.h"
+int32_t tt_load_code(void);
+const char *tt_load(const char *path);
+const char * tt_code_name(int32_t value);
+int32_t tt_settings_conversion_error(struct thinkthen_error *error);
+int32_t tt_question_conversion_error(struct thinkthen_error *error);
+int32_t tt_client_open(const struct thinkthen_settings *settings, struct thinkthen_client **out, struct thinkthen_error *error);
+void tt_client_free(struct thinkthen_client *client);
+int32_t tt_call_open_question(const struct thinkthen_client *client, const struct thinkthen_question *question, const struct thinkthen_text *name, uint32_t offsets, struct thinkthen_call **out, struct thinkthen_error *error);
+int32_t tt_call_send_text(struct thinkthen_call *call, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_call_send_json(struct thinkthen_call *call, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_call_send_invalid(struct thinkthen_call *call, struct thinkthen_error *error);
+void tt_call_end_input(struct thinkthen_call *call);
+int32_t tt_call_next(struct thinkthen_call *call, struct thinkthen_row *out, struct thinkthen_error *error);
+void tt_call_cancel(struct thinkthen_call *call);
+void tt_call_free(struct thinkthen_call *call);
+void tt_error_free(struct thinkthen_error *error);
+void tt_row_free(struct thinkthen_row *row);
+int32_t tt_question_new(uint32_t function, const uint8_t *data, size_t len, struct thinkthen_question **out, struct thinkthen_error *error);
+int32_t tt_question_add_choice(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_question_add_label(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_question_add_level(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_question_add_kind(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_question_add_rule(struct thinkthen_question *question, const struct thinkthen_rule *rule, struct thinkthen_error *error);
+int32_t tt_question_set_cut(struct thinkthen_question *question, double cut, struct thinkthen_error *error);
+int32_t tt_question_set_band(struct thinkthen_question *question, double low, double high, struct thinkthen_error *error);
+int32_t tt_question_set_evidence(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_question_set_top(struct thinkthen_question *question, size_t top, struct thinkthen_error *error);
+int32_t tt_question_add_entry(struct thinkthen_question *question, const uint8_t *name, size_t len, const struct thinkthen_question *child, struct thinkthen_error *error);
+void tt_question_free(struct thinkthen_question *question);
+int32_t tt_settings_new(struct thinkthen_settings **out, struct thinkthen_error *error);
+int32_t tt_settings_set_backend(struct thinkthen_settings *settings, uint32_t backend, struct thinkthen_error *error);
+int32_t tt_settings_set_api_key(struct thinkthen_settings *settings, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_settings_set_model(struct thinkthen_settings *settings, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_settings_set_url(struct thinkthen_settings *settings, const uint8_t *data, size_t len, struct thinkthen_error *error);
+int32_t tt_settings_set_batch(struct thinkthen_settings *settings, uint64_t batch, struct thinkthen_error *error);
+int32_t tt_settings_set_retry(struct thinkthen_settings *settings, uint32_t max_retries, uint64_t initial_backoff_ms, uint64_t attempt_timeout_ms, struct thinkthen_error *error);
+void tt_settings_free(struct thinkthen_settings *settings);
+int32_t tt_call_open_records_question(const thinkthen_client *, const thinkthen_question *, const thinkthen_text *, const thinkthen_record_input *, size_t, size_t, uint32_t, thinkthen_call **, thinkthen_error *);
+int32_t tt_toolbox_new(thinkthen_toolbox **, thinkthen_error *);
+int32_t tt_toolbox_insert(thinkthen_toolbox *, const uint8_t *, size_t, const thinkthen_question *, thinkthen_error *);
+int32_t tt_toolbox_from_json(const uint8_t *, size_t, thinkthen_toolbox **, thinkthen_error *);
+int32_t tt_toolbox_to_json(const thinkthen_toolbox *, thinkthen_buffer *, thinkthen_error *);
+int32_t tt_toolbox_definitions_json(const thinkthen_toolbox *, thinkthen_buffer *, thinkthen_error *);
+void tt_toolbox_free(thinkthen_toolbox *);
+void tt_buffer_free(thinkthen_buffer *);
+#endif

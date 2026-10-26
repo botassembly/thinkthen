@@ -7,11 +7,20 @@ import subprocess
 import sys
 import tomllib
 from native_platform import current
+from build_targets import container_labels, floor_target
 
 root = Path(__file__).resolve().parent.parent
+prepare = sys.argv[1:2] == ['--prepare']
+if prepare:
+    if sys.argv[2:] != ['scripts/qualification-gate-prepare']:
+        sys.exit('--prepare only accepts scripts/qualification-gate-prepare')
+    del sys.argv[1]
 if len(sys.argv) < 2:
     sys.exit('usage: runtime-floor-build COMMAND [ARGUMENT...]')
-if sys.platform != 'linux' or os.environ.get('THINKTHEN_FLOOR_BUILD') == '1':
+if sys.platform != 'linux':
+    os.execvp(sys.argv[1], sys.argv[1:])
+os.environ['CARGO_TARGET_DIR'] = str(floor_target(root))
+if os.environ.get('THINKTHEN_FLOOR_BUILD') == '1':
     os.execvp(sys.argv[1], sys.argv[1:])
 image('floor')
 home = Path.home()
@@ -19,28 +28,34 @@ channel = tomllib.loads((root / 'rust-toolchain.toml').read_text())['toolchain']
 compiler = home / '.rustup/toolchains' / f'{channel}-{current()["rust"]}/bin'
 go_cache = Path(os.environ.get('GOCACHE', home / '.cache/go-build'))
 os.environ['GOCACHE'] = str(go_cache)
-mounts = {home / '.cache/zig', root, home / '.cargo', home / '.rustup', home / '.local/share/thinkthen-build-tools', home / '.local/share/uv', home / '.cache/uv', home / '.local/bin'}
-for key in ('CARGO_TARGET_DIR', 'GOCACHE', 'THINKTHEN_CANDIDATE_OUT'):
+cargo_home = Path(os.environ.get('CARGO_HOME', home / '.cargo')).resolve()
+# .NET stores named mutex files under HOME, independently of DOTNET_CLI_HOME.
+mounts = {cargo_home, home / '.dotnet', home / '.npm', home / '.cache/zig', root, home / '.cargo', home / '.rustup', home / '.local/share/thinkthen-build-tools', home / '.local/share/uv', home / '.cache/uv', home / '.local/bin'}
+for key in ('CARGO_TARGET_DIR', 'GOCACHE', 'THINKTHEN_CANDIDATE_OUT', 'TMPDIR'):
     if os.environ.get(key):
         path = Path(os.environ[key]).resolve()
         path.mkdir(parents=True, exist_ok=True)
         mounts.add(path)
-command = ['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
-           '--label', 'pm.ticket=' + (os.environ.get('PM_JOB', '').split() or ['local'])[0], '--user', f'{os.getuid()}:{os.getgid()}',
+command = ['docker', 'run', '--rm', '--network', 'bridge' if prepare else 'none',
+           *container_labels(root), '--user', f'{os.getuid()}:{os.getgid()}',
            '--workdir', str(Path.cwd())]
 common = Path(subprocess.check_output(['git', '-C', root, 'rev-parse', '--git-common-dir'], text=True).strip())
 if not common.is_absolute():
     common = root / common
 if not common.resolve().is_relative_to(root.resolve()):
     command += ['-v', f'{common.resolve()}:{common.resolve()}:ro']
+if os.environ.get('THINKTHEN_DOCKER_IN_FLOOR') == '1':
+    command += ['--group-add', str(Path('/var/run/docker.sock').stat().st_gid),
+                '-v', '/var/run/docker.sock:/var/run/docker.sock',
+                '-v', str(home / '.local/share/thinkthen-build-tools/gate-docker/docker') + ':/usr/local/bin/docker:ro']
 for path in sorted(mounts):
     path.mkdir(parents=True, exist_ok=True)
     command += ['-v', f'{path}:{path}']
 for key, value in os.environ.items():
-    if key.startswith(('CARGO_BUILD_', 'CARGO_PROFILE_', 'CARGO_TARGET_', 'THINKTHEN_COVERAGE_')) or key in ('THINKTHEN_FLOOR_IMAGE', 'THINKTHEN_SWIFT_IMAGE', 'PYO3_NO_PYTHON', 'PM_JOB', 'PM_JOB_CORES', 'THINKTHEN_RUNTIME_PREFIX', 'THINKTHEN_JANSSON_ROOT', 'THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_SWIFT_NATIVE_ASSETS', 'THINKTHEN_SQL_ARCHIVE', 'THINKTHEN_DUCKDB_DEPS', 'THINKTHEN_DUCKDB_OUTPUT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'GOCACHE', 'GOPROXY', 'GOSUMDB', 'GOTOOLCHAIN', 'CGO_ENABLED', 'PKG_CONFIG_PATH', 'R_LIBS_USER', 'R_LIBS_SITE'):
+    if key.startswith(('CARGO_BUILD_', 'CARGO_PROFILE_', 'CARGO_TARGET_', 'THINKTHEN_COVERAGE_')) or key in ('THINKTHEN_FLOOR_IMAGE', 'THINKTHEN_SWIFT_IMAGE', 'PYO3_NO_PYTHON', 'PM_JOB', 'PM_JOB_CORES', 'THINKTHEN_RUNTIME_PREFIX', 'THINKTHEN_JANSSON_ROOT', 'THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_SWIFT_NATIVE_ASSETS', 'THINKTHEN_SQL_ARCHIVE', 'THINKTHEN_SQL_TEST_ARCHIVE', 'THINKTHEN_NATIVE_FIXTURES', 'THINKTHEN_LOOPBACK', 'THINKTHEN_STRESS_FULL', 'THINKTHEN_NODE_HOME', 'THINKTHEN_GO_HOME', 'THINKTHEN_SDK_GATE_RUNNER', 'THINKTHEN_SWIFT_LOOPBACK', 'THINKTHEN_SWIFT_PACKAGE', 'TMPDIR', 'THINKTHEN_DUCKDB_DEPS', 'THINKTHEN_DUCKDB_OUTPUT', 'RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'GOCACHE', 'GOPROXY', 'GOSUMDB', 'GOTOOLCHAIN', 'CGO_ENABLED', 'PKG_CONFIG_PATH', 'R_LIBS_USER', 'R_LIBS_SITE'):
         command += ['-e', key + '=' + value]
 command += ['-e', 'HOME=' + str(home), '-e', 'RUSTUP_HOME=' + str(home / '.rustup'),
-            '-e', 'CARGO_HOME=' + str(home / '.cargo'), '-e', 'THINKTHEN_RUST_BIN=' + str(compiler), '-e', 'CARGO_NET_OFFLINE=true',
+            '-e', 'CARGO_HOME=' + str(cargo_home), '-e', 'THINKTHEN_RUST_BIN=' + str(compiler), '-e', 'CARGO_NET_OFFLINE=' + ('false' if prepare else 'true'),
             '-e', 'RUSTC_WRAPPER=', '-e', 'RUSTC_WORKSPACE_WRAPPER=', '-e', 'THINKTHEN_FLOOR_BUILD=1',
             image('floor'), 'sh', '-eu', '-c',
             'export PATH="$THINKTHEN_RUST_BIN:$HOME/.local/bin:$PATH"; exec "$@"', 'floor-build', *sys.argv[1:]]

@@ -12,33 +12,93 @@ if ! command -v zig >/dev/null 2>&1 || [ "$(zig version)" != "$zig_release" ]; t
 fi
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+if [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
+    python3 - "$THINKTHEN_ZIG_DEBUG_CHECKPOINT" <<'PYTHON'
+import hashlib, json, subprocess, sys
+from pathlib import Path
+base = Path(sys.argv[1])
+identity = json.loads((base / 'identity.json').read_text())
+assert identity['profile'] == 'debug' and identity['production_native_pair'] is False
+assert identity['variants']['feature-free']['cargo_features']['thinkthen_ffi'] == []
+subprocess.run(['git', 'diff', '--exit-code', identity['revision'], '--',
+                'Cargo.toml', 'Cargo.lock', 'crates', 'schemas', 'conformance'], check=True)
+for name in ('feature-free/libthinkthen_ffi.dylib', 'loopback', 'include/thinkthen.h'):
+    assert hashlib.sha256((base / name).read_bytes()).hexdigest() == identity['assets'][name], name
+assert (base / 'include/thinkthen.h').read_bytes() == Path('crates/thinkthen-ffi/include/thinkthen.h').read_bytes()
+print('Zig bridge consumes feature-free debug native checkpoint', identity['revision'])
+PYTHON
+    THINKTHEN_ZIG_NATIVE_FILE="$THINKTHEN_ZIG_DEBUG_CHECKPOINT/feature-free/libthinkthen_ffi.dylib"
+    export THINKTHEN_ZIG_NATIVE_FILE
+fi
+if [ "${THINKTHEN_ZIG_DEBUG_NATIVE:-}" = 1 ]; then
+    cargo build --offline --locked -p thinkthen-ffi -p loopback
+    native_target=${CARGO_TARGET_DIR:-target}
+    case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
+    THINKTHEN_ZIG_NATIVE_FILE="$native_target/debug/libthinkthen_ffi.dylib"
+    export THINKTHEN_ZIG_NATIVE_FILE
+fi
 scripts/zig-package "$scratch/archive"
 mkdir "$scratch/unpacked" "$scratch/consumer"
 tar -xzf "$scratch/archive"/thinkthen-zig-*.tar.gz -C "$scratch/unpacked"
 mv "$scratch/unpacked/thinkthen" "$scratch/package"
 mkdir -p "$scratch/readme/src"
+cp sdk/zig/tests/*.zig "$scratch/readme/"
 python3 - "$scratch/package/README.md" "$scratch/readme" <<'PYTHON'
 from pathlib import Path
 import re, sys
 text = Path(sys.argv[1]).read_text()
 blocks = re.findall(r"```zig\n(.*?)\n```", text, re.S)
 root = Path(sys.argv[2])
-(root / "src/main.zig").write_text(blocks[0])
-(root / "build.zig").write_text(next(block for block in blocks if "pub fn build(" in block))
-(root / "build.zig.zon").write_text(next(block for block in blocks if ".fingerprint" in block).replace('"../thinkthen"', '"../package"'))
+main = blocks[0]
+(root / "src/main.zig").write_text(main)
+(root / "build.zig").write_text(Path("sdk/zig/tests/build.zig").read_text()
+    .replace('"consumer.zig"', '"src/main.zig"'))
+(root / "build.zig.zon").write_text(Path("sdk/zig/tests/build.zig.zon").read_text())
 PYTHON
 (cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
-"$scratch/readme/zig-out/bin/example"
-cp sdk/zig/tests/build.zig sdk/zig/tests/build.zig.zon sdk/zig/tests/consumer.zig "$scratch/consumer/"
+"$scratch/readme/zig-out/bin/consumer"
+python3 scripts/surface-example prepare zig "$scratch/readme/src"
+cp "$scratch/readme/src/records.jsonl" "$scratch/readme/records.jsonl"
+(cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
+(cd "$scratch/readme" && python3 "$root/scripts/surface-example" check zig ./zig-out/bin/consumer)
+cp sdk/zig/tests/*.zig sdk/zig/tests/build.zig.zon "$scratch/consumer/"
 zig fmt --check sdk/zig/src sdk/zig/build.zig sdk/zig/build.zig.zon sdk/zig/tests
-(cd "$scratch/consumer" && zig build -j2 --cache-dir "$scratch/cache")
-cargo build --offline --locked -p loopback --bin loopback
+zig_target=$(python3 - <<'PYTHON'
+import json, platform
+floors = json.load(open('scripts/runtime-floors.json'))
+arch = 'aarch64' if platform.machine() in ('arm64', 'aarch64') else 'x86_64'
+print(f'{arch}-macos.{floors["macos"]}' if platform.system() == 'Darwin' else f'{arch}-linux-gnu.{floors["linux"]["glibc"]}')
+PYTHON
+)
+(cd "$scratch/consumer" && zig build -j2 -Dtarget="$zig_target" -Dcpu=baseline -Doptimize=ReleaseSafe --cache-dir "$scratch/cache")
+"$scratch/consumer/zig-out/bin/public-api"
+for invalid in invalid_annotation invalid_toolbox; do
+    if (cd "$scratch/consumer" && zig build "$invalid" -j2 --cache-dir "$scratch/cache") >"$scratch/$invalid.log" 2>&1; then
+        echo "Invalid annotation consumer compiled: $invalid" >&2
+        exit 1
+    fi
+    case "$invalid" in
+        invalid_annotation) grep -q "no field named 'rank'" "$scratch/$invalid.log" ;;
+        invalid_toolbox) grep -q "expected type.*AnnotationQuestions.*found.*Toolbox" "$scratch/$invalid.log" ;;
+    esac
+done
+if [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
+    zig_loopback="$THINKTHEN_ZIG_DEBUG_CHECKPOINT/loopback"
+else
+    cargo build --offline --locked -p loopback --bin loopback
+fi
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
-python3 sdk/zig/tests/run.py "$scratch/consumer/zig-out/bin/consumer" "$root" "$build_target/debug/loopback"
+zig_native=$(find "$scratch/package/native" -type f -name 'libthinkthen_ffi.*' -print)
+python3 scripts/loader-failure-check "$scratch/consumer/zig-out/bin/$(basename "$zig_native")" --attempted "$([ "$(uname -s)" = Darwin ] && echo '@loader_path/libthinkthen_ffi.dylib' || echo 'libthinkthen_ffi.so')" -- "$scratch/consumer/zig-out/bin/consumer" load
+scripts/native-fixtures --engine "$zig_native" --output "$scratch/abi-fixtures"
+THINKTHEN_ZIG_ABI_FIXTURES="$scratch/abi-fixtures"
+export THINKTHEN_ZIG_ABI_FIXTURES
+python3 sdk/zig/tests/run.py "$scratch/consumer/zig-out/bin/consumer" "$root" "${zig_loopback:-$build_target/debug/loopback}"
 if [ -n "${THINKTHEN_ZIG_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_ZIG_ARTIFACT_DIR"
     cp "$scratch/archive"/thinkthen-zig-*.tar.gz "$THINKTHEN_ZIG_ARTIFACT_DIR/"
     cp "$scratch/consumer/zig-out/bin/"* "$THINKTHEN_ZIG_ARTIFACT_DIR/"
-    cp sdk/zig/examples/all-ten.py construction/stub.json "$THINKTHEN_ZIG_ARTIFACT_DIR/"
+    cp sdk/zig/examples/all-ten.py "$THINKTHEN_ZIG_ARTIFACT_DIR/"
+    cp -R conformance/typed "$THINKTHEN_ZIG_ARTIFACT_DIR/typed"
 fi

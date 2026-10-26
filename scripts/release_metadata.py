@@ -58,13 +58,16 @@ def check(root=ROOT):
                 equal(path.relative_to(root), element.get('Version'))
     patterns = {
         'sdk/r/DESCRIPTION': r'^Version: (.+)$',
-        'sdk/c/cmake/thinkthen-c.pc.in': r'^Version: (.+)$',
         'sdk/zig/build.zig.zon': r'^\s*\.version = "([^"]+)"',
         'extensions/postgres/thinkthen.control': r"^default_version = '([^']+)'",
     }
     for name, pattern in patterns.items():
         found = re.search(pattern, (root / name).read_text(), re.MULTILINE)
         equal(name, found[1] if found else None)
+    # CMake derives PROJECT_VERSION from the workspace manifest during configuration.
+    c_template = (root / 'sdk/c/cmake/thinkthen-c.pc.in').read_text()
+    if re.search(r'^Version: (.+)$', c_template, re.MULTILINE)[1] != '@PROJECT_VERSION@':
+        raise ValueError('C pkg-config version must use its configured workspace version')
     if not (root / f'extensions/postgres/thinkthen--{expected}.sql').is_file():
         raise ValueError('PostgreSQL SQL filename differs from the release version')
 

@@ -26,7 +26,7 @@ fn prefixed(field: &[u8], mut write: impl FnMut(&[u8])) {
 
 /// Groups records into bounded batches whose rounds can span requests.
 #[derive(Debug)]
-pub struct Packer<'a, F: Function> {
+pub(crate) struct Packer<'a, F: Function> {
     question: &'a F,
     adapter: Adapter,
     batch: NonZeroUsize,
@@ -41,13 +41,14 @@ impl<'a, F: Function> Packer<'a, F> {
     /// A packer for `adapter` at `address` asking `model`, closing each request
     /// at `batch` records or at the selected backend model limits.
     #[must_use]
-    pub fn new(
+    pub(crate) fn new(
         question: &'a F,
         adapter: Adapter,
         address: &str,
         model: &str,
         batch: NonZeroUsize,
         limits: crate::core::Limits,
+        identity: String,
     ) -> Self {
         let mut seed = Vec::new();
         for field in [adapter.path(), address, model] {
@@ -70,23 +71,16 @@ impl<'a, F: Function> Packer<'a, F> {
                 limits,
                 model.to_owned(),
                 empty_len,
-                question.identity(),
+                identity,
             ),
         }
-    }
-
-    /// Set the caller-visible operation identity before preparing records.
-    #[must_use]
-    pub fn identity(mut self, identity: String) -> Self {
-        self.open.identity = identity;
-        self
     }
 
     /// Add `record`, asked by `ask`. Returns the request it closes, if any.
     ///
     /// A record whose question alone passes the byte limit fails with
     /// `backend.limit` and sends nothing.
-    pub fn push(&mut self, record: Record) -> Option<Chunk<'a, F>> {
+    pub(crate) fn push(&mut self, record: Record) -> Option<Chunk<'a, F>> {
         self.position += 1;
         let id = record.id.clone().unwrap_or(Id::position(self.position));
         let record = AdmittedRecord::new(record);
@@ -166,8 +160,14 @@ impl<'a, F: Function> Packer<'a, F> {
 
     /// The last open request, if it holds any record.
     #[must_use]
-    pub fn finish(mut self) -> Option<Chunk<'a, F>> {
+    pub(crate) fn finish(mut self) -> Option<Chunk<'a, F>> {
+        self.flush()
+    }
+    pub(crate) fn flush(&mut self) -> Option<Chunk<'a, F>> {
         (!self.open.entries.is_empty()).then(|| self.take())
+    }
+    pub(crate) fn flush_full(&mut self) -> Option<Chunk<'a, F>> {
+        (self.open.entries.len() == self.batch.get()).then(|| self.take())
     }
 
     fn prepare(
@@ -235,7 +235,7 @@ struct EncodedAsk {
 
 /// An ordered record group and the distinct questions in its current round.
 #[derive(Debug)]
-pub struct Chunk<'a, F: Function> {
+pub(crate) struct Chunk<'a, F: Function> {
     question: &'a F,
     identity: String,
     adapter: Adapter,
@@ -298,7 +298,7 @@ impl<'a, F: Function> Chunk<'a, F> {
 
     /// Bounded wire requests for this round, retaining their original answer slots.
     #[must_use]
-    pub fn requests(&self) -> Vec<Request<'_>> {
+    pub(crate) fn requests(&self) -> Vec<Request<'_>> {
         let mut requests = Vec::new();
         let mut start = 0;
         let mut state = self
@@ -366,7 +366,7 @@ impl<'a, F: Function> Chunk<'a, F> {
     }
 
     /// Match every request reply, then return rows or prepare the next round.
-    pub fn advance(
+    pub(crate) fn advance(
         self,
         replies: Vec<RequestAnswers>,
         address: &str,
@@ -379,8 +379,8 @@ impl<'a, F: Function> Chunk<'a, F> {
             &self.model,
             batch,
             self.limits,
-        )
-        .identity(self.identity.clone());
+            self.identity.clone(),
+        );
         let mut chunks = Vec::new();
         for (id, record, entry, mut history) in self.entries {
             let asks = entry.and_then(|asks| {
@@ -429,7 +429,7 @@ impl<'a, F: Function> Chunk<'a, F> {
 
 /// One bounded request whose answer slots belong to its original round.
 #[derive(Debug)]
-pub struct Request<'a> {
+pub(crate) struct Request<'a> {
     adapter: Adapter,
     model: &'a str,
     state: &'a str,
@@ -440,7 +440,7 @@ pub struct Request<'a> {
 impl<'a> Request<'a> {
     /// Encode this request for its adapter.
     #[must_use]
-    pub fn body(&self) -> Vec<u8> {
+    pub(crate) fn body(&self) -> Vec<u8> {
         let questions: Vec<_> = self
             .questions
             .iter()
@@ -451,7 +451,7 @@ impl<'a> Request<'a> {
 
     /// Split a refused request once when it holds more than one question.
     #[must_use]
-    pub fn split(&self) -> Option<(Self, Self)> {
+    pub(crate) fn split(&self) -> Option<(Self, Self)> {
         if self.questions.len() < 2 {
             return None;
         }
@@ -472,7 +472,7 @@ impl<'a> Request<'a> {
 
     /// Answer from the built-in deterministic provider without I/O.
     #[must_use]
-    pub fn stub_answer(&self) -> RequestAnswers {
+    pub(crate) fn stub_answer(&self) -> RequestAnswers {
         RequestAnswers {
             slots: self.start..self.start + self.questions.len(),
             reply: Ok(Reply::Stub),
@@ -480,7 +480,7 @@ impl<'a> Request<'a> {
     }
 
     /// Decode a reply while preserving the original round's answer slots.
-    pub fn answered(&self, reply: Result<Vec<u8>, Error>) -> RequestAnswers {
+    pub(crate) fn answered(&self, reply: Result<Vec<u8>, Error>) -> RequestAnswers {
         RequestAnswers {
             slots: self.start..self.start + self.questions.len(),
             reply: reply.and_then(|body| self.adapter.decode(&body)),
@@ -490,14 +490,14 @@ impl<'a> Request<'a> {
 
 /// A decoded request, bound to the slots that produced it.
 #[derive(Debug)]
-pub struct RequestAnswers {
+pub(crate) struct RequestAnswers {
     slots: std::ops::Range<usize>,
     reply: Result<Reply, Error>,
 }
 
 /// The original question's next request, or its finished rows.
 #[derive(Debug)]
-pub enum NextRound<'a, F: Function> {
+pub(crate) enum NextRound<'a, F: Function> {
     /// This record group has finished every dependent round.
     Ready(Vec<Row>),
     /// This record group has another request to send.

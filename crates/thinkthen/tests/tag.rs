@@ -3,14 +3,15 @@
 
 use loopback::{KEY, Loopback, Reply};
 use serde_json::json;
-use thinkthen::{Backend, Batch, Engine, Pointer, Record, Tag, Threshold};
+use thinkthen::{Batch, Cut, Engine, Key, Question, Record, Settings, Tag};
 
+fn settings(server: &Loopback) -> Settings {
+    Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+}
 fn engine(server: &Loopback) -> Engine {
-    let backend = Backend::resolve(Some(server.base()), None, |name| {
-        (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-    })
-    .unwrap();
-    Engine::new(backend)
+    settings(server).engine(|_| None).unwrap()
 }
 
 #[test]
@@ -35,27 +36,29 @@ fn independent_labels_keep_their_probability_and_input_order() {
         .unwrap();
         let question = Tag::new("What applies?", ["billing", "refund", "shipping"])
             .unwrap()
-            .threshold("0.7".parse().unwrap())
-            .unwrap();
-        let records = (0..3).map(|i| {
-            Record::json(
-                &json!({"id": format!("r{i}"), "body": "a \"quoted\" message"}).to_string(),
-                &"/body".parse::<Pointer>().unwrap(),
-            )
-        });
+            .threshold(Cut::new(0.7).unwrap())
+            .evidence("/body".parse().unwrap());
+        let records = (0..3)
+            .map(|i| Record::json(json!({"id": format!("r{i}"), "body": "a \"quoted\" message"})));
         let mut rows = Vec::new();
-        engine(&server)
+        settings(&server)
             .batch("2".parse::<Batch>().unwrap())
-            .call(&question, records, |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .engine(|_| None)
+            .unwrap()
+            .rows(&question, records)
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows.len(), 3);
         for (i, row) in rows.iter().enumerate() {
             assert_eq!(
-                &loopback::without_source(row.clone()),
-                &json!({"id": format!("r{i}"), "status": "answered", "answer": expected,
-                "detail": {"billing": probabilities[0], "refund": probabilities[1], "shipping": probabilities[2]}})
+                &{
+                    let mut value = row.clone();
+                    value.as_object_mut().unwrap().remove("source");
+                    value
+                },
+                &json!({"id": format!("r{i}"), "function":"tag", "position":i+1,"status": "answered", "answer": expected,
+                "detail": {"labels":{"billing": probabilities[0], "refund": probabilities[1], "shipping": probabilities[2]}}})
             );
         }
         assert_eq!(server.count(), 2);
@@ -80,15 +83,12 @@ fn invalid_questions_and_threshold_bands_are_refused_at_construction() {
         ("What?", vec!["billing", "billing"]),
     ] {
         assert_eq!(
-            Tag::new(text, labels).unwrap_err().kind().code(),
+            Tag::new(text, labels).unwrap_err().code().as_str(),
             "usage.question"
         );
     }
-    let error = Tag::new("What?", ["billing"])
-        .unwrap()
-        .threshold("0.2:0.8".parse::<Threshold>().unwrap())
-        .unwrap_err();
-    assert_eq!(error.kind().code(), "usage.threshold");
+    let error = Question::from_json(r#"{"function":"tag","question":"What?","labels":["billing"],"threshold":{"low":0.2,"high":0.8}}"#).unwrap_err();
+    assert_eq!(error.code().as_str(), "usage.threshold");
 }
 
 #[test]
@@ -103,19 +103,19 @@ fn one_missing_label_or_failed_record_fails_the_whole_row() {
     let question = Tag::new("What?", ["billing", "shipping"]).unwrap();
     let records = [
         Record::text("text"),
-        Record::json("bad json", &Pointer::default()),
+        Record::from_json("bad json"),
         Record::text("x".repeat(96_000)),
     ];
     let mut rows = Vec::new();
     engine(&server)
-        .call(&question, records, |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap_err();
+        .rows(&question, records)
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 3);
     for (row, code) in rows
         .iter()
-        .zip(["backend.reply", "usage.record", "backend.limit"])
+        .zip(["backend.reply", "record.json", "record.too-large"])
     {
         assert_eq!(row["status"], "failed");
         assert_eq!(row["error"]["code"], code);
@@ -130,8 +130,10 @@ fn multi_ask_records_span_requests_at_the_byte_limit() {
     // Measure the wire overhead rather than copying the request encoding.
     let server = Loopback::noul(0.9).unwrap();
     engine(&server)
-        .call(&question, [Record::text("x".repeat(100))], |_| {})
-        .unwrap();
+        .rows(&question, [Record::text("x".repeat(100))])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|_| {});
     let overhead = server.requests()[0].body.len() - 200;
     let fitting = (96_000 - overhead) / 2;
     for (sizes, expected, requests) in [
@@ -143,15 +145,17 @@ fn multi_ask_records_span_requests_at_the_byte_limit() {
         let server = Loopback::noul(0.9).unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(
+            .rows(
                 &question,
                 sizes
                     .iter()
                     .enumerate()
-                    .map(|(i, size)| Record::text(format!("{i}{}", "x".repeat(size - 1)))),
-                |row| rows.push(serde_json::to_value(row).unwrap()),
+                    .map(|(i, size)| Record::text(format!("{i}{}", "x".repeat(size - 1))))
+                    .collect::<Vec<_>>(),
             )
-            .unwrap();
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let statuses: Vec<_> = rows
             .iter()
             .map(|row| row["status"].as_str().unwrap())

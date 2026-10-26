@@ -80,7 +80,7 @@ def homebrew(staged):
         digest = hashlib.sha256((staged / 'github' / name).read_bytes()).hexdigest()
         text.extend([f'    url "https://github.com/botassembly/thinkthen/releases/download/v{version()}/{name}"',
                      f'    sha256 "{digest}"'])
-    text.extend(['  end', '  def install', '    bin.install "thinkthen"', '    pkgshare.install "THIRD-PARTY-NOTICES"', '  end',
+    text.extend(['  end', '  def install', '    bin.install "thinkthen"', '    man1.install "thinkthen.1"', '    pkgshare.install "THIRD-PARTY-NOTICES"', '  end',
                  '  test do', f'    assert_match "thinkthen {version()}", shell_output("#{{bin}}/thinkthen --version")',
                  '  end', 'end'])
     (destination / 'thinkthen.rb').write_text('\n'.join(text) + '\n')

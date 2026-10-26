@@ -1,0 +1,73 @@
+#!/bin/sh
+# Compile every public C++ consumer against one relocated installed prefix.
+set -eu
+prefix=$1
+loopback=$2
+engine=$3
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 - "$prefix" <<'PYTHON'
+import json, platform, subprocess, sys
+from pathlib import Path
+prefix = Path(sys.argv[1])
+engines = [p for p in (prefix / "lib").glob("libthinkthen.*") if not p.is_symlink()]
+assert len(engines) == 1, engines
+registry = json.loads(Path("schemas/abi.json").read_text())
+expected = {item["name"] for section in ("exports", "sql_exports") for item in registry[section]}
+command = ["nm", "-gU"] if platform.system() == "Darwin" else ["nm", "-D", "--defined-only"]
+lines = subprocess.check_output([*command, str(engines[0])], text=True).splitlines()
+actual = {line.split()[-1].removeprefix("_") for line in lines if line.split()}
+assert actual == expected, (actual - expected, expected - actual)
+if platform.system() == "Darwin":
+    identity = subprocess.check_output(["otool", "-D", str(engines[0])], text=True)
+    assert "@rpath/" + engines[0].name in identity, identity
+else:
+    identity = subprocess.check_output(["readelf", "-d", str(engines[0])], text=True)
+    assert "(SONAME)" in identity and "[" + engines[0].name + "]" in identity, identity
+PYTHON
+mkdir "$scratch/source"
+cp sdk/cpp/tests/stress.hpp sdk/cpp/tests/consumer.cpp sdk/cpp/tests/typed_consumer.cpp sdk/cpp/tests/typed_network_consumer.cpp sdk/cpp/tests/unknown_code_consumer.cpp sdk/cpp/tests/CMakeLists.txt "$scratch/source/"
+cmake -S "$scratch/source" -B "$scratch/build" -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_PREFIX_PATH="$prefix;$HOME/.local/share/thinkthen-build-tools/nlohmann-json/3.11.3" \
+    -DCMAKE_INSTALL_PREFIX="$scratch/application"
+cmake --build "$scratch/build" --parallel 2
+cmake --install "$scratch/build"
+rm -rf "$scratch/source" "$scratch/build"
+"$scratch/application/bin/typed_consumer"
+python3 sdk/c/tests/toolbox.py "$scratch/application/bin/typed_consumer" "$root"
+"$scratch/application/bin/ranges_consumer"
+"$scratch/application/bin/unknown_code_consumer"
+mkdir "$scratch/home"
+HOME="$scratch/home" python3 sdk/cpp/tests/run.py "$scratch/application/bin/consumer" "$loopback" \
+    "$scratch/application/bin/consumer" "$root/conformance/typed/manifest.json"
+HOME="$scratch/home" python3 sdk/cpp/tests/network.py "$scratch/application/bin/network_consumer" "$loopback"
+THINKTHEN_LOOPBACK="$loopback" python3 scripts/stress-adapters.py --surface cpp ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py cpp "$scratch/application/bin/consumer"
+python3 - "$prefix/share/thinkthen-cpp/README.md" "$scratch" <<'PYTHON'
+from pathlib import Path
+import re, sys
+text = Path(sys.argv[1]).read_text()
+blocks = re.findall(r"```cpp\n(.*?)\n```", text, re.S)
+root = Path(sys.argv[2])
+(root / "example.cpp").write_text(blocks[0])
+(root / "CMakeLists.txt").write_text(
+    'cmake_minimum_required(VERSION 3.20)\nproject(example LANGUAGES CXX)\n'
+    'find_package(ThinkThenCpp CONFIG REQUIRED)\nadd_executable(example example.cpp)\n'
+    'target_link_libraries(example PRIVATE ThinkThen::Cpp)\n')
+PYTHON
+cmake -S "$scratch" -B "$scratch/readme-build" -DCMAKE_PREFIX_PATH="$prefix"
+cmake --build "$scratch/readme-build" --parallel 2
+"$scratch/readme-build/example"
+python3 "$root/scripts/surface-example" prepare c-cpp "$scratch/guide"
+c++ -std=c++17 -I"$prefix/include" "$scratch/guide/example.cpp" -L"$prefix/lib" -lthinkthen -Wl,-rpath,"$prefix/lib" -o "$scratch/guide/example"
+(cd "$scratch/guide" && python3 "$root/scripts/surface-example" check c-cpp ./example)
+# Negative type contracts exclude rank and general toolboxes from annotations.
+for expression in 'thinkthen::annotation_question q = thinkthen::rank{"Rank?", {"low", "high"}};' 'thinkthen::annotate q{thinkthen::toolbox{{{"ready", thinkthen::decide{"Ready?"}}}}};'; do
+    printf '#include <thinkthen/thinkthen.hpp>\nint main() { %s }\n' "$expression" > "$scratch/negative.cpp"
+    if c++ -std=c++17 -fsyntax-only -I"$prefix/include" "$scratch/negative.cpp" > "$scratch/negative.log" 2>&1; then
+        echo 'annotation accepted an excluded question type' >&2
+        exit 1
+    fi
+done
+scripts/native-fixtures --engine "$engine" --output "$scratch/fixtures"
+HOME="$scratch/home" python3 sdk/cpp/tests/abi.py "$prefix" "$scratch/fixtures/manifest.json"

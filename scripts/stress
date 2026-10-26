@@ -1,0 +1,11 @@
+#!/bin/sh
+# Separate offline volume and soak run. Default output: test summary and resource peaks.
+# Usage: scripts/stress [SAMPLES.jsonl]; run through pm job after landing.
+set -eu
+cd "$(dirname "$0")/.."
+export CARGO_NET_OFFLINE=true
+cargo build --locked -p loopback --bin loopback
+cargo test --locked -p thinkthen --test stress --no-run
+rounds=$(python3 -c 'import json; print(json.load(open("conformance/stress.json"))["records"]["soak_rounds"])')
+exec python3 scripts/stress-sample.py --rounds "$rounds" --groups rust/systemone,command/systemone,rust/openai,command/openai ${1:+--output "$1"} -- \
+    cargo test --locked -p thinkthen --test stress loopback_stress_full_volume_and_soak -- --ignored --exact --test-threads=1

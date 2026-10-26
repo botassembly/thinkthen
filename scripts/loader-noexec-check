@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-loader-') as temporary:
     module.mkdir()
     with tarfile.open(next((candidate / 'go').glob('*.tar.gz'))) as package:
         package.extractall(module, filter='data')
-    for source in (root / 'sdk/go').iterdir():
+    for source in (root / 'sdk/go/thinkthen').iterdir():
         if source.suffix in ('.go', '.c', '.h'):
             shutil.copy2(source, module / source.name)
     shutil.copytree(root / 'sdk/go/tests', work / 'consumer')
@@ -29,14 +29,17 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-loader-') as temporary:
     shutil.copy2(candidate / 'checks/jvm/consumer.jar', work / 'consumer.jar')
     shutil.copy2(root / 'construction/stub.json', work / 'stub.json')
     shutil.copytree(root / 'sdk/java/library/src/main/java', work / 'java-source')
+    generated = work / 'generated-java'
+    subprocess.run([sys.executable, str(root / 'scripts/jvm-generated'), str(generated)], check=True)
+    shutil.copytree(generated / 'library/target/generated-sources/contracts', work / 'java-source', dirs_exist_ok=True)
     command = '''set -eu
 mkdir -p /work/home /work/build-tmp /work/classes
 export HOME=/work/home XDG_CACHE_HOME=/work/home/.cache GOTMPDIR=/work/build-tmp
 export GOCACHE=/work/go-cache GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 cd /work/consumer
-go mod edit -replace=github.com/botassembly/thinkthen/sdk/go=/work/module
+go mod edit -replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=/work/module
 go test -c -o /work/go-consumer
-/jdk/bin/javac --release 22 -cp '/work/java/dependencies/*' -d /work/classes $(find /work/java-source -name '*.java')
+/jdk/bin/javac --release 22 --module-path /work/java/dependencies -d /work/classes $(find /work/java-source -name '*.java')
 /jdk/bin/jar --update --file /work/java/thinkthen-java-0.2.0.jar -C /work/classes .
 # Independent processes publish into one cold cache, then reuse it read-only.
 go_case() { THINKTHEN_STUB_CASES=/work/stub.json /work/go-consumer -test.run='^TestSharedStub$'; }

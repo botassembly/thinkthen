@@ -1,0 +1,38 @@
+#!/bin/sh
+# Run every C# README example against an installed package and an approved debug asset.
+set -eu
+cd "$(dirname "$0")/../.."
+root=$PWD
+bundle=${1:?supply the approved native debug bundle}
+. scripts/native-tools-env
+export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+case $(uname -s) in
+    Darwin) filename=libthinkthen_ffi.dylib; parameter=MacNative ;;
+    Linux) filename=libthinkthen_ffi.so; parameter=LinuxNative ;;
+    *) echo 'Run the README check on a prepared Unix build host' >&2; exit 1 ;;
+esac
+python3 - "$bundle" "$filename" "$stage" <<'PY'
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import sys
+bundle, filename, stage = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+identity = json.loads((bundle / 'identity.json').read_text())
+relative = 'feature-free/' + filename
+asset = bundle / relative
+if identity['profile'] != 'debug' or identity['variants']['feature-free']['cargo_features']['thinkthen_ffi']:
+    raise SystemExit('expected the approved feature-free debug asset')
+if hashlib.sha256(asset.read_bytes()).hexdigest() != identity['assets'][relative]:
+    raise SystemExit('native asset differs from its bundle identity')
+shutil.copyfile(asset, stage / filename)
+PY
+if [ "$(uname -s)" = Darwin ]; then install_name_tool -id "@rpath/$filename" "$stage/$filename"; fi
+printf '<configuration><packageSources><clear /><add key="prepared" value="%s/singlefile-packages" /></packageSources></configuration>\n' "${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}" > "$stage/NuGet.Config"
+dotnet pack sdk/csharp/ThinkThen.csproj --configfile "$stage/NuGet.Config" --artifacts-path "$stage/artifacts" -o "$stage/feed" "-p:$parameter=$stage/$filename"
+python3 scripts/csharp_consumers.py readme "$stage"

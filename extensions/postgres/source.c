@@ -3,16 +3,22 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/portal.h"
+#include "utils/json.h"
+#include "utils/lsyscache.h"
+#include "nodes/plannodes.h"
 
-ParamListInfo tt_parameters(text *parameters)
+ParamListInfo tt_parameters(Jsonb *parameters)
 {
-    Oid type = JSONOID;
+    Oid type = JSONBOID;
     Datum value = PointerGetDatum(parameters);
     ParamListInfo bindings;
     uint64 index;
-    int result = SPI_execute_with_args(
-        "SELECT value OPERATOR(pg_catalog.#>>) '{}' AS value, pg_catalog.json_typeof(value) AS type "
-        "FROM pg_catalog.json_array_elements($1) AS parameter(value)",
+    int result;
+    if (!JB_ROOT_IS_ARRAY(parameters))
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("params must be a JSON array")));
+    result = SPI_execute_with_args(
+        "SELECT value OPERATOR(pg_catalog.#>>) '{}' AS value, pg_catalog.jsonb_typeof(value) AS type "
+        "FROM pg_catalog.jsonb_array_elements($1) AS parameter(value)",
         1, &type, &value, NULL, true, 0);
     if (result != SPI_OK_SELECT)
         elog(ERROR, "cannot read source parameters: SPI result %d", result);
@@ -45,7 +51,7 @@ ParamListInfo tt_parameters(text *parameters)
     return bindings;
 }
 
-Portal tt_source(TtOwner *owner, text *sql, text *parameters, uint32 *kind)
+Portal tt_source(TtOwner *owner, text *sql, Jsonb *parameters, const char *record_column, const char *id_column, uint32 *kind)
 {
     SPIParseOpenOptions options = {0};
     Portal source;
@@ -55,21 +61,30 @@ Portal tt_source(TtOwner *owner, text *sql, text *parameters, uint32 *kind)
     options.cursorOptions = CURSOR_OPT_NO_SCROLL;
     source = SPI_cursor_parse_open(NULL, text_to_cstring(sql), &options);
     owner->source = source;
-    if (source->strategy != PORTAL_ONE_SELECT || source->tupDesc->natts != 1 ||
-        strcmp(NameStr(TupleDescAttr(source->tupDesc, 0)->attname), "record") != 0)
-        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-            errmsg("source must be one read-only SELECT with one column named record")));
-    column_type = TupleDescAttr(source->tupDesc, 0)->atttypid;
-    if (column_type != TEXTOID && column_type != JSONOID)
-        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH),
-            errmsg("source record must have type text or json")));
-    *kind = column_type == TEXTOID ? THINKTHEN_SQL_TEXT : THINKTHEN_SQL_JSON;
+    if (source->strategy != PORTAL_ONE_SELECT)
+        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("source must be one read-only SELECT")));
+    {
+        ListCell *statement;
+        foreach(statement, source->stmts) {
+            PlannedStmt *planned = lfirst_node(PlannedStmt, statement);
+            if (planned->commandType != CMD_SELECT || planned->hasModifyingCTE)
+                ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("source must be one read-only SELECT")));
+        }
+    }
+    owner->record_column = SPI_fnumber(source->tupDesc, record_column);
+    owner->id_column = id_column == NULL ? 0 : SPI_fnumber(source->tupDesc, id_column);
+    if (owner->record_column <= 0 || owner->id_column < 0)
+        ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("selected source column does not exist")));
+    column_type = TupleDescAttr(source->tupDesc, owner->record_column - 1)->atttypid;
+    if (column_type != TEXTOID && column_type != JSONOID && column_type != JSONBOID)
+        ereport(ERROR, (errcode(ERRCODE_DATATYPE_MISMATCH), errmsg("source record must have type text, json or jsonb")));
+    *kind = column_type == TEXTOID ? THINKTHEN_RECORD_TEXT : THINKTHEN_RECORD_JSON;
     return source;
 }
 
 void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
 {
-    thinkthen_sql_record *records;
+    thinkthen_sql_input *records;
     uint64 index;
     uint64 count;
     int result;
@@ -78,25 +93,62 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
     count = SPI_processed;
     if (count == 0) {
         SPI_freetuptable(SPI_tuptable);
-        TT_BRIDGE(thinkthen_sql_end_input(owner->call));
+        TT_BRIDGE(thinkthen_sql_call_end_input(owner->call));
         return;
     }
     previous = MemoryContextSwitchTo(fetch_context);
     records = palloc0(sizeof(*records) * count);
     for (index = 0; index < count; index++) {
         bool is_null;
-        Datum value = SPI_getbinval(SPI_tuptable->vals[index], SPI_tuptable->tupdesc, 1, &is_null);
+        Datum value = SPI_getbinval(SPI_tuptable->vals[index], SPI_tuptable->tupdesc, owner->record_column, &is_null);
         text *record;
         size_t length;
         CHECK_FOR_INTERRUPTS();
-        if (is_null)
-            ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("source record cannot be SQL NULL")));
-        record = DatumGetTextPP(value);
+        owner->input_position++;
+        if (owner->id_column > 0) {
+            bool id_null;
+            Oid type = TupleDescAttr(SPI_tuptable->tupdesc, owner->id_column - 1)->atttypid;
+            Datum id_value = SPI_getbinval(SPI_tuptable->vals[index], SPI_tuptable->tupdesc, owner->id_column, &id_null);
+            MemoryContext id_previous = MemoryContextSwitchTo(owner->id_context);
+            TtId *entry = hash_search(owner->ids, &owner->input_position, HASH_ENTER, NULL);
+            entry->memory = AllocSetContextCreate(owner->id_context, "ThinkThen selected id", ALLOCSET_SMALL_SIZES);
+            MemoryContextSwitchTo(entry->memory);
+            entry->value.data = (const uint8_t *)"null";
+            entry->value.len = 4;
+            if (!id_null) {
+                Oid output;
+                bool variable;
+                char *encoded;
+                getTypeOutputInfo(type, &output, &variable);
+                encoded = OidOutputFunctionCall(output, id_value);
+                if (type == BOOLOID) encoded = DatumGetBool(id_value) ? "true" : "false";
+                else if (type != JSONOID && type != JSONBOID && type != NUMERICOID && type != INT2OID
+                    && type != INT4OID && type != INT8OID && type != FLOAT4OID && type != FLOAT8OID) {
+                    StringInfoData quoted;
+                    initStringInfo(&quoted);
+                    escape_json(&quoted, encoded);
+                    encoded = quoted.data;
+                }
+                {
+                    size_t id_length;
+                    entry->value.data = (uint8_t *)tt_utf8(encoded, strlen(encoded), &id_length);
+                    entry->value.len = id_length;
+                }
+            }
+            MemoryContextSwitchTo(id_previous);
+        }
+        if (is_null) {
+            records[index].kind = THINKTHEN_RECORD_MISSING;
+            continue;
+        }
+        if (TupleDescAttr(SPI_tuptable->tupdesc, owner->record_column - 1)->atttypid == JSONBOID)
+            record = cstring_to_text(JsonbToCString(NULL, &DatumGetJsonbP(value)->root, 0));
+        else record = DatumGetTextPP(value);
         records[index].kind = kind;
         records[index].data = (uint8_t *)tt_utf8(VARDATA_ANY(record), VARSIZE_ANY_EXHDR(record), &length);
         records[index].len = length;
     }
-    TT_BRIDGE(result = thinkthen_sql_send_chunk(owner->call, records, count, &owner->error));
+    TT_BRIDGE(result = thinkthen_sql_call_send_chunk_postgres(owner->call, records, count, &owner->error));
     MemoryContextSwitchTo(previous);
     tt_check(owner, result);
     SPI_freetuptable(SPI_tuptable);

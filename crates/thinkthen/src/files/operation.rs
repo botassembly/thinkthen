@@ -1,10 +1,12 @@
 //! One admitted operation owns its snapshot, stream and publication.
 
+use crate::contract_driver::driver::{Driver, Event};
 use crate::files::admission::{check_cancel, copy};
 use crate::files::{
     FileError, FileFormat, FileJob, FileOutput, FileReceipt, csv, headers, local, spool, xlsx,
 };
-use crate::{Cancel, Client, Error, ErrorKind, OffsetUnit, PullEvent, SdkRequest};
+use crate::records::Record;
+use crate::{Cancel, Engine, Error, ErrorKind, OffsetUnit, Question, Request};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
@@ -22,8 +24,8 @@ impl FileJob {
     /// output at the path named in the error. Completed row failures stay in the receipt.
     pub fn execute(
         &self,
-        request: &SdkRequest,
-        client: &Client,
+        request: &Request,
+        client: &Engine,
         cancel: &Cancel,
     ) -> Result<FileReceipt, FileError> {
         if !request.records().is_empty() {
@@ -31,22 +33,24 @@ impl FileJob {
                 "a file operation's request must not contain initial records",
             ));
         }
-        let prepared = client.prepare(request, cancel.clone())?;
-        let annotation = prepared.is_annotate();
-        let filter = prepared.is_filter();
+        let prepared = request.question();
+        let annotation = matches!(prepared, Question::Annotate(_));
         if !annotation
             && self.columns.len() == 1
             && !prepared.evidence_pointer().to_string().is_empty()
         {
             return Err(invalid(
-                "a single --column supplies text; omit --on or select several named columns",
+                "a single --column supplies text; omit --evidence or select several named columns",
             ));
         }
         let names: Vec<String> = if annotation {
             if self.into.is_some() {
                 return Err(invalid("annotate uses its question names; omit --into"));
             }
-            prepared.annotation_names().map(str::to_owned).collect()
+            match prepared {
+                Question::Annotate(question) => question.questions().keys().cloned().collect(),
+                _ => Vec::new(),
+            }
         } else {
             vec![
                 self.into
@@ -108,7 +112,12 @@ impl FileJob {
             let header = reader
                 .next()?
                 .ok_or_else(|| invalid("input has no header row; add column names"))?;
-            headers(&header.fields, &self.columns)?;
+            headers(&header.fields, &self.columns).map_err(|error| match error {
+                FileError::Invalid(message) => {
+                    FileError::Invalid(format!("CSV/TSV row 1 {message}"))
+                }
+                error => error,
+            })?;
             let positions = self
                 .columns
                 .iter()
@@ -124,12 +133,13 @@ impl FileJob {
             while let Some(row) = reader.next()? {
                 check_cancel(cancel)?;
                 if row.fields.len() != input_headers.len() {
-                    return Err(invalid(&format!(
-                        "CSV/TSV row {} (line {}): expected {} fields, found {}; quote a field containing a separator or remove the extra separator",
-                        row.number,
-                        row.line,
-                        input_headers.len(),
-                        row.fields.len()
+                    return Err(FileError::Invalid(crate::core::diagnostic::requirement(
+                        &format!("CSV/TSV row {} (line {})", row.number, row.line),
+                        &format!("{} fields", input_headers.len()),
+                        &format!(
+                            "{} fields; quote a field containing a separator or remove the extra separator",
+                            row.fields.len()
+                        ),
                     )));
                 }
                 let values = positions
@@ -143,11 +153,8 @@ impl FileJob {
         let mut generated = Vec::new();
         for name in &names {
             generated.push(name.clone());
-            for suffix in ["_status", "_p", "_error", "_detail"] {
+            for suffix in ["_status", "_probability", "_error", "_detail", "_source"] {
                 generated.push(format!("{name}{suffix}"));
-            }
-            if filter {
-                generated.push(format!("{name}_kept"));
             }
         }
         let mut unique: BTreeSet<_> = input_headers.iter().map(String::as_str).collect();
@@ -171,28 +178,24 @@ impl FileJob {
         check_cancel(cancel)?;
         let mut answers = spool::Answers::new()?;
         let mut inputs = records.reader()?;
-        let mut call = client.open(request, OffsetUnit::CodePoints, cancel.clone())?;
+        let mut call = Driver::open(
+            &client.clone().cancel(cancel.clone()),
+            request,
+            OffsetUnit::CodePoints,
+        )?;
         let mut first_failure = None;
         loop {
-            match call.next_event() {
-                PullEvent::NeedsInput => match inputs.next().transpose()? {
-                    Some((_, Value::String(text))) => call.send_text(&text)?,
-                    Some((_, value)) => call.send_json(&value.to_string())?,
+            match call.next_event()? {
+                Event::NeedsInput => match inputs.next().transpose()? {
+                    Some((_, Value::String(text))) => call.send(Record::text(text))?,
+                    Some((_, value)) => call.send(Record::json(value))?,
                     None => call.end_input(),
                 },
-                PullEvent::Row(row) => {
-                    let source_row = records.source_row(row.position)?;
+                Event::Row(row) => {
+                    let source_row =
+                        records.source_row(usize::try_from(row.position()).map_err(local)?)?;
                     let mut failure = row.failure().cloned();
-                    let mut value: Value = serde_json::from_str(&row.json).map_err(local)?;
-                    if let Some(detail) = row.detail {
-                        value
-                            .as_object_mut()
-                            .ok_or_else(|| local("engine row is not an object"))?
-                            .insert(
-                                "detail".into(),
-                                serde_json::from_str(&detail).map_err(local)?,
-                            );
-                    }
+                    let value = serde_json::to_value(&row).map_err(local)?;
                     let mut cells = Vec::new();
                     if annotation {
                         for name in &names {
@@ -205,9 +208,6 @@ impl FileJob {
                     } else {
                         cells.extend(file_outcome(&value, self.format, &mut failure));
                     }
-                    if filter {
-                        cells.push(Value::Bool(row.kept));
-                    }
                     if let Some(failure) = failure
                         && first_failure
                             .as_ref()
@@ -217,12 +217,7 @@ impl FileJob {
                     }
                     answers.put(source_row, &cells)?;
                 }
-                PullEvent::Finished => {
-                    if let Some(error) = call.final_error() {
-                        return Err(error.clone().into());
-                    }
-                    break;
-                }
+                Event::Finished => break,
             }
         }
         check_cancel(cancel)?;
@@ -476,7 +471,7 @@ fn outcome(value: &Value) -> Vec<Value> {
         _ => Value::Null,
     };
     let mut cells = vec![answer];
-    for key in ["status", "p", "error", "detail"] {
+    for key in ["status", "probability", "error", "detail", "source"] {
         let value = value.get(key).cloned().unwrap_or(Value::Null);
         cells.push(if matches!(value, Value::Array(_) | Value::Object(_)) {
             Value::String(value.to_string())
@@ -557,5 +552,9 @@ fn check_cell(value: &Value) -> Result<(), FileError> {
     Ok(())
 }
 fn invalid(message: &str) -> FileError {
-    FileError::Invalid(message.into())
+    FileError::Invalid(crate::core::diagnostic::requirement(
+        "file",
+        "a valid file operation",
+        message,
+    ))
 }

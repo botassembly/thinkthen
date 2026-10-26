@@ -1,0 +1,65 @@
+{
+  "name": "exact-identifiers",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      {
+        "id": -9223372036854775808,
+        "body": "same"
+      },
+      {
+        "id": 18446744073709551615,
+        "body": "same"
+      },
+      {
+        "id": "9007199254740993",
+        "body": "same"
+      },
+      {
+        "body": "same"
+      }
+    ]
+  },
+  "replies": [
+    {
+      "probability": 0.8123456789012345
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345,
+      "id": -9223372036854775808
+    },
+    {
+      "function": "decide",
+      "position": 2,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345,
+      "id": 18446744073709551615
+    },
+    {
+      "function": "decide",
+      "position": 3,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345,
+      "id": "9007199254740993"
+    },
+    {
+      "function": "decide",
+      "position": 4,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345
+    }
+  ],
+  "requests": 1
+}

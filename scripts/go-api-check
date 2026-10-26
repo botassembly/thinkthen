@@ -1,0 +1,70 @@
+#!/bin/sh
+# Exercise the typed Go API with one isolated debug engine and a staged consumer.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+root=$PWD
+go() { "$root/scripts/go-build" "$@"; }
+# The prepared floor compiler keeps this check compatible with the declared module floor.
+THINKTHEN_GO_HOME=${THINKTHEN_GO_HOME:-$HOME/.local/share/thinkthen-build-tools/go1.23.12}
+test -x "$THINKTHEN_GO_HOME/bin/go"
+PATH="$THINKTHEN_GO_HOME/bin:$PATH"
+export PATH THINKTHEN_GO_HOME GOTOOLCHAIN=local
+test "$(go env GOVERSION)" = go1.23.12
+test -z "$(gofmt -l sdk/go/thinkthen/*.go sdk/go/tests/*.go)"
+export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
+export CARGO_TARGET_DIR="${THINKTHEN_GO_TARGET:-$PWD/target-go-api}"
+cargo build --locked -p thinkthen-ffi -p loopback
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+scripts/go-package "$scratch/module" debug
+case "$(uname -s)" in Darwin) suffix=dylib ;; *) suffix=so ;; esac
+scripts/native-fixtures --engine "$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix" --output "$scratch/native"
+mkdir -p "$scratch/consumer" "$scratch/home" "$scratch/tmp"
+cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
+export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback" THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES="$scratch/native" THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
+export HOME="$scratch/home" TMPDIR="$scratch/tmp"
+cd "$scratch/consumer"
+go mod edit -replace="github.com/botassembly/thinkthen/sdk/go/thinkthen=$scratch/module"
+go version
+staticcheck -version
+staticcheck_pin=$(python3 - "$root/scripts/release-tools.json" <<'PYTHON'
+import json
+import sys
+print(json.load(open(sys.argv[1]))['staticcheck'])
+PYTHON
+)
+go version -m "$(command -v staticcheck)" | awk -v pin="$staticcheck_pin" '
+    $1 == "mod" && $2 == "honnef.co/go/tools" && $3 == pin { found=1 }
+    END { exit !found }
+'
+go vet github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
+staticcheck github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
+go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" ./...
+# Compile the existing checked README example against the staged import path.
+mkdir readme
+python3 - "$scratch/module/README.md" readme/main.go <<'PY'
+from pathlib import Path
+import sys
+Path(sys.argv[2]).write_text(Path(sys.argv[1]).read_text().split('```go\n', 1)[1].split('```', 1)[0])
+PY
+go run ./readme
+python3 "$root/scripts/surface-example" prepare go "$scratch/consumer/guide"
+(cd guide && python3 "$root/scripts/surface-example" check go "$root/scripts/go-build" run .)
+go test -c -o "$scratch/loader-consumer"
+case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_cache="$HOME/.cache" ;; esac
+python3 "$root/scripts/loader-cache-check" "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
+# A separate installed prefix exercises pkg-config linkage without embedding.
+mkdir -p "$scratch/system/lib/pkgconfig" "$scratch/system/include"
+cp "$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix" "$scratch/system/lib/libthinkthen.$suffix"
+cp "$scratch/module/thinkthen.h" "$scratch/system/include/"
+python3 - "$root/sdk/c/cmake/thinkthen-c.pc.in" "$scratch/system/lib/pkgconfig/thinkthen-c.pc" <<'PY'
+from pathlib import Path
+import sys
+source=Path(sys.argv[1]).read_text()
+for key,value in {'CMAKE_INSTALL_LIBDIR':'lib','CMAKE_INSTALL_INCLUDEDIR':'include','PROJECT_VERSION':'0.2.0'}.items():
+    source=source.replace('@'+key+'@',value)
+Path(sys.argv[2]).write_text(source)
+PY
+PKG_CONFIG_PATH="$scratch/system/lib/pkgconfig" go test -tags thinkthen_system -race -count=1 -run='^TestSharedStub$' .

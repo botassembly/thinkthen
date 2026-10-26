@@ -1,0 +1,6 @@
+#!/bin/sh
+# Compile external typed C consumers against the committed engine header.
+set -eu
+cd "$(dirname "$0")/.."
+scripts/c-gate
+cargo test -p thinkthen-ffi --test typed_projection --locked

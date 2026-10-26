@@ -1,0 +1,26 @@
+#!/bin/sh
+# Coverage-guided admission campaign. Routine replay is cargo test --test admission_fuzz.
+# Usage: scripts/admission-fuzz [SECONDS] [LIBFUZZER_OPTIONS...]
+# Rust Fuzz Book: https://rust-fuzz.github.io/book/cargo-fuzz/guide.html
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+duration=${1:-300}
+if [ "$#" -gt 0 ]; then shift; fi
+case "$duration" in ''|*[!0-9]*) echo 'admission-fuzz: seconds must be an integer' >&2; exit 2;; esac
+if [ "$duration" -eq 0 ]; then echo 'admission-fuzz: seconds must be positive' >&2; exit 2; fi
+CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
+case "$CARGO_BUILD_JOBS" in ''|*[!0-9]*|0) echo 'admission-fuzz: workers must be a positive integer' >&2; exit 2;; esac
+export CARGO_BUILD_JOBS
+# cargo-fuzz may be installed in the prepared tools root with cargo install --root.
+PATH="$HOME/.local/share/thinkthen-build-tools/cargo-fuzz/bin:$PATH"
+export PATH
+# Scope the prepared nightly to this command; never change rustup's default.
+toolchain=${THINKTHEN_FUZZ_TOOLCHAIN:-nightly-2026-08-24}
+corpus=${THINKTHEN_FUZZ_CORPUS:-$PWD/fuzz/corpus-generated/admission}
+mkdir -p "$corpus"
+cp fuzz/corpus/admission/* "$corpus/"
+max_len=$(python3 -c 'from pathlib import Path; print(max(p.stat().st_size for p in Path("fuzz/corpus/admission").iterdir()))')
+exec cargo "+$toolchain" fuzz run admission "$corpus" -- \
+    "-max_total_time=$duration" "-max_len=$max_len" -rss_limit_mb=2048 \
+    -dict=fuzz/admission.dict "$@"

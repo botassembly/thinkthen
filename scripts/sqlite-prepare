@@ -3,35 +3,111 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-build-env
+case "${1:-}" in
+    '') jansson_only=0 ;;
+    --jansson-only) jansson_only=1 ;;
+    *) echo 'usage: scripts/sqlite-prepare [--jansson-only]' >&2; exit 2 ;;
+esac
+if [ "$jansson_only" = 0 ] && [ "${THINKTHEN_SQLITE_PREPARE_LOCK:-}" != "$THINKTHEN_SQLITE_ROOT" ]; then
+    mkdir -p "$THINKTHEN_SQLITE_ROOT"
+    exec python3 - "$0" "$@" <<'LOCK'
+import fcntl, os, subprocess, sys
+root = os.environ['THINKTHEN_SQLITE_ROOT']
+with open(root + '/sqlite-prepare.lock', 'w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    os.environ['THINKTHEN_SQLITE_PREPARE_LOCK'] = root
+    sys.exit(subprocess.call(['sh', *sys.argv[1:]]))
+LOCK
+fi
 tools="$HOME/.local/share/thinkthen-build-tools"
-sqlite="$tools/sqlite-3.41.0"
-scratch=$(mktemp -d)
+mkdir -p "$THINKTHEN_SQLITE_ROOT"
+scratch=$(mktemp -d "$THINKTHEN_SQLITE_ROOT/.sqlite-prepare.XXXXXX")
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+TMPDIR=$scratch
+export TMPDIR
 check_hash() {
     if command -v sha256sum >/dev/null 2>&1; then actual=$(sha256sum "$1" | cut -d ' ' -f 1)
     else actual=$(shasum -a 256 "$1" | cut -d ' ' -f 1); fi
     [ "$actual" = "$2" ] || { echo 'dependency checksum mismatch' >&2; exit 1; }
 }
+compile() {
+    if [ "$(uname -s)" = Linux ]; then scripts/runtime-floor-build "$@"
+    else MACOSX_DEPLOYMENT_TARGET=$(python3 scripts/runtime_floors.py macos) "$@"; fi
+}
+if [ "$jansson_only" = 0 ]; then
+if [ "$(uname -s)" = Linux ]; then
+    if [ -z "${THINKTHEN_FLOOR_IMAGE:-}" ] && ! python3 scripts/release_images.py floor >/dev/null 2>&1; then
+        scripts/floors/prepare-image
+    fi
+    THINKTHEN_FLOOR_IMAGE=$(python3 scripts/release_images.py floor)
+    export THINKTHEN_FLOOR_IMAGE
+fi
 for release in '3.41.0 2023 3410000 146ce189b67fdbefbf2d72cdc81e198d07ff643614cc9102e9bf063255e8e7e1' \
                '3.54.1 2026 3540100 0a9c8e34352dad46006aa82836d5383bff9dc6bc9ce5a60553c05aa30e6ad1f9'; do
     set -- $release
-    sqlite="$tools/sqlite-$1"
-    if [ -f "$sqlite/libsqlite3.a" ] && [ -x "$sqlite/bin/sqlite3" ]; then continue; fi
+    sqlite="$THINKTHEN_SQLITE_ROOT/sqlite-$1"
+    sqlite_flags='-O2 -fPIC -DSQLITE_THREADSAFE=1'
+    printf '%s\n' "source_sha256=$4" "CFLAGS=$sqlite_flags" > "$scratch/sqlite-provenance"
+    compile uname -m >> "$scratch/sqlite-provenance"
+    compile cc --version >> "$scratch/sqlite-provenance"
+    if [ "$(uname -s)" = Linux ]; then
+        printf '%s\n' "image=${THINKTHEN_FLOOR_IMAGE:?Use the declared floor image}" >> "$scratch/sqlite-provenance"
+    else
+        printf '%s\n' "MACOSX_DEPLOYMENT_TARGET=$(python3 scripts/runtime_floors.py macos)" >> "$scratch/sqlite-provenance"
+    fi
+    if [ -f "$sqlite/libsqlite3.a" ] && [ -x "$sqlite/bin/sqlite3" ]; then
+        if cmp -s "$scratch/sqlite-provenance" "$sqlite/provenance"; then continue; fi
+        echo 'Prepared SQLite has different or incomplete provenance' >&2
+        exit 1
+    fi
     curl -fsSL "https://www.sqlite.org/$2/sqlite-amalgamation-$3.zip" -o "$scratch/sqlite.zip"
     check_hash "$scratch/sqlite.zip" "$4"
     unzip -q "$scratch/sqlite.zip" -d "$scratch"
-    mkdir -p "$sqlite/bin"
-    cp "$scratch/sqlite-amalgamation-$3/sqlite3.h" "$sqlite/"
-    cp "$scratch/sqlite-amalgamation-$3/sqlite3ext.h" "$sqlite/"
-    cc -O2 -fPIC -DSQLITE_THREADSAFE=1 -c "$scratch/sqlite-amalgamation-$3/sqlite3.c" -o "$scratch/sqlite3.o"
-    ar rcs "$sqlite/libsqlite3.a" "$scratch/sqlite3.o"
-    cc -O2 "$scratch/sqlite-amalgamation-$3/shell.c" "$sqlite/libsqlite3.a" \
-        -ldl -lpthread -lm -o "$sqlite/bin/sqlite3"
+    [ ! -e "$sqlite" ] || { echo 'Prepared SQLite is incomplete' >&2; exit 1; }
+    prepared="$scratch/sqlite-$1"
+    mkdir -p "$prepared/bin"
+    cp "$scratch/sqlite-amalgamation-$3/sqlite3.h" "$prepared/"
+    cp "$scratch/sqlite-amalgamation-$3/sqlite3ext.h" "$prepared/"
+    compile cc $sqlite_flags -c "$scratch/sqlite-amalgamation-$3/sqlite3.c" -o "$scratch/sqlite3.o"
+    compile ar rcs "$prepared/libsqlite3.a" "$scratch/sqlite3.o"
+    compile cc -O2 "$scratch/sqlite-amalgamation-$3/shell.c" "$prepared/libsqlite3.a" \
+        -ldl -lpthread -lm -o "$prepared/bin/sqlite3"
+    cp "$scratch/sqlite-provenance" "$prepared/provenance"
+    mv "$prepared" "$sqlite"
 done
-if [ ! -f "$tools/jansson/lib/libjansson.a" ]; then
-    curl -fsSL https://github.com/akheron/jansson/releases/download/v2.14.1/jansson-2.14.1.tar.gz -o "$scratch/jansson.tar.gz"
-    check_hash "$scratch/jansson.tar.gz" 2521cd51a9641d7a4e457f7215a4cd5bb176f690bc11715ddeec483e85d9e2b3
-    tar -xzf "$scratch/jansson.tar.gz" -C "$scratch"
-    (cd "$scratch/jansson-2.14.1" && CFLAGS='-O2 -fPIC' ./configure --prefix="$tools/jansson" --disable-shared && make -j2 && make install)
+fi
+jansson_archive="$tools/sources/jansson-2.14.1.tar.gz"
+jansson_hash=2521cd51a9641d7a4e457f7215a4cd5bb176f690bc11715ddeec483e85d9e2b3
+mkdir -p "$tools/sources"
+if [ ! -f "$jansson_archive" ]; then
+    curl -fsSL https://github.com/akheron/jansson/releases/download/v2.14.1/jansson-2.14.1.tar.gz -o "$jansson_archive"
+fi
+check_hash "$jansson_archive" "$jansson_hash"
+jansson="$tools/jansson"
+if [ "$(uname -s)" = Linux ]; then
+    if [ "${THINKTHEN_FLOOR_BUILD:-}" != 1 ]; then
+        if [ -z "${THINKTHEN_FLOOR_IMAGE:-}" ] && ! python3 scripts/release_images.py floor >/dev/null 2>&1; then
+            scripts/floors/prepare-image
+        fi
+        scripts/runtime-floor-build scripts/sqlite-prepare --jansson-only
+        exit 0
+    fi
+    jansson=$THINKTHEN_JANSSON_ROOT
+    expected_libc=$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from runtime_floors import FLOORS; print(FLOORS["linux"]["glibc"])')
+    [ "$(getconf GNU_LIBC_VERSION)" = "glibc $expected_libc" ] || { echo 'Prepare Jansson in the declared runtime floor' >&2; exit 1; }
+    printf '%s\n' "source_sha256=$jansson_hash" "image=${THINKTHEN_FLOOR_IMAGE:?Use the declared floor runner}" \
+        "libc=$(getconf GNU_LIBC_VERSION)" 'CFLAGS=-O2 -fPIC' "$(cc --version)" > "$scratch/provenance"
+    if [ -f "$jansson/lib/libjansson.a" ] && [ -f "$jansson/include/jansson.h" ] && cmp -s "$scratch/provenance" "$jansson/provenance"; then
+        printf '%s\n' 'Pinned floor Jansson is ready'
+        exit 0
+    fi
+    [ ! -e "$jansson" ] || { echo 'Prepared Jansson has different or incomplete provenance' >&2; exit 1; }
+fi
+if [ ! -f "$jansson/lib/libjansson.a" ]; then
+    tar -xzf "$jansson_archive" -C "$scratch"
+    (cd "$scratch/jansson-2.14.1" && CFLAGS='-O2 -fPIC' ./configure --prefix="$jansson" --disable-shared && make -j2 && make DESTDIR="$scratch/install" install)
+    if [ -f "$scratch/provenance" ]; then cp "$scratch/provenance" "$scratch/install$jansson/provenance"; fi
+    mkdir -p "$(dirname "$jansson")"
+    mv "$scratch/install$jansson" "$jansson"
 fi
 printf '%s\n' 'SQLite and Jansson build dependencies are ready'

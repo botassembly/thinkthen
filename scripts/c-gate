@@ -2,13 +2,17 @@
 # Build the external C consumer against this tree's shared library and header.
 set -eu
 cd "$(dirname "$0")/.."
+scripts/header-contract-check
 cargo build --locked -p thinkthen-ffi
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in
   /*) ;;
   *) build_target="$PWD/$build_target" ;;
 esac
-cc -std=c11 -Wall -Wextra -Werror -pthread \
-  -I crates/thinkthen-ffi/include crates/thinkthen-ffi/tests/consumer.c \
-  -L "$build_target/debug" -lthinkthen_ffi \
-  -Wl,-rpath,"$build_target/debug" -o "$build_target/debug/thinkthen-c-consumer"
+for consumer in c-consumer typed-consumer typed-projections typed-sql; do
+    case "$consumer" in c-consumer) source=consumer ;; *) source=$consumer ;; esac
+    cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread \
+      -I crates/thinkthen-ffi/include "crates/thinkthen-ffi/tests/$source.c" \
+      -L "$build_target/debug" -lthinkthen_ffi \
+      -Wl,-rpath,"$build_target/debug" -o "$build_target/debug/thinkthen-$consumer"
+done

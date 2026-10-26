@@ -1,253 +1,461 @@
-//! Public foreign entry points, forwarding behavior to admitted Rust values.
+//! Version, ownership and canonical call operations.
 #![allow(
     unsafe_code,
-    reason = "C exports dereference counted borrowed pointers under the header contract"
+    reason = "exports borrow counted foreign inputs and own supported output prefixes"
 )]
-
-use crate::memory::{error_buffer, text};
-use crate::{Buffer, CallHandle, ClientHandle, HostRow};
-use std::cell::UnsafeCell;
-use std::panic::{AssertUnwindSafe, catch_unwind};
-use thinkthen::{Cancel, Client, Error, ErrorKind, OffsetUnit, PullEvent, SdkRequest};
-
-const OK: i32 = 0;
-const END: i32 = 1;
-const NEEDS_INPUT: i32 = 2;
-const ERROR: i32 = -1;
-
+use crate::memory::{bytes, error_size, row_size, text};
+use crate::{
+    Buffer, CallHandle, ClientHandle, HostError, HostRow, QuestionHandle, SettingsHandle, TextView,
+};
+use std::{
+    ffi::c_char,
+    panic::{AssertUnwindSafe, catch_unwind},
+    ptr,
+    sync::OnceLock,
+};
+use thinkthen::{
+    Code, Error, OffsetUnit, Request, Settings,
+    native::{self, Event},
+    records::Record,
+};
+/// A row or successful operation.
+pub const THINKTHEN_OK: i32 = 0;
+/// Successful completion, including after record failures.
+pub const THINKTHEN_END: i32 = 1;
+/// One input slot is reserved before the host sends its next record.
+pub const THINKTHEN_NEEDS_INPUT: i32 = 2;
+/// A call-level error, separate from the row status and code registry.
+pub const THINKTHEN_ERROR: i32 = -1;
+pub(crate) const OK: i32 = THINKTHEN_OK;
+pub(crate) const END: i32 = THINKTHEN_END;
+pub(crate) const NEEDS_INPUT: i32 = THINKTHEN_NEEDS_INPUT;
+pub(crate) const ERROR: i32 = THINKTHEN_ERROR;
 pub(crate) unsafe fn operation(
-    error: *mut Buffer,
+    error: *mut HostError,
     run: impl FnOnce() -> Result<i32, Error>,
 ) -> i32 {
-    // SAFETY: the required error slot is writable and owns no live buffer.
-    unsafe { error.write(Buffer::default()) };
-    let result = catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| {
-        Err(Error::new(
-            ErrorKind::Io,
-            "the native operation could not complete",
-        ))
-    });
-    match result {
+    /* SAFETY: only the first size field is read until its supported prefix is validated. */
+    let Some(size) = (unsafe { error_size(error) }) else {
+        return ERROR;
+    };
+    /* SAFETY: the validated slot owns no live allocation on entry. */
+    unsafe {
+        error.write(HostError::empty(size));
+    }
+    match catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(native::internal_error())) {
         Ok(status) => status,
         Err(failure) => {
-            // SAFETY: the operation's exclusive error slot receives its own allocation.
-            unsafe { error.write(error_buffer(&failure)) };
+            /* SAFETY: the supported prefix is writable and exclusively owned. */
+            unsafe {
+                error.write(HostError::from_error(size, &failure));
+            }
             ERROR
         }
     }
 }
-
-/// Admit client settings and publish an independent client owner.
+/// Return the shared call-level error for host settings conversion failure.
 /// # Safety
-/// All pointers obey the readable input and writable distinct output contract.
+/// The error is an exclusive, empty writable slot with a supported struct_size.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_settings_conversion_error(error: *mut HostError) -> i32 {
+    /* SAFETY: the caller lends the sized error slot until return. */
+    unsafe { operation(error, || Err(native::settings_conversion_error())) }
+}
+/// Return the shared call-level error for host question conversion failure.
+/// # Safety
+/// The error is an exclusive, empty writable slot with a supported struct_size.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_question_conversion_error(error: *mut HostError) -> i32 {
+    /* SAFETY: the caller lends the sized error slot until return. */
+    unsafe { operation(error, || Err(native::question_conversion_error())) }
+}
+/// Return the shared cancellation error after a host interrupts a completed pull.
+/// # Safety
+/// The error is an exclusive, empty writable slot with a supported struct_size.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_cancelled_error(error: *mut HostError) -> i32 {
+    /* SAFETY: the caller lends the sized error slot until return. */
+    unsafe { operation(error, || Err(native::cancelled_error())) }
+}
+/// Native ABI major/minor, independent of package version.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_abi_version() -> u32 {
+    thinkthen::ABI_VERSION
+}
+/// Process-lifetime NUL-terminated package version; never free this pointer.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_version() -> *const c_char {
+    concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()
+}
+/// Process-lifetime dotted code name, or NULL for an unknown integer.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_code_name(value: i32) -> *const c_char {
+    static NAMES: OnceLock<Vec<(i32, std::ffi::CString)>> = OnceLock::new();
+    NAMES
+        .get_or_init(|| {
+            Code::ALL
+                .iter()
+                .filter_map(|code| {
+                    std::ffi::CString::new(code.as_str())
+                        .ok()
+                        .map(|name| (code.abi(), name))
+                })
+                .collect()
+        })
+        .iter()
+        .find(|(code, _)| *code == value)
+        .map_or(ptr::null(), |(_, name)| name.as_ptr())
+}
+/// Open a client from a copied typed settings snapshot.
+/// # Safety
+/// Handles are live; out/error are distinct, empty writable slots.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_client_open(
-    settings: *const u8,
-    len: usize,
+    settings: *const SettingsHandle,
     out: *mut *mut ClientHandle,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: the required output slot owns no live client.
-    unsafe { out.write(std::ptr::null_mut()) };
-    // SAFETY: counted bytes and error slot obey the export's contract.
+    /* SAFETY: the caller lends all inputs and exclusive output slots. */
     unsafe {
         operation(error, || {
-            let client = Client::from_json(text(settings, len)?, |name| std::env::var(name).ok())?;
-            out.write(Box::into_raw(Box::new(ClientHandle(client))));
+            out.write(ptr::null_mut());
+            let engine = (*settings).0.engine(|name| std::env::var(name).ok())?;
+            out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })
     }
 }
-
-/// Release a client; independently opened calls retain their engine.
+/// Admit canonical client JSON for a JSON-native host before resolving keys.
 /// # Safety
-/// The pointer is NULL or this library's unfreed owner, with no active callers.
+/// Counted bytes and distinct, empty outputs remain live until return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_client_open_json(
+    settings: *const u8,
+    len: usize,
+    out: *mut *mut ClientHandle,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: inputs are counted readable bytes and outputs are exclusive slots. */
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let settings = Settings::from_json(text(settings, len)?)?;
+            let engine = settings.engine(|name| std::env::var(name).ok())?;
+            out.write(Box::into_raw(Box::new(ClientHandle(engine))));
+            Ok(OK)
+        })
+    }
+}
+/// Free this client; its calls retain the engine independently.
+/// # Safety
+/// NULL or one live owner after all active operations finish.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_client_free(client: *mut ClientHandle) {
     if !client.is_null() {
-        // SAFETY: the host transfers the unique client allocation after its readers.
+        /* SAFETY: the caller transfers its unique allocation. */
         drop(unsafe { Box::from_raw(client) });
     }
 }
-
-/// Admit one call using a retained client and shared offset type.
+pub(crate) unsafe fn open(
+    client: *const ClientHandle,
+    request: &Request,
+    offsets: u32,
+    out: *mut *mut CallHandle,
+) -> Result<i32, Error> {
+    /* SAFETY: the output is exclusive and initially owns no call. */
+    unsafe {
+        out.write(ptr::null_mut());
+    }
+    let offsets = OffsetUnit::from_abi(offsets).ok_or_else(native::abi_error)?;
+    /* SAFETY: the client remains live while the engine snapshot is retained. */
+    let call = native::Call::open(unsafe { &(*client).0 }, request, offsets)?;
+    /* SAFETY: an independent owned call is published into the empty slot. */
+    unsafe {
+        out.write(Box::into_raw(Box::new(CallHandle::new(
+            call,
+            request,
+            crate::original::Original::initial(request),
+        ))));
+    }
+    Ok(OK)
+}
+/// Open a copied typed question with its lists, options and optional execution name.
+/// NULL name is absent; a present empty name fails the shared name validation.
+/// Toolbox selection never supplies this execution name.
 /// # Safety
-/// Client and input bytes are live; output slots are distinct and writable.
+/// Handles, optional name view and distinct empty outputs remain live until return.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call_open(
+pub unsafe extern "C" fn thinkthen_call_open_question(
+    client: *const ClientHandle,
+    question: *const QuestionHandle,
+    name: *const TextView,
+    offsets: u32,
+    out: *mut *mut CallHandle,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends live inputs and exclusive writable outputs. */
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let mut request = Request::new((*question).0.build()?);
+            if !name.is_null() {
+                request = request.named(text((*name).data, (*name).len)?)?;
+            }
+            open(client, &request, offsets, out)
+        })
+    }
+}
+/// Admit a canonical request for a JSON-native host; never load a question file.
+/// # Safety
+/// Client and counted bytes are live; outputs are distinct empty slots.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_open_json(
     client: *const ClientHandle,
     request: *const u8,
     len: usize,
     offsets: u32,
     out: *mut *mut CallHandle,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: the required output slot owns no live call.
-    unsafe { out.write(std::ptr::null_mut()) };
-    // SAFETY: the host retains inputs and gives this operation exclusive outputs.
+    /* SAFETY: counted input and outputs obey their documented extents. */
     unsafe {
         operation(error, || {
-            let offsets = match offsets {
-                0 => OffsetUnit::Utf8,
-                1 => OffsetUnit::Utf16,
-                2 => OffsetUnit::CodePoints,
-                _ => return Err(Error::new(ErrorKind::Question, "invalid offset unit")),
+            open(
+                client,
+                &Request::from_json(text(request, len)?)?,
+                offsets,
+                out,
+            )
+        })
+    }
+}
+/// Send copied text after NEEDS_INPUT; invalid UTF-8 becomes one record.invalid row.
+/// # Safety
+/// One driver owns a live call and borrows counted readable bytes and an empty error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_send_text(
+    call: *mut CallHandle,
+    data: *const u8,
+    len: usize,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: one driver exclusively accesses the cell; cancel uses a separate token. */
+    unsafe {
+        operation(error, || {
+            (&mut *(*call).call.get()).send(Record::from_utf8(bytes(data, len)))?;
+            if let Some(originals) = &mut *(*call).originals.get() {
+                originals.push_back(crate::original::Original::new(
+                    thinkthen::records::RecordKind::Text,
+                    bytes(data, len),
+                ));
+            }
+            Ok(OK)
+        })
+    }
+}
+/// Send copied structured JSON; admission failures become failed records.
+/// # Safety
+/// One driver owns the call; counted input and error slots remain live.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_send_json(
+    call: *mut CallHandle,
+    data: *const u8,
+    len: usize,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: one driver accesses the cell and borrows counted bytes until return. */
+    unsafe {
+        operation(error, || {
+            let record = match std::str::from_utf8(bytes(data, len)) {
+                Ok(json) => Record::from_json(json),
+                Err(_) => Record::invalid(),
             };
-            let request = SdkRequest::from_json(text(request, len)?)?;
-            let cancel = Cancel::default();
-            let call = (*client).0.open(&request, offsets, cancel.clone())?;
-            out.write(Box::into_raw(Box::new(CallHandle {
-                call: UnsafeCell::new(call),
-                cancel,
-            })));
+            (&mut *(*call).call.get()).send(record)?;
+            if let Some(originals) = &mut *(*call).originals.get() {
+                originals.push_back(crate::original::Original::new(
+                    thinkthen::records::RecordKind::Json,
+                    bytes(data, len),
+                ));
+            }
             Ok(OK)
         })
     }
 }
-
-/// Supply a raw UTF-8 text record when the shared call requests input.
+/// Send native-endian UTF-16; unpaired surrogates become one failed record.
 /// # Safety
-/// One driver owns the live call, the input extent and exclusive error slot.
+/// One driver owns the call; data lends len aligned units or NULL at zero.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_send_text(
+pub unsafe extern "C" fn thinkthen_call_send_utf16(
     call: *mut CallHandle,
-    record: *const u8,
+    data: *const u16,
     len: usize,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: only the driver accesses the call cell; cancel uses a separate token.
-    unsafe {
-        operation(error, || {
-            (&mut *(*call).call.get()).send_text(text(record, len)?)?;
-            Ok(OK)
-        })
-    }
-}
-
-/// Supply counted native-endian UTF-16 through the shared strict text decoder.
-/// # Safety
-/// One driver owns the live call, readable aligned units and exclusive error slot.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_send_utf16(
-    call: *mut CallHandle,
-    record: *const u16,
-    len: usize,
-    error: *mut Buffer,
-) -> i32 {
-    // SAFETY: the driver owns the cell; the host lends len aligned units or NULL/zero.
+    /* SAFETY: the caller lends aligned counted units and an exclusive error slot. */
     unsafe {
         operation(error, || {
             let units = if len == 0 {
                 &[]
             } else {
-                std::slice::from_raw_parts(record, len)
+                std::slice::from_raw_parts(data, len)
             };
-            let text = thinkthen::utf16_text(units)?;
-            (&mut *(*call).call.get()).send_text(&text)?;
+            (&mut *(*call).call.get()).send(Record::from_utf16(units))?;
+            if let Some(originals) = &mut *(*call).originals.get() {
+                originals.push_back(match String::from_utf16(units) {
+                    Ok(text) => crate::original::Original::new(
+                        thinkthen::records::RecordKind::Text,
+                        text.as_bytes(),
+                    ),
+                    Err(_) => {
+                        crate::original::Original::new(thinkthen::records::RecordKind::Invalid, &[])
+                    }
+                });
+            }
             Ok(OK)
         })
     }
 }
-
-/// Supply a structured JSON record, leaving evidence admission to Rust.
+/// Send an explicit host missing value without a backend call.
 /// # Safety
-/// One driver owns the live call, the input extent and exclusive error slot.
+/// One driver owns the live call and empty exclusive error slot.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_send_json(
+pub unsafe extern "C" fn thinkthen_call_send_missing(
     call: *mut CallHandle,
-    record: *const u8,
-    len: usize,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: only the driver accesses the call cell; bytes live through return.
+    /* SAFETY: only the driver accesses this call cell and output slot. */
     unsafe {
         operation(error, || {
-            (&mut *(*call).call.get()).send_json(text(record, len)?)?;
+            (&mut *(*call).call.get()).send(Record::missing())?;
+            if let Some(originals) = &mut *(*call).originals.get() {
+                originals.push_back(crate::original::Original::new(
+                    thinkthen::records::RecordKind::Missing,
+                    &[],
+                ));
+            }
             Ok(OK)
         })
     }
 }
-
-/// End input without waiting for execution or queue capacity.
+/// Send an explicit host conversion failure without fabricating a JSON id.
 /// # Safety
-/// The live call has one driver and cannot be freed during this operation.
+/// One driver owns the live call and empty exclusive error slot.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_end_input(call: *mut CallHandle) {
-    // SAFETY: the driver exclusively borrows the operation cell.
-    unsafe { (&mut *(*call).call.get()).end_input() };
+pub unsafe extern "C" fn thinkthen_call_send_invalid(
+    call: *mut CallHandle,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: only the driver accesses this call cell and output slot. */
+    unsafe {
+        operation(error, || {
+            (&mut *(*call).call.get()).send(Record::invalid())?;
+            if let Some(originals) = &mut *(*call).originals.get() {
+                originals.push_back(crate::original::Original::new(
+                    thinkthen::records::RecordKind::Invalid,
+                    &[],
+                ));
+            }
+            Ok(OK)
+        })
+    }
 }
-
-/// Pull one shared row, input request or terminal outcome.
+/// Close input without waiting for output capacity or backend work.
 /// # Safety
-/// One driver owns the live call; row and error outputs are distinct and empty.
+/// A sole driver owns a live call; free cannot run concurrently.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_next(
+pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
+    /* SAFETY: only the driver accesses the call cell. */
+    unsafe {
+        (&mut *(*call).call.get()).end_input();
+    }
+}
+/// Pull one row, reserved input slot or completion. Failed records return OK.
+/// # Safety
+/// A sole driver owns the call; row/error are sized, distinct, empty output slots.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_next(
     call: *mut CallHandle,
     out: *mut HostRow,
-    error: *mut Buffer,
+    error: *mut HostError,
 ) -> i32 {
-    // SAFETY: the row slot is exclusive writable storage, with no live row.
-    unsafe { out.write(HostRow::default()) };
-    // SAFETY: the one driver alone accesses the cell and required output slots.
+    /* SAFETY: size is validated before writing any supported output field. */
     unsafe {
         operation(error, || {
-            let call = &mut *(*call).call.get();
-            match call.next_event() {
-                PullEvent::NeedsInput => Ok(NEEDS_INPUT),
-                PullEvent::Row(row) => {
-                    out.write(row.into());
+            let size = row_size(out)?;
+            out.write(HostRow::empty(size));
+            match (&mut *(*call).call.get()).next_event()? {
+                Event::NeedsInput => Ok(NEEDS_INPUT),
+                Event::Finished => Ok(END),
+                Event::Row(row) => {
+                    let mut result = HostRow::from_row(size, row)?;
+                    if let Some(originals) = &mut *(*call).originals.get() {
+                        let original = originals.pop_front().ok_or_else(native::internal_error)?;
+                        result.source.attach_original(original);
+                    }
+                    out.write(result);
                     Ok(OK)
                 }
-                PullEvent::Finished => call
-                    .final_error()
-                    .map_or(Ok(END), |error| Err(error.clone())),
+                _ => Err(native::abi_error()),
             }
         })
     }
 }
-
-/// Request cancellation without accessing the driver's mutable operation.
+/// Request cancellation concurrently without touching driver state.
 /// # Safety
-/// The call remains live until every concurrent operation has returned.
+/// The handle remains live until every concurrent operation returns.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_cancel(call: *mut CallHandle) {
-    // SAFETY: the independently shared token is live and safe to cancel concurrently.
-    unsafe { (*call).cancel.cancel() };
+pub unsafe extern "C" fn thinkthen_call_cancel(call: *mut CallHandle) {
+    /* SAFETY: cancel accesses only its independently shared thread-safe token. */
+    unsafe {
+        (*call).cancel.cancel();
+    }
 }
-
-/// Release the host owner without joining the backend worker.
+/// Cancel and release a call without joining a backend worker.
 /// # Safety
-/// The pointer is NULL or a unique live owner after all host operations return.
+/// NULL or the unique owner after all active operations finish.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_free(call: *mut CallHandle) {
+pub unsafe extern "C" fn thinkthen_call_free(call: *mut CallHandle) {
     if !call.is_null() {
-        // SAFETY: the host transfers the unique call allocation with no active users.
+        /* SAFETY: the host transfers its unique call allocation. */
         drop(unsafe { Box::from_raw(call) });
     }
 }
-
-/// Release one returned buffer and clear its fields.
+/// Free one owned counted buffer and clear it; empty/NULL is harmless.
 /// # Safety
-/// The pointer is NULL or writable storage owning an unread library allocation.
+/// The slot uniquely owns an engine allocation and no reader remains.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_buffer_free(buffer: *mut Buffer) {
     if !buffer.is_null() {
-        // SAFETY: the unique buffer and its writable slot are transferred for cleanup.
-        unsafe { (*buffer).release() };
+        /* SAFETY: cleanup owns the allocation and writable slot. */
+        unsafe {
+            (*buffer).release();
+        }
     }
 }
-
-/// Release both row buffers and clear all fields.
+/// Free a supported error prefix while preserving caller size and trailing bytes.
 /// # Safety
-/// The pointer is NULL or a uniquely owned row after every reader has finished.
+/// NULL or a sized unique error after readers finish; unsupported prefixes are untouched.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_error_free(error: *mut HostError) {
+    /* SAFETY: only its first field is read until a supported prefix is known. */
+    if let Some(size) = unsafe { error_size(error) } {
+        /* SAFETY: the supported owned message and prefix are exclusively writable. */
+        unsafe {
+            (*error).message.release();
+            error.write(HostError::empty(size));
+        }
+    }
+}
+/// Free a supported row prefix while preserving caller size and trailing bytes.
+/// # Safety
+/// NULL or a sized unique row after readers finish; unsupported prefixes are untouched.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_row_free(row: *mut HostRow) {
-    if !row.is_null() {
-        // SAFETY: both unique row buffers and their containing writable slot are owned.
+    /* SAFETY: the first size field validates the remaining supported prefix. */
+    if unsafe { row_size(row) }.is_ok() {
+        /* SAFETY: every buffer in the valid prefix has one owner. */
         unsafe {
-            (*row).fields.release();
-            (*row).detail.release();
-            row.write(HostRow::default());
+            (*row).release();
         }
     }
 }

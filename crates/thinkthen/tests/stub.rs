@@ -1,68 +1,49 @@
 #![cfg(test)]
 //! Public backend construction and key-based repeatability.
 
-use thinkthen::{Backend, Decide, Engine, Record};
+use thinkthen::{BackendName, Decide, OffsetUnit, Record, Request, Settings};
 
 #[test]
 fn stub_ignores_remote_settings_and_never_reads_credentials() {
-    let backend = Backend::resolve_named(
-        "stub",
-        Some("http://remote.invalid"),
-        Some("ignored"),
-        |name| panic!("the stub read environment variable {name}"),
-    )
-    .unwrap();
+    let engine = Settings::default()
+        .with_backend(BackendName::Stub)
+        .url("http://remote.invalid")
+        .model("ignored")
+        .engine(|name| panic!("the stub read environment variable {name}"))
+        .unwrap();
     let question = Decide::new("Ready?").unwrap();
     let mut rows = Vec::new();
-    Engine::new(backend)
-        .call(
-            &question,
-            ["alpha", "beta", "alpha"].map(Record::text),
-            |row| rows.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap();
+    engine
+        .rows(&question, ["alpha", "beta", "alpha"].map(Record::text))
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 3);
-    assert_eq!(rows[0]["p"], rows[2]["p"]);
-    assert_ne!(rows[0]["p"], rows[1]["p"]);
+    assert_eq!(rows[0]["probability"], rows[2]["probability"]);
+    assert_ne!(rows[0]["probability"], rows[1]["probability"]);
     assert!(rows.iter().all(|row| row["status"] == "answered"));
 }
 
 #[test]
 fn every_library_construction_matches_the_shared_stub_rows() {
     use serde_json::Value;
-    use thinkthen::{Cancel, SdkRequest, SdkSettings};
-
     let cases: Vec<Value> =
         serde_json::from_str(include_str!("../../../construction/stub.json")).unwrap();
     let mut failures = Vec::new();
     for case in cases {
-        let mut request = case["request"].clone();
-        // The public SDK admits settings and records separately from its question.
-        // Each part comes from the same complete construction request.
-        let fields = request.as_object_mut().unwrap();
-        let records = fields.remove("records").unwrap();
-        let settings = SdkSettings::from_json(&case["client"].to_string()).unwrap();
-        let engine = settings
-            .engine(|name| {
-                assert_eq!(
-                    name, "THINKTHEN_BATCH",
-                    "the stub consulted a backend variable"
-                );
-                None
-            })
+        let engine = Settings::from_json(&case["client"].to_string())
+            .unwrap()
+            .engine(|name| panic!("the stub consulted variable {name}"))
             .unwrap();
-        let request = SdkRequest::from_json(&request.to_string()).unwrap();
-        let call = request.prepare(&engine, Cancel::default()).unwrap();
-        let mut actual = Vec::new();
-        call.run(
-            records
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|value| (call.record(value), ())),
-            |(), row| actual.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap();
+        let request = Request::from_json(&case["request"].to_string()).unwrap();
+        let call = engine
+            .open_request(&request, OffsetUnit::CodePoints)
+            .unwrap();
+        call.sender().close();
+        let actual = call
+            .rows()
+            .map(|row| serde_json::to_value(row.unwrap()).unwrap())
+            .collect::<Vec<_>>();
         if Value::Array(actual.clone()) != case["expected"] {
             failures.push(serde_json::json!({"request":case["request"],"actual":actual}));
         }
@@ -76,23 +57,24 @@ fn every_library_construction_matches_the_shared_stub_rows() {
 
 #[test]
 fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
-    use thinkthen::{Annotate, Pointer, Toolbox};
-    let toolbox = Toolbox::from_bytes(
-        br#"{"questions":{"a":{"decide":"Ready?","on":"/body"},"b":{"decide":"Ready?","on":"/body"},"c":{"decide":"Ready?","threshold":"0.8","on":"/body"},"d":{"decide":"Ready?","on":"/other"}}}"#,
-    )
+    use thinkthen::Annotate;
+    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a":{"function":"decide","question":"Ready?","evidence":"/body"},"b":{"function":"decide","question":"Ready?","evidence":"/body"},"c":{"function":"decide","question":"Ready?","threshold":0.8,"evidence":"/body"},"d":{"function":"decide","question":"Ready?","evidence":"/other"}}}"#)
     .unwrap();
-    let engine = Engine::new(Backend::stub());
+    let engine = Settings::default()
+        .with_backend(BackendName::Stub)
+        .engine(|_| None)
+        .unwrap();
     let mut rows = Vec::new();
     engine
-        .annotate(
-            &Annotate::new(&toolbox),
-            [Record::json(
+        .rows(
+            &toolbox,
+            [Record::from_json(
                 r#"{"body":"evidence","other":"different"}"#,
-                &Pointer::default(),
             )],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap();
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["answer"]["a"], rows[0]["answer"]["b"]);
     for (name, question, evidence) in [
@@ -108,12 +90,14 @@ fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
     ] {
         let mut standalone = Vec::new();
         engine
-            .call(&question, [Record::text(evidence)], |row| {
+            .rows(&question, [Record::text(evidence)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| {
                 standalone.push(serde_json::to_value(row).unwrap());
-            })
-            .unwrap();
+            });
         assert_eq!(standalone.len(), 1);
-        for field in ["status", "answer", "p"] {
+        for field in ["status", "answer", "probability"] {
             assert_eq!(rows[0]["answer"][name][field], standalone[0][field]);
         }
     }
@@ -121,25 +105,28 @@ fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
 
 #[test]
 fn nul_in_wording_and_record_data_remains_valid() {
-    use thinkthen::{Pointer, RelationRule};
+    use thinkthen::RelationRule;
     let question = Decide::new("Ready?\0Still ready?").unwrap();
     RelationRule::new("linked", "person", "person")
         .unwrap()
         .reads("works\0with")
         .unwrap();
     let mut rows = Vec::new();
-    Engine::new(Backend::stub())
-        .call(
+    Settings::default()
+        .with_backend(BackendName::Stub)
+        .engine(|_| None)
+        .unwrap()
+        .rows(
             &question,
-            [Record::json(
-                r#"{"id":{"data\u0000key":"id"},"record\u0000key":"before\u0000after"}"#,
-                &Pointer::default(),
+            [Record::from_json(
+                r#"{"id":"data\u0000id","record\u0000key":"before\u0000after"}"#,
             )],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap();
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["status"], "answered");
-    assert_eq!(rows[0]["id"], serde_json::json!({"data\0key":"id"}));
+    assert_eq!(rows[0]["id"], serde_json::json!("data\0id"));
     assert!(rows[0]["answer"].is_boolean());
 }

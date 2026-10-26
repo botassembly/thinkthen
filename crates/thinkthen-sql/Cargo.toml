@@ -9,7 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-thinkthen.workspace = true
+thinkthen = { workspace = true, features = ["native"] }
 serde_json.workspace = true
 
 [dev-dependencies]

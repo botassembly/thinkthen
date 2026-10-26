@@ -1,0 +1,27 @@
+{
+  "name": "decide-precision",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      []
+    ]
+  },
+  "replies": [
+    {
+      "probability": 0.8123456789012345
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345
+    }
+  ],
+  "requests": 1
+}

@@ -1,8 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
-    "strict": true, "allowJs": true, "checkJs": true, "noEmit": true,
-    "noUncheckedIndexedAccess": true, "exactOptionalPropertyTypes": true
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "lib": [
+      "ES2022",
+      "ESNext.Disposable"
+    ]
   },
-  "include": ["runtime.js", "index.d.ts", "tests/types.ts"]
+  "include": [
+    "*.js",
+    "index.d.ts",
+    "tests/types.ts"
+  ]
 }

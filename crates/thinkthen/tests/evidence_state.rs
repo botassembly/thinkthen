@@ -4,7 +4,8 @@
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 use thinkthen::{
-    Adapter, Annotate, Backend, Engine, Recognize, Record, Relate, RelationRule, Toolbox,
+    Annotate, BackendName as Adapter, Engine, Key, Recognize, Record, Relate, RelationRule,
+    Settings,
 };
 
 fn questions(body: &Value) -> Vec<&Value> {
@@ -35,6 +36,7 @@ fn reply(question: &Value, adapter: Adapter) -> Value {
         return match adapter {
             Adapter::SystemOne => json!({"type":"noul", "noul":0.9}),
             Adapter::OpenAi => json!({"type":"predicate", "probability":0.9}),
+            _ => panic!("remote fixture"),
         };
     }
     let boundary = labels.contains(&"BEGIN");
@@ -66,6 +68,7 @@ fn reply(question: &Value, adapter: Adapter) -> Value {
                 .collect();
             json!({"type":"choice", "probabilities":probabilities})
         }
+        _ => panic!("remote fixture"),
     }
 }
 
@@ -91,6 +94,7 @@ fn server(adapter: Adapter) -> Loopback {
                     .map(|question| reply(question, adapter))
                     .collect(),
             ),
+            _ => panic!("remote fixture"),
         };
         Reply::json(200, &json!({"answers":answers}))
     })
@@ -98,10 +102,12 @@ fn server(adapter: Adapter) -> Loopback {
 }
 
 fn engine(server: &Loopback, adapter: Adapter) -> Engine {
-    Engine::new(
-        Backend::resolve_adapter(adapter, Some(server.base()), None, |_| Some(KEY.to_owned()))
-            .unwrap(),
-    )
+    Settings::default()
+        .with_backend(adapter)
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
 
 fn check_wording(question: &Value, round: usize) {
@@ -189,6 +195,7 @@ fn check_states(server: &Loopback, adapter: Adapter, expected: &[(&str, [usize; 
         let state = body[match adapter {
             Adapter::SystemOne => "state",
             Adapter::OpenAi => "input",
+            _ => panic!("remote fixture"),
         }]
         .as_str()
         .unwrap();
@@ -245,30 +252,34 @@ fn selected_text_is_shared_evidence_for_both_adapters_and_all_name_rounds() {
             let server = server(adapter);
             let mut rows = Vec::new();
             let records = ["Ada joined Acme", "Zoë joined Orbit"].map(|text| {
-                Record::json(
+                Record::from_json(
                     &json!({"ignored":"wrong evidence", "nested":{"text":text}}).to_string(),
-                    &"/nested/text".parse().unwrap(),
                 )
             });
             if relations {
                 engine(&server, adapter)
-                    .call(
+                    .rows(
                         &Relate::new(vec![
-                            RelationRule::parse("works_for=person:company").unwrap(),
+                            RelationRule::new("works_for", "person", "company").unwrap(),
                         ])
-                        .unwrap(),
+                        .unwrap()
+                        .evidence("/nested/text".parse().unwrap()),
                         records,
-                        |row| rows.push(serde_json::to_value(row).unwrap()),
                     )
-                    .unwrap();
+                    .unwrap()
+                    .map(|row| row.unwrap())
+                    .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
             } else {
                 engine(&server, adapter)
-                    .call(
-                        &Recognize::new(["person", "company"]).unwrap(),
+                    .rows(
+                        &Recognize::new(["person", "company"])
+                            .unwrap()
+                            .evidence("/nested/text".parse().unwrap()),
                         records,
-                        |row| rows.push(serde_json::to_value(row).unwrap()),
                     )
-                    .unwrap();
+                    .unwrap()
+                    .map(|row| row.unwrap())
+                    .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
             }
             assert_eq!(rows.len(), 2);
             for (row, (person, company)) in rows.iter().zip([("Ada", "Acme"), ("Zoë", "Orbit")]) {
@@ -293,19 +304,14 @@ fn selected_text_is_shared_evidence_for_both_adapters_and_all_name_rounds() {
             );
         }
         let server = server(adapter);
-        let toolbox = Toolbox::from_bytes(br#"{"questions":{"decision":{"decide":"Is this stated?","on":"/decision"},"names":{"recognize":["person","company"],"on":"/fields/names"},"relations":{"relate":[{"name":"works_for","source":"person","target":"company"}],"on":"/fields/relations"}}}"#).unwrap();
+        let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"decision":{"function":"decide","question":"Is this stated?","evidence":"/container/decision"},"names":{"function":"recognize","kinds":["person","company"],"evidence":"/container/fields/names"},"relations":{"function":"relate","rules":[{"relation":"works_for","source":"person","target":"company"}],"evidence":"/container/fields/relations"}}}"#).unwrap();
         let record = json!({"container":{"decision":"yes", "fields":{"names":"Ada one two three four five six seven left", "relations":"Ada one two three four five six seven right Acme"}}, "fields":{"names":"wrong"}});
         let mut rows = Vec::new();
         engine(&server, adapter)
-            .annotate(
-                &Annotate::new(&toolbox),
-                [Record::json(
-                    &record.to_string(),
-                    &"/container".parse().unwrap(),
-                )],
-                |row| rows.push(serde_json::to_value(row).unwrap()),
-            )
-            .unwrap();
+            .rows(&toolbox, [Record::from_json(&record.to_string())])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows.len(), 1);
         let answer = &rows[0]["answer"];
         assert_eq!(answer["decision"]["answer"], true);
@@ -336,15 +342,13 @@ fn shared_evidence_counts_toward_the_request_byte_limit() {
         let server = server(adapter);
         let mut rows = Vec::new();
         engine(&server, adapter)
-            .call(
-                &Recognize::new(["person"]).unwrap(),
-                [Record::text(&text)],
-                |row| rows.push(serde_json::to_value(row).unwrap()),
-            )
-            .unwrap_err();
+            .rows(&Recognize::new(["person"]).unwrap(), [Record::text(&text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["status"], "failed");
-        assert_eq!(rows[0]["error"]["code"], "backend.limit");
+        assert_eq!(rows[0]["error"]["code"], "record.too-large");
         assert_eq!(server.count(), 0);
     }
 }

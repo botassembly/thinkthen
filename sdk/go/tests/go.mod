@@ -1,5 +1,5 @@
 module consumer
 
-go 1.22
+go 1.23
 
-require github.com/botassembly/thinkthen/sdk/go v0.0.0
+require github.com/botassembly/thinkthen/sdk/go/thinkthen v0.0.0

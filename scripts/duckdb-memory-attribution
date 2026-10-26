@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Observe one bounded original DuckDB workload; this is not acceptance proof."""
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+
+from sql_stress_proof import BEFORE, lifetime_proof
+
+REFERENCE = '7890a5eba312811dda97537d4dd19bde918a0abf'
+NATIVE = '975e5aab495211ca1ffc95a8c4d6811913444ceae9ef4b4bc75777e76d3c3eda'
+PRODUCER = 'b475fea7eaed6bc0a1c0eb210b8adbbde4ff1f36'
+PAYLOADS = {
+    'sql': '1c0311c33756afbdff3db411c763a32cce18d805a0bb5a19959da253a50c5234',
+    'libduckdb.so': 'd1d969cca693c1c59d09f91c985d50223b933a7f403126f2de0961f724104296',
+    'thinkthen.duckdb_extension': '022440897c1c63edb84029337ab2ef92eaa09b6a95f274d0767b35cb5ee06a6f',
+}
+
+PYTHON_OBSERVER = '''import ctypes
+import json
+import os
+from pathlib import Path
+import sys
+import time
+import tracemalloc
+
+class Mallinfo(ctypes.Structure):
+    _fields_ = [(name, ctypes.c_size_t) for name in (
+        'arena', 'ordblks', 'smblks', 'hblks', 'hblkhd', 'usmblks',
+        'fsmblks', 'uordblks', 'fordblks', 'keepcost')]
+
+libc = ctypes.CDLL(None)
+libc.mallinfo2.restype = Mallinfo
+assert libc.mallinfo2().arena > 0, 'glibc mallinfo2 unavailable'
+tracemalloc.start(1)
+
+def observe():
+    current, peak = tracemalloc.get_traced_memory()
+    counters = libc.mallinfo2()
+    event = dict(pid=os.getpid(), monotonic_ns=time.monotonic_ns(),
+        traced_current=current, traced_peak=peak, allocated_blocks=sys.getallocatedblocks(),
+        tracer_overhead=tracemalloc.get_tracemalloc_memory(),
+        glibc_uordblks=counters.uordblks, glibc_hblkhd=counters.hblkhd,
+        glibc_arena=counters.arena, glibc_fordblks=counters.fordblks)
+    with Path(os.environ['THINKTHEN_DUCKDB_ATTRIBUTION_PYTHON']).open('a') as stream:
+        stream.write(json.dumps(event) + '\\n')
+'''
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def save(path, value):
+    path.write_text(json.dumps(value, indent=2) + '\n')
+
+
+def module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('output', type=Path, help='new directory for attribution artifacts')
+    options = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+    tools = Path.home() / '.local/share/thinkthen-build-tools'
+    original = tools / 'stress-campaign/0182-7890a5eba312-native/duckdb/fixture'
+    output = options.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    receipt = dict(revision=revision, reference=REFERENCE, native_key=NATIVE,
+        native_producer=PRODUCER, original_payloads=PAYLOADS, rounds=2,
+        purpose='allocation ownership diagnosis, not an acceptance verdict',
+        observation='Python tracemalloc(1), counters only; native allocator stats after result destruction; no collection or allocator policy changes')
+    save(output / 'receipt.json', receipt)
+    try:
+        run(root, tools, original, output, receipt)
+    finally:
+        save(output / 'receipt.json', receipt)
+        destination = 'yellow:' + str(output.parent) + '/'
+        subprocess.run(['ssh', 'yellow', shlex.join(['mkdir', '-p', '--', str(output.parent)])], check=True)
+        subprocess.run(['scp', '-r', str(output), destination], check=True)
+        print(json.dumps(dict(artifacts=str(output), receipt=receipt)), flush=True)
+
+
+def run(root, tools, original, output, receipt):
+    for name, expected in PAYLOADS.items():
+        if digest(original / name) != expected:
+            raise RuntimeError('original payload changed: ' + name)
+    source = output / 'source'
+    paths = ['databases/duckdb/tests/stress.py', 'databases/duckdb/tests/typed_api.py',
+        'databases/duckdb/tests/runner.cpp', 'databases/stress.py', 'databases/testing.py',
+        'scripts/stress-adapters.py', 'conformance/stress.json']
+    receipt['original_source_hashes'] = {}
+    for name in paths:
+        path = source / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(subprocess.check_output(['git', 'show', REFERENCE + ':' + name]))
+        receipt['original_source_hashes'][name] = digest(path)
+    # The observer uses the landed 0200 criterion, separately from original workload code.
+    for name in ['stress_monitor.py', 'stress_resources.py', 'stress-checkpoint']:
+        shutil.copy2(root / 'scripts' / name, source / 'scripts' / name)
+    baseline = output.parent / BEFORE
+    baseline_receipt = json.loads((baseline / 'receipt.json').read_text())
+    observed_sql = baseline / 'fixture/sql'
+    expected_sql = baseline_receipt['instrumented_hashes']['fixture/sql']
+    if digest(observed_sql) != expected_sql:
+        raise RuntimeError('baseline observed SQL host changed')
+    receipt['baseline_artifacts'] = str(baseline)
+    receipt['reused_instrumented_sql_sha256'] = expected_sql
+    for name in ('databases/duckdb/tests/stress.py', 'databases/stress.py'):
+        shutil.copy2(root / name, source / name)
+    adapter = source / 'databases/duckdb/tests/stress.py'
+    text = adapter.read_text().replace('import json\n', 'import json\nfrom memory_attribution import observe\n', 1)
+    text = text.replace('with Host(package, environment(case)) as host:', "with Host(package, dict(environment(case), THINKTHEN_DUCKDB_ATTRIBUTION_NATIVE=os.environ['THINKTHEN_DUCKDB_ATTRIBUTION_NATIVE'])) as host:", 1)
+    text = text.replace("if hook := os.environ.get('THINKTHEN_STRESS_CHECKPOINT_COMMAND'):", "observe()\n            if hook := os.environ.get('THINKTHEN_STRESS_CHECKPOINT_COMMAND'):", 1)
+    adapter.write_text(text)
+    (adapter.parent / 'memory_attribution.py').write_text(PYTHON_OBSERVER)
+    package = output / 'fixture'
+    package.mkdir()
+    for name in ('libduckdb.so', 'thinkthen.duckdb_extension'):
+        (package / name).symlink_to(original / name)
+    (package / 'sql').symlink_to(observed_sql)
+    receipt['instrumented_hashes'] = {str(path.relative_to(output)): digest(path)
+        for path in source.rglob('*') if path.is_file()}
+    receipt['instrumented_hashes']['fixture/sql'] = digest(package / 'sql')
+    env = dict(os.environ, THINKTHEN_DUCKDB_ATTRIBUTION_NATIVE=str(output / 'native.jsonl'),
+        THINKTHEN_DUCKDB_ATTRIBUTION_PYTHON=str(output / 'python.jsonl'))
+    for key in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH', 'THINKTHEN_STRESS_FULL'):
+        env.pop(key, None)
+    # Both owners must expose their counters before any backend fixture starts.
+    subprocess.run([str(package / 'sql'), '--attribution-preflight'], env=env, check=True)
+    subprocess.run([sys.executable, '-c', 'import memory_attribution'], cwd=adapter.parent, env=env, check=True)
+    receipt['preflight'] = 'glibc mallinfo2 and DuckDB prefixed jemalloc allocated/active/resident/retained supported'
+    loopbacks = list((tools / 'native' / NATIVE / 'test-fixtures/x86_64-unknown-linux-gnu').glob('*/loopback'))
+    if len(loopbacks) != 1:
+        raise RuntimeError('expected one preserved loopback')
+    env['THINKTHEN_LOOPBACK'] = str(loopbacks[0])
+    os.environ['THINKTHEN_LOOPBACK'] = str(loopbacks[0])
+    receipt['loopback_sha256'] = digest(loopbacks[0])
+    receipt['python_runtime'] = dict(executable=sys.executable, version=sys.version)
+    lifetime_proof(root, tools, output, loopbacks[0], receipt)
+    sys.path.insert(0, str(source / 'scripts'))
+    original_runner = module('original_runner', source / 'scripts/stress-adapters.py')
+    from stress_monitor import Monitor
+    table = json.loads((source / 'conformance/stress.json').read_text())
+    scenario = next(item for item in table['scenarios'] if item['name'] == 'healthy')
+    fixture = original_runner.Fixture(['--stress', scenario['name']])
+    owned = [fixture.process.pid]
+    process = None
+    monitor = None
+    try:
+        case = dict(client=dict(table['client'], backend='openai', url=fixture.url, api_key='loopback-only'),
+            scenario=scenario, records=table['records']['full'], probability=table['replies'][0]['probability'],
+            concurrency=1, rounds=receipt['rounds'], cancel=False)
+        save(output / 'case.json', case)
+        monitor = Monitor(lambda: owned, int(fixture.url.split(':')[2].split('/')[0]))
+        env.update(THINKTHEN_STRESS_CASE=str(output / 'case.json'),
+            THINKTHEN_STRESS_CHECKPOINT=monitor.path, THINKTHEN_STRESS_CONCURRENCY='1',
+            THINKTHEN_STRESS_CHECKPOINT_COMMAND='exec ' + shlex.join([sys.executable, str(source / 'scripts/stress-checkpoint')]))
+        receipt['started_monotonic_ns'] = time.monotonic_ns()
+        with (output / 'adapter.stdout').open('w') as stdout, (output / 'adapter.stderr').open('w') as stderr:
+            process = subprocess.Popen([sys.executable, str(adapter), str(package)], env=env,
+                stdout=stdout, stderr=stderr, stdin=subprocess.DEVNULL, start_new_session=True)
+            owned.append(process.pid)
+            receipt['adapter_pid'] = process.pid
+            receipt['adapter_exit'] = process.wait()
+        receipt['fixture_requests'] = fixture.command('count')
+    finally:
+        if process is not None and process.poll() is None:
+            original_runner.stop_adapter(process)
+        fixture.close()
+        receipt['fixture_exit'] = fixture.process.returncode
+        receipt['finished_monotonic_ns'] = time.monotonic_ns()
+        # Preserve actual exits before deriving any memory interpretation.
+        save(output / 'receipt.json', receipt)
+        if monitor is not None:
+            resources = monitor.finish()
+            resources['groups'] = {name: dict(round_samples=rows, process_samples=monitor.process_samples[name])
+                for name, rows in monitor.groups.items()}
+            resources['resource_growth'] = 'not evaluated: two-round ownership witness is below the unchanged soak minimum'
+            save(output / 'resources.json', resources)
+    if receipt.get('adapter_exit') != 0 or receipt['fixture_exit'] != 0:
+        raise RuntimeError('diagnostic consumer or fixture failed; inspect saved exits')
+    if len(monitor.groups.get('workload', [])) != receipt['rounds']:
+        raise RuntimeError('diagnostic lost completed-round observations')
+    report = json.loads((output / 'adapter.stdout').read_text())
+    if report != dict(calls=2, rows=200000, failed=0, cancelled=False):
+        raise RuntimeError('diagnostic lost calls or rows')
+    receipt['consumer_report'] = report
+
+
+if __name__ == '__main__':
+    main()

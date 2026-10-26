@@ -15,6 +15,7 @@ import sys
 import tempfile
 import tomllib
 from native_platform import ARM_BASE, HOSTS
+from build_targets import floor_target
 
 from runtime_floors import FLOORS
 from release_images import image
@@ -24,6 +25,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PLATFORMS = {row[3]: (row[1], row[2], 'libthinkthen_ffi.' + row[5])
              for row in HOSTS.values() if row[0] != 'linux-arm64'}
 BUILD = ["--offline", "--locked", "--release", "-p", "thinkthen-ffi"]
+# These integration-test trees are not read by production modules or build
+# scripts. Keep this list explicit: audit includes and build inputs before
+# excluding another tree or adding a production dependency on one of these.
+TEST_TREES = tuple(Path("crates") / crate / "tests" for crate in
+                   ("thinkthen", "thinkthen-ffi", "thinkthen-sql"))
 
 
 def output(*args):
@@ -56,6 +62,8 @@ def cache_path():
         if p["source"] is None:
             folder = Path(p["manifest_path"]).parent.relative_to(ROOT)
             for name in output("git", "ls-files", "--", str(folder)).splitlines():
+                if any(Path(name).is_relative_to(tree) for tree in TEST_TREES):
+                    continue
                 inputs[name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
     manifest = tomllib.loads((ROOT / "Cargo.toml").read_text())
     manifest["workspace"].pop("members", None)
@@ -105,6 +113,8 @@ def main():
         sys.exit("usage: scripts/native-prepare [--path]")
     if not sys.argv[1:] and os.environ.get("LLVM_PROFILE_FILE"):
         sys.exit("native-prepare keeps release assets; coverage builds stay in the job target")
+    from header_contract import check
+    check(ROOT)
     cache = cache_path()
     if sys.argv[1:]:
         print(cache)
@@ -121,7 +131,7 @@ def main():
             print(f"native cache hit: {host}", file=sys.stderr)
         else:
             print(f"native cache miss: {host}", file=sys.stderr)
-            target = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+            target = floor_target(ROOT) if sys.platform == "linux" else Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
             with tempfile.TemporaryFile(mode="w+") as messages:
                 subprocess.run(([str(ROOT / "scripts/runtime-floor-build")] if sys.platform == "linux" else []) + ["cargo", "build", *BUILD, "--target", host,
                                 "--message-format=json-render-diagnostics"], cwd=ROOT,
@@ -146,6 +156,9 @@ def main():
             if not alias.is_symlink() and not alias.exists():
                 alias.symlink_to(Path("..") / asset_rid, target_is_directory=True)
         shutil.copy2(ROOT / "crates/thinkthen-ffi/include/thinkthen.h", cache / "thinkthen.h")
+    from production_native import check
+    for asset in (destination, archive):
+        check(asset.read_bytes(), str(asset))
     print(cache)
 
 

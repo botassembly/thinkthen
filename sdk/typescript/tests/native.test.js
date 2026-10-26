@@ -1,286 +1,170 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { once } from "node:events";
-import { pathToFileURL } from "node:url";
-import { runInNewContext } from "node:vm";
-import { readFile } from "node:fs/promises";
-import { sdk, backend, caseFor } from "./support.js";
+import { sdk } from "./support.js";
 
-const yes = { answer: { type: "noul", noul: 0.9 } };
+function deferred() {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+}
 
-test("filter retains original objects through a failure and reports it after the last kept record", async () => {
-  const server = await backend(caseFor({}, [], [
-    { contains: '"bad"', status: 400, body: {} },
-    { contains: '"no"', answer: { type: "noul", noul: 0.1 } }, yes,
-  ]));
-  try {
-    const client = new sdk.ThinkThen({ url: server.url, batch: 1 });
-    const input = [{ id: "first", body: "good" }, { body: "bad" }, { body: "no" }, { id: "last", body: "good again" }];
-    const kept = [];
-    await assert.rejects(async () => {
-      for await (const record of client.filterStream("Ready?", input, { on: "/body" })) kept.push(record);
-    }, error => error instanceof sdk.BackendError && error.code === "backend.status");
-    assert.equal(kept.length, 2);
-    assert.equal(kept[0], input[0]);
-    assert.equal(kept[1], input[3]);
-    assert.equal(await server.count(), 4);
-  } finally { await server.close(); }
-});
-
-test("async input is bounded, runs beside JavaScript, and closes on break or source failure", async () => {
-  const server = await backend(caseFor({}, [], [yes]));
-  try {
-    const client = new sdk.ThinkThen({ url: server.url, batch: 1 });
-    let pulled = 0;
-    let closed = 0;
-    let ticked = false;
-    async function* records() {
-      try {
-        for (let i = 0; i < 1000; i++) {
-          pulled++;
-          await new Promise(resolve => setImmediate(() => { ticked = true; resolve(); }));
-          yield `record ${i}`;
-        }
-      } finally { closed++; }
-    }
-    for await (const row of client.decideStream("Ready?", records())) {
-      assert.equal(row.status, "answered");
-      assert.equal(ticked, true);
-      break;
-    }
-    assert(pulled < 1000);
-    assert.equal(closed, 1);
-    const failure = new Error('{"code":"usage.question","message":"source failed"}');
-    async function* broken() { throw failure; }
-    await assert.rejects(async () => {
-      for await (const row of client.decideStream("Ready?", broken())) void row;
-    }, error => error === failure);
-  } finally { await server.close(); }
-});
-
-test("abort preserves its reason, closes pending input and leaves the client's next call usable", async () => {
-  const server = await backend(caseFor({}, [], [yes]));
-  try {
-    const client = new sdk.ThinkThen({ url: server.url, batch: 1 });
-    const pre = new AbortController();
-    const reason = { cancelled: true };
-    pre.abort(reason);
-    await assert.rejects(client.decide("Ready?", "evidence", { signal: pre.signal }), error => error === reason);
-    assert.equal(await server.count(), 0);
+// Feature: stop paths interrupt a pending pull without joining its next promise.
+for (const action of ["abort", "return", "dispose", "close"]) {
+  test(`${action} interrupts pending next and awaits iterator return exactly once`, { timeout: 10000 }, async () => {
+    const entered = deferred();
+    const inputReply = deferred();
+    const returnEntered = deferred();
+    const returnReply = deferred();
     const controller = new AbortController();
-    let entered;
-    const pulled = new Promise(resolve => { entered = resolve; });
-    let release;
-    const blocked = new Promise(resolve => { release = resolve; });
     let returned = 0;
-    const records = {
+    const input = {
       [Symbol.asyncIterator]() { return this; },
-      next() { entered(); return blocked; },
-      return() { returned++; return Promise.resolve({ done: true }); },
+      next() { entered.resolve(); return inputReply.promise; },
+      return() { returned++; returnEntered.resolve(); return returnReply.promise; },
     };
-    const stream = client.decideStream("Ready?", records, { signal: controller.signal });
-    const waiting = stream[Symbol.asyncIterator]().next();
-    await pulled;
-    controller.abort(reason);
-    await assert.rejects(waiting, error => error === reason);
-    assert.equal(returned, 1);
-    release({ done: true });
-    const row = await client.decide("Ready?", "evidence");
-    assert.equal(row.answer, true);
-    assert.equal(await server.count(), 1);
-  } finally { await server.close(); }
-});
-
-test("clients keep their own backend and question options", async () => {
-  const a = await backend(caseFor({}, [], [yes]));
-  const b = await backend(caseFor({}, [], [{ answer: { type: "noul", noul: 0.1 } }]));
-  try {
-    const left = new sdk.ThinkThen({ url: a.url, model: "left", batch: 1 });
-    const right = new sdk.ThinkThen({ url: b.url, model: "right", batch: 2 });
-    const [one, two] = await Promise.all([
-      left.decide("Ready?", { body: "yes" }, { on: "/body", threshold: "0.2:0.8" }),
-      right.decide("Ready?", "no"),
-    ]);
-    assert.equal(one.answer, true);
-    assert.equal(two.answer, false);
-    assert.equal((await left.decide("Ready?", "again")).answer, true);
-    assert.equal(await a.count(), 2);
-    assert.equal(await b.count(), 1);
-  } finally { await a.close(); await b.close(); }
-});
-
-test("answer spans use String.slice through find, names, relations and annotation with detail in the same string units", async () => {
-  const tags = { type: "choice", probabilities: { BEGIN: 0, INSIDE: 0, END: 0, SINGLE: 1, OUT: 0 } };
-  const server = await backend(caseFor({}, [], [
-    { criterion: "u1", answer: { type: "choice", probabilities: { u1: 0, u2: 1, none: 0 } } },
-    { criterion: "BEGIN", answer: tags },
-    { criterion: "person", contains: "[[Ada]]", answer: { type: "choice", probabilities: { person: 1, company: 0, "none of these": 0 } } },
-    { criterion: "person", contains: "[[Acme]]", answer: { type: "choice", probabilities: { person: 0, company: 1, "none of these": 0 } } },
-    { criterion: "person", answer: { type: "choice", probabilities: { person: 0, company: 0, "none of these": 1 } } },
-    yes,
-  ]));
-  try {
-    const client = new sdk.ThinkThen({ url: server.url });
-    const text = "😀 Ada Acme";
-    const rules = [{ name: "works_for", source: "person", target: "company" }];
-    const found = await client.find("Who?", "😀\nAda");
-    assert.equal("😀\nAda".slice(found.answer.start, found.answer.end), "Ada");
-    const names = await client.recognize(["person", "company"], text);
-    assert.deepEqual(names.answer.map(n => text.slice(n.start, n.end)), ["Ada", "Acme"]);
-    assert.equal(names.detail.probabilities.pieces[0].end, 2);
-    const relations = await client.relate(rules, text);
-    assert.equal(relations.answer.length, 1);
-    const relation = relations.answer[0];
-    assert.equal(text.slice(relation.source.start, relation.source.end), "Ada");
-    assert.equal(text.slice(relation.target.start, relation.target.end), "Acme");
-    const row = await client.annotate({ questions: {
-      found: { find: "Who?", on: "/lines" },
-      names: { recognize: ["person", "company"], on: "/text" },
-      relations: { relate: rules, on: "/text" },
-    } }, { lines: "😀\nAda", text });
-    assert.equal(row.answer.found.answer.start, 3);
-    assert.equal(row.answer.names.answer[0].start, 3);
-    assert.equal(row.answer.relations.answer[0].target.start, 7);
-    assert.equal(row.answer.names.detail.pieces[0].end, 2);
-  } finally { await server.close(); }
-});
-
-test("module admission follows promise and iteration contracts and error constructors match types", async () => {
-  delete process.env.THINKTHEN_API_KEY;
-  try {
-    let promise;
-    assert.doesNotThrow(() => { promise = sdk.decide("Ready?", "evidence"); });
-    await assert.rejects(promise, error => error instanceof sdk.UsageError && error.code === "usage.key-missing");
-    let stream;
-    assert.doesNotThrow(() => { stream = sdk.decideStream("Ready?", ["evidence"]); });
-    await assert.rejects(stream[Symbol.asyncIterator]().next(), error => error instanceof sdk.UsageError && error.code === "usage.key-missing");
-    const error = new sdk.UsageError({ code: "usage.question", message: "Question failed" });
-    assert.equal(error.message, "Question failed");
-    assert.equal(error.code, "usage.question");
-    assert(error instanceof sdk.ThinkThenError);
-  } finally { process.env.THINKTHEN_API_KEY = "sk-test-0123456789"; }
-});
-
-test("JSON values stay single records and malformed host text fails before sending", async () => {
-  const server = await backend(caseFor({}, [], [yes]));
-  try {
-    const client = new sdk.ThinkThen({ url: server.url });
-    const rows = [];
-    for await (const row of client.decideStream("Ready?", [null, true, 42, ["a", "b"]])) rows.push(row);
-    assert.equal(rows.length, 4);
-    assert.deepEqual(rows.map(row => row.id), [1, 2, 3, 4]);
-    assert(rows.every(row => row.status === "answered" && row.answer === true));
-    const one = await client.decide("Ready?", ["a", "b"]);
-    assert.equal(one.id, 1);
-    assert.equal(one.answer, true);
-    const sent = await server.count();
-    await assert.rejects(client.decide("Ready?", "\ud800"), error => error instanceof sdk.UsageError && error.code === "usage.record");
-    assert.equal(await server.count(), sent);
-  } finally { await server.close(); }
-});
-
-test("tagged in-memory questions keep client routing and literal question strings", async () => {
-  const client = new sdk.ThinkThen({ adapter: "stub" });
-  const inline = await client.decide("literal.json", "evidence");
-  const named = await client.decide({ type: "toolbox", value: { questions: { ready: { decide: "literal.json" } } }, name: "ready" }, "evidence");
-  assert.deepEqual(named, inline);
-  assert.equal(inline.detail.source.backend, "stub");
-});
-
-// Raw strings and structured evidence must preserve the same caller bytes.
-test("raw text keeps empty strings and embedded or trailing NUL characters", async () => {
-  const client = new sdk.ThinkThen({ adapter: "stub" });
-  for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) {
-    const raw = await client.decide("Ready?", text, { on: "/body" });
-    const structured = await client.decide("Ready?", { body: text }, { on: "/body" });
-    assert.deepEqual(raw, structured);
-  }
-});
-
-test("row detail decodes only when read", async () => {
-  const original = JSON.parse;
-  let decoded = 0;
-  JSON.parse = (...args) => {
-    const value = original(...args);
-    if (value !== null && typeof value === "object" && "source" in value) decoded++;
-    return value;
-  };
-  try {
-    const row = await new sdk.ThinkThen({ adapter: "stub" }).decide("Ready?", "text");
-    assert.equal(decoded, 0);
-    const detail = row.detail;
-    assert.equal(detail.source.backend, "stub");
-    assert.equal(decoded, 1);
-    assert.equal(row.detail, detail);
-    assert.equal(decoded, 1);
-  } finally { JSON.parse = original; }
-});
-
-test("JSON conversion refuses non-finite numbers in settings, calls and nested records", async () => {
-  const client = new sdk.ThinkThen({ adapter: "stub" });
-  const usage = error => error instanceof sdk.UsageError && error.code === "usage.record";
-  const numbers = [NaN, Infinity, -Infinity];
-  const values = numbers.flatMap(value => [value, new Number(value), runInNewContext("new Number(value)", { value })]);
-  for (const value of values) {
-    assert.throws(() => new sdk.ThinkThen({ adapter: "stub", batch: value }), usage);
-    await assert.rejects(client.decide("Ready?", "alpha", { threshold: value }), usage);
-    await assert.rejects(client.decide("Ready?", { body: [value] }), usage);
-    const stream = client.decideStream("Ready?", [{ body: { number: value } }]);
-    await assert.rejects(stream[Symbol.asyncIterator]().next(), usage);
-  }
-  assert.equal((await client.decide("Ready?", { body: [null, 1] })).status, "answered");
-  assert.deepEqual(await client.decide("Ready?", { body: new Number(1) }), await client.decide("Ready?", { body: 1 }));
-});
-
-test("unordered relation answers retain their direction flag", async () => {
-  const fixture = JSON.parse(await readFile(new URL("../../../conformance/relate-undirected.json", import.meta.url), "utf8"));
-  const server = await backend(fixture);
-  try {
-    const client = new sdk.ThinkThen({ url: server.url });
-    const text = fixture.request.records[0];
-    const row = await client.relate(fixture.request.question.value, text);
-    assert.equal(row.answer.length, 1);
-    assert.equal(row.answer[0].either, true);
-    assert.equal(text.slice(row.answer[0].source.start, row.answer[0].source.end), row.answer[0].source.text);
-  } finally { await server.close(); }
-});
-
-
-test("abandoned stream releases Node's event loop", async () => {
-  const url = pathToFileURL(process.env.THINKTHEN_NODE_PACKAGE).href;
-  for (const mode of ["after-row", "pending-input"]) {
-    const child = spawn(process.execPath, ["--input-type=module", "-e", `
-      import { ThinkThen } from ${JSON.stringify(url)};
-      const input = ${JSON.stringify(mode)} === "pending-input"
-        ? { [Symbol.asyncIterator]() { return this; }, next() { return new Promise(() => {}); } }
-        : ["first", "second"];
-      const stream = new ThinkThen({ adapter: "stub", batch: 1 }).decideStream("Ready?", input);
-      const pending = stream.next();
-      if (${JSON.stringify(mode)} === "after-row") await pending;
-    `], { stdio: ["ignore", "pipe", "pipe"] });
-    const done = once(child, "exit");
-    const timeout = setTimeout(() => child.kill(), 10000);
+    const client = new sdk.ThinkThen({ backend: "stub" });
+    const stream = client.decideStream("Ready?", input, { signal: controller.signal });
+    const pending = stream.next();
+    const outcome = pending.then(value => ({ value }), error => ({ error }));
+    await entered.promise;
+    let stopping;
+    if (action === "abort") controller.abort({ callerReason: true });
+    else if (action === "return") stopping = stream.return();
+    else if (action === "dispose") stopping = stream[Symbol.asyncDispose]();
+    else stopping = client.close();
     try {
-      const [code, signal] = await done;
-      assert.equal(signal, null, `abandoned stream kept Node alive: ${mode}`);
-      assert.equal(code, 0);
-    } finally { clearTimeout(timeout); child.kill(); }
-  }
+      await returnEntered.promise;
+      assert.equal(returned, 1);
+      // Observe stop before releasing the input's next promise.
+      returnReply.resolve({ done: true });
+      if (stopping) await stopping;
+      const result = await outcome;
+      if (action === "abort") {
+        assert(result.error instanceof sdk.CancelledError);
+        assert.equal(result.error.code, "local.cancelled");
+        assert.notEqual(result.error, controller.signal.reason);
+      } else {
+        assert.equal(result.error, undefined);
+        assert.equal(result.value.done, true);
+      }
+      inputReply.resolve({ done: false, value: "late input must not publish" });
+      assert.equal((await stream.next()).done, true);
+      assert.equal(returned, 1);
+    } finally {
+      inputReply.resolve({ done: true });
+      returnReply.resolve({ done: true });
+      await stream.return();
+      await client.close();
+    }
+  });
+}
+
+// Feature: AbortSignal cancellation has one typed error regardless of reason.
+test("already aborted signals never acquire the source and always use CancelledError", async () => {
+  const client = new sdk.ThinkThen({ backend: "stub" });
+  let pulled = 0;
+  const source = { [Symbol.iterator]() { return { next() { pulled++; return { done: false, value: "evidence" }; } }; } };
+  try {
+    for (const reason of [undefined, "stop", { stop: true }, new Error("caller error")]) {
+      const controller = new AbortController();
+      controller.abort(reason);
+      const isCancel = error => error instanceof sdk.CancelledError && error.code === "local.cancelled";
+      await assert.rejects(client.decide("Ready?", "evidence", { signal: controller.signal }), isCancel);
+      const stream = client.decideStream("Ready?", source, { signal: controller.signal });
+      await assert.rejects(stream.next(), isCancel);
+      assert.equal((await stream.next()).done, true);
+    }
+    assert.equal(pulled, 0);
+  } finally { await client.close(); }
 });
 
-test("future engine error families preserve code and message in the base error", async () => {
-  let family;
-  const parse = JSON.parse;
-  JSON.parse = (...args) => {
-    const value = parse(...args);
-    if (value?.family && value?.code) value.family = family;
-    return value;
+// Feature: breaking iteration closes its source while retained rows remain usable.
+test("break and repeated disposal release one iterator and preserve other client calls", async () => {
+  const client = new sdk.ThinkThen({ backend: "stub", batch: 1 });
+  let returned = 0;
+  async function* source() {
+    try { yield "first"; yield "second"; }
+    finally { returned++; }
+  }
+  const stream = client.chooseStream("Team?", source(), { choices: ["billing", "shipping"] });
+  let retained;
+  try {
+    for await (const row of stream) { retained = row; break; }
+    assert.equal(returned, 1);
+    await stream.return();
+    await stream[Symbol.asyncDispose]();
+    assert.equal(returned, 1);
+    const independent = await client.decide("Ready?", "still open");
+    assert.equal(independent.function, "decide");
+    await client.close();
+    await client.close();
+    assert.equal(retained.status, "answered");
+    assert(["billing", "shipping"].includes(retained.answer));
+    assert(Object.isFrozen(retained.detail));
+    assert(Object.isFrozen(retained.detail.labels));
+    await assert.rejects(client.decide("Ready?", "closed"), error => error instanceof sdk.ThinkThenError);
+  } finally { await stream.return(); await client.close(); }
+});
+
+// Feature: source exceptions keep their identity after owned resources close.
+test("source failure is not parsed as an engine error and closes once", async () => {
+  const client = new sdk.ThinkThen({ backend: "stub" });
+  const failure = new Error('{"code":"usage.question","message":"source error"}');
+  let returned = 0;
+  const input = {
+    [Symbol.asyncIterator]() { return this; },
+    async next() { throw failure; },
+    async return() { returned++; return { done: true }; },
   };
   try {
-    for (family of ["future", "constructor", "__proto__"]) {
-      assert.throws(() => new sdk.ThinkThen({ adapter: "stub", batch: 0 }),
-        error => error.constructor === sdk.ThinkThenError && error.code === "usage.batch" && error.message.length > 0);
-    }
-  } finally { JSON.parse = parse; }
+    const stream = client.decideStream("Ready?", input);
+    await assert.rejects(stream.next(), error => error === failure);
+    assert.equal(returned, 1);
+    assert.equal((await stream.next()).done, true);
+  } finally { await client.close(); }
+});
+
+// Feature: active native cancellation closes the remote operation and spares its client.
+test("abort after request arrival closes native I/O", { timeout: 10000 }, async () => {
+  const { backend } = await import("./support.js");
+  const held = await backend(["--held", "body"]);
+  const controller = new AbortController();
+  const client = new sdk.ThinkThen({ backend: "systemone", url: held.url, apiKey: "test-only", batch: 1 });
+  const stream = client.decideStream("Ready?", ["evidence"], { signal: controller.signal });
+  const outcome = stream.next().then(value => ({ value }), error => ({ error }));
+  try {
+    assert.equal(await held.event("arrived"), "arrived");
+    controller.abort("stop");
+    const result = await outcome;
+    assert(result.error instanceof sdk.CancelledError);
+    assert.equal(result.error.code, "local.cancelled");
+    assert.equal(await held.event("closed"), "closed");
+    assert.equal((await stream.next()).done, true);
+  } finally { controller.abort(); await stream.return(); await client.close(); await held.close(); }
+});
+
+// Feature: concurrent next calls serialize and each call owns its cancellation.
+test("aborting one call leaves another call's queued reads in order", async () => {
+  const client = new sdk.ThinkThen({backend:"stub",batch:1});
+  const entered = deferred();
+  const pendingInput = deferred();
+  const controller = new AbortController();
+  let returned = 0;
+  const blocked = client.decideStream("Ready?", {
+    [Symbol.asyncIterator]() { return this; },
+    next() { entered.resolve(); return pendingInput.promise; },
+    async return() { returned++; return {done:true}; },
+  }, {signal:controller.signal});
+  const active = blocked.next().then(value => ({value}), error => ({error}));
+  await entered.promise;
+  const independent = client.decideStream("Ready?", ["one","two","three"]);
+  try {
+    assert.equal((await independent.next()).value.position,1);
+    controller.abort("stop one call");
+    assert((await active).error instanceof sdk.CancelledError);
+    const values = await Promise.all([independent.next(),independent.next(),independent.next()]);
+    assert.deepEqual(values.slice(0,2).map(value => value.value.position),[2,3]);
+    assert.equal(values[2].done,true);
+    assert.equal(returned,1);
+  } finally { pendingInput.resolve({done:true}); await blocked.return(); await independent.return(); await client.close(); }
 });

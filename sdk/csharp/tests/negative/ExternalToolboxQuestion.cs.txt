@@ -1,0 +1,5 @@
+using ThinkThen;
+public sealed record ForeignToolboxQuestion : ToolboxQuestion
+{
+    public ForeignToolboxQuestion(ToolboxQuestion source) : base(source) { }
+}

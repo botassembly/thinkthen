@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import io.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: TagRequiresLabels. This expression must fail after the positive consumer compiles.
+suspend fun rejectedTagRequiresLabels(client: ThinkThen) {
+    client.tag("Which labels?", "record")
+}

@@ -10,6 +10,7 @@ import sys
 import tempfile
 
 from native_platform import current
+from build_targets import floor_target
 
 PACKAGES = ('thinkthen', 'thinkthen-ffi', 'thinkthen-python', 'thinkthen-node', 'thinkthen-r')
 
@@ -96,13 +97,16 @@ def prepare(root, run, native_run):
             result = native_run(*arguments, env=env)
             messages = output / 'artifacts.json'
             messages.write_text(result.stdout)
-            selected = target / host['rust'] / 'release'
-            for artifact in ('libthinkthen_ffi.' + host['suffix'], 'libthinkthen_r.a'):
+            selected = (floor_target(root, target) if sys.platform == 'linux' else target) / host['rust'] / 'release'
+            for artifact in artifacts:
                 run(sys.executable, 'scripts/package-profile', messages, selected / artifact, 'release')
             stage_outputs(selected, payload, inputs, artifacts)
             print('candidate: shared Rust release build', flush=True)
         else:
             print('candidate: shared Rust release cache hit', flush=True)
+        from production_native import check
+        for artifact in artifacts:
+            check((payload / artifact).read_bytes(), artifact)
         # The same lock and atomic file publication protect the routine producer.
         with (cache / (host['rust'] + '.lock')).open('w') as host_lock:
             fcntl.flock(host_lock, fcntl.LOCK_EX)

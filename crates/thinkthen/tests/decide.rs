@@ -3,37 +3,31 @@
 
 use loopback::{KEY, Loopback, Reply, UnavailableBackend};
 use serde_json::json;
-use thinkthen::{Answer, Backend, Decide, Engine, Outcome, Record, Row, Threshold};
+use thinkthen::{Decide, Engine, Key, Outcome, Record, Row, Settings, Threshold};
 
-fn backend(base: &str) -> Backend {
-    let base = base.to_owned();
-    Backend::resolve(None, None, move |name| match name {
-        "THINKTHEN_BASE_URL" => Some(base.clone()),
-        "THINKTHEN_API_KEY" => Some(KEY.to_owned()),
-        _ => None,
-    })
-    .unwrap()
+fn engine(base: &str) -> Engine {
+    Settings::default()
+        .url(base)
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
 
-fn decide(server: &Loopback, threshold: Option<&str>, text: &str) -> Row {
+fn decide(server: &Loopback, threshold: Option<&str>, text: &str) -> Row<Decide> {
     let mut question = Decide::new("Is it a refund request?").unwrap();
     if let Some(threshold) = threshold {
         question = question.threshold(threshold.parse().unwrap());
     }
-    one(&Engine::new(backend(server.base())), &question, text)
+    one(&engine(server.base()), &question, text)
 }
 
-fn one(engine: &Engine, question: &Decide, text: &str) -> Row {
-    let mut rows = Vec::new();
-    let result = engine.call(question, [Record::text(text)], |row| rows.push(row));
-    assert_eq!(rows.len(), 1);
-    assert_eq!(result.err().as_ref(), rows[0].outcome().failure());
-    rows.pop().unwrap()
+fn one(engine: &Engine, question: &Decide, text: &str) -> Row<Decide> {
+    engine.run(question, Record::text(text)).unwrap()
 }
 
-fn failure_code(row: &Row) -> &'static str {
+fn failure_code(row: &Row<Decide>) -> &'static str {
     match row.outcome() {
-        Outcome::Failed { error } => error.kind().code(),
+        Outcome::Failed { error } => error.code().as_str(),
         other => panic!("expected a failure, got {other:?}"),
     }
 }
@@ -57,10 +51,7 @@ fn the_threshold_turns_the_probability_into_yes_no_or_unsure() {
         let server = Loopback::noul(p).unwrap();
         let row = decide(&server, threshold, "Please refund me.");
         let got = match row.outcome() {
-            Outcome::Answered {
-                answer: Answer::Bool(yes),
-                ..
-            } => Some(*yes),
+            Outcome::Answered { answer: yes, .. } => Some(*yes),
             Outcome::Unsure { .. } => None,
             other => panic!("p {p} at {threshold:?}: {other:?}"),
         };
@@ -75,14 +66,14 @@ fn a_threshold_outside_the_rule_is_refused() {
         "nan", "inf", "x",
     ] {
         let error = text.parse::<Threshold>().unwrap_err();
-        assert_eq!(error.kind().code(), "usage.threshold", "{text}");
+        assert_eq!(error.code().as_str(), "usage.threshold", "{text}");
     }
 }
 
 #[test]
 fn a_blank_question_is_refused() {
     assert_eq!(
-        Decide::new(" \n").unwrap_err().kind().code(),
+        Decide::new(" \n").unwrap_err().code().as_str(),
         "usage.question"
     );
 }
@@ -91,31 +82,10 @@ fn a_blank_question_is_refused() {
 fn the_request_quotes_the_text_inside_its_question() {
     let instructions = "The text is \"Say \\\"refund\\\"\\nnow\". Is it a refund request?";
     let question = Decide::new("Is it a refund request?").unwrap();
-    let cases = [
-        (
-            question.clone(),
-            json!({"type": "noul", "instructions": instructions}),
-        ),
-        (
-            question.clone().yes("Money back."),
-            json!({"type": "noul", "instructions": instructions, "criteria": {"true": "Money back."}}),
-        ),
-        (
-            question.yes("Money back.").no("Anything else."),
-            json!({
-                "type": "noul",
-                "instructions": instructions,
-                "criteria": {"true": "Money back.", "false": "Anything else."}
-            }),
-        ),
-    ];
-    for (question, wire) in cases {
+    let wire = json!({"type":"noul", "instructions":instructions});
+    {
         let server = Loopback::noul(0.9).unwrap();
-        one(
-            &Engine::new(backend(server.base())),
-            &question,
-            "Say \"refund\"\nnow",
-        );
+        one(&engine(server.base()), &question, "Say \"refund\"\nnow");
         let requests = server.requests();
         let [request] = requests.as_slice() else {
             panic!("expected one request, got {}", requests.len());
@@ -173,7 +143,7 @@ fn a_bad_reply_fails_the_row_with_its_code() {
 fn an_unreachable_backend_fails_the_row() {
     let unavailable = UnavailableBackend::new().unwrap();
     let question = Decide::new("Is it?").unwrap();
-    let row = one(&Engine::new(backend(unavailable.base())), &question, "text");
+    let row = one(&engine(unavailable.base()), &question, "text");
     assert_eq!(failure_code(&row), "backend.transport");
 }
 
@@ -181,17 +151,11 @@ fn an_unreachable_backend_fails_the_row() {
 fn the_key_is_sent_without_surrounding_whitespace() {
     let server = Loopback::noul(0.9).unwrap();
     let base = server.base().to_owned();
-    let backend = Backend::resolve(None, None, move |name| match name {
-        "THINKTHEN_BASE_URL" => Some(base.clone()),
-        "THINKTHEN_API_KEY" => Some(format!(" {KEY}\n")),
-        _ => None,
-    })
-    .unwrap();
-    one(
-        &Engine::new(backend),
-        &Decide::new("Is it?").unwrap(),
-        "text",
-    );
+    let engine = Settings::default()
+        .url(base)
+        .engine(|name| (name == "THINKTHEN_API_KEY").then(|| format!(" {KEY}\n")))
+        .unwrap();
+    one(&engine, &Decide::new("Is it?").unwrap(), "text");
     let requests = server.requests();
     assert_eq!(
         requests[0].header("authorization"),
@@ -202,13 +166,14 @@ fn the_key_is_sent_without_surrounding_whitespace() {
 #[test]
 fn a_missing_key_is_refused_without_exposing_credential_input() {
     for key in [None, Some(""), Some(" \t\n")] {
-        let error = Backend::resolve(None, None, |name| {
-            (name == "THINKTHEN_API_KEY")
-                .then(|| key.map(str::to_owned))
-                .flatten()
-        })
-        .unwrap_err();
-        assert_eq!(error.kind().code(), "usage.key-missing");
+        let error = Settings::default()
+            .engine(|name| {
+                (name == "THINKTHEN_API_KEY")
+                    .then(|| key.map(str::to_owned))
+                    .flatten()
+            })
+            .unwrap_err();
+        assert_eq!(error.code().as_str(), "usage.key-missing");
         assert!(!error.to_string().contains(KEY));
     }
 }
@@ -217,7 +182,7 @@ fn a_missing_key_is_refused_without_exposing_credential_input() {
 fn the_key_appears_in_no_result_or_debug_line() {
     let server =
         Loopback::start(|_| Reply::json(401, &json!({"error": format!("bad key {KEY}")}))).unwrap();
-    let engine = Engine::new(backend(server.base()));
+    let engine = engine(server.base());
     let row = one(&engine, &Decide::new("Is it?").unwrap(), "text");
     assert_eq!(failure_code(&row), "backend.status");
     for shown in [

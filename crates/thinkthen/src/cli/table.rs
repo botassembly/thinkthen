@@ -1,261 +1,176 @@
-//! Shared file framing translates command arguments into the existing call.
-
-use super::{Command, CommonArgs, family_code, local};
-use clap::Args;
-use serde_json::{Value, json};
-use std::io::{self, Write};
+//! Adapt path and delimited stdin framing to the existing safe file operation.
+use super::{
+    input::{Format, Input},
+    options::{self, usage, value},
+};
+use crate::files::{FileError, FileFormat, FileJob, FileOutput, FileReceipt, TemporaryPaths};
+use crate::{Cancel, Engine, Error, Request};
+use clap::ArgMatches;
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
-use thinkthen::files::{FileError, FileFormat, FileJob, FileOutput, FileReceipt};
-use thinkthen::{Cancel, Client, Error, SdkRequest};
 
-#[derive(Debug, Args)]
-pub(super) struct TableArgs {
-    /// Read a UTF-8 comma-separated file and append judgment columns.
-    #[arg(long, requires="input", group="structured", conflicts_with_all=["tsv", "excel", "lines"])]
-    csv: bool,
-    /// Read a UTF-8 tab-separated file and append judgment columns.
-    #[arg(long, requires="input", group="structured", conflicts_with_all=["csv", "excel", "lines"])]
-    tsv: bool,
-    /// Preserve an .xlsx workbook and append judgment columns to one sheet.
-    #[arg(long, requires="input", group="structured", conflicts_with_all=["csv", "tsv", "lines"])]
-    excel: bool,
-    /// The local table to read.
-    #[arg(long)]
-    input: Option<PathBuf>,
-    /// A worksheet name; required when the workbook has several sheets.
-    #[arg(long)]
-    sheet: Option<String>,
-    /// A literal evidence-column header. Repeat for several columns.
-    #[arg(long = "column")]
-    columns: Vec<String>,
-    /// The new answer column; annotate uses its question names instead.
-    #[arg(long)]
-    into: Option<String>,
-    /// A new output file; defaults to NAME.thinkthen.EXT beside the input.
-    #[arg(long, conflicts_with = "in_place")]
-    output: Option<PathBuf>,
-    /// Replace the input after retaining an exclusive backup beside it.
-    #[arg(long, conflicts_with = "output")]
-    in_place: bool,
-}
-
-impl TableArgs {
-    pub(super) fn enabled(&self) -> bool {
-        self.csv
-            || self.tsv
-            || self.excel
-            || self.input.is_some()
-            || self.sheet.is_some()
-            || !self.columns.is_empty()
-            || self.into.is_some()
-            || self.output.is_some()
-            || self.in_place
-    }
-
-    pub(super) fn run(
-        &self,
-        request: &SdkRequest,
-        client: &Client,
-        cancel: &Cancel,
-    ) -> Result<u8, Error> {
-        let result = self
-            .job()
-            .and_then(|job| job.execute(request, client, cancel));
-        Self::render(result)
-    }
-
-    pub(super) fn run_entry(
-        &self,
-        entry: &thinkthen::runs::RunEntry,
-        client: &Client,
-        cancel: &Cancel,
-    ) -> Result<u8, Error> {
-        Self::render(
-            self.job()
-                .and_then(|job| entry.execute_file(&job, client, cancel)),
-        )
-    }
-
-    fn render(result: Result<FileReceipt, FileError>) -> Result<u8, Error> {
-        match result {
-            Ok(receipt) => {
-                writeln!(io::stdout().lock(), "{}", receipt.output.display())
-                    .map_err(|_| local("standard output could not be written"))?;
-                if let Some(backup) = receipt.backup {
-                    writeln!(
-                        io::stderr().lock(),
-                        "thinkthen: backup: {}",
-                        backup.display()
-                    )
-                    .map_err(|_| local("standard error could not be written"))?;
-                }
-                if let Some(error) = receipt.first_failure {
-                    super::report(&error);
-                    Ok(family_code(error.kind().family()))
-                } else {
-                    Ok(0)
-                }
-            }
-            Err(error) => {
-                writeln!(io::stderr().lock(), "thinkthen: {}: {error}", error.code())
-                    .map_err(|_| local("standard error could not be written"))?;
-                Ok(family_code(error.family()))
+pub(super) fn validate(input: &Input, args: &ArgMatches, json: bool) -> Result<(), Error> {
+    if input.table() {
+        if json {
+            return Err(usage(
+                "json",
+                "text output for table framing",
+                "JSON row output",
+            ));
+        }
+    } else {
+        for key in ["sheet", "column", "into", "output", "in-place"] {
+            if options::explicit(args, key).is_some() {
+                return Err(usage(key, "csv, tsv or xlsx framing", "stream framing"));
             }
         }
     }
-
-    fn job(&self) -> Result<FileJob, FileError> {
-        let input = self
-            .input
-            .clone()
-            .ok_or_else(|| FileError::Invalid("file framing requires --input PATH".into()))?;
-        let format = if self.csv {
-            FileFormat::Csv
-        } else if self.tsv {
-            FileFormat::Tsv
-        } else if self.excel {
-            FileFormat::Xlsx
-        } else {
-            return Err(FileError::Invalid("choose --csv, --tsv or --excel".into()));
-        };
-        let output = if self.in_place {
-            FileOutput::InPlace
-        } else {
-            FileOutput::NewFile(self.output.clone())
-        };
-        FileJob::new(
-            input,
-            format,
-            self.sheet.clone(),
-            self.columns.clone(),
-            self.into.clone(),
-            output,
-        )
-    }
+    Ok(())
 }
 
-pub(super) fn dispatch(command: &Command, cancel: &Cancel) -> Option<Result<u8, Error>> {
-    let common = match command {
-        Command::Decide(a) | Command::Find(a) | Command::Filter(a) => &a.common,
-        Command::Choose(a) => &a.common,
-        Command::Tag(a) => &a.common,
-        Command::Score(a) => &a.common,
-        Command::Rank(a) => &a.common,
-        Command::Recognize(a) => &a.common,
-        Command::Relate(a) => &a.common,
-        Command::Annotate(a) => &a.common,
-        Command::Run(_) => return None,
+pub(super) fn run(
+    input: &Input,
+    args: &ArgMatches,
+    request: &Request,
+    engine: &Engine,
+    cancel: &Cancel,
+) -> Result<u8, Error> {
+    let (path, format) = input
+        .sources
+        .first()
+        .ok_or_else(|| usage("files", "a table source", "absent source"))?;
+    let format = match format {
+        Format::Csv => FileFormat::Csv,
+        Format::Tsv => FileFormat::Tsv,
+        _ => FileFormat::Xlsx,
     };
-    if !common.table.enabled() {
-        return None;
+    let mut destination = options::group(args, &["output", "in-place"]).into_iter();
+    let output = destination.next().flatten().map(PathBuf::from);
+    let in_place = options::boolean("in-place", destination.next().flatten())?.unwrap_or(false);
+    if in_place && output.is_some() {
+        return Err(usage("output", "output or in-place", "both forms"));
     }
-    Some((|| {
-        let mut options = serde_json::Map::new();
-        let (function, question) = match command {
-            Command::Decide(a) | Command::Find(a) | Command::Filter(a) => {
-                if let Some(cut) = &a.threshold {
-                    options.insert("threshold".into(), cut.clone().into());
-                }
-                let function = match command {
-                    Command::Find(_) => "find",
-                    Command::Filter(_) => "filter",
-                    _ => "decide",
-                };
-                (function, Value::String(a.question.clone()))
-            }
-            Command::Choose(a) => {
-                options.insert("options".into(), json!(a.options));
-                if let Some(cut) = &a.threshold {
-                    options.insert("threshold".into(), cut.clone().into());
-                }
-                ("choose", a.question.clone().into())
-            }
-            Command::Tag(a) => {
-                options.insert("labels".into(), json!(a.labels));
-                if let Some(cut) = &a.threshold {
-                    options.insert("threshold".into(), cut.clone().into());
-                }
-                ("tag", a.question.clone().into())
-            }
-            Command::Score(a) => {
-                options.insert("levels".into(), json!(a.levels));
-                ("score", a.question.clone().into())
-            }
-            Command::Rank(a) => {
-                if !a.levels.is_empty() {
-                    options.insert("levels".into(), json!(a.levels));
-                }
-                if let Some(top) = &a.top {
-                    let top: thinkthen::RankLimit = top.parse()?;
-                    options.insert("top".into(), top.get().into());
-                }
-                ("rank", a.question.clone().into())
-            }
-            Command::Recognize(a) => {
-                if let Some(cut) = &a.threshold {
-                    options.insert("threshold".into(), cut.clone().into());
-                }
-                ("recognize", json!(a.kinds))
-            }
-            Command::Relate(a) => {
-                let rules = a
-                    .rules
-                    .iter()
-                    .map(|rule| {
-                        thinkthen::RelationRule::parse(rule).map(|rule| rule.either(a.either))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-                if let Some(cut) = &a.threshold {
-                    options.insert("threshold".into(), cut.clone().into());
-                }
-                (
-                    "relate",
-                    serde_json::to_value(rules)
-                        .map_err(|_| local("relation arguments could not be encoded"))?,
-                )
-            }
-            Command::Annotate(a) => (
-                "annotate",
-                serde_json::from_str(&a.toolbox).map_err(|_| {
-                    Error::new(
-                        thinkthen::ErrorKind::Toolbox,
-                        "annotate expects an inline JSON toolbox",
-                    )
-                })?,
-            ),
-            Command::Run(_) => return Err(local("saved entries use their own file framing")),
-        };
-        if let Some(on) = &common.on {
-            options.insert("on".into(), on.clone().into());
+    if path == "-" && (format == FileFormat::Xlsx || in_place) {
+        return Err(usage(
+            "files",
+            "a source path for xlsx or in-place",
+            "stdin",
+        ));
+    }
+    let columns = options::list(args, "column", "THINKTHEN_COLUMNS")?
+        .unwrap_or_else(|| serde_json::Value::Array(Vec::new()));
+    let columns = <Vec<String> as serde::Deserialize>::deserialize(&columns).map_err(|error| {
+        Error::new(
+            crate::ErrorKind::Question,
+            crate::core::diagnostic::context("column", &error.to_string()),
+        )
+    })?;
+    let mut paths = TemporaryPaths::default();
+    let stdin = path == "-";
+    let mut source_guard = if stdin {
+        let mut source = paths
+            .temporary(None)
+            .map_err(|_| super::local("stdin table could not be retained"))?;
+        let mut stdin = io::stdin();
+        let reader = super::input::spawn(
+            move || {
+                let mut bytes = vec![0; 64 * 1024];
+                let count = stdin
+                    .read(&mut bytes)
+                    .map_err(|_| super::local("stdin table could not be read"))?;
+                bytes.truncate(count);
+                Ok((count != 0).then_some(bytes))
+            },
+            cancel.clone(),
+        )?;
+        while let Some(bytes) = super::input::receive(&reader, cancel)? {
+            source
+                .write_all(&bytes)
+                .map_err(|_| super::local("stdin table could not be retained"))?;
         }
-        let request = SdkRequest::from_json(&json!({"function":function,"question":{"type":"inline","value":question},"options":options}).to_string())?;
-        let client = client(common)?;
-        common.table.run(&request, &client, cancel)
-    })())
+        Some(source)
+    } else {
+        None
+    };
+    let input_path = source_guard
+        .as_mut()
+        .map_or_else(|| PathBuf::from(path), |file| file.path().to_path_buf());
+    let stdout = stdin && output.is_none();
+    let output_guard = if stdout {
+        Some(
+            paths
+                .temporary_with_suffix(
+                    None,
+                    if format == FileFormat::Csv {
+                        ".csv"
+                    } else {
+                        ".tsv"
+                    },
+                )
+                .map_err(|_| super::local("table output could not be retained"))?,
+        )
+    } else {
+        None
+    };
+    // File publication requires a new path; remove the reserved empty file first.
+    let output_path = output_guard.as_ref().map(|file| file.path().to_path_buf());
+    if let Some(path) = &output_path {
+        std::fs::remove_file(path)
+            .map_err(|_| super::local("table output could not be prepared"))?;
+    }
+    let destination = if in_place {
+        FileOutput::InPlace
+    } else {
+        FileOutput::NewFile(output.or(output_path.clone()))
+    };
+    let result = FileJob::new(
+        input_path,
+        format,
+        value(args, "sheet"),
+        columns,
+        value(args, "into"),
+        destination,
+    )
+    .and_then(|job| job.execute(request, engine, cancel));
+    let code = render(result, stdout, cancel);
+    drop(source_guard);
+    code
 }
 
-fn client(common: &CommonArgs) -> Result<Client, Error> {
-    let mut settings = serde_json::Map::new();
-    settings.insert("adapter".into(), common.adapter.clone().into());
-    if let Some(model) = &common.model {
-        settings.insert("model".into(), model.clone().into());
+fn render(
+    result: Result<FileReceipt, FileError>,
+    stdout: bool,
+    cancel: &Cancel,
+) -> Result<u8, Error> {
+    match result {
+        Ok(receipt) => {
+            if stdout {
+                let mut file = std::fs::File::open(&receipt.output)
+                    .map_err(|_| super::local("the completed table could not be opened"))?;
+                io::copy(&mut file, &mut io::stdout().lock())
+                    .map_err(|error| super::output_error(error, cancel))?;
+            } else {
+                writeln!(io::stdout().lock(), "{}", receipt.output.display())
+                    .map_err(|error| super::output_error(error, cancel))?;
+            }
+            if let Some(backup) = receipt.backup {
+                let _ = writeln!(
+                    io::stderr().lock(),
+                    "thinkthen: backup: {}",
+                    backup.display()
+                );
+            }
+            if let Some(error) = receipt.first_failure {
+                super::report(&error);
+                Ok(6)
+            } else {
+                Ok(0)
+            }
+        }
+        Err(FileError::Engine(error)) => Err(error),
+        Err(error) => {
+            let _ = writeln!(io::stderr().lock(), "thinkthen: {}: {error}", error.code());
+            Ok(super::family_code(error.family()))
+        }
     }
-    if let Some(url) = &common.url {
-        settings.insert("url".into(), url.clone().into());
-    }
-    if let Some(batch) = &common.batch {
-        let batch = batch
-            .parse::<serde_json::Number>()
-            .map_err(|_| {
-                Error::new(
-                    thinkthen::ErrorKind::Batch,
-                    "batch must be a whole number of at least 1",
-                )
-            })?
-            .into();
-        settings.insert("batch".into(), batch);
-    }
-    Client::from_json(&Value::Object(settings).to_string(), |name| {
-        std::env::var(name).ok()
-    })
 }

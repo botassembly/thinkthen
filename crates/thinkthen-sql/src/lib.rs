@@ -1,15 +1,17 @@
 //! Drive a statement's row chunks through one shared engine call.
 //!
-//! A database retains its admitted [`Client`] per connection. It owns all cursor
+//! A database retains its admitted [`Engine`] per connection. It owns all cursor
 //! access and passes owned records here only when [`SqlEvent::NeedsChunk`] asks.
 //! The engine owns validation, batching, execution, row order and failures.
 
 use std::time::Duration;
 use std::vec::IntoIter;
 
-use thinkthen::{Cancel, Client, Error, ErrorKind, OffsetUnit, PullCall, PullEvent, SdkRequest};
+use thinkthen::native::{Call, Event};
+use thinkthen::records::Record;
+use thinkthen::{Engine, Error, OffsetUnit, Request};
 
-pub use thinkthen::PullRow;
+pub use thinkthen::results::AnyRow;
 
 mod request;
 pub use request::{client, client_with_policy, request};
@@ -21,15 +23,25 @@ pub enum SqlRecord {
     Text(String),
     /// A serialized structured JSON value, interpreted by the shared library.
     Json(String),
+    /// PostgreSQL JSON input also admits native result representation.
+    PostgresJson(String),
+    /// A database NULL is a failed missing record and never calls a backend.
+    Missing,
+    /// A host conversion failure retains its input position.
+    Invalid,
 }
 
 /// The next action for a database driving one statement invocation.
 #[derive(Debug)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "the 208-byte row crosses a bounded queue without a per-row allocation"
+)]
 pub enum SqlEvent {
     /// Fetch and submit a whole chunk, or end the source.
     NeedsChunk,
     /// One result, retaining its original one-based input position.
-    Row(PullRow),
+    Row(AnyRow),
     /// No more rows remain; inspect [`SqlCall::final_error`].
     Finished,
 }
@@ -41,10 +53,11 @@ pub enum SqlEvent {
 /// handle or callback enters the engine worker.
 #[derive(Debug)]
 pub struct SqlCall {
-    call: PullCall,
+    call: Call,
     chunk: IntoIter<SqlRecord>,
     needs_chunk: bool,
     ended: bool,
+    error: Option<Error>,
 }
 
 impl SqlCall {
@@ -53,12 +66,13 @@ impl SqlCall {
     ///
     /// # Errors
     /// Returns the shared library's request admission error.
-    pub fn open(client: &Client, request: &SdkRequest) -> Result<Self, Error> {
+    pub fn open(client: &Engine, request: &Request) -> Result<Self, Error> {
         Ok(Self {
-            call: client.open(request, OffsetUnit::CodePoints, Cancel::default())?,
+            call: Call::open(client, request, OffsetUnit::CodePoints)?,
             chunk: Vec::new().into_iter(),
             needs_chunk: false,
             ended: false,
+            error: None,
         })
     }
 
@@ -66,13 +80,10 @@ impl SqlCall {
     /// allowed; only [`Self::end_input`] ends the input and flushes its last batch.
     ///
     /// # Errors
-    /// Returns a record error if the call has not requested another chunk.
+    /// Returns usage.abi if the call has not requested another chunk.
     pub fn send_chunk(&mut self, chunk: Vec<SqlRecord>) -> Result<(), Error> {
         if !self.needs_chunk {
-            return Err(Error::new(
-                ErrorKind::Record,
-                "the SQL call has not requested a chunk",
-            ));
+            return Err(thinkthen::native::abi_error());
         }
         self.chunk = chunk.into_iter();
         if let Some(record) = self.chunk.next() {
@@ -113,10 +124,19 @@ impl SqlCall {
         });
         if interrupted() {
             self.call.cancel();
-            event = self.call.poll(Duration::ZERO);
+            if event.is_ok() {
+                event = self.call.poll(Duration::ZERO);
+            }
         }
+        let event = match event {
+            Ok(event) => event,
+            Err(error) => {
+                self.error = Some(error);
+                Some(Event::Finished)
+            }
+        };
         Ok(match event {
-            Some(PullEvent::NeedsInput) => match self.chunk.next() {
+            Some(Event::NeedsInput) => match self.chunk.next() {
                 Some(record) => {
                     self.send(record)?;
                     None
@@ -130,28 +150,37 @@ impl SqlCall {
                     Some(SqlEvent::NeedsChunk)
                 }
             },
-            Some(PullEvent::Row(row)) => Some(SqlEvent::Row(row)),
-            Some(PullEvent::Finished) => {
+            Some(Event::Row(row)) => Some(SqlEvent::Row(row)),
+            Some(Event::Finished) => {
                 self.chunk = Vec::new().into_iter();
                 self.needs_chunk = false;
                 self.ended = true;
                 Some(SqlEvent::Finished)
             }
+            Some(_) => return Err(thinkthen::native::abi_error()),
             None if self.needs_chunk => Some(SqlEvent::NeedsChunk),
             None => None,
         })
     }
 
     fn send(&mut self, record: SqlRecord) -> Result<(), Error> {
-        match record {
-            SqlRecord::Text(text) => self.call.send_text(&text),
-            SqlRecord::Json(json) => self.call.send_json(&json),
-        }
+        self.call.send(match record {
+            SqlRecord::Text(text) => Record::text(text),
+            SqlRecord::Json(json) => Record::from_json(&json),
+            SqlRecord::PostgresJson(json) => thinkthen::native::sql_postgres_record(&json),
+            SqlRecord::Missing => Record::missing(),
+            SqlRecord::Invalid => Record::invalid(),
+        })
+    }
+
+    /// Request cancellation without waiting for the backend worker.
+    pub fn cancel(&self) {
+        self.call.cancel();
     }
 
     /// The shared call's final failure after [`SqlEvent::Finished`].
     #[must_use]
     pub const fn final_error(&self) -> Option<&Error> {
-        self.call.final_error()
+        self.error.as_ref()
     }
 }

@@ -122,8 +122,7 @@ def distribute(out, target, root=ROOT):
         key = family if family in ('command', 'python', 'typescript', 'r') else 'ffi'
         if key not in cached: cached[key] = bundle(target, family, root, produced['crates'])
         contents = cached[key].copy()
-        for surface, name, source in [('c', 'jansson', 'sdk/c/JANSSON-LICENSE'),
-                                      ('sqlite', 'jansson', 'sdk/c/JANSSON-LICENSE'),
+        for surface, name, source in [('sqlite', 'jansson', 'licenses/native/jansson-2.14.1/LICENSE'),
                                       ('cpp', 'nlohmann-json', 'sdk/cpp/JSON-LICENSE')]:
             if family == surface: contents[NOTICE + '/' + name + '/LICENSE'] = (root / source).read_bytes()
         if family == 'python':
@@ -137,8 +136,13 @@ def distribute(out, target, root=ROOT):
         apply(artifact, contents, prefix)
     from release_jvm_notices import distribute as jvm_notices
     jvm_notices(out, root)
-    for path in [*(out / 'r').glob('jsonlite-*'), *(out / 'prerequisites/r').glob('jsonlite_*')]:
-        apply(path, runtime_files('jsonlite-2.0.0', root), 'jsonlite/')
+    from release_r_dependencies import directories, terms, metadata, refresh
+    for folder in directories(out):
+        inventory = json.loads((folder / 'inventory.json').read_text())
+        for filename in inventory['install_order']:
+            path = folder / filename
+            apply(path, terms(path, root), metadata(path)['Package'] + '/')
+        refresh(folder)
     swift = out / 'prerequisites/swift-runtime'
     if swift.is_dir():
         for name, data in runtime_files('swift-icu', root).items():

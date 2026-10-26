@@ -1,4 +1,5 @@
 """Install universal packages using the ordinary package managers and shared cases."""
+from csharp_dependencies import prepared_feed
 import os
 import json
 import hashlib
@@ -83,7 +84,7 @@ def install(packages, scratch):
     shutil.copytree(ROOT / 'sdk/csharp/tests', consumer)
     project = consumer / 'Consumer.csproj'
     config = consumer / 'NuGet.Config'
-    config.write_text(f'<configuration><packageSources><clear/><add key="local" value="{packages / "nuget"}"/></packageSources></configuration>')
+    config.write_text(f'<configuration><packageSources><clear/><add key="local" value="{packages / "nuget"}"/><add key="prepared" value="{prepared_feed()}"/></packageSources></configuration>')
     run('dotnet', 'build', project, '--configfile', config, '--artifacts-path', scratch / 'dotnet-artifacts',
         '-o', scratch / 'dotnet-bin', env=isolated)
     run('dotnet', scratch / 'dotnet-bin/Consumer.dll', ROOT / 'construction/stub.json', '--stub-only', env=isolated)
@@ -98,6 +99,8 @@ def install(packages, scratch):
     for main in ('ConsumerCases', 'KotlinCasesKt'):
         run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
             '-cp', os.pathsep.join(map(str, jars)), main, ROOT / 'construction/stub.json', '--stub-only'), env=isolated)
+    run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
+        '-cp', os.pathsep.join(map(str, jars)), 'JavaApiCases', '--stub-only'), env=isolated)
     print('registry: clean npm, NuGet and JVM consumers pass the shared stub cases')
 
 

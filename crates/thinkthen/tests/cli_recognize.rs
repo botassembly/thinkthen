@@ -10,8 +10,13 @@ use std::process::{Output, Stdio};
 fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
     let mut child = support::command()
         .arg("recognize")
+        .args(if args.contains(&"person") {
+            vec![]
+        } else {
+            vec!["--kind", "ENTITY"]
+        })
         .args(args)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -27,7 +32,7 @@ fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
     child.wait_with_output().unwrap()
 }
 fn server(single: bool) -> Loopback {
-    Loopback::answering(move |_| json!({"type":"choice","probabilities":{"BEGIN":0.,"INSIDE":0.,"END":0.,"SINGLE":if single {1.}else{0.},"OUT":if single {0.}else{1.}}})).unwrap()
+    Loopback::answering(move |q| if q["criteria"].get("ENTITY").is_some() {json!({"type":"choice","probabilities":{"ENTITY":1.0,"none of these":0.0}})} else {json!({"type":"choice","probabilities":{"BEGIN":0.,"INSIDE":0.,"END":0.,"SINGLE":if single {1.}else{0.},"OUT":if single {0.}else{1.}}})}).unwrap()
 }
 #[test]
 fn names_print_one_json_object_each_and_empty_names_succeed() {
@@ -50,9 +55,13 @@ fn names_print_one_json_object_each_and_empty_names_succeed() {
 #[test]
 fn details_and_records_render_rows_without_top_probability() {
     for (args, input, count) in [
-        (vec!["--details"], "Ada", 1),
-        (vec!["--lines"], "Ada\nBea\n", 2),
-        (vec!["--jsonl", "--on", "/body"], "{\"body\":\"Ada\"}\n", 1),
+        (vec!["--json"], "Ada", 1),
+        (vec!["--from", "lines", "--json"], "Ada\nBea\n", 2),
+        (
+            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
+            "{\"body\":\"Ada\"}\n",
+            1,
+        ),
     ] {
         let server = server(true);
         let output = run(&server, &args, input);
@@ -64,7 +73,7 @@ fn details_and_records_render_rows_without_top_probability() {
             .map(|s| serde_json::from_str(s).unwrap())
             .collect();
         assert_eq!(rows.len(), count);
-        assert!(rows[0].get("p").is_none());
+        assert!(rows[0].get("probability").is_none());
         assert_eq!(rows[0]["status"], "answered");
         assert!(rows[0].get("detail").is_some());
     }
@@ -74,7 +83,7 @@ fn threshold_bands_fail_before_sending() {
     let server = server(true);
     let output = run(&server, &["--threshold", "0.2:0.8"], "Ada");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.threshold");
+    assert_eq!(support::reported(&output), "usage.question");
     assert_eq!(server.count(), 0);
 }
 
@@ -84,7 +93,7 @@ fn named_kinds_reach_the_dependent_round() {
         if q["criteria"].get("BEGIN").is_some() { json!({"type":"choice","probabilities":{"BEGIN":0.,"INSIDE":0.,"END":0.,"SINGLE":1.,"OUT":0.}}) }
         else { json!({"type":"choice","probabilities":{"person":1.,"none of these":0.}}) }
     }).unwrap();
-    let output = run(&server, &["person"], "Ada");
+    let output = run(&server, &["--kind", "person"], "Ada");
     assert_eq!(output.status.code(), Some(0));
     let name: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(name["kind"], "person");

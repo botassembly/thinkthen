@@ -1,11 +1,11 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::definition::QuestionDefinition;
 use rusqlite::{Connection, OptionalExtension, TransactionBehavior, params};
 use serde::Serialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use thinkthen::{Answer, Backend, Cancel, Engine, QuestionDefinition, SdkRequest};
 
 use crate::*;
 
@@ -141,7 +141,7 @@ impl Service {
         question: &QuestionId,
         evidence: &EvidenceId,
         expected: Option<GoldId>,
-        answer: &Answer,
+        answer: &Value,
         attribution: Attribution,
     ) -> Result<Gold, Error> {
         let definition = self.definition(question)?;
@@ -150,13 +150,8 @@ impl Service {
         let text = if stored_evidence.get("type").and_then(Value::as_str) == Some("text") {
             value.as_str().ok_or(Error::Storage)?.to_owned()
         } else {
-            thinkthen::AdmittedRecord::new(thinkthen::Record::json(
-                &json!({"selected": value}).to_string(),
-                &"/selected".parse().map_err(|_| Error::Storage)?,
-            ))
-            .map_err(|_| Error::Question)?
-            .evidence()
-            .to_owned()
+            thinkthen::native::recording_evidence(&serde_json::to_string(value)?)
+                .map_err(|_| Error::Question)?
         };
         definition
             .validate_answer(answer, &text)
@@ -275,19 +270,7 @@ impl Service {
 
 fn admit(request: &str) -> Result<QuestionDefinition, Error> {
     bounded(request)?;
-    let request = SdkRequest::from_json(request).map_err(|_| Error::Question)?;
-    if !request.records().is_empty() {
-        return Err(Error::Question);
-    }
-    let definition = request
-        .prepare(&Engine::new(Backend::stub()), Cancel::default())
-        .and_then(|call| call.definition())
-        .map_err(|_| Error::Question)?;
-    // Annotation recording admits named members separately. One gold key must
-    // never imply that members with different selectors saw the same evidence.
-    if definition.function() == "annotate" {
-        return Err(Error::Question);
-    }
+    let definition = QuestionDefinition::admit(request)?;
     Ok(definition)
 }
 

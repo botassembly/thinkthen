@@ -1,38 +1,56 @@
 //! The pure core of ThinkThen. It touches no file, environment, network, process or clock.
 
+pub(crate) mod abi;
 mod adapter;
-mod ask;
+pub use abi::ABI_VERSION;
+mod backend_name;
+pub use backend_name::BackendName;
+pub(crate) mod ask;
+mod code;
+pub(crate) mod diagnostic;
 mod error;
+pub mod questions;
+pub mod records;
+pub mod results;
+pub use code::Code;
 mod function;
 mod pack;
 mod probability;
-mod record;
+pub(crate) mod record;
+pub(crate) mod spans;
+pub use spans::OffsetUnit;
 mod row;
 mod threshold;
 
-pub use adapter::Adapter;
-pub use ask::{Ask, AskAnswer, ChoiceOption};
-pub use error::{Error, ErrorKind, Family, escape_diagnostic};
-pub use function::annotate::Annotate;
-pub use function::choose::Choose;
-pub use function::decide::Decide;
-pub use function::filter::{Filter, passes};
-pub use function::find::{Find, Found};
-pub use function::rank::{Rank, RankLimit, Ranking};
-pub use function::recognize::{KindDetail, Name, PieceDetail, Recognize, RecognizeDetail};
-pub use function::score::Score;
-pub use function::tag::Tag;
-pub use function::{Function, FunctionAnswers};
-pub use pack::{Chunk, NextRound, Packer, Request, RequestAnswers};
+pub(crate) use adapter::Adapter;
+pub(crate) use ask::{Ask, AskAnswer, ChoiceOption};
+pub(crate) use error::ErrorKind;
+#[cfg(feature = "command")]
+pub(crate) use error::escape_diagnostic;
+pub use error::{Error, Family};
+pub(crate) use function::annotate::Annotate;
+pub(crate) use function::choose::Choose;
+pub(crate) use function::decide::Decide;
+pub(crate) use function::find::{Find, Found};
+pub(crate) use function::rank::RankLimit;
+pub(crate) use function::recognize::{Name, Recognize, RecognizeDetail};
+pub(crate) use function::score::Score;
+pub(crate) use function::tag::Tag;
+pub(crate) use function::{Function, FunctionAnswers};
+pub(crate) use pack::{Chunk, NextRound, Packer, Request, RequestAnswers};
 pub use probability::Probability;
-pub use record::{AdmittedRecord, Pointer, Record};
-pub use row::{Answer, Detail, Outcome, Row, Source};
-pub use threshold::{Threshold, Verdict};
+pub use record::Pointer;
+pub(crate) use record::{AdmittedRecord, Record};
+pub(crate) use row::{Answer, Detail, Outcome, Row};
+pub(crate) use threshold::Verdict;
+pub use threshold::{Cut, Threshold};
 
 mod toolbox;
-pub use toolbox::{TOOLBOX_LIMIT, Toolbox, ToolboxFunction, ToolboxQuestion};
+#[cfg(feature = "command")]
+pub(crate) use questions::TOOLBOX_LIMIT;
+pub(crate) use toolbox::{Toolbox, ToolboxFunction, ToolboxQuestion};
 
-pub use function::relate::{Relate, Relation, RelationName, RelationRule};
+pub(crate) use function::relate::{Relate, Relation, RelationName, RelationRule};
 
 mod limits;
-pub use limits::Limits;
+pub(crate) use limits::Limits;

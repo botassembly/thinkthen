@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! Record-store admission, storage and correction preserve their public codes.
 
-use thinkthen::Answer;
+use serde_json::json;
 use thinkthen_proxy::{ActorKind, Attribution, Evidence, Service};
 
 #[test]
@@ -25,7 +25,7 @@ fn store_boundaries_keep_their_own_codes() {
         cases["question"]["code"]
     );
     let question = service
-        .admit_inline(r#"{"function":"decide","question":{"type":"inline","value":"Ready?"}}"#)
+        .admit_inline(r#"{"question":{"function":"decide","question":"Ready?"}}"#)
         .unwrap();
     let evidence = service
         .admit_evidence(&Evidence::Text("alpha".to_owned()))
@@ -36,22 +36,10 @@ fn store_boundaries_keep_their_own_codes() {
         reason: "Review evidence".to_owned(),
     };
     service
-        .set_gold(
-            &question.question,
-            &evidence,
-            None,
-            &Answer::Bool(false),
-            author(),
-        )
+        .set_gold(&question.question, &evidence, None, &json!(false), author())
         .unwrap();
     let error = service
-        .set_gold(
-            &question.question,
-            &evidence,
-            None,
-            &Answer::Bool(true),
-            author(),
-        )
+        .set_gold(&question.question, &evidence, None, &json!(true), author())
         .unwrap_err();
     assert_eq!(error.code(), cases["conflict"]["code"]);
 }

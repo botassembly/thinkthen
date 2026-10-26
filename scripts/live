@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
-"""Run by hand against the default backend: scripts/live /path/to/thinkthen."""
+"""Bounded manual checks: live BINARY BACKEND; live --preflight BACKEND [SURFACE].
 
+Import with runpy.run_path for preflight(backend, surface) and validate_rows(rows,
+backend, surface). SURFACE is ordinary or spreadsheets (one CSV, TSV and XLSX).
+No import or preflight reads credentials or starts a process.
+"""
+
+import copy
 import json
 import math
 import os
 from pathlib import Path
-import shlex
+import re
 import subprocess
 import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+TEXT_CAP = 25_000
+CALL_CAP = 100
+TOKEN_CAP = 10_000
 
 
 def require(condition, message):
@@ -15,134 +26,196 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def compact(value):
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def source_string(path, pattern):
+    matches = re.findall(pattern, (ROOT / path).read_text())
+    require(len(matches) == 1, "live contract changed; review the preflight")
+    return matches[0]
+
+
+def fixture():
+    """Return only the shared choose request, without its stub answer."""
+    cases = json.loads((ROOT / "construction/stub.json").read_text())
+    requests = [case["request"] for case in cases
+                if case["request"]["question"]["function"] == "choose"]
+    require(len(requests) == 1, "expected one shared choose fixture")
+    request = requests[0]
+    require(request == {"question": {"function": "choose", "question": "Which?",
+                                    "choices": ["z", "a"]},
+                        "records": ["evidence"]}, "shared live fixture changed")
+    return request
+
+
+def budget(body, text_bytes, runs, retries):
+    """One indivisible choose ask per run, with the engine's retry allowance."""
+    attempts = runs * (retries + 1)
+    totals = {"max_calls": attempts, "text_bytes": text_bytes * attempts,
+              # Count the entire wire body at one byte per input token.
+              "input_token_bound": len(compact(body).encode("utf-8")) * attempts}
+    require(totals["max_calls"] < CALL_CAP, "live call cap exceeded")
+    require(totals["text_bytes"] <= TEXT_CAP, "live text cap exceeded")
+    require(totals["input_token_bound"] < TOKEN_CAP, "live input token cap exceeded")
+    return totals
+
+
+def preflight(backend, surface="ordinary"):
+    """Return the fixed request/settings, exact wire body and conservative budget.
+
+    Consumers must use these settings without overrides and run each request once.
+    spreadsheets covers three separate single-record file checks. All other
+    surfaces cover one. A choose ask has no dependent round and cannot split.
+    """
+    require(backend in ("systemone", "openai"), "select systemone or openai")
+    require(surface in ("ordinary", "spreadsheets"), "unknown live surface")
+    request = fixture()
+    # Defaults come from the engine, without consulting environment settings.
+    models = re.findall(r'"(?:THINKTHEN_API_KEY|OPENAI_API_KEY)",\s*"([^"]+)"',
+                        (ROOT / "crates/thinkthen/src/backend.rs").read_text())
+    require(len(models) == 2, "backend defaults changed; review the preflight")
+    model = models[("systemone", "openai").index(backend)]
+    retry = int(source_string("crates/thinkthen/src/retry.rs",
+                             r"const DEFAULT_RETRIES: u32 = (\d+);"))
+    state = source_string("crates/thinkthen/src/core/ask.rs",
+                          r'const DEFAULT_STATE: &str = "([^"]*)";')
+    question = request["question"]
+    record = request["records"][0]
+    # core/function.rs::quoted and adapter/{systemone,openai}.rs::encode.
+    instructions = f'The text is {compact(record)}. {question["question"]}'
+    ask = {"type": "choice", "instructions": instructions}
+    if backend == "systemone":
+        ask["criteria"] = dict.fromkeys(question["choices"])
+        body = {"state": state, "model": model, "questions": {"q1": ask}}
+    else:
+        ask["choices"] = [{"value": choice} for choice in question["choices"]]
+        body = {"input": state, "model": model, "questions": [ask]}
+    # Include raw evidence again as a conservative allowance for record text.
+    text_bytes = sum(len(text.encode("utf-8")) for text in
+                     [state, instructions, record, *question["choices"]])
+    runs = 3 if surface == "spreadsheets" else 1
+    return {"request": request,
+            "client": {"backend": backend, "model": model, "batch": 1},
+            "max_retries": retry, "runs": runs, "wire_body": body,
+            "body_bytes_per_attempt": len(compact(body).encode("utf-8")),
+            "text_bytes_per_attempt": text_bytes,
+            **budget(body, text_bytes, runs, retry)}
+
+
 def probability(value):
     return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1
 
 
-def span(value, text):
-    require(isinstance(value, dict), "expected a text span")
-    start, end = value.get("start"), value.get("end")
-    require(type(start) is int and type(end) is int, "expected integer offsets")
-    require(0 <= start < end <= len(text), "span offsets are outside the input")
-    require(value.get("text") == text[start:end], "span text differs from the input")
+def validate_rows(rows, backend, surface="ordinary"):
+    """Check choose rows without judging a model's semantic choice."""
+    plan = preflight(backend, surface)
+    require(isinstance(rows, list) and len(rows) == plan["runs"], "wrong live row count")
+    for row in rows:
+        require(isinstance(row, dict), "expected a typed row")
+        require(row.get("function") == "choose", "expected a choose row")
+        require(type(row.get("position")) is int and row["position"] == 1,
+                "expected the single input position")
+        require(row.get("status") in ("answered", "unsure"), "live row failed")
+        require("error" not in row, "successful live row must omit error")
+        require(probability(row.get("probability")), "invalid choice probability")
+        if row["status"] == "answered":
+            require(row.get("answer") in plan["request"]["question"]["choices"],
+                    "answer is not an offered choice")
+        else:
+            require("answer" not in row, "unsure row must omit answer")
+        source = row.get("source")
+        require(isinstance(source, dict), "missing row source")
+        require(source.get("backend") == backend, "wrong source backend")
+        require(source.get("model") == plan["client"]["model"], "wrong source model")
+        require(isinstance(source.get("question_identity"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", source["question_identity"]),
+                "invalid question identity")
+        if "detail" in row:
+            detail = row["detail"]
+            require(isinstance(detail, dict) and isinstance(detail.get("labels"), dict),
+                    "expected choice probability detail")
+            labels = detail["labels"]
+            require(set(labels) == set(plan["request"]["question"]["choices"])
+                    and all(probability(p) for p in labels.values()), "invalid label probabilities")
 
 
-def name(value, text):
-    span(value, text)
-    require(value.get("kind") in ("person", "company"), "unexpected name kind")
+def self_test():
+    """Offline contract and refusal checks, without credentials or child processes."""
+    def refused(call):
+        try:
+            call()
+        except ValueError:
+            return
+        raise ValueError("expected refusal")
 
-
-def answer(function, row, text):
-    require(isinstance(row, dict), "expected a result row")
-    status = row.get("status")
-    require(status != "failed", "command returned a failed row")
-    require(status in ("answered", "unsure"), "expected a result status")
-    if status == "unsure":
-        require(function in ("decide", "filter", "choose", "find"), "unexpected unsure status")
-        require(probability(row.get("p")), "expected an unsure probability")
-        require("answer" in row and row["answer"] is None, "unsure row must contain a null answer")
-        return
-    require("answer" in row, "answered row has no answer")
-    value = row["answer"]
-    if function in ("decide", "filter"):
-        require(type(value) is bool, "expected a boolean answer")
-    elif function == "choose":
-        require(value in ("billing", "shipping"), "expected one offered option")
-    elif function == "tag":
-        require(isinstance(value, list), "expected a list of labels")
-        require(all(label in ("refund", "delivery") for label in value), "unexpected label")
-        require(len(value) == len(set(value)), "duplicate labels")
-    elif function == "score":
-        require(probability(value), "expected a score from zero to one")
-    elif function == "rank":
-        require(type(value) is int and value > 0, "expected a positive rank")
-    elif function == "find":
-        if value is not None:
-            span(value, text)
-    elif function == "annotate":
-        require(isinstance(value, dict) and set(value) == {"refund", "topic"},
-                "expected both named annotations")
-        answer("decide", value["refund"], text)
-        answer("choose", value["topic"], text)
-    elif function == "recognize":
-        require(isinstance(value, list), "expected a list of names")
-        for item in value:
-            name(item, text)
-            require(probability(item.get("p")), "expected a name probability")
-    elif function == "relate":
-        require(isinstance(value, list), "expected a list of relations")
-        for item in value:
-            require(isinstance(item, dict), "expected a relation object")
-            require(item.get("relation") == "works_for", "unexpected relation")
-            require(probability(item.get("p")), "expected a relation probability")
-            name(item.get("source"), text)
-            name(item.get("target"), text)
-            require(item["source"]["kind"] == "person"
-                    and item["target"]["kind"] == "company", "unexpected relation kinds")
-    if function in ("decide", "filter", "choose"):
-        require(probability(row.get("p")), "expected an answer probability")
-
-
-def run(binary, args, text, count=1):
-    command = [binary, *args, "--details"]
-    print("$ " + shlex.join(command), flush=True)
-    print("stdin: " + json.dumps(text), flush=True)
-    result = subprocess.run(command, input=text, text=True, capture_output=True, check=False)
-    print("stdout:\n" + result.stdout, end="" if result.stdout.endswith("\n") else "\n")
-    print("stderr:\n" + result.stderr, end="" if result.stderr.endswith("\n") else "\n")
-    print(f"exit: {result.returncode}", flush=True)
-    function = args[0]
-    try:
-        require(result.returncode in (0, 1, 3), "command failed")
-        rows = [json.loads(line) for line in result.stdout.splitlines()]
-        require(len(rows) == count, f"expected {count} result rows")
-        for row in rows:
-            answer(function, row, text)
-        expected = 0
-        if function in ("decide", "choose", "find"):
-            if rows[0]["status"] == "unsure":
-                expected = 3
-            elif rows[0]["answer"] is False or rows[0]["answer"] is None:
-                expected = 1
-        require(result.returncode == expected, "exit code disagrees with the answer")
-        if function == "rank":
-            require([row["answer"] for row in rows] == list(range(1, count + 1)),
-                    "expected consecutive ranks")
-    except (ValueError, TypeError, KeyError) as error:
-        print(f"FAIL {function}: {error}", flush=True)
-        return False
-    print(f"PASS {function}", flush=True)
-    return True
+    for backend in ("systemone", "openai"):
+        plan = preflight(backend)
+        require(plan["max_calls"] == 4, "unexpected retry contract")
+        require(preflight(backend, "spreadsheets")["max_calls"] == 12,
+                "unexpected spreadsheet budget")
+        row = {"function": "choose", "position": 1, "status": "answered", "answer": "z",
+               "probability": 0.7, "source": {**plan["client"], "question_identity": "a" * 64},
+               "detail": {"labels": {"z": 0.7, "a": 0.3}}}
+        validate_rows([row], backend)
+        unsure = {key: value for key, value in row.items() if key != "answer"}
+        unsure["status"] = "unsure"
+        validate_rows([unsure], backend)
+        refused(lambda: validate_rows([{**unsure, "answer": None}], backend))
+        refused(lambda: validate_rows([{**unsure, "answer": "z"}], backend))
+        for result in (row, unsure):
+            refused(lambda: validate_rows([{**result, "error": None}], backend))
+        for key, value in [("probability", float("nan")), ("answer", "other"),
+                           ("status", "failed"), ("position", True), ("function", "tag")]:
+            refused(lambda: validate_rows([{**row, key: value}], backend))
+        wrong = copy.deepcopy(row)
+        wrong["source"]["model"] = "wrong"
+        refused(lambda: validate_rows([wrong], backend))
+        refused(lambda: validate_rows([], backend))
+    refused(lambda: preflight("stub"))
+    refused(lambda: preflight("openai", "all"))
+    for body, text, runs, retries in [({}, TEXT_CAP + 1, 1, 0), ({}, 0, CALL_CAP, 0),
+                                      ({"input": "x" * TOKEN_CAP}, 0, 1, 0)]:
+        refused(lambda: budget(body, text, runs, retries))
+    print("PASS live preflight, caps and choose rows (offline)")
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("usage: scripts/live /path/to/thinkthen", file=sys.stderr)
-        return 2
-    binary = str(Path(sys.argv[1]).resolve())
-    # Leave the key inherited and unread. An address override must not redirect a live check.
-    os.environ.pop("THINKTHEN_BASE_URL", None)
-    refund = "Please refund my order."
-    people = "Ada works for Acme."
-    toolbox = json.dumps({"questions": {
-        "refund": {"decide": "Does the customer ask for money back?"},
-        "topic": {"choose": "What is the message about?", "options": ["billing", "shipping"]},
-    }})
-    cases = [
-        (["decide", "Does the customer ask for money back?"], refund, 1),
-        (["choose", "What is the message about?", "--option", "billing", "--option", "shipping"], refund, 1),
-        (["tag", "Which topics apply?", "--label", "refund", "--label", "delivery"], refund, 1),
-        (["score", "How urgent is the message?", "--level", "not urgent", "--level", "urgent"], refund, 1),
-        (["filter", "Does the customer ask for money back?", "--lines"], refund + "\nThanks for the delivery.\n", 2),
-        (["rank", "Does the customer ask for money back?", "--lines"], refund + "\nThanks for the delivery.\n", 2),
-        (["find", "Which line asks for money back?"], "Thanks for the delivery.\n" + refund, 1),
-        (["annotate", toolbox], refund, 1),
-        (["recognize", "person", "company"], people, 1),
-        (["relate", "works_for=person:company"], people, 1),
-    ]
-    passed = [run(binary, args, text, count) for args, text, count in cases]
-    return 0 if all(passed) else 1
+    if sys.argv[1:] == ["--self-test"]:
+        self_test()
+        return 0
+    if len(sys.argv) in (3, 4) and sys.argv[1] == "--preflight":
+        print(compact(preflight(*sys.argv[2:])))
+        return 0
+    require(len(sys.argv) == 3, "usage: scripts/live BINARY systemone|openai")
+    binary, backend = str(Path(sys.argv[1]).resolve()), sys.argv[2]
+    plan = preflight(backend)
+    # Presence only; keys remain inherited and unread. Clear all other settings.
+    require(all(key in os.environ for key in ("THINKTHEN_API_KEY", "OPENAI_API_KEY")),
+            "both standard backend key variables must be present")
+    for key in list(os.environ):
+        if key.startswith("THINKTHEN_") and key != "THINKTHEN_API_KEY":
+            os.environ.pop(key)
+    print(compact(plan), flush=True)
+    question = plan["request"]["question"]
+    command = [binary, "choose", question["question"], "--backend", backend,
+               "--model", plan["client"]["model"], "--batch", "1", "--from", "text", "--json"]
+    for choice in question["choices"]:
+        command += ["--choice", choice]
+    result = subprocess.run(command, input=plan["request"]["records"][0], text=True,
+                            capture_output=True, check=False)
+    # Do not echo arbitrary command diagnostics, which may contain request headers.
+    require(result.returncode == 0, "live command failed; inspect diagnostics privately")
+    rows = [json.loads(line) for line in result.stdout.splitlines()]
+    validate_rows(rows, backend)
+    print(compact(rows))
+    print(f"PASS choose {backend}")
+    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (ValueError, TypeError, KeyError) as error:
+        print(f"FAIL live: {error}", file=sys.stderr)
+        sys.exit(1)

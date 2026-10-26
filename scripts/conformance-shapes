@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""Generate shared row shape boundaries from the engine's generated schema."""
+import argparse
+import copy
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SCHEMA = json.loads((ROOT / 'schemas/row.schema.json').read_text())
+TARGET = ROOT / 'conformance/typed/shapes.json'
+
+
+def resolve(node):
+    while '$ref' in node:
+        name = node['$ref'].removeprefix('#/$defs/')
+        node = SCHEMA['$defs'][name]
+    return node
+
+
+def sample(node):
+    node = resolve(node)
+    if 'const' in node:
+        return copy.deepcopy(node['const'])
+    if 'enum' in node:
+        return copy.deepcopy(node['enum'][0])
+    if 'anyOf' in node:
+        return sample(next(part for part in node['anyOf'] if part.get('type') != 'null'))
+    kind = node.get('type')
+    if isinstance(kind, list):
+        kind = next(name for name in kind if name != 'null')
+    if kind == 'object' or 'properties' in node:
+        value = {name: sample(node['properties'][name]) for name in node.get('required', [])}
+        if 'oneOf' in node:
+            value.update(sample(node['oneOf'][0]))
+        for part in node.get('allOf', []):
+            value.update(sample(part))
+        return value
+    if 'oneOf' in node:
+        return sample(node['oneOf'][0])
+    if kind == 'array':
+        return [sample(node['items']) for _ in range(node.get('minItems', 0))]
+    if kind == 'boolean':
+        return False
+    if kind == 'string':
+        return 'x' * max(1, node.get('minLength', 0))
+    if kind in ('integer', 'number'):
+        return node.get('minimum', node.get('exclusiveMinimum', -0.5) + 0.5)
+    if kind == 'null':
+        return None
+    raise ValueError(f'unsupported schema shape: {node}')
+
+
+def generate():
+    cases = []
+    for reference in SCHEMA['oneOf']:
+        row = resolve(reference)
+        base = {key: value for key, value in row.items() if key != 'oneOf'}
+        for status in row['oneOf']:
+            value = sample(base)
+            value.update(sample(status))
+            name = value['function'] + '-' + value['status']
+            cases.append({'name': name, 'valid': True, 'row': value})
+            invalid = copy.deepcopy(value)
+            if value['status'] == 'answered':
+                invalid['answer'] = 'wrong' if isinstance(value['answer'], bool) else False
+            elif value['status'] == 'unsure':
+                invalid['answer'] = None
+            else:
+                invalid['probability'] = 0.5
+            cases.append({'name': name + '-wrong-fields', 'valid': False, 'row': invalid})
+        baseline = copy.deepcopy(cases[-2]['row'])
+        for key, bad in [('position', 0), ('raw_backend', {})]:
+            invalid = copy.deepcopy(baseline)
+            invalid[key] = bad
+            cases.append({'name': value['function'] + '-' + key, 'valid': False, 'row': invalid})
+    return json.dumps({'format': 1, 'cases': cases}, indent=2, sort_keys=True) + '\n'
+
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--check', action='store_true')
+args = parser.parse_args()
+expected = generate()
+if args.check:
+    if not TARGET.exists() or TARGET.read_text() != expected:
+        raise SystemExit('conformance shapes: regenerate with scripts/conformance-shapes')
+else:
+    TARGET.write_text(expected)
+print('conformance shapes: generated row boundaries agree')

@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import io.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: TagRejectsBand. This expression must fail after the positive consumer compiles.
+suspend fun rejectedTagRejectsBand(client: ThinkThen) {
+    client.tag("Which labels?", "record", listOf("billing"), threshold = Threshold.band(0.2, 0.8))
+}

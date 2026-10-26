@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 import zipfile
 
+from production_native import check as production_native
 from runtime_floors import FLOORS
 from runtime_floor_macos import versions as mac_versions, dependencies as mac_dependencies
 
@@ -67,6 +68,7 @@ def check(folder):
     with tempfile.TemporaryDirectory() as scratch:
         binary = Path(scratch) / 'object'
         for name, data in objects.items():
+            production_native(data, name)
             swift = name.startswith(('swift/', 'checks/swift/', 'prerequisites/swift-runtime/'))
             floor = FLOORS['linux']['swift_glibc' if swift else 'glibc']
             cxx_floor = FLOORS['linux']['swift_glibcxx' if swift else 'glibcxx']

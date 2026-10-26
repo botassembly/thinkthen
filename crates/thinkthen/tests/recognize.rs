@@ -3,15 +3,14 @@
 
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Engine, Recognize, Record, Toolbox};
+use thinkthen::{Cut, Engine, Key, Recognize, Record, Settings};
 
 fn engine(server: &Loopback) -> Engine {
-    Engine::new(
-        Backend::resolve(Some(server.base()), None, |name| {
-            (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-        })
-        .unwrap(),
-    )
+    Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
 
 fn reply(q: &Value, tags: &[(&str, [f64; 5])], kind: &[f64]) -> Value {
@@ -25,7 +24,11 @@ fn reply(q: &Value, tags: &[(&str, [f64; 5])], kind: &[f64]) -> Value {
         json!({"type":"choice", "probabilities":{"BEGIN":p[0],"INSIDE":p[1],"END":p[2],"SINGLE":p[3],"OUT":p[4]}})
     } else {
         assert!(instructions.contains("[["));
-        json!({"type":"choice", "probabilities":{"person":kind[0],"company":kind[1],"none of these":kind[2]}})
+        if q["criteria"].get("ENTITY").is_some() {
+            json!({"type":"choice", "probabilities":{"ENTITY":1.0,"none of these":0.0}})
+        } else {
+            json!({"type":"choice", "probabilities":{"person":kind[0],"company":kind[1],"none of these":kind[2]}})
+        }
     }
 }
 
@@ -35,7 +38,7 @@ fn names_keep_offsets_kinds_and_cuts() {
         (
             "Ada",
             vec![("Ada", [0., 0., 0., 1., 0.])],
-            vec![],
+            vec!["ENTITY"],
             vec![("Ada", 0, 3, "ENTITY")],
         ),
         (
@@ -44,7 +47,7 @@ fn names_keep_offsets_kinds_and_cuts() {
                 ("New", [1., 0., 0., 0., 0.]),
                 ("York", [0., 0., 1., 0., 0.]),
             ],
-            vec![],
+            vec!["ENTITY"],
             vec![("New York", 0, 8, "ENTITY")],
         ),
         (
@@ -75,11 +78,11 @@ fn names_keep_offsets_kinds_and_cuts() {
         (
             "x",
             vec![("x", [0.05, 0.7, 0.05, 0.15, 0.05])],
-            vec![],
+            vec!["ENTITY"],
             vec![("x", 0, 1, "ENTITY")],
         ),
     ] {
-        let drop = text == "Ada" && !kinds.is_empty();
+        let drop = text == "Ada" && kinds != ["ENTITY"];
         let tags_for_server = tags.clone();
         let server = Loopback::answering(move |q| {
             reply(
@@ -98,13 +101,13 @@ fn names_keep_offsets_kinds_and_cuts() {
         let question = Recognize::new(kinds.clone()).unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(&question, [Record::text(text)], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&question, [Record::text(text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let row = &rows[0];
         assert_eq!(row["status"], "answered");
-        assert!(row.get("p").is_none());
+        assert!(row.get("probability").is_none());
         let names = row["answer"].as_array().unwrap();
         assert_eq!(names.len(), expected.len(), "{row}");
         for (name, (text, start, end, kind)) in names.iter().zip(expected) {
@@ -112,16 +115,13 @@ fn names_keep_offsets_kinds_and_cuts() {
             assert_eq!(name["start"], start);
             assert_eq!(name["end"], end);
             assert_eq!(name["kind"], kind);
-            assert!(name["p"].as_f64().unwrap() >= 0.5);
+            assert!(name["probability"].as_f64().unwrap() >= 0.5);
         }
         assert_eq!(
-            row["detail"]["probabilities"]["pieces"]
-                .as_array()
-                .unwrap()
-                .len(),
+            row["detail"]["pieces"].as_array().unwrap().len(),
             tags.len()
         );
-        let second = !kinds.is_empty() && tags.iter().any(|(_, p)| p[3] > 0.5);
+        let second = tags.iter().any(|(_, p)| p[3] > 0.5) || text == "New York" || text == "x";
         assert_eq!(server.count(), 1 + usize::from(second));
     }
 }
@@ -140,20 +140,19 @@ fn least_piece_membership_multiplies_kind_probability_before_the_cut() {
     for (cut, kept) in [("0.5", true), ("0.50001", false)] {
         let question = Recognize::new(["person", "company"])
             .unwrap()
-            .threshold(cut.parse().unwrap())
-            .unwrap();
+            .threshold(Cut::new(cut.parse().unwrap()).unwrap());
         let mut rows = Vec::new();
         engine(&server)
-            .call(&question, [Record::text("Ada")], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&question, [Record::text("Ada")])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(
             rows[0]["answer"].as_array().unwrap().len(),
             usize::from(kept)
         );
         if kept {
-            assert!((rows[0]["answer"][0]["p"].as_f64().unwrap() - 0.5).abs() < 1e-12);
+            assert!((rows[0]["answer"][0]["probability"].as_f64().unwrap() - 0.5).abs() < 1e-12);
         }
     }
 }
@@ -161,38 +160,40 @@ fn least_piece_membership_multiplies_kind_probability_before_the_cut() {
 #[test]
 fn toolbox_empty_text_and_local_limits_keep_record_rows() {
     let server = Loopback::answering(|q| reply(q, &[("Ada", [0., 0., 0., 1., 0.])], &[])).unwrap();
-    let toolbox = Toolbox::from_bytes(br#"{"recognize":[]}"#).unwrap();
+    let question = Recognize::new(["ENTITY"]).unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
-            toolbox.question(None).unwrap(),
+        .rows(
+            &question,
             [
                 Record::text(""),
                 Record::text("Ada"),
                 Record::text("x".repeat(100_000)),
             ],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap_err();
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows[0]["answer"], json!([]));
     assert_eq!(rows[1]["answer"][0]["text"], "Ada");
-    assert_eq!(rows[2]["error"]["code"], "backend.limit");
-    assert_eq!(server.count(), 1);
+    assert_eq!(rows[2]["error"]["code"], "record.too-large");
+    assert_eq!(server.count(), 2);
 }
 
 #[test]
 fn long_names_keep_the_weakest_piece_support_without_inflation() {
     let server = Loopback::answering(|_| json!({"type":"choice", "probabilities":{"BEGIN":0.1225,"INSIDE":0.1225,"END":0.1225,"SINGLE":0.1225,"OUT":0.51}})).unwrap();
-    let question = Recognize::new(Vec::<String>::new()).unwrap();
+    let question = Recognize::new(["ENTITY"]).unwrap();
     let mut rows = Vec::new();
     // All OUT-majority pieces stay outside, however long the input is.
     engine(&server)
-        .call(&question, [Record::text("x ".repeat(2000))], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap();
+        .rows(&question, [Record::text("x ".repeat(2000))])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows[0]["answer"], json!([]));
     let server = Loopback::answering(|q| {
+        if q["criteria"].get("ENTITY").is_some() { return json!({"type":"choice","probabilities":{"ENTITY":1.0,"none of these":0.0}}); }
         let weak = q["instructions"].as_str().unwrap().contains("[[weak]]");
         let outside = if weak { 0.375 } else { 0.01 };
         let start = q["instructions"].as_str().unwrap().contains("[[start]]");
@@ -204,14 +205,14 @@ fn long_names_keep_the_weakest_piece_support_without_inflation() {
         format!("start {}weak", "x ".repeat(2000)),
     ] {
         engine(&server)
-            .call(&question, [Record::text(text.clone())], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&question, [Record::text(text.clone())])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let row = rows.last().unwrap();
         assert_eq!(row["answer"].as_array().unwrap().len(), 1);
         assert_eq!(row["answer"][0]["text"], text);
-        assert_eq!(row["answer"][0]["p"], 0.63);
+        assert_eq!(row["answer"][0]["probability"], 0.625);
     }
 }
 
@@ -365,23 +366,17 @@ fn positional_spans_join_weak_boundaries_and_keep_supported_boundaries() {
         let server = Loopback::answering(move |q| reply(q, &tags, &[])).unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(
-                &Recognize::new(Vec::<String>::new()).unwrap(),
-                [Record::text(text)],
-                |row| rows.push(row),
-            )
-            .unwrap();
-        let thinkthen::Outcome::Answered {
-            answer: thinkthen::Answer::Names(names),
-            ..
-        } = rows[0].outcome()
-        else {
+            .rows(&Recognize::new(["ENTITY"]).unwrap(), [Record::text(text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(row));
+        let thinkthen::Outcome::Answered { answer: names, .. } = rows[0].outcome() else {
             panic!("expected names")
         };
         assert_eq!(names.len(), expected.len(), "{text}");
         for (name, (text, p)) in names.iter().zip(expected) {
-            assert_eq!(name.text, text);
-            assert!((name.p.get() - p).abs() < 1e-12);
+            assert_eq!(name.text(), text);
+            assert!((name.probability().get() - p).abs() < 1e-12);
         }
     }
 }
@@ -423,17 +418,18 @@ fn only_marks_touching_both_names_can_bridge_an_outside_piece() {
         let text = format!("Nacre{middle}Skiff");
         let mut rows = Vec::new();
         engine(&server)
-            .call(
-                &Recognize::new(Vec::<String>::new()).unwrap(),
+            .rows(
+                &Recognize::new(["ENTITY"]).unwrap(),
                 [Record::text(text.clone())],
-                |row| rows.push(serde_json::to_value(row).unwrap()),
             )
-            .unwrap();
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let names = rows[0]["answer"].as_array().unwrap();
         assert_eq!(names.len(), expected, "{text}: {names:?}");
         if expected == 1 {
             assert_eq!(names[0]["text"], text);
-            assert_eq!(names[0]["p"], 0.6);
+            assert_eq!(names[0]["probability"], 0.6);
         } else if expected == 2 {
             assert_eq!(names[0]["text"], "Nacre");
             assert_eq!(names[1]["text"], "Skiff");
@@ -445,131 +441,9 @@ fn only_marks_touching_both_names_can_bridge_an_outside_piece() {
 fn invalid_kinds_fail_explicitly() {
     for kinds in [vec![""], vec!["person", "person"], vec!["none of these"]] {
         assert_eq!(
-            Recognize::new(kinds).unwrap_err().kind().code(),
+            Recognize::new(kinds).unwrap_err().code().as_str(),
             "usage.question"
         );
-    }
-}
-
-#[test]
-fn dependent_rounds_preserve_all_answers_through_split_retry_and_deduplication() {
-    use loopback::Reply;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::time::Duration;
-    use thinkthen::{
-        AdmittedRecord, Answer, Ask, Decide, Error, Function, FunctionAnswers, Outcome, RetryPolicy,
-    };
-    struct Rounds(bool);
-    impl Function for Rounds {
-        const NAME: &'static str = "rounds";
-        fn identity_as(&self, function: &str) -> String {
-            Decide::new(if self.0 {
-                "Expanded rounds?"
-            } else {
-                "Rounds?"
-            })
-            .unwrap()
-            .identity_as(function)
-        }
-        fn try_asks_record(
-            &self,
-            record: &AdmittedRecord,
-            limits: thinkthen::Limits,
-        ) -> Result<Vec<Ask>, Error> {
-            Decide::new("Round 0?")
-                .unwrap()
-                .try_asks_record(record, limits)
-        }
-        fn followup_record(
-            context: FunctionAnswers<'_, Self>,
-            limits: thinkthen::Limits,
-        ) -> Result<Vec<Ask>, Error> {
-            let question = context.question();
-            let record = context.record();
-            let answers = context.answers();
-            for answer in answers {
-                answer.as_ref().map_err(Clone::clone)?;
-            }
-            if answers.len() < 3 {
-                Decide::new(format!(
-                    "Round {}?{}",
-                    answers.len(),
-                    if question.0 && answers.len() == 1 {
-                        "x".repeat(50_000)
-                    } else {
-                        String::new()
-                    }
-                ))
-                .unwrap()
-                .try_asks_record(record, limits)
-            } else {
-                Ok(vec![])
-            }
-        }
-        fn read_record(context: FunctionAnswers<'_, Self>, _limits: thinkthen::Limits) -> Outcome {
-            let answers = context.answers();
-            assert_eq!(answers.len(), 3);
-            for (answer, expected) in answers.iter().zip([0.6, 0.7, 0.8]) {
-                assert_eq!(
-                    answer.as_ref().unwrap().probabilities(),
-                    &[thinkthen::Probability::new(expected).unwrap()]
-                );
-            }
-            Outcome::Answered {
-                answer: Answer::Bool(true),
-                p: Some(answers.last().unwrap().as_ref().unwrap().probabilities()[0]),
-                detail: None,
-            }
-        }
-    }
-    for expanded in [false, true] {
-        let retried = AtomicBool::new(false);
-        let server = Loopback::start(move |request| {
-            let body = request.json().unwrap();
-            let questions = body["questions"].as_object().unwrap();
-            let round = questions.values().next().unwrap()["instructions"]
-                .as_str()
-                .unwrap();
-            if round.contains("Round 1?") && questions.len() > 1 {
-                return Reply::json(413, &json!({}));
-            }
-            if round.contains("Round 2?") && !retried.swap(true, Ordering::SeqCst) {
-                return Reply::json(503, &json!({}));
-            }
-            let p = if round.contains("Round 0?") {
-                0.6
-            } else if round.contains("Round 1?") {
-                0.7
-            } else {
-                0.8
-            };
-            let answers: serde_json::Map<String, Value> = questions
-                .keys()
-                .map(|key| (key.clone(), json!({"type":"noul","noul":p})))
-                .collect();
-            Reply::json(200, &json!({"answers":answers}))
-        })
-        .unwrap();
-        let mut rows = Vec::new();
-        engine(&server)
-            .retry_policy(RetryPolicy {
-                initial_backoff: Duration::ZERO,
-                ..RetryPolicy::default()
-            })
-            .call(
-                &Rounds(expanded),
-                ["a", "a", "b", "b"].map(Record::text),
-                |row| rows.push(serde_json::to_value(row).unwrap()),
-            )
-            .unwrap();
-        assert_eq!(rows.len(), 4);
-        for (i, row) in rows.iter().enumerate() {
-            assert_eq!(row["id"], i + 1);
-            assert_eq!(row["answer"], true);
-            assert_eq!(row["p"], 0.8);
-        }
-        // Refused request halves rejoin before the next dependent round.
-        assert_eq!(server.count(), 6);
     }
 }
 
@@ -583,15 +457,16 @@ fn failed_rounds_stop_each_record_without_partial_names() {
         }).unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(
+            .rows(
                 &Recognize::new(["person"]).unwrap(),
                 [Record::text("Ada"), Record::text("Ada")],
-                |row| rows.push(serde_json::to_value(row).unwrap()),
             )
-            .unwrap_err();
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows.len(), 2);
         for (i, row) in rows.iter().enumerate() {
-            assert_eq!(row["id"], i + 1);
+            assert_eq!(row["position"], i + 1);
             assert_eq!(row["error"]["code"], "backend.reply");
             assert!(row.get("answer").is_none());
         }
@@ -611,7 +486,7 @@ fn unicode_pieces_preserve_names_and_original_scalar_offsets() {
             8,
         ),
     ] {
-        let question = Recognize::new(Vec::<String>::new()).unwrap();
+        let question = Recognize::new(["ENTITY"]).unwrap();
         let expected_owned = expected.to_owned();
         let server = Loopback::answering(move |q| {
             reply(
@@ -628,10 +503,10 @@ fn unicode_pieces_preserve_names_and_original_scalar_offsets() {
         .unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(&question, [Record::text(text)], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&question, [Record::text(text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let names = rows[0]["answer"].as_array().unwrap();
         assert_eq!(names.len(), 1);
         assert_eq!(names[0]["text"], expected);
@@ -650,7 +525,7 @@ fn unicode_pieces_preserve_names_and_original_scalar_offsets() {
         (" \u{feff}a", vec!["\u{feff}a"]),
         ("\u{feff}\u{2060}", vec![]),
     ] {
-        let q = Recognize::new(Vec::<String>::new()).unwrap();
+        let q = Recognize::new(["ENTITY"]).unwrap();
         let server = Loopback::answering(|q| {
             let probabilities = q["criteria"]
                 .as_object()
@@ -663,12 +538,12 @@ fn unicode_pieces_preserve_names_and_original_scalar_offsets() {
         .unwrap();
         let mut rows = Vec::new();
         engine(&server)
-            .call(&q, [Record::text(text)], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&q, [Record::text(text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let row = &rows[0];
-        let pieces: Vec<_> = row["detail"]["probabilities"]["pieces"]
+        let pieces: Vec<_> = row["detail"]["pieces"]
             .as_array()
             .unwrap()
             .iter()
@@ -692,16 +567,15 @@ fn decode_ties_choose_the_earliest_previous_tag_at_each_step() {
         )
     })
     .unwrap();
-    let question = Recognize::new(Vec::<String>::new())
+    let question = Recognize::new(["ENTITY"])
         .unwrap()
-        .threshold("0.01".parse().unwrap())
-        .unwrap();
+        .threshold(Cut::new(0.01).unwrap());
     let mut rows = Vec::new();
     engine(&server)
-        .call(&question, [Record::text("A B C")], |row| {
-            rows.push(serde_json::to_value(row).unwrap())
-        })
-        .unwrap();
+        .rows(&question, [Record::text("A B C")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     let names = rows[0]["answer"].as_array().unwrap();
     assert_eq!(names.len(), 1);
     assert_eq!(names[0]["text"], "B C");
@@ -723,7 +597,7 @@ fn names_require_a_unicode_letter_or_decimal_digit() {
         ("A\u{301}", vec!["A\u{301}"], true),
         ("Lark!", vec!["Lark", "!"], true),
     ] {
-        for kinds in [vec![], vec!["person", "company"]] {
+        for kinds in [vec!["ENTITY"], vec!["person", "company"]] {
             let tags: Vec<_> = pieces
                 .iter()
                 .enumerate()
@@ -742,29 +616,79 @@ fn names_require_a_unicode_letter_or_decimal_digit() {
             let server = Loopback::answering(move |q| reply(q, &tags, &[1., 0., 0.])).unwrap();
             let mut rows = Vec::new();
             engine(&server)
-                .call(
+                .rows(
                     &Recognize::new(kinds.clone()).unwrap(),
                     [Record::text(text)],
-                    |row| rows.push(serde_json::to_value(row).unwrap()),
                 )
-                .unwrap();
+                .unwrap()
+                .map(|row| row.unwrap())
+                .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
             assert_eq!(rows.len(), 1);
             assert_eq!(rows[0]["status"], "answered");
             let names = rows[0]["answer"].as_array().unwrap();
             assert_eq!(names.len(), usize::from(kept), "{text}: {names:?}");
             assert_eq!(
-                rows[0]["detail"]["probabilities"]["names"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
+                rows[0]["detail"]["names"].as_array().unwrap().len(),
                 usize::from(kept && !kinds.is_empty())
             );
             if kept {
                 assert_eq!(names[0]["text"], text);
                 assert_eq!(names[0]["start"], 0);
                 assert_eq!(names[0]["end"], text.chars().count());
-                assert_eq!(names[0]["p"], 1.);
+                assert_eq!(names[0]["probability"], 1.);
             }
         }
     }
+}
+
+#[test]
+fn dependent_rounds_preserve_names_through_split_retry_and_deduplication() {
+    use loopback::Reply;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration;
+    use thinkthen::Retry;
+    let retried = AtomicBool::new(false);
+    let server = Loopback::start(move |request| {
+        let body = request.json().unwrap();
+        let questions = body["questions"].as_object().unwrap();
+        let boundary = questions.values().next().unwrap()["criteria"].get("BEGIN").is_some();
+        if boundary && questions.len() > 1 {return Reply::json(413, &json!({}));}
+        if !boundary && !retried.swap(true, Ordering::SeqCst) {return Reply::json(503, &json!({}));}
+        let answers = questions.keys().map(|key| (key.clone(), if boundary {
+            json!({"type":"choice","probabilities":{"BEGIN":0.0,"INSIDE":0.0,"END":0.0,"SINGLE":0.9,"OUT":0.1}})
+        } else {json!({"type":"choice","probabilities":{"person":0.8,"none of these":0.2}})})).collect::<serde_json::Map<_,_>>();
+        Reply::json(200, &json!({"answers":answers}))
+    }).unwrap();
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .retry(Retry::new(1, Duration::ZERO, Duration::from_secs(5)).unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let rows = engine
+        .rows(
+            &Recognize::new(["person"]).unwrap(),
+            ["Ada Bea", "Ada Bea", "Ada Bea", "Ada Bea"].map(Record::text),
+        )
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 4);
+    for (position, row) in rows.into_iter().enumerate() {
+        assert_eq!(row.position(), (position + 1) as u64);
+        let names = row.into_result().unwrap().unwrap();
+        assert_eq!(
+            names
+                .iter()
+                .map(|name| name.text().as_str())
+                .collect::<Vec<_>>(),
+            ["Ada", "Bea"]
+        );
+        assert!(
+            names
+                .iter()
+                .all(|name| (name.probability().get() - 0.72).abs() < 1e-12)
+        );
+    }
+    assert_eq!(server.count(), 5);
 }

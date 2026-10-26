@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+from csharp_dependencies import prepare_project
 import subprocess
 import sys
 import tempfile
@@ -50,7 +51,7 @@ feed = TOOLS / 'windows-singlefile-packages'
 with tempfile.TemporaryDirectory(prefix='thinkthen-singlefile-prepare-') as temporary:
     scratch = Path(temporary)
     project = scratch / 'Consumer.csproj'
-    project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup></Project>')
+    project.write_text(prepare_project())
     run('dotnet', 'restore', project, '--runtime', 'win-x64', '--packages', feed,
         '--source', 'https://api.nuget.org/v3/index.json',
         env=dict(os.environ, DOTNET_CLI_HOME=str(scratch), DOTNET_CLI_TELEMETRY_OPTOUT='1',

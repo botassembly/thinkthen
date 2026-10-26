@@ -5,8 +5,8 @@ bundle=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 LD_LIBRARY_PATH="$bundle/runtime/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export LD_LIBRARY_PATH
 case "${1:-}" in
-    --stub) settings='{"adapter":"stub"}' ;;
-    '') settings='{}' ;;
+    --stub) backend=stub ;;
+    '') backend=systemone ;;
     *) echo 'usage: run-live [--stub]' >&2; exit 2 ;;
 esac
 scratch=$(mktemp -d)
@@ -21,9 +21,9 @@ trap cleanup EXIT HUP INT TERM
     -o "-k $scratch -c listen_addresses=''" -w start >/dev/null
 running=true
 {
-    printf 'CREATE EXTENSION thinkthen;\nSET thinkthen.settings = '\''%s'\'';\n' "$settings"
+    printf 'CREATE SCHEMA thinkthen;\nCREATE EXTENSION thinkthen SCHEMA thinkthen;\nSET thinkthen.backend = '\''%s'\'';\n' "$backend"
     if [ "${1:-}" = --stub ]; then
-        printf '%s\n' "SET thinkthen.allowed_backends = '{\"stub\":[\"stub\"]}';"
+        printf '%s\n' "SET thinkthen.allowed_backends = 'stub:*';"
     fi
     cat "$bundle/all-ten.sql"
 } | "$bundle/runtime/bin/psql" -X -h "$scratch" -U thinkthen -d postgres -v ON_ERROR_STOP=1

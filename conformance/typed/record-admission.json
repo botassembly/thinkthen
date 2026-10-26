@@ -1,0 +1,90 @@
+{
+  "name": "record-admission",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      null,
+      {
+        "id": null
+      },
+      {
+        "id": true
+      },
+      {
+        "id": 1.5
+      },
+      {
+        "id": {}
+      },
+      {
+        "id": []
+      },
+      {
+        "id": 18446744073709551616
+      }
+    ]
+  },
+  "replies": [],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "record.missing"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 2,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 3,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 4,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 5,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 6,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    },
+    {
+      "function": "decide",
+      "position": 7,
+      "status": "failed",
+      "error": {
+        "code": "record.invalid"
+      }
+    }
+  ],
+  "requests": 0
+}

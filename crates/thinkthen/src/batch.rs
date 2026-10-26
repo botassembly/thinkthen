@@ -66,7 +66,11 @@ impl FromStr for Batch {
             .ok_or_else(|| {
                 Error::new(
                     ErrorKind::Batch,
-                    format!("the batch `{text}` must be a whole number of at least 1"),
+                    crate::core::diagnostic::expected(
+                        "batch",
+                        "a whole number of at least 1",
+                        &serde_json::Value::String(text.into()),
+                    ),
                 )
             })
     }
@@ -75,5 +79,43 @@ impl FromStr for Batch {
 impl From<NonZeroUsize> for Batch {
     fn from(size: NonZeroUsize) -> Self {
         Self(size)
+    }
+}
+
+impl serde::Serialize for Batch {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(&self.0, serializer)
+    }
+}
+impl<'de> serde::Deserialize<'de> for Batch {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        <NonZeroUsize as serde::Deserialize>::deserialize(deserializer).map(Self)
+    }
+}
+impl schemars::JsonSchema for Batch {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Batch".into()
+    }
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        <NonZeroUsize as schemars::JsonSchema>::json_schema(generator)
+    }
+}
+impl TryFrom<u64> for Batch {
+    type Error = Error;
+    fn try_from(value: u64) -> Result<Self, Error> {
+        usize::try_from(value)
+            .ok()
+            .and_then(NonZeroUsize::new)
+            .map(Self)
+            .ok_or_else(|| {
+                Error::new(
+                    ErrorKind::Batch,
+                    crate::core::diagnostic::requirement(
+                        "batch",
+                        "a positive integer within the platform range",
+                        "an out-of-range count",
+                    ),
+                )
+            })
     }
 }

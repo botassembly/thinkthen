@@ -1,14 +1,11 @@
 #![cfg(test)]
-//! Filtering through the public Rust API.
-
+//! Filter callers retain originals and every independent row outcome.
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{
-    Backend, Cancel, Client, Engine, Filter, OffsetUnit, PullEvent, Record, SdkRequest,
-};
+use thinkthen::{Filter, Key, Record, Settings, Threshold};
 
 #[test]
-fn filter_emits_passing_records_and_preserves_its_first_failure_through_both_apis() {
+fn filter_pairs_every_original_with_its_row_and_keeps_only_answered_true() {
     let server = Loopback::answering(|question| {
         let text = question["instructions"].as_str().unwrap();
         let p = if text.contains("yes") {
@@ -20,64 +17,50 @@ fn filter_emits_passing_records_and_preserves_its_first_failure_through_both_api
         } else {
             0.1
         };
-        json!({"type": "noul", "noul": p})
+        json!({"type":"noul","noul":p})
     })
     .unwrap();
-    let backend = Backend::resolve(Some(server.base()), None, |name| {
-        (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-    })
-    .unwrap();
-    let engine = Engine::new(backend).batch("2".parse().unwrap());
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .batch("2".parse().unwrap())
+        .engine(|_| None)
+        .unwrap();
     let question = Filter::new("Keep?")
         .unwrap()
-        .threshold("0.2:0.8".parse().unwrap());
-    let original = ["yes first", "no", "maybe", "broken", "yes last"];
-    let mut kept = Vec::new();
-    let result = engine.filter(
-        &question,
-        original
-            .map(|text| (Record::text(text), text))
-            .into_iter()
-            .chain([(Record::json("invalid", &Default::default()), "invalid")]),
-        |text| kept.push(text),
-    );
-    assert_eq!(kept, ["yes first", "yes last"]);
-    assert_eq!(result.unwrap_err().kind().code(), "backend.reply");
-
-    let client = Client::from_json(
-        &json!({"url":server.base(),"batch":2}).to_string(),
-        |name| (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned()),
-    )
-    .unwrap();
-    let request = SdkRequest::from_json(r#"{"function":"filter","question":{"type":"inline","value":"Keep?"},"options":{"threshold":"0.2:0.8"}}"#).unwrap();
-    let mut call = client
-        .open(&request, OffsetUnit::CodePoints, Cancel::default())
-        .unwrap();
-    let mut input = original.into_iter();
-    let mut sent_invalid = false;
-    let mut kept = Vec::new();
-    let mut rows = 0;
-    loop {
-        match call.next_event() {
-            PullEvent::NeedsInput => match input.next() {
-                Some(text) => call.send_text(text).unwrap(),
-                None if !sent_invalid => {
-                    call.send_json("invalid").unwrap();
-                    sent_invalid = true;
-                }
-                None => call.end_input(),
-            },
-            PullEvent::Row(row) => {
-                rows += 1;
-                if row.kept {
-                    kept.push(row.position);
-                }
-                assert!(call.final_error().is_none());
+        .threshold(Threshold::band(0.2, 0.8).unwrap());
+    let original = ["yes first", "no", "maybe", "broken", "yes last", "invalid"];
+    let rows = engine
+        .filter_items(&question, original, |text| {
+            if *text == "invalid" {
+                Record::from_json("invalid")
+            } else {
+                Record::text(*text)
             }
-            PullEvent::Finished => break,
-        }
-    }
-    assert_eq!(rows, 6);
-    assert_eq!(kept, [1, 5]);
-    assert_eq!(call.final_error().unwrap().kind().code(), "backend.reply");
+        })
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 6);
+    assert_eq!(
+        rows.iter().map(|(text, _)| *text).collect::<Vec<_>>(),
+        original
+    );
+    assert_eq!(
+        rows.iter()
+            .filter(|(_, row)| row.kept())
+            .map(|(text, _)| *text)
+            .collect::<Vec<_>>(),
+        ["yes first", "yes last"]
+    );
+    assert_eq!(rows[2].1.status(), thinkthen::Status::Unsure);
+    assert_eq!(rows[3].1.error().unwrap().code().as_str(), "backend.reply");
+    assert_eq!(rows[5].1.error().unwrap().code().as_str(), "record.json");
+    assert_eq!(
+        rows.iter()
+            .filter(|(_, row)| row.kept())
+            .map(|(_, row)| row.position())
+            .collect::<Vec<_>>(),
+        [1, 5]
+    );
 }

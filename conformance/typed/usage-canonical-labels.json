@@ -1,0 +1,21 @@
+{
+  "name": "canonically equal labels fail shared admission",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "Which fits?",
+      "labels": [
+        "é",
+        "é"
+      ]
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [],
+  "requests": 0,
+  "expected": {
+    "error": "usage.question"
+  }
+}

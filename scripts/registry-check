@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-check-') as temporar
     from release_source import stage
     stage(libraries, scratch / 'tag-source', notices)
     assert (scratch / 'tag-source/Package.swift').is_file()
-    assert len(list((scratch / 'tag-source/sdk/go').glob('library_*.go'))) == 4
+    assert len(list((scratch / 'tag-source/sdk/go/thinkthen').glob('library_*.go'))) == 4
     with tarfile.open(next((destination / 'npm').glob('*.tgz'))) as archive:
         assert len([n for n in archive.getnames() if n.endswith('.node')]) == 4
     with zipfile.ZipFile(next((destination / 'nuget').glob('*.nupkg'))) as archive:

@@ -1,0 +1,1359 @@
+{
+  "cases": [
+    {
+      "name": "decide-answered",
+      "row": {
+        "answer": false,
+        "function": "decide",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "decide-answered-wrong-fields",
+      "row": {
+        "answer": "wrong",
+        "function": "decide",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-unsure",
+      "row": {
+        "function": "decide",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "decide-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "decide",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "decide",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "decide-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "decide",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "decide",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "decide-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "decide",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-answered",
+      "row": {
+        "answer": "x",
+        "function": "choose",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "choose",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-unsure",
+      "row": {
+        "function": "choose",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "choose",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "choose",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "choose",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "choose",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "choose-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "choose",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-answered",
+      "row": {
+        "answer": [],
+        "function": "tag",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "tag-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "tag",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-unsure",
+      "row": {
+        "function": "tag",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "tag-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "tag",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "tag",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "tag-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "tag",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "tag",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "tag-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "tag",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "score-answered",
+      "row": {
+        "answer": 0.0,
+        "function": "score",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "score-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "score",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "score-unsure",
+      "row": {
+        "function": "score",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "score-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "score",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "score-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "score",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "score-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "score",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "score-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "score",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "score-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "score",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-answered",
+      "row": {
+        "answer": false,
+        "function": "filter",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "filter-answered-wrong-fields",
+      "row": {
+        "answer": "wrong",
+        "function": "filter",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-unsure",
+      "row": {
+        "function": "filter",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "filter-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "filter",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "filter-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "filter-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "filter",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "find-answered",
+      "row": {
+        "answer": {
+          "end": 0,
+          "start": 0,
+          "text": "x"
+        },
+        "function": "find",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "find",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "find-unsure",
+      "row": {
+        "function": "find",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "find",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "find-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "find",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "find-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "find",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "find-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "find",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "find-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "find",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "recognize-answered",
+      "row": {
+        "answer": [],
+        "function": "recognize",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "recognize-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "recognize",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "recognize-unsure",
+      "row": {
+        "function": "recognize",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "recognize-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "recognize",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "recognize-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "recognize",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "recognize-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "recognize",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "recognize-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "recognize",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "recognize-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "recognize",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "relate-answered",
+      "row": {
+        "answer": [],
+        "function": "relate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "relate-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "relate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "relate-unsure",
+      "row": {
+        "function": "relate",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "relate-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "relate",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "relate-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "relate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "relate-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "relate",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "relate-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "relate",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "relate-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "relate",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "rank-answered",
+      "row": {
+        "answer": 1,
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "rank-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "rank-unsure",
+      "row": {
+        "function": "rank",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "rank-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "rank",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "rank-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "rank-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "rank",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "rank-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "rank",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "rank-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "rank",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "annotate-answered",
+      "row": {
+        "answer": {},
+        "function": "annotate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": true
+    },
+    {
+      "name": "annotate-answered-wrong-fields",
+      "row": {
+        "answer": false,
+        "function": "annotate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "answered"
+      },
+      "valid": false
+    },
+    {
+      "name": "annotate-unsure",
+      "row": {
+        "function": "annotate",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": true
+    },
+    {
+      "name": "annotate-unsure-wrong-fields",
+      "row": {
+        "answer": null,
+        "function": "annotate",
+        "position": 1,
+        "probability": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "unsure"
+      },
+      "valid": false
+    },
+    {
+      "name": "annotate-failed",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "annotate",
+        "position": 1,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": true
+    },
+    {
+      "name": "annotate-failed-wrong-fields",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "annotate",
+        "position": 1,
+        "probability": 0.5,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "annotate-position",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "annotate",
+        "position": 0,
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    },
+    {
+      "name": "annotate-raw_backend",
+      "row": {
+        "error": {
+          "code": "record.json",
+          "message": "x"
+        },
+        "function": "annotate",
+        "position": 1,
+        "raw_backend": {},
+        "source": {
+          "backend": "systemone",
+          "model": "x",
+          "question_identity": "x"
+        },
+        "status": "failed"
+      },
+      "valid": false
+    }
+  ],
+  "format": 1
+}

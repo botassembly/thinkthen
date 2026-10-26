@@ -22,8 +22,40 @@ def revision():
 
 def pins():
     from release_windows_host import selections
-    return {name: value for name, value in selections()['INPUTS'].items()
-            if name.startswith(('R-', 'jsonlite_'))}
+    from release_r_dependencies import fields, names
+    selected = {name: value for name, value in selections()['INPUTS'].items()
+                if name.startswith('R-') or re.fullmatch(r'[A-Za-z][A-Za-z0-9.]*_[0-9].*\.zip', name)}
+    available = {name.split('_')[0] for name in selected if '_' in name}
+    missing = names(fields((ROOT / 'sdk/r/DESCRIPTION').read_bytes()), ('Imports',)) - available
+    if missing:
+        raise ValueError('Missing pinned Windows R binary inputs: ' + ', '.join(sorted(missing)))
+    return selected
+
+
+def dependencies(folder, r=None):
+    from release_r_dependencies import bundle, fields
+    selected = pins()
+    installer = next(name for name in selected if name.startswith('R-'))
+    r = r or TOOLS / 'windows' / installer.removesuffix('-win.exe')
+    standard = []
+    for path in (r / 'library').glob('*/DESCRIPTION'):
+        info = fields(path.read_bytes())
+        if info.get('Priority'):
+            standard.append(info['Package'])
+    if not standard:
+        raise ValueError('Prepare the pinned R runtime before resolving Windows R dependencies')
+    archives = []
+    for name, (_, digest) in selected.items():
+        if not name.endswith('.zip'):
+            continue
+        path = TOOLS / 'windows' / name
+        if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise ValueError('Pinned Windows R binary checksum differs: ' + name)
+        archives.append(path)
+    result = bundle(ROOT / 'sdk/r/DESCRIPTION', archives, folder,
+                    installer.removeprefix('R-').removesuffix('-win.exe'), standard)
+    shutil.copytree(r / 'share/licenses', Path(folder) / 'licenses', dirs_exist_ok=True)
+    return result
 
 
 def version():
@@ -58,9 +90,11 @@ def runtime():
         fetch(url, TOOLS / 'windows' / name, digest)
     if not (r / 'bin/x64/R.dll').is_file():
         run(TOOLS / 'windows' / installer, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/DIR=' + str(r))
-    dependency = next(name for name in selected if name.startswith('jsonlite_'))
-    with zipfile.ZipFile(TOOLS / 'windows' / dependency) as archive:
-        archive.extractall(r / 'library')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:
+        inventory = dependencies(temporary, r)
+        for dependency in inventory['install_order']:
+            with zipfile.ZipFile(Path(temporary) / dependency) as archive:
+                archive.extractall(r / 'library')
     return r
 
 
@@ -123,6 +157,8 @@ def build(folder):
     for name, (_, digest) in selected.items():
         if hashlib.sha256((TOOLS / 'windows' / name).read_bytes()).hexdigest() != digest:
             raise ValueError('prepared Windows R input differs: ' + name)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:
+        dependencies(temporary, r)
     env = environment(r)
     folder = Path(folder).resolve()
     folder.mkdir(parents=True, exist_ok=True)

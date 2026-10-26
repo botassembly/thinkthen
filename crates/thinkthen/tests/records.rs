@@ -7,35 +7,29 @@ use std::thread;
 
 use loopback::{KEY, Loopback, Reply, Request};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Batch, Decide, Engine, Pointer, Record};
+use thinkthen::{Batch, Decide, Engine, Key, Pointer, Record, Settings};
 
 const QUESTION: &str = "Is it a refund request?";
 
 fn engine(server: &Loopback, batch: Option<usize>) -> Engine {
-    let base = server.base().to_owned();
-    let backend = Backend::resolve(None, None, move |name| match name {
-        "THINKTHEN_BASE_URL" => Some(base.clone()),
-        "THINKTHEN_API_KEY" => Some(KEY.to_owned()),
-        _ => None,
-    })
-    .unwrap();
-    match batch {
-        Some(batch) => Engine::new(backend).batch(batch.to_string().parse().unwrap()),
-        None => Engine::new(backend),
+    let mut settings = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap());
+    if let Some(batch) = batch {
+        settings = settings.batch(batch.to_string().parse().unwrap());
     }
+    settings.engine(|_| None).unwrap()
 }
 
 fn run(engine: &Engine, records: impl IntoIterator<Item = Record>) -> Vec<Value> {
-    let question = Decide::new(QUESTION).unwrap();
-    let mut rows = Vec::new();
-    let result = engine.call(&question, records, |row| {
-        rows.push(serde_json::to_value(&row).unwrap());
-    });
-    assert_eq!(
-        result.err().map(|error| error.kind().code()),
-        rows.iter().find_map(|row| row["error"]["code"].as_str())
-    );
-    rows
+    engine
+        .rows(
+            &Decide::new(QUESTION).unwrap(),
+            records.into_iter().collect::<Vec<_>>(),
+        )
+        .unwrap()
+        .map(|row| serde_json::to_value(row.unwrap()).unwrap())
+        .collect()
 }
 
 fn texts(count: usize) -> Vec<Record> {
@@ -61,7 +55,7 @@ fn instructions(evidence: &str) -> Value {
 }
 
 fn ids(rows: &[Value]) -> Vec<Value> {
-    rows.iter().map(|row| row["id"].clone()).collect()
+    rows.iter().map(|row| row["position"].clone()).collect()
 }
 
 fn positions(count: usize) -> Vec<Value> {
@@ -279,7 +273,10 @@ fn the_byte_limit_closes_requests_and_fails_a_record_too_large_alone() {
         assert_eq!(bodies.contains(&LIMIT), exact, "{sizes:?}");
         for (row, id) in rows.iter().zip(1..) {
             if too_large.contains(&id) {
-                assert_eq!(row["error"]["code"], "backend.limit", "{sizes:?} row {id}");
+                assert_eq!(
+                    row["error"]["code"], "record.too-large",
+                    "{sizes:?} row {id}"
+                );
             } else {
                 assert_eq!(row["status"], "answered", "{sizes:?} row {id}");
             }
@@ -355,28 +352,50 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
             Ok("nameless"),
         ),
     ];
-    let server = Loopback::noul(0.9).unwrap();
-    let records = cases
-        .iter()
-        .map(|(line, pointer, ..)| Record::json(line, &pointer.parse::<Pointer>().unwrap()));
-    let rows = run(&engine(&server, None), records);
-    let requests = server.requests();
-    let [request] = requests.as_slice() else {
-        panic!("expected one request, got {}", requests.len());
-    };
-    let mut sent = questions(request).into_iter();
-    for ((line, pointer, id, expected), row) in cases.iter().zip(&rows) {
-        assert_eq!(&row["id"], id, "{line} at {pointer}");
+    for (line, pointer, old_id, expected) in cases {
+        let server = Loopback::noul(0.9).unwrap();
+        let question = Decide::new(QUESTION)
+            .unwrap()
+            .evidence(pointer.parse().unwrap());
+        let row = engine(&server, None)
+            .run(&question, Record::from_json(line))
+            .unwrap();
+        let value = serde_json::to_value(&row).unwrap();
+        assert_eq!(row.position(), 1);
+        let input = serde_json::from_str::<Value>(line).ok();
+        let supplied_id = input.as_ref().and_then(|value| value.get("id"));
+        let expected_id = supplied_id.filter(|id| !id.is_null());
+        assert_eq!(
+            value.get("id"),
+            expected_id,
+            "{line} at {pointer}, former id {old_id}"
+        );
+        if supplied_id == Some(&Value::Null) {
+            assert_eq!(row.error().unwrap().code().as_str(), "record.invalid");
+            assert_eq!(server.count(), 0);
+            continue;
+        }
         match expected {
             Ok(evidence) => {
-                assert_eq!(row["status"], "answered", "{line} at {pointer}");
-                let question = sent.next().unwrap();
-                assert_eq!(question["instructions"], instructions(evidence), "{line}");
+                assert_eq!(value["status"], "answered", "{line} at {pointer}");
+                assert_eq!(server.count(), 1);
+                assert_eq!(
+                    questions(&server.requests()[0])[0]["instructions"],
+                    instructions(evidence),
+                    "{line}"
+                );
             }
-            Err(code) => assert_eq!(row["error"]["code"], *code, "{line} at {pointer}"),
+            Err(code) => {
+                let code = match code {
+                    "usage.missing" => "record.missing",
+                    "usage.record" => "record.json",
+                    other => other,
+                };
+                assert_eq!(value["error"]["code"], code, "{line} at {pointer}");
+                assert_eq!(server.count(), 0);
+            }
         }
     }
-    assert_eq!(sent.next(), None);
 }
 
 #[test]
@@ -386,7 +405,7 @@ fn a_pointer_outside_rfc_6901_is_refused() {
     }
     for text in ["body", "$.body", "#/id", "/a~", "/a~2"] {
         let error = text.parse::<Pointer>().unwrap_err();
-        assert_eq!(error.kind().code(), "usage.pointer", "{text}");
+        assert_eq!(error.code().as_str(), "usage.pointer", "{text}");
     }
 }
 
@@ -418,7 +437,7 @@ fn the_batch_flag_beats_the_variable_which_beats_the_default() {
                 size.parse::<Batch>().unwrap(),
                 "{flag:?} {variable:?}"
             ),
-            None => assert_eq!(got.unwrap_err().kind().code(), "usage.batch", "{flag:?}"),
+            None => assert_eq!(got.unwrap_err().code().as_str(), "usage.batch", "{flag:?}"),
         }
     }
 }

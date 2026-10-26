@@ -18,6 +18,11 @@ profile = matching[0]["profile"]
 optimized = profile["opt_level"] != "0" and not profile["debug_assertions"]
 if mode not in ("release", "debug") or optimized != (mode == "release"):
     sys.exit(f"package engine profile is not {mode}: {profile}")
+if mode == "release":
+    from production_native import check
+    if any("fixture-routing" in artifact.get("features", []) for artifact in artifacts):
+        sys.exit("production native graph contains the test routing feature")
+    check(selected.read_bytes(), str(selected))
 for log in link_logs:
     links = [line for line in Path(log).read_text().splitlines()
              if " -shared " in line or " -dynamiclib " in line]

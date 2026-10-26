@@ -16,7 +16,7 @@ export PKG_CONFIG_PATH="$scratch/installed/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG
 # Deliberately compile through the installed pkg-config surface, not source paths.
 cc -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
     $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/consumer"
-cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/conformance.c \
+cc -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
     $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/conformance"
 python3 - "$scratch/installed/share/thinkthen-c/README.md" "$scratch/example.c" <<'PYTHON'
 from pathlib import Path
@@ -25,14 +25,23 @@ Path(sys.argv[2]).write_text(re.search(r"```c\n(.*?)\n```", Path(sys.argv[1]).re
 PYTHON
 cc -std=c11 -Wall -Wextra -Werror "$scratch/example.c" \
     $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/example"
+c_library=$(find "$scratch/installed/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
+case $(uname -s) in Darwin) c_attempted=$(pkg-config --variable=libdir thinkthen-c)/$(basename "$c_library") ;; *) c_attempted=$(basename "$c_library") ;; esac
+python3 scripts/loader-failure-check "$c_library" --attempted "$c_attempted" -- "$scratch/example"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/original"
+"$scratch/original"
 "$scratch/example"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/original"
+"$scratch/original"
 mkdir "$scratch/home"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
-HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$root/construction/stub.json" "$build_target/debug/loopback" "$scratch/conformance" "$root/conformance"
+python3 sdk/c/tests/toolbox.py "$scratch/consumer" "$root"
+HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$build_target/debug/loopback" "$scratch/conformance" "$root/conformance/typed/manifest.json"
+THINKTHEN_LOOPBACK="$build_target/debug/loopback" python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
 cmake -S sdk/c/tests -B "$scratch/cmake-consumer" \
     -DCMAKE_PREFIX_PATH="$scratch/installed" -DCMAKE_BUILD_TYPE=Debug
 cmake --build "$scratch/cmake-consumer" --parallel 2
-"$scratch/cmake-consumer/consumer" "$root/construction/stub.json"
+"$scratch/cmake-consumer/consumer"
 if [ -n "${THINKTHEN_C_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_C_ARTIFACT_DIR"
     cp "$scratch/package"/*.tar.gz "$THINKTHEN_C_ARTIFACT_DIR/"

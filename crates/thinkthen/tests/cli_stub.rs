@@ -21,14 +21,14 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
     let mut actual = Vec::new();
     for case in &cases {
         let request = &case["request"];
-        let function = request["function"].as_str().unwrap();
+        let function = request["question"]["function"].as_str().unwrap();
         let mut entry = request.as_object().unwrap().clone();
         entry.remove("records");
         std::fs::write(&path, serde_json::to_string(&entry).unwrap()).unwrap();
         let mut child = support::command()
             .arg("run")
             .arg(&path)
-            .args(["--adapter", "stub", "--url", server.base()])
+            .args(["--backend", "stub", "--url", server.base(), "--json"])
             .env("THINKTHEN_API_KEY", "unused-synthetic-key")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -41,8 +41,18 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
         }
         drop(input);
         let output = child.wait_with_output().unwrap();
-        assert!(
-            output.status.success(),
+        let failed = case["expected"].as_array().unwrap().iter().any(|row| {
+            row["status"] == "failed"
+                || (row["function"] == "annotate"
+                    && row["answer"]
+                        .as_object()
+                        .unwrap()
+                        .values()
+                        .any(|entry| entry["status"] == "failed"))
+        });
+        assert_eq!(
+            output.status.code(),
+            Some(if failed { 6 } else { 0 }),
             "{function}: {}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -57,7 +67,7 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
     assert_eq!(server.count(), 0);
     let expected: Vec<Value> = cases
         .iter()
-        .map(|case| json!({"function":case["request"]["function"],"rows":case["expected"]}))
+        .map(|case| json!({"function":case["request"]["question"]["function"],"rows":case["expected"]}))
         .collect();
     assert_eq!(
         actual,

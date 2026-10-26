@@ -34,7 +34,7 @@ def check_sources():
         'python': ('sdk/python/pyproject.toml', r'requires-python = ">=([0-9.]+)"'),
         'typescript': ('sdk/typescript/package.json', r'"node": ">=([0-9.]+)"'),
         'ruby': ('sdk/ruby/thinkthen.gemspec', r'required_ruby_version = ">= ([0-9.]+)"'),
-        'go': ('sdk/go/go.mod', r'(?m)^go ([0-9.]+)$'),
+        'go': ('sdk/go/thinkthen/go.mod', r'(?m)^go ([0-9.]+)$'),
         'java': ('sdk/java/pom.xml', r'<maven.compiler.release>([0-9.]+)<'),
         'zig': ('sdk/zig/build.zig.zon', r'minimum_zig_version = "([0-9.]+)"'),
         'swift': ('sdk/swift/Package.swift', r'swift-tools-version: ([0-9.]+)'),

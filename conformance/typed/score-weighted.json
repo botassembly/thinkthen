@@ -1,0 +1,39 @@
+{
+  "name": "score-weighted",
+  "request": {
+    "question": {
+      "function": "score",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ]
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "distribution": {
+        "low": 0.2,
+        "high": 0.8
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "score",
+      "position": 1,
+      "answer": 0.8,
+      "status": "answered",
+      "detail": {
+        "levels": [
+          0.2,
+          0.8
+        ]
+      }
+    }
+  ],
+  "requests": 1
+}

@@ -3,7 +3,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+scripts/sqlite-prepare
+cargo fetch --locked
 rustup component add rustfmt clippy
+scripts/ruby-dev-prepare
+scripts/csharp-prepare
 npm --prefix sdk/typescript ci --ignore-scripts --no-audit --no-fund
 python3 - <<'PY'
 import platform
@@ -22,15 +26,26 @@ text = text.replace("\\" + "\n", "")
 args = shlex.split(text.split('exec uv run ', 1)[1].split("<<'CHECKS'", 1)[0])
 args = args[:args.index('--')]
 args.remove('--offline')
+args.insert(0, '--refresh')
 subprocess.run(['uv', 'run', *args, '--', 'python', '--version'], check=True)
 
 version = re.search(r'gitleaks/([0-9.]+)/', Path('scripts/secrets').read_text())[1]
 folder = TOOLS / 'gitleaks' / version
 if not (folder / 'gitleaks').is_file():
-    name = f'gitleaks_{version}_darwin_arm64.tar.gz'
+    system = 'darwin' if platform.system() == 'Darwin' else 'linux'
+    architecture = 'arm64' if platform.machine() in ('arm64', 'aarch64') else 'x64'
+    name = f'gitleaks_{version}_{system}_{architecture}.tar.gz'
     base = f'https://github.com/gitleaks/gitleaks/releases/download/v{version}/'
     archive = fetch(base + name, TOOLS / 'sources' / name)
     folder.mkdir(parents=True, exist_ok=True)
     with tarfile.open(archive) as source:
         source.extractall(folder, filter='data')
 PY
+
+# Source checkers use the same prepared compiler selected for the offline gate.
+python3 - <<'PYTHON'
+import sys
+sys.path.insert(0, 'scripts')
+from release_host_tools import source_tools
+source_tools()
+PYTHON

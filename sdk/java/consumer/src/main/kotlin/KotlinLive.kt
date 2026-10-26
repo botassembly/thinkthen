@@ -1,21 +1,19 @@
-import io.thinkthen.Rule
-import io.thinkthen.kotlin.ThinkThen
+import io.thinkthen.kotlin.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 
 fun main() = runBlocking {
     val text = "Ada works for Acme."
     ThinkThen().use { client ->
-        JavaLive.report("decide", client.decide("Does this state employment?", text))
-        JavaLive.report("choose", client.choose("What topic is stated?", text, listOf("employment", "delivery")))
-        JavaLive.report("tag", client.tag("Which topics are stated?", text, listOf("employment", "delivery")))
-        JavaLive.report("score", client.score("How clearly is employment stated?", text, listOf("unclear", "clear")))
-        println("filter " + client.filter("Does this state employment?", listOf(text, "A parcel arrived.")).toList())
-        client.rank("Does this state employment?", listOf(text, "A parcel arrived.")).toList().forEach { JavaLive.report("rank", it) }
-        JavaLive.report("find", client.find("Who works for Acme?", text))
-        val toolbox = ConsumerCases.JSON.readTree("""{"questions":{"employment":{"decide":"Does this state employment?"}}}""")
-        JavaLive.report("annotate", client.annotate(toolbox, text))
-        JavaLive.report("recognize", client.recognize(text, listOf("person", "company")))
-        JavaLive.report("relate", client.relate(text, listOf(Rule("works_for", "person", "company", null, null))))
+        println(client.decide("Does this state employment?",text))
+        println(client.choose("What topic is stated?",text,listOf("employment","delivery")))
+        println(client.tag("Which topics are stated?",text,listOf("employment","delivery")))
+        println(client.score("How clearly is employment stated?",text,listOf("unclear","clear")))
+        println(client.filter("Does this state employment?",listOf(text,"A parcel arrived.")).toList())
+        println(client.rank("How clearly is employment stated?",listOf(text,"A parcel arrived."),listOf("unclear","clear")).toList())
+        println(client.find("Who works for Acme?",text))
+        println(client.toolbox(AnnotationQuestions(mapOf("employment" to Decide("Does this state employment?")))).annotate(text))
+        println(client.recognize(text,listOf("person","company")))
+        println(client.relate(text,listOf(RelationRule("works_for","person","company"))))
     }
 }

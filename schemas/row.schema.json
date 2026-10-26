@@ -1,368 +1,1453 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Row",
-  "description": "One record's result: its id and what its question came to.",
-  "type": "object",
-  "properties": {
-    "id": {
-      "$ref": "#/$defs/Id"
-    }
-  },
+  "title": "AnyRow",
   "oneOf": [
     {
-      "description": "The model answered and the threshold accepted the answer.",
-      "type": "object",
-      "properties": {
-        "answer": {
-          "description": "The answer.",
-          "$ref": "#/$defs/Answer"
-        },
-        "detail": {
-          "description": "The backend probabilities for each label or scale level.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Detail"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "p": {
-          "description": "The probability behind the answer.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Probability"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "status": {
-          "type": "string",
-          "const": "answered"
-        }
-      },
-      "required": [
-        "status",
-        "answer"
-      ]
+      "$ref": "#/$defs/Row"
     },
     {
-      "description": "The model answered inside the not sure band.",
-      "type": "object",
-      "properties": {
-        "answer": {
-          "type": "null"
-        },
-        "detail": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Detail"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "p": {
-          "$ref": "#/$defs/Probability"
-        },
-        "status": {
-          "type": "string",
-          "const": "unsure"
-        }
-      },
-      "required": [
-        "status",
-        "answer",
-        "p"
-      ]
+      "$ref": "#/$defs/Row2"
     },
     {
-      "description": "The question could not be answered.",
-      "type": "object",
-      "properties": {
-        "error": {
-          "description": "Why.",
-          "$ref": "#/$defs/Error"
-        },
-        "status": {
-          "type": "string",
-          "const": "failed"
-        }
-      },
-      "required": [
-        "status",
-        "error"
-      ]
+      "$ref": "#/$defs/Row3"
+    },
+    {
+      "$ref": "#/$defs/Row4"
+    },
+    {
+      "$ref": "#/$defs/Row5"
+    },
+    {
+      "$ref": "#/$defs/Row6"
+    },
+    {
+      "$ref": "#/$defs/Row7"
+    },
+    {
+      "$ref": "#/$defs/Row8"
+    },
+    {
+      "$ref": "#/$defs/Row9"
+    },
+    {
+      "$ref": "#/$defs/Row10"
     }
   ],
-  "required": [
-    "id"
-  ],
   "$defs": {
-    "Answer": {
-      "description": "An answer's value. Its shape depends on the function.",
-      "anyOf": [
-        {
-          "description": "Relations stated by the text.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Relation"
-          }
-        },
-        {
-          "description": "Names and their kinds in text order.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Name"
-          }
-        },
-        {
-          "description": "A selected text unit, or no matching unit.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Found"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        {
-          "description": "The record's rank, starting at one.",
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        {
-          "description": "Each named question and its own outcome.",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/Outcome"
-          }
-        },
-        {
-          "description": "The chosen option.",
-          "type": "string"
-        },
-        {
-          "description": "The answer to a yes or no question.",
-          "type": "boolean"
-        },
-        {
-          "description": "Every label that applies.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        {
-          "description": "A number on a scale from 0 to 1.",
-          "type": "number",
-          "format": "double"
-        }
-      ]
+    "AnnotateFunction": {
+      "type": "string",
+      "const": "annotate"
     },
-    "Detail": {
-      "description": "The backend probabilities behind a structured answer.",
-      "anyOf": [
+    "AnnotationEntry": {
+      "description": "A named annotation result without an enclosing position, id or source.",
+      "oneOf": [
         {
-          "description": "The caller-visible question identity and route with optional backend detail.",
+          "description": "Decide",
           "type": "object",
           "properties": {
-            "probabilities": {
-              "description": "The function's complete backend detail, when present.",
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/Detail"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "source": {
-              "description": "The question and route that answered.",
-              "$ref": "#/$defs/Source"
+            "function": {
+              "type": "string",
+              "const": "decide"
             }
           },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "boolean"
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
           "required": [
-            "source"
+            "function"
           ]
         },
         {
-          "description": "Every asked pair and its probability.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Relation"
-          }
-        },
-        {
-          "description": "Boundary and kind probabilities for recognized names.",
-          "$ref": "#/$defs/RecognizeDetail"
-        },
-        {
-          "description": "A probability for each named label.",
+          "description": "Choose",
           "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/Probability"
-          }
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "choose"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "string"
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LabelDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LabelDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
         },
         {
-          "description": "A probability for each scale level, in the question's order.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Probability"
-          }
+          "description": "Tag",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "tag"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LabelDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LabelDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        },
+        {
+          "description": "Score",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "score"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "number",
+                  "format": "double"
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LevelDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/LevelDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        },
+        {
+          "description": "Filter",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "filter"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "boolean"
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        },
+        {
+          "description": "Find",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "find"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/Found"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/NoDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        },
+        {
+          "description": "Recognize",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "recognize"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Name"
+                  }
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/RecognizeDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/RecognizeDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        },
+        {
+          "description": "Relate",
+          "type": "object",
+          "properties": {
+            "function": {
+              "type": "string",
+              "const": "relate"
+            }
+          },
+          "oneOf": [
+            {
+              "description": "An accepted typed answer.",
+              "type": "object",
+              "properties": {
+                "answer": {
+                  "description": "The answer, including explicit null when find returns no match.",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Relation"
+                  }
+                },
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/PairDetail"
+                },
+                "probability": {
+                  "description": "A defined aggregate probability, when the function has one.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "answered"
+                }
+              },
+              "required": [
+                "status",
+                "answer"
+              ]
+            },
+            {
+              "description": "A result inside a threshold band, without an answer key.",
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "description": "The function's complete detail.",
+                  "$ref": "#/$defs/PairDetail"
+                },
+                "probability": {
+                  "description": "The probability behind the result.",
+                  "$ref": "#/$defs/Probability"
+                },
+                "status": {
+                  "type": "string",
+                  "const": "unsure"
+                }
+              },
+              "required": [
+                "status",
+                "probability"
+              ]
+            },
+            {
+              "description": "A failure belonging to this record.",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "description": "The typed failure.",
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "record.json",
+                        "record.missing",
+                        "record.too-large",
+                        "record.invalid",
+                        "backend.transport",
+                        "backend.status",
+                        "backend.reply"
+                      ]
+                    },
+                    "http_status": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "format": "uint16",
+                      "maximum": 65535,
+                      "minimum": 0
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "const": "failed"
+                }
+              },
+              "required": [
+                "status",
+                "error"
+              ]
+            }
+          ],
+          "required": [
+            "function"
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "BackendName": {
+      "description": "The backend selected by a caller, independent of its wire representation.",
+      "oneOf": [
+        {
+          "description": "systemone",
+          "type": "string",
+          "const": "systemone"
+        },
+        {
+          "description": "openai",
+          "type": "string",
+          "const": "openai"
+        },
+        {
+          "description": "stub",
+          "type": "string",
+          "const": "stub"
         }
       ]
     },
-    "Error": {
-      "description": "A failure with its kind and its message.",
-      "type": "object",
-      "properties": {
-        "code": {
-          "type": "string"
+    "ChooseFunction": {
+      "type": "string",
+      "const": "choose"
+    },
+    "Code": {
+      "description": "A stable error identity shared by every caller and backend.",
+      "oneOf": [
+        {
+          "description": "usage.threshold",
+          "type": "string",
+          "const": "usage.threshold"
         },
-        "message": {
-          "type": "string"
+        {
+          "description": "usage.question",
+          "type": "string",
+          "const": "usage.question"
+        },
+        {
+          "description": "usage.name",
+          "type": "string",
+          "const": "usage.name"
+        },
+        {
+          "description": "usage.settings",
+          "type": "string",
+          "const": "usage.settings"
+        },
+        {
+          "description": "usage.backend",
+          "type": "string",
+          "const": "usage.backend"
+        },
+        {
+          "description": "usage.url",
+          "type": "string",
+          "const": "usage.url"
+        },
+        {
+          "description": "usage.key-missing",
+          "type": "string",
+          "const": "usage.key-missing"
+        },
+        {
+          "description": "usage.batch",
+          "type": "string",
+          "const": "usage.batch"
+        },
+        {
+          "description": "usage.pointer",
+          "type": "string",
+          "const": "usage.pointer"
+        },
+        {
+          "description": "usage.sql-policy",
+          "type": "string",
+          "const": "usage.sql-policy"
+        },
+        {
+          "description": "usage.sql-selection",
+          "type": "string",
+          "const": "usage.sql-selection"
+        },
+        {
+          "description": "usage.abi",
+          "type": "string",
+          "const": "usage.abi"
+        },
+        {
+          "description": "record.json",
+          "type": "string",
+          "const": "record.json"
+        },
+        {
+          "description": "record.missing",
+          "type": "string",
+          "const": "record.missing"
+        },
+        {
+          "description": "record.too-large",
+          "type": "string",
+          "const": "record.too-large"
+        },
+        {
+          "description": "record.invalid",
+          "type": "string",
+          "const": "record.invalid"
+        },
+        {
+          "description": "backend.transport",
+          "type": "string",
+          "const": "backend.transport"
+        },
+        {
+          "description": "backend.status",
+          "type": "string",
+          "const": "backend.status"
+        },
+        {
+          "description": "backend.reply",
+          "type": "string",
+          "const": "backend.reply"
+        },
+        {
+          "description": "local.cancelled",
+          "type": "string",
+          "const": "local.cancelled"
+        },
+        {
+          "description": "local.io",
+          "type": "string",
+          "const": "local.io"
+        },
+        {
+          "description": "local.toolbox",
+          "type": "string",
+          "const": "local.toolbox"
+        },
+        {
+          "description": "internal.bug",
+          "type": "string",
+          "const": "internal.bug"
         }
-      },
-      "required": [
-        "code",
-        "message"
       ]
+    },
+    "DecideFunction": {
+      "type": "string",
+      "const": "decide"
+    },
+    "FilterFunction": {
+      "type": "string",
+      "const": "filter"
+    },
+    "FindFunction": {
+      "type": "string",
+      "const": "find"
     },
     "Found": {
-      "description": "A chosen line and its Unicode scalar offsets in the record.",
+      "description": "A selected span of the original evidence.",
       "type": "object",
       "properties": {
         "end": {
-          "description": "Exclusive end, counted in Unicode scalar values.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         },
         "start": {
-          "description": "Inclusive start, counted in Unicode scalar values.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         },
         "text": {
-          "description": "The line without its line ending.",
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "text",
         "start",
         "end"
       ]
     },
-    "Id": true,
     "KindDetail": {
-      "description": "Backend kind probabilities for one decoded name, including dropped names.",
+      "description": "Kind probabilities for one proposed name.",
       "type": "object",
       "properties": {
         "end": {
-          "description": "Exclusive Unicode scalar offset.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         },
         "kinds": {
-          "description": "Each kind's probability, including none of these.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/Probability"
           }
         },
         "start": {
-          "description": "Inclusive Unicode scalar offset.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         }
       },
+      "additionalProperties": false,
       "required": [
         "start",
         "end",
         "kinds"
       ]
     },
+    "LabelDetail": {
+      "description": "Probability for every named label.",
+      "type": "object",
+      "properties": {
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Probability"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "labels"
+      ]
+    },
+    "LevelDetail": {
+      "description": "Probabilities in the question's level order.",
+      "type": "object",
+      "properties": {
+        "levels": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Probability"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "levels"
+      ]
+    },
     "Name": {
-      "description": "A name recognized in the original text.",
+      "description": "A recognized name and its typed support probability.",
       "type": "object",
       "properties": {
         "end": {
-          "description": "Exclusive Unicode scalar offset.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         },
         "kind": {
-          "description": "The chosen kind, or ENTITY when kinds were omitted.",
           "type": "string"
         },
-        "p": {
-          "description": "The least member-piece membership multiplied by the chosen kind's probability.\nThis support score is not the probability of exact name boundaries.",
+        "probability": {
           "$ref": "#/$defs/Probability"
         },
         "start": {
-          "description": "Inclusive Unicode scalar offset.",
           "type": "integer",
           "format": "uint",
           "minimum": 0
         },
         "text": {
-          "description": "The original text covered by the name.",
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "text",
         "start",
         "end",
         "kind",
-        "p"
+        "probability"
       ]
     },
-    "Outcome": {
-      "description": "What a record's question came to.",
+    "NoDetail": false,
+    "PairDetail": {
+      "description": "Recognized names and complete probabilities for allowed relation pairs.",
+      "type": "object",
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Name"
+          }
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Relation"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "pairs"
+      ]
+    },
+    "PieceDetail": {
+      "description": "Boundary probabilities for one original piece.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "start": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Probability"
+          }
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "start",
+        "end",
+        "tags"
+      ]
+    },
+    "Probability": {
+      "description": "A finite probability from 0 to 1, inclusive.\n\nSerialization and [`Self::get`] retain full precision.",
+      "type": "number",
+      "format": "double",
+      "maximum": 1,
+      "minimum": 0
+    },
+    "RankFunction": {
+      "type": "string",
+      "const": "rank"
+    },
+    "RecognizeDetail": {
+      "description": "Complete typed name-recognition detail.",
+      "type": "object",
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KindDetail"
+          }
+        },
+        "pieces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PieceDetail"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "pieces",
+        "names"
+      ]
+    },
+    "RecognizeFunction": {
+      "type": "string",
+      "const": "recognize"
+    },
+    "RecordId": {
+      "description": "A record's exact caller-supplied identity.",
+      "anyOf": [
+        {
+          "description": "A signed JSON integer.",
+          "type": "integer",
+          "format": "int64"
+        },
+        {
+          "description": "An unsigned JSON integer beyond the signed range.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        {
+          "description": "A string, including numeric-looking strings.",
+          "type": "string"
+        }
+      ]
+    },
+    "RelateFunction": {
+      "type": "string",
+      "const": "relate"
+    },
+    "Relation": {
+      "description": "One allowed relation and its probability.",
+      "type": "object",
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "probability": {
+          "$ref": "#/$defs/Probability"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/RelationName"
+        },
+        "target": {
+          "$ref": "#/$defs/RelationName"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "relation",
+        "probability"
+      ]
+    },
+    "RelationName": {
+      "description": "One relation endpoint.",
+      "type": "object",
+      "properties": {
+        "end": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "kind": {
+          "type": "string"
+        },
+        "start": {
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "start",
+        "end",
+        "kind"
+      ]
+    },
+    "Row": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/DecideFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
       "oneOf": [
         {
-          "description": "The model answered and the threshold accepted the answer.",
+          "description": "An accepted typed answer.",
           "type": "object",
           "properties": {
             "answer": {
-              "description": "The answer.",
-              "$ref": "#/$defs/Answer"
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "boolean"
             },
             "detail": {
-              "description": "The backend probabilities for each label or scale level.",
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/Detail"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
             },
-            "p": {
-              "description": "The probability behind the answer.",
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/Probability"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
             },
             "status": {
               "type": "string",
@@ -375,23 +1460,15 @@
           ]
         },
         {
-          "description": "The model answered inside the not sure band.",
+          "description": "A result inside a threshold band, without an answer key.",
           "type": "object",
           "properties": {
-            "answer": {
-              "type": "null"
-            },
             "detail": {
-              "anyOf": [
-                {
-                  "$ref": "#/$defs/Detail"
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
             },
-            "p": {
+            "probability": {
+              "description": "The probability behind the result.",
               "$ref": "#/$defs/Probability"
             },
             "status": {
@@ -401,17 +1478,47 @@
           },
           "required": [
             "status",
-            "answer",
-            "p"
+            "probability"
           ]
         },
         {
-          "description": "The question could not be answered.",
+          "description": "A failure belonging to this record.",
           "type": "object",
           "properties": {
             "error": {
-              "description": "Why.",
-              "$ref": "#/$defs/Error"
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
             },
             "status": {
               "type": "string",
@@ -423,160 +1530,1258 @@
             "error"
           ]
         }
-      ]
-    },
-    "PieceDetail": {
-      "description": "Backend probabilities for one original piece.",
-      "type": "object",
-      "properties": {
-        "end": {
-          "description": "Exclusive Unicode scalar offset.",
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        "start": {
-          "description": "Inclusive Unicode scalar offset.",
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        "tags": {
-          "description": "The five boundary tag probabilities.",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/Probability"
-          }
-        },
-        "text": {
-          "description": "The original piece.",
-          "type": "string"
-        }
-      },
+      ],
       "required": [
-        "text",
-        "start",
-        "end",
-        "tags"
-      ]
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
     },
-    "Probability": {
-      "description": "A finite probability from 0 to 1, inclusive.\n\nSerialization rounds to two decimal places; [`Self::get`] retains full precision.",
-      "type": "number",
-      "format": "double",
-      "maximum": 1,
-      "minimum": 0
-    },
-    "RecognizeDetail": {
-      "description": "The underlying choice probabilities for name recognition.",
+    "Row10": {
+      "description": "One result with its original input position and optional exact id.",
       "type": "object",
       "properties": {
-        "names": {
-          "description": "Each decoded name's kind probabilities in text order.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/KindDetail"
-          }
+        "function": {
+          "$ref": "#/$defs/AnnotateFunction"
         },
-        "pieces": {
-          "description": "Each piece's boundary probabilities in text order.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/PieceDetail"
-          }
-        }
-      },
-      "required": [
-        "pieces",
-        "names"
-      ]
-    },
-    "Relation": {
-      "description": "One allowed pair and its probability of being stated in the text.",
-      "type": "object",
-      "properties": {
-        "either": {
-          "description": "Present only for unordered rules.",
-          "type": "boolean"
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
-        "p": {
-          "description": "Probability of yes for this pair.",
-          "$ref": "#/$defs/Probability"
-        },
-        "relation": {
-          "description": "The rule name.",
-          "type": "string"
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
         },
         "source": {
-          "description": "The first endpoint, or directed source.",
-          "$ref": "#/$defs/RelationName"
-        },
-        "target": {
-          "description": "The second endpoint, or directed target.",
-          "$ref": "#/$defs/RelationName"
+          "$ref": "#/$defs/Source"
         }
       },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/AnnotationEntry"
+              }
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
       "required": [
-        "source",
-        "target",
-        "relation",
-        "p"
-      ]
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
     },
-    "RelationName": {
-      "description": "A relation endpoint in the original text.",
+    "Row2": {
+      "description": "One result with its original input position and optional exact id.",
       "type": "object",
       "properties": {
-        "end": {
-          "description": "Exclusive Unicode scalar offset.",
+        "function": {
+          "$ref": "#/$defs/ChooseFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
           "type": "integer",
-          "format": "uint",
-          "minimum": 0
+          "format": "uint64",
+          "minimum": 1
         },
-        "kind": {
-          "description": "Recognized kind.",
-          "type": "string"
-        },
-        "start": {
-          "description": "Inclusive Unicode scalar offset.",
-          "type": "integer",
-          "format": "uint",
-          "minimum": 0
-        },
-        "text": {
-          "description": "Original name text.",
-          "type": "string"
+        "source": {
+          "$ref": "#/$defs/Source"
         }
       },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "string"
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LabelDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LabelDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
       "required": [
-        "text",
-        "start",
-        "end",
-        "kind"
-      ]
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row3": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/TagFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LabelDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LabelDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row4": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/ScoreFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "number",
+              "format": "double"
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LevelDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LevelDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row5": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/FilterFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "boolean"
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row6": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/FindFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Found"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/NoDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row7": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/RecognizeFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Name"
+              }
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/RecognizeDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/RecognizeDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row8": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/RelateFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Relation"
+              }
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/PairDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/PairDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "Row9": {
+      "description": "One result with its original input position and optional exact id.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/RankFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RecordId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "oneOf": [
+        {
+          "description": "An accepted typed answer.",
+          "type": "object",
+          "properties": {
+            "answer": {
+              "description": "The answer, including explicit null when find returns no match.",
+              "type": "integer",
+              "format": "uint",
+              "minimum": 1
+            },
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LevelDetail"
+            },
+            "probability": {
+              "description": "A defined aggregate probability, when the function has one.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "answered"
+            }
+          },
+          "required": [
+            "status",
+            "answer"
+          ]
+        },
+        {
+          "description": "A result inside a threshold band, without an answer key.",
+          "type": "object",
+          "properties": {
+            "detail": {
+              "description": "The function's complete detail.",
+              "$ref": "#/$defs/LevelDetail"
+            },
+            "probability": {
+              "description": "The probability behind the result.",
+              "$ref": "#/$defs/Probability"
+            },
+            "status": {
+              "type": "string",
+              "const": "unsure"
+            }
+          },
+          "required": [
+            "status",
+            "probability"
+          ]
+        },
+        {
+          "description": "A failure belonging to this record.",
+          "type": "object",
+          "properties": {
+            "error": {
+              "description": "The typed failure.",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "record.json",
+                    "record.missing",
+                    "record.too-large",
+                    "record.invalid",
+                    "backend.transport",
+                    "backend.status",
+                    "backend.reply"
+                  ]
+                },
+                "http_status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint16",
+                  "maximum": 65535,
+                  "minimum": 0
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "code",
+                "message"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            }
+          },
+          "required": [
+            "status",
+            "error"
+          ]
+        }
+      ],
+      "required": [
+        "function",
+        "position",
+        "source"
+      ],
+      "unevaluatedProperties": false
+    },
+    "ScoreFunction": {
+      "type": "string",
+      "const": "score"
     },
     "Source": {
-      "description": "The caller-visible question and actual route that answered it.",
+      "description": "The execution question and attempted route, including on failed rows.",
       "type": "object",
       "properties": {
         "backend": {
-          "description": "The backend that served the question.",
-          "type": "string"
+          "$ref": "#/$defs/BackendName"
         },
         "model": {
-          "description": "The model that served the question.",
           "type": "string"
         },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "question_identity": {
-          "description": "SHA-256 of the caller-visible function and question content.",
           "type": "string"
         }
       },
+      "additionalProperties": false,
       "required": [
         "question_identity",
         "backend",
         "model"
       ]
+    },
+    "TagFunction": {
+      "type": "string",
+      "const": "tag"
     }
   }
 }

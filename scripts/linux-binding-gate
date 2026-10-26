@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""Prepare Linux tools separately, then run the offline CLI and installed SDK gates.
+
+Run --prepare online first. CARGO_HOME selects the floor compiler configuration;
+THINKTHEN_HOST_CARGO_HOME selects the separate host loopback configuration.
+"""
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from build_targets import container_labels
+from release_images import image
+from release_go import home as go_home, prepare as prepare_go
+
+ROOT = Path(__file__).resolve().parent.parent
+TOOLS = Path.home() / '.local/share/thinkthen-build-tools'
+
+
+def run(*args, **kwargs):
+    return subprocess.run(list(map(str, args)), cwd=ROOT, check=True, **kwargs)
+
+
+def floor(*args, prepare=False):
+    return run('scripts/runtime-floor-build', *(['--prepare'] if prepare else []), *args)
+
+
+
+def prepare():
+    host = dict(os.environ, CARGO_HOME=os.environ['THINKTHEN_HOST_CARGO_HOME'],
+                RUSTC_WRAPPER='', RUSTC_WORKSPACE_WRAPPER='', CARGO_NET_OFFLINE='false')
+    run('cargo', 'fetch', '--locked', env=host)
+    run('cargo', 'metadata', '--offline', '--locked', '--format-version=1',
+        '--manifest-path', ROOT / 'crates/loopback/Cargo.toml',
+        env=dict(host, CARGO_NET_OFFLINE='true'), stdout=subprocess.DEVNULL)
+    prepare_go()
+    node = Path(shutil.which('node')).resolve()
+    version = tuple(map(int, subprocess.check_output([node, '-p', 'process.versions.node'], text=True).strip().split('.')))
+    if version < (22, 12):
+        raise ValueError('prepare Node >=22.12 on PATH before Linux binding preparation')
+    parent = TOOLS / 'gate-node'
+    parent.mkdir(parents=True, exist_ok=True)
+    destination = parent / '.'.join(map(str, version))
+    if not destination.exists():
+        with tempfile.TemporaryDirectory(dir=parent) as temporary:
+            staged = Path(temporary) / 'node'
+            shutil.copytree(node.parent.parent, staged, symlinks=True)
+            staged.rename(destination)
+    selected = parent / 'current.partial'
+    selected.unlink(missing_ok=True)
+    selected.symlink_to(destination.name, target_is_directory=True)
+    selected.replace(parent / 'current')
+    # The host Docker CLI may require a newer libc than the engine floor. Keep
+    # its own loader beside it, without changing the product compiler image.
+    docker = Path(shutil.which('docker')).resolve()
+    folder = TOOLS / 'gate-docker'
+    folder.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(docker, folder / 'docker.real')
+    libraries = subprocess.check_output(['ldd', docker], text=True)
+    paths = {Path(path) for path in re.findall(r'(/[^\s()]+)', libraries)}
+    for path in paths:
+        shutil.copy2(path, folder / path.name)
+    loader = next(path for path in paths if path.name.startswith('ld-linux'))
+    launcher = folder / 'docker'
+    launcher.write_text('#!/bin/sh\nexec ' + shlex.quote(str(folder / loader.name)) +
+                        ' --library-path ' + shlex.quote(str(folder)) + ' ' +
+                        shlex.quote(str(folder / 'docker.real')) + ' "$@"\n')
+    launcher.chmod(0o755)
+    os.environ['THINKTHEN_NODE_HOME'] = str(destination)
+    floor('scripts/qualification-gate-prepare', prepare=True)
+
+
+def swift():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-') as temporary:
+        stage = Path(temporary) / 'ThinkThen'
+        run('scripts/swift-package', stage)
+        toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
+        command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
+                   '--user', f'{os.getuid()}:{os.getgid()}', '--workdir', str(ROOT)]
+        for path in (ROOT, Path.home(), Path(temporary), Path(os.environ['THINKTHEN_SWIFT_LOOPBACK']).parent):
+            command += ['-v', f'{path}:{path}']
+        for name in ('THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES'):
+            command += ['-e', name + '=' + os.environ[name]]
+        command += ['-e', 'HOME=' + str(Path.home()), '-e', 'THINKTHEN_LOOPBACK=' + os.environ['THINKTHEN_SWIFT_LOOPBACK'],
+                    '-e', 'THINKTHEN_SWIFT_PACKAGE=' + str(stage), image('swift'), 'sh', '-eu', '-c',
+                    'export PATH="$1/usr/bin:/usr/bin:/bin"; exec scripts/swift-gate', 'swift-gate', str(toolchain)]
+        run(*command)
+
+
+def offline():
+    host = os.environ['THINKTHEN_HOST_CARGO_HOME']
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-') as temporary:
+        stage = Path(temporary)
+        host_target = stage / 'host'
+        run('cargo', 'build', '--offline', '--locked', '-p', 'loopback', '--bin', 'loopback',
+            env=dict(os.environ, CARGO_HOME=host, CARGO_TARGET_DIR=str(host_target)))
+        os.environ['THINKTHEN_SWIFT_LOOPBACK'] = str(host_target / 'debug/loopback')
+        os.environ['THINKTHEN_CANDIDATE_OUT'] = str(stage)
+        os.environ['THINKTHEN_DOCKER_IN_FLOOR'] = '1'
+        os.environ['TMPDIR'] = str(stage)
+        os.environ['THINKTHEN_NODE_HOME'] = str(TOOLS / 'gate-node/current')
+        os.environ['THINKTHEN_GO_HOME'] = str(go_home())
+        floor('sh', '-eu', '-c', '''
+. scripts/native-tools-env
+scripts/native-prepare
+pair=$(mktemp)
+trap 'rm -f "$pair"' EXIT HUP INT TERM
+scripts/native-pair export "$pair"
+scripts/native-pair import "$pair" "$(scripts/native-prepare --path)"
+scripts/native-test-assets prepare
+scripts/native-abi-assets prepare
+. scripts/native-env
+export THINKTHEN_SDK_GATE_RUNNER=scripts/linux-binding-gate
+python3 scripts/linux-binding-gate --cli
+scripts/c-gate
+scripts/sdk-gates
+''')
+
+
+def cli():
+    metadata = json.loads(subprocess.check_output(['cargo', 'metadata', '--offline', '--locked', '--no-deps', '--format-version=1'], text=True))
+    package = next(row for row in metadata['packages'] if row['name'] == 'thinkthen')
+    tests = [row['name'] for row in package['targets'] if row['kind'] == ['test'] and
+             (row['name'].startswith('cli_') or row['name'] == 'canonical_cli')]
+    run('cargo', 'test', '--offline', '--locked', '-p', 'thinkthen',
+        *(argument for name in tests for argument in ('--test', name)))
+
+
+if __name__ == '__main__':
+    os.chdir(ROOT)
+    os.umask(0o077)
+    if not os.environ.get('PM_JOB'):
+        sys.exit('Run Linux binding preparation and gates through pm job')
+    try:
+        if sys.argv[1:] == ['--prepare']:
+            prepare()
+        elif sys.argv[1:] == ['--cli']:
+            cli()
+        elif sys.argv[1:] == ['scripts/swift-gate']:
+            swift()
+        elif len(sys.argv) == 2 and sys.argv[1].startswith('scripts/'):
+            run(sys.argv[1])
+        elif not sys.argv[1:]:
+            offline()
+        else:
+            sys.exit(__doc__)
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+        sys.exit('Linux bindings: ' + str(error))

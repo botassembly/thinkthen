@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import io.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: RecognizeRequiresKinds. This expression must fail after the positive consumer compiles.
+suspend fun rejectedRecognizeRequiresKinds(client: ThinkThen) {
+    client.recognize("record")
+}

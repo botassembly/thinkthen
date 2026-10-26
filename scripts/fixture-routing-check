@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""Prove that the loopback test seam cannot compile into a release artifact."""
+import subprocess
+result = subprocess.run([
+    'cargo', 'check', '--release', '-p', 'thinkthen', '--no-default-features',
+    '--features', 'fixture-routing', '--locked',
+], capture_output=True, text=True)
+marker = 'fixture routing cannot enter a production release build'
+if result.returncode == 0 or marker not in result.stderr:
+    raise SystemExit('fixture routing: release refusal was not proven\n' + result.stderr)
+print('fixture routing: release compilation refuses the test seam')

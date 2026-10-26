@@ -56,23 +56,24 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
     run('git', '-C', tag, '-c', 'user.name=Release rehearsal', '-c', 'user.email=release@example.invalid',
         'commit', '--quiet', '-m', 'Stage local native release')
     run('git', '-C', tag, 'tag', 'v' + version())
+    run('git', '-C', tag, 'tag', 'sdk/go/thinkthen/v' + version())
     # A file module proxy serves the same tagged module payload as the public site.
-    module = 'github.com/botassembly/thinkthen/sdk/go'
+    module = 'github.com/botassembly/thinkthen/sdk/go/thinkthen'
     label = 'v' + version()
     proxy = scratch / 'proxy' / module / '@v'
     proxy.mkdir(parents=True)
     (proxy / 'list').write_text(label + '\n')
     (proxy / (label + '.info')).write_text(json.dumps({'Version': label, 'Time': '2026-10-23T00:00:00Z'}))
-    shutil.copy2(tag / 'sdk/go/go.mod', proxy / (label + '.mod'))
+    shutil.copy2(tag / 'sdk/go/thinkthen/go.mod', proxy / (label + '.mod'))
     with zipfile.ZipFile(proxy / (label + '.zip'), 'w') as archive:
-        for path in sorted((tag / 'sdk/go').rglob('*')):
-            relative = path.relative_to(tag / 'sdk/go')
+        for path in sorted((tag / 'sdk/go/thinkthen').rglob('*')):
+            relative = path.relative_to(tag / 'sdk/go/thinkthen')
             # The tests are a separate Go module, excluded by the module proxy.
             if path.is_file() and relative.parts[0] != 'tests':
                 archive.write(path, module + '@' + label + '/' + str(relative))
     go = scratch / 'go-consumer'
     shutil.copytree(ROOT / 'sdk/go/tests', go)
-    (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.22\n\nrequire ' + module + ' ' + label + '\n')
+    (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.23\n\nrequire ' + module + ' ' + label + '\n')
     go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
                     'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json')}
     def go_run(*arguments, cwd):
@@ -82,6 +83,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
             selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_STUB_CASES']
             return run(ROOT / 'scripts/runtime-floor-build', 'env',
                        *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
+        if sys.platform == 'darwin':
+            return run(sys.executable, ROOT / 'scripts/go-build', *arguments, cwd=cwd, env=go_env)
         return run('go', *arguments, cwd=cwd, env=go_env)
 
     go_run('test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=go)

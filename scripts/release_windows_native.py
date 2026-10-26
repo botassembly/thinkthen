@@ -51,7 +51,7 @@ def compile_windows(output, sources, *, includes=(), libraries=(), exports=(), c
 
 
 def c_consumer(out, native):
-    compile_windows(out / 'checks/c-consumer.exe', [ROOT / 'scripts/release/windows.c'],
+    compile_windows(out / 'checks/c-consumer.exe', [ROOT / 'sdk/c/tests/conformance.c'],
                     includes=[ROOT / 'crates/thinkthen-ffi/include'],
                     libraries=[native / 'thinkthen_ffi.dll.lib'])
 
@@ -69,9 +69,9 @@ def databases_and_r(stage, out, version, native, packages):
     packages['sqlite'] = out / f'sqlite/thinkthen-sqlite-{version}-windows-x86_64.zip'
     zip_package(sqlite, packages['sqlite'])
     duckdb = stage / 'duckdb'
-    for name in ('thinkthen.duckdb_extension', 'DUCKDB-LICENSE', 'YYJSON-LICENSE', 'THINKTHEN-LICENSE'):
+    from package_inventory import INPUTS, DUCKDB_TERMS
+    for name in ['thinkthen.duckdb_extension', *DUCKDB_TERMS, *(destination for _, destination in INPUTS['duckdb'])]:
         copy(native / 'duckdb' / name, duckdb / name)
-    copy(ROOT / 'databases/duckdb/README.md', duckdb / 'README.md')
     packages['duckdb'] = out / f'duckdb/thinkthen-duckdb-{version}-windows-x86_64.zip'
     zip_package(duckdb, packages['duckdb'])
     r = stage / f'thinkthen_{version}.zip'
@@ -113,7 +113,10 @@ def cmake_toolchain(destination):
 
 def build_databases(native):
     """Build adapters from pinned dependency sources without network access."""
-    sources = [ROOT / 'sdk/c/src/thinkthen_c.c', ROOT / 'sdk/c/include/thinkthen_c.h',
+    from header_contract import check
+    check(ROOT)
+    sources = [ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
+               ROOT / 'crates/thinkthen-ffi/include/thinkthen_sql.h',
                *sorted((ROOT / 'extensions/sqlite/src').glob('*.[ch]')),
                ROOT / 'databases/duckdb/src/extension.cpp']
     data = b''.join(path.read_bytes() for path in sources)
@@ -135,21 +138,6 @@ def build_databases(native):
         run('cmake', '--build', jansson, '--config', 'Release', '--parallel', '2')
         library = next(jansson.rglob('jansson.lib'))
         from release_windows import copy
-        c = native / 'c'
-        shared = stage / 'jansson-shared'
-        run('cmake', '-S', TOOLS / 'windows/jansson-2.14.1', '-B', shared,
-            '-DCMAKE_TOOLCHAIN_FILE=' + str(toolchain), '-DCMAKE_BUILD_TYPE=Release',
-            '-DCMAKE_POLICY_VERSION_MINIMUM=3.5', '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW', '-DJANSSON_BUILD_SHARED_LIBS=ON', '-DJANSSON_BUILD_DOCS=OFF', '-DJANSSON_WITHOUT_TESTS=ON')
-        run('cmake', '--build', shared, '--config', 'Release', '--parallel', '2')
-        shared_library = next(shared.rglob('jansson.lib'))
-        header = (ROOT / 'sdk/c/include/thinkthen_c.h').read_text()
-        header = re.sub(r'/\*.*?\*/', '', header, flags=re.S)
-        exports = sorted(set(re.findall(r'\b(tt_[a-z_]+)\s*\(', header)))
-        compile_windows(c / 'bin/thinkthen_c.dll', [ROOT / 'sdk/c/src/thinkthen_c.c'],
-            includes=[ROOT / 'sdk/c/include', TOOLS / 'windows/jansson-2.14.1/src',
-                      shared / 'include', ROOT / 'crates/thinkthen-ffi/include'],
-            libraries=[native / 'thinkthen_ffi.dll.lib', shared_library], exports=exports)
-        copy(c / 'bin/thinkthen_c.lib', c / 'lib/thinkthen_c.lib')
         compile_windows(native / 'thinkthen_sqlite.dll',
             [ROOT / f'extensions/sqlite/src/{name}.c' for name in ('extension', 'rows', 'source')],
             includes=[TOOLS / 'sqlite-3.41.0', TOOLS / 'windows/jansson-2.14.1/src',
@@ -183,8 +171,6 @@ def duckdb_build(stage, native, toolchain):
     run('cmake', '-DEXTENSION=' + str(extension), '-DNULL_FILE=' + str(stage / 'null'),
         '-DPLATFORM_FILE=' + str(metadata), '-DVERSION_FIELD=v1.4.3', '-DABI_TYPE=CPP',
         '-P', source / 'scripts/append_metadata.cmake')
-    notices = [source / 'LICENSE', *sorted(p for p in (source / 'third_party').rglob('*')
-               if p.is_file() and p.name.upper().startswith(('LICENSE', 'COPYING', 'NOTICE')))]
-    (output / 'DUCKDB-LICENSE').write_text(''.join(str(p.relative_to(source)) + '\n\n' + p.read_text() + '\n' for p in notices))
-    copy(source / 'third_party/yyjson/LICENSE', output / 'YYJSON-LICENSE')
-    copy(ROOT / 'LICENSE', output / 'THINKTHEN-LICENSE')
+    from package_inventory import stage as stage_inputs, duckdb_terms
+    stage_inputs('duckdb', output, ROOT)
+    duckdb_terms(source, output)

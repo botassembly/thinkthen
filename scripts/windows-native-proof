@@ -2,6 +2,7 @@
 """Build current Windows packages and run their installed public consumers."""
 import os
 from pathlib import Path
+from csharp_dependencies import prepare_project
 import shutil
 import subprocess
 import sys
@@ -40,7 +41,7 @@ def nuget_config(path, feeds=()):
 
 def go(scratch, native, env, runtime):
     package = scratch / 'package'
-    shutil.copytree(ROOT / 'sdk/go', package, ignore=shutil.ignore_patterns('tests'))
+    shutil.copytree(ROOT / 'sdk/go/thinkthen', package, ignore=shutil.ignore_patterns('tests'))
     copy(native, package / 'native/library')
     copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'thinkthen.h')
     copy(ROOT / 'LICENSE', package / 'LICENSE')
@@ -53,7 +54,7 @@ def go(scratch, native, env, runtime):
         source.extractall(package)
     consumer = scratch / 'consumer'
     shutil.copytree(ROOT / 'sdk/go/tests', consumer)
-    build('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go=' + str(package), cwd=consumer, env=env)
+    build('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(package), cwd=consumer, env=env)
     binary = scratch / 'Consumer.exe'
     build('go', 'test', '-mod=mod', '-c', '-o', binary, cwd=consumer, env=env)
     check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v'],
@@ -92,13 +93,13 @@ def csharp(scratch, native, env, runtime):
     # Prepare ordinary RID and task dependencies before the isolated restore.
     feed = scratch / 'prepared-feed'
     prepare = scratch / 'Prepare.csproj'
-    prepare.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained></PropertyGroup></Project>')
+    prepare.write_text(prepare_project())
     build('dotnet', 'restore', prepare, '--runtime', 'win-x64', '--packages', feed,
           '--source', 'https://api.nuget.org/v3/index.json', cwd=scratch, env=env)
     source = scratch / 'library'
     shutil.copytree(ROOT / 'sdk/csharp', source, ignore=shutil.ignore_patterns('tests', 'obj', 'bin'))
     config = scratch / 'NuGet.Config'
-    nuget_config(config)
+    nuget_config(config, (feed,))
     packages = scratch / 'candidate'
     cold = env | {'NUGET_PACKAGES': str(scratch / 'cold-packages')}
     build('dotnet', 'pack', source / 'ThinkThen.csproj', '--configfile', config,

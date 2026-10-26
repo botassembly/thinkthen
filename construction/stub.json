@@ -1,954 +1,688 @@
 [
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
         "answer": false,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4"
-          }
+        "function": "decide",
+        "position": 1,
+        "probability": 0.4,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "767082e90e74196f289426fb81660fa2f70f287cc9ccc1323cbc456951f05cef"
         },
-        "id": 1,
-        "p": 0.47,
-        "status": "answered"
-      },
-      {
-        "answer": true,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4"
-          }
-        },
-        "id": 2,
-        "p": 0.77,
-        "status": "answered"
-      },
-      {
-        "answer": false,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "57fa89220bc0d83ebe74062b9bf73ba95113849759b8937374329516133b65e4"
-          }
-        },
-        "id": 3,
-        "p": 0.47,
         "status": "answered"
       }
     ],
     "request": {
-      "function": "decide",
       "question": {
-        "type": "inline",
-        "value": "Ready?"
+        "function": "decide",
+        "question": "Ready?"
       },
       "records": [
-        "alpha",
-        "evidence 5",
-        "alpha"
+        []
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
-        "answer": "green",
+        "answer": "a",
         "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "33002d14fc83064ccf061b6281e1056058460e507c80313294cb5427017c5259"
+          "labels": {
+            "a": 1.0,
+            "z": 0.0
           }
         },
-        "id": 1,
-        "p": 1.0,
+        "function": "choose",
+        "position": 1,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "1ac320873ac8b825ba4e45ee7d28cc7c53dd987f17250d57144cc36b06b8d2df"
+        },
         "status": "answered"
       }
     ],
     "request": {
-      "function": "choose",
-      "options": {
-        "options": [
-          "red",
-          "green",
-          "blue"
-        ]
-      },
       "question": {
-        "type": "inline",
-        "value": "Pick a color"
+        "choices": [
+          "z",
+          "a"
+        ],
+        "function": "choose",
+        "question": "Which?"
       },
       "records": [
-        "alpha"
+        "evidence"
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
         "answer": [
-          "red",
-          "green",
-          "blue"
+          "billing"
         ],
         "detail": {
-          "probabilities": {
-            "blue": 0.92,
-            "green": 0.96,
-            "red": 0.85
-          },
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "7f18dd86004161c5fa3ed258f1ada49c5134a0afff8713d81cc86412d2fc7958"
+          "labels": {
+            "billing": 0.8,
+            "refund": 0.19,
+            "shipping": 0.32
           }
         },
-        "id": 1,
+        "function": "tag",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "53b3bce927bba0f56590b261da38d59de4fe6510c39d616613e2eec8017acbdc"
+        },
+        "status": "answered"
+      },
+      {
+        "answer": [
+          "refund"
+        ],
+        "detail": {
+          "labels": {
+            "billing": 0.56,
+            "refund": 0.96,
+            "shipping": 0.59
+          }
+        },
+        "function": "tag",
+        "position": 2,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "53b3bce927bba0f56590b261da38d59de4fe6510c39d616613e2eec8017acbdc"
+        },
+        "status": "answered"
+      },
+      {
+        "answer": [
+          "refund"
+        ],
+        "detail": {
+          "labels": {
+            "billing": 0.64,
+            "refund": 0.74,
+            "shipping": 0.22
+          }
+        },
+        "function": "tag",
+        "position": 3,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "53b3bce927bba0f56590b261da38d59de4fe6510c39d616613e2eec8017acbdc"
+        },
         "status": "answered"
       }
     ],
     "request": {
-      "function": "tag",
-      "options": {
-        "labels": [
-          "red",
-          "green",
-          "blue"
-        ]
-      },
       "question": {
-        "type": "inline",
-        "value": "Apply labels"
+        "function": "tag",
+        "labels": [
+          "billing",
+          "refund",
+          "shipping"
+        ],
+        "question": "What applies?",
+        "threshold": 0.7
       },
       "records": [
-        "evidence 10"
+        "a",
+        "b",
+        "c"
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
-        "answer": 0.0,
+        "answer": 1.0,
         "detail": {
-          "probabilities": [
-            1.0,
+          "levels": [
             0.0,
-            0.0
-          ],
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "bcecbdc456caaa9c512cce57a2eb7f094bd08c84f9c0838260fa1627356432ee"
-          }
+            1.0
+          ]
         },
-        "id": 1,
+        "function": "score",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "73bae587601373d117ff593c2d9d8e9c3ed8d3757620eb4e184466fed7c675b3"
+        },
         "status": "answered"
       }
     ],
     "request": {
-      "function": "score",
-      "options": {
+      "question": {
+        "function": "score",
         "levels": [
           "low",
-          "medium",
           "high"
-        ]
-      },
-      "question": {
-        "type": "inline",
-        "value": "How strong?"
+        ],
+        "question": "How much?"
       },
       "records": [
-        "alpha"
+        "evidence"
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
-        "answer": true,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "3dd511759be19743ce5815517d80f4a703daa8b1519a420fe82392a6f3088a4a"
-          }
+        "answer": false,
+        "function": "filter",
+        "position": 1,
+        "probability": 0.31,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
         },
-        "id": 1,
-        "p": 0.96,
         "status": "answered"
       },
       {
         "answer": false,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "3dd511759be19743ce5815517d80f4a703daa8b1519a420fe82392a6f3088a4a"
-          }
+        "function": "filter",
+        "position": 2,
+        "probability": 0.36,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
         },
-        "id": 2,
-        "p": 0.46,
         "status": "answered"
       },
       {
-        "answer": true,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "3dd511759be19743ce5815517d80f4a703daa8b1519a420fe82392a6f3088a4a"
-          }
+        "error": {
+          "code": "record.missing",
+          "message": "the record is missing"
         },
-        "id": 3,
-        "p": 0.96,
-        "status": "answered"
+        "function": "filter",
+        "position": 3,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
+        },
+        "status": "failed"
       }
     ],
     "request": {
-      "function": "filter",
       "question": {
-        "type": "inline",
-        "value": "Ready?"
+        "function": "filter",
+        "question": "Ready?"
       },
       "records": [
-        "beta",
-        "alpha",
-        "beta"
+        "refund",
+        "parcel",
+        null
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
         "answer": 1,
         "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99"
-          }
+          "levels": [
+            1.0,
+            0.0
+          ]
         },
-        "id": 2,
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "f9c5e199cb771977554de304e9305e3499492730920056aed84f16e75284b949"
+        },
         "status": "answered"
       },
       {
-        "answer": 2,
-        "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "9c6b6e6c738bc0e369a92fbfa135d3b2af40dc08a86e50644e28e7a54b1b3d99"
-          }
+        "error": {
+          "code": "record.missing",
+          "message": "the record is missing"
         },
-        "id": 1,
-        "status": "answered"
+        "function": "rank",
+        "position": 3,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "f9c5e199cb771977554de304e9305e3499492730920056aed84f16e75284b949"
+        },
+        "status": "failed"
+      },
+      {
+        "error": {
+          "code": "record.invalid",
+          "message": "the record cannot be converted without loss"
+        },
+        "function": "rank",
+        "position": 4,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "f9c5e199cb771977554de304e9305e3499492730920056aed84f16e75284b949"
+        },
+        "status": "failed"
       }
     ],
     "request": {
-      "function": "rank",
       "question": {
-        "type": "inline",
-        "value": "Ready?"
+        "function": "rank",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "question": "How much?",
+        "top": 1
       },
       "records": [
-        "alpha",
-        "beta"
+        "a",
+        "b",
+        null,
+        {
+          "body": "ignored",
+          "id": true
+        }
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
-        "answer": {
-          "end": 5,
-          "start": 0,
-          "text": "alpha"
+        "answer": null,
+        "function": "find",
+        "position": 1,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "a94cfeac612903a89e6f02f9bc714ab88dcb7a87a354731b3240058a07087609"
         },
-        "detail": {
-          "probabilities": {
-            "none": 0.0,
-            "u1": 1.0,
-            "u2": 0.0,
-            "u3": 0.0
-          },
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "3c9159fc0cb2ac320ce4661ad4eae7354e3065a97504a5912ce03b38c9c16c41"
-          }
-        },
-        "id": 1,
-        "p": 1.0,
         "status": "answered"
       }
     ],
     "request": {
-      "function": "find",
       "question": {
-        "type": "inline",
-        "value": "Which line?"
+        "function": "find",
+        "question": "Which line?"
       },
       "records": [
-        "alpha\nbeta\ngamma"
+        "é🦀\r\n \n 答🙂 \r\n"
       ]
     },
     "requests": 0
   },
   {
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
     "expected": [
       {
-        "answer": {
-          "color": {
-            "answer": "green",
-            "p": 1.0,
-            "status": "answered"
-          },
-          "ready": {
-            "answer": false,
-            "p": 0.47,
-            "status": "answered"
-          },
-          "ready_again": {
-            "answer": false,
-            "p": 0.47,
-            "status": "answered"
+        "answer": [
+          {
+            "end": 3,
+            "kind": "person",
+            "probability": 1.0,
+            "start": 0,
+            "text": "Ada"
           }
-        },
+        ],
         "detail": {
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "6d6f9b9a23c6e8f0ad109254d52fee573d2b54800147d5164c39622074d217e7"
-          }
+          "names": [
+            {
+              "end": 3,
+              "kinds": {
+                "none of these": 0.0,
+                "person": 1.0
+              },
+              "start": 0
+            }
+          ],
+          "pieces": [
+            {
+              "end": 3,
+              "start": 0,
+              "tags": {
+                "BEGIN": 0.0,
+                "END": 1.0,
+                "INSIDE": 0.0,
+                "OUT": 0.0,
+                "SINGLE": 0.0
+              },
+              "text": "Ada"
+            }
+          ]
         },
-        "id": 1,
+        "function": "recognize",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "d3a3b9e2b2134cc3d812ca393402ae311f181269b30da5b4a13034916960207f"
+        },
         "status": "answered"
       }
     ],
     "request": {
-      "function": "annotate",
       "question": {
-        "type": "inline",
-        "value": {
-          "questions": {
-            "color": {
-              "choose": "Pick a color",
-              "options": [
-                "red",
-                "green",
-                "blue"
+        "function": "recognize",
+        "kinds": [
+          "person"
+        ]
+      },
+      "records": [
+        "Ada"
+      ]
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected": [
+      {
+        "answer": [],
+        "detail": {
+          "names": [
+            {
+              "end": 3,
+              "kind": "person",
+              "probability": 1.0,
+              "start": 0,
+              "text": "Ada"
+            }
+          ],
+          "pairs": []
+        },
+        "function": "relate",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "9b13d5db49da26a16f921e019a3ca44e6cbe865d28a71da18371459eca73e742"
+        },
+        "status": "answered"
+      }
+    ],
+    "request": {
+      "question": {
+        "function": "relate",
+        "rules": [
+          {
+            "relation": "works_for",
+            "source": "person",
+            "target": "company"
+          }
+        ]
+      },
+      "records": [
+        "Ada Acme Bea"
+      ]
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected": [
+      {
+        "answer": {
+          "choice": {
+            "answer": "z",
+            "detail": {
+              "labels": {
+                "a": 0.0,
+                "z": 1.0
+              }
+            },
+            "function": "choose",
+            "probability": 1.0,
+            "status": "answered"
+          },
+          "choice_unsure": {
+            "answer": "a",
+            "detail": {
+              "labels": {
+                "a": 1.0,
+                "z": 0.0
+              }
+            },
+            "function": "choose",
+            "probability": 1.0,
+            "status": "answered"
+          },
+          "decision": {
+            "answer": false,
+            "function": "decide",
+            "probability": 0.33,
+            "status": "answered"
+          },
+          "labels": {
+            "answer": [],
+            "detail": {
+              "labels": {
+                "routine": 0.32,
+                "urgent": 0.05
+              }
+            },
+            "function": "tag",
+            "status": "answered"
+          },
+          "missing": {
+            "error": {
+              "code": "record.missing",
+              "message": "the record holds nothing at /absent"
+            },
+            "function": "decide",
+            "status": "failed"
+          },
+          "root": {
+            "answer": true,
+            "function": "decide",
+            "probability": 1.0,
+            "status": "answered"
+          },
+          "scale": {
+            "answer": 1.0,
+            "detail": {
+              "levels": [
+                0.0,
+                1.0
               ]
             },
-            "ready": {
-              "decide": "Ready?"
-            },
-            "ready_again": {
-              "decide": "Ready?"
-            }
+            "function": "score",
+            "status": "answered"
+          }
+        },
+        "function": "annotate",
+        "id": "r1",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "411b54e67c45dd069dca4acb628fb633c70bd4d7bdf6d9063629c220178dceb6"
+        },
+        "status": "answered"
+      }
+    ],
+    "request": {
+      "question": {
+        "evidence": "/body",
+        "function": "annotate",
+        "questions": {
+          "choice": {
+            "choices": [
+              "z",
+              "a"
+            ],
+            "function": "choose",
+            "question": "Which?"
+          },
+          "choice_unsure": {
+            "choices": [
+              "z",
+              "a"
+            ],
+            "function": "choose",
+            "question": "Which?",
+            "threshold": 0.9
+          },
+          "decision": {
+            "function": "decide",
+            "question": "Ready?"
+          },
+          "labels": {
+            "function": "tag",
+            "labels": [
+              "urgent",
+              "routine"
+            ],
+            "question": "Which labels?"
+          },
+          "missing": {
+            "evidence": "/absent",
+            "function": "decide",
+            "question": "Ready?"
+          },
+          "root": {
+            "evidence": "",
+            "function": "decide",
+            "question": "Ready?"
+          },
+          "scale": {
+            "function": "score",
+            "levels": [
+              "low",
+              "high"
+            ],
+            "question": "How much?"
           }
         }
       },
       "records": [
-        "alpha"
-      ]
-    },
-    "requests": 0
-  },
-  {
-    "client": {
-      "adapter": "stub"
-    },
-    "expected": [
-      {
-        "answer": [
-          {
-            "end": 8,
-            "kind": "thing",
-            "p": 1.0,
-            "start": 4,
-            "text": "Acme"
-          },
-          {
-            "end": 35,
-            "kind": "thing",
-            "p": 1.0,
-            "start": 30,
-            "text": "David"
-          },
-          {
-            "end": 54,
-            "kind": "thing",
-            "p": 1.0,
-            "start": 36,
-            "text": "Delta Echo Foxtrot"
-          }
-        ],
-        "detail": {
-          "probabilities": {
-            "names": [
-              {
-                "end": 3,
-                "kinds": {
-                  "none of these": 1.0,
-                  "thing": 0.0
-                },
-                "start": 0
-              },
-              {
-                "end": 8,
-                "kinds": {
-                  "none of these": 0.0,
-                  "thing": 1.0
-                },
-                "start": 4
-              },
-              {
-                "end": 23,
-                "kinds": {
-                  "none of these": 1.0,
-                  "thing": 0.0
-                },
-                "start": 9
-              },
-              {
-                "end": 35,
-                "kinds": {
-                  "none of these": 0.0,
-                  "thing": 1.0
-                },
-                "start": 30
-              },
-              {
-                "end": 54,
-                "kinds": {
-                  "none of these": 0.0,
-                  "thing": 1.0
-                },
-                "start": 36
-              }
-            ],
-            "pieces": [
-              {
-                "end": 3,
-                "start": 0,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 1.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Ada"
-              },
-              {
-                "end": 8,
-                "start": 4,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 1.0
-                },
-                "text": "Acme"
-              },
-              {
-                "end": 12,
-                "start": 9,
-                "tags": {
-                  "BEGIN": 1.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Bob"
-              },
-              {
-                "end": 17,
-                "start": 13,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 1.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Beta"
-              },
-              {
-                "end": 23,
-                "start": 18,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 1.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Carol"
-              },
-              {
-                "end": 29,
-                "start": 24,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 1.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Gamma"
-              },
-              {
-                "end": 35,
-                "start": 30,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 1.0
-                },
-                "text": "David"
-              },
-              {
-                "end": 41,
-                "start": 36,
-                "tags": {
-                  "BEGIN": 1.0,
-                  "END": 0.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Delta"
-              },
-              {
-                "end": 46,
-                "start": 42,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 1.0,
-                  "INSIDE": 0.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Echo"
-              },
-              {
-                "end": 54,
-                "start": 47,
-                "tags": {
-                  "BEGIN": 0.0,
-                  "END": 0.0,
-                  "INSIDE": 1.0,
-                  "OUT": 0.0,
-                  "SINGLE": 0.0
-                },
-                "text": "Foxtrot"
-              }
-            ]
-          },
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "4b047b1ce9bb77bc1bd7b0862529a305b11b308ddc9bd6937a0d835b86a23612"
-          }
-        },
-        "id": 1,
-        "status": "answered"
-      }
-    ],
-    "request": {
-      "function": "recognize",
-      "question": {
-        "type": "inline",
-        "value": [
-          "thing"
-        ]
-      },
-      "records": [
-        "Ada Acme Bob Beta Carol Gamma David Delta Echo Foxtrot"
-      ]
-    },
-    "requests": 0
-  },
-  {
-    "client": {
-      "adapter": "stub"
-    },
-    "expected": [
-      {
-        "answer": [
-          {
-            "p": 0.97,
-            "relation": "linked",
-            "source": {
-              "end": 17,
-              "kind": "thing",
-              "start": 13,
-              "text": "Beta"
-            },
-            "target": {
-              "end": 35,
-              "kind": "thing",
-              "start": 18,
-              "text": "Carol Gamma David"
-            }
-          },
-          {
-            "p": 0.75,
-            "relation": "linked",
-            "source": {
-              "end": 35,
-              "kind": "thing",
-              "start": 18,
-              "text": "Carol Gamma David"
-            },
-            "target": {
-              "end": 57,
-              "kind": "thing",
-              "start": 47,
-              "text": "Foxtrot 11"
-            }
-          },
-          {
-            "p": 0.64,
-            "relation": "linked",
-            "source": {
-              "end": 46,
-              "kind": "thing",
-              "start": 42,
-              "text": "Echo"
-            },
-            "target": {
-              "end": 17,
-              "kind": "thing",
-              "start": 13,
-              "text": "Beta"
-            }
-          },
-          {
-            "p": 0.72,
-            "relation": "linked",
-            "source": {
-              "end": 46,
-              "kind": "thing",
-              "start": 42,
-              "text": "Echo"
-            },
-            "target": {
-              "end": 35,
-              "kind": "thing",
-              "start": 18,
-              "text": "Carol Gamma David"
-            }
-          },
-          {
-            "p": 0.85,
-            "relation": "linked",
-            "source": {
-              "end": 46,
-              "kind": "thing",
-              "start": 42,
-              "text": "Echo"
-            },
-            "target": {
-              "end": 57,
-              "kind": "thing",
-              "start": 47,
-              "text": "Foxtrot 11"
-            }
-          },
-          {
-            "p": 0.66,
-            "relation": "linked",
-            "source": {
-              "end": 57,
-              "kind": "thing",
-              "start": 47,
-              "text": "Foxtrot 11"
-            },
-            "target": {
-              "end": 35,
-              "kind": "thing",
-              "start": 18,
-              "text": "Carol Gamma David"
-            }
-          },
-          {
-            "p": 0.67,
-            "relation": "linked",
-            "source": {
-              "end": 57,
-              "kind": "thing",
-              "start": 47,
-              "text": "Foxtrot 11"
-            },
-            "target": {
-              "end": 46,
-              "kind": "thing",
-              "start": 42,
-              "text": "Echo"
-            }
-          }
-        ],
-        "detail": {
-          "probabilities": [
-            {
-              "p": 0.97,
-              "relation": "linked",
-              "source": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              },
-              "target": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              }
-            },
-            {
-              "p": 0.36,
-              "relation": "linked",
-              "source": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              },
-              "target": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              }
-            },
-            {
-              "p": 0.4,
-              "relation": "linked",
-              "source": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              },
-              "target": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              }
-            },
-            {
-              "p": 0.4,
-              "relation": "linked",
-              "source": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              },
-              "target": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              }
-            },
-            {
-              "p": 0.15,
-              "relation": "linked",
-              "source": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              },
-              "target": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              }
-            },
-            {
-              "p": 0.75,
-              "relation": "linked",
-              "source": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              },
-              "target": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              }
-            },
-            {
-              "p": 0.64,
-              "relation": "linked",
-              "source": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              },
-              "target": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              }
-            },
-            {
-              "p": 0.72,
-              "relation": "linked",
-              "source": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              },
-              "target": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              }
-            },
-            {
-              "p": 0.85,
-              "relation": "linked",
-              "source": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              },
-              "target": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              }
-            },
-            {
-              "p": 0.12,
-              "relation": "linked",
-              "source": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              },
-              "target": {
-                "end": 17,
-                "kind": "thing",
-                "start": 13,
-                "text": "Beta"
-              }
-            },
-            {
-              "p": 0.66,
-              "relation": "linked",
-              "source": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              },
-              "target": {
-                "end": 35,
-                "kind": "thing",
-                "start": 18,
-                "text": "Carol Gamma David"
-              }
-            },
-            {
-              "p": 0.67,
-              "relation": "linked",
-              "source": {
-                "end": 57,
-                "kind": "thing",
-                "start": 47,
-                "text": "Foxtrot 11"
-              },
-              "target": {
-                "end": 46,
-                "kind": "thing",
-                "start": 42,
-                "text": "Echo"
-              }
-            }
-          ],
-          "source": {
-            "backend": "stub",
-            "model": "stub",
-            "question_identity": "cf4ecefacfce536cd1a39cd21f261760c84dd9f4d21dff95a68c405168a3447b"
-          }
-        },
-        "id": 1,
-        "status": "answered"
-      }
-    ],
-    "request": {
-      "function": "relate",
-      "question": {
-        "type": "inline",
-        "value": [
-          {
-            "name": "linked",
-            "source": "thing",
-            "target": "thing"
-          }
-        ]
-      },
-      "records": [
-        "Ada Acme Bob Beta Carol Gamma David Delta Echo Foxtrot 11"
+        {
+          "body": "refund",
+          "id": "r1"
+        }
       ]
     },
     "requests": 0

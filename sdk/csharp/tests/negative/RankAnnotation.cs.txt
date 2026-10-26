@@ -1,0 +1,6 @@
+using ThinkThen;
+public static class InvalidInput
+{
+    public static void Call(RankQuestion question) => AnnotationQuestions.Create(
+        new Dictionary<string, AnnotationQuestion> { ["rank"] = new ToolboxQuestion.Rank(question) });
+}

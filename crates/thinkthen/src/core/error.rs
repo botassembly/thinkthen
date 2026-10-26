@@ -1,12 +1,20 @@
 //! Every failure: a stable code, a family and one message.
 
 use serde::ser::{Serialize, Serializer};
+use std::sync::Arc;
+
+use super::code::Code;
 
 /// Which part of a call failed. Each family maps to one exit code.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Family {
     /// The caller's arguments or question are wrong.
     Usage,
+    /// One input record could not be admitted.
+    Record,
+    /// An unexpected engine fault stopped the call.
+    Internal,
     /// The backend could not be reached, refused, or answered badly.
     Backend,
     /// A local file or stream could not be read or written.
@@ -15,7 +23,7 @@ pub enum Family {
 
 /// The kind of a failure. Its code never changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorKind {
+pub(crate) enum ErrorKind {
     /// A threshold is not a valid cut or band.
     Threshold,
     /// A question is blank or malformed.
@@ -26,16 +34,6 @@ pub enum ErrorKind {
     Settings,
     /// The selected backend name is unknown.
     Backend,
-    /// The selected client mode has no transport.
-    Mode,
-    /// A named question has no available resolver.
-    Reference,
-    /// A key source differs from the selected backend's own variable.
-    KeySource,
-    /// The database administrator's backend/model policy is malformed.
-    SqlPolicy,
-    /// The selected backend/model pair is outside the database policy.
-    SqlSelection,
     /// A batch size is not a whole number of at least 1.
     Batch,
     /// A pointer is not a JSON Pointer.
@@ -59,8 +57,10 @@ pub enum ErrorKind {
     /// The caller cancelled the call.
     Cancelled,
     /// A local file or stream could not be read or written.
+    #[cfg(feature = "command")]
     Io,
     /// A toolbox cannot be read as valid named questions.
+    #[cfg(feature = "command")]
     Toolbox,
 }
 
@@ -70,109 +70,73 @@ impl Family {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Usage => "usage",
+            Self::Record => "record",
+            Self::Internal => "internal",
             Self::Backend => "backend",
             Self::Local => "local",
         }
     }
 }
 
-impl ErrorKind {
-    /// The stable dotted code, such as `usage.threshold`.
-    #[must_use]
-    pub const fn code(self) -> &'static str {
-        match self {
-            Self::Threshold => "usage.threshold",
-            Self::Question => "usage.question",
-            Self::Name => "usage.name",
-            Self::Settings => "usage.settings",
-            Self::Backend => "usage.backend",
-            Self::Mode => "usage.mode",
-            Self::Reference => "usage.reference",
-            Self::KeySource => "usage.key-source",
-            Self::SqlPolicy => "usage.sql-policy",
-            Self::SqlSelection => "usage.sql-selection",
-            Self::Batch => "usage.batch",
-            Self::Pointer => "usage.pointer",
-            Self::Record => "usage.record",
-            Self::Missing => "usage.missing",
-            Self::BackendLimit => "backend.limit",
-            Self::Url => "usage.url",
-            Self::KeyMissing => "usage.key-missing",
-            Self::Transport => "backend.transport",
-            Self::Status => "backend.status",
-            Self::Reply => "backend.reply",
-            Self::Cancelled => "local.cancelled",
-            Self::Io => "local.io",
-            Self::Toolbox => "local.toolbox",
-        }
-    }
-
-    /// The family this kind belongs to.
-    #[must_use]
-    pub const fn family(self) -> Family {
-        match self {
-            Self::Threshold
-            | Self::Question
-            | Self::Name
-            | Self::Batch
-            | Self::Pointer
-            | Self::Record
-            | Self::Missing
-            | Self::Url
-            | Self::Settings
-            | Self::Backend
-            | Self::Mode
-            | Self::Reference
-            | Self::KeySource
-            | Self::SqlPolicy
-            | Self::SqlSelection
-            | Self::KeyMissing => Family::Usage,
-            Self::BackendLimit | Self::Transport | Self::Status | Self::Reply => Family::Backend,
-            Self::Cancelled | Self::Io | Self::Toolbox => Family::Local,
-        }
-    }
-}
+impl ErrorKind {}
 
 /// A failure with its kind and its message.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error, schemars::JsonSchema)]
-#[error("{message}")]
-#[schemars(with = "ErrorWire<'static>")]
+#[non_exhaustive]
+#[derive(Debug, Clone, schemars::JsonSchema)]
+#[schemars(with = "ErrorWire<'static, Code>")]
 pub struct Error {
-    kind: ErrorKind,
     message: String,
+    code: Code,
+    pub(crate) http_status: Option<u16>,
+    pub(crate) source: Option<Arc<dyn std::error::Error + Send + Sync>>,
 }
 
 impl Error {
+    pub(crate) fn from_contract(code: Code, message: impl Into<String>) -> Self {
+        Self {
+            message: escape_diagnostic(&message.into()),
+            code,
+            http_status: None,
+            source: None,
+        }
+    }
+
     /// A failure of `kind` that says `message`.
     #[must_use]
-    pub fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
+    pub(crate) fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
         Self {
-            kind,
             message: escape_diagnostic(&message.into()),
+            code: kind.contract_code(),
+            http_status: None,
+            source: None,
         }
     }
 
-    /// Treat a toolbox supplied as a call argument as a usage failure.
+    /// The stable typed identity of this error.
     #[must_use]
-    pub fn into_argument(mut self) -> Self {
-        if self.kind == ErrorKind::Toolbox {
-            self.kind = ErrorKind::Question;
-        }
-        self
+    pub const fn code(&self) -> Code {
+        self.code
     }
 
-    /// The kind of failure.
+    /// The library's diagnostic message.
     #[must_use]
-    pub const fn kind(&self) -> ErrorKind {
-        self.kind
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    /// The HTTP status when the backend returned one.
+    #[must_use]
+    pub const fn http_status(&self) -> Option<u16> {
+        self.http_status
     }
 }
 
 impl Serialize for Error {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         ErrorWire {
-            code: self.kind.code(),
+            code: self.code,
             message: &self.message,
+            http_status: self.http_status,
         }
         .serialize(serializer)
     }
@@ -185,16 +149,19 @@ impl Serialize for Error {
 )]
 mod wire {
     #[derive(serde::Serialize, schemars::JsonSchema)]
-    pub(super) struct ErrorWire<'a> {
-        pub(super) code: &'a str,
+    #[serde(deny_unknown_fields)]
+    pub(crate) struct ErrorWire<'a, C> {
+        pub(super) code: C,
         pub(super) message: &'a str,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub(super) http_status: Option<u16>,
     }
 }
-use wire::ErrorWire;
+pub(crate) use wire::ErrorWire;
 
 /// Escape actual diagnostic controls once, preserving printable text and literal escapes.
 #[must_use]
-pub fn escape_diagnostic(text: &str) -> String {
+pub(crate) fn escape_diagnostic(text: &str) -> String {
     text.chars().fold(
         String::with_capacity(text.len()),
         |mut escaped, character| {
@@ -212,4 +179,74 @@ pub fn escape_diagnostic(text: &str) -> String {
             escaped
         },
     )
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source
+            .as_deref()
+            .map(|source| source as &dyn std::error::Error)
+    }
+}
+
+impl PartialEq for Error {
+    fn eq(&self, other: &Self) -> bool {
+        self.code == other.code
+            && self.message == other.message
+            && self.http_status == other.http_status
+    }
+}
+impl Eq for Error {}
+
+impl<'de> serde::Deserialize<'de> for Error {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            code: Code,
+            message: String,
+            http_status: Option<u16>,
+        }
+        let wire = Wire::deserialize(deserializer)?;
+        Ok(Self {
+            code: wire.code,
+            message: escape_diagnostic(&wire.message),
+            http_status: wire.http_status,
+            source: None,
+        })
+    }
+}
+
+// Private worker conveniences map to the single public code registry.
+impl ErrorKind {
+    const fn contract_code(self) -> Code {
+        match self {
+            Self::Threshold => Code::UsageThreshold,
+            Self::Question => Code::UsageQuestion,
+            Self::Name => Code::UsageName,
+            Self::Settings => Code::UsageSettings,
+            Self::Backend => Code::UsageBackend,
+            Self::Batch => Code::UsageBatch,
+            Self::Pointer => Code::UsagePointer,
+            Self::Record => Code::RecordJson,
+            Self::Missing => Code::RecordMissing,
+            Self::BackendLimit => Code::RecordTooLarge,
+            Self::Url => Code::UsageUrl,
+            Self::KeyMissing => Code::UsageKeyMissing,
+            Self::Transport => Code::BackendTransport,
+            Self::Status => Code::BackendStatus,
+            Self::Reply => Code::BackendReply,
+            Self::Cancelled => Code::LocalCancelled,
+            #[cfg(feature = "command")]
+            Self::Io => Code::LocalIo,
+            #[cfg(feature = "command")]
+            Self::Toolbox => Code::LocalToolbox,
+        }
+    }
 }

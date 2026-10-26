@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Check Ruby implementation and installed signatures without network access."""
+import argparse
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import tempfile
+
+root = Path(__file__).resolve().parents[3]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--dev-gems', required=True, type=Path)
+args = parser.parse_args()
+cache = args.dev_gems.resolve(strict=True)
+env = dict(os.environ, GEM_HOME=str(cache), GEM_PATH=str(cache), NO_COLOR='1')
+with tempfile.TemporaryDirectory(prefix='ruby-types-') as temporary:
+    stage = Path(temporary)
+    for directory in ('lib', 'sig'):
+        shutil.copytree(root / 'sdk/ruby' / directory, stage / directory)
+    (stage / 'tests').mkdir()
+    shutil.copy2(root / 'sdk/ruby/tests/typing.rb', stage / 'tests/typing.rb')
+    shutil.copy2(root / 'sdk/ruby/Steepfile', stage / 'Steepfile')
+    subprocess.run([str(root / 'scripts/ruby-code-types'), str(stage / 'sig')], check=True)
+    subprocess.run(['ruby', str(cache / 'bin/rbs'), '-I', 'sig', 'validate'], cwd=stage, env=env, check=True)
+    checked = subprocess.run(['ruby', str(cache / 'bin/steep'), 'check', '-j', '2'], cwd=stage, env=env,
+                             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if checked.returncode or 'FATAL:' in checked.stdout or 'Unexpected error:' in checked.stdout:
+        raise SystemExit('Ruby implementation type check failed:\n' + checked.stdout)
+    print(checked.stdout)
+    negative = stage / 'negative'
+    negative.mkdir()
+    source = root / 'sdk/ruby/tests/typing_invalid.rb'
+    shutil.copy2(source, negative / source.name)
+    (negative / 'Steepfile').write_text('target :invalid do\n  signature "../sig"\n  check "typing_invalid.rb"\nend\n')
+    result = subprocess.run(['ruby', str(cache / 'bin/steep'), 'check', '-j', '2'], cwd=negative, env=env,
+                            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    expected = {index for index, line in enumerate(source.read_text().splitlines(), 1) if '# type-error' in line}
+    actual = {int(line) for line in re.findall(r'typing_invalid.rb:(\d+):\d+: \[error\]', result.stdout)}
+    if not expected or result.returncode == 0 or actual != expected:
+        raise SystemExit('Ruby negative type cases failed:\n' + result.stdout)
+print('Ruby implementation, public consumers and negative type cases passed')

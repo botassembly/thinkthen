@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 
 struct Fixture(PathBuf);
@@ -29,11 +30,13 @@ impl Fixture {
         path
     }
     fn run(&self, args: &[&str], input: &str) -> Output {
+        let server=Loopback::answering(|q| json!({"type":"noul","noul":if q["instructions"].as_str().unwrap().contains("evidence 5"){0.77}else{0.47}})).unwrap();
         let mut child = support::command()
             .current_dir(&self.0)
             .arg("run")
             .args(args)
-            .args(["--adapter", "stub"])
+            .args(["--json", "--backend", "systemone", "--url", server.base()])
+            .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -51,7 +54,7 @@ impl Drop for Fixture {
     }
 }
 fn question() -> Value {
-    json!({"function":"decide","question":{"type":"inline","value":"Ready?"}})
+    json!({"question":{"function":"decide","question":"Ready?"}})
 }
 fn rows(output: &Output) -> Vec<Value> {
     assert!(
@@ -72,7 +75,7 @@ fn saved_questions_use_explicit_files_folders_and_local_lookup() {
     fixture.write("thinkthen.json", &json!({"entries":{"ready":question()}}));
     for args in [
         vec!["single.json"],
-        vec!["thinkthen.json", "ready"],
+        vec!["thinkthen.json", "--entry", "ready"],
         vec!["ready"],
     ] {
         let actual = rows(&fixture.run(&args, "\"alpha\"\n\"evidence 5\"\n"));
@@ -86,7 +89,7 @@ fn saved_questions_use_explicit_files_folders_and_local_lookup() {
     std::fs::remove_file(fixture.0.join("thinkthen.json")).unwrap();
     assert_eq!(rows(&fixture.run(&["ready"], "\"alpha\"\n")).len(), 1);
     assert_eq!(
-        rows(&fixture.run(&["thinkthen", "ready"], "\"alpha\"\n")).len(),
+        rows(&fixture.run(&["thinkthen", "--entry", "ready"], "\"alpha\"\n")).len(),
         1
     );
 }
@@ -98,7 +101,7 @@ fn declared_pipeline_passes_function_rows_to_shell_and_back() {
     let actual = rows(&fixture.run(&["pipeline.json"], "\"alpha\"\n"));
     assert_eq!(actual.len(), 1);
     assert_eq!(actual[0]["answer"], true);
-    assert_eq!(actual[0]["p"], 0.77);
+    assert_eq!(actual[0]["probability"], 0.77);
 }
 
 #[test]
@@ -124,7 +127,7 @@ fn ctrl_c_terminates_the_interpreter_and_its_child() {
     fixture.write("interrupt.json", &json!({"run":[{"shell":["/bin/sh","-c","sleep 300 & child=$!; printf '%s\\n' \"$child\" >&2; wait \"$child\""]}, question()]}));
     let mut child = support::command()
         .current_dir(&fixture.0)
-        .args(["run", "interrupt.json", "--adapter", "stub"])
+        .args(["run", "interrupt.json", "--backend", "stub"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -158,7 +161,7 @@ fn ctrl_c_terminates_the_interpreter_and_its_child() {
 #[test]
 fn admission_finishes_before_any_declared_command_starts() {
     let fixture = Fixture::new();
-    fixture.write("invalid.json", &json!({"run":[{"shell":["/bin/sh","-c","printf ran > marker"]},{"function":"choose","question":{"type":"inline","value":"Which?"}}]}));
+    fixture.write("invalid.json", &json!({"run":[{"shell":["/bin/sh","-c","printf ran > marker"]},{"question":{"function":"choose","question":"Which?"}}]}));
     let rejected = fixture.run(&["invalid.json"], "");
     assert_eq!(rejected.status.code(), Some(2));
     assert_eq!(support::reported(&rejected), "usage.question");
@@ -168,7 +171,7 @@ fn admission_finishes_before_any_declared_command_starts() {
         r#"{"run":[]}"#,
         r#"{"run":[{"shell":[]}]}"#,
         r#"{"run":[{"run":[]}]}"#,
-        r#"{"function":"decide","question":{"type":"inline","value":"Ready?"},"records":[]}"#,
+        r#"{"question":{"function":"decide","question":"Ready?"},"records":[]}"#,
     ] {
         std::fs::write(fixture.0.join("invalid.json"), text).unwrap();
         assert_eq!(
@@ -187,13 +190,13 @@ fn shell_arguments_are_literal_and_text_lines_use_existing_framing() {
     assert_eq!(actual, vec![json!({"literal":"$HOME; touch marker"})]);
     assert!(!fixture.0.join("marker").exists());
     fixture.write("single.json", &question());
-    let actual = rows(&fixture.run(&["single.json", "--lines"], "alpha\nevidence 5\n"));
+    let actual = rows(&fixture.run(&["single.json", "--from", "lines"], "alpha\nevidence 5\n"));
     assert_eq!(actual.len(), 2);
     assert_eq!(actual[0]["answer"], false);
     assert_eq!(actual[1]["answer"], true);
     assert_eq!(
         fixture.run(&["single.json"], "not-json\n").status.code(),
-        Some(5)
+        Some(6)
     );
 }
 
@@ -213,7 +216,7 @@ fn downstream_success_closes_and_reaps_a_still_running_upstream() {
     ]}));
     let mut child = support::command()
         .current_dir(&fixture.0)
-        .args(["run", "early.json", "--adapter", "stub"])
+        .args(["run", "early.json", "--backend", "stub"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -255,7 +258,7 @@ fn an_early_reader_drains_its_record_through_the_following_function() {
     let actual = rows(&fixture.run(&["first.json"], ""));
     assert_eq!(actual.len(), 1);
     assert_eq!(actual[0]["answer"], false);
-    assert_eq!(actual[0]["p"], 0.47);
+    assert_eq!(actual[0]["probability"], 0.47);
 }
 
 #[test]
@@ -270,14 +273,14 @@ fn an_early_reader_cancels_only_its_upstream_function_call() {
     let actual = rows(&fixture.run(&["first.json"], &input));
     assert_eq!(actual.len(), 1);
     assert_eq!(actual[0]["answer"], true);
-    assert_eq!(actual[0]["p"], 0.77);
+    assert_eq!(actual[0]["probability"], 0.77);
 }
 
 #[test]
 fn a_failed_function_row_never_becomes_input_to_a_shell() {
     let fixture = Fixture::new();
     let mut request = question();
-    request["options"] = json!({"on":"/missing"});
+    request["question"]["evidence"] = json!("/missing");
     fixture.write(
         "failed.json",
         &json!({"run":[
@@ -286,8 +289,52 @@ fn a_failed_function_row_never_becomes_input_to_a_shell() {
         ]}),
     );
     let output = fixture.run(&["failed.json"], "{\"present\":1}\n");
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.missing");
+    assert_eq!(output.status.code(), Some(6));
+    assert_eq!(support::reported(&output), "record.missing");
     assert!(output.stdout.is_empty());
     assert!(!fixture.0.join("marker").exists());
+}
+
+#[test]
+fn saved_numeric_bands_preserve_unsure_rows_without_a_verdict_exit() {
+    let fixture = Fixture::new();
+    fixture.write("band.json", &json!({"question":{"function":"decide","question":"Ready?","threshold":{"low":0.2,"high":0.8}}}));
+    let output = fixture.run(&["band.json"], "\"alpha\"\n");
+    let actual = rows(&output);
+    assert_eq!(actual.len(), 1);
+    assert_eq!(actual[0]["status"], "unsure");
+    assert_eq!(actual[0]["probability"], 0.47);
+    assert!(actual[0].get("answer").is_none());
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn global_evidence_replaces_saved_function_evidence_in_a_pipeline() {
+    let fixture = Fixture::new();
+    fixture.write("evidence.json", &json!({"run":[
+        {"name":"stored","question":{"function":"decide","question":"Ready?","evidence":"/missing"}},
+        {"shell":["cat"]}
+    ]}));
+    let output = fixture.run(
+        &["evidence.json", "--evidence", "/body"],
+        "{\"body\":\"chosen\"}\n",
+    );
+    let actual = rows(&output);
+    assert_eq!(actual.len(), 1);
+    assert_eq!(actual[0]["status"], "answered");
+    assert_eq!(actual[0]["source"]["name"], "stored");
+}
+
+#[test]
+fn question_toolboxes_share_sdk_admission_before_lookup_or_execution() {
+    let fixture = Fixture::new();
+    let malformed: Vec<String> =
+        serde_json::from_str(include_str!("../../../conformance/toolbox/malformed.json")).unwrap();
+    // Runs and annotation remain richer command entries, outside this subset.
+    for text in malformed.iter().take(3) {
+        std::fs::write(fixture.0.join("questions.json"), text).unwrap();
+        let rejected = fixture.run(&["questions.json", "--entry", "topic"], "");
+        assert_eq!(rejected.status.code(), Some(2), "{text}");
+        assert_eq!(support::reported(&rejected), "usage.question", "{text}");
+    }
 }

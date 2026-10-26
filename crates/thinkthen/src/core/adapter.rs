@@ -11,7 +11,7 @@ use crate::core::error::Error;
 
 /// A wire format a backend speaks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
-pub enum Adapter {
+pub(crate) enum Adapter {
     /// The System One decisions API.
     #[serde(rename = "systemone")]
     SystemOne,
@@ -31,7 +31,7 @@ pub(crate) enum Reply {
 impl Adapter {
     /// The path this adapter posts to, under the backend's base address.
     #[must_use]
-    pub const fn path(self) -> &'static str {
+    pub(crate) const fn path(self) -> &'static str {
         match self {
             Self::SystemOne => "systemone",
             Self::OpenAi => "decisions",
@@ -40,7 +40,7 @@ impl Adapter {
 
     /// Whether this adapter's error body reports an oversized request.
     #[must_use]
-    pub fn request_too_large(self, body: &[u8]) -> bool {
+    pub(crate) fn request_too_large(self, body: &[u8]) -> bool {
         match self {
             Self::SystemOne => systemone::request_too_large(body),
             Self::OpenAi => false,

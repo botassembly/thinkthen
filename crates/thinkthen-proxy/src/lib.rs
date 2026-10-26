@@ -3,6 +3,7 @@
 //! Admission uses the existing request and typed answer contract. This crate
 //! performs no backend execution, authentication or network transport.
 
+mod definition;
 mod store;
 pub use store::Service;
 

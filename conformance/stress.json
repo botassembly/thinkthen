@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "client": {"model":"stress-model", "batch":32, "retry":{"max_retries":2,"initial_backoff_ms":1,"attempt_timeout_ms":1000}},
+  "records": {"smoke":65,"full":100000,"soak_rounds":20,"identifier_base":10000000},
+  "replies": [{"probability":0.9}],
+  "scenarios": [
+    {"name":"healthy", "faults":[], "status":"answered"},
+    {"name":"rate-limit", "faults":[{"kind":"status","status":429,"retry_after":"0","repeat":1}], "status":"answered"},
+    {"name":"server-burst", "faults":[{"kind":"status","status":503,"repeat":2}], "status":"answered"},
+    {"name":"slow", "faults":[{"kind":"slow","delay_ms":20,"repeat":1}], "status":"answered"},
+    {"name":"truncated", "faults":[{"kind":"truncated","repeat":1}], "status":"failed", "code":"backend.transport"},
+    {"name":"closed", "faults":[{"kind":"closed","repeat":1}], "status":"failed", "code":"backend.transport"},
+    {"name":"refused", "faults":[], "status":"failed", "code":"backend.transport"}
+  ]
+}

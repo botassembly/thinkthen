@@ -65,11 +65,21 @@ impl TemporaryPaths {
     }
 
     pub(crate) fn temporary(&mut self, parent: Option<&Path>) -> io::Result<NamedTempFile> {
+        self.temporary_with_suffix(parent, "")
+    }
+
+    pub(crate) fn temporary_with_suffix(
+        &mut self,
+        parent: Option<&Path>,
+        suffix: &str,
+    ) -> io::Result<NamedTempFile> {
         let mut registry = paths();
         active(&registry)?;
+        let mut builder = tempfile::Builder::new();
+        builder.suffix(suffix);
         let file = match parent {
-            Some(parent) => NamedTempFile::new_in(parent)?,
-            None => NamedTempFile::new()?,
+            Some(parent) => builder.tempfile_in(parent)?,
+            None => builder.tempfile()?,
         };
         registry.paths.insert(file.path().to_owned());
         self.0.push(file.path().to_owned());

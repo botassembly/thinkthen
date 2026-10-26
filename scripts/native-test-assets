@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Prepare or verify shared debug-only SQL fixture assets beside the native pair."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+from build_targets import floor_target
+
+ROOT = Path(__file__).resolve().parent.parent
+STORE = Path.home() / '.local/share/thinkthen-build-tools'
+FILES = ('libthinkthen_ffi.a', 'loopback')
+
+
+def output(*args):
+    return subprocess.check_output(args, cwd=ROOT, text=True).strip()
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def identity():
+    cache = Path(output(str(ROOT / 'scripts/native-prepare'), '--path'))
+    host = output('rustc', '-vV').split('host: ')[1].splitlines()[0]
+    producer = digest(Path(__file__))
+    loopback = {name: digest(ROOT / name) for name in output('git', 'ls-files', '--', 'crates/loopback').splitlines()}
+    configuration = hashlib.sha256(json.dumps({'producer': producer, 'loopback': loopback}, sort_keys=True).encode()).hexdigest()
+    return cache / 'test-fixtures' / host / configuration, {
+        'native_key': cache.name, 'producer': producer, 'target': host,
+        'profile': 'debug', 'features': ['fixture-routing'], 'loopback': loopback,
+    }
+
+
+def verify(folder, expected):
+    manifest = json.loads((folder / 'identity.json').read_text())
+    if set(manifest) != {'inputs', 'built_revision', 'files'} or manifest['inputs'] != expected:
+        raise ValueError('SQL test asset inputs differ from this checkout')
+    if set(manifest['files']) != set(FILES):
+        raise ValueError('SQL test asset inventory differs')
+    for name in FILES:
+        path = folder / name
+        if path.is_symlink() or digest(path) != manifest['files'][name]:
+            raise ValueError('SQL test asset checksum differs: ' + name)
+    if b'thinkthen_fixture_routes_install' not in (folder / FILES[0]).read_bytes():
+        raise ValueError('SQL test archive omits its explicit test interface')
+    return manifest
+
+
+def prepare(folder, inputs):
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    with folder.with_suffix('.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if folder.exists():
+            verify(folder, inputs)
+            return
+        # This target is isolated from every production build and ordinary SDK
+        # debug target. One producer owns it even across input-key changes.
+        target = STORE / 'native-test-build' / inputs['target']
+        target.mkdir(parents=True, exist_ok=True)
+        with (target / 'build.lock').open('w') as build_lock:
+            fcntl.flock(build_lock, fcntl.LOCK_EX)
+            command = ['cargo', 'build', '--offline', '--locked', '--target', inputs['target'],
+                       '-p', 'thinkthen-ffi', '-p', 'loopback', '--bin', 'loopback', '--lib',
+                       '--features', 'thinkthen-ffi/fixture-routing']
+            if sys.platform == 'linux':
+                command.insert(0, str(ROOT / 'scripts/runtime-floor-build'))
+            subprocess.run(command, cwd=ROOT, check=True, env=dict(os.environ, CARGO_TARGET_DIR=str(target)))
+            source = (floor_target(ROOT, target) if sys.platform == 'linux' else target) / inputs['target'] / 'debug'
+            with tempfile.TemporaryDirectory(prefix='publish-', dir=folder.parent) as temporary:
+                stage = Path(temporary) / 'assets'
+                stage.mkdir()
+                for name in FILES:
+                    shutil.copy2(source / name, stage / name)
+                (stage / 'identity.json').write_text(json.dumps({
+                    'inputs': inputs, 'built_revision': output('git', 'rev-parse', 'HEAD'),
+                    'files': {name: digest(stage / name) for name in FILES},
+                }, sort_keys=True, indent=2) + '\n')
+                verify(stage, inputs)
+                stage.rename(folder)
+
+
+def main():
+    if sys.argv[1:] not in (['prepare'], ['env']):
+        raise SystemExit('usage: scripts/native-test-assets prepare|env')
+    folder, inputs = identity()
+    if sys.argv[1] == 'prepare':
+        prepare(folder, inputs)
+        print(folder)
+    else:
+        verify(folder, inputs)
+        print('THINKTHEN_SQL_TEST_ARCHIVE=' + shlex.quote(str(folder / FILES[0])))
+        print('THINKTHEN_LOOPBACK=' + shlex.quote(str(folder / FILES[1])))
+        print('export THINKTHEN_SQL_TEST_ARCHIVE THINKTHEN_LOOPBACK')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        raise SystemExit('SQL test assets: ' + str(error))

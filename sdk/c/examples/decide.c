@@ -1,68 +1,46 @@
+#include <thinkthen.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <thinkthen_c.h>
 
 int main(void) {
-    json_t *settings = json_pack("{s:s}", "adapter", "stub");
-    json_t *question = json_pack("{s:s,s:s}",
-                                "type", "inline", "value", "Ready?");
-    tt_client *client = NULL;
-    tt_call *call = NULL;
-    tt_row *row = NULL;
-    tt_error *error = NULL;
+    thinkthen_settings *settings = NULL;
+    thinkthen_question *question = NULL;
+    thinkthen_client *client = NULL;
+    thinkthen_error error = {.struct_size = sizeof error};
+    thinkthen_row row = {.struct_size = sizeof row};
     int result = EXIT_FAILURE;
-    bool sent = false;
-    if (!settings || !question) goto cleanup;
-    client = tt_client_new(settings, &error);
-    if (!client) goto cleanup;
-    call = tt_decide(client, question, NULL, &error);
-    if (!call) goto cleanup;
-    for (;;) {
-        switch (tt_next(call, &row, &error)) {
-        case TT_INPUT:
-            if (sent) {
-                tt_end_input(call);
-            } else {
-                const char text[] = "evidence";
-                if (!tt_send_text(call, (tt_text){text, sizeof text - 1}, &error))
-                    goto cleanup;
-                sent = true;
-            }
-            break;
-        case TT_ROW:
-            if (tt_row_status(row) == TT_ANSWERED) {
-                bool answer;
-                if (!tt_row_verdict(row, &answer)) goto cleanup;
-                puts(answer ? "yes" : "no");
-            } else if (tt_row_status(row) == TT_UNSURE)
-                puts("not sure");
-            else {
-                tt_text message = tt_error_message(tt_row_error(row));
-                fwrite(message.data, 1, message.len, stderr);
-                fputc('\n', stderr);
-            }
-            tt_row_free(row);
-            row = NULL;
-            break;
-        case TT_DONE:
-            result = EXIT_SUCCESS;
-            goto cleanup;
-        case TT_ERROR:
-            goto cleanup;
-        }
+    if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) {
+        fputs(THINKTHEN_ABI_ERROR_MESSAGE "\n", stderr);
+        return result;
     }
+    if (thinkthen_settings_new(&settings, &error) != THINKTHEN_OK) goto cleanup;
+    if (thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &error) != THINKTHEN_OK)
+        goto cleanup;
+    if (thinkthen_client_open(settings, &client, &error) != THINKTHEN_OK) goto cleanup;
+    const uint8_t wording[] = "Ready?";
+    if (thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, wording, sizeof wording - 1,
+                               &question, &error) != THINKTHEN_OK) goto cleanup;
+    const uint8_t evidence[] = "evidence";
+    if (thinkthen_run_one(client, question, evidence, sizeof evidence - 1,
+                          THINKTHEN_RECORD_TEXT, &row, &error) != THINKTHEN_OK) goto cleanup;
+    if (row.status == THINKTHEN_STATUS_ANSWERED)
+        puts(row.answer_bool ? "yes" : "no");
+    else if (row.status == THINKTHEN_STATUS_UNSURE)
+        puts("not sure");
+    else {
+        fprintf(stderr, "%s\n", thinkthen_code_name(row.error_code));
+        goto cleanup;
+    }
+    result = EXIT_SUCCESS;
 cleanup:
-    if (error) {
-        tt_text message = tt_error_message(error);
-        fwrite(message.data, 1, message.len, stderr);
+    if (error.code) {
+        fwrite(error.message.data, 1, error.message.len, stderr);
         fputc('\n', stderr);
     }
-    tt_row_free(row);
-    tt_error_free(error);
-    tt_call_free(call);
-    tt_client_free(client);
-    json_decref(question);
-    json_decref(settings);
+    thinkthen_row_free(&row);
+    thinkthen_error_free(&error);
+    thinkthen_question_free(question);
+    thinkthen_client_free(client);
+    thinkthen_settings_free(settings);
     return result;
 }

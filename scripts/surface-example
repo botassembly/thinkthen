@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Extract or run a guide's first call with an array record and six offline collection inputs.
+
+Prepare prints one source path. Check accepts the caller's installed runtime,
+runs from its isolated directory and checks every input position and failure.
+"""
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+LANGUAGES = {
+    'bash': ('bash', 'example.sh'), 'python': ('python', 'example.py'),
+    'typescript': ('js', 'example.mjs'), 'go': ('go', 'main.go'),
+    'r': ('r', 'example.R'), 'ruby': ('ruby', 'example.rb'),
+    'java': ('java', 'Example.java'), 'kotlin': ('kotlin', 'Example.kt'),
+    'csharp': ('csharp', 'Program.cs'), 'swift': ('swift', 'main.swift'),
+    'c-cpp': ('cpp', 'example.cpp'), 'zig': ('zig', 'main.zig'),
+    'duckdb': ('sql', 'example.sql'), 'sqlite': ('python', 'example.py'),
+    'postgresql': ('sql', 'example.sql'),
+}
+
+
+def prepare(surface, folder, engine=None):
+    language, filename = LANGUAGES[surface]
+    text = (ROOT / 'docs/surfaces' / (surface + '.md')).read_text()
+    code = re.search(r'```([^\n]*)\n(.*?)\n```', text, re.S)
+    if code is None or code[1] != language or 'records.jsonl' not in code[2]:
+        raise SystemExit('guide must start with its JSON Lines collection example: ' + surface)
+    if 'records[0]' in text:
+        raise SystemExit('guide must pass every record: ' + surface)
+    folder.mkdir(parents=True, exist_ok=True)
+    # Missing records and missing fields must remain separate input positions.
+    records = [{'id': 'a1', 'text': 'Please refund my order.'},
+               {'id': 'a2', 'text': 'Where is my parcel?'}, None, {'id': 'a4'},
+               [{'text': 'first'}, {'text': 'second'}], {'id': 'a6', 'text': None}]
+    (folder / 'records.jsonl').write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path = folder / filename
+    source = code[2]
+    if engine:
+        source = source.replace('/absolute/path/to/thinkthen_sqlite', engine)
+        source = source.replace('/absolute/path/to/thinkthen.duckdb_extension', engine)
+    path.write_text(source + '\n')
+    print(path)
+
+
+def check(surface, command):
+    # The gates own isolated homes, runtime paths and installed package locations.
+    environment = dict(os.environ)
+    for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH'):
+        environment.pop(name, None)
+    result = subprocess.run(command, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if result.returncode and not (surface == 'bash' and result.returncode == 6):
+        raise SystemExit(result.stdout)
+    if surface in ('bash', 'duckdb'):
+        if surface == 'duckdb':
+            # The CLI emits one JSON array per SELECT statement.
+            rows, remaining = [], result.stdout.strip()
+            while remaining:
+                batch, end = json.JSONDecoder().raw_decode(remaining)
+                rows.extend(batch)
+                remaining = remaining[end:].strip()
+        else:
+            rows = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
+        array, *rows = rows
+        array_status = array['status']
+        actual = [(row['position'], row['status']) for row in rows]
+        false_answer = any(row['status'] == 'answered' and row.get('answer') is False for row in rows)
+    else:
+        array = re.search(r'^\s*array(?:\s+|\|)(answered|unsure|failed|completed)\b', result.stdout, re.M | re.I)
+        array_status = array[1].lower() if array else 'missing'
+        actual = [(int(position), status.lower()) for position, status in
+                  re.findall(r'^\s*([1-6])(?:\s+|\|)(answered|unsure|failed|completed)\b', result.stdout, re.M | re.I)]
+        # SQL hosts print their native boolean representation.
+        boolean = {'sqlite': r'(?:false|0)', 'postgresql': r'(?:false|f)'}.get(surface, r'false')
+        false_answer = re.search(r'^\s*[1-6](?:\s+|\|)(?:answered|completed)(?:\s+|\|)'
+                                 + boolean + r'\b', result.stdout, re.M | re.I) is not None
+    if (array_status not in ('answered', 'completed')
+            or [position for position, _ in actual] != [1, 2, 3, 4, 5, 6]
+            or any(status == 'failed' for _, status in actual[:2])
+            or [status for _, status in actual[2:5]] != ['failed', 'failed', 'failed']
+            or actual[5][1] not in ('answered', 'completed')):
+        raise SystemExit('guide dropped or misreported array/null inputs: ' + surface + '\n' + result.stdout)
+    if not false_answer:
+        raise SystemExit('guide lost the answered false value: ' + surface + '\n' + result.stdout)
+    if 'array of 2 values' not in result.stdout or 'stream form of the call' not in result.stdout:
+        raise SystemExit('guide lost the shared array hint: ' + surface + '\n' + result.stdout)
+    print(surface + ' guide: single array and all six collection outcomes survived, including answered false and selected null')
+
+
+if __name__ == '__main__':
+    action, surface, *args = sys.argv[1:]
+    if action == 'prepare' and len(args) in (1, 2):
+        prepare(surface, Path(args[0]).resolve(), args[1] if len(args) == 2 else None)
+    elif action == 'check' and args:
+        check(surface, args)
+    else:
+        raise SystemExit('usage: surface-example prepare SURFACE DIRECTORY [EXTENSION] | check SURFACE COMMAND [ARGS...]')

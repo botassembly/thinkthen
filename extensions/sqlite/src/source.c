@@ -8,10 +8,10 @@ static int native_failure(Cursor *cursor, int code) {
 }
 
 static int bind_parameters(Cursor *cursor) {
-    const char *text = cursor->arguments[3] == NULL ? "[]" :
-        (const char *)sqlite3_value_text(cursor->arguments[3]);
-    size_t length = cursor->arguments[3] == NULL ? 2 :
-        (size_t)sqlite3_value_bytes(cursor->arguments[3]);
+    const char *text = cursor->arguments[ARG_PARAMS] == NULL ? "[]" :
+        (const char *)sqlite3_value_text(cursor->arguments[ARG_PARAMS]);
+    size_t length = cursor->arguments[ARG_PARAMS] == NULL ? 2 :
+        (size_t)sqlite3_value_bytes(cursor->arguments[ARG_PARAMS]);
     if (text == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
     json_error_t failure = {0};
     json_t *parameters = json_loadb(text, length, JSON_DECODE_ANY | JSON_ALLOW_NUL, &failure);
@@ -52,6 +52,14 @@ static int bind_parameters(Cursor *cursor) {
 
 int source_open(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
+    for (int argument = ARG_RECORD; argument <= ARG_FORMAT; ++argument) {
+        sqlite3_value *value = cursor->arguments[argument];
+        if (value == NULL) continue;
+        const unsigned char *text = sqlite3_value_text(value);
+        if (text == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
+        if (memchr(text, '\0', (size_t)sqlite3_value_bytes(value)) != NULL)
+            return cursor_error(cursor, SQLITE_MISMATCH, "source column and format values must not contain zero bytes");
+    }
     const char *sql = (const char *)sqlite3_value_text(cursor->arguments[0]);
     int length = sqlite3_value_bytes(cursor->arguments[0]);
     if (sql == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
@@ -74,44 +82,38 @@ int source_open(Cursor *cursor) {
     }
     if (!sqlite3_stmt_readonly(cursor->source))
         return cursor_error(cursor, SQLITE_READONLY, "source SQL must be read-only");
-    if (sqlite3_column_count(cursor->source) != 1)
-        return cursor_error(cursor, SQLITE_MISMATCH, "source SQL must return exactly one column named record");
-    const char *name = sqlite3_column_name(cursor->source, 0);
-    if (name == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
-    if (sqlite3_stricmp(name, "record") != 0)
-        return cursor_error(cursor, SQLITE_MISMATCH, "source SQL must return exactly one column named record");
-    return bind_parameters(cursor);
-}
-
-static int sorted_record(sqlite3 *db, const unsigned char *text, int length, char **message) {
-    int first = 0;
-    while (first < length && (text[first] == ' ' || text[first] == '\t' ||
-           text[first] == '\r' || text[first] == '\n')) ++first;
-    if (first == length || (text[first] != '{' && text[first] != '[')) return SQLITE_OK;
-    /* SQLite's JSON parser accepts the same numeric range as its constructors.
-     * A host JSON parser could mistake a valid object with a large number for text. */
-    sqlite3_stmt *check = NULL;
-    int result = sqlite3_prepare_v2(db, "SELECT json_valid(?1)", -1, &check, NULL);
-    if (result == SQLITE_OK)
-        result = sqlite3_bind_text(check, 1, (const char *)text, length, SQLITE_STATIC);
-    if (result == SQLITE_OK) result = sqlite3_step(check);
-    if (result == SQLITE_ROW) {
-        result = sqlite3_column_int(check, 0) ? SQLITE_MISMATCH : SQLITE_OK;
-        if (result != SQLITE_OK)
-            *message = sqlite3_mprintf("source sort lost a possible JSON subtype; stage ordered input "
-                "in a table with an INTEGER PRIMARY KEY and apply json(document) in the final indexed projection");
-    } else {
-        *message = sqlite3_mprintf("%s", sqlite3_errmsg(db));
+    const char *record=cursor->arguments[ARG_RECORD] ? (const char*)sqlite3_value_text(cursor->arguments[ARG_RECORD]) : "record";
+    const char *id=cursor->arguments[ARG_ID] ? (const char*)sqlite3_value_text(cursor->arguments[ARG_ID]) : "id";
+    cursor->record_column=-1;cursor->id_column=-1;
+    for(int n=0;n<sqlite3_column_count(cursor->source);n++) {
+        const char *name=sqlite3_column_name(cursor->source,n);
+        if(sqlite3_stricmp(name,record)==0)cursor->record_column=n;
+        if(sqlite3_stricmp(name,id)==0)cursor->id_column=n;
     }
-    sqlite3_finalize(check);
-    return result;
+    if(cursor->record_column<0 || (cursor->arguments[ARG_ID] && cursor->id_column<0))
+        return cursor_error(cursor,SQLITE_MISMATCH,"source column does not exist");
+    cursor->json=cursor->arguments[ARG_EVIDENCE]!=NULL;
+    if(cursor->arguments[ARG_FORMAT]) {
+        const char *format=(const char*)sqlite3_value_text(cursor->arguments[ARG_FORMAT]);
+        if(!strcmp(format,"json"))cursor->json=1;
+        else if(strcmp(format,"text") || cursor->json)
+            return cursor_error(cursor,SQLITE_MISMATCH,"format must be text or json and agree with evidence");
+    }
+    return bind_parameters(cursor);
 }
 
 int source_chunk(Cursor *cursor) {
     enum { CHUNK_RECORDS = 128 };
     Table *table = (Table *)cursor->base.pVtab;
-    thinkthen_sql_record records[CHUNK_RECORDS] = {{0}};
+    thinkthen_sql_input records[CHUNK_RECORDS] = {{0}};
     sqlite3_value *values[CHUNK_RECORDS] = {0};
+    /* Reuse released slots between chunks; rank keeps every source position. */
+    if(cursor->ids_start) {
+        cursor->ids_count-=cursor->ids_start;
+        memmove(cursor->ids,cursor->ids+cursor->ids_start,cursor->ids_count*sizeof(*cursor->ids));
+        cursor->ids_offset+=cursor->ids_start;
+        cursor->ids_start=0;
+    }
     size_t count = 0;
     int result = SQLITE_OK;
     int ended = 0;
@@ -121,26 +123,27 @@ int source_chunk(Cursor *cursor) {
         result = sqlite3_step(cursor->source);
         if (result == SQLITE_DONE) { ended = 1; result = SQLITE_OK; break; }
         if (result != SQLITE_ROW) break;
-        if (sqlite3_column_type(cursor->source, 0) != SQLITE_TEXT) {
-            result = SQLITE_MISMATCH;
-            break;
+        if(cursor->ids_count==cursor->ids_capacity) {
+            size_t capacity=cursor->ids_capacity?cursor->ids_capacity*2:128;
+            sqlite3_value **ids=sqlite3_realloc64(cursor->ids,capacity*sizeof(*ids));
+            if(!ids){result=SQLITE_NOMEM;break;}
+            cursor->ids=ids;cursor->ids_capacity=capacity;
         }
-        /* column_value is unprotected: duplicate before inspecting its subtype.
-         * SQLite JSON text uses subtype 74 ('J'); see src/json.c JSON_SUBTYPE.
-         * These are source-column values, not scalar-function arguments, so
-         * SQLITE_SUBTYPE registration flags do not apply to this virtual table. */
-        values[count] = sqlite3_value_dup(sqlite3_column_value(cursor->source, 0));
+        sqlite3_value *id=cursor->id_column<0 ? NULL : sqlite3_value_dup(sqlite3_column_value(cursor->source,cursor->id_column));
+        if(cursor->id_column>=0 && !id){result=SQLITE_NOMEM;break;}
+        cursor->ids[cursor->ids_count++]=id;
+        int type = sqlite3_column_type(cursor->source, cursor->record_column);
+        if (type != SQLITE_TEXT) {
+            records[count++].kind = type == SQLITE_NULL ? THINKTHEN_RECORD_MISSING : THINKTHEN_RECORD_INVALID;
+            result = SQLITE_OK;
+            continue;
+        }
+        values[count] = sqlite3_value_dup(sqlite3_column_value(cursor->source, cursor->record_column));
         if (values[count] == NULL) { result = SQLITE_NOMEM; break; }
-        records[count].kind = sqlite3_value_subtype(values[count]) == 74
-            ? THINKTHEN_SQL_JSON : THINKTHEN_SQL_TEXT;
+        records[count].kind = cursor->json ? THINKTHEN_RECORD_JSON : THINKTHEN_RECORD_TEXT;
         const unsigned char *text = sqlite3_value_text(values[count]);
         int length = sqlite3_value_bytes(values[count]);
         if (text == NULL) { result = SQLITE_NOMEM; break; }
-        if (records[count].kind == THINKTHEN_SQL_TEXT &&
-            sqlite3_stmt_status(cursor->source, SQLITE_STMTSTATUS_SORT, 0) != 0) {
-            result = sorted_record(table->db, text, length, &message);
-            if (result != SQLITE_OK) break;
-        }
         records[count].data = text;
         records[count].len = (size_t)length;
         ++count;
@@ -152,8 +155,8 @@ int source_chunk(Cursor *cursor) {
             result == SQLITE_MISMATCH ? "source record must contain TEXT, not SQL NULL or another storage class" :
             result == SQLITE_NOMEM ? "out of memory" : sqlite3_errmsg(table->db));
     if (result == SQLITE_OK && count != 0) {
-        thinkthen_buffer error = {0};
-        if (thinkthen_sql_send_chunk(cursor->call, records, count, &error) != THINKTHEN_OK)
+        thinkthen_error error = { .struct_size = sizeof(error) };
+        if (thinkthen_sql_call_send_chunk(cursor->call, records, count, &error) != THINKTHEN_OK)
             result = engine_error(&error, &message);
     }
     for (size_t index = 0; index < CHUNK_RECORDS; ++index)
@@ -168,7 +171,7 @@ int source_chunk(Cursor *cursor) {
         result = sqlite3_finalize(cursor->source);
         cursor->source = NULL;
         if (result != SQLITE_OK) return native_failure(cursor, result);
-        thinkthen_sql_end_input(cursor->call);
+        thinkthen_sql_call_end_input(cursor->call);
     }
     return SQLITE_OK;
 }

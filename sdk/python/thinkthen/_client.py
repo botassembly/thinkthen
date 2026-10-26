@@ -1,493 +1,918 @@
-"""Named Python calls that translate once into shared engine requests."""
+"""Owned clients over the shared admitted engine contract."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
-from threading import Lock
-from typing import Literal, cast
+import atexit
+import json
+import logging
+from collections.abc import Iterable
+from dataclasses import fields
+from threading import RLock
+from typing import Any, TypeVar, overload
+from weakref import WeakSet
 
 from . import _native
-from ._relation import Relation
-from ._runtime import (
-    SKIP,
-    Cancel,
-    Question,
-    Raw,
-    Stream,
-    Toolbox,
-    binding,
-    encode,
-    row_from_json,
-    source,
+from ._questions import (
+    _MISSING,
+    AnnotateQuestion,
+    AnnotationQuestions,
+    ChooseQuestion,
+    DecideQuestion,
+    FilterQuestion,
+    FindQuestion,
+    RankQuestion,
+    RecognizeQuestion,
+    RelateQuestion,
+    ScoreQuestion,
+    TagQuestion,
+    _Question,
+    definition,
 )
+from ._runtime import Cancel, binding, encode, source
+from ._streams import RowStream
 from ._types import (
-    Adapter,
-    Found,
-    JSONValue,
-    Name,
+    AnnotateRow,
+    Backend,
+    BackendInput,
+    ChooseRow,
+    ClientSettings,
+    DecideRow,
+    FilterRow,
+    FindRow,
+    RankRow,
+    RecognizeRow,
     Record,
-    RecordT,
+    RelateRow,
     RelationRule,
-    Row,
+    RetryPolicy,
+    ScoreRow,
+    Strings,
+    TagRow,
     Threshold,
 )
 
+T = TypeVar("T")
+_log = logging.getLogger("thinkthen")
+_log.addHandler(logging.NullHandler())
+
+
+def _milliseconds(value: float) -> int:
+    try:
+        seconds = float(value)
+        exact = seconds == value
+    except Exception:  # noqa: BLE001 - host conversion must use the static engine error.
+        binding(_native.reject_settings_conversion)
+    if not exact:
+        binding(_native.reject_settings_conversion)
+    return binding(lambda: _native.seconds_to_millis(seconds))
+
 
 class Client:
-    """One engine whose backend settings and connections survive each call."""
-
     def __init__(
         self,
         *,
-        adapter: Adapter = "systemone",
-        mode: Literal["embedded", "proxy"] = "embedded",
-        key_source: str | None = None,
+        backend: BackendInput = "systemone",
         url: str | None = None,
         model: str | None = None,
+        api_key: str | None = None,
         batch: int | None = None,
+        retry: RetryPolicy | None = None,
     ) -> None:
-        settings = encode(
-            {
-                "adapter": adapter,
-                "mode": mode,
-                "key_source": key_source,
-                "url": url,
-                "model": model,
-                "batch": batch,
-            }
+        values: dict[str, object] = {
+            "backend": backend,
+            "url": url,
+            "model": model,
+            "api_key": api_key,
+            "batch": batch,
+        }
+        if isinstance(batch, bool):
+            binding(_native.reject_settings_conversion)
+        if retry is not None:
+            if not isinstance(retry, RetryPolicy):
+                binding(_native.reject_settings_conversion)
+            policy: dict[str, object] = {}
+            for field in fields(retry):
+                name, value = field.name, getattr(retry, field.name)
+                if value is None:
+                    continue
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    binding(_native.reject_settings_conversion)
+                if name == "max_retries":
+                    policy[name] = value
+                else:
+                    policy[name + "_ms"] = _milliseconds(value)
+            values["retry"] = policy
+        settings = encode(values, _native.reject_settings_conversion)
+        self._native: _native.NativeEngine | None = binding(
+            lambda: _native.NativeEngine(settings)
         )
-        self._native = binding(lambda: _native.NativeEngine(settings))
+        self._lock = RLock()
+        self._active: WeakSet[RowStream[Any]] = WeakSet()
 
-    def _start(
-        self,
-        function: str,
-        question: object,
-        records: Iterable[Record],
-        *,
-        cancel: Cancel | None = None,
-        loaded: Question[object] | None = None,
-        toolbox: Toolbox | None = None,
-        keep_originals: bool,
-        **options: object,
-    ) -> _native.NativeStream:
-        if loaded is None and isinstance(question, Question):
-            loaded, question = question, None
-        options = {key: value for key, value in options.items() if value is not None}
-        handle = cancel if cancel is not None else Cancel()
-        request = encode(
-            {
-                "function": function,
-                "question": {"type": "inline", "value": question},
-                "options": options,
-            }
-        )
-        encoded_options = encode(options)
-        return binding(
-            lambda: self._native.start(
-                function,
-                request,
-                encoded_options,
-                source(records),
-                handle._native,
-                keep_originals,
-                loaded._native if loaded is not None else None,
-                toolbox._native if toolbox is not None else None,
-            )
+    @property
+    def settings(self) -> ClientSettings:
+        with self._lock:
+            engine = self._native
+            if engine is None:
+                binding(_native.reject_closed_client)
+            value = json.loads(binding(lambda: engine.settings))
+        retry = value["retry"]
+        return ClientSettings(
+            Backend(value["backend"]),
+            value["model"],
+            value["url"],
+            value["batch"],
+            RetryPolicy(
+                retry["max_retries"],
+                retry["initial_backoff_ms"] / 1000,
+                retry["attempt_timeout_ms"] / 1000,
+            ),
         )
 
-    def _single(
-        self,
-        function: str,
-        question: object,
-        text: Record,
+    @classmethod
+    def from_env(
+        cls,
         *,
-        cancel: Cancel | None = None,
-        loaded: Question[object] | None = None,
-        toolbox: Toolbox | None = None,
-        **options: object,
-    ) -> Row[JSONValue]:
-        native = self._start(
-            function,
-            question,
-            (text,),
-            keep_originals=False,
-            cancel=cancel,
-            loaded=loaded,
-            toolbox=toolbox,
-            **options,
+        backend: BackendInput = "systemone",
+        url: str | None = None,
+        model: str | None = None,
+        api_key: str | None = None,
+        batch: int | None = None,
+        retry: RetryPolicy | None = None,
+    ) -> Client:
+        return cls(
+            backend=backend,
+            url=url,
+            model=model,
+            api_key=api_key,
+            batch=batch,
+            retry=retry,
         )
-        try:
-            received = cast(Iterator[Raw], iter(lambda: binding(native.receive), None))
-            raw = next(received)
-            row = row_from_json(raw[0], raw[1])
-            for _ in received:
-                pass
-            return row
-        finally:
-            native.close()
+
+    def __repr__(self) -> str:
+        return f"Client(closed={self._native is None})"
+
+    def __reduce__(self) -> tuple[Any, ...]:
+        raise TypeError("operational clients cannot be pickled")
+
+    def close(self) -> None:
+        with self._lock:
+            active = list(self._active)
+            self._native = None
+        for stream in active:
+            stream.cancel()
+        for stream in active:
+            stream.close()
+
+    def __enter__(self) -> Client:  # noqa: PYI034 - standard library on Python 3.10.
+        return self
+
+    def __exit__(self, *exception: object) -> None:
+        self.close()
 
     def _rows(
         self,
         function: str,
         question: object,
-        records: Iterable[Record],
+        records: Iterable[Any],
         *,
+        name: str | None = None,
         cancel: Cancel | None = None,
-        loaded: Question[object] | None = None,
-        toolbox: Toolbox | None = None,
         **options: object,
-    ) -> Stream[Row[JSONValue]]:
-        native = self._start(
-            function,
-            question,
-            records,
-            keep_originals=False,
-            cancel=cancel,
-            loaded=loaded,
-            toolbox=toolbox,
-            **options,
-        )
-        return Stream(native, lambda raw: row_from_json(raw[0], raw[1]))
+    ) -> RowStream[Any]:
+        shape_question = question
+        loaded: _native.NativeQuestion | None = None
+        if isinstance(question, _Question):
+            if question._native.function != function or any(
+                value is not None and value is not _MISSING
+                for value in options.values()
+            ):
+                binding(_native.reject_question_conversion)
+            loaded = question._native
+            payload: dict[str, object] = {"name": name}
+        else:
+            if function == "annotate":
+                if not isinstance(question, AnnotationQuestions):
+                    binding(_native.reject_question_conversion)
+                question = question._definitions()
+            admitted = definition(function, question, **options)
+            payload = {"question": admitted, "name": name}
+        request = encode(payload, _native.reject_question_conversion)
+        handle = cancel if cancel is not None else Cancel()
+        with self._lock:
+            engine = self._native
+            if engine is None:
+                binding(_native.reject_closed_client)
+            start = (
+                engine.start_finite
+                if isinstance(records, (list, tuple))
+                else engine.start
+            )
+            native = binding(
+                lambda: start(
+                    request,
+                    source(records),
+                    handle._native,
+                    function == "filter",
+                    loaded,
+                )
+            )
+            stream: RowStream[Any] = RowStream(
+                native,
+                len(records) if isinstance(records, (list, tuple)) else 0,
+                function=function,
+                question=shape_question,
+            )
+            self._active.add(stream)
+        _log.debug("%s", function)
+        return stream
 
+    def _single(
+        self, function: str, question: object, record: Record, **options: Any
+    ) -> Any:
+        with self._rows(function, question, (record,), **options) as rows:
+            row = next(rows)
+            for _ in rows:
+                pass
+            return row
+
+    def _invoke(
+        self,
+        function: str,
+        collection: bool,
+        args: tuple[Any, ...],
+        options: dict[str, Any],
+    ) -> Any:
+        key = "records" if collection else "record"
+        if function in {"recognize", "relate"} and len(args) == 1:
+            question, records = None, args[0]
+        else:
+            question = (
+                args[0]
+                if args
+                else options.pop("question", options.pop("toolbox", None))
+            )
+            if len(args) < 2 and key not in options:
+                raise TypeError(f"{key} is required")
+            records = args[1] if len(args) > 1 else options.pop(key)
+        domain = {"recognize": "kinds", "relate": "rules"}.get(function)
+        if (
+            domain is not None
+            and not isinstance(question, _Question)
+            and domain not in options
+        ):
+            raise TypeError(f"{domain} is required")
+        method = self._rows if collection else self._single
+        return method(function, question, records, **options)
+
+    @overload
     def decide(
         self,
-        question: str | Question[object],
-        text: Record,
+        question: DecideQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> DecideRow: ...
+    @overload
+    def decide(
+        self,
+        question: str,
+        record: Record,
         *,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Row[bool]:
-        return cast(
-            Row[bool],
-            self._single(
-                "decide", question, text, threshold=threshold, on=on, cancel=cancel
-            ),
+    ) -> DecideRow: ...
+    def decide(
+        self,
+        question: Any,
+        record: Any,
+        *,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        return self._single(
+            "decide",
+            question,
+            record,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
-    def choose(
+    @overload
+    def decide_stream(
         self,
-        question: str | Question[object],
-        text: Record,
+        question: DecideQuestion,
+        records: Iterable[Record],
         *,
-        options: Sequence[str] | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[DecideRow]: ...
+    @overload
+    def decide_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Row[str]:
-        return cast(
-            Row[str],
-            self._single(
-                "choose",
-                question,
-                text,
-                options=options,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-            ),
-        )
-
-    def tag(
+    ) -> RowStream[DecideRow]: ...
+    def decide_stream(
         self,
-        question: str | Question[object],
-        text: Record,
+        question: Any,
+        records: Any,
         *,
-        labels: Sequence[str] | None = None,
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Row[list[str]]:
-        return cast(
-            Row[list[str]],
-            self._single(
-                "tag",
-                question,
-                text,
-                labels=labels,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-            ),
+    ) -> Any:
+        return self._rows(
+            "decide",
+            question,
+            records,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
-    def score(
-        self,
-        question: str | Question[object],
-        text: Record,
-        *,
-        levels: Sequence[str] | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Row[float]:
-        return cast(
-            Row[float],
-            self._single("score", question, text, levels=levels, on=on, cancel=cancel),
-        )
-
+    @overload
     def filter(
         self,
-        question: str | Question[object],
-        records: Iterable[RecordT],
+        question: FilterQuestion,
+        records: Iterable[T],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[FilterRow[T]]: ...
+    @overload
+    def filter(
+        self,
+        question: str,
+        records: Iterable[T],
         *,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[RecordT]:
-        native = self._start(
+    ) -> RowStream[FilterRow[T]]: ...
+    def filter(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        return self._rows(
             "filter",
             question,
             records,
-            keep_originals=True,
             threshold=threshold,
-            on=on,
+            evidence=evidence,
+            name=name,
             cancel=cancel,
         )
-        return Stream(native, lambda raw: cast(RecordT, raw[3]) if raw[2] else SKIP)
 
-    def rank(
+    @overload
+    def choose(
         self,
-        question: str | Question[JSONValue],
-        records: Iterable[Record],
+        question: ChooseQuestion,
+        record: Record,
         *,
-        levels: Sequence[str] | None = None,
-        top: int | None = None,
-        on: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[int]]:
-        loaded = question if isinstance(question, Question) else None
-        text = question if isinstance(question, str) else None
-        return cast(
-            Stream[Row[int]],
-            self._rows(
-                "rank",
-                text,
-                records,
-                levels=levels,
-                top=top,
-                on=on,
-                cancel=cancel,
-                loaded=loaded,
-            ),
-        )
-
-    def find(
+    ) -> ChooseRow: ...
+    @overload
+    def choose(
         self,
-        question: str | Question[object],
-        text: Record,
+        question: str,
+        record: Record,
         *,
+        choices: Strings,
         threshold: Threshold | None = None,
-        on: str | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Row[Found]:
-        return cast(
-            Row[Found],
-            self._single(
-                "find", question, text, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
-
-    def annotate(
+    ) -> ChooseRow: ...
+    def choose(
         self,
-        toolbox: Toolbox | dict[str, JSONValue],
-        text: Record,
+        question: Any,
+        record: Any,
         *,
-        on: str | None = None,
+        choices: Any = _MISSING,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Row[dict[str, JSONValue]]:
-        loaded = toolbox if isinstance(toolbox, Toolbox) else None
-        return cast(
-            Row[dict[str, JSONValue]],
-            self._single(
-                "annotate",
-                None if loaded is not None else toolbox,
-                text,
-                on=on,
-                cancel=cancel,
-                toolbox=loaded,
-            ),
+    ) -> Any:
+        if not isinstance(question, _Question) and choices is _MISSING:
+            raise TypeError("choices is required")
+        return self._single(
+            "choose",
+            question,
+            record,
+            choices=choices,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
-    def recognize(
-        self,
-        text: Record,
-        *,
-        kinds: Sequence[str] | Question[object] = (),
-        threshold: Threshold | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Row[list[Name]]:
-        return cast(
-            Row[list[Name]],
-            self._single(
-                "recognize", kinds, text, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
-
-    def relate(
-        self,
-        text: Record,
-        *,
-        rules: Sequence[RelationRule] | Question[object],
-        threshold: Threshold | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Row[list[Relation]]:
-        return cast(
-            Row[list[Relation]],
-            self._single(
-                "relate", rules, text, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
-
-    def decide_stream(
-        self,
-        question: str | Question[object],
-        records: Iterable[Record],
-        *,
-        threshold: Threshold | None = None,
-        on: str | None = None,
-        cancel: Cancel | None = None,
-    ) -> Stream[Row[bool]]:
-        return cast(
-            Stream[Row[bool]],
-            self._rows(
-                "decide", question, records, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
-
+    @overload
     def choose_stream(
         self,
-        question: str | Question[object],
+        question: ChooseQuestion,
         records: Iterable[Record],
         *,
-        options: Sequence[str] | None = None,
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[str]]:
-        return cast(
-            Stream[Row[str]],
-            self._rows(
-                "choose",
-                question,
-                records,
-                options=options,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-            ),
+    ) -> RowStream[ChooseRow]: ...
+    @overload
+    def choose_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        choices: Strings,
+        threshold: Threshold | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[ChooseRow]: ...
+    def choose_stream(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        choices: Any = _MISSING,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and choices is _MISSING:
+            raise TypeError("choices is required")
+        return self._rows(
+            "choose",
+            question,
+            records,
+            choices=choices,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
+    @overload
+    def tag(
+        self,
+        question: TagQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> TagRow: ...
+    @overload
+    def tag(
+        self,
+        question: str,
+        record: Record,
+        *,
+        labels: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> TagRow: ...
+    def tag(
+        self,
+        question: Any,
+        record: Any,
+        *,
+        labels: Any = _MISSING,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and labels is _MISSING:
+            raise TypeError("labels is required")
+        return self._single(
+            "tag",
+            question,
+            record,
+            labels=labels,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
+        )
+
+    @overload
     def tag_stream(
         self,
-        question: str | Question[object],
+        question: TagQuestion,
         records: Iterable[Record],
         *,
-        labels: Sequence[str] | None = None,
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[list[str]]]:
-        return cast(
-            Stream[Row[list[str]]],
-            self._rows(
-                "tag",
-                question,
-                records,
-                labels=labels,
-                threshold=threshold,
-                on=on,
-                cancel=cancel,
-            ),
+    ) -> RowStream[TagRow]: ...
+    @overload
+    def tag_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        labels: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[TagRow]: ...
+    def tag_stream(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        labels: Any = _MISSING,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and labels is _MISSING:
+            raise TypeError("labels is required")
+        return self._rows(
+            "tag",
+            question,
+            records,
+            labels=labels,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
+    @overload
+    def score(
+        self,
+        question: ScoreQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> ScoreRow: ...
+    @overload
+    def score(
+        self,
+        question: str,
+        record: Record,
+        *,
+        levels: Strings,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> ScoreRow: ...
+    def score(
+        self,
+        question: Any,
+        record: Any,
+        *,
+        levels: Any = _MISSING,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and levels is _MISSING:
+            raise TypeError("levels is required")
+        return self._single(
+            "score",
+            question,
+            record,
+            levels=levels,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
+        )
+
+    @overload
     def score_stream(
         self,
-        question: str | Question[object],
+        question: ScoreQuestion,
         records: Iterable[Record],
         *,
-        levels: Sequence[str] | None = None,
-        on: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[float]]:
-        return cast(
-            Stream[Row[float]],
-            self._rows("score", question, records, levels=levels, on=on, cancel=cancel),
+    ) -> RowStream[ScoreRow]: ...
+    @overload
+    def score_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        levels: Strings,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[ScoreRow]: ...
+    def score_stream(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        levels: Any = _MISSING,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and levels is _MISSING:
+            raise TypeError("levels is required")
+        return self._rows(
+            "score",
+            question,
+            records,
+            levels=levels,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
+    @overload
+    def rank(
+        self,
+        question: RankQuestion,
+        records: Iterable[Record],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[RankRow]: ...
+    @overload
+    def rank(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        levels: Strings,
+        top: int | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[RankRow]: ...
+    def rank(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        levels: Any = _MISSING,
+        top: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        if not isinstance(question, _Question) and levels is _MISSING:
+            raise TypeError("levels is required")
+        return self._rows(
+            "rank",
+            question,
+            records,
+            levels=levels,
+            top=top,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
+        )
+
+    @overload
+    def find(
+        self,
+        question: FindQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> FindRow: ...
+    @overload
+    def find(
+        self,
+        question: str,
+        record: Record,
+        *,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> FindRow: ...
+    def find(
+        self,
+        question: Any,
+        record: Any,
+        *,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        return self._single(
+            "find",
+            question,
+            record,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
+        )
+
+    @overload
     def find_stream(
         self,
-        question: str | Question[object],
+        question: FindQuestion,
         records: Iterable[Record],
         *,
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[Found]]:
-        return cast(
-            Stream[Row[Found]],
-            self._rows(
-                "find", question, records, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
-
-    def annotate_stream(
+    ) -> RowStream[FindRow]: ...
+    @overload
+    def find_stream(
         self,
-        toolbox: Toolbox | dict[str, JSONValue],
+        question: str,
         records: Iterable[Record],
         *,
-        on: str | None = None,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[dict[str, JSONValue]]]:
-        loaded = toolbox if isinstance(toolbox, Toolbox) else None
-        return cast(
-            Stream[Row[dict[str, JSONValue]]],
-            self._rows(
-                "annotate",
-                None if loaded is not None else toolbox,
-                records,
-                on=on,
-                cancel=cancel,
-                toolbox=loaded,
-            ),
+    ) -> RowStream[FindRow]: ...
+    def find_stream(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        threshold: Any = None,
+        evidence: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        return self._rows(
+            "find",
+            question,
+            records,
+            threshold=threshold,
+            evidence=evidence,
+            name=name,
+            cancel=cancel,
         )
 
+    @overload
+    def recognize(
+        self,
+        question: RecognizeQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RecognizeRow: ...
+    @overload
+    def recognize(
+        self,
+        record: Record,
+        *,
+        kinds: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RecognizeRow: ...
+    def recognize(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("recognize", False, args, options)
+
+    @overload
+    def recognize_stream(
+        self,
+        question: RecognizeQuestion,
+        records: Iterable[Record],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[RecognizeRow]: ...
+    @overload
     def recognize_stream(
         self,
         records: Iterable[Record],
         *,
-        kinds: Sequence[str] | Question[object] = (),
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        kinds: Strings,
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[list[Name]]]:
-        return cast(
-            Stream[Row[list[Name]]],
-            self._rows(
-                "recognize", kinds, records, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
+    ) -> RowStream[RecognizeRow]: ...
+    def recognize_stream(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("recognize", True, args, options)
 
+    @overload
+    def relate(
+        self,
+        question: RelateQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RelateRow: ...
+    @overload
+    def relate(
+        self,
+        record: Record,
+        *,
+        rules: list[RelationRule] | tuple[RelationRule, ...],
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RelateRow: ...
+    def relate(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("relate", False, args, options)
+
+    @overload
+    def relate_stream(
+        self,
+        question: RelateQuestion,
+        records: Iterable[Record],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[RelateRow]: ...
+    @overload
     def relate_stream(
         self,
         records: Iterable[Record],
         *,
-        rules: Sequence[RelationRule] | Question[object],
-        threshold: Threshold | None = None,
-        on: str | None = None,
+        rules: list[RelationRule] | tuple[RelationRule, ...],
+        threshold: float | None = None,
+        evidence: str | None = None,
+        name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> Stream[Row[list[Relation]]]:
-        return cast(
-            Stream[Row[list[Relation]]],
-            self._rows(
-                "relate", rules, records, threshold=threshold, on=on, cancel=cancel
-            ),
-        )
+    ) -> RowStream[RelateRow]: ...
+    def relate_stream(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("relate", True, args, options)
+
+    @overload
+    def annotate(
+        self,
+        question: AnnotateQuestion,
+        record: Record,
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> AnnotateRow: ...
+    @overload
+    def annotate(
+        self,
+        toolbox: AnnotationQuestions,
+        record: Record,
+        *,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> AnnotateRow: ...
+    def annotate(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("annotate", False, args, options)
+
+    @overload
+    def annotate_stream(
+        self,
+        question: AnnotateQuestion,
+        records: Iterable[Record],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[AnnotateRow]: ...
+    @overload
+    def annotate_stream(
+        self,
+        toolbox: AnnotationQuestions,
+        records: Iterable[Record],
+        *,
+        evidence: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[AnnotateRow]: ...
+    def annotate_stream(self, *args: Any, **options: Any) -> Any:
+        return self._invoke("annotate", True, args, options)
 
 
 _default: Client | None = None
-_default_lock = Lock()
+_default_lock = RLock()
 
 
 def default_client() -> Client:
@@ -496,3 +921,15 @@ def default_client() -> Client:
         if _default is None:
             _default = Client()
         return _default
+
+
+def close_default_client() -> None:
+    global _default
+    with _default_lock:
+        old, _default = _default, None
+    if old is not None:
+        old.close()
+
+
+atexit.register(close_default_client)
+__all__ = ["Client", "close_default_client"]

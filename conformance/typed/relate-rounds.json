@@ -1,0 +1,148 @@
+{
+  "name": "relate-rounds",
+  "request": {
+    "question": {
+      "function": "relate",
+      "rules": [
+        {
+          "relation": "works_for",
+          "source": "person",
+          "target": "company"
+        }
+      ]
+    },
+    "records": [
+      "Ada Acme Bea"
+    ]
+  },
+  "replies": [
+    {
+      "criterion": "BEGIN",
+      "distribution": {
+        "BEGIN": 0,
+        "END": 0,
+        "INSIDE": 0,
+        "OUT": 0,
+        "SINGLE": 1
+      }
+    },
+    {
+      "contains": "[[Ada]]",
+      "criterion": "person",
+      "distribution": {
+        "company": 0,
+        "none of these": 0,
+        "person": 1
+      }
+    },
+    {
+      "contains": "[[Bea]]",
+      "criterion": "person",
+      "distribution": {
+        "company": 0,
+        "none of these": 0,
+        "person": 1
+      }
+    },
+    {
+      "criterion": "person",
+      "distribution": {
+        "company": 1,
+        "none of these": 0,
+        "person": 0
+      }
+    },
+    {
+      "contains": "\"text\":\"Bea\"",
+      "probability": 0.1
+    },
+    {
+      "probability": 0.8
+    }
+  ],
+  "expected": [
+    {
+      "function": "relate",
+      "position": 1,
+      "answer": [
+        {
+          "probability": 0.8,
+          "relation": "works_for",
+          "source": {
+            "end": 3,
+            "kind": "person",
+            "start": 0,
+            "text": "Ada"
+          },
+          "target": {
+            "end": 8,
+            "kind": "company",
+            "start": 4,
+            "text": "Acme"
+          }
+        }
+      ],
+      "status": "answered",
+      "detail": {
+        "pairs": [
+          {
+            "probability": 0.8,
+            "relation": "works_for",
+            "source": {
+              "end": 3,
+              "kind": "person",
+              "start": 0,
+              "text": "Ada"
+            },
+            "target": {
+              "end": 8,
+              "kind": "company",
+              "start": 4,
+              "text": "Acme"
+            }
+          },
+          {
+            "probability": 0.1,
+            "relation": "works_for",
+            "source": {
+              "text": "Bea",
+              "start": 9,
+              "end": 12,
+              "kind": "person"
+            },
+            "target": {
+              "end": 8,
+              "kind": "company",
+              "start": 4,
+              "text": "Acme"
+            }
+          }
+        ],
+        "names": [
+          {
+            "text": "Ada",
+            "start": 0,
+            "end": 3,
+            "kind": "person",
+            "probability": 1.0
+          },
+          {
+            "text": "Acme",
+            "start": 4,
+            "end": 8,
+            "kind": "company",
+            "probability": 1.0
+          },
+          {
+            "text": "Bea",
+            "start": 9,
+            "end": 12,
+            "kind": "person",
+            "probability": 1.0
+          }
+        ]
+      }
+    }
+  ],
+  "requests": 3
+}

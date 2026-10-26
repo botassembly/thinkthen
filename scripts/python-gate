@@ -10,20 +10,52 @@ root=$PWD
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 python sdk/python/relation_type.py
-ruff check sdk/python --exclude _relation.py
-ruff format --check sdk/python --exclude _relation.py
+ruff check sdk/python --exclude _codes.py --exclude _contract.py
+ruff format --check sdk/python --exclude _codes.py --exclude _contract.py
 mypy --strict --no-incremental sdk/python/thinkthen/*.py sdk/python/tests
 cargo build -p loopback --bin loopback --locked
 mkdir "$scratch/wheels"
 (cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")
 python -m venv "$scratch/venv"
 "$scratch/venv/bin/python" -m pip install --no-index "$scratch"/wheels/*.whl
+installed_package=$("$scratch/venv/bin/python" -c 'import sysconfig; print(sysconfig.get_paths()["purelib"] + "/thinkthen")')
+"$scratch/venv/bin/python" scripts/module-abi-fixtures python "$installed_package" --runtime "$scratch/venv/bin/python"
 export THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-$root/target}/debug/loopback"
 export THINKTHEN_CASES="$root/conformance"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH PYTHONPATH
 cd "$scratch"
+"$scratch/venv/bin/python" "$root/scripts/surface-example" prepare python "$scratch/guide"
+(cd "$scratch/guide" && "$scratch/venv/bin/python" "$root/scripts/surface-example" check python "$scratch/venv/bin/python" example.py)
+"$scratch/venv/bin/python" "$root/scripts/release/python.py" "$root/construction/stub.json"
 "$scratch/venv/bin/python" "$root/sdk/python/tests/conformance.py" --cases "$root/conformance" --scratch "$scratch"
-"$scratch/venv/bin/python" -c 'import sys, thinkthen; assert "pandas" not in sys.modules and "polars" not in sys.modules'
+"$scratch/venv/bin/python" - <<'BASE'
+import asyncio
+import sys
+import thinkthen as tt
+assert "pandas" not in sys.modules and "polars" not in sys.modules
+with tt.Client(backend="stub") as client:
+    for method in ("to_pandas", "to_polars"):
+        rows = client.decide_stream("Ready?", ["body"])
+        try:
+            getattr(rows, method)()
+        except ModuleNotFoundError:
+            pass
+        else:
+            raise AssertionError("optional dependency unexpectedly installed")
+        assert rows.to_list() == []
+async def check_async():
+    async with tt.AsyncClient(backend="stub") as client:
+        for method in ("to_pandas", "to_polars"):
+            rows = client.decide_stream("Ready?", ["body"])
+            try:
+                await getattr(rows, method)()
+            except ModuleNotFoundError:
+                pass
+            else:
+                raise AssertionError("optional dependency unexpectedly installed")
+            assert await rows.to_list() == []
+asyncio.run(check_async())
+BASE
 uv pip install --offline --python "$scratch/venv/bin/python" 'pandas>=2.2' 'polars>=1.0' pandas-stubs
 mypy --strict --no-incremental --python-executable "$scratch/venv/bin/python" "$root/sdk/python/tests/typing_examples.py"
 uv pip install --offline --python "$scratch/venv/bin/python" 'pytest>=8,<9'

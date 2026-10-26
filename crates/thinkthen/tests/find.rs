@@ -3,15 +3,14 @@
 
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Engine, Find, Record, Toolbox};
+use thinkthen::{BackendName, Cut, Engine, Find, Key, Question, Record, Settings};
 
 fn engine(server: &Loopback) -> Engine {
-    Engine::new(
-        Backend::resolve(Some(server.base()), None, |name| {
-            (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned())
-        })
-        .unwrap(),
-    )
+    Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap()
 }
 
 #[test]
@@ -74,24 +73,22 @@ fn finds_one_nonblank_line_with_scalar_offsets_and_settled_ties() {
             0.9,
         ),
     ] {
-        let expected_probabilities = probabilities.clone();
         let server =
             Loopback::answering(move |_| json!({"type":"choice","probabilities":probabilities}))
                 .unwrap();
         let question = Find::new("Which line?")
             .unwrap()
-            .threshold(threshold.parse().unwrap())
-            .unwrap();
+            .threshold(Cut::new(threshold.parse().unwrap()).unwrap());
         let mut rows = Vec::new();
         engine(&server)
-            .call(&question, [Record::text(text)], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            })
-            .unwrap();
+            .rows(&question, [Record::text(text)])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         assert_eq!(rows[0]["status"], status);
         assert_eq!(rows[0]["answer"], answer);
-        assert_eq!(rows[0]["p"], p);
-        assert_eq!(rows[0]["detail"]["probabilities"], expected_probabilities);
+        assert_eq!(rows[0]["probability"], p);
+        assert!(rows[0].get("detail").is_none());
         let request = server.requests()[0].json().unwrap();
         assert_eq!(
             request["questions"]["q1"]["criteria"]["none"],
@@ -107,20 +104,20 @@ fn empty_and_oversized_texts_need_no_request_and_preserve_record_order() {
     let question = Find::new("Which?").unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
+        .rows(
             &question,
             [
                 Record::text(" \r\n\t\n"),
                 Record::text("line\n".repeat(256)),
             ],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap_err();
-    assert_eq!(
-        loopback::without_source(rows[0].clone()),
-        json!({"id":1,"status":"answered","answer":null})
-    );
-    assert_eq!(rows[1]["error"]["code"], "backend.limit");
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+    assert_eq!(rows[0]["position"], 1);
+    assert_eq!(rows[0]["status"], "answered");
+    assert_eq!(rows[0]["answer"], Value::Null);
+    assert_eq!(rows[1]["error"]["code"], "record.too-large");
     assert_eq!(server.count(), 0);
 }
 
@@ -129,37 +126,37 @@ fn toolbox_find_retains_context_and_rejects_bands() {
     let server =
         Loopback::answering(|_| json!({"type":"choice","probabilities":{"u1":0.8,"none":0.2}}))
             .unwrap();
-    let toolbox = Toolbox::from_bytes(br#"{"find":"Which?","threshold":"0.7"}"#).unwrap();
+    let question = Find::new("Which?")
+        .unwrap()
+        .threshold(Cut::new(0.7).unwrap());
     engine(&server)
-        .call(
-            toolbox.question(None).unwrap(),
-            [Record::text("answer")],
-            |row| {
-                assert_eq!(
-                    serde_json::to_value(row).unwrap()["answer"],
-                    json!({"text":"answer","start":0,"end":6})
-                );
-            },
-        )
-        .unwrap();
+        .rows(&question, [Record::text("answer")])
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| {
+            assert_eq!(
+                serde_json::to_value(row).unwrap()["answer"],
+                json!({"text":"answer","start":0,"end":6})
+            );
+        });
     assert!(
-        Find::new("Which?")
-            .unwrap()
-            .threshold("0.2:0.8".parse().unwrap())
-            .is_err()
+        Question::from_json(
+            r#"{"function":"find","question":"Which?","threshold":{"low":0.2,"high":0.8}}"#
+        )
+        .is_err()
     );
     assert!(Find::new(" ").is_err());
-    assert!(Toolbox::from_bytes(br#"{"find":"Which?","options":["x"]}"#).is_err());
+    assert!(
+        Question::from_json(r#"{"function":"find","question":"Which?","options":["x"]}"#).is_err()
+    );
 }
 
 #[test]
 fn option_limits_include_none_and_fail_only_the_oversized_record() {
-    use thinkthen::Adapter;
-
     for (adapter, count, expected_requests) in [
-        (Adapter::SystemOne, 254, 1),
-        (Adapter::SystemOne, 255, 0),
-        (Adapter::OpenAi, 255, 0),
+        (BackendName::SystemOne, 254, 1),
+        (BackendName::SystemOne, 255, 0),
+        (BackendName::OpenAi, 255, 0),
     ] {
         let server = Loopback::answering(move |_| {
             let mut probabilities = serde_json::Map::new();
@@ -170,24 +167,23 @@ fn option_limits_include_none_and_fail_only_the_oversized_record() {
             json!({"type":"choice","probabilities":probabilities})
         })
         .unwrap();
-        let key_variable = match adapter {
-            Adapter::SystemOne => "THINKTHEN_API_KEY",
-            Adapter::OpenAi => "OPENAI_API_KEY",
-        };
-        let backend = Backend::resolve_adapter(adapter, Some(server.base()), None, |name| {
-            (name == key_variable).then(|| KEY.to_owned())
-        })
-        .unwrap();
+        let engine = Settings::default()
+            .with_backend(adapter)
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
+            .unwrap();
         let question = Find::new("Which?").unwrap();
         let mut rows = Vec::new();
-        let result =
-            Engine::new(backend).call(&question, [Record::text("line\n".repeat(count))], |row| {
-                rows.push(serde_json::to_value(row).unwrap())
-            });
-        assert_eq!(result.is_err(), expected_requests == 0);
+        engine
+            .rows(&question, [Record::text("line\n".repeat(count))])
+            .unwrap()
+            .map(|row| row.unwrap())
+            .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+        assert_eq!(rows[0]["status"] == "failed", expected_requests == 0);
         assert_eq!(server.count(), expected_requests);
         if expected_requests == 0 {
-            assert_eq!(rows[0]["error"]["code"], "backend.limit");
+            assert_eq!(rows[0]["error"]["code"], "record.too-large");
         } else {
             assert_eq!(rows[0]["status"], "answered");
             assert!(rows[0]["answer"].is_null());
@@ -199,7 +195,7 @@ fn option_limits_include_none_and_fail_only_the_oversized_record() {
                     .len(),
                 255
             );
-            assert_eq!(rows[0]["detail"]["probabilities"]["none"], 1.0);
+            assert!(rows[0].get("detail").is_none());
         }
     }
 }
@@ -212,14 +208,15 @@ fn direct_questions_select_an_answering_line_without_repeating_evidence() {
     .unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
+        .rows(
             &Find::new("When does the invoice arrive?").unwrap(),
             [Record::text(
                 "The invoice arrives Friday.\nThe meeting is Monday.",
             )],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap();
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(
         rows[0]["answer"],
@@ -242,7 +239,6 @@ fn direct_questions_select_an_answering_line_without_repeating_evidence() {
 #[test]
 fn smaller_adapter_limit_leaves_room_for_none_and_preserves_other_records() {
     use loopback::Reply;
-    use thinkthen::Adapter;
 
     let server = Loopback::start(|request| {
         let body = request.json().unwrap();
@@ -262,25 +258,28 @@ fn smaller_adapter_limit_leaves_room_for_none_and_preserves_other_records() {
         )
     })
     .unwrap();
-    let backend = Backend::resolve_adapter(Adapter::OpenAi, Some(server.base()), None, |name| {
-        (name == "OPENAI_API_KEY").then(|| KEY.to_owned())
-    })
-    .unwrap();
+    let engine = Settings::default()
+        .with_backend(BackendName::OpenAi)
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .engine(|_| None)
+        .unwrap();
     let mut rows = Vec::new();
-    Engine::new(backend)
-        .call(
+    engine
+        .rows(
             &Find::new("Which?").unwrap(),
             [
                 Record::text("line\n".repeat(255)),
                 Record::text("line\n".repeat(254)),
             ],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap_err();
-    assert_eq!(rows[0]["error"]["code"], "backend.limit");
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
+    assert_eq!(rows[0]["error"]["code"], "record.too-large");
     assert_eq!(rows[1]["status"], "answered");
     assert!(rows[1]["answer"].is_null());
-    assert_eq!(rows[1]["detail"]["probabilities"]["none"], 1.0);
+    assert!(rows[1].get("detail").is_none());
     assert_eq!(server.count(), 1);
 }
 
@@ -289,12 +288,13 @@ fn a_malformed_find_reply_fails_the_record_without_a_partial_answer() {
     let server = Loopback::answering(|_| json!({"type":"noul", "noul":0.9})).unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
+        .rows(
             &Find::new("Which?").unwrap(),
             [Record::text("first\nsecond")],
-            |row| rows.push(serde_json::to_value(row).unwrap()),
         )
-        .unwrap_err();
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["status"], "failed");
     assert_eq!(rows[0]["error"]["code"], "backend.reply");

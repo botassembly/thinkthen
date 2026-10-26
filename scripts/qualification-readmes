@@ -16,6 +16,7 @@ import tarfile
 import tempfile
 import zipfile
 
+from csharp_consumers import package_config, stub_example
 from release_registry_check import environment, java_arguments
 from release_workflow import ROOT, version
 
@@ -83,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
             raise ValueError('command README must extract its delivered archive once')
         output = run('sh', '-eu', '-c', 'status=0; ' + shell + ' || status=$?; case $status in 0|1|3) ;; *) exit "$status";; esac', capture_output=True, text=True).stdout
     rows = [json.loads(line) for line in output.splitlines() if line.strip()]
-    if len(rows) != 1 or rows[0].get('status') not in ('answered', 'unsure') or not {'answer', 'p'} <= rows[0].keys():
+    if len(rows) != 1 or rows[0].get('status') not in ('answered', 'unsure') or not {'answer', 'probability'} <= rows[0].keys():
         raise ValueError('command README must produce one successful decision row')
     print('README: command passes', flush=True)
 
@@ -91,15 +92,14 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
     run(sys.executable, '-m', 'venv', python_home)
     python = python_home / ('Scripts/python.exe' if WINDOWS else 'bin/python')
     run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', one('python', '*.whl'))
-    body = example('python', 'python').replace('import thinkthen', 'import thinkthen\nthinkthen = thinkthen.Client(adapter="stub")', 1)
+    body = example('python', 'python')
     run(python, write('first.py', body))
     print('README: Python passes', flush=True)
 
     node = scratch / 'node'
     run('npm.cmd' if WINDOWS else 'npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
         '--cache', scratch / 'npm-cache', '--prefix', node, one('typescript', '*.tgz'))
-    body = example('typescript', 'ts').replace('import { decide } from "thinkthen";',
-        'import { ThinkThen } from "thinkthen";\nconst client = new ThinkThen({ adapter: "stub" });\nconst decide = client.decide.bind(client);')
+    body = example('typescript', 'ts')
     script = node / 'first.mjs'
     script.write_text(body)
     run('node', script)
@@ -107,17 +107,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
 
     for name in ('c', 'cpp'):
         installed = unpack(name, scratch / name)
+        native_package = installed if name == 'c' else scratch / 'c'
         extension = 'c' if name == 'c' else 'cpp'
         source = write('first.' + extension, example(name, extension))
         binary = scratch / ('first-' + name + ('.exe' if WINDOWS else ''))
         if WINDOWS:
-            jansson = Path(os.environ['JANSSON_ROOT']) if name == 'c' else None
-            libraries = [installed / 'lib/thinkthen_c.lib', jansson / 'lib/jansson.lib'] if name == 'c' else [installed / 'native/win-x64/thinkthen_ffi.lib']
-            dependency = ['/I' + str(jansson / 'include')] if jansson else []
+            libraries = [native_package / 'lib/thinkthen_ffi.lib']
             run('clang-cl', '/nologo', '/std:c11' if name == 'c' else '/std:c++17', '/EHsc', '/MD',
-                '/I' + str(installed / 'include'), *dependency, source, '/Fe:' + str(binary), '/link', *libraries)
-            native = installed / ('bin' if name == 'c' else 'native/win-x64')
-            search = [str(native)] + ([str(jansson / 'bin')] if jansson else [])
+                '/I' + str(installed / 'include'), '/I' + str(native_package / 'include'), source, '/Fe:' + str(binary), '/link', *libraries)
+            native = native_package / 'bin'
+            search = [str(native)]
             run(binary, extra={'PATH': os.pathsep.join(search) + os.pathsep + env['PATH']})
         else:
             if name == 'c':
@@ -126,8 +125,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
                 run('cc', '-std=c11', source, *shlex.split(result.stdout), '-o', binary)
             else:
                 run('c++', '-std=c++17', '-I' + str(installed / 'include'),
-                    '-I' + str(PACKAGE / 'cpp/dependencies/nlohmann-json/include'), source,
-                    '-L' + str(installed / 'lib'), '-lthinkthen_ffi', '-Wl,-rpath,' + str(installed / 'lib'), '-o', binary)
+                    '-I' + str(native_package / 'include'), source,
+                    '-L' + str(native_package / 'lib'), '-lthinkthen', '-Wl,-rpath,' + str(native_package / 'lib'), '-o', binary)
             run(binary)
         print('README: ' + name + ' passes', flush=True)
 
@@ -152,22 +151,22 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
     run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
     print('README: Kotlin passes', flush=True)
 
-    write('dotnet/Program.cs', example('csharp', 'csharp').replace('new ThinkThenClient()', 'new ThinkThenClient(new ClientSettings { Adapter = "stub" })'))
+    write('dotnet/Program.cs', stub_example(example('csharp', 'csharp')))
     project = write('dotnet/Example.csproj', '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version() + '" /></ItemGroup></Project>')
-    write('dotnet/NuGet.Config', '<configuration><packageSources><clear/><add key="candidate" value="' + str(PACKAGE / 'csharp') + '"/></packageSources></configuration>')
+    package_config(PACKAGE / 'csharp', scratch / 'dotnet')
     run('dotnet', 'run', '--project', project)
     print('README: C# passes', flush=True)
 
     library = scratch / 'r-library'
     library.mkdir()
-    archives = [*sorted((PACKAGE / ('prerequisites/r' if WINDOWS else 'r')).glob('jsonlite*')),
-                *sorted((PACKAGE / 'r').glob('thinkthen_*'))]
+    directory = PACKAGE / ('prerequisites/r' if WINDOWS else 'prerequisites/r-frames')
+    inventory = json.loads((directory / 'inventory.json').read_text())
+    archives = [directory / name for name in inventory['install_order']]
+    archives.extend(sorted((PACKAGE / 'r').glob('thinkthen_*')))
     r_env = {'R_LIBS_USER': str(library), 'R_LIBS_SITE': ''}
-    expression = 'a <- commandArgs(TRUE); install.packages(a[-1], lib=a[[1]], repos=NULL, type="' + ('win.binary' if WINDOWS else 'source') + '")'
-    run('Rscript', '--vanilla', '-e', expression, library, *archives, extra=r_env)
-    body = example('r', 'r').replace('  threshold=', '  client=tt_client(adapter="stub"), threshold=')
-    # README uses spaced named arguments.
-    body = body.replace('  threshold =', '  client = tt_client(adapter="stub"), threshold =')
+    expression = 'a <- commandArgs(TRUE); stopifnot(as.character(getRversion()) == a[[2]]); .libPaths(c(a[[1]], .Library)); install.packages(a[-c(1,2)], lib=a[[1]], repos=NULL, type="' + ('win.binary' if WINDOWS else 'source') + '")'
+    run('Rscript', '--vanilla', '-e', expression, library, inventory['r'], *archives, extra=r_env)
+    body = example('r', 'r')
     run('Rscript', '--vanilla', write('first.R', body), extra=r_env)
     print('README: R passes', flush=True)
 
@@ -177,7 +176,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
         blocks = re.findall(r'```sql\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(), re.S)
         if name == 'sqlite':
             extension = installed / ('thinkthen_sqlite.' + SUFFIX)
-            sql = blocks[0].replace('./thinkthen_sqlite', extension.as_posix()) + '\n' + blocks[1]
+            sql = blocks[0].replace('./thinkthen_sqlite', extension.as_posix())
             script = write('first-sqlite.sql', sql)
             run('sqlite3', '-bail', ':memory:', '.read ' + script.as_posix())
         else:

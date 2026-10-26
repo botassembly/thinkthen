@@ -1,0 +1,22 @@
+[package]
+name = "admission-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+thinkthen = { path = "../crates/thinkthen", default-features = false }
+serde_json = "1"
+
+[[bin]]
+name = "admission"
+path = "fuzz_targets/admission.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

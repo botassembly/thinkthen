@@ -31,8 +31,16 @@ REVIEWED_SDK = '10.0.26100'
 REVIEWED_CRT = '14.44.17.14'
 INPUTS = {
     'R-4.6.1-win.exe': ('https://cloud.r-project.org/bin/windows/base/R-4.6.1-win.exe', 'c5424c40cd70ef85765a55d2ff96bb602b5f30ed536938ff004f14db5db3c2df'),
+    # R dependency ZIPs use package_version.zip names. Add every Imports dependency
+    # with its reviewed checksum; preparation refuses an incomplete pinned closure.
     # CRAN's Windows 4.6 binary: Built R 4.6.1, 2026-10-21 01:07:16 UTC.
     'jsonlite_2.0.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/jsonlite_2.0.0.zip', '062aeffa1f311b2cbef49075bf3b592339da63d12ea6d67c40612330e29538e9'),
+    # Matching R 4.6.1 Windows binaries for the required Imports closure.
+    'cli_3.6.6.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/cli_3.6.6.zip', '8ffcf10cef9d810770623257c8c603844ffb966d2479920ad3625bad6425be0d'),
+    'glue_1.8.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/glue_1.8.1.zip', '8ed0ba3ea03312a11fb652fbbc893fee6deda2199d584195a3fb0238a3d27a05'),
+    'lifecycle_1.0.5.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/lifecycle_1.0.5.zip', '7267651683ef7260c86df74091226b142bd028331394f207f62a81679db2f9b3'),
+    'rlang_1.3.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/rlang_1.3.0.zip', '93f66f7c398c6f66014cea32616d2eff5839ecebbe178ba2ca7c33d00aa28840'),
+    'vctrs_0.7.3.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/vctrs_0.7.3.zip', '65016e8874ff9bf20f5d717e59d8ea543da30cb6738d7cc24137db23d8a764f1'),
     'ffi-1.17.4-x64-mingw-ucrt.gem': ('https://rubygems.org/downloads/ffi-1.17.4-x64-mingw-ucrt.gem', 'f6ff9618cfccc494138bddade27aa06c74c6c7bc367a1ea1103d80c2fcb9ed35'),
     'duckdb-cli.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/duckdb_cli-windows-amd64.zip', '6af7c45f38d764d1c8345f1cb1b1f2d07d779e11125ddf5dca7f2dfdf50efc7e'),
     'duckdb-lib.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/libduckdb-windows-amd64.zip', '4b26f7febc5e300c642d1a45d2fbc3ab51fd3c80e5f82023c90a3260a4949e13'),
@@ -47,6 +55,8 @@ def run(*arguments, **options):
 
 
 def inputs():
+    from release_windows_r import pins
+    pins()
     WINDOWS.mkdir(parents=True, exist_ok=True)
     for name, (url, digest) in INPUTS.items():
         path = WINDOWS / name

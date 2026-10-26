@@ -1,15 +1,21 @@
 #!/bin/sh
-# Exercise the build recipe against a prepared pair and an isolated source copy.
+# Exercise prepared assets and source keys; --keys-only needs no prepared pair.
 set -eu
 cd "$(dirname "$0")/.."
+case "${1:-}" in
+    '') test "$#" -eq 0 ;;
+    --keys-only) test "$#" -eq 1 ;;
+    *) echo 'usage: scripts/native-cache-test [--keys-only]' >&2; exit 1 ;;
+esac
 root=$PWD
 cache=$(scripts/native-prepare --path)
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+if [ "$#" -eq 0 ]; then
 test -f "$cache/linux-x64/libthinkthen_ffi.so"
 test -f "$cache/osx-arm64/libthinkthen_ffi.dylib"
 test -f "$cache/linux-x64/libthinkthen_ffi.a"
 test -f "$cache/osx-arm64/libthinkthen_ffi.a"
-scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 # A closed job's target is gone; both concurrent consumers still reuse the pair.
 mkdir "$scratch/closed-target"
 rmdir "$scratch/closed-target"
@@ -30,9 +36,15 @@ cp -Rp "$cache/linux-x64" "$cache/osx-arm64" "$fresh/"
 HOME="$scratch/home" scripts/native-prepare > "$scratch/fresh"
 test "$(cat "$scratch/fresh")" = "$fresh"
 test "$(find -L "$fresh/jvm" -type f -name 'libthinkthen_ffi.*' | wc -l)" -eq 4
+fi
 git clone --quiet --shared "$root" "$scratch/source"
 cd "$scratch/source"
 test "$(scripts/native-prepare --path)" = "$cache"
+for test_source in crates/thinkthen/tests/stress.rs crates/thinkthen-ffi/tests/consumer.rs crates/thinkthen-sql/tests/public_contract.rs; do
+    printf '\n// Native cache test-only input regression.\n' >> "$test_source"
+    test "$(scripts/native-prepare --path)" = "$cache"
+    git checkout -- "$test_source"
+done
 printf '\n// Native cache input regression.\n' >> crates/thinkthen-ffi/src/lib.rs
 changed=$(scripts/native-prepare --path)
 test "$changed" != "$cache"
@@ -62,4 +74,4 @@ p.write_text(s)
 PY
 cargo metadata --offline --format-version=1 >/dev/null
 test "$(scripts/native-prepare --path)" = "$cache"
-echo 'native cache: no restoration or build after target cleanup; source/settings miss; unrelated member hit'
+echo 'native cache: test-only/unrelated member hit; source/settings miss'

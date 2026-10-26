@@ -26,7 +26,7 @@ fn decide_selects_openai_and_uses_its_key_variable() {
         .args([
             "decide",
             "Is it urgent?",
-            "--adapter",
+            "--backend",
             "openai",
             "--url",
             server.base(),

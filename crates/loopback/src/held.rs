@@ -12,6 +12,8 @@ use crate::{Loopback, Reply, lock};
 pub enum HeldReply {
     /// No response headers have arrived.
     Headers,
+    /// Reset the connection after receiving the request.
+    Reset,
     /// Successful response headers have arrived, but the body has not.
     Body,
     /// A refused response needs its body to determine whether to split.
@@ -20,16 +22,24 @@ pub enum HeldReply {
 
 pub(super) struct Hold {
     reply: HeldReply,
+    chosen: Arc<crate::Chosen>,
     received: mpsc::Sender<()>,
     closed: mpsc::Sender<std::io::Result<usize>>,
 }
 
 impl Hold {
+    pub(super) fn chosen(&self, request: &crate::Request) -> bool {
+        (self.chosen)(request)
+    }
     pub(super) fn serve(&self, mut stream: TcpStream) {
+        if matches!(self.reply, HeldReply::Reset) {
+            let _ = socket2::SockRef::from(&stream).set_linger(Some(Duration::ZERO));
+            return;
+        }
         // A hang guard releases the fixture if a broken caller never closes.
         let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
         let status = match self.reply {
-            HeldReply::Headers => None,
+            HeldReply::Headers | HeldReply::Reset => None,
             HeldReply::Body => Some(200),
             HeldReply::RefusalBody => Some(400),
         };
@@ -67,10 +77,20 @@ impl Loopback {
         &self,
         reply: HeldReply,
     ) -> (mpsc::Receiver<()>, mpsc::Receiver<std::io::Result<usize>>) {
+        self.hold_matching(reply, |_| true)
+    }
+
+    /// Hold only selected requests; all other requests use the normal reply rule.
+    pub fn hold_matching(
+        &self,
+        reply: HeldReply,
+        chosen: impl Fn(&crate::Request) -> bool + Send + Sync + 'static,
+    ) -> (mpsc::Receiver<()>, mpsc::Receiver<std::io::Result<usize>>) {
         let (received, arrivals) = mpsc::channel();
         let (closed, endings) = mpsc::channel();
         lock(&self.state).held = Some(Arc::new(Hold {
             reply,
+            chosen: Arc::new(chosen),
             received,
             closed,
         }));

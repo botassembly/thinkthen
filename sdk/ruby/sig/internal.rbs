@@ -1,0 +1,232 @@
+module FFI
+  class NotFoundError < LoadError
+  end
+  module Library
+    def ffi_lib: (*untyped) -> untyped
+    def attach_function: (*untyped, **untyped) -> untyped
+  end
+  module Platform
+    def self.windows?: () -> bool
+    def self.mac?: () -> bool
+  end
+  class Pointer
+    NULL: untyped
+  end
+  class MemoryPointer
+    def self.new: (*untyped) -> untyped
+    def self.from_string: (String) -> untyped
+  end
+  class AutoPointer
+    def self.new: (*untyped) -> untyped
+  end
+  class Struct
+    def self.layout: (*untyped) -> untyped
+    def self.size: () -> Integer
+    def self.new: (*untyped) -> untyped
+    def []: (Symbol) -> untyped
+    def []=: (Symbol, untyped) -> untyped
+  end
+end
+module ThinkThen
+  UNSET: untyped
+  def self.native: () -> untyped
+  module NativeContract
+    ABI_VERSION: Integer
+    ABI_CODE: error_code
+    ABI_MESSAGE: String
+    FUNCTION_NAMES: Hash[Integer, String]
+    STATUS_NAMES: Hash[Integer, String]
+    BACKEND_NAMES: Hash[Integer, String]
+    ID_NAMES: Hash[Integer, String]
+    RECORD_NAMES: Hash[Integer, String]
+    OFFSET_NAMES: Hash[Integer, String]
+    CODE_NAMES: Hash[Integer, String]
+  end
+  module Native
+    extend FFI::Library
+    class Buffer < FFI::Struct
+    end
+    class RecordInput < FFI::Struct
+    end
+    class NativeError < FFI::Struct
+      def initialize: () -> void
+    end
+    class Row < FFI::Struct
+      def initialize: () -> void
+    end
+    class SettingsPointer < FFI::AutoPointer
+      def self.release: (untyped) -> void
+    end
+    class ClientPointer < FFI::AutoPointer
+      def self.release: (untyped) -> void
+    end
+    class CallPointer < FFI::AutoPointer
+      def self.release: (untyped) -> void
+    end
+    def self.thinkthen_abi_version: (*untyped) -> untyped
+    def self.toolbox_json: (String, ?saved: bool, ?definitions: bool) -> String
+    def self.thinkthen_toolbox_from_json: (*untyped) -> untyped
+    def self.thinkthen_toolbox_from_definitions_json: (*untyped) -> untyped
+    def self.thinkthen_toolbox_to_json: (*untyped) -> untyped
+    def self.thinkthen_toolbox_definitions_json: (*untyped) -> untyped
+    def self.thinkthen_toolbox_free: (*untyped) -> untyped
+    def self.thinkthen_buffer_free: (*untyped) -> untyped
+    def self.thinkthen_question_new: (*untyped) -> untyped
+    def self.thinkthen_question_set_cut: (*untyped) -> untyped
+    def self.thinkthen_question_set_band: (*untyped) -> untyped
+    def self.thinkthen_question_free: (*untyped) -> untyped
+    def self.thinkthen_settings_new: (*untyped) -> untyped
+    def self.thinkthen_settings_set_api_key: (*untyped) -> untyped
+    def self.thinkthen_settings_from_json: (*untyped) -> untyped
+    def self.thinkthen_settings_copy_api_key: (*untyped) -> untyped
+    def self.thinkthen_settings_free: (*untyped) -> untyped
+    def self.thinkthen_client_open: (*untyped) -> untyped
+    def self.thinkthen_client_open_json: (*untyped) -> untyped
+    def self.thinkthen_settings_conversion_error: (*untyped) -> untyped
+    def self.thinkthen_question_conversion_error: (*untyped) -> untyped
+    def self.thinkthen_cancelled_error: (*untyped) -> untyped
+    def self.thinkthen_call_send_invalid: (*untyped) -> untyped
+    def self.thinkthen_client_free: (*untyped) -> untyped
+    def self.thinkthen_call_open_records_json: (*untyped) -> untyped
+    def self.thinkthen_call_open_json: (*untyped) -> untyped
+    def self.thinkthen_call_send_text: (*untyped) -> untyped
+    def self.thinkthen_call_send_json: (*untyped) -> untyped
+    def self.thinkthen_call_send_missing: (*untyped) -> untyped
+    def self.thinkthen_call_end_input: (*untyped) -> untyped
+    def self.thinkthen_call_next: (*untyped) -> untyped
+    def self.thinkthen_call_cancel: (*untyped) -> untyped
+    def self.thinkthen_call_free: (*untyped) -> untyped
+    def self.thinkthen_error_free: (*untyped) -> untyped
+    def self.thinkthen_row_free: (*untyped) -> untyped
+    def self.settings: () -> untyped
+    def self.validate_threshold: (Symbol, String?, untyped) -> void
+    def self.validate_question: (untyped) -> void
+    def self.dump: (untyped, ?symbols: bool) -> String
+    def self.snapshot: (untyped, ?untyped, ?bool) -> untyped
+    def self.context_dump: (untyped, Symbol) -> String
+    def self.records: (untyped) { (untyped, Integer) -> untyped } -> untyped
+    def self.record_value: (untyped) -> [String, String?]
+    def self.parse: (String) -> untyped
+    def self.copy: (untyped) -> String
+    def self.error_symbol: (String) -> error_code
+    def self.discriminator: (Hash[Integer, String], Integer) -> String
+    def self.checked: () { (untyped) -> untyped } -> untyped
+    def self.bytes: (String) { (untyped, Integer) -> untyped } -> untyped
+  end
+  module Values
+    def self.freeze_copy: (untyped) -> untyped
+    def self.wire: (untyped) -> untyped
+  end
+  module WireValue : Object
+    def to_h: () -> Hash[String, json]
+  end
+  interface _RowFields
+    def status: () -> status
+    def id_present: () -> bool
+    def id_present?: () -> bool
+    def answered?: () -> bool
+    def answer: () -> untyped
+  end
+  module RowWire : Object, _RowFields
+    def id_present?: () -> bool
+    def to_h: () -> Hash[String, json]
+  end
+  module AnnotationWire : Object, _RowFields
+    include WireValue
+    def to_h: () -> Hash[String, json]
+  end
+  module Row
+    def self.row_error: (untyped) -> RowError
+    def self.decode: (untyped) -> untyped
+    def self.variant: (untyped, ?untyped) -> untyped
+    def self.value: (untyped, untyped) -> untyped
+    def self.relation: (untyped) -> untyped
+    def self.answer: (String, untyped) -> untyped
+    def self.detail: (String, untyped) -> untyped
+  end
+  class Question
+    attr_reader value: untyped
+    def initialize: (Symbol, ?String?, **untyped) -> void
+    def self.evidence: (evidence?) -> String?
+    def self.threshold: (threshold?, band: bool) -> untyped
+    def self.list: (Array[String]) -> Array[String]
+  end
+  class AnnotationQuestions
+    def value: () -> untyped
+  end
+  class CancelToken
+    def attach: (untyped) -> untyped
+    def detach: (untyped) -> untyped
+  end
+  class RedactedKey
+    def initialize: (String) -> void
+    private
+    def copy_to: (untyped) -> untyped
+  end
+  class Configuration
+    def initialize: () -> void
+    def to_h: () -> untyped
+  end
+  class Client
+    private
+    def build_question: (Symbol, untyped, untyped) -> untyped
+    def open_rows: (untyped, untyped, untyped, untyped) -> untyped
+    def admit: (String, ?untyped) -> untyped
+    def forget: (untyped) -> untyped
+  end
+  class CallOwner
+    def initialize: (untyped) -> void
+    def use: () { (untyped) -> untyped } -> untyped
+    def close: () -> nil
+    def cancel: () -> nil
+    def closed?: () -> bool
+  end
+end
+
+module JSON
+  def self.generate: (untyped, **untyped) -> String
+  def self.parse: (String, **untyped) -> untyped
+end
+class Data
+  def initialize: (*untyped, **untyped) -> void
+  def self.members: () -> Array[Symbol]
+end
+module ThinkThen
+  class Source
+    def initialize: (question_identity: String, backend: backend, model: String, ?name: String?) -> void
+  end
+  class RowError
+    def initialize: (code: error_code, message: String, ?http_status: Integer?) -> void
+  end
+  class RelationRule
+    private
+    def definition: () -> untyped
+    public
+    def initialize: (source: String, target: String, relation: String, ?phrase: String?, ?symmetric: bool) -> void
+  end
+  class Retry
+    def initialize: (?max_retries: Integer?, ?initial_backoff_ms: Integer?, ?attempt_timeout_ms: Integer?) -> void
+  end
+end
+
+# RBS 3.10 omits the documented block on this Ruby core method.
+class Thread
+  def self.handle_interrupt: [T] (untyped) { () -> T } -> T
+                          | ...
+end
+
+module ThinkThen
+  class NativeRead
+    @result: untyped
+    @error: Exception?
+    def initialize: (untyped) -> void
+    def run: (untyped) -> void
+    def value: () -> untyped
+  end
+  class NativeReader
+    @requests: untyped
+    def initialize: (untyped) -> void
+    def start: (untyped) -> NativeRead
+    def close: () -> nil
+  end
+end

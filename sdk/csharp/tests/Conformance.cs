@@ -1,139 +1,215 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ThinkThen;
-using Record = ThinkThen.Record;
 
 internal static partial class Program
 {
+    private static async Task AdmissionCases(string directory)
+    {
+        JsonArray samples = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "public-contract", "usage-admission.json")))!.AsArray();
+        int count = 0;
+        foreach (var sample in samples)
+        {
+            if (sample!["kind"]!.GetValue<string>() != "admission") continue;
+            string name = sample["name"]!.GetValue<string>();
+            string boundary = sample["boundary"]!.GetValue<string>();
+            string expected = sample["message"]!.GetValue<string>();
+            JsonNode input = sample["input"]!;
+            string route;
+            switch (boundary)
+            {
+                case "settings":
+                    route = "direct: JsonSerializer.Deserialize<ThinkThenOptions> admits raw settings";
+                    break;
+                case "toolbox":
+                    route = "direct: Toolbox.FromJson admits the saved toolbox unchanged";
+                    break;
+                case "question":
+                    input = new JsonObject { ["entries"] = new JsonObject { ["case"] = new JsonObject { ["question"] = input.DeepClone() } } };
+                    Check(expected.StartsWith("question.", StringComparison.Ordinal), "unexpected question diagnostic context");
+                    expected = "toolbox.entries.[0].question." + expected["question.".Length..];
+                    route = "public projection: raw question inside a saved Toolbox.FromJson entry";
+                    break;
+                default: throw new Exception($"Unclassified admission boundary: {boundary}");
+            }
+            try
+            {
+                if (boundary == "settings") _ = JsonSerializer.Deserialize<ThinkThenOptions>(input.ToJsonString(), JsonOptions);
+                else _ = Toolbox.FromJson(input.ToJsonString());
+                throw new Exception($"Accepted admission case: {name}");
+            }
+            catch (ThinkThenException error)
+            {
+                Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.Code, JsonOptions), sample["code"]), $"admission code: {name}");
+                Check(error.Message == expected, $"admission message: {name}: {error.Message} != {expected}");
+                Check(!error.Message.Contains("secret-placeholder", StringComparison.Ordinal), $"admission leaked a secret: {name}");
+            }
+            Console.WriteLine($"C# admission: {name}: {route}");
+            count++;
+        }
+        Check(count > 0, "No C# admission cases classified");
+    }
+
     private static async Task Conformance(string directory, string loopback)
     {
-        foreach (string path in Directory.GetFiles(directory, "*.json").Order())
+        JsonNode manifest = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "manifest.json")))!;
+        foreach (var backend in manifest["backends"]!.AsArray())
+        foreach (var name in manifest["cases"]!.AsArray())
         {
-            var fixture = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+            string path = Path.Combine(directory, name!.GetValue<string>());
+            JsonNode fixture = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+            JsonNode request = fixture["request"]!;
             await using var server = await Fixture.Start(loopback, path);
-                JsonNode actual;
-                var delivered = new JsonArray();
+            JsonObject settings = manifest["client"]!.DeepClone().AsObject();
+            if (fixture["client"] is JsonObject overrides)
+                foreach (var field in overrides) settings[field.Key] = field.Value?.DeepClone();
+            settings["backend"] = backend!.DeepClone();
+            settings["url"] = server.Url;
+            ThinkThenOptions admitted = settings.Deserialize<ThinkThenOptions>(JsonOptions)!;
+            admitted.ApiKey = ApiKey.From("synthetic-loopback-key");
+            await using var client = new ThinkThenClient(admitted);
+            if (fixture["expected"] is JsonObject failure)
+            {
+                var output = new JsonArray();
                 try
                 {
-                    var settings = fixture["client"]!.Deserialize<ClientSettings>(JsonOptions)!;
-                    using var client = new ThinkThenClient(settings with { Url = server.Url, KeySource = "THINKTHEN_API_KEY" });
-                    using var stop = new CancellationTokenSource();
-                    if (fixture["cancelled"]?.GetValue<bool>() == true) stop.Cancel();
-                    actual = await ContractRows(client, fixture["request"]!, stop.Token, delivered);
+                    await ContractRows(client, request, default, output);
+                    throw new Exception($"Expected admission failure: {name}");
                 }
-                catch (ThinkThenException error) { actual = new JsonObject { ["error"] = error.Code }; }
-                catch (OperationCanceledException) when (fixture["cancelled"]?.GetValue<bool>() == true) { actual = new JsonObject { ["error"] = "local.cancelled" }; }
-                if (fixture["expected_rows"] is JsonArray expectedRows)
+                catch (ThinkThenException error)
                 {
-                    StripMessages(delivered);
-                    Check(JsonNode.DeepEquals(delivered, expectedRows), $"{Path.GetFileName(path)} rows before terminal error: {delivered} != {expectedRows}");
+                    Check(output.Count == 0, "admission returned rows");
+                    Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.Code, JsonOptions), failure["error"]), "admission error code");
                 }
-                var expected = fixture["expected"]!.DeepClone();
-                if (fixture["request"]!["function"]!.GetValue<string>() == "filter" && expected is JsonArray filterRows)
-                {
-                    var records = fixture["request"]!["records"]!.AsArray();
-                    expected = new JsonArray(filterRows.Select((row, index) => (row, index))
-                        .Where(pair => pair.row!["answer"]?.GetValue<bool>() == true)
-                        .Select(pair => records[pair.index]!.DeepClone()).ToArray());
-                }
-                else if (expected is JsonArray rows)
-                {
-                    string function = fixture["request"]!["function"]!.GetValue<string>();
-                    var records = fixture["request"]!["records"]!.AsArray();
-                    for (int i = 0; i < rows.Count; i++)
-                    {
-                        string evidence = Evidence(records[i]!, fixture["request"]!["options"]?["on"]?.GetValue<string>());
-                        if (function == "annotate" && rows[i]!["answer"] is JsonObject annotations)
-                        {
-                            foreach (var annotation in annotations)
-                            {
-                                string? on = fixture["request"]!["question"]!["value"]!["questions"]?[annotation.Key]?["on"]?.GetValue<string>();
-                                ProjectOffsets(annotation.Value, on is null ? evidence : Evidence(records[i]!, on));
-                            }
-                        }
-                        else
-                        {
-                            ProjectOffsets(rows[i]!["answer"], evidence);
-                            ProjectOffsets(rows[i]!["detail"], evidence);
-                        }
-                    }
-                    StripMessages(actual);
-                }
-                Check(JsonNode.DeepEquals(actual, expected), $"{Path.GetFileName(path)}: {actual} != {expected}");
-                Check(int.Parse(await server.Command("count")) == fixture["requests"]!.GetValue<int>(), $"{path}: request count");
-        }
-        Console.WriteLine("All shared conformance cases passed.");
-    }
-    private static async Task<JsonNode> ContractRows(ThinkThenClient client, JsonNode request, CancellationToken token, JsonArray output)
-    {
-        string function = request["function"]!.GetValue<string>();
-        var value = request["question"]!["value"]!;
-        var records = request["records"]!.AsArray().Select(node => node is JsonValue text && text.TryGetValue<string>(out var s)
-            ? Record.Text(s) : Record.Json(JsonSerializer.SerializeToElement(node))).ToArray();
-        Question question = function switch
-        {
-            "recognize" => Question.Kinds(value.Deserialize<string[]>()!),
-            "relate" => Question.Relations(value.Deserialize<RelationRule[]>(JsonOptions)!),
-            "annotate" => "unused",
-            _ => value.GetValue<string>()
-        };
-        var options = request["options"];
-        Threshold? threshold = options?["threshold"] is JsonValue cut
-            ? cut.TryGetValue<string>(out var band) ? (Threshold)band : (Threshold)cut.GetValue<double>() : (Threshold?)null;
-        var settings = new CallOptions { Threshold = threshold, On = options?["on"]?.GetValue<string>() };
-        var source = Records(records);
-        string[] Choices(string name) => options![name]!.Deserialize<string[]>()!;
-        if (function == "filter")
-        {
-            await foreach (var record in client.FilterAsync(question, source, settings, token))
-                output.Add(record.IsText ? JsonValue.Create(record.TextValue) : JsonSerializer.SerializeToNode(record.JsonValue));
-            return output;
-        }
-        return function switch
-        {
-            "decide" => await Rows(client.DecideStreamAsync(question, source, settings, token), output),
-            "choose" => await Rows(client.ChooseStreamAsync(question, source, Choices("options"), settings, token), output),
-            "tag" => await Rows(client.TagStreamAsync(question, source, Choices("labels"), settings, token), output),
-            "score" => await Rows(client.ScoreStreamAsync(question, source, Choices("levels"), settings, token), output),
-            "rank" => await Rows(client.RankAsync(question, source, new() { Threshold = threshold, On = settings.On, Top = options?["top"]?.GetValue<double>() }, token), output),
-            "find" => await Rows(client.FindStreamAsync(question, source, settings, token), output),
-            "annotate" => await Rows(client.AnnotateStreamAsync(JsonSerializer.SerializeToElement(value), source, settings, token), output),
-            "recognize" => await Rows(client.RecognizeStreamAsync(question, source, settings, token), output),
-            "relate" => await Rows(client.RelateStreamAsync(question, source, settings, token), output),
-            _ => throw new Exception(function)
-        };
-    }
-    private static void StripMessages(JsonNode node)
-    {
-        foreach (var row in node.AsArray())
-        {
-            if (row?["error"] is JsonObject error) error.Remove("message");
-            if (row?["answer"] is JsonObject annotation)
-                foreach (var entry in annotation)
-                    if (entry.Value is JsonObject outcome && outcome["error"] is JsonObject entryError) entryError.Remove("message");
-        }
-    }
-    private static string Evidence(JsonNode record, string? pointer)
-    {
-        if (record is JsonValue text && text.TryGetValue<string>(out string? value)) return value;
-        JsonNode? selected = record;
-        if (pointer is not null)
-            foreach (string segment in pointer.Split('/').Skip(1)) selected = selected?[segment.Replace("~1", "/").Replace("~0", "~")];
-        return selected is JsonValue scalar && scalar.TryGetValue<string>(out value) ? value : selected?.ToJsonString() ?? "null";
-    }
-    private static void ProjectOffsets(JsonNode? answer, string evidence)
-    {
-        if (answer is JsonArray values) { foreach (var item in values) ProjectOffsets(item, evidence); }
-        else if (answer is JsonObject value)
-        {
-            if (value["start"] is not null && value["end"] is not null)
-            {
-                int start = value["start"]!.GetValue<int>(), end = value["end"]!.GetValue<int>();
-                var runes = evidence.EnumerateRunes().ToArray();
-                value["start"] = runes.Take(start).Sum(rune => rune.Utf16SequenceLength);
-                value["end"] = runes.Take(end).Sum(rune => rune.Utf16SequenceLength);
+                Check(int.Parse(await server.Command("count")) == fixture["requests"]!.GetValue<int>(), "admission sent a request");
+                continue;
             }
-            foreach (var child in value) ProjectOffsets(child.Value, evidence);
+            JsonArray actual = (JsonArray)await ContractRows(client, request, default, new());
+            foreach (var row in actual)
+            {
+                Check(row!["source"]!["backend"]!.GetValue<string>() == backend.GetValue<string>(), "row source backend");
+                Check(row["source"]!["model"]!.GetValue<string>() == admitted.Model, "row source model");
+                Check(row["source"]!["question_identity"]!.GetValue<string>().Length > 0, "row source identity");
+                Check(row["source"]!["name"] is null, "toolbox selection supplied an execution name");
+                row.AsObject().Remove("source");
+            }
+            JsonNode expected = fixture["expected"]!.DeepClone();
+            ExpectedUtf16(expected, request);
+            Check(JsonNode.DeepEquals(WithoutMessages(actual), WithoutMessages(expected)),
+                $"{backend}/{name}: {actual} != {expected}");
+            int requests = int.Parse(await server.Command("count"));
+            int finiteRequests = fixture["requests"]!.GetValue<int>();
+            int count = request["records"]!.AsArray().Count;
+            Check(finiteRequests == 0 ? requests == 0 : requests > 0 && requests <= finiteRequests * count,
+                $"{backend}/{name}: async input used {requests} requests outside its canonical bound");
         }
+    }
+
+    private static async Task<JsonNode> ContractRows(
+        ThinkThenClient client, JsonNode request, CancellationToken token, JsonArray output)
+    {
+        JsonNode question = request["question"]!;
+        string function = question["function"]!.GetValue<string>();
+        // This driver maps host arguments only. Shared admission owns validation.
+        JsonElement[] records = request["records"]!.AsArray()
+            .Select(node => JsonSerializer.SerializeToElement(node)).ToArray();
+        var source = Records(records, token);
+        string? executionName = request["name"]?.GetValue<string>();
+        string entryName = "case";
+        Toolbox? toolbox = function == "annotate" ? null : Toolbox.Parse(
+            new JsonObject { [entryName] = question.DeepClone() }.ToJsonString(), token);
+        switch (function)
+        {
+            case "decide":
+                return await Rows(client.DecideStreamAsync(toolbox!.Decide(entryName), source, name: executionName, cancellationToken: token), output);
+            case "choose":
+                return await Rows(client.ChooseStreamAsync(toolbox!.Choose(entryName), source, name: executionName, cancellationToken: token), output);
+            case "tag":
+                return await Rows(client.TagStreamAsync(toolbox!.Tag(entryName), source, name: executionName, cancellationToken: token), output);
+            case "score":
+                return await Rows(client.ScoreStreamAsync(toolbox!.Score(entryName), source, name: executionName, cancellationToken: token), output);
+            case "find":
+                return await Rows(client.FindStreamAsync(toolbox!.Find(entryName), source, name: executionName, cancellationToken: token), output);
+            case "recognize":
+                return await Rows(client.RecognizeStreamAsync(toolbox!.Recognize(entryName), source, name: executionName, cancellationToken: token), output);
+            case "relate":
+                return await Rows(client.RelateStreamAsync(toolbox!.Relate(entryName), source, name: executionName, cancellationToken: token), output);
+            case "annotate":
+                Pointer? evidence = question["evidence"] is JsonNode pointer ? Pointer.From(pointer.GetValue<string>()) : null;
+                return await Rows(client.AnnotateStreamAsync(AnnotationQuestions.Parse(question["questions"]!.ToJsonString(), token), source,
+                    new() { Evidence = evidence }, name: executionName, cancellationToken: token), output);
+            case "filter":
+                await foreach (var item in client.FilterAsync(toolbox!.Filter(entryName), source, name: executionName, cancellationToken: token))
+                {
+                    Check(item.Item.GetRawText() == records[checked((int)item.Row.Position - 1)].GetRawText(),
+                        "filter changed the item joined by position");
+                    Check(item.Kept == (item.Row is Answered<bool, NoDetail> { Answer: true }),
+                        "filter kept a failed, unsure or false row");
+                    output.Add(Row(item.Row));
+                }
+                return output;
+            case "rank":
+                await foreach (var item in client.RankAsync(toolbox!.Rank(entryName), source, name: executionName, cancellationToken: token))
+                {
+                    Check(item.Item.GetRawText() == records[checked((int)item.Row.Position - 1)].GetRawText(),
+                        "rank used rank answer instead of input position to join the item");
+                    output.Add(Row(item.Row));
+                }
+                return output;
+            default: throw new Exception($"unknown canonical function {function}");
+        }
+    }
+
+    private static void ExpectedUtf16(JsonNode expected, JsonNode request)
+    {
+        if (expected is not JsonArray rows) return;
+        foreach (JsonNode? row in rows)
+        {
+            JsonNode? record = request["records"]![checked((int)row!["position"]!.GetValue<ulong>() - 1)];
+            JsonNode question = request["question"]!;
+            string Evidence(JsonNode definition)
+            {
+                JsonNode? selected = record;
+                string? pointer = definition["evidence"]?.GetValue<string>() ?? question["evidence"]?.GetValue<string>();
+                if (pointer is not null)
+                    foreach (string part in pointer.Split('/').Skip(1))
+                        selected = selected?[part.Replace("~1", "/").Replace("~0", "~")];
+                return selected is JsonValue text && text.TryGetValue<string>(out var value)
+                    ? value : selected?.ToJsonString() ?? "null";
+            }
+            if (question["function"]!.GetValue<string>() == "annotate" && row["answer"] is JsonObject entries)
+                foreach (var entry in entries) Project(entry.Value, Evidence(question["questions"]![entry.Key]!));
+            else
+            {
+                Project(row["answer"], Evidence(question));
+                Project(row["detail"], Evidence(question));
+            }
+        }
+        static void Project(JsonNode? value, string text)
+        {
+            if (value is JsonArray array) foreach (var child in array) Project(child, text);
+            if (value is not JsonObject obj) return;
+            if (obj["start"] is JsonNode start && obj["end"] is JsonNode end)
+            {
+                var runes = text.EnumerateRunes().ToArray();
+                obj["start"] = runes.Take(start.GetValue<int>()).Sum(rune => rune.Utf16SequenceLength);
+                obj["end"] = runes.Take(end.GetValue<int>()).Sum(rune => rune.Utf16SequenceLength);
+            }
+            foreach (var child in obj) Project(child.Value, text);
+        }
+    }
+
+    private static JsonNode WithoutMessages(JsonNode value)
+    {
+        JsonNode copy = value.DeepClone();
+        void Visit(JsonNode? node)
+        {
+            if (node is JsonArray array) foreach (var child in array) Visit(child);
+            if (node is not JsonObject obj) return;
+            if (obj["error"] is JsonObject error) error.Remove("message");
+            foreach (var child in obj) Visit(child.Value);
+        }
+        Visit(copy);
+        return copy;
     }
 }

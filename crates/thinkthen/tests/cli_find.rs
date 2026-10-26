@@ -19,15 +19,36 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "answer\n",
             0,
         ),
-        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "", 1),
+        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "", 0),
         (
             json!({"u1":0.6,"none":0.4}),
             "answer",
             vec!["--threshold", "0.7"],
             "unsure\n",
+            0,
+        ),
+        (json!({"u1":0.8,"none":0.2}), " \n", vec![], "", 0),
+        (
+            json!({"u1":0.8,"none":0.2}),
+            "answer",
+            vec!["--check"],
+            "answer\n",
+            0,
+        ),
+        (
+            json!({"u1":0.2,"none":0.8}),
+            "answer",
+            vec!["--check"],
+            "",
+            1,
+        ),
+        (
+            json!({"u1":0.6,"none":0.4}),
+            "answer",
+            vec!["--threshold", "0.7", "--check"],
+            "unsure\n",
             3,
         ),
-        (json!({"u1":0.8,"none":0.2}), " \n", vec![], "", 1),
     ] {
         let server =
             Loopback::answering(move |_| json!({"type":"choice","probabilities":probabilities}))
@@ -35,7 +56,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
         let mut child = support::command()
             .args(["find", "Which?"])
             .args(args)
-            .env("THINKTHEN_BASE_URL", server.base())
+            .env("THINKTHEN_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -65,8 +86,16 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
         Loopback::answering(|_| json!({"type":"choice","probabilities":{"u1":0.8,"none":0.2}}))
             .unwrap();
     let mut child = support::command()
-        .args(["find", "Which?", "--jsonl", "--on", "/body"])
-        .env("THINKTHEN_BASE_URL", server.base())
+        .args([
+            "find",
+            "Which?",
+            "--from",
+            "jsonl",
+            "--json",
+            "--evidence",
+            "/body",
+        ])
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -84,7 +113,11 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
     let rows: Vec<Value> = String::from_utf8(output.stdout)
         .unwrap()
         .lines()
-        .map(|line| loopback::without_source(serde_json::from_str(line).unwrap()))
+        .map(|line| {
+            let mut row: Value = serde_json::from_str(line).unwrap();
+            row.as_object_mut().unwrap().remove("source");
+            row
+        })
         .collect();
     assert_eq!(
         rows[0]["answer"],
@@ -92,6 +125,6 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
     );
     assert_eq!(
         rows[1],
-        json!({"id":"empty","status":"answered","answer":null})
+        json!({"function":"find","position":2,"id":"empty","status":"answered","answer":null})
     );
 }

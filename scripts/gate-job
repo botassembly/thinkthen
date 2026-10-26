@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Run a prepared gate through pm from a selected worktree and full revision.
+
+Usage: gate-job WORKTREE FULL_SHA TICKET [PM_JOB_OPTIONS...] -- COMMAND [ARGS...]
+Output is pm's normal job stream. Preparation selects the gate's own dependencies.
+"""
+from contextlib import ExitStack
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def revision(root):
+    return subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+
+
+def main():
+    args = sys.argv[1:]
+    if args[:1] != ['--run']:
+        if len(args) < 6 or '--' not in args[3:]:
+            sys.exit(__doc__)
+        root, sha, ticket = Path(args[0]).resolve(), args[1], args[2]
+        separator = args.index('--', 3)
+        if len(sha) != 40 or revision(root) != sha:
+            sys.exit('gate-job: full revision must name the selected worktree HEAD')
+        os.chdir(root)
+        os.execvp('pm', ['pm', 'job', 'run', *args[3:separator], ticket, sha, '--',
+                         'scripts/gate-job', '--run', sha, *args[separator + 1:]])
+    if len(args) < 3 or revision(ROOT) != args[1]:
+        sys.exit('gate-job: job checkout differs from the selected revision')
+    with ExitStack() as cleanup:
+        env = dict(os.environ)
+        # pm owns its machine-local temporary folder and removes it after the job.
+        if not env.get('TMPDIR'):
+            env['TMPDIR'] = cleanup.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-gate-'))
+        target = Path(env.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve()
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryFile(dir=target):
+                pass
+        except OSError:
+            target = Path(env['TMPDIR']) / 'cargo-target'
+            target.mkdir(parents=True, exist_ok=True)
+        env['CARGO_TARGET_DIR'] = str(target)
+        subprocess.run(['sh', '-eu', '-c',
+                        '. scripts/native-tools-env; unset CARGO_NET_OFFLINE UV_OFFLINE npm_config_offline; '
+                        'scripts/qualification-gate-prepare; '
+                        'export CARGO_NET_OFFLINE=true UV_OFFLINE=1 npm_config_offline=true; exec "$@"',
+                        'gate-job', *args[2:]], cwd=ROOT, env=env, check=True)
+
+
+if __name__ == '__main__':
+    main()

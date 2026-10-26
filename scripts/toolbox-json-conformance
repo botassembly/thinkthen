@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Exchange saved toolboxes between installed Python, Node and the command.
+
+Run with the installed Python interpreter. Arguments: Node module path, command.
+Output is one result line. Packages and the command must come from one revision.
+"""
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+import thinkthen as tt
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'sdk/python/tests'))
+from conformance import child_environment  # noqa: E402
+
+
+def rows(client, toolbox, records):
+    return [[row.status.value, row.answer, row.probability, row.source.question_identity]
+            for row in client.choose_stream(toolbox.choose('topic'), records)]
+
+
+def main():
+    if len(sys.argv) != 3:
+        raise SystemExit('usage: toolbox-json-conformance NODE_MODULE COMMAND')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-toolbox-') as scratch:
+        folder = Path(scratch)
+        environment = child_environment()
+        for name in ('HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME'):
+            path = folder / name.lower()
+            path.mkdir()
+            environment[name] = str(path)
+        records = [{'body': 'Bill'}, {'body': 'Parcel'}]
+        original = tt.Toolbox.from_json((ROOT / 'conformance/toolbox/questions.json').read_text())
+        python_saved = folder / 'python.json'
+        python_saved.write_text(original.to_json())
+        exchanged = subprocess.run(
+            ['node', '--input-type=module', '-e', NODE, str(Path(sys.argv[1]).resolve()),
+             str(python_saved), json.dumps(records)],
+            env=environment, check=True, capture_output=True, text=True,
+        )
+        node = json.loads(exchanged.stdout)
+        node_saved = folder / 'node.json'
+        node_saved.write_text(node['saved'])
+        loaded = tt.Toolbox.from_json(node['saved'])
+        with tt.Client(backend='stub') as client:
+            expected = rows(client, original, records)
+            assert len(expected) == len(records)
+            assert rows(client, loaded, records) == expected
+        assert node['rows'] == expected
+        command = subprocess.run(
+            [str(Path(sys.argv[2]).resolve()), 'run', str(node_saved), '--entry', 'topic',
+             '--backend', 'stub', '--json'],
+            input=''.join(json.dumps(record) + '\n' for record in records),
+            env=environment, capture_output=True, text=True,
+        )
+        assert command.returncode == 0, command.stderr
+        actual = [json.loads(line) for line in command.stdout.splitlines()]
+        assert len(actual) == len(records)
+        assert [[row['status'], row.get('answer'), row.get('probability'),
+                 row['source']['question_identity']] for row in actual] == expected
+    print('Toolbox exchange: Python -> TypeScript -> Python and command preserve rows.')
+
+
+NODE = r'''
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+const sdk = await import(pathToFileURL(process.argv[1]).href);
+const box = sdk.parseToolbox(await readFile(process.argv[2], 'utf8'));
+const client = new sdk.ThinkThen({backend: 'stub'});
+try {
+  const rows = await client.chooseStream(box.topic, JSON.parse(process.argv[3])).toArray();
+  console.log(JSON.stringify({saved: sdk.serializeToolbox(box), rows: rows.map(row =>
+    [row.status, row.answer ?? null, row.probability ?? null, row.source.questionIdentity])}));
+} finally { await client.close(); }
+'''
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,30 @@
+{
+  "name": "decide-unsure",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?",
+      "threshold": {
+        "low": 0.2,
+        "high": 0.8
+      }
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "probability": 0.6
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "unsure",
+      "probability": 0.6
+    }
+  ],
+  "requests": 1
+}

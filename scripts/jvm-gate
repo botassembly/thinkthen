@@ -1,7 +1,8 @@
 #!/bin/sh
 # Build native output once; test the installed Java and Kotlin artifacts offline.
 set -eu
-version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
+jvm_python=$(python3 -c 'import sys; print(sys.executable)')
+version=$("$jvm_python" "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
 root=$PWD
 . scripts/jvm-env
@@ -11,6 +12,7 @@ if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ]; then
 else
   cargo build --offline --locked -p thinkthen-ffi -p loopback --bin loopback --lib
 fi
+"$jvm_python" scripts/jvm-generated
 rm -rf sdk/java/library/target/classes sdk/kotlin/target/classes
 native_target=${CARGO_TARGET_DIR:-target}
 resource="sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
@@ -29,9 +31,9 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
 fi
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-python3 scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
+"$jvm_python" scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
 mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" install -DskipTests
-cp -R sdk/java/consumer/. "$scratch/"
+"$jvm_python" scripts/jvm_repository.py consumer "$root" "$scratch"
 case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
 native_input="$native_target/debug/$jvm_library"
 if [ -n "${THINKTHEN_JVM_NATIVE_ASSETS:-}" ] && [ -z "${LLVM_PROFILE_FILE:-}" ]; then
@@ -41,9 +43,21 @@ export THINKTHEN_LOOPBACK="$native_target/debug/loopback"
 export THINKTHEN_API_KEY=sk-test-0123456789
 PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:/usr/bin:/bin"
 export PATH
+"$jvm_python" "$root/scripts/surface-example" prepare java "$scratch/src/main/java"
+"$jvm_python" "$root/scripts/surface-example" prepare kotlin "$scratch/src/main/kotlin"
+cp "$scratch/src/main/java/records.jsonl" "$scratch/records.jsonl"
 cd "$scratch"
 mvn -o -B -q -Dmaven.repo.local="$scratch/m2" package dependency:build-classpath -Dmdep.outputFile="$scratch/classpath"
-python3 "$root/scripts/jvm_repository.py" verify "$root" "$scratch/classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
+"$jvm_python" - "$root" "$scratch/classpath" <<'PYTHON'
+from pathlib import Path
+import sys
+root, classpath = map(Path, sys.argv[1:])
+sys.path.insert(0, str(root / 'scripts'))
+from release_jvm_notices import terms
+terms([Path(path) for path in classpath.read_text().strip().split(':')], root)
+print('JVM runtime dependency pins and terms pass')
+PYTHON
+"$jvm_python" "$root/scripts/jvm_repository.py" verify "$root" "$scratch/classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
 classpath="target/classes:$(cat "$scratch/classpath")"
 mkdir -p "$scratch/home"
 XDG_CACHE_HOME="$scratch/home/.cache"
@@ -54,41 +68,48 @@ case "$(uname -s)" in
     Darwin) loader_cache="$scratch/home/Library/Caches" ;;
     *) loader_cache="$XDG_CACHE_HOME" ;;
 esac
-python3 "$root/scripts/loader-cache-check" "$loader_cache" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json" --stub-only
+"$jvm_python" "$root/scripts/loader-cache-check" "$loader_cache" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json" --stub-only
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinCasesKt "$root/construction/stub.json"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCases "$root/construction/options.json"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCasesKt "$root/construction/options.json"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinConformanceKt "$root/conformance"
+
+"$jvm_python" "$root/scripts/surface-example" check java "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" Example
+"$jvm_python" "$root/scripts/surface-example" check kotlin "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ExampleKt
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaApiCases
+java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaSettingsCases "$root/schemas/contract.json"
+java --enable-native-access=ALL-UNNAMED -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1 -cp "$classpath" JavaOwnershipCases "$root/conformance"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.ConformanceCasesKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SurfaceCasesKt "$root/conformance"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.FlowCasesKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.AbiAndCodesKt registry "$root/schemas/contract.json"
+java --enable-native-access=io.thinkthen --module-path "$(cat "$scratch/classpath")" --add-modules ALL-MODULE-PATH -cp target/classes consumer.AbiAndCodesKt abi true
+"$jvm_python" "$root/sdk/kotlin/tests/abi.py" "$THINKTHEN_NATIVE_FIXTURES/manifest.json" "$classpath" "$JAVA_HOME/bin/java" "$jvm_platform" "$jvm_library" "$scratch"
 
 
-cat > src/main/kotlin/UnsupportedThreshold.kt <<'KOTLIN'
-import io.thinkthen.kotlin.ThinkThen
-import com.fasterxml.jackson.databind.JsonNode
-suspend fun unsupported(client: ThinkThen, toolbox: JsonNode) {
-    client.score("Ready?", "text", listOf("low", "high"), threshold = "0.5")
-    client.rank("Ready?", listOf("text"), threshold = "0.5")
-    client.annotate(toolbox, "text", threshold = "0.5")
-}
-KOTLIN
-if mvn -o -B -q -Dmaven.repo.local="$scratch/m2" process-classes > "$scratch/threshold.log" 2>&1; then
-  echo 'Kotlin accepted unsupported threshold parameters' >&2
-  exit 1
-fi
-python3 - "$scratch/threshold.log" <<'PYTHON'
+"$jvm_python" - "$root/sdk/kotlin/tests/compile-fail" <<'PYTHON'
 from pathlib import Path
 import sys
-text = Path(sys.argv[1]).read_text()
-for line in (4, 5, 6):
-    assert any(f'UnsupportedThreshold.kt:{line}:' in message and 'None of the following candidates is applicable' in message
-               for message in text.splitlines()), text
-print("Kotlin score, rank and annotate reject threshold at compile time")
+for case in Path(sys.argv[1]).glob('*.kt.fail'):
+    Path('src/main/kotlin', case.name.removesuffix('.fail')).write_text(case.read_text())
 PYTHON
-rm src/main/kotlin/UnsupportedThreshold.kt
+if mvn -o -B -q -Dmaven.repo.local="$scratch/m2" process-classes > "$scratch/refusals.log" 2>&1; then
+  echo 'Kotlin accepted invalid public API expressions' >&2
+  exit 1
+fi
+"$jvm_python" - "$root/sdk/kotlin/tests/compile-fail" "$scratch/refusals.log" <<'PYTHON'
+from pathlib import Path
+import sys
+text = Path(sys.argv[2]).read_text()
+for case in Path(sys.argv[1]).glob('*.kt.fail'):
+    assert case.name.removesuffix('.fail') + ':' in text, text
+    Path('src/main/kotlin', case.name.removesuffix('.fail')).unlink()
+print("Kotlin public API compile refusals passed")
+PYTHON
 
 if [ -n "${THINKTHEN_JVM_OUT:-}" ]; then
   mkdir -p "$THINKTHEN_JVM_OUT/lib" "$THINKTHEN_JVM_OUT/maven" "$THINKTHEN_JVM_OUT/construction"
-  python3 - "$scratch/classpath" "$THINKTHEN_JVM_OUT/lib" "$scratch/packaged-classpath" <<'PYTHON'
+  "$jvm_python" - "$scratch/classpath" "$THINKTHEN_JVM_OUT/lib" "$scratch/packaged-classpath" <<'PYTHON'
 import pathlib, shutil, sys
 selected = []
 for item in pathlib.Path(sys.argv[1]).read_text().strip().split(':'):
@@ -103,6 +124,6 @@ PYTHON
   cp "$root/sdk/java/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-jvm-parent-$version.pom"
   cp "$root/sdk/java/library/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-java-$version.pom"
   cp "$root/sdk/kotlin/pom.xml" "$THINKTHEN_JVM_OUT/maven/thinkthen-kotlin-$version.pom"
-  python3 "$root/scripts/jvm_repository.py" verify "$root" "$scratch/packaged-classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
+  "$jvm_python" "$root/scripts/jvm_repository.py" verify "$root" "$scratch/packaged-classpath" "$root/sdk/java/library/target/classes/io/thinkthen/native" "$jvm_platform" "$native_input"
   shasum -a 256 "$THINKTHEN_JVM_OUT/lib/thinkthen-java-$version.jar" "$THINKTHEN_JVM_OUT/lib/thinkthen-kotlin-$version.jar"
 fi

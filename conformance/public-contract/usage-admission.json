@@ -1,0 +1,87 @@
+[
+  {
+    "name": "Integer score levels",
+    "boundary": "question",
+    "input": {
+      "function": "score",
+      "question": "Priority?",
+      "levels": [
+        1,
+        2
+      ]
+    },
+    "code": "usage.question",
+    "message": "question.levels[0]: expected a string; received integer `1`",
+    "kind": "admission"
+  },
+  {
+    "name": "TypeScript saved toolbox array evidence",
+    "boundary": "toolbox",
+    "input": {
+      "entries": {
+        "ready": {
+          "question": {
+            "function": "decide",
+            "question": "Ready?",
+            "evidence": [
+              "body"
+            ]
+          }
+        }
+      }
+    },
+    "code": "usage.question",
+    "message": "toolbox.entries.[0].question.evidence: expected a string; received an array",
+    "kind": "admission"
+  },
+  {
+    "name": "SQLite wrong-type settings",
+    "boundary": "settings",
+    "input": {
+      "backend": "stub",
+      "retry": {
+        "max_retries": "secret-placeholder"
+      }
+    },
+    "code": "usage.settings",
+    "message": "settings.retry.max_retries: expected u32; received a string (contents redacted)",
+    "kind": "admission"
+  },
+  {
+    "name": "R tags in a serialized question",
+    "boundary": "question",
+    "input": {
+      "function": "tag",
+      "question": "Topics?",
+      "tags": [
+        "billing"
+      ]
+    },
+    "code": "usage.question",
+    "kind": "admission",
+    "message": "question.tags: expected one of `question`, `labels`, `threshold`, `evidence`; received unknown field `tags`; did you mean `labels`?",
+    "contains": [
+      "question.tags:",
+      "expected",
+      "received unknown field `tags`",
+      "did you mean `labels`?"
+    ]
+  },
+  {
+    "name": "Malformed relation rule source",
+    "boundary": "question",
+    "input": {
+      "function": "relate",
+      "rules": [
+        {
+          "relation": "supports",
+          "source": 1,
+          "target": "claim"
+        }
+      ]
+    },
+    "code": "usage.question",
+    "message": "question.rules[0].source: expected a string; received integer `1`",
+    "kind": "admission"
+  }
+]

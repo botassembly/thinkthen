@@ -1,0 +1,3 @@
+package consumer.rejected
+import io.thinkthen.kotlin.*
+fun rejectedToolbox(client: ThinkThen) { client.toolbox(Toolbox(mapOf("ready" to Decide("Ready?")))) }

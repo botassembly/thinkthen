@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Check two small real SQL-driver rounds without retaining observed payloads.
+
+Usage: sql-stress-lifetime-test SOURCE SURFACE LOOPBACK [HOST ARG ...]
+SURFACE is duckdb, sqlite, or postgres. HOST arguments match the stress driver.
+THINKTHEN_LIFETIME_CONCURRENCY selects one or two calls per round (default one).
+The default output is one small case report. PostgreSQL needs an owned installed
+server environment; every fixture and database directory belongs to this test.
+"""
+import contextlib
+import importlib.util
+import io
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+import weakref
+
+
+def load(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+class ObservedDict(dict):
+    pass
+
+
+class ObservedList(list):
+    pass
+
+
+def main():
+    source, surface, loopback, *host = sys.argv[1:]
+    source = Path(source).resolve()
+    root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root / 'scripts'))
+    runner = load('stress_runner', root / 'scripts/stress-adapters.py')
+    os.environ['THINKTHEN_LOOPBACK'] = loopback
+    paths = dict(duckdb='databases/duckdb/tests/stress.py', sqlite='extensions/sqlite/tests/stress.py',
+        postgres='extensions/postgres/tests/stress.py')
+    path = source / paths[surface]
+    sys.path.insert(0, str(path.parent))
+    driver = load('stress_driver', path)
+    references = []
+    checks = dict(checkpoints=0, round=None)
+
+    def observe(value):
+        value = ObservedDict(value) if isinstance(value, dict) else ObservedList(value)
+        references.append(weakref.ref(value))
+        return value
+
+    def released(boundary):
+        assert not any(reference() is not None for reference in references), 'completed payload outlived ' + boundary
+
+    original_loads = json.loads
+    def decode(text, *args, **kwargs):
+        value = original_loads(text, *args, **kwargs)
+        if isinstance(value, dict) and isinstance(value.get('rows'), list) and value['rows']:
+            row = value['rows'][0]
+            if surface == 'duckdb' and isinstance(row, dict) and 'result' in row:
+                return observe(value)
+            if surface == 'sqlite' and isinstance(row, list) and len(row) == 6:
+                value['rows'] = observe(value['rows'])
+        return value
+    json.loads = decode
+    operation = 'scan' if surface == 'postgres' else 'statement'
+    original_operation = getattr(driver, operation)
+    def begin(*args, **kwargs):
+        position = 2 if surface == 'postgres' else 1
+        prefix = args[position] if len(args) > position else kwargs.get('prefix', '')
+        if match := re.match(r'round-(\d+)-call-', prefix):
+            index = int(match[1])
+            if checks['round'] != index:
+                released('next query')
+                checks['round'] = index
+        return original_operation(*args, **kwargs)
+    setattr(driver, operation, begin)
+    if surface == 'postgres':
+        original_query = driver.api['query']
+        def query(database, statement, parameters=()):
+            value = original_query(database, statement, parameters)
+            return observe(value) if isinstance(statement, str) and statement.startswith('SELECT position,') else value
+        driver.api['query'] = query
+    else:
+        original_decode = driver.decode
+        driver.decode = lambda value: observe(original_decode(value))
+    checkpoint = 'exec ' + shlex.join([sys.executable, str(root / 'scripts/stress-checkpoint')])
+    original_run = subprocess.run
+    def run(command, *args, **kwargs):
+        if command == checkpoint:
+            released('checkpoint')
+            checks['checkpoints'] += 1
+        return original_run(command, *args, **kwargs)
+    subprocess.run = run
+    fixture = runner.Fixture(['--stress', 'healthy'])
+    try:
+        with tempfile.TemporaryDirectory(prefix='sql-stress-lifetime-') as temporary:
+            case = json.loads((root / 'conformance/stress.json').read_text())
+            concurrency = int(os.environ.get('THINKTHEN_LIFETIME_CONCURRENCY', '1'))
+            workload = dict(client=dict(case['client'], backend='openai', url=fixture.url, api_key='loopback-only'),
+                scenario=next(item for item in case['scenarios'] if item['name'] == 'healthy'),
+                records=case['records']['smoke'], probability=case['replies'][0]['probability'],
+                concurrency=concurrency, rounds=2, cancel=False,
+                identifier_base=case['records']['identifier_base'])
+            case_path = Path(temporary) / 'case.json'
+            case_path.write_text(json.dumps(workload))
+            os.environ.update(THINKTHEN_STRESS_CASE=str(case_path), THINKTHEN_STRESS_CHECKPOINT_COMMAND=checkpoint)
+            sys.argv = [str(path), *host]
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                driver.main()
+            released('driver return')
+            assert checks['checkpoints'] == 2, checks
+            result = json.loads(output.getvalue())
+            assert result == dict(calls=2 * concurrency, rows=2 * concurrency * workload['records'],
+                failed=0, cancelled=False, identifier_width_mask=1 << (len(str(workload['identifier_base'])) * 3 + len('round--call--record-'))), result
+            assert references, 'no real result ownership was observed'
+            print(json.dumps(dict(surface=surface, concurrency=concurrency, ownership='released', **result)))
+    finally:
+        fixture.close()
+
+
+if __name__ == '__main__':
+    main()

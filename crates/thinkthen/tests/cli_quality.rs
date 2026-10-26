@@ -66,9 +66,9 @@ fn scores_real_answers_with_misses_extras_and_selected_backend() {
         json!({"id":"find-right","function":"find","args":["Which?"],"text":"Ada\nAcme","expected":[[0,3]]}),
         json!({"id":"find-wrong","function":"find","args":["Which?"],"text":"Ada\nAcme","expected":[[4,8]]}),
         json!({"id":"find-empty","function":"find","args":["Which?"],"text":"Ada\nAcme","expected":[]}),
-        json!({"id":"names","function":"recognize","args":["person","company"],"text":"Ada joined Acme Missing","expected":[["person",0,3],["person",16,23]]}),
-        json!({"id":"edges-right","function":"relate","args":["works_for=person:company"],"text":"Ada joined Acme!","expected":[["works_for","Ada","Acme!"]]}),
-        json!({"id":"edges-extra","function":"relate","args":["works_for=person:company"],"text":"Ada joined Acme","expected":[]}),
+        json!({"id":"names","function":"recognize","args":["--kind","person","--kind","company"],"text":"Ada joined Acme Missing","expected":[["person",0,3],["person",16,23]]}),
+        json!({"id":"edges-right","function":"relate","args":["--rule", "works_for", "person", "company"],"text":"Ada joined Acme!","expected":[["works_for","Ada","Acme!"]]}),
+        json!({"id":"edges-extra","function":"relate","args":["--rule", "works_for", "person", "company"],"text":"Ada joined Acme","expected":[]}),
     ];
     std::fs::write(
         temporary.join("cases.jsonl"),
@@ -83,6 +83,22 @@ fn scores_real_answers_with_misses_extras_and_selected_backend() {
         temporary.join("comparison.json"),
         json!([{"function":"find","backend":"systemone","precision":0.75,"comparison":"canned reference"}]).to_string(),
     ).unwrap();
+    let bundled = temporary.join("bundled");
+    std::fs::create_dir(&bundled).unwrap();
+    let inventory: Vec<Value> = std::fs::read_to_string(root.join("quality/cases.jsonl"))
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    let selected = ["recognize", "relate"].map(|function| {
+        inventory
+            .iter()
+            .find(|case| case["function"] == function)
+            .unwrap()
+            .to_string()
+    });
+    std::fs::write(bundled.join("cases.jsonl"), selected.join("\n")).unwrap();
+    std::fs::write(bundled.join("comparison.json"), "[]").unwrap();
     for adapter in ["systemone", "openai"] {
         let openai = adapter == "openai";
         let server = Loopback::start(move |request| {
@@ -145,6 +161,32 @@ fn scores_real_answers_with_misses_extras_and_selected_backend() {
         ] {
             assert!(stdout.lines().any(|line| line == expected), "{stdout}");
         }
+        let bundled_output = Command::new("python3")
+            .env_clear()
+            .arg(root.join("scripts/quality"))
+            .arg(&binary)
+            .arg(adapter)
+            .args(["--url", server.base(), "--data"])
+            .arg(&bundled)
+            .env("THINKTHEN_API_KEY", KEY)
+            .env("OPENAI_API_KEY", KEY)
+            .output()
+            .unwrap();
+        assert!(
+            bundled_output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&bundled_output.stderr)
+        );
+        let scores = String::from_utf8(bundled_output.stdout).unwrap();
+        for kind in ["song", "person", "album"] {
+            assert!(
+                scores
+                    .lines()
+                    .any(|line| line.starts_with(&format!("recognize:{kind}\t{adapter}\t1\t"))),
+                "{scores}"
+            );
+        }
+        assert!(!scores.contains("recognize:--kind"), "{scores}");
         assert!(!stdout.contains(KEY));
         assert!(!server.requests().is_empty());
         assert!(server.requests().iter().all(|request| request.path

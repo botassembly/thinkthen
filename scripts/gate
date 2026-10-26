@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 python3 scripts/release_metadata.py
+if [ "$(uname -s)" = Linux ]; then scripts/stress-resource-test; scripts/stress-runner-test; fi
 for tool in R Rscript; do
     if ! "$tool" --version >/dev/null 2>&1; then
         printf 'gate: %s is missing or cannot run on %s\n' "$tool" "$(hostname)" >&2
@@ -12,11 +13,23 @@ done
 scripts/words ${THINKTHEN_PRIVATE_PATTERNS:+"$THINKTHEN_PRIVATE_PATTERNS"}
 scripts/secrets
 scripts/bindings-schema
+scripts/contract-schema-check
 scripts/notices --check
 scripts/supply-chain-check
 cargo fmt --all --check
 scripts/core-check
+scripts/fixture-routing-check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 if [ -f scripts/c-gate ]; then scripts/c-gate; fi
 cargo test --workspace --locked
+guide_root=$PWD
+guide_scratch=$(mktemp -d)
+python3 scripts/surface-example prepare bash "$guide_scratch"
+command_target=${CARGO_TARGET_DIR:-$PWD/target}
+case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
+if ! (cd "$guide_scratch" && PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh); then
+    rm -rf "$guide_scratch"
+    exit 1
+fi
+rm -rf "$guide_scratch"
 scripts/sdk-gates

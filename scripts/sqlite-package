@@ -2,15 +2,19 @@
 # Package an extension using the prepared shared host archive, never a downloader.
 set -eu
 cd "$(dirname "$0")/.."
+scripts/header-contract-check
 . scripts/native-build-env
 [ "$#" = 1 ] || { echo 'usage: scripts/sqlite-package OUTPUT_DIRECTORY' >&2; exit 2; }
 root=$PWD
 mkdir -p "$1"
 output=$(cd "$1" && pwd)
-tools="$HOME/.local/share/thinkthen-build-tools"
-sqlite="$tools/sqlite-3.41.0"
+sqlite="$THINKTHEN_SQLITE_ROOT/sqlite-3.41.0"
 jansson="$THINKTHEN_JANSSON_ROOT"
-if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
+if [ -n "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
+    archive=$THINKTHEN_SQL_TEST_ARCHIVE
+elif [ -n "${THINKTHEN_SQL_ARCHIVE:-}" ]; then
+    archive=$THINKTHEN_SQL_ARCHIVE
+elif [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     cargo build --offline --locked -p thinkthen-ffi
     target=${CARGO_TARGET_DIR:-target}
     case "$target" in /*) ;; *) target="$root/$target" ;; esac
@@ -28,22 +32,30 @@ scratch="$output/build"
 mkdir -p "$scratch" "$output/package"
 # Coverage flags belong to this build invocation, never the installed SQL API.
 sqlite_flags=${THINKTHEN_SQLITE_CFLAGS:-${CFLAGS:--O2}}
-for source in extension rows source; do
+for source in extension rows source question; do
     cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden $sqlite_flags \
         -I "$sqlite" -I "$jansson/include" -I crates/thinkthen-ffi/include \
         -c "extensions/sqlite/src/$source.c" -o "$scratch/$source.o"
 done
+route_object=
+if [ -n "${THINKTHEN_SQL_TEST_ARCHIVE:-}" ]; then
+    cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden $sqlite_flags \
+        -DTHINKTHEN_TEST_BUILD -DTHINKTHEN_TEST_FIXTURE \
+        -I crates/thinkthen-ffi/include -I conformance/native \
+        -c databases/duckdb/tests/routes.c -o "$scratch/routes.o"
+    route_object=$scratch/routes.o
+fi
 case "$(uname -s)" in
     Darwin)
         extension=thinkthen_sqlite.dylib
-        cc -dynamiclib $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" \
+        cc -dynamiclib $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" $route_object \
             "$archive" "$jansson/lib/libjansson.a" -lpthread -ldl -lm \
             -framework Security -framework SystemConfiguration -liconv \
             -Wl,-exported_symbol,_sqlite3_thinkthensqlite_init -o "$output/package/$extension"
         ;;
     Linux)
         extension=thinkthen_sqlite.so
-        cc -shared $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" \
+        cc -shared $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" $route_object \
             "$archive" "$jansson/lib/libjansson.a" -lpthread -ldl -lm \
             -Wl,--exclude-libs,ALL -o "$output/package/$extension"
         ;;
@@ -51,6 +63,6 @@ esac
 if [ -z "${LLVM_PROFILE_FILE:-}" ]; then
     strip -S "$output/package/$extension"
 fi
-cp extensions/sqlite/README.md LICENSE "$output/package/"
+python3 scripts/package_inventory.py stage sqlite "$output/package"
 COPYFILE_DISABLE=1 tar -czf "$output/thinkthen-sqlite-$(uname -s)-$(uname -m).tar.gz" -C "$output/package" .
 printf '%s\n' "$output/package/$extension"

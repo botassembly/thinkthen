@@ -1,32 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "SdkSettings",
-  "description": "Immutable settings captured when a host creates its client.",
+  "title": "Settings",
+  "description": "Immutable operational settings; serialization always omits the API key.",
   "type": "object",
   "properties": {
-    "adapter": {
+    "api_key": {
       "type": [
         "string",
-        "null"
-      ]
-    },
-    "batch": {
-      "type": [
-        "number",
         "null"
       ],
-      "format": "double"
+      "writeOnly": true
     },
-    "key_source": {
-      "type": [
-        "string",
-        "null"
-      ]
+    "backend": {
+      "$ref": "#/$defs/BackendName",
+      "default": "systemone"
     },
-    "mode": {
+    "batch": {
       "anyOf": [
         {
-          "$ref": "#/$defs/Mode"
+          "$ref": "#/$defs/Batch"
         },
         {
           "type": "null"
@@ -39,6 +31,14 @@
         "null"
       ]
     },
+    "retry": {
+      "$ref": "#/$defs/Retry",
+      "default": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      }
+    },
     "url": {
       "type": [
         "string",
@@ -48,12 +48,55 @@
   },
   "additionalProperties": false,
   "$defs": {
-    "Mode": {
-      "type": "string",
-      "enum": [
-        "embedded",
-        "proxy"
+    "BackendName": {
+      "description": "The backend selected by a caller, independent of its wire representation.",
+      "oneOf": [
+        {
+          "description": "systemone",
+          "type": "string",
+          "const": "systemone"
+        },
+        {
+          "description": "openai",
+          "type": "string",
+          "const": "openai"
+        },
+        {
+          "description": "stub",
+          "type": "string",
+          "const": "stub"
+        }
       ]
+    },
+    "Batch": {
+      "type": "integer",
+      "format": "uint",
+      "minimum": 1
+    },
+    "Retry": {
+      "description": "The existing retry policy expressed in integer milliseconds at JSON boundaries.",
+      "type": "object",
+      "properties": {
+        "attempt_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 120000,
+          "minimum": 1
+        },
+        "initial_backoff_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 500,
+          "minimum": 0
+        },
+        "max_retries": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 3,
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

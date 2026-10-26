@@ -4,61 +4,49 @@ use crate::core::{Answer, Ask, ChoiceOption, Error, ErrorKind, Outcome, Threshol
 
 /// A choice question with ordered options.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct Choose {
-    text: String,
-    options: Vec<ChoiceOption>,
-    threshold: Threshold,
+pub(crate) struct Choose {
+    pub(crate) text: String,
+    pub(crate) options: Vec<ChoiceOption>,
+    pub(crate) threshold: Threshold,
 }
 
 impl Choose {
-    pub(crate) fn definition(&self) -> super::identity::Definition<'_> {
-        super::identity::Definition::Choice {
-            options: self.options.iter().map(Into::into).collect(),
-            question: &self.text,
-            threshold: self.threshold.canonical(),
-        }
-    }
-
-    /// Replace the options, keeping the question's other settings.
-    ///
-    /// # Errors
-    /// Returns `usage.question` when the replacement options are invalid.
-    pub fn options(self, options: Vec<ChoiceOption>) -> Result<Self, Error> {
-        let replacement = Self::new(self.text, options)?;
-        Ok(Self {
-            threshold: self.threshold,
-            ..replacement
-        })
-    }
-
     /// A question and its options, in order.
     ///
     /// # Errors
     /// Returns `usage.question` for a blank question, fewer than two options,
     /// or duplicate option labels.
-    pub fn new(
+    pub(crate) fn new(
         text: impl Into<String>,
         options: impl IntoIterator<Item = ChoiceOption>,
     ) -> Result<Self, Error> {
         let text = text.into();
         let options: Vec<_> = options.into_iter().collect();
-        if text.trim().is_empty() || options.len() < 2 {
+        if text.trim().is_empty() {
             return Err(Error::new(
                 ErrorKind::Question,
-                "choose needs a question and at least two options",
+                crate::core::diagnostic::requirement("question", "nonblank text", "blank text"),
             ));
         }
-        for (place, option) in options.iter().enumerate() {
-            if options
-                .iter()
-                .take(place)
-                .any(|earlier| earlier.label() == option.label())
-            {
-                return Err(Error::new(
-                    ErrorKind::Question,
-                    "choose options must have distinct labels",
-                ));
-            }
+        if options.len() < crate::core::questions::MIN_CHOICES {
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement(
+                    "choices",
+                    &format!("at least {} choices", crate::core::questions::MIN_CHOICES),
+                    &format!("{} choices", options.len()),
+                ),
+            ));
+        }
+        if !crate::core::ask::distinct_labels(options.iter().map(ChoiceOption::label)) {
+            return Err(Error::new(
+                ErrorKind::Question,
+                crate::core::diagnostic::requirement(
+                    "choices",
+                    "distinct labels",
+                    "repeated labels (contents redacted)",
+                ),
+            ));
         }
         Ok(Self {
             text,
@@ -66,19 +54,9 @@ impl Choose {
             threshold: Threshold::default(),
         })
     }
-
-    /// Accept the winning option only when its probability reaches this threshold.
-    #[must_use]
-    pub fn threshold(self, threshold: Threshold) -> Self {
-        Self { threshold, ..self }
-    }
 }
 
 impl super::Function for Choose {
-    const NAME: &'static str = "choose";
-    fn identity_as(&self, function: &str) -> String {
-        super::identity(function, &self.definition())
-    }
     fn try_asks_record(
         &self,
         record: &crate::core::AdmittedRecord,

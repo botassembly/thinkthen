@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""Refuse a native build or package when committed declarations have drifted."""
+from header_contract import check
+
+check()

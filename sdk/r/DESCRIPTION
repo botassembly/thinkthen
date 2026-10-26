@@ -8,8 +8,8 @@ Description: Judge text and structured records with typed questions. The native
     ordinary R vectors and data frames, with coded error conditions.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Imports: jsonlite
-Suggests: tibble, dplyr, data.table
+Imports: jsonlite, vctrs, rlang, cli, tibble
+Suggests: dplyr, data.table
 SystemRequirements: Rust, Cargo, C compiler
 URL: https://github.com/botassembly/thinkthen
 BugReports: https://github.com/botassembly/thinkthen/issues

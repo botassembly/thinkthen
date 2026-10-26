@@ -1,4 +1,5 @@
 comment = 'Semantic decisions over a source query'
 default_version = '0.2.0'
 module_pathname = '$libdir/thinkthen_postgres'
-relocatable = true
+relocatable = false
+schema = 'thinkthen'

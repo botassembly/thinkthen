@@ -17,6 +17,11 @@ static void tick(sqlite3_context *context, int argc, sqlite3_value **values) {
     sqlite3_result_value(context, values[0]);
 }
 
+static void native_memory(sqlite3_context *context, int argc, sqlite3_value **values) {
+    (void)argc; (void)values;
+    sqlite3_result_int64(context, sqlite3_memory_used());
+}
+
 static void tick_count(sqlite3_context *context, int argc, sqlite3_value **values) {
     (void)argc; (void)values;
     sqlite3_result_int64(context, ticks);
@@ -98,17 +103,32 @@ static json_t *run(json_t *command) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2 || sqlite3_open(":memory:", &database) != SQLITE_OK) return 2;
+    if ((argc != 2 && argc != 3) || sqlite3_open(":memory:", &database) != SQLITE_OK) return 2;
     sqlite3_enable_load_extension(database, 1);
     char *error = NULL;
     if (sqlite3_load_extension(database, argv[1], "sqlite3_thinkthensqlite_init", &error) != SQLITE_OK) {
+        if (argc == 3) {
+            sqlite3_free(error);
+            sqlite3_stmt *statement = NULL;
+            if (sqlite3_prepare_v2(database, "SELECT * FROM thinkthen_decide('SELECT 1 AS record','Ready?')", -1, &statement, NULL) == SQLITE_OK) return 3;
+            sqlite3_finalize(statement);
+            if (sqlite3_prepare_v2(database, "SELECT thinkthen_set('backend','stub')", -1, &statement, NULL) == SQLITE_OK) return 3;
+            sqlite3_finalize(statement);
+            if (sqlite3_prepare_v2(database, "SELECT count(*) FROM pragma_module_list WHERE name GLOB 'thinkthen_*'", -1, &statement, NULL) != SQLITE_OK ||
+                sqlite3_step(statement) != SQLITE_ROW || sqlite3_column_int(statement, 0) != 0) return 3;
+            sqlite3_finalize(statement);
+            if (sqlite3_exec(database, "CREATE TABLE reused(value); INSERT INTO reused VALUES(1)", NULL, NULL, NULL) != SQLITE_OK) return 3;
+            return sqlite3_close(database) == SQLITE_OK ? 0 : 3;
+        }
         fprintf(stderr, "%s\n", error);
         sqlite3_free(error);
         return 2;
     }
+    if (argc == 3) return 3;
     sqlite3_enable_load_extension(database, 0);
     sqlite3_create_function(database, "tick", 1, SQLITE_UTF8, NULL, tick, NULL, NULL);
     sqlite3_create_function(database, "tick_count", 0, SQLITE_UTF8, NULL, tick_count, NULL, NULL);
+    sqlite3_create_function(database, "native_memory", 0, SQLITE_UTF8, NULL, native_memory, NULL, NULL);
     char *line = NULL;
     size_t capacity = 0;
     while (getline(&line, &capacity, stdin) >= 0) {

@@ -23,7 +23,7 @@ expected_rows = (1, 1, 1, 1, 2, 2, 1, 1, 1, 1)
 for statement, count in zip(statements, expected_rows, strict=True):
     prefix = "LOAD '" + str(package/'thinkthen.duckdb_extension').replace("'", "''") + "';"
     if stub:
-        prefix += "SET thinkthen_settings='{\"adapter\":\"stub\"}';"
+        prefix += "SET thinkthen_backend='stub';"
     output = subprocess.check_output(['duckdb', '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + statement],
                                      env=env, text=True)
     result = json.loads(output)

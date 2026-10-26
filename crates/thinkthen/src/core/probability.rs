@@ -4,7 +4,7 @@ use serde::{Serialize, Serializer};
 
 /// A finite probability from 0 to 1, inclusive.
 ///
-/// Serialization rounds to two decimal places; [`Self::get`] retains full precision.
+/// Serialization and [`Self::get`] retain full precision.
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, schemars::JsonSchema)]
 #[schemars(transparent)]
 pub struct Probability(#[schemars(range(min = 0, max = 1))] f64);
@@ -32,6 +32,15 @@ impl Probability {
 
 impl Serialize for Probability {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.serialize_f64((self.0 * 100.0).round() / 100.0)
+        serializer.serialize_f64(self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Probability {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let value = <f64 as serde::Deserialize>::deserialize(deserializer)?;
+        Self::new(value).ok_or_else(|| {
+            serde::de::Error::custom("a probability must be finite and between 0 and 1")
+        })
     }
 }

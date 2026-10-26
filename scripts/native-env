@@ -10,6 +10,14 @@ for thinkthen_native_asset in linux-x64/libthinkthen_ffi.so osx-arm64/libthinkth
         return 1
     fi
 done
+thinkthen_test_environment=$(scripts/native-test-assets env) || return
+# The producer emits shell-quoted paths only after verifying this source key and
+# every copied asset hash. It never builds while a consumer sources the gate.
+eval "$thinkthen_test_environment"
+unset thinkthen_test_environment
+thinkthen_abi_environment=$(scripts/native-abi-assets env) || return
+eval "$thinkthen_abi_environment"
+unset thinkthen_abi_environment
 THINKTHEN_CSHARP_NATIVE_ASSETS=$thinkthen_native_cache
 THINKTHEN_JVM_NATIVE_ASSETS=$thinkthen_native_cache/jvm
 export THINKTHEN_CSHARP_NATIVE_ASSETS THINKTHEN_JVM_NATIVE_ASSETS

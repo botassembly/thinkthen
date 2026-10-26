@@ -13,8 +13,11 @@ GO = {'linux-x86_64': ('linux', 'amd64'), 'linux-arm64': ('linux', 'arm64'),
 
 def stage(libraries, destination, notices):
     """Return additions for an off-main commit, never mutate the source checkout."""
-    go = destination / 'sdk/go'
-    shutil.copytree(ROOT / 'sdk/go', go, ignore=shutil.ignore_patterns('native', 'library.go', 'tests'))
+    from header_contract import check
+    check(ROOT)
+    go = destination / 'sdk/go/thinkthen'
+    shutil.copytree(ROOT / 'sdk/go/thinkthen', go, ignore=shutil.ignore_patterns('native', 'library.go', 'tests'))
+    shutil.copy2(ROOT / 'sdk/go/README.md', go / 'README.md')
     # The tag overlays main, so replace its one-platform declaration as well.
     (go / 'library.go').write_text('package thinkthen\n')
     shutil.copy2(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', go / 'thinkthen.h')
@@ -23,6 +26,11 @@ def stage(libraries, destination, notices):
     shutil.copytree(ROOT / 'sdk/swift', swift, ignore=shutil.ignore_patterns('Native', '.build'))
     shutil.copy2(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
                  swift / 'Sources/CThinkThen/include/thinkthen.h')
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, str(ROOT / 'sdk/swift/generate-codes.py'),
+                    str(ROOT / 'schemas/contract.json'),
+                    str(swift / 'Sources/ThinkThen/ErrorCode.swift')], check=True)
     for target, library in libraries.items():
         system, arch = GO[target]
         relative = f'native/{system}-{arch}/{library.name}'
@@ -30,7 +38,7 @@ def stage(libraries, destination, notices):
         asset.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(library, asset)
         (go / f'library_{system}_{arch}.go').write_text(
-            f'//go:build {system} && {arch}\n\npackage thinkthen\n\nimport _ "embed"\n\n'
+            f'//go:build !thinkthen_system && {system} && {arch}\n\npackage thinkthen\n\nimport _ "embed"\n\n'
             f'//go:embed {relative}\nvar library []byte\n')
         asset = swift / 'Sources/ThinkThen/Native' / RIDS[target] / library.name
         asset.parent.mkdir(parents=True, exist_ok=True)

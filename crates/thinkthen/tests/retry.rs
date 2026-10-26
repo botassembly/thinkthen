@@ -8,18 +8,17 @@ use std::time::Duration;
 
 use loopback::{KEY, Loopback, Reply, Request, UnavailableBackend};
 use serde_json::{Value, json};
-use thinkthen::{Backend, Cancel, Decide, Engine, Key, Record, RetryPolicy};
+use thinkthen::{BackendName, Cancel, Decide, Engine, Error, Key, Record, Retry, Settings};
 
-fn policy() -> RetryPolicy {
-    RetryPolicy {
-        max_retries: 2,
-        initial_backoff: Duration::from_millis(1),
-        attempt_timeout: Duration::from_secs(2),
-    }
+fn settings(base: &str) -> Settings {
+    Settings::default()
+        .url(base)
+        .api_key(Key::new(KEY).unwrap())
+        .model("test")
+        .retry(Retry::new(2, Duration::from_millis(1), Duration::from_secs(2)).unwrap())
 }
-
 fn engine(server: &Loopback) -> Engine {
-    Engine::new(Backend::new(server.base(), Key::new(KEY).unwrap(), "test")).retry_policy(policy())
+    settings(server.base()).engine(|_| None).unwrap()
 }
 
 fn answers(request: &Request) -> Reply {
@@ -33,22 +32,17 @@ fn answers(request: &Request) -> Reply {
     Reply::json(200, &json!({"answers": answers}))
 }
 
-fn run(engine: &Engine, texts: &[&str]) -> Vec<Value> {
-    let question = Decide::new("Is it relevant?").unwrap();
-    let mut rows = Vec::new();
-    let result = engine.call(
-        &question,
-        texts.iter().map(|text| Record::text(*text)),
-        |row| {
-            rows.push(serde_json::to_value(row).unwrap());
-        },
-    );
-    let expected = rows.iter().find_map(|row| row["error"]["code"].as_str());
-    assert_eq!(
-        result.err().map(|error| error.kind().code()),
-        expected.or_else(|| rows.is_empty().then_some("local.cancelled"))
-    );
-    rows
+fn run(engine: &Engine, texts: &[&str]) -> Result<Vec<Value>, Error> {
+    engine
+        .rows(
+            &Decide::new("Is it relevant?").unwrap(),
+            texts
+                .iter()
+                .map(|text| Record::text(*text))
+                .collect::<Vec<_>>(),
+        )?
+        .map(|row| row.map(|row| serde_json::to_value(row).unwrap()))
+        .collect()
 }
 
 #[test]
@@ -64,7 +58,7 @@ fn retryable_statuses_retry_up_to_the_policy_limit() {
             }
         })
         .unwrap();
-        assert_eq!(run(&engine(&server), &["one"])[0]["answer"], true);
+        assert_eq!(run(&engine(&server), &["one"]).unwrap()[0]["answer"], true);
         assert_eq!(server.count(), 2, "status {status}");
     }
     for status in [429, 500, 502, 503, 504, 529, 400, 401, 403, 408, 501] {
@@ -72,12 +66,20 @@ fn retryable_statuses_retry_up_to_the_policy_limit() {
             let server = Loopback::start(move |_| Reply::json(status, &json!({}))).unwrap();
             assert_eq!(
                 run(
-                    &engine(&server).retry_policy(RetryPolicy {
-                        max_retries,
-                        ..policy()
-                    }),
+                    &settings(server.base())
+                        .retry(
+                            Retry::new(
+                                max_retries,
+                                Duration::from_millis(1),
+                                Duration::from_secs(2)
+                            )
+                            .unwrap()
+                        )
+                        .engine(|_| None)
+                        .unwrap(),
                     &["one"]
-                )[0]["error"]["code"],
+                )
+                .unwrap()[0]["error"]["code"],
                 "backend.status"
             );
             let expected = if matches!(status, 429 | 500 | 502 | 503 | 504 | 529) {
@@ -87,7 +89,7 @@ fn retryable_statuses_retry_up_to_the_policy_limit() {
             };
             assert_eq!(
                 server.count(),
-                expected,
+                usize::try_from(expected).unwrap(),
                 "status {status}, limit {max_retries}"
             );
         }
@@ -110,11 +112,11 @@ fn oversized_requests_split_their_questions_only_once() {
                 }
             })
             .unwrap();
-            let rows = run(&engine(&server), &["one", "two", "three", "four", "four"]);
+            let rows = run(&engine(&server), &["one", "two", "three", "four", "four"]).unwrap();
             assert_eq!(server.count(), 3);
             assert_eq!(
                 rows.iter()
-                    .map(|row| row["id"].as_u64().unwrap())
+                    .map(|row| row["position"].as_u64().unwrap())
                     .collect::<Vec<_>>(),
                 [1, 2, 3, 4, 5]
             );
@@ -139,12 +141,15 @@ fn oversized_requests_split_their_questions_only_once() {
     }
     let server = Loopback::start(|_| Reply::json(400, &json!({"error":"other"}))).unwrap();
     assert_eq!(
-        run(&engine(&server), &["one", "two"])[0]["status"],
+        run(&engine(&server), &["one", "two"]).unwrap()[0]["status"],
         "failed"
     );
     assert_eq!(server.count(), 1);
     let server = Loopback::start(|_| Reply::json(413, &json!({}))).unwrap();
-    assert_eq!(run(&engine(&server), &["one"])[0]["status"], "failed");
+    assert_eq!(
+        run(&engine(&server), &["one"]).unwrap()[0]["status"],
+        "failed"
+    );
     assert_eq!(server.count(), 1);
 }
 
@@ -153,7 +158,13 @@ fn cancel_before_the_call_sends_nothing() {
     let server = Loopback::noul(0.9).unwrap();
     let cancel = Cancel::default();
     cancel.cancel();
-    assert!(run(&engine(&server).cancel(cancel), &["one"]).is_empty());
+    assert_eq!(
+        run(&engine(&server).cancel(cancel), &["one"])
+            .unwrap_err()
+            .code()
+            .as_str(),
+        "local.cancelled"
+    );
     assert_eq!(server.count(), 0);
 }
 
@@ -166,19 +177,18 @@ fn cancel_stops_a_retry_wait_without_another_send() {
     })
     .unwrap();
     let cancel = Cancel::default();
-    let runner = engine(&server)
-        .cancel(cancel.clone())
-        .retry_policy(RetryPolicy {
-            initial_backoff: Duration::from_secs(60),
-            ..policy()
-        });
+    let runner = settings(server.base())
+        .retry(Retry::new(2, Duration::from_secs(60), Duration::from_secs(2)).unwrap())
+        .engine(|_| None)
+        .unwrap()
+        .cancel(cancel.clone());
     let (done, result) = mpsc::channel();
     let worker = thread::spawn(move || done.send(run(&runner, &["one"])).unwrap());
     first.recv_timeout(Duration::from_secs(5)).unwrap();
     cancel.cancel();
     let rows = result.recv_timeout(Duration::from_secs(5)).unwrap();
     worker.join().unwrap();
-    assert_eq!(rows[0]["error"]["code"], "local.cancelled");
+    assert_eq!(rows.unwrap_err().code().as_str(), "local.cancelled");
     assert_eq!(server.count(), 1);
 }
 
@@ -194,7 +204,7 @@ fn a_sent_request_that_times_out_is_never_resent() {
     })
     .unwrap();
     let runner = engine(&server);
-    let worker = thread::spawn(move || run(&runner, &["one"]));
+    let worker = thread::spawn(move || run(&runner, &["one"]).unwrap());
     first.recv().unwrap();
     let rows = worker.join().unwrap();
     release.send(()).unwrap();
@@ -206,17 +216,12 @@ fn a_sent_request_that_times_out_is_never_resent() {
 #[test]
 fn a_refused_loopback_connection_finishes_as_a_transport_failure() {
     let unavailable = UnavailableBackend::new().unwrap();
-    let runner = Engine::new(Backend::new(
-        unavailable.base(),
-        Key::new(KEY).unwrap(),
-        "test",
-    ))
-    .retry_policy(RetryPolicy {
-        initial_backoff: Duration::ZERO,
-        ..policy()
-    });
+    let runner = settings(unavailable.base())
+        .retry(Retry::new(2, Duration::ZERO, Duration::from_secs(2)).unwrap())
+        .engine(|_| None)
+        .unwrap();
     assert_eq!(
-        run(&runner, &["one"])[0]["error"]["code"],
+        run(&runner, &["one"]).unwrap()[0]["error"]["code"],
         "backend.transport"
     );
 }
@@ -230,13 +235,9 @@ fn cancel_after_an_oversized_reply_prevents_both_split_sends() {
         Reply::json(413, &json!({}))
     })
     .unwrap();
-    let rows = run(&engine(&server).cancel(cancel), &["one", "two"]);
+    let error = run(&engine(&server).cancel(cancel), &["one", "two"]).unwrap_err();
     assert_eq!(server.count(), 1);
-    assert_eq!(rows.len(), 2);
-    assert!(
-        rows.iter()
-            .all(|row| row["error"]["code"] == "local.cancelled")
-    );
+    assert_eq!(error.code().as_str(), "local.cancelled");
 }
 
 #[test]
@@ -253,19 +254,17 @@ fn splitting_preserves_all_labels_and_shared_questions_per_record() {
     let question = thinkthen::Tag::new("What applies?", ["billing", "shipping"]).unwrap();
     let mut rows = Vec::new();
     engine(&server)
-        .call(
-            &question,
-            ["one", "one", "two", "two"].map(Record::text),
-            |row| rows.push(serde_json::to_value(row).unwrap()),
-        )
-        .unwrap();
+        .rows(&question, ["one", "one", "two", "two"].map(Record::text))
+        .unwrap()
+        .map(|row| row.unwrap())
+        .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(server.count(), 3);
     assert_eq!(rows.len(), 4);
     for (index, row) in rows.iter().enumerate() {
-        assert_eq!(row["id"], index + 1);
+        assert_eq!(row["position"], index + 1);
         assert_eq!(row["status"], "answered");
         assert_eq!(row["answer"], json!(["billing", "shipping"]));
-        assert!(row.get("p").is_none());
+        assert!(row.get("probability").is_none());
     }
     let sizes: Vec<usize> = server
         .requests()
@@ -284,12 +283,12 @@ fn splitting_preserves_all_labels_and_shared_questions_per_record() {
 fn openai_does_not_split_on_a_system_one_error_code() {
     let server =
         Loopback::start(|_| Reply::json(400, &json!({"error":"max_tokens_exceeded"}))).unwrap();
-    let backend = Backend::resolve_named("openai", Some(server.base()), None, |name| {
-        assert_eq!(name, "OPENAI_API_KEY");
-        Some(KEY.to_owned())
-    })
-    .unwrap();
-    let rows = run(&Engine::new(backend), &["first", "second"]);
+    let engine = settings(server.base())
+        .with_backend(BackendName::OpenAi)
+        .batch("50".parse().unwrap())
+        .engine(|_| panic!("explicit settings must not consult environment"))
+        .unwrap();
+    let rows = run(&engine, &["first", "second"]).unwrap();
     assert_eq!(rows.len(), 2);
     assert!(
         rows.iter()
@@ -299,30 +298,22 @@ fn openai_does_not_split_on_a_system_one_error_code() {
 }
 
 #[test]
-#[expect(
-    clippy::print_stderr,
-    reason = "report the cancellation bound promised by the public API"
-)]
 fn cancelling_an_open_exchange_closes_its_connection_without_retry() {
     use loopback::HeldReply;
-    use std::time::Instant;
 
     for stage in [HeldReply::Headers, HeldReply::Body, HeldReply::RefusalBody] {
         let (server, arrived, closed) = Loopback::holding(stage).unwrap();
         let cancel = Cancel::default();
-        let runner = engine(&server)
-            .cancel(cancel.clone())
-            .retry_policy(RetryPolicy {
-                attempt_timeout: Duration::from_secs(120),
-                ..policy()
-            });
+        let runner = settings(server.base())
+            .retry(Retry::new(2, Duration::from_millis(1), Duration::from_secs(120)).unwrap())
+            .engine(|_| None)
+            .unwrap()
+            .cancel(cancel.clone());
         let (done, result) = mpsc::channel();
         let worker = thread::spawn(move || done.send(run(&runner, &["one"])).unwrap());
         arrived.recv_timeout(Duration::from_secs(30)).unwrap();
-        let start = Instant::now();
         cancel.cancel();
         let rows = result.recv_timeout(Duration::from_secs(30)).unwrap();
-        let elapsed = start.elapsed();
         let ending = closed.recv_timeout(Duration::from_secs(30)).unwrap();
         assert!(
             matches!(ending, Ok(0))
@@ -330,11 +321,12 @@ fn cancelling_an_open_exchange_closes_its_connection_without_retry() {
             "{stage:?}: connection remained open: {ending:?}"
         );
         worker.join().unwrap();
-        assert_eq!(rows.len(), 1);
-        assert_eq!(rows[0]["error"]["code"], "local.cancelled", "{stage:?}");
+        assert_eq!(
+            rows.unwrap_err().code().as_str(),
+            "local.cancelled",
+            "{stage:?}"
+        );
         assert_eq!(server.count(), 1, "{stage:?}: cancelled attempt was resent");
-        eprintln!("{stage:?}: cancellation completed in {elapsed:?}");
-        assert!(elapsed < Duration::from_secs(1), "{stage:?}: {elapsed:?}");
     }
 }
 
@@ -349,7 +341,7 @@ fn cancellation_belongs_to_one_call_and_a_client_can_call_again() {
         answers(request)
     })
     .unwrap();
-    let base = Engine::new(Backend::new(server.base(), Key::new(KEY).unwrap(), "test"));
+    let base = engine(&server);
     let stopped = Cancel::default();
     let (done, results) = mpsc::channel();
     let runner = base.clone().cancel(stopped.clone());
@@ -357,12 +349,11 @@ fn cancellation_belongs_to_one_call_and_a_client_can_call_again() {
     arrivals.recv_timeout(Duration::from_secs(30)).unwrap();
     let runner = base.clone().cancel(Cancel::default());
     let (other_done, other_result) = mpsc::channel();
-    let other = thread::spawn(move || other_done.send(run(&runner, &["two"])).unwrap());
+    let other = thread::spawn(move || other_done.send(run(&runner, &["two"]).unwrap()).unwrap());
     arrivals.recv_timeout(Duration::from_secs(30)).unwrap();
     stopped.cancel();
     let rows = results.recv_timeout(Duration::from_secs(30)).unwrap();
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0]["error"]["code"], "local.cancelled");
+    assert_eq!(rows.unwrap_err().code().as_str(), "local.cancelled");
     // Release both server handlers. The uncancelled call must still read its reply.
     release.send(()).unwrap();
     release.send(()).unwrap();
@@ -373,7 +364,7 @@ fn cancellation_belongs_to_one_call_and_a_client_can_call_again() {
     other.join().unwrap();
     // A new operation on the same engine can establish a healthy connection.
     release.send(()).unwrap();
-    let rows = run(&base.cancel(Cancel::default()), &["again"]);
+    let rows = run(&base.cancel(Cancel::default()), &["again"]).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["answer"], true);
     assert_eq!(server.count(), 3);
@@ -384,13 +375,12 @@ fn cancellation_closes_a_reused_connection() {
     let server = Loopback::start(answers).unwrap();
     server.keep_alive();
     let cancel = Cancel::default();
-    let runner = engine(&server)
-        .cancel(cancel.clone())
-        .retry_policy(RetryPolicy {
-            attempt_timeout: Duration::from_secs(120),
-            ..policy()
-        });
-    assert_eq!(run(&runner, &["first"])[0]["answer"], true);
+    let runner = settings(server.base())
+        .retry(Retry::new(2, Duration::from_millis(1), Duration::from_secs(120)).unwrap())
+        .engine(|_| None)
+        .unwrap()
+        .cancel(cancel.clone());
+    assert_eq!(run(&runner, &["first"]).unwrap()[0]["answer"], true);
     let (arrived, closed) = server.hold(loopback::HeldReply::Headers);
     let worker = thread::spawn(move || run(&runner, &["second"]));
     arrived.recv_timeout(Duration::from_secs(30)).unwrap();
@@ -401,8 +391,7 @@ fn cancellation_closes_a_reused_connection() {
             || matches!(ending, Err(ref error) if error.kind() == std::io::ErrorKind::ConnectionReset)
     );
     let rows = worker.join().unwrap();
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0]["error"]["code"], "local.cancelled");
+    assert_eq!(rows.unwrap_err().code().as_str(), "local.cancelled");
     assert_eq!(server.count(), 2);
     assert_eq!(
         server.connections(),

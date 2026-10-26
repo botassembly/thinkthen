@@ -7,8 +7,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TrySendError};
 use std::time::Duration;
 
-use crate::{Cancel, Client, Error, ErrorKind, OffsetUnit, PullEvent};
+use crate::{Cancel, Engine, Error, ErrorKind, OffsetUnit};
 
+use crate::contract_driver::driver::{Driver, Event};
+use crate::records::Record;
 use crate::runs::RunEntry;
 use crate::runs::entry::Step;
 
@@ -23,6 +25,8 @@ pub enum RunCompletion {
     Success,
     /// A library, input, output or launch operation failed.
     Failure(Error),
+    /// A function step returned a failed row and stopped the run.
+    RecordFailure(Error),
     /// One declared command exited unsuccessfully.
     ChildExit {
         /// The step's ordinal, starting at one.
@@ -38,6 +42,7 @@ struct State {
     cancel: Cancel,
     caller: Cancel,
     failure: Mutex<Option<RunCompletion>>,
+    record_failure: Mutex<Option<Error>>,
 }
 impl State {
     fn fail(&self, failure: RunCompletion) {
@@ -57,7 +62,7 @@ impl State {
 /// All stage workers and declared child groups finish before this returns.
 pub fn execute(
     entry: &RunEntry,
-    client: &Client,
+    client: &Engine,
     cancel: Cancel,
     input: Receiver<Result<String, Error>>,
     mut sink: impl FnMut(&str) -> Result<(), Error>,
@@ -65,18 +70,11 @@ pub fn execute(
     if cancel.is_cancelled() {
         return RunCompletion::Cancelled;
     }
-    // Admit every function before spawning any declared command.
-    for step in &entry.0 {
-        if let Step::Function(request) = step
-            && let Err(error) = client.prepare(request, cancel.clone())
-        {
-            return RunCompletion::Failure(error);
-        }
-    }
     let state = State {
         cancel: Cancel::default(),
         caller: cancel,
         failure: Mutex::new(None),
+        record_failure: Mutex::new(None),
     };
     std::thread::scope(|scope| {
         let (send, mut receiver) = mpsc::sync_channel(1);
@@ -96,7 +94,14 @@ pub fn execute(
             let state = &state;
             if std::thread::Builder::new()
                 .spawn_scoped(scope, move || match step {
-                    Step::Function(request) => function(request, client, prior, send, state),
+                    Step::Function(request) => function(
+                        request,
+                        client,
+                        prior,
+                        send,
+                        state,
+                        index + 1 == entry.0.len(),
+                    ),
                     Step::Shell(args) => shell(args, index + 1, prior, send, state),
                 })
                 .is_err()
@@ -130,7 +135,12 @@ pub fn execute(
     match state.failure.into_inner() {
         Ok(Some(failure)) => failure,
         _ if state.caller.is_cancelled() => RunCompletion::Cancelled,
-        _ => RunCompletion::Success,
+        _ => state
+            .record_failure
+            .into_inner()
+            .ok()
+            .flatten()
+            .map_or(RunCompletion::Success, RunCompletion::RecordFailure),
     }
 }
 
@@ -139,12 +149,6 @@ fn forward(input: Input, output: Output, state: &State) {
         match input.recv_timeout(POLL) {
             Ok(Ok(line)) if line.trim().is_empty() => {}
             Ok(Ok(line)) => {
-                if serde_json::from_str::<serde_json::Value>(&line).is_err() {
-                    state.fail(RunCompletion::Failure(local(
-                        "run input contains an invalid JSON line",
-                    )));
-                    return;
-                }
                 if !send(&output, line, state) {
                     return;
                 }
@@ -160,13 +164,20 @@ fn forward(input: Input, output: Output, state: &State) {
 }
 
 fn function(
-    request: &crate::SdkRequest,
-    client: &Client,
+    request: &crate::Request,
+    client: &Engine,
     input: Input,
     output: Output,
     state: &State,
+    final_step: bool,
 ) {
-    let result = client.open(request, OffsetUnit::CodePoints, Cancel::default());
+    let result = if matches!(request.question(), crate::Question::Rank(_)) {
+        finite_records(&input, state).and_then(|records| {
+            Driver::open_records(client, request, records, OffsetUnit::CodePoints)
+        })
+    } else {
+        Driver::open(client, request, OffsetUnit::CodePoints)
+    };
     let mut call = match result {
         Ok(call) => call,
         Err(error) => {
@@ -175,54 +186,71 @@ fn function(
         }
     };
     while !state.cancel.is_cancelled() {
-        match call.poll(POLL) {
-            Some(PullEvent::NeedsInput) => loop {
-                if state.cancel.is_cancelled() {
+        let event = match call.poll(POLL) {
+            Ok(event) => event,
+            Err(error) => {
+                state.fail(RunCompletion::Failure(error));
+                return;
+            }
+        };
+        match event {
+            Some(Event::NeedsInput) => match input.recv_timeout(POLL) {
+                Ok(Ok(line)) => {
+                    if let Err(error) = call.send(Record::from_json(&line)) {
+                        state.fail(RunCompletion::Failure(error));
+                    }
+                }
+                Ok(Err(error)) => {
+                    state.fail(RunCompletion::Failure(error));
                     return;
                 }
-                match input.recv_timeout(POLL) {
-                    Ok(Ok(line)) => {
-                        if let Err(error) = call.send_json(&line) {
-                            state.fail(RunCompletion::Failure(error));
-                        }
-                        break;
-                    }
-                    Ok(Err(error)) => {
-                        state.fail(RunCompletion::Failure(error));
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => call.end_input(),
+            },
+            Some(Event::Row(row)) => {
+                let failed = row.failure();
+                if let Some(error) = failed {
+                    if !final_step {
+                        state.fail(RunCompletion::RecordFailure(error.clone()));
                         return;
                     }
-                    Err(RecvTimeoutError::Timeout) => {}
-                    Err(RecvTimeoutError::Disconnected) => {
-                        call.end_input();
-                        break;
+                    if let Ok(mut first) = state.record_failure.lock()
+                        && first.is_none()
+                    {
+                        *first = Some(error.clone());
                     }
                 }
-            },
-            Some(PullEvent::Row(row)) => {
-                if let Some(error) = row.failure() {
-                    state.fail(RunCompletion::Failure(error.clone()));
-                    return;
-                }
-                let mut line = row.json;
-                if let Some(detail) = row.detail {
-                    line.pop();
-                    line.push_str(",\"detail\":");
-                    line.push_str(&detail);
-                    line.push('}');
-                }
+                let line = match serde_json::to_string(&row) {
+                    Ok(line) => line,
+                    Err(error) => {
+                        state.fail(RunCompletion::Failure(local(&error.to_string())));
+                        return;
+                    }
+                };
                 if !send(&output, line, state) {
                     return;
                 }
             }
-            Some(PullEvent::Finished) => {
-                if let Some(error) = call.final_error() {
-                    state.fail(RunCompletion::Failure(error.clone()));
-                }
+            Some(Event::Finished) => {
                 return;
             }
             None => {}
         }
     }
+    call.cancel();
+}
+
+fn finite_records(input: &Input, state: &State) -> Result<Vec<Record>, Error> {
+    let mut records = Vec::new();
+    while !state.cancel.is_cancelled() {
+        match input.recv_timeout(POLL) {
+            Ok(Ok(line)) => records.push(Record::from_json(&line)),
+            Ok(Err(error)) => return Err(error),
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => return Ok(records),
+        }
+    }
+    Err(crate::retry::cancelled())
 }
 
 fn shell(args: &[String], ordinal: usize, input: Input, output: Output, state: &State) {

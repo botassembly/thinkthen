@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "registry": "../../schemas/contract.json",
+  "request_schema": "../../schemas/request.schema.json",
+  "row_schema": "../../schemas/row.schema.json",
+  "backends": [
+    "systemone",
+    "openai"
+  ],
+  "client": {
+    "model": "fixture-model",
+    "batch": 32,
+    "retry": {
+      "max_retries": 0
+    }
+  },
+  "cases": [
+    "decide-precision.json",
+    "decide-unsure.json",
+    "choose-tie.json",
+    "tag-batching.json",
+    "score-weighted.json",
+    "filter-rows.json",
+    "rank-top-failures.json",
+    "find-unicode.json",
+    "recognize-name.json",
+    "relate-rounds.json",
+    "annotate-isolation.json",
+    "annotate-columns.json",
+    "backend-isolation.json",
+    "record-admission.json",
+    "exact-identifiers.json",
+    "usage-canonical-labels.json"
+  ],
+  "shapes": "shapes.json"
+}

@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Check candidate Swift assembly or selected Linux Go without a full candidate."""
+import json
+import os
+from pathlib import Path
+import runpy
+import shutil
+import sys
+import tempfile
+import tomllib
+
+from release_go import command, version as go_version
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def main():
+    if sys.argv[1:] not in (['swift'], ['swift-windows'], ['go']):
+        sys.exit('usage: release-consumer-test swift|swift-windows|go')
+    if not os.environ.get('PM_JOB'):
+        sys.exit('run candidate consumer checks through pm job')
+    candidate = runpy.run_path(str(ROOT / 'scripts/release-candidate'))
+    if sys.argv[1] == 'swift-windows':
+        from release_windows import check_sources, source_package
+        from release_windows_sdks import unpack
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-swift-') as temporary:
+            scratch = Path(temporary)
+            out = scratch / 'candidate'
+            check_sources(out)
+            # Package description needs the installed layout, but executes no native code.
+            native = scratch / 'thinkthen_ffi.dll'
+            native.touch()
+            version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+            archive = source_package(scratch / 'stage', out, 'swift', version, native, native)
+            unpack(archive, scratch / 'swift/ThinkThen')
+            consumer = scratch / 'swift/Consumer'
+            shutil.copytree(out / 'checks/swift', consumer)
+            package = json.loads(candidate['text']('swift', 'package', '--package-path', consumer, 'describe', '--type', 'json'))
+            guide = next(target for target in package['targets'] if target['name'] == 'Guide')
+            assert guide['sources'] == ['main.swift'], guide
+            assert (consumer / 'Guide/records.jsonl').is_file(), 'candidate omitted the guide inputs'
+            assert (consumer / 'Guide/main.swift').read_text() in (ROOT / 'docs/surfaces/swift.md').read_text()
+            print('candidate Windows Swift: extracted package resolves its staged Guide target and inputs')
+        return
+    if sys.argv[1] == 'go':
+        assert sys.platform == 'linux', 'Go selection check needs the Linux floor'
+        expected = 'go' + go_version()
+        built = candidate['native_text'](ROOT / 'scripts/go-build', 'version')
+        recorded = candidate['native_text'](command(), 'version')
+        assert built == recorded and built.split()[2] == expected, (built, recorded, expected)
+        print('candidate Go: consumer and receipt use ' + built)
+        return
+    with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-swift-') as temporary:
+        scratch = Path(temporary)
+        # The actual candidate assembles, archives, extracts and builds this package.
+        # Keep its generated directories in an isolated source checkout.
+        candidate['run']('git', 'clone', '--quiet', '--local', '--no-hardlinks', ROOT, scratch / 'source')
+        build = candidate['swift_package']
+        build.__globals__['ROOT'] = scratch / 'source'
+        out = scratch / 'candidate'
+        (out / 'checks').mkdir(parents=True)
+        host, rid, _, _ = candidate['host_info']()
+        assets = Path(os.environ.get('THINKTHEN_SWIFT_NATIVE_ASSETS') or os.environ['THINKTHEN_CSHARP_NATIVE_ASSETS'])
+        version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+        build(out, version, host, rid, assets)
+        consumer = scratch / 'source/.swift-installed/Consumer'
+        assert (consumer / 'Guide').is_dir(), 'candidate omitted its Swift Guide target'
+        package = json.loads(candidate['text']('swift', 'package', '--package-path', consumer, 'describe', '--type', 'json'))
+        guide = next(target for target in package['targets'] if target['name'] == 'Guide')
+        assert guide['sources'], 'candidate Guide has no generated source'
+        assert (out / 'checks/swift/Consumer').is_file()
+        print('candidate Swift: extracted package builds with the generated Guide target')
+
+
+if __name__ == '__main__':
+    main()

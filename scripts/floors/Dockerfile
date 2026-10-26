@@ -5,7 +5,7 @@ COPY scripts/release_downloads.py scripts/release-downloads.json /opt/thinkthen-
 WORKDIR /tmp/sources
 RUN /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://nodejs.org/dist/v22.0.0/node-v22.0.0-linux-x64.tar.xz node.tar.xz \
  && mkdir /opt/node && tar -xf node.tar.xz -C /opt/node --strip-components=1 \
- && /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://go.dev/dl/go1.22.12.linux-amd64.tar.gz go.tar.gz \
+ && /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://go.dev/dl/go1.23.12.linux-amd64.tar.gz go.tar.gz \
  && tar -xf go.tar.gz -C /opt
 RUN /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://cran.r-project.org/src/base/R-4/R-4.3.3.tar.gz R.tar.gz \
  && tar -xf R.tar.gz && cd R-4.3.3 \

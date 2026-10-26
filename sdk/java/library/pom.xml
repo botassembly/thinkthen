@@ -5,4 +5,5 @@
     <dependency><groupId>com.fasterxml.jackson.core</groupId><artifactId>jackson-databind</artifactId><version>2.20.1</version></dependency>
     <dependency><groupId>org.jspecify</groupId><artifactId>jspecify</artifactId><version>1.0.0</version></dependency>
   </dependencies>
+  <build><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><compileSourceRoots><compileSourceRoot>${project.basedir}/src/main/java</compileSourceRoot><compileSourceRoot>${project.build.directory}/generated-sources/contracts</compileSourceRoot></compileSourceRoots></configuration></plugin></plugins></build>
 </project>

@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import io.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: ChooseRequiresChoices. This expression must fail after the positive consumer compiles.
+suspend fun rejectedChooseRequiresChoices(client: ThinkThen) {
+    client.choose("Which team?", "record")
+}

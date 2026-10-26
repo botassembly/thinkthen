@@ -21,7 +21,7 @@ fn run(server: &Loopback, extra: &[&str], input: &str) -> Output {
             "shipping",
         ])
         .args(extra)
-        .env("THINKTHEN_BASE_URL", server.base())
+        .env("THINKTHEN_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -58,10 +58,14 @@ fn the_command_prints_each_matching_label_and_always_exits_zero() {
 #[test]
 fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
     for (args, input, count) in [
-        (vec!["--details"], "message", 1),
-        (vec!["--lines", "--threshold", "0.8"], "first\nsecond\n", 2),
+        (vec!["--json"], "message", 1),
         (
-            vec!["--jsonl", "--on", "/body"],
+            vec!["--from", "lines", "--json", "--threshold", "0.8"],
+            "first\nsecond\n",
+            2,
+        ),
+        (
+            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
             "{\"body\":\"message\"}\n",
             1,
         ),
@@ -72,13 +76,17 @@ fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
         let text = String::from_utf8(output.stdout).unwrap();
         let rows: Vec<serde_json::Value> = text
             .lines()
-            .map(|line| loopback::without_source(serde_json::from_str(line).unwrap()))
+            .map(|line| {
+                let mut row: serde_json::Value = serde_json::from_str(line).unwrap();
+                row.as_object_mut().unwrap().remove("source");
+                row
+            })
             .collect();
         assert_eq!(rows.len(), count);
         assert_eq!(
             rows[0],
-            json!({"id": 1, "status": "answered", "answer": ["billing", "shipping"],
-            "detail": {"billing": 0.8, "shipping": 0.8}})
+            json!({"function":"tag","position": 1, "status": "answered", "answer": ["billing", "shipping"],
+            "detail": {"labels":{"billing": 0.8, "shipping": 0.8}}})
         );
     }
 }
@@ -88,7 +96,7 @@ fn a_threshold_band_exits_two_without_a_send() {
     let server = Loopback::noul(0.9).unwrap();
     let output = run(&server, &["--threshold", "0.2:0.8"], "message");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.threshold");
+    assert_eq!(support::reported(&output), "usage.question");
     assert!(output.stdout.is_empty());
     assert_eq!(server.count(), 0);
 }

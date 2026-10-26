@@ -8,5 +8,12 @@ case "$(uname -s)" in
     Linux) THINKTHEN_RUNTIME_PREFIX="$tools/floors/linux-glibc$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from runtime_floors import FLOORS; print(FLOORS["linux"]["glibc"])')" ;;
 esac
 THINKTHEN_JANSSON_ROOT="$THINKTHEN_RUNTIME_PREFIX/jansson"
-export THINKTHEN_RUNTIME_PREFIX THINKTHEN_JANSSON_ROOT
+THINKTHEN_SQLITE_ROOT="$THINKTHEN_RUNTIME_PREFIX"
+if [ "$(uname -s)" = Darwin ]; then
+    THINKTHEN_SQLITE_ROOT="$tools/floors/macos$(python3 scripts/runtime_floors.py macos)"
+fi
+if [ "$(uname -s)" = Linux ]; then
+    THINKTHEN_JANSSON_ROOT="$THINKTHEN_RUNTIME_PREFIX/jansson-2.14.1"
+fi
+export THINKTHEN_RUNTIME_PREFIX THINKTHEN_JANSSON_ROOT THINKTHEN_SQLITE_ROOT
 unset tools

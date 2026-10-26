@@ -9,7 +9,7 @@ use std::process::Stdio;
 fn filename_and_hash_question_strings_are_literal() {
     for question in ["missing.json", "missing.json#ready"] {
         let mut child = support::command()
-            .args(["decide", question, "--adapter", "stub"])
+            .args(["decide", question, "--backend", "stub"])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

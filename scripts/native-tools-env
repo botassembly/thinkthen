@@ -1,15 +1,21 @@
 #!/bin/sh
 # Source from the repository root to select prepared compilers and runtimes.
 # These are build paths, never library runtime search paths.
-PATH="$HOME/.local/share/thinkthen-build-tools/swift/macos-commands:/usr/lib/llvm-21/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/ruby@3.3/bin:$HOME/.local/share/thinkthen-build-tools/node/bin:$HOME/.local/share/thinkthen-build-tools/ruby/runtime/bin:$HOME/.local/share/thinkthen-build-tools/dotnet10:$HOME/.cargo/bin:$HOME/.local/share/thinkthen-build-tools/go/bin:$HOME/.local/share/thinkthen-build-tools/cmake/bin:/opt/zerobrew/bin:/opt/zerobrew/opt/node@22/bin:/opt/zerobrew/opt/ruby@3.3/bin:$PATH"
+PATH="$HOME/.local/share/thinkthen-build-tools/swift/macos-commands:/usr/lib/llvm-21/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/ruby@3.3/bin:${THINKTHEN_NODE_HOME:-$HOME/.local/share/thinkthen-build-tools/node}/bin:$HOME/.local/share/thinkthen-build-tools/ruby/runtime/bin:$HOME/.local/share/thinkthen-build-tools/dotnet10:$HOME/.cargo/bin:$HOME/.local/share/thinkthen-build-tools/go/bin:$HOME/.local/share/thinkthen-build-tools/cmake/bin:/opt/zerobrew/bin:/opt/zerobrew/opt/node@22/bin:/opt/zerobrew/opt/ruby@3.3/bin:$PATH"
 for thinkthen_python in "$HOME"/.local/share/uv/python/cpython-3.13-*/bin; do
     if [ -x "$thinkthen_python/python3" ]; then PATH="$thinkthen_python:$PATH"; break; fi
 done
 . scripts/native-build-env
-PATH="$THINKTHEN_RUNTIME_PREFIX/bin:$HOME/.local/share/thinkthen-build-tools/sqlite-3.41.0/bin:$PATH"
+PATH="$THINKTHEN_RUNTIME_PREFIX/bin:$THINKTHEN_SQLITE_ROOT/sqlite-3.41.0/bin:$PATH"
 R_LIBS_USER="$THINKTHEN_RUNTIME_PREFIX/r-frames/library"
 export PATH R_LIBS_USER
 PKG_CONFIG_PATH="$THINKTHEN_JANSSON_ROOT/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 export PKG_CONFIG_PATH
 unset thinkthen_python
 . scripts/jvm-env
+
+# Baseline runtimes belong to the prepared image, not a relocated host install.
+if [ "${THINKTHEN_FLOOR_BUILD:-}" = 1 ]; then
+    PATH="${THINKTHEN_NODE_HOME:-/opt/node}/bin:/opt/R/bin:/opt/ruby/bin:${THINKTHEN_GO_HOME:-/opt/go}/bin:/opt/thinkthen-pg18/bin:$PATH"
+    export PATH
+fi

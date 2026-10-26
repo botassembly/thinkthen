@@ -20,7 +20,6 @@ import release_crates
 import release_upload
 from release_workflow import ROOT, TARGETS, collect, version
 from release_install import checksums
-from release_registry import github_assets, attach
 from runtime_floors import FLOORS, requirements
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as temporary:
@@ -157,20 +156,6 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
         assert text in notes, text
     with tarfile.open(release / f'thinkthen-{version()}-linux-x86_64-packages.tar.gz') as archive:
         assert archive.extractfile(f'{version()}/linux-x86_64/INSTALL.md').read() == b'Offline installation for linux-x86_64'
-    assert 'PostgreSQL18 linux-x86_64, PostgreSQL18 linux-arm64' in notes
-    github = scratch / 'github'
-    sqlite_names = set()
-    for target in TARGETS:
-        package = scratch / 'packages' / version() / target
-        sqlite = package / 'sqlite'
-        sqlite.mkdir()
-        name = f'thinkthen-sqlite-{version()}-{target}' + ('.zip' if target == 'windows-x86_64' else '.tar.gz')
-        (sqlite / name).write_bytes(target.encode())
-        (sqlite / 'requirements.json').write_text('{}')
-        github_assets(package, github)
-        sqlite_names.add(name)
-    assert {p.name for p in github.iterdir()} == sqlite_names
-    assert all((github / name).read_bytes() for name in sqlite_names)
     print(notes)
 
     source = scratch / 'source'

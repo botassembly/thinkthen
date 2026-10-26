@@ -1,256 +1,619 @@
 [
   {
-    "name": "saved-choose-domain",
     "client": {
-      "adapter": "stub"
-    },
-    "request": {
-      "function": "choose",
-      "question": {
-        "type": "toolbox",
-        "value": {
-          "questions": {
-            "saved": {
-              "choose": "Which fits?",
-              "options": [
-                "red",
-                "blue"
-              ]
-            }
-          }
-        },
-        "name": "saved"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
       },
-      "records": [
-        "alpha",
-        "beta"
-      ]
+      "url": null
     },
     "equivalent_request": {
-      "function": "choose",
+      "name": "saved",
       "question": {
-        "type": "inline",
-        "value": "Which fits?"
-      },
-      "options": {
-        "options": [
+        "choices": [
           "red",
           "blue"
-        ]
+        ],
+        "function": "choose",
+        "question": "Which fits?"
       },
       "records": [
         "alpha",
         "beta"
       ]
-    }
-  },
-  {
-    "name": "saved-tag-domain",
-    "client": {
-      "adapter": "stub"
     },
-    "request": {
-      "function": "tag",
-      "question": {
-        "type": "toolbox",
-        "value": {
-          "questions": {
-            "saved": {
-              "tag": "Which fits?",
-              "labels": [
-                "red",
-                "blue"
-              ]
-            }
+    "expected": [
+      {
+        "answer": "blue",
+        "detail": {
+          "labels": {
+            "blue": 1.0,
+            "red": 0.0
           }
         },
-        "name": "saved"
+        "function": "choose",
+        "position": 1,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "name": "saved",
+          "question_identity": "dd0f075247bb3844ec70daad66642b673426fd4e34ad579fd95adb7fc7d99a22"
+        },
+        "status": "answered"
+      },
+      {
+        "answer": "blue",
+        "detail": {
+          "labels": {
+            "blue": 1.0,
+            "red": 0.0
+          }
+        },
+        "function": "choose",
+        "position": 2,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "name": "saved",
+          "question_identity": "dd0f075247bb3844ec70daad66642b673426fd4e34ad579fd95adb7fc7d99a22"
+        },
+        "status": "answered"
+      }
+    ],
+    "name": "named-choose-domain",
+    "request": {
+      "name": "saved",
+      "question": {
+        "choices": [
+          "red",
+          "blue"
+        ],
+        "function": "choose",
+        "question": "Which fits?"
       },
       "records": [
         "alpha",
         "beta"
       ]
     },
-    "equivalent_request": {
-      "function": "tag",
-      "question": {
-        "type": "inline",
-        "value": "Which fits?"
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
       },
-      "options": {
+      "url": null
+    },
+    "equivalent_request": {
+      "name": "priority",
+      "question": {
+        "function": "rank",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "question": "How much?",
+        "top": 1
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "expected": [
+      {
+        "answer": 1,
+        "detail": {
+          "levels": [
+            1.0,
+            0.0
+          ]
+        },
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "name": "priority",
+          "question_identity": "915a74e0a591b6e25336aaac134345a880dcc53b2881af7a8a90b0582dc308bb"
+        },
+        "status": "answered"
+      }
+    ],
+    "name": "named-rank-levels",
+    "request": {
+      "name": "priority",
+      "question": {
+        "function": "rank",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "question": "How much?",
+        "top": 1
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "choose-missing-domain",
+    "request": {
+      "question": {
+        "function": "choose",
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "choose-small-domain",
+    "request": {
+      "question": {
+        "choices": [
+          "one"
+        ],
+        "function": "choose",
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.threshold",
+    "name": "tag-rejects-band",
+    "request": {
+      "question": {
+        "function": "tag",
         "labels": [
-          "red",
-          "blue"
-        ]
-      },
-      "records": [
-        "alpha",
-        "beta"
-      ]
-    }
+          "one"
+        ],
+        "question": "Ready?",
+        "threshold": {
+          "high": 0.8,
+          "low": 0.2
+        }
+      }
+    },
+    "requests": 0
   },
   {
-    "name": "saved-score-domain",
     "client": {
-      "adapter": "stub"
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
     },
+    "expected_error": "usage.question",
+    "name": "annotation-rejects-rank",
     "request": {
-      "function": "score",
       "question": {
-        "type": "toolbox",
-        "value": {
-          "questions": {
-            "saved": {
-              "score": "Which fits?",
-              "levels": [
-                "low",
-                "high"
-              ]
-            }
-          }
-        },
-        "name": "saved"
-      },
-      "records": [
-        "alpha",
-        "beta"
-      ]
-    },
-    "equivalent_request": {
-      "function": "score",
-      "question": {
-        "type": "inline",
-        "value": "Which fits?"
-      },
-      "options": {
-        "levels": [
-          "low",
-          "high"
-        ]
-      },
-      "records": [
-        "alpha",
-        "beta"
-      ]
-    }
-  },
-  {
-    "name": "rank-levels",
-    "client": {
-      "adapter": "stub"
-    },
-    "request": {
-      "function": "rank",
-      "question": {
-        "type": "inline",
-        "value": "How strong?"
-      },
-      "options": {
-        "levels": [
-          "low",
-          "medium",
-          "high"
-        ]
-      },
-      "records": [
-        "alpha",
-        "beta",
-        "gamma"
-      ]
-    },
-    "equivalent_request": {
-      "function": "rank",
-      "question": {
-        "type": "toolbox",
-        "value": {
-          "questions": {
-            "saved": {
-              "score": "How strong?",
-              "levels": [
-                "low",
-                "medium",
-                "high"
-              ]
-            }
-          }
-        },
-        "name": "saved"
-      },
-      "records": [
-        "alpha",
-        "beta",
-        "gamma"
-      ]
-    }
-  },
-  {
-    "name": "score-refuses-threshold",
-    "client": {
-      "adapter": "stub"
-    },
-    "request": {
-      "function": "score",
-      "question": {
-        "type": "inline",
-        "value": "How strong?"
-      },
-      "options": {
-        "threshold": "0.5",
-        "levels": [
-          "low",
-          "high"
-        ]
-      },
-      "records": [
-        "alpha"
-      ]
-    },
-    "expected_error": "usage.question"
-  },
-  {
-    "name": "rank-refuses-threshold",
-    "client": {
-      "adapter": "stub"
-    },
-    "request": {
-      "function": "rank",
-      "question": {
-        "type": "inline",
-        "value": "How strong?"
-      },
-      "options": {
-        "threshold": "0.5"
-      },
-      "records": [
-        "alpha"
-      ]
-    },
-    "expected_error": "usage.question"
-  },
-  {
-    "name": "annotate-refuses-threshold",
-    "client": {
-      "adapter": "stub"
-    },
-    "request": {
-      "function": "annotate",
-      "question": {
-        "type": "inline",
-        "value": {
-          "questions": {
-            "ready": {
-              "decide": "Ready?"
-            }
+        "function": "annotate",
+        "questions": {
+          "rank": {
+            "function": "rank",
+            "levels": [
+              "low",
+              "high"
+            ],
+            "question": "How much?"
           }
         }
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
       },
-      "options": {
-        "threshold": "0.5"
+      "url": null
+    },
+    "expected_error": "usage.pointer",
+    "name": "evidence-needs-pointer",
+    "request": {
+      "question": {
+        "evidence": "body",
+        "function": "decide",
+        "question": "Ready?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "equivalent_request": {
+      "question": {
+        "choices": [
+          "red",
+          "blue"
+        ],
+        "function": "choose",
+        "question": "Which fits?"
       },
       "records": [
-        "alpha"
+        "alpha",
+        "beta"
       ]
     },
-    "expected_error": "usage.question"
+    "expected": [
+      {
+        "answer": "blue",
+        "detail": {
+          "labels": {
+            "blue": 1.0,
+            "red": 0.0
+          }
+        },
+        "function": "choose",
+        "position": 1,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "ff6b5cb9ee263524e5f22e4efe701c16c7c37ab4e0fa1b60a5a9c40741b3895b"
+        },
+        "status": "answered"
+      },
+      {
+        "answer": "blue",
+        "detail": {
+          "labels": {
+            "blue": 1.0,
+            "red": 0.0
+          }
+        },
+        "function": "choose",
+        "position": 2,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "ff6b5cb9ee263524e5f22e4efe701c16c7c37ab4e0fa1b60a5a9c40741b3895b"
+        },
+        "status": "answered"
+      }
+    ],
+    "name": "unnamed-choose-domain",
+    "request": {
+      "question": {
+        "choices": [
+          "red",
+          "blue"
+        ],
+        "function": "choose",
+        "question": "Which fits?"
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "equivalent_request": {
+      "question": {
+        "function": "rank",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "question": "How much?",
+        "top": 1
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "expected": [
+      {
+        "answer": 1,
+        "detail": {
+          "levels": [
+            1.0,
+            0.0
+          ]
+        },
+        "function": "rank",
+        "position": 1,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "f9c5e199cb771977554de304e9305e3499492730920056aed84f16e75284b949"
+        },
+        "status": "answered"
+      }
+    ],
+    "name": "unnamed-rank-levels",
+    "request": {
+      "question": {
+        "function": "rank",
+        "levels": [
+          "low",
+          "high"
+        ],
+        "question": "How much?",
+        "top": 1
+      },
+      "records": [
+        "alpha",
+        "beta"
+      ]
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "choose-rejects-canonically-equal-labels",
+    "request": {
+      "question": {
+        "choices": [
+          "é",
+          "é"
+        ],
+        "function": "choose",
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "tag-rejects-canonically-equal-labels",
+    "request": {
+      "question": {
+        "function": "tag",
+        "labels": [
+          "é",
+          "é"
+        ],
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "score-rejects-canonically-equal-labels",
+    "request": {
+      "question": {
+        "function": "score",
+        "levels": [
+          "é",
+          "é"
+        ],
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "rank-rejects-canonically-equal-labels",
+    "request": {
+      "question": {
+        "function": "rank",
+        "levels": [
+          "é",
+          "é"
+        ],
+        "question": "Which fits?"
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "recognize-rejects-canonically-equal-labels",
+    "request": {
+      "question": {
+        "function": "recognize",
+        "kinds": [
+          "é",
+          "é"
+        ]
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "relate-rejects-canonically-equal-rules",
+    "request": {
+      "question": {
+        "function": "relate",
+        "rules": [
+          {
+            "relation": "é",
+            "source": "person",
+            "target": "person"
+          },
+          {
+            "relation": "é",
+            "source": "person",
+            "target": "person"
+          }
+        ]
+      }
+    },
+    "requests": 0
+  },
+  {
+    "client": {
+      "backend": "stub",
+      "batch": null,
+      "model": null,
+      "retry": {
+        "attempt_timeout_ms": 120000,
+        "initial_backoff_ms": 500,
+        "max_retries": 3
+      },
+      "url": null
+    },
+    "expected_error": "usage.question",
+    "name": "relate-rejects-canonically-equal-kinds",
+    "request": {
+      "question": {
+        "function": "relate",
+        "rules": [
+          {
+            "relation": "knows",
+            "source": "é",
+            "target": "é"
+          }
+        ]
+      }
+    },
+    "requests": 0
   }
 ]

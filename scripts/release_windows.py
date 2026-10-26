@@ -61,15 +61,19 @@ def source_package(stage, out, name, version, native, import_library):
         copy(native, package / 'native/library')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'thinkthen.h')
     elif name == 'swift':
+        (package / 'generate-codes.py').unlink()
+        subprocess.run([sys.executable, str(ROOT / 'sdk/swift/generate-codes.py'),
+                        str(ROOT / 'schemas/contract.json'),
+                        str(package / 'Sources/ThinkThen/ErrorCode.swift')], check=True)
         copy(native, package / 'Sources/ThinkThen/Native/win-x64/thinkthen_ffi.dll')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'Sources/CThinkThen/include/thinkthen.h')
-    else:
+    elif name != 'cpp':
         copy(native, package / 'native/win-x64/thinkthen_ffi.dll')
         copy(import_library, package / 'native/win-x64/thinkthen_ffi.lib')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'include/thinkthen.h')
     if name == 'swift': (package / 'VERSION').write_text(version + '\n')
     copy(ROOT / 'LICENSE', package / 'LICENSE')
-    if name == 'cpp': cmake_config(package, 'Cpp', 'native/win-x64/thinkthen_ffi.dll', 'native/win-x64/thinkthen_ffi.lib')
+    if name == 'cpp': cmake_config(package, 'Cpp', 'native/win-x64/thinkthen_ffi.dll', 'native/win-x64/thinkthen_ffi.lib', version)
     result = out / f'{name}/thinkthen-{name}-{version}-windows-x86_64.zip'
     zip_package(package, result)
     return result
@@ -145,24 +149,24 @@ def candidate(destination):
         copy(r / f'thinkthen_{version}.zip', stage / f'thinkthen_{version}.zip')
         command = stage / 'command'
         copy(native / 'thinkthen.exe', command / 'thinkthen.exe')
+        manual = run('cargo', 'run', '--release', '--offline', '--locked', '-p', 'thinkthen', '--bin', 'thinkthen', '--', 'man').stdout
+        (command / 'thinkthen.1').write_text(manual)
         copy(ROOT / 'README.md', command / 'README.md')
         command_path = out / f'thinkthen-{version}-windows-x86_64.zip'
-        # The command format has exactly these two members, in this order.
+        # The command manual comes from the same argument grammar.
         with zipfile.ZipFile(command_path, 'w', zipfile.ZIP_DEFLATED) as archive:
-            for name in ('thinkthen.exe', 'README.md'): archive.write(command / name, name)
+            for name in ('thinkthen.exe', 'thinkthen.1', 'README.md'): archive.write(command / name, name)
         from release_windows_native import build_databases
         build_databases(native)
         c = stage / 'c'
-        shutil.copytree(native / 'c', c, ignore=shutil.ignore_patterns('jansson.*', 'jansson_config.h'))
-        copy(ROOT / 'sdk/c/include/thinkthen_c.h', c / 'include/thinkthen_c.h')
-        copy(ROOT / 'sdk/c/JANSSON-LICENSE', c / 'JANSSON-LICENSE')
+        c.mkdir()
         copy(native / 'thinkthen_ffi.dll', c / 'bin/thinkthen_ffi.dll')
         copy(native / 'thinkthen_ffi.dll.lib', c / 'lib/thinkthen_ffi.lib')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', c / 'include/thinkthen.h')
         copy(ROOT / 'sdk/c/README.md', c / 'README.md')
         copy(ROOT / 'LICENSE', c / 'LICENSE')
         for leftover in [*list((c / 'bin').glob('*.lib')), *list((c / 'bin').glob('*.exp'))]: leftover.unlink()
-        cmake_config(c, 'C', 'bin/thinkthen_c.dll', 'lib/thinkthen_c.lib')
+        cmake_config(c, 'C', 'bin/thinkthen_ffi.dll', 'lib/thinkthen_ffi.lib', version)
         packages = {'command': command_path, 'c': out / f'c/thinkthen-c-{version}-windows-x86_64.zip'}
         assert not any('jansson' in p.name.lower() for directory in ('bin', 'lib', 'include')
                        for p in (c / directory).rglob('*') if p.is_file())
@@ -173,10 +177,12 @@ def candidate(destination):
                                             native / 'thinkthen_ffi.dll', native / 'thinkthen_ffi.dll.lib')
         package_more(stage, out, version, native, packages)
     copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
+    copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
     copy(ROOT / 'scripts/release-check', out / 'check')
     copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
     copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
     copy(ROOT / 'scripts/release_windows_check.py', out / 'release_windows_check.py')
+    copy(ROOT / 'scripts/production_native.py', out / 'production_native.py')
     copy(ROOT / 'scripts/release_windows_sdks.py', out / 'release_windows_sdks.py')
     copy(ROOT / 'scripts/release_windows_cache.py', out / 'release_windows_cache.py')
     copy(ROOT / 'scripts/windows_caller_process.py', out / 'windows_caller_process.py')
@@ -197,6 +203,7 @@ def candidate(destination):
 
 
 def package_more(stage, out, version, native, packages):
+    run(sys.executable, ROOT / 'scripts/typescript-prepare')
     npm = stage / 'typescript'
     npm.mkdir()
     manifest = json.loads((ROOT / 'sdk/typescript/package.json').read_text())
@@ -223,8 +230,8 @@ def package_more(stage, out, version, native, packages):
     copy(gem, packages['ruby'])
     dependency, = (TOOLS / 'windows').glob('ffi-*-x64-mingw-ucrt.gem')
     copy(dependency, out / 'ruby/dependencies' / dependency.name)
-    dependency, = (TOOLS / 'windows').glob('jsonlite_*.zip')
-    copy(dependency, out / 'prerequisites/r' / dependency.name)
+    from release_windows_r import dependencies as r_dependencies
+    r_dependencies(out / 'prerequisites/r')
     # Reuse the language tools' own JAR and NuGet writers in an isolated source.
     loader = SourceFileLoader('candidate_host', str(ROOT / 'scripts/release-candidate'))
     spec = importlib.util.spec_from_loader(loader.name, loader)
@@ -249,7 +256,7 @@ def package_more(stage, out, version, native, packages):
 def windows_requirements(out):
     config = json.loads((ROOT / 'scripts/runtime-floors.json').read_text())
     runtime = dict(config['runtimes'])
-    runtime.update(command='Windows x86-64', r='R 4.6; bundled matching jsonlite binary',
+    runtime.update(command='Windows x86-64', r='R 4.6; bundled matching R dependency binaries',
                    c='C11 compiler and Windows x64 linker to build; operating-system runtime thereafter',
                    cpp='C++17 compiler; bundled nlohmann_json headers; standard C++ runtime thereafter',
                    swift='Swift >=6.3 Windows toolchain',
@@ -277,9 +284,9 @@ def finish_readmes(out, packages):
         '# Install ThinkThen on Windows x86-64', '',
         FLOORS['windows']['support'], '',
         'This candidate is unpublished. Use the bundled package files. Put each ordinary runtime from requirements.json on PATH before installing its package. PostgreSQL is Linux only.', '',
-        'Extract the command ZIP and run `thinkthen.exe decide --adapter stub "Ready?"` with text on standard input. The stub needs no key or network.', '',
+        'Extract the command ZIP and run `thinkthen.exe decide --backend stub "Ready?"` with text on standard input. The stub needs no key or network.', '',
         'Install the Python wheel with `py -m pip install --no-index python\\thinkthen-*.whl` after selecting the concrete bundled filename. Install the npm archive with `npm install --offline --ignore-scripts .\\typescript\\thinkthen-*.tgz` after selecting its concrete filename.', '',
-        'Install the R binary with `install.packages("r/thinkthen_VERSION.zip", repos=NULL, type="win.binary")`, replacing VERSION with the bundled version. Install the matching bundled jsonlite ZIP first. The optional tibble, dplyr and data.table packages use their ordinary R installers.', '',
+        'Install the R binary with `install.packages("r/thinkthen_VERSION.zip", repos=NULL, type="win.binary")`, replacing VERSION with the bundled version. Install the bundled prerequisite ZIPs in prerequisites/r/install-order.txt order first. The optional tibble, dplyr and data.table packages use their ordinary R installers.', '',
         'Install the Ruby gems with `gem install --local --no-document` using the bundled ffi dependency and ThinkThen gem. Use the NuGet file as a local source for dotnet. Java and Kotlin include their runtime JAR dependencies beside the package.', '',
         'The C package supplies include/thinkthen.h, lib/thinkthen_ffi.lib and bin/thinkthen_ffi.dll. Link the import library and keep the DLL beside the consuming executable. C++ additionally needs the supplied nlohmann_json headers. Go, Zig and Swift packages include the Windows DLL for their ordinary build tools.', '',
         'Extract each database ZIP before loading its extension by absolute path. SQLite uses thinkthen_sqlite.dll. DuckDB uses thinkthen.duckdb_extension and its official unsigned-extension setting.', '',
@@ -288,10 +295,10 @@ def finish_readmes(out, packages):
     (out / 'INSTALL.md').write_text('\n'.join(commands))
 
 
-def cmake_config(package, language, dll, library):
+def cmake_config(package, language, dll, library, version):
     folder = package / f'lib/cmake/ThinkThen{language}'
     folder.mkdir(parents=True, exist_ok=True)
-    target = 'C' if language == 'C' else 'Engine'
+    target = 'C'
     lines = [
         'get_filename_component(_thinkthen_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)',
         f'if(NOT TARGET ThinkThen::{target})',
@@ -302,16 +309,21 @@ def cmake_config(package, language, dll, library):
         '    INTERFACE_INCLUDE_DIRECTORIES "${_thinkthen_prefix}/include")',
         'endif()',
     ]
-    if language == 'C':
-        lines += ['include(CMakeFindDependencyMacro)',
-                  'find_dependency(jansson CONFIG)',
-                  'set_property(TARGET ThinkThen::C PROPERTY INTERFACE_LINK_LIBRARIES jansson::jansson)']
-    else:
+    if language != 'C':
+        lines = ['include(CMakeFindDependencyMacro)', f'find_dependency(ThinkThenC {version} CONFIG REQUIRED)',
+                 'get_filename_component(_thinkthen_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)']
         lines += ['add_library(ThinkThen::Cpp INTERFACE IMPORTED)',
                   'set_target_properties(ThinkThen::Cpp PROPERTIES',
                   '  INTERFACE_INCLUDE_DIRECTORIES "${_thinkthen_prefix}/include"',
-                  '  INTERFACE_LINK_LIBRARIES ThinkThen::Engine INTERFACE_COMPILE_FEATURES cxx_std_17)']
+                  '  INTERFACE_LINK_LIBRARIES ThinkThen::C INTERFACE_COMPILE_FEATURES cxx_std_17)']
     (folder / f'ThinkThen{language}Config.cmake').write_text('\n'.join(lines) + '\n')
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.cmake') as recipe:
+        recipe.write('include(CMakePackageConfigHelpers)\n'
+                     'write_basic_package_version_file("${OUTPUT}" VERSION "${VERSION}" '
+                     'COMPATIBILITY SameMinorVersion ARCH_INDEPENDENT)\n')
+        recipe.flush()
+        run('cmake', f'-DVERSION={version}',
+            f'-DOUTPUT={folder / f"ThinkThen{language}ConfigVersion.cmake"}', '-P', recipe.name)
 
 
 def check_sources(out):
@@ -319,13 +331,17 @@ def check_sources(out):
     for path in (ROOT / 'scripts/release').iterdir():
         if path.is_file(): copy(path, out / 'checks' / path.name)
     for family, patterns in {'go': ['*.go', 'go.mod'], 'c': ['conformance.c', 'rows.h'],
-                              'cpp': ['consumer.cpp'], 'swift': ['*.swift'], 'zig': ['*.zig', '*.zon']}.items():
+                              'cpp': ['consumer.cpp', '*.hpp'], 'swift': ['*.swift'], 'zig': ['*.zig', '*.zon']}.items():
         for pattern in patterns:
             for path in (ROOT / 'sdk' / family / 'tests').glob(pattern):
                 copy(path, out / 'checks' / family / path.name)
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md',
         out / 'checks/swift/Readme')
+    run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift',
+        out / 'checks/swift/Guide')
     copy(ROOT / 'sdk/r/tests/run.R', out / 'checks/run.R')
+    copy(ROOT / 'sdk/r/tests/support.R', out / 'checks/support.R')
+    copy(ROOT / 'sdk/r/tests/release-cases.R', out / 'checks/r-cases.R')
     for pattern in ('*.cs', 'Consumer.csproj'):
         for path in (ROOT / 'sdk/csharp/tests').glob(pattern):
             copy(path, out / 'checks/csharp-source' / path.name)

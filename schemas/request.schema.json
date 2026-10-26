@@ -1,632 +1,606 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "SdkRequest",
-  "description": "A request parsed at the host boundary, before question validation.",
-  "oneOf": [
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "decide"
-        },
-        "options": {
-          "$ref": "#/$defs/DecisionOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
+  "title": "Request",
+  "description": "A canonical question and its initial input records.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
     },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "choose"
-        },
-        "options": {
-          "$ref": "#/$defs/ChoiceOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
+    "question": {
+      "$ref": "#/$defs/RawQuestion"
     },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "tag"
-        },
-        "options": {
-          "$ref": "#/$defs/TagOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "score"
-        },
-        "options": {
-          "$ref": "#/$defs/ScaleOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "filter"
-        },
-        "options": {
-          "$ref": "#/$defs/DecisionOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "rank"
-        },
-        "options": {
-          "$ref": "#/$defs/RankOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "find"
-        },
-        "options": {
-          "$ref": "#/$defs/DecisionOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "annotate"
-        },
-        "options": {
-          "$ref": "#/$defs/AnnotationOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged2"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "recognize"
-        },
-        "options": {
-          "$ref": "#/$defs/DecisionOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged3"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "function": {
-          "type": "string",
-          "const": "relate"
-        },
-        "options": {
-          "$ref": "#/$defs/DecisionOptions"
-        },
-        "question": {
-          "$ref": "#/$defs/Tagged4"
-        },
-        "records": {
-          "type": "array",
-          "default": [],
-          "items": true
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "function",
-        "question"
-      ]
+    "records": {
+      "type": "array",
+      "default": [],
+      "items": true
     }
+  },
+  "additionalProperties": false,
+  "required": [
+    "question"
   ],
   "$defs": {
-    "AnnotationOptions": {
+    "Band": {
       "type": "object",
       "properties": {
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "high": {
+          "$ref": "#/$defs/Cut"
+        },
+        "low": {
+          "$ref": "#/$defs/Cut"
         }
       },
-      "additionalProperties": false
-    },
-    "ChoiceOptions": {
-      "type": "object",
-      "properties": {
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "options": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "threshold": true
-      },
-      "additionalProperties": false
-    },
-    "DecisionOptions": {
-      "type": "object",
-      "properties": {
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "threshold": true
-      },
-      "additionalProperties": false
-    },
-    "RankOptions": {
-      "type": "object",
-      "properties": {
-        "levels": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "top": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint",
-          "minimum": 1
-        }
-      },
-      "additionalProperties": false
-    },
-    "ScaleOptions": {
-      "type": "object",
-      "properties": {
-        "levels": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
-    "TagOptions": {
-      "type": "object",
-      "properties": {
-        "labels": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "on": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "threshold": true
-      },
-      "additionalProperties": false
-    },
-    "Tagged": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "inline"
-            },
-            "value": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "type": {
-              "type": "string",
-              "const": "toolbox"
-            },
-            "value": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "type": {
-              "type": "string",
-              "const": "reference"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "name"
-          ]
-        }
+      "additionalProperties": false,
+      "required": [
+        "low",
+        "high"
       ]
     },
-    "Tagged2": {
+    "Cut": {
+      "description": "A finite probability from 0 to 1, inclusive.\n\nSerialization and [`Self::get`] retain full precision.",
+      "type": "number",
+      "format": "double",
+      "exclusiveMinimum": 0,
+      "maximum": 1
+    },
+    "Pointer": {
+      "type": "string",
+      "format": "json-pointer"
+    },
+    "RawAnnotatableQuestion": {
       "oneOf": [
         {
           "type": "object",
           "properties": {
-            "type": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
               "type": "string",
-              "const": "inline"
+              "const": "decide"
             },
-            "value": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "type": {
-              "type": "string",
-              "const": "toolbox"
-            },
-            "value": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
+            "question": {
               "type": "string"
             },
-            "type": {
-              "type": "string",
-              "const": "reference"
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
             }
           },
           "additionalProperties": false,
           "required": [
-            "type",
-            "name"
+            "function",
+            "question"
           ]
-        }
-      ]
-    },
-    "Tagged3": {
-      "oneOf": [
+        },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "inline"
-            },
-            "value": {
+            "choices": {
               "type": "array",
               "items": {
                 "type": "string"
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": [
-                "string",
-                "null"
-              ]
+              },
+              "minItems": 2
             },
-            "type": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
               "type": "string",
-              "const": "toolbox"
+              "const": "choose"
             },
-            "value": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
+            "question": {
               "type": "string"
             },
-            "type": {
-              "type": "string",
-              "const": "reference"
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
             }
           },
           "additionalProperties": false,
           "required": [
-            "type",
-            "name"
+            "function",
+            "question",
+            "choices"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "tag"
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "labels"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "score"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2
+            },
+            "question": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "levels"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "filter"
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "find"
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "recognize"
+            },
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "kinds"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "relate"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RuleWire"
+              },
+              "minItems": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "rules"
           ]
         }
       ]
     },
-    "Tagged4": {
+    "RawNamed": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/RawAnnotatableQuestion"
+      },
+      "minProperties": 1
+    },
+    "RawQuestion": {
       "oneOf": [
         {
           "type": "object",
           "properties": {
-            "type": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
               "type": "string",
-              "const": "inline"
+              "const": "decide"
             },
-            "value": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": true
-              }
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "type": {
-              "type": "string",
-              "const": "toolbox"
-            },
-            "value": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "value"
-          ]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "name": {
+            "question": {
               "type": "string"
             },
-            "type": {
-              "type": "string",
-              "const": "reference"
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
             }
           },
           "additionalProperties": false,
           "required": [
-            "type",
-            "name"
+            "function",
+            "question"
           ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2
+            },
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "choose"
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "choices"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "tag"
+            },
+            "labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "labels"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "score"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2
+            },
+            "question": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "levels"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "filter"
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Threshold",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "find"
+            },
+            "question": {
+              "type": "string"
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "recognize"
+            },
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "kinds"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "relate"
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/RuleWire"
+              },
+              "minItems": 1
+            },
+            "threshold": {
+              "$ref": "#/$defs/Cut",
+              "default": 0.5
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "rules"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "rank"
+            },
+            "levels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2
+            },
+            "question": {
+              "type": "string"
+            },
+            "top": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint",
+              "maximum": 2147483647,
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "question",
+            "levels"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "evidence": {
+              "$ref": "#/$defs/Pointer"
+            },
+            "function": {
+              "type": "string",
+              "const": "annotate"
+            },
+            "questions": {
+              "$ref": "#/$defs/RawNamed"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "function",
+            "questions"
+          ]
+        }
+      ]
+    },
+    "RuleWire": {
+      "type": "object",
+      "properties": {
+        "either": {
+          "type": "boolean",
+          "default": false
+        },
+        "reads": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "relation",
+        "source",
+        "target"
+      ]
+    },
+    "Threshold": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Cut"
+        },
+        {
+          "$ref": "#/$defs/Band"
         }
       ]
     }

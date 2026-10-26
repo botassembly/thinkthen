@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""Attribute one completed C++ stress round to glibc stack lists.
+
+Usage: cpp-stack-snapshot CONSUMER LOOPBACK OUTPUT
+The preserved installed consumer receives the shared healthy System One case.
+This diagnostic never calls allocator functions or establishes a soak verdict.
+"""
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shlex
+import signal
+import subprocess
+import sys
+import time
+
+sys.dont_write_bytecode = True
+root = Path(__file__).resolve().parent.parent
+consumer, loopback, output = map(Path, sys.argv[1:])
+consumer, loopback, output = consumer.resolve(), loopback.resolve(), output.resolve()
+output.mkdir(parents=True, exist_ok=False)
+table = json.loads((root / 'conformance/stress.json').read_text())
+identity = dict(source_revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'],
+    cwd=root, text=True).strip(), payload_sha256={str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in (consumer, loopback)}, host=os.uname().nodename, load=os.getloadavg())
+loader = subprocess.check_output(['ldd', str(consumer)], text=True)
+library = Path(next(line.split('=>', 1)[1].split()[0] for line in loader.splitlines()
+    if 'libthinkthen.so' in line))
+identity['payload_sha256'][str(library)] = hashlib.sha256(library.read_bytes()).hexdigest()
+(output / 'identity.json').write_text(json.dumps(identity, indent=2))
+(output / 'loader.txt').write_text(loader)
+for source in ('cpp-stack-snapshot', 'cpp_stack_snapshot.py'):
+    (output / source).write_bytes((root / 'scripts' / source).read_bytes())
+spec = importlib.util.spec_from_file_location('adapter', root / 'scripts/stress-adapters.py')
+adapter = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(adapter)
+os.environ['THINKTHEN_LOOPBACK'] = str(loopback)
+fixture = adapter.Fixture(['--stress', 'healthy'])
+client = dict(table['client'], backend='systemone', url=fixture.url, api_key='loopback-only')
+command = [str(consumer), 'stress', json.dumps(client), str(table['records']['full']),
+    'answered', '', str(table['replies'][0]['probability']), '1', '1']
+environment = dict(os.environ, DEBUGINFOD_URLS='')
+for key in list(environment):
+    if key.startswith('THINKTHEN_') or key in ('OPENAI_API_KEY', 'LD_PRELOAD', 'LD_LIBRARY_PATH'):
+        environment.pop(key)
+environment.update(THINKTHEN_STACK_SNAPSHOT_OUTPUT=str(output),
+    THINKTHEN_STRESS_CHECKPOINT_COMMAND='exec ' + shlex.join([
+        sys.executable, str(root / 'scripts/stress-checkpoint')]))
+gdb_script = output / 'snapshot.gdb'
+gdb_script.write_text('\n'.join(['set pagination off', 'set confirm off',
+    'set debuginfod enabled off', 'set disable-randomization off',
+    'set print thread-events off', 'set follow-fork-mode parent', 'set detach-on-fork on',
+    'start', 'python',
+    'exec(compile(open(' + repr(str(root / 'scripts/cpp_stack_snapshot.py')) +
+    ').read(), "cpp_stack_snapshot.py", "exec"))', 'end', 'continue', '']))
+invocation = ['gdb', '--quiet', '--batch', '-x', str(gdb_script), '--args', *command]
+(output / 'invocation.json').write_text(json.dumps(dict(command=invocation,
+    cwd=str(consumer.parents[2]), records=table['records']['full'], rounds=1,
+    concurrency=1, watchdog_seconds=300), indent=2))
+started = time.monotonic()
+process = None
+failure = None
+try:
+    with (output / 'stdout').open('w') as stdout, (output / 'stderr').open('w') as stderr:
+        process = subprocess.Popen(invocation, cwd=consumer.parents[2], env=environment,
+            stdin=subprocess.DEVNULL, stdout=stdout, stderr=stderr, start_new_session=True)
+        try:
+            process.wait(timeout=300)
+        except BaseException as error:
+            failure = repr(error)
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+finally:
+    if process is not None:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    fixture.close()
+    (output / 'exit.json').write_text(json.dumps(dict(error=failure,
+        gdb_exit=process.returncode if process else None,
+        loopback_exit=fixture.process.returncode,
+        elapsed_seconds=time.monotonic() - started), indent=2))
+assert process is not None and process.returncode == 0 and failure is None
+assert not (output / 'measurement-failure.json').exists()
+snapshot = json.loads((output / 'stack-ownership.json').read_text())
+assert snapshot['cache_lock'] == 0 and snapshot['in_flight'] == 0, 'stack list changed during observation'
+summaries = [json.loads(line) for line in (output / 'stdout').read_text().splitlines()
+    if line.startswith('{')]
+assert summaries == [dict(calls=1, rows=table['records']['full'], failed=0, cancelled=False)]
+(output / 'sha256.json').write_text(json.dumps({path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+    for path in output.iterdir() if path.is_file()}, indent=2))
+print(json.dumps(dict(result='complete', output=str(output), consumer=summaries[0],
+    cached_stacks=len(snapshot['cached']), active_stacks=len(snapshot['active']))))

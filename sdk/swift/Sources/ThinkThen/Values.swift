@@ -1,117 +1,217 @@
 import Foundation
 
-/// Owned JSON bytes. Decoding is an optional view with the chosen type's limits.
-public struct JSON: Sendable {
-  public let utf8: Data
-  public init(utf8: Data) { self.utf8 = utf8 }
-  public static func encoding<T: Encodable>(_ value: T) throws -> JSON {
-    JSON(utf8: try JSONEncoder().encode(value))
-  }
-  public func decode<T: Decodable>(_ type: T.Type) throws -> T {
-    try JSONDecoder().decode(type, from: utf8)
-  }
+public enum Backend: String, Sendable, Codable, CaseIterable { case systemone, openai, stub }
+public enum FunctionName: String, Sendable, Codable, CaseIterable {
+  case decide, choose, tag, score, filter, rank, find, recognize, relate, annotate
 }
-public enum Record: Sendable {
-  case text(String)
-  case json(JSON)
-}
-public struct Question: Sendable, ExpressibleByStringLiteral {
-  let json: Data
-  public init(stringLiteral value: String) {
-    // Encoding a String has no non-finite values or custom encoder callbacks.
-    json = Data("{\"type\":\"inline\",\"value\":".utf8) + Self.quoted(value) + Data("}".utf8)
-  }
-  public static func inline(_ value: JSON) -> Question {
-    Question(json: Data("{\"type\":\"inline\",\"value\":".utf8) + value.utf8 + Data("}".utf8))
-  }
-  public static func toolbox(_ value: JSON, name: String? = nil) -> Question {
-    var bytes = Data("{\"type\":\"toolbox\",\"value\":".utf8) + value.utf8
-    if let name { bytes += Data(",\"name\":".utf8) + quoted(name) }
-    bytes += Data("}".utf8)
-    return Question(json: bytes)
-  }
-  public static func reference(_ name: String) -> Question {
-    Question(json: Data("{\"type\":\"reference\",\"name\":".utf8) + quoted(name) + Data("}".utf8))
-  }
-  private init(json: Data) { self.json = json }
-  private static func quoted(_ value: String) -> Data {
-    // JSONSerialization's strings-only array cannot fail JSON admission.
-    let encoded = try! JSONSerialization.data(withJSONObject: [value], options: [.fragmentsAllowed])
-    return encoded.dropFirst().dropLast()
-  }
-}
-public struct ClientSettings: Encodable, Sendable {
-  public let mode: String?, adapter: String?, url: String?, model: String?, keySource: String?
-  public let batch: Double?
-  public init(
-    mode: String? = nil, adapter: String? = nil, url: String? = nil,
-    model: String? = nil, keySource: String? = nil, batch: Double? = nil
-  ) {
-    self.mode = mode
-    self.adapter = adapter
-    self.url = url
-    self.model = model
-    self.keySource = keySource
-    self.batch = batch
-  }
-  enum CodingKeys: String, CodingKey {
-    case mode, adapter, url, model, batch
-    case keySource = "key_source"
-  }
-}
-public enum Threshold: Encodable, Sendable, ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral,
-  ExpressibleByStringLiteral
-{
+public enum JSONValue: Sendable, Codable, Equatable, Hashable {
+  case null
+  case bool(Bool)
+  case string(String)
   case number(Double)
-  case band(String)
-  public init(floatLiteral value: Double) { self = .number(value) }
-  public init(integerLiteral value: Int) { self = .number(Double(value)) }
-  public init(stringLiteral value: String) { self = .band(value) }
+  case integer(Int64)
+  case unsigned(UInt64)
+  case array([JSONValue])
+  case object([String: JSONValue])
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.singleValueContainer()
+    if c.decodeNil() {
+      self = .null
+    } else if let x = try? c.decode(Bool.self) {
+      self = .bool(x)
+    } else if let x = try? c.decode(String.self) {
+      self = .string(x)
+    } else if let x = try? c.decode(Int64.self) {
+      self = .integer(x)
+    } else if let x = try? c.decode(UInt64.self) {
+      self = .unsigned(x)
+    } else if let x = try? c.decode(Double.self) {
+      self = .number(x)
+    } else if let x = try? c.decode([JSONValue].self) {
+      self = .array(x)
+    } else {
+      self = .object(try c.decode([String: JSONValue].self))
+    }
+  }
   public func encode(to encoder: any Encoder) throws {
-    var container = encoder.singleValueContainer()
+    var c = encoder.singleValueContainer()
     switch self {
-    case .number(let value): try container.encode(value)
-    case .band(let value): try container.encode(value)
+    case .null: try c.encodeNil()
+    case .bool(let x): try c.encode(x)
+    case .string(let x): try c.encode(x)
+    case .number(let x): try c.encode(x)
+    case .integer(let x): try c.encode(x)
+    case .unsigned(let x): try c.encode(x)
+    case .array(let x): try c.encode(x)
+    case .object(let x): try c.encode(x)
     }
   }
 }
-public struct CallOptions: Encodable, Sendable {
-  public let threshold: Threshold?, on: String?
-  public init(threshold: Threshold? = nil, on: String? = nil) {
-    self.threshold = threshold
-    self.on = on
+public enum Record: Sendable, Codable, Equatable, Hashable {
+  case text(String)
+  case json(JSONValue)
+  case missing
+  public static func encoding<T: Encodable>(_ value: T) throws(ThinkThenError) -> Record {
+    do {
+      return .json(try JSONDecoder().decode(JSONValue.self, from: JSONEncoder().encode(value)))
+    } catch { throw .encoding(message: String(describing: error)) }
   }
 }
-public struct EvidenceOptions: Encodable, Sendable {
-  public let on: String?
-  public init(on: String? = nil) { self.on = on }
-}
-public struct RankOptions: Encodable, Sendable {
-  public let on: String?, top: Double?
-  public let levels: [String]?
-  public init(on: String? = nil, top: Double? = nil, levels: [String]? = nil) {
-    self.on = on
-    self.top = top
-    self.levels = levels
+public enum RecordID: Sendable, Codable, Equatable, Hashable {
+  case string(String)
+  case integer(Int64)
+  case unsigned(UInt64)
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.singleValueContainer()
+    if let x = try? c.decode(String.self) {
+      self = .string(x)
+    } else if let x = try? c.decode(Int64.self) {
+      self = .integer(x)
+    } else {
+      self = .unsigned(try c.decode(UInt64.self))
+    }
+  }
+  public func encode(to encoder: any Encoder) throws {
+    var c = encoder.singleValueContainer()
+    switch self {
+    case .string(let x): try c.encode(x)
+    case .integer(let x): try c.encode(x)
+    case .unsigned(let x): try c.encode(x)
+    }
   }
 }
-public enum RowStatus: String, Decodable, Sendable { case answered, unsure, failed }
-public struct ThinkThenError: Error, Decodable, Sendable {
-  public let code: String, message: String
+public enum Threshold: Sendable, Codable, Equatable, Hashable,
+  ExpressibleByFloatLiteral, ExpressibleByIntegerLiteral
+{
+  case value(Double)
+  case band(low: Double, high: Double)
+  public init(floatLiteral value: Double) { self = .value(value) }
+  public init(integerLiteral value: Int) { self = .value(Double(value)) }
+  private enum Keys: String, CodingKey { case low, high }
+  public init(from decoder: any Decoder) throws {
+    if let x = try? decoder.singleValueContainer().decode(Double.self) {
+      self = .value(x)
+    } else {
+      let c = try decoder.container(keyedBy: Keys.self)
+      self = .band(
+        low: try c.decode(Double.self, forKey: .low), high: try c.decode(Double.self, forKey: .high)
+      )
+    }
+  }
+  public func encode(to encoder: any Encoder) throws {
+    switch self {
+    case .value(let x):
+      var c = encoder.singleValueContainer()
+      try c.encode(x)
+    case .band(let low, let high):
+      var c = encoder.container(keyedBy: Keys.self)
+      try c.encode(low, forKey: .low)
+      try c.encode(high, forKey: .high)
+    }
+  }
 }
-public struct NativeLoadError: Error, Sendable { public let message: String }
-public enum RowsIterationError: Error, Sendable { case alreadyIterated, concurrentNext }
-public struct Row<Answer: Sendable>: Sendable {
-  public let id: JSON?, status: RowStatus, answer: Answer?, p: Double?, error: ThinkThenError?
-  public let position: Int, kept: Bool, detail: JSON?
+public struct APIKey: Sendable, Equatable, CustomStringConvertible, CustomDebugStringConvertible,
+  CustomReflectable
+{
+  let value: String
+  public init(_ value: String) { self.value = value }
+  public var description: String { "<redacted>" }
+  public var debugDescription: String { description }
+  public var customMirror: Mirror { Mirror(self, children: ["value": "<redacted>"]) }
 }
-public struct TextSpan: Codable, Sendable { public let text: String, start: Int, end: Int }
-public struct RecognizedName: Codable, Sendable {
-  public let text: String, start: Int, end: Int, kind: String, p: Double
+public struct Retry: Sendable, Codable, Equatable, Hashable {
+  public let maxRetries: Int, initialBackoff: Duration, attemptTimeout: Duration
+  public init(maxRetries: Int, initialBackoff: Duration, attemptTimeout: Duration) {
+    self.maxRetries = maxRetries
+    self.initialBackoff = initialBackoff
+    self.attemptTimeout = attemptTimeout
+  }
+  enum CodingKeys: String, CodingKey {
+    case maxRetries = "max_retries"
+    case initialBackoff = "initial_backoff_ms"
+    case attemptTimeout = "attempt_timeout_ms"
+  }
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    maxRetries = try c.decode(Int.self, forKey: .maxRetries)
+    initialBackoff = .milliseconds(try c.decode(Int64.self, forKey: .initialBackoff))
+    attemptTimeout = .milliseconds(try c.decode(Int64.self, forKey: .attemptTimeout))
+  }
+  func milliseconds(_ value: Duration) throws -> Int64 {
+    let x = value.components
+    let (seconds, overflow) = x.seconds.multipliedReportingOverflow(by: 1000)
+    let (total, sumOverflow) = seconds.addingReportingOverflow(
+      x.attoseconds / 1_000_000_000_000_000)
+    guard !overflow, !sumOverflow, x.attoseconds % 1_000_000_000_000_000 == 0 else {
+      throw ThinkThenError.encoding(
+        message: "Duration cannot be represented as integer milliseconds")
+    }
+    return total
+  }
+  public func encode(to encoder: any Encoder) throws {
+    var c = encoder.container(keyedBy: CodingKeys.self)
+    try c.encode(maxRetries, forKey: .maxRetries)
+    try c.encode(milliseconds(initialBackoff), forKey: .initialBackoff)
+    try c.encode(milliseconds(attemptTimeout), forKey: .attemptTimeout)
+  }
 }
-public struct RelationName: Codable, Sendable {
-  public let text: String, start: Int, end: Int, kind: String
+public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
+  CustomDebugStringConvertible, CustomReflectable
+{
+  public let backend: Backend, url: URL?, model: String?, apiKey: APIKey?, batch: Int?,
+    retry: Retry?
+  public init(
+    backend: Backend = .systemone, url: URL? = nil, model: String? = nil, apiKey: APIKey? = nil,
+    batch: Int? = nil, retry: Retry? = nil
+  ) {
+    self.backend = backend
+    self.url = url
+    self.model = model
+    self.apiKey = apiKey
+    self.batch = batch
+    self.retry = retry
+  }
+  enum CodingKeys: String, CodingKey {
+    case backend, url, model, batch, retry
+    case apiKey = "api_key"
+  }
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    backend = try c.decodeIfPresent(Backend.self, forKey: .backend) ?? .systemone
+    url = try c.decodeIfPresent(URL.self, forKey: .url)
+    model = try c.decodeIfPresent(String.self, forKey: .model)
+    apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey).map(APIKey.init)
+    batch = try c.decodeIfPresent(Int.self, forKey: .batch)
+    retry = try c.decodeIfPresent(Retry.self, forKey: .retry)
+  }
+  public func encode(to encoder: any Encoder) throws {
+    var c = encoder.container(keyedBy: CodingKeys.self)
+    try c.encode(backend, forKey: .backend)
+    try c.encodeIfPresent(url, forKey: .url)
+    try c.encodeIfPresent(model, forKey: .model)
+    try c.encodeIfPresent(batch, forKey: .batch)
+    try c.encodeIfPresent(retry, forKey: .retry)
+  }
+  public var description: String { "Settings(apiKey: <redacted>)" }
+  public var debugDescription: String { description }
+  public var customMirror: Mirror { Mirror(self, children: ["apiKey": "<redacted>"]) }
 }
-public struct RelationEdge: Codable, Sendable {
-  public let source: RelationName, target: RelationName, relation: String, p: Double, either: Bool?
+public struct ABIVersion: Sendable, Equatable { public let major: UInt32, minor: UInt32 }
+public enum IterationIssue: Sendable, Equatable { case alreadyIterated, concurrentNext }
+public enum ThinkThenError: Error, Sendable, Equatable {
+  case engine(RowFailure)
+  case engineUnavailable(message: String)
+  case engineVersion(required: ABIVersion, found: ABIVersion)
+  case encoding(message: String)
+  case contract(message: String)
+  case recordSource(message: String)
+  case toolboxSelection(name: String, expected: FunctionName)
+  case iteration(IterationIssue)
+  case cancelled
+}
+func typedError(_ error: any Error) -> ThinkThenError {
+  if let typed = error as? ThinkThenError { return typed }
+  if error is CancellationError { return .cancelled }
+  if error is EncodingError { return .encoding(message: String(describing: error)) }
+  return .contract(message: String(describing: error))
 }

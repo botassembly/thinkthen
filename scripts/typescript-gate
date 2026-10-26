@@ -3,6 +3,8 @@
 set -eu
 version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
+root=$PWD
+scripts/typescript-prepare
 cargo build --locked -p thinkthen-node -p loopback
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in
@@ -20,10 +22,22 @@ cp "$addon" sdk/typescript/thinkthen.node
 cp LICENSE sdk/typescript/LICENSE
 trap 'rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE' EXIT HUP INT TERM
 npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
-(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js --max-warnings 0)
+(cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js --max-warnings 0)
 (cd sdk/typescript && npm pack --pack-destination "$stage" --ignore-scripts --quiet)
+# Node 22.12 supports require(esm); attw's Node 16 resolver predates it.
+# The installed import/require test proves that supported runtime path.
+sdk/typescript/node_modules/.bin/attw "$stage/thinkthen-$version.tgz" --profile node16 --ignore-rules cjs-resolves-to-esm
 mkdir "$stage/consumer"
 npm --prefix "$stage/consumer" install --offline --ignore-scripts --no-audit --no-fund "$stage/thinkthen-$version.tgz"
+python3 scripts/module-abi-fixtures typescript "$stage/consumer/node_modules/thinkthen"
+python3 scripts/surface-example prepare typescript "$stage/consumer"
+(cd "$stage/consumer" && python3 "$root/scripts/surface-example" check typescript node example.mjs)
+cp scripts/release/node.mjs "$stage/consumer/release.mjs"
+node "$stage/consumer/release.mjs" construction/stub.json
 sed 's|"../index.js"|"thinkthen"|' sdk/typescript/tests/types.ts > "$stage/consumer/types.mts"
-sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 "$stage/consumer/types.mts"
+sdk/typescript/node_modules/.bin/tsc --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --noEmit --module NodeNext --target ES2022 --lib ES2022,DOM,ESNext.Disposable "$stage/consumer/types.mts"
 THINKTHEN_NODE_PACKAGE="$stage/consumer/node_modules/thinkthen/runtime.js" THINKTHEN_LOOPBACK="$build_target/debug/loopback" node --test sdk/typescript/tests/*.test.js
+if [ "${THINKTHEN_NODE_EXTRA_RUNTIMES:-0}" = 1 ]; then
+    bun sdk/typescript/tests/runtime-smoke.mjs "$stage/consumer/node_modules/thinkthen/runtime.js"
+    deno run --allow-env --allow-read --allow-ffi sdk/typescript/tests/runtime-smoke.mjs "$stage/consumer/node_modules/thinkthen/runtime.js"
+fi

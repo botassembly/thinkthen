@@ -8,8 +8,10 @@ mod operation;
 mod spool;
 mod xlsx;
 
+pub(crate) use cleanup::TemporaryPaths;
 pub use cleanup::force_cleanup;
 
+use crate::core::diagnostic;
 use crate::{Error, Family};
 use std::path::PathBuf;
 
@@ -74,9 +76,9 @@ impl FileError {
     #[must_use]
     pub fn code(&self) -> &str {
         match self {
-            Self::Engine(error) => error.kind().code(),
-            Self::Invalid(_) => "usage.file",
-            Self::Local(_) => "local.file",
+            Self::Engine(error) => error.code().as_str(),
+            Self::Invalid(_) => crate::Code::UsageQuestion.as_str(),
+            Self::Local(_) => crate::Code::LocalIo.as_str(),
         }
     }
 
@@ -84,7 +86,7 @@ impl FileError {
     #[must_use]
     pub fn family(&self) -> Family {
         match self {
-            Self::Engine(error) => error.kind().family(),
+            Self::Engine(error) => error.code().family(),
             Self::Invalid(_) => Family::Usage,
             Self::Local(_) => Family::Local,
         }
@@ -111,25 +113,35 @@ impl FileJob {
                 extension.eq_ignore_ascii_case("xls") || extension.eq_ignore_ascii_case("ods")
             })
         {
-            return Err(FileError::Invalid(
-                "unsupported workbook format; save as .xlsx or CSV before running ThinkThen".into(),
-            ));
+            return Err(FileError::Invalid(diagnostic::requirement(
+                "input.format",
+                "xlsx, CSV or TSV",
+                "unsupported workbook format; save as .xlsx or CSV before running ThinkThen",
+            )));
         }
         if columns.is_empty() {
-            return Err(FileError::Invalid(
-                "name at least one evidence column with --column".into(),
-            ));
+            return Err(FileError::Invalid(diagnostic::requirement(
+                "columns",
+                "at least one evidence column with --column",
+                "an empty selection",
+            )));
         }
         let mut unique = std::collections::BTreeSet::new();
         for column in &columns {
             if column.is_empty() || !unique.insert(column) {
-                return Err(FileError::Invalid(
-                    "evidence column names must be nonempty and not repeated".into(),
-                ));
+                return Err(FileError::Invalid(diagnostic::requirement(
+                    "columns",
+                    "nonempty, distinct evidence column names",
+                    "an empty or repeated name",
+                )));
             }
         }
         if format != FileFormat::Xlsx && sheet.is_some() {
-            return Err(FileError::Invalid("--sheet requires --excel".into()));
+            return Err(FileError::Invalid(diagnostic::requirement(
+                "sheet",
+                "xlsx framing",
+                "CSV or TSV framing",
+            )));
         }
         Ok(Self {
             input,
@@ -149,14 +161,18 @@ fn local(error: impl std::fmt::Display) -> FileError {
 fn headers(headers: &[String], selected: &[String]) -> Result<(), FileError> {
     let mut unique = std::collections::BTreeSet::new();
     if headers.is_empty() || headers.iter().any(|h| h.is_empty() || !unique.insert(h)) {
-        return Err(FileError::Invalid(
-            "column headers must be nonempty and unique; name every column once".into(),
-        ));
+        return Err(FileError::Invalid(diagnostic::requirement(
+            "headers",
+            "nonempty, unique column headers",
+            "empty or repeated column headers",
+        )));
     }
     for name in selected {
         if !unique.contains(name) {
-            return Err(FileError::Invalid(format!(
-                "evidence column `{name}` is missing; choose a header present in the input"
+            return Err(FileError::Invalid(diagnostic::unknown(
+                "column",
+                name,
+                &headers.iter().map(String::as_str).collect::<Vec<_>>(),
             )));
         }
     }

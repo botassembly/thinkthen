@@ -12,13 +12,18 @@ repository.workspace = true
 name = "thinkthen_ffi"
 crate-type = ["cdylib", "rlib", "staticlib"]
 
+[features]
+fixture-routing = ["thinkthen/fixture-routing"]
+
 [dependencies]
 log.workspace = true
-thinkthen.workspace = true
+thinkthen = { workspace=true, features=["native"] }
 thinkthen-sql = { path = "../thinkthen-sql" }
 serde_json.workspace = true
 
 [dev-dependencies]
+serde.workspace = true
+cbindgen = { version="0.29", default-features=false }
 loopback.workspace = true
 
 [lints.rust]
