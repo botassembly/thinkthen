@@ -65,6 +65,9 @@ jobs:
         run: |
           . scripts/native-tools-env
           scripts/postgres-prepare
+          scripts/native-test-assets prepare
+          test_environment=$(scripts/native-test-assets env)
+          eval "$test_environment"
           scripts/postgres-gate
       # Workflow artifacts transport gate inputs; they are never release assets.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -112,6 +115,8 @@ jobs:
           THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image)
           export THINKTHEN_FLOOR_IMAGE
           scripts/native-prepare >/dev/null
+          scripts/native-test-assets prepare
+          scripts/native-abi-assets prepare
           . scripts/native-env
           scripts/gate
 
