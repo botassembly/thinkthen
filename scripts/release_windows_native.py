@@ -139,7 +139,7 @@ def build_databases(native):
         library = next(jansson.rglob('jansson.lib'))
         from release_windows import copy
         compile_windows(native / 'thinkthen_sqlite.dll',
-            [ROOT / f'extensions/sqlite/src/{name}.c' for name in ('extension', 'rows', 'source')],
+            sorted((ROOT / 'extensions/sqlite/src').glob('*.c')),
             includes=[TOOLS / 'sqlite-3.41.0', TOOLS / 'windows/jansson-2.14.1/src',
                       jansson / 'include', ROOT / 'crates/thinkthen-ffi/include'],
             libraries=[native / 'thinkthen_ffi.lib', library, *system_libraries()],

@@ -46,7 +46,7 @@ for name, command in commands.items():
              'csharp': 'managed', 'swift': 'swift'}.get(name, 'base')
     mounts = []
     paths = ['/usr/bin', '/bin']
-    if name in ('python', 'pandas and Polars', 'sqlite', 'duckdb', 'zig', 'csharp'):
+    if name in ('python', 'pandas and Polars', 'c', 'cpp', 'sqlite', 'duckdb', 'zig', 'csharp'):
         mounts += [(python, '/runtime/python')]
         paths.insert(0, '/runtime/python/bin')
     if name == 'typescript': paths.insert(0, '/opt/node/bin')

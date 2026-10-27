@@ -1,7 +1,7 @@
 #!/bin/sh
 # Source from the repository root to select prepared compilers and runtimes.
 # These are build paths, never library runtime search paths.
-PATH="${THINKTHEN_NODE_HOME:-$HOME/.local/share/thinkthen-build-tools/node}/bin:$HOME/.local/share/thinkthen-build-tools/swift/macos-commands:/usr/lib/llvm-21/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/ruby@3.3/bin:$HOME/.local/share/thinkthen-build-tools/ruby/runtime/bin:$HOME/.local/share/thinkthen-build-tools/dotnet10:$HOME/.cargo/bin:$HOME/.local/share/thinkthen-build-tools/go/bin:$HOME/.local/share/thinkthen-build-tools/cmake/bin:/opt/zerobrew/bin:/opt/zerobrew/opt/node@22/bin:/opt/zerobrew/opt/ruby@3.3/bin:$PATH"
+PATH="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}:${THINKTHEN_NODE_HOME:-$HOME/.local/share/thinkthen-build-tools/node}/bin:$HOME/.local/share/thinkthen-build-tools/swift/macos-commands:/usr/lib/llvm-21/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/ruby@3.3/bin:$HOME/.local/share/thinkthen-build-tools/ruby/runtime/bin:$HOME/.cargo/bin:$HOME/.local/share/thinkthen-build-tools/go/bin:$HOME/.local/share/thinkthen-build-tools/cmake/bin:/opt/zerobrew/bin:/opt/zerobrew/opt/node@22/bin:/opt/zerobrew/opt/ruby@3.3/bin:$PATH"
 for thinkthen_python in "$HOME"/.local/share/uv/python/cpython-3.13-*/bin; do
     if [ -x "$thinkthen_python/python3" ]; then PATH="$thinkthen_python:$PATH"; break; fi
 done
