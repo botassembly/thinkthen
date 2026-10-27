@@ -1,7 +1,8 @@
-"""Share the prepared Linux Go runtime selected by the floor recipe."""
+"""Share the pinned host Go runtime selected by the floor recipe."""
 import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -18,10 +19,13 @@ def version():
 
 
 def home():
-    return TOOLS / 'gate-go' / ('go' + version())
+    parent = TOOLS / 'gate-go' if sys.platform == 'linux' else TOOLS
+    return parent / ('go' + version())
 
 
 def command():
+    if sys.platform == 'darwin':
+        return str(Path(os.environ.get('THINKTHEN_GO_HOME', home())) / 'bin/go')
     return str(home() / 'bin/go') if sys.platform == 'linux' else 'go'
 
 
@@ -34,10 +38,16 @@ def prepare():
         fcntl.flock(lock, fcntl.LOCK_EX)
         if not destination.exists():
             architecture = os.uname().machine
-            filename = destination.name + '.linux-' + {'x86_64': 'amd64', 'aarch64': 'arm64'}[architecture] + '.tar.gz'
+            system = {'linux': 'linux', 'darwin': 'darwin'}[sys.platform]
+            architecture = {'x86_64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[architecture]
+            filename = destination.name + '.' + system + '-' + architecture + '.tar.gz'
             archive = fetch('https://go.dev/dl/' + filename, TOOLS / 'sources' / filename)
             with tempfile.TemporaryDirectory(dir=destination.parent) as temporary:
                 with tarfile.open(archive) as source:
                     source.extractall(temporary, filter='data')
                 (Path(temporary) / 'go').rename(destination)
+        actual = subprocess.check_output([destination / 'bin/go', 'env', 'GOVERSION'],
+                                         env=dict(os.environ, GOTOOLCHAIN='local'), text=True).strip()
+        if actual != 'go' + version():
+            raise ValueError('prepare the pinned Go floor compiler')
     os.environ['THINKTHEN_GO_HOME'] = str(destination)

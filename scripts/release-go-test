@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Exercise cold pinned Go preparation and source checker installation on macOS."""
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def main():
+    if sys.platform != 'darwin' or not os.environ.get('PM_JOB'):
+        sys.exit('run the cold Go preparation check through a macOS pm job')
+    with tempfile.TemporaryDirectory(prefix='.release-go-', dir=ROOT) as temporary:
+        environment = dict(os.environ, HOME=temporary, GOCACHE=str(Path(temporary) / 'go-cache'),
+                           PYTHONDONTWRITEBYTECODE='1')
+        environment.pop('THINKTHEN_GO_HOME', None)
+        subprocess.run([sys.executable, '-c', '''
+import os
+from pathlib import Path
+import subprocess
+import sys
+sys.path.insert(0, 'scripts')
+from release_go import command, home, prepare, version
+from release_host_tools import source_tools
+expected = Path.home() / '.local/share/thinkthen-build-tools' / ('go' + version())
+assert home() == expected and command() == str(expected / 'bin/go'), (home(), command())
+assert not expected.exists(), 'cold preparation inherited a Go installation'
+prepare()
+assert subprocess.check_output([command(), 'env', 'GOVERSION'], text=True).strip() == 'go' + version()
+shell_env = dict(os.environ)
+shell_env.pop('THINKTHEN_GO_HOME', None)
+selected = subprocess.check_output(['sh', '-eu', '-c', '. scripts/native-tools-env; command -v go'],
+                                   env=shell_env, text=True).strip()
+assert selected == command(), (selected, command())
+built = subprocess.check_output(['scripts/go-build', 'version'], text=True).strip()
+assert built.split()[2] == 'go' + version(), built
+source_tools()
+checker = Path.home() / '.local/bin/staticcheck'
+metadata = subprocess.check_output([command(), 'version', '-m', checker], text=True)
+assert metadata.splitlines()[0].endswith('go' + version()), metadata
+print('cold macOS Go: ' + str(expected) + '; staticcheck built with ' + metadata.splitlines()[0], flush=True)
+wrong = Path.home() / 'wrong/bin'
+wrong.mkdir(parents=True)
+(wrong / 'go').write_text('#!/bin/sh\\nprintf "go1.22.0\\\\n"\\n')
+(wrong / 'go').chmod(0o755)
+os.environ['THINKTHEN_GO_HOME'] = str(wrong.parent)
+try:
+    source_tools()
+except ValueError as error:
+    assert 'pinned Go floor compiler' in str(error), error
+else:
+    raise AssertionError('source_tools accepted a different Go version')
+print('source tools: reject a compiler outside the exact pin', flush=True)
+'''], cwd=ROOT, env=environment, check=True)
+
+
+if __name__ == '__main__':
+    main()

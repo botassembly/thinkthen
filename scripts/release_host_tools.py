@@ -24,10 +24,10 @@ def host_tools():
     if not shutil.which('uv'):
         run(sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'uv==' + PINS['uv'])
     prepared('uv', 'python', 'install', '3.10', '3.13')
-    required = ('cc', 'make', 'cmake', 'pkg-config', 'node', 'go', 'ruby')
+    required = ('cc', 'make', 'cmake', 'pkg-config', 'node', 'ruby')
     if any(not shutil.which(name) for name in required):
         if platform.system() == 'Darwin':
-            run('brew', 'install', 'cmake', 'pkgconf', 'gettext', 'node@22', 'go', 'ruby@3.3')
+            run('brew', 'install', 'cmake', 'pkgconf', 'gettext', 'node@22', 'ruby@3.3')
         else:
             run('sudo', 'apt-get', 'update')
             run('sudo', 'apt-get', 'install', '-y', 'build-essential', 'cmake', 'ninja-build',
@@ -56,18 +56,7 @@ def host_languages():
         with tarfile.open(archive) as source:
             source.extractall(TOOLS, filter='data')
         (TOOLS / name).rename(TOOLS / 'node')
-    if system == 'linux':
-        prepare_go()
-    else:
-        try:
-            go_version = re.search(r'go([0-9]+)\.([0-9]+)', prepared('go', 'version', capture_output=True, text=True).stdout)
-            go_ok = go_version and tuple(map(int, go_version.groups())) >= (1, 22)
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            go_ok = False
-        if not go_ok:
-            filename = f'go{HOST_PINS["go"]}.{system}-{"arm64" if arm else "amd64"}.tar.gz'
-            with tarfile.open(fetch('https://go.dev/dl/' + filename, TOOLS / 'sources' / filename)) as source:
-                source.extractall(TOOLS, filter='data')
+    prepare_go()
     try:
         prepared('ruby', '-e', 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3") ? 0 : 1)', capture_output=True)
         return
@@ -125,8 +114,7 @@ def install_macos_swift():
 
 def source_tools():
     """Prepare the pinned Go checker with the selected floor compiler."""
-    compiler = (Path(go_command()) if platform.system() == 'Linux' else
-                Path(os.environ.get('THINKTHEN_GO_HOME', TOOLS / ('go' + HOST_PINS['go']))) / 'bin/go')
+    compiler = Path(go_command())
     cache = TOOLS / 'staticcheck' / PINS['staticcheck']
     environment = dict(os.environ, GOTOOLCHAIN='local', CGO_ENABLED='0',
                        GOPROXY='https://proxy.golang.org', GOSUMDB='sum.golang.org',

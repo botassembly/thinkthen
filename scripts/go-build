@@ -12,7 +12,7 @@ if sys.platform == 'darwin':
     # Read effective defaults from Go, including flags saved with go env -w.
     target = '-mmacosx-version-min=' + FLOORS['macos']
     names = ('CGO_CFLAGS', 'CGO_CXXFLAGS', 'CGO_LDFLAGS')
-    flags = json.loads(subprocess.check_output(['go', 'env', '-json', *names], text=True))
+    flags = json.loads(subprocess.check_output([command(), 'env', '-json', *names], text=True))
     for name in names:
         os.environ[name] = (os.environ.get(name, flags[name]) + ' ' + target).strip()
 os.execvp(command(), [command(), *sys.argv[1:]])

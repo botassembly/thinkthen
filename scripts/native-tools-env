@@ -6,6 +6,11 @@ for thinkthen_python in "$HOME"/.local/share/uv/python/cpython-3.13-*/bin; do
     if [ -x "$thinkthen_python/python3" ]; then PATH="$thinkthen_python:$PATH"; break; fi
 done
 . scripts/native-build-env
+if [ "$(uname -s)" = Darwin ]; then
+    THINKTHEN_GO_HOME=${THINKTHEN_GO_HOME:-$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_go import home; print(home())')}
+    PATH="$THINKTHEN_GO_HOME/bin:$PATH"
+    export THINKTHEN_GO_HOME
+fi
 PATH="$THINKTHEN_RUNTIME_PREFIX/bin:$THINKTHEN_SQLITE_ROOT/sqlite-3.41.0/bin:$PATH"
 R_LIBS_USER="$THINKTHEN_RUNTIME_PREFIX/r-frames/library"
 export PATH R_LIBS_USER
