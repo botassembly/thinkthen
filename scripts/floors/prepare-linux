@@ -26,5 +26,4 @@ scripts/runtime-floor-build cmake --build "$work/jansson-build" --parallel 2
 scripts/runtime-floor-build cmake --install "$work/jansson-build"
 scripts/runtime-floor-build cc -O2 -DSQLITE_THREADSAFE=1 "$work/sqlite-amalgamation-3410000/shell.c" \
     "$work/sqlite-amalgamation-3410000/sqlite3.c" -ldl -lpthread -lm -o "$prefix/bin/sqlite3"
-scripts/runtime-floor-build scripts/floors/prepare-r
 sha256sum "$prefix/sources/"*.gz "$prefix/sources/sqlite.zip" > "$prefix/sources/SHA256SUMS"

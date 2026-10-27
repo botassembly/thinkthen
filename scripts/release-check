@@ -352,7 +352,7 @@ def r_package():
 
 def databases():
     sqlite = unpack(only('sqlite/*.tar.gz'), SCRATCH / 'sqlite')
-    executable = os.environ.get('THINKTHEN_CHECK_SQLITE') or shutil.which('sqlite3')
+    executable = os.environ.get('THINKTHEN_CHECK_SQLITE') or (str(Path(os.environ['THINKTHEN_SQLITE_ROOT']) / 'sqlite-3.41.0/bin/sqlite3') if 'THINKTHEN_SQLITE_ROOT' in os.environ else shutil.which('sqlite3'))
     run(sys.executable, CHECKS / 'sql.py', 'sqlite', executable, sqlite / f'thinkthen_sqlite.{SUFFIX}', CHECKS / 'stub.json')
     duck = unpack(only('duckdb/*.tar.gz'), SCRATCH / 'duckdb')
     executable = PACKAGE / 'prerequisites/duckdb/duckdb'

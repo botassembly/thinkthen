@@ -11,7 +11,7 @@ if [ ! -f "$deps/source.tar.gz" ]; then
     curl -fsSL https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3 -o "$deps/source.tar.gz"
 fi
 verify "$deps/source.tar.gz" b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64
-if [ ! -d "$deps/duckdb-1.4.3" ]; then tar -xzf "$deps/source.tar.gz" -C "$deps"; fi
+tar -xzf "$deps/source.tar.gz" -C "$deps"
 case $(uname -sm) in
     'Darwin arm64') platform=osx-universal; checksum=efd0c2424589f0d5743ffdc0de22ce84b99bf307c330752f44277cffa3406e43 ;;
     'Linux x86_64') platform=linux-amd64; checksum=3c7bb8d586d39ccce56442c3f6bafa97f53d7b6bb5405dac827442fcb31494aa ;;

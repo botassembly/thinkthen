@@ -55,6 +55,8 @@ def dependencies(folder, r=None):
     result = bundle(ROOT / 'sdk/r/DESCRIPTION', archives, folder,
                     installer.removeprefix('R-').removesuffix('-win.exe'), standard)
     shutil.copytree(r / 'share/licenses', Path(folder) / 'licenses', dirs_exist_ok=True)
+    (Path(folder) / 'runtime.json').write_text(json.dumps({'version': result['r'],
+        'standard_packages': sorted(standard)}, indent=2) + '\n')
     return result
 
 
@@ -63,7 +65,7 @@ def version():
 
 
 def files():
-    return (f'thinkthen_{version()}.zip', 'artifacts.json')
+    return (f'thinkthen_{version()}.zip', 'artifacts.json', 'prerequisites.zip')
 
 
 def verified(folder=None):
@@ -78,6 +80,13 @@ def verified(folder=None):
         if path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != manifest['files'][name]:
             raise ValueError('Windows R package checksum differs: ' + name)
     return folder
+
+
+def bundle_dependencies(source, folder):
+    """Consume only prerequisites covered by the native producer's manifest."""
+    source = verified(source)
+    with zipfile.ZipFile(source / 'prerequisites.zip') as archive:
+        archive.extractall(folder)
 
 
 def runtime():
@@ -157,11 +166,14 @@ def build(folder):
     for name, (_, digest) in selected.items():
         if hashlib.sha256((TOOLS / 'windows' / name).read_bytes()).hexdigest() != digest:
             raise ValueError('prepared Windows R input differs: ' + name)
-    with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:
-        dependencies(temporary, r)
     env = environment(r)
     folder = Path(folder).resolve()
     folder.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:
+        dependencies(temporary, r)
+        with zipfile.ZipFile(folder / 'prerequisites.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+            for path in sorted(Path(temporary).rglob('*')):
+                if path.is_file(): archive.write(path, path.relative_to(temporary).as_posix())
     # Generate the MSVC COFF import library from the exact pinned R DLL.
     report = subprocess.check_output(['llvm-readobj', '--coff-exports', str(r / 'bin/x64/R.dll')], text=True, env=env)
     (r / 'lib').mkdir(exist_ok=True)

@@ -106,8 +106,6 @@ def import_pair(path, source):
         cache.mkdir(parents=True, exist_ok=True)
         with (cache / 'import.lock').open('w') as cache_lock:
             fcntl.flock(cache_lock, fcntl.LOCK_EX)
-            if destination.exists() and load(destination) != data:
-                raise ValueError('native pair conflicts with the stored manifest')
             for name in ASSETS:
                 target = cache / name
                 if target.exists() and digest(target) != data['assets'][name]:

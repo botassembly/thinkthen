@@ -17,5 +17,5 @@ if [ ! -x "$tools/swift/6.3.2-ubuntu22.04/usr/bin/swift" ]; then
     tar -xzf "$archive" --strip-components=1 -C "$tools/swift/6.3.2-ubuntu22.04"
 fi
 sha256sum "$archive"
-docker build --label pm.repo=thinkthen --label "pm.ticket=${PM_JOB%% *}" \
+docker build --label pm.repo=thinkthen \
     -t thinkthen-swift-build:6.3.2-ubuntu22.04 -f scripts/floors/Swift.Dockerfile scripts/floors

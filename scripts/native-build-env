@@ -3,10 +3,12 @@
 MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-$(python3 scripts/runtime_floors.py macos)}
 export MACOSX_DEPLOYMENT_TARGET
 tools="$HOME/.local/share/thinkthen-build-tools"
+if [ -z "${THINKTHEN_RUNTIME_PREFIX:-}" ]; then
 case "$(uname -s)" in
     Darwin) THINKTHEN_RUNTIME_PREFIX="$tools/floors/macos$MACOSX_DEPLOYMENT_TARGET" ;;
     Linux) THINKTHEN_RUNTIME_PREFIX="$tools/floors/linux-glibc$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from runtime_floors import FLOORS; print(FLOORS["linux"]["glibc"])')" ;;
 esac
+fi
 THINKTHEN_JANSSON_ROOT="$THINKTHEN_RUNTIME_PREFIX/jansson"
 THINKTHEN_SQLITE_ROOT="$THINKTHEN_RUNTIME_PREFIX"
 if [ "$(uname -s)" = Darwin ]; then

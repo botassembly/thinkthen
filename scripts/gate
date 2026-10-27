@@ -3,6 +3,8 @@
 set -eu
 cd "$(dirname "$0")/.."
 python3 scripts/release_metadata.py
+scripts/release-preparation-test
+scripts/release-floor-inputs-test
 if [ "$(uname -s)" = Linux ]; then scripts/stress-resource-test; scripts/stress-runner-test; fi
 for tool in R Rscript; do
     if ! "$tool" --version >/dev/null 2>&1; then

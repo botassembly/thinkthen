@@ -8,7 +8,8 @@ cd "$(dirname "$0")/../.."
 source="$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3"
 prefix="$THINKTHEN_RUNTIME_PREFIX/duckdb"
 mkdir -p "$prefix/static" "$prefix/cli"
-if [ ! -d "$prefix/duckdb-1.4.3" ]; then cp -R "$source/duckdb-1.4.3" "$prefix/"; fi
+rm -rf "$prefix/duckdb-1.4.3"
+cp -R "$source/duckdb-1.4.3" "$prefix/"
 cp "$source/cli/duckdb" "$prefix/cli/"
 cp "$source"/duckdb-*.whl "$prefix/"
 work=$(mktemp -d)

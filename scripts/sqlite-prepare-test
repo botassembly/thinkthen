@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Exercise cold, stale and valid prepared dependencies with the real floor builder."""
+import hashlib
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def contents(folder):
+    return {str(path.relative_to(folder)): (hashlib.sha256(path.read_bytes()).hexdigest(),
+                                            path.stat().st_ino, path.stat().st_mtime_ns)
+            for path in folder.rglob('*') if path.is_file() and not path.name.endswith('.lock')}
+
+
+def main():
+    if sys.platform != 'linux' or not os.environ.get('PM_JOB'):
+        sys.exit('run the SQLite/Jansson preparation check through a Linux pm job')
+    scratch = Path(tempfile.mkdtemp(prefix='.sqlite-prepare-test-', dir=ROOT))
+    print('preparation evidence: ' + str(scratch), flush=True)
+    env = dict(os.environ, HOME=str(scratch / 'home'), CARGO_TARGET_DIR=str(scratch / 'target'),
+               PYTHONDONTWRITEBYTECODE='1')
+    for name in ('THINKTHEN_SQLITE_PREPARE_LOCK', 'THINKTHEN_FLOOR_BUILD'):
+        env.pop(name, None)
+    sys.path.insert(0, str(ROOT / 'scripts'))
+    from release_images import image
+    from runtime_floors import FLOORS
+    env['THINKTHEN_FLOOR_IMAGE'] = image('floor')
+    tools = Path(env['HOME']) / '.local/share/thinkthen-build-tools'
+    floor = tools / ('floors/linux-glibc' + FLOORS['linux']['glibc'])
+
+    def run(name, *args, environment=env, failure=None):
+        with (scratch / (name + '.log')).open('w+') as log:
+            result = subprocess.run(['scripts/sqlite-prepare', *args], cwd=ROOT, env=environment,
+                                    stdout=log, stderr=subprocess.STDOUT)
+            log.seek(0)
+            text = log.read()
+        if failure:
+            assert result.returncode and failure in text, (name, result.returncode, text[-3000:])
+        else:
+            assert result.returncode == 0, (name, text[-3000:])
+        print('preparation: ' + name + ' passed' + ('; rejected: ' + failure if failure else ''), flush=True)
+
+    # Exercise release preparation order without downloading unrelated runtimes or
+    # compiling the floor. The language step uses the real dependencies.
+    import release_workflow_prepare as workflow
+    calls = []
+    workflow.host_tools = lambda: calls.append('host tools')
+    workflow.floor_inputs = lambda: calls.append('floor inputs')
+
+    def prepared_floor(command):
+        assert command == 'scripts/floors/prepare-image', command
+        calls.append('floor image')
+        env['THINKTHEN_FLOOR_IMAGE'] = image('floor')
+
+    def dependencies():
+        assert calls == ['host tools', 'floor image'], calls
+        calls.append('language inputs')
+        run('cold', '--refresh')
+
+    workflow.prepared = prepared_floor
+    workflow.language_inputs = dependencies
+    assert not floor.exists()
+    workflow.prepare('linux-x86_64' if os.uname().machine == 'x86_64' else 'linux-arm64')
+    assert calls == ['host tools', 'floor image', 'language inputs', 'floor inputs'], calls
+    cold = contents(floor)
+    run('strict-cold')
+    run('valid-warm', '--refresh')
+    assert contents(floor) == cold, 'valid warm preparation changed dependency bytes'
+    libraries = [floor / ('sqlite-' + version) for version in ('3.41.0', '3.54.1')]
+    jansson = floor / 'jansson-2.14.1'
+    (libraries[1] / 'provenance').write_text('image=restored-incompatible-image\n')
+    (jansson / 'provenance').unlink()
+    run('strict-stale-sqlite', failure='Prepared SQLite has different or incomplete provenance')
+    (libraries[0] / 'libsqlite3.a').unlink()
+    stale = contents(floor)
+    shutil.copytree(floor, scratch / 'stale-inputs')
+    run('strict-incomplete-sqlite', failure='Prepared SQLite is incomplete')
+    run('strict-stale-jansson', '--jansson-only', failure='Prepared Jansson has different or incomplete provenance')
+    # A download failure must leave every old input available for a later retry.
+    binary = scratch / 'bin'
+    binary.mkdir()
+    curl = binary / 'curl'
+    curl.write_text('#!/bin/sh\necho forced-download-failure >&2\nexit 1\n')
+    curl.chmod(0o755)
+    run('failed-refresh', '--refresh', environment=dict(env, PATH=str(binary) + os.pathsep + env['PATH']),
+        failure='forced-download-failure')
+    assert contents(floor) == stale, 'failed refresh changed existing inputs'
+    curl.unlink()
+    move = binary / 'mv'
+    actual_move = shutil.which('mv')
+    move.write_text('#!/bin/sh\ncase "$1:$2" in */previous:*) ;; *:*/sqlite-3.41.0) '
+                    'echo forced-publication-failure >&2; exit 1;; esac\n'
+                    'exec ' + actual_move + ' "$@"\n')
+    move.chmod(0o755)
+    run('failed-publication', '--refresh', environment=dict(env, PATH=str(binary) + os.pathsep + env['PATH']),
+        failure='forced-publication-failure')
+    assert contents(floor) == stale, 'failed publication changed existing inputs'
+    move.unlink()
+    # Concurrent full and direct Jansson preparations must share their producer lock.
+    with (scratch / 'concurrent-jansson.log').open('w') as log:
+        other = subprocess.Popen(['scripts/sqlite-prepare', '--refresh', '--jansson-only'],
+                                 cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+        try:
+            run('refresh-stale', '--refresh')
+        finally:
+            assert other.wait() == 0, 'concurrent Jansson preparation failed'
+    run('strict-refreshed')
+    assert (libraries[1] / 'provenance').read_text() != 'image=restored-incompatible-image\n'
+    assert (jansson / 'provenance').is_file()
+    assert all((folder / 'libsqlite3.a').is_file() for folder in libraries)
+    rebuilt = contents(floor)
+    run('refreshed-warm', '--refresh')
+    assert contents(floor) == rebuilt, 'warm preparation rebuilt valid dependencies'
+    print('cold, incomplete, incompatible, failed, concurrent and warm preparation passed', flush=True)
+    shutil.rmtree(scratch)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,238 @@
+#!/usr/bin/env python3
+"""Exercise release preparation contracts without downloading or compiling tools."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+
+def pair(scratch):
+    source = scratch / 'source'
+    (source / 'scripts').mkdir(parents=True)
+    for name in ('native-pair', 'release_images.py'):
+        shutil.copy2(ROOT / 'scripts' / name, source / 'scripts' / name)
+    # The real import boundary asks the producer for its input key. This fixture
+    # changes that key with the selected compiler image, without compiling Rust.
+    producer = source / 'scripts/native-prepare'
+    producer.write_text('#!' + sys.executable + '\nimport os\nfrom pathlib import Path\nprint(Path.home()/".local/share/thinkthen-build-tools/native"/os.environ["THINKTHEN_FLOOR_IMAGE"].split(":")[1])\n')
+    producer.chmod(0o755)
+    subprocess.run(['git', 'init', '--quiet', source], check=True)
+    subprocess.run(['git', '-C', source, '-c', 'user.name=Release test', '-c', 'user.email=test@example.invalid',
+                    'commit', '--quiet', '--allow-empty', '-m', 'Create source'], check=True)
+    revision = subprocess.check_output(['git', '-C', source, 'rev-parse', 'HEAD'], text=True).strip()
+    assets = scratch / 'assets'
+    names = ('linux-x64/libthinkthen_ffi.so', 'linux-x64/libthinkthen_ffi.a', 'thinkthen.h')
+    for name in names:
+        path = assets / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(name)
+    data = {'revision': revision, 'floor_image': 'sha256:' + 'a' * 64,
+            'native_key': 'a' * 64, 'assets': {name: hashlib.sha256((assets / name).read_bytes()).hexdigest() for name in names}}
+    manifest = scratch / 'pair.json'
+    env = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
+    env.update(HOME=str(scratch / 'home'), PYTHONDONTWRITEBYTECODE='1')
+
+    def command(*args, ok=True):
+        result = subprocess.run([sys.executable, source / 'scripts/native-pair', *args], env=env, capture_output=True, text=True)
+        assert (result.returncode == 0) == ok, (args, result.stdout, result.stderr)
+        return result
+
+    def imported(ok=True):
+        manifest.write_text(json.dumps(data))
+        return command('import', str(manifest), str(assets), ok=ok)
+
+    imported()
+    imported()  # A complete warm import reuses identical assets.
+    data.update(floor_image='sha256:' + 'b' * 64, native_key='b' * 64)
+    imported()  # The same source may select a newly prepared compiler image.
+    assert command('image').stdout.strip() == data['floor_image']
+    selections = []
+    for digit in ('c', 'd'):
+        candidate = dict(data, floor_image='sha256:' + digit * 64, native_key=digit * 64)
+        transfer = scratch / ('pair-' + digit + '.json')
+        transfer.write_text(json.dumps(candidate))
+        selections.append(candidate)
+    workers = [subprocess.Popen([sys.executable, source / 'scripts/native-pair', 'import',
+                                 scratch / ('pair-' + digit + '.json'), assets],
+                                env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+               for digit in ('c', 'd')]
+    for worker in workers:
+        stdout, stderr = worker.communicate()
+        assert worker.returncode == 0, (stdout, stderr)
+    assert command('image').stdout.strip() in {item['floor_image'] for item in selections}
+    store = Path(env['HOME']) / '.local/share/thinkthen-build-tools'
+    assert json.loads((store / 'native-pairs' / (revision + '.json')).read_text()) in selections
+    for selection in selections:
+        for name in names:
+            assert hashlib.sha256((store / 'native' / selection['native_key'] / name).read_bytes()).hexdigest() == data['assets'][name]
+    for field, wrong in [('revision', '0' * 40), ('native_key', 'c' * 64), ('floor_image', 'tag:latest')]:
+        previous = data[field]
+        data[field] = wrong
+        imported(ok=False)
+        data[field] = previous
+    first = names[0]
+    (assets / first).write_text('conflicting bytes')
+    imported(ok=False)  # Unverified transfer bytes must fail.
+    data['assets'][first] = hashlib.sha256((assets / first).read_bytes()).hexdigest()
+    imported(ok=False)  # A changed manifest cannot redefine assets under one key.
+    print('native pair: cold/warm and competing imports select a valid pair; strict conflicts fail')
+
+
+def windows(scratch):
+    module = runpy.run_path(str(ROOT / 'scripts/release_windows_r.py'))
+    verify = module['verified']
+    state = verify.__globals__
+    state['revision'] = lambda: 'a' * 40
+    tools = scratch / 'windows-tools'
+    source = scratch / 'windows-source'
+    (source / 'sdk/r').mkdir(parents=True)
+    (source / 'sdk/r/DESCRIPTION').write_text('Package: thinkthen\nImports: Direct, base\n')
+    state['TOOLS'], state['ROOT'] = tools, source
+    state['version'] = lambda: '0.2.0'
+    runtime = tools / 'windows/R-4.6.1'
+    (runtime / 'library/base').mkdir(parents=True)
+    (runtime / 'library/base/DESCRIPTION').write_text('Package: base\nPriority: base\n')
+    (runtime / 'share/licenses').mkdir(parents=True)
+    (runtime / 'share/licenses/GPL-3').write_text('target runtime license')
+    selected = {'R-4.6.1-win.exe': ('unused', 'b' * 64)}
+    for package, imports in [('Leaf', 'base'), ('Direct', 'Leaf')]:
+        name = package + '_1.0.zip'
+        path = tools / 'windows' / name
+        with zipfile.ZipFile(path, 'w') as archive:
+            archive.writestr(package + '/DESCRIPTION', f'Package: {package}\nVersion: 1.0\nLicense: GPL-3\nImports: {imports}\nBuilt: R 4.6.1; x86_64-w64-mingw32;\n')
+            archive.writestr(package + '/LICENSE', package + ' terms')
+        selected[name] = ('unused', hashlib.sha256(path.read_bytes()).hexdigest())
+    state['pins'] = lambda: selected
+    produced = scratch / 'windows-prerequisites'
+    inventory = state['dependencies'](produced, runtime)
+    assert inventory['install_order'] == ['Leaf_1.0.zip', 'Direct_1.0.zip']
+    assert json.loads((produced / 'runtime.json').read_text()) == {'version': '4.6.1', 'standard_packages': ['base']}
+    assert (produced / 'licenses/GPL-3').read_text() == 'target runtime license'
+    assert (produced / 'install-order.txt').read_text().splitlines() == inventory['install_order']
+    folder = scratch / 'windows-r'
+    folder.mkdir()
+    for name in state['files']():
+        (folder / name).write_text(name)
+    with zipfile.ZipFile(folder / 'prerequisites.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(produced.rglob('*')):
+            if path.is_file():
+                archive.write(path, path.relative_to(produced).as_posix())
+    manifest = {'revision': 'a' * 40, 'target': 'x86_64-pc-windows-msvc', 'inputs': {name: digest for name, (_, digest) in selected.items()},
+                'files': {name: hashlib.sha256((folder / name).read_bytes()).hexdigest() for name in state['files']()}}
+    (folder / 'manifest.json').write_text(json.dumps(manifest))
+    assert verify(folder) == folder
+    assert 'prerequisites.zip' in manifest['files']
+    # The Linux consumer has only the handoff, never the native runtime/cache.
+    shutil.rmtree(tools)
+    consumed = scratch / 'windows-consumed'
+    state['bundle_dependencies'](folder, consumed)
+    assert {path.relative_to(consumed).as_posix(): path.read_bytes() for path in consumed.rglob('*') if path.is_file()} == {path.relative_to(produced).as_posix(): path.read_bytes() for path in produced.rglob('*') if path.is_file()}
+    for field, wrong in [('revision', '0' * 40), ('target', 'other'), ('inputs', {}), ('files', {})]:
+        changed = dict(manifest, **{field: wrong})
+        (folder / 'manifest.json').write_text(json.dumps(changed))
+        try:
+            state['bundle_dependencies'](folder, scratch / 'rejected-' / field)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('changed handoff provenance accepted: ' + field)
+        (folder / 'manifest.json').write_text(json.dumps(manifest))
+    for name in state['files']():
+        original = (folder / name).read_bytes()
+        (folder / name).write_bytes(b'changed')
+        try:
+            verify(folder)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('changed handoff accepted: ' + name)
+        (folder / name).write_bytes(original)
+    print('Windows R: target dependency closure, metadata and licenses survive verified handoff; changed provenance/bytes fail')
+
+
+def images(scratch):
+    binary = scratch / 'bin'
+    binary.mkdir()
+    docker = binary / 'docker'
+    docker.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$CAPTURE"\nif [ "$#" -gt 0 ]; then cat >> "$CAPTURE"; fi\n')
+    docker.chmod(0o755)
+    env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'])
+    capture = scratch / 'docker-request'
+    for ticket in ('0234 first-job', '0085 next-job'):
+        subprocess.run([sys.executable, ROOT / 'scripts/floors/prepare-image'],
+                       env=dict(env, PM_JOB=ticket, CAPTURE=str(capture)), check=True, capture_output=True)
+        request = capture.read_bytes()
+        assert b'pm.ticket' not in request
+        if ticket.startswith('0234'):
+            first = request
+        else:
+            assert request == first, 'job identity changed the reusable image build'
+    print('image preparation: separate jobs submit the same reusable image recipe')
+
+
+def node(scratch):
+    module = runpy.run_path(str(ROOT / 'scripts/release_host_tools.py'))
+    action = module['host_languages']
+    state = action.__globals__
+    home = scratch / 'node-home'
+    tools = home / '.local/share/thinkthen-build-tools'
+    tools.mkdir(parents=True)
+    state['TOOLS'] = tools
+    state['prepare_go'] = lambda: None
+    original = state['prepared']
+    state['prepared'] = lambda *args, **kwargs: (subprocess.CompletedProcess(args, 0) if args[0] == 'ruby' else original(*args, **kwargs))
+    downloads = []
+
+    def fetch(url, destination):
+        import io
+        import tarfile
+        downloads.append(url)
+        name = Path(url).name.removesuffix('.tar.gz')
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(destination, 'w:gz') as archive:
+            body = b'#!/bin/sh\nprintf "22.12.0\\n"\n'
+            info = tarfile.TarInfo(name + '/bin/node')
+            info.size, info.mode = len(body), 0o755
+            archive.addfile(info, io.BytesIO(body))
+        return destination
+
+    state['fetch'] = fetch
+    # An ordinary earlier runtime must not shadow the downloaded pinned runtime.
+    old = scratch / 'old-node'
+    old.mkdir()
+    (old / 'node').write_text('#!/bin/sh\nprintf "22.0.0\\n"\n')
+    (old / 'node').chmod(0o755)
+    environment = dict(os.environ)
+    try:
+        os.environ['HOME'] = str(home)
+        os.environ.pop('THINKTHEN_NODE_HOME', None)
+        os.environ['PATH'] = str(old) + os.pathsep + environment['PATH']
+        action()
+        assert len(downloads) == 1 and '/v22.12.0/' in downloads[0]
+        action()
+        assert len(downloads) == 1, 'the complete warm pinned runtime was downloaded again'
+        selected = tools / 'node/bin/node'
+        selected.write_text('#!/bin/sh\nprintf "22.12.1\\n"\n')
+        action()
+        assert len(downloads) == 2, 'full patch version was not compared'
+    finally:
+        os.environ.clear()
+        os.environ.update(environment)
+    print('Node preparation: old minor and differing patch refresh; the full pinned release reuses')
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-preparation-') as temporary:
+    scratch = Path(temporary)
+    pair(scratch)
+    windows(scratch)
+    images(scratch)
+    node(scratch)

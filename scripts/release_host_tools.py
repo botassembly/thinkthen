@@ -45,17 +45,21 @@ def host_languages():
     system = 'darwin' if platform.system() == 'Darwin' else 'linux'
     arm = platform.machine() in ('arm64', 'aarch64')
     try:
-        node_major = int(prepared('node', '-p', 'process.versions.node.split(".")[0]', capture_output=True, text=True).stdout)
+        node_version = prepared('node', '-p', 'process.versions.node', capture_output=True, text=True).stdout.strip()
     except (FileNotFoundError, subprocess.CalledProcessError):
-        node_major = 0
-    if node_major < 22:
+        node_version = ''
+    if node_version != HOST_PINS['node']:
         name = f'node-v{HOST_PINS["node"]}-{system}-{"arm64" if arm else "x64"}'
         base = 'https://nodejs.org/dist/v' + HOST_PINS['node']
         filename = name + '.tar.gz'
         archive = fetch(base + '/' + filename, TOOLS / 'sources' / filename)
         with tarfile.open(archive) as source:
             source.extractall(TOOLS, filter='data')
+        shutil.rmtree(TOOLS / 'node', ignore_errors=True)
         (TOOLS / name).rename(TOOLS / 'node')
+    actual = prepared('node', '-p', 'process.versions.node', capture_output=True, text=True).stdout.strip()
+    if actual != HOST_PINS['node']:
+        raise ValueError('prepared Node version differs from the pinned release')
     prepare_go()
     try:
         prepared('ruby', '-e', 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.3") ? 0 : 1)', capture_output=True)

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../.."
 : "${PM_JOB:?Run preparation through pm job}"
 . scripts/native-build-env
 tools="$HOME/.local/share/thinkthen-build-tools"
-floor="$tools/floors/macos$MACOSX_DEPLOYMENT_TARGET"
+floor=$THINKTHEN_RUNTIME_PREFIX
 mkdir -p "$floor/sources"
 python3 scripts/release_downloads.py https://cran.r-project.org/bin/macosx/sonoma-arm64/base/R-4.6.1-arm64.pkg "$floor/sources/R.pkg"
 pkgutil --check-signature "$floor/sources/R.pkg"
@@ -20,7 +20,12 @@ resources="$floor/Frameworks/R.framework/Resources"
 mkdir -p "$floor/bin" "$floor/include"
 # Header only: libR exports these functions; no Homebrew library is linked.
 gettext_header=/opt/zerobrew/opt/gettext/include/libintl.h
-if [ ! -f "$gettext_header" ]; then gettext_header="$(brew --prefix gettext)/include/libintl.h"; fi
+if [ ! -f "$gettext_header" ]; then gettext_header="$(brew --prefix gettext 2>/dev/null || true)/include/libintl.h"; fi
+if [ ! -f "$gettext_header" ]; then
+    brew install gettext
+    gettext_header="$(brew --prefix gettext)/include/libintl.h"
+fi
+test -f "$gettext_header"
 cp "$gettext_header" "$floor/include/"
 # R's launcher chooses its relocated resource root; the framework's public
 # install names remain those of the ordinary CRAN installation.

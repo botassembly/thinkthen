@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
-scripts/sqlite-prepare
+scripts/sqlite-prepare --refresh
 cargo fetch --locked
 rustup component add rustfmt clippy
 scripts/ruby-dev-prepare

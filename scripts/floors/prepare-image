@@ -20,7 +20,6 @@ if platform.machine() in ('aarch64', 'arm64'):
 print('release prepare: baseline image for ' + platform.machine(), flush=True)
 with tempfile.TemporaryFile(mode='w+') as log:
     result = subprocess.run(['docker', 'build', '--label', 'pm.repo=thinkthen',
-                             '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0],
                              '-t', 'thinkthen-floor-build:glibc2.28', '-f', '-',
                              str(root)], input=recipe, text=True,
                             stdout=log, stderr=subprocess.STDOUT)

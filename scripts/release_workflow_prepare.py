@@ -1,5 +1,6 @@
 """Prepare public build inputs separately from the offline candidate."""
 import email
+import fcntl
 import hashlib
 import json
 import os
@@ -8,6 +9,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import zipfile
@@ -70,7 +72,7 @@ def r_sources():
 
 def language_inputs():
     for command in ('cpp-prepare', 'jvm-prepare', 'csharp-prepare', 'sqlite-prepare', 'duckdb-prepare'):
-        prepared('scripts/' + command)
+        prepared('scripts/' + command, *(['--refresh'] if command == 'sqlite-prepare' else []))
     wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
     abi = wheel.split('-')[2][2:]
     prepared('uv', 'python', 'install', f'{abi[0]}.{abi[1:]}')
@@ -97,20 +99,115 @@ def language_inputs():
 
 
 def floor_inputs():
+    from release_native import complete
+    from release_images import image
     from runtime_floors import FLOORS
-    if platform.system() == 'Darwin':
-        prefix = TOOLS / ('floors/macos' + FLOORS['macos'])
-        if not (prefix / 'Frameworks/R.framework/Resources/bin/Rscript').exists():
-            prepared('scripts/floors/prepare-macos')
-        if not list((prefix / 'duckdb/static').glob('*.a')):
-            prepared('scripts/floors/prepare-duckdb')
-        if not list((prefix / 'r-frames/packages').glob('dplyr_*')):
-            prepared('scripts/floors/prepare-r')
-    else:
-        prepared('scripts/floors/prepare-image')
-        prefix = TOOLS / ('floors/linux-glibc' + FLOORS['linux']['glibc'])
-        if not (prefix / 'bin/sqlite3').is_file() or not list((prefix / 'r-frames/packages').glob('dplyr_*')):
-            prepared('scripts/floors/prepare-linux')
+    macos = platform.system() == 'Darwin'
+    prefix = TOOLS / ('floors/macos' + FLOORS['macos'] if macos else 'floors/linux-glibc' + FLOORS['linux']['glibc'])
+    identity = {'floor': FLOORS['macos'] if macos else image('floor')}
+
+    def produce(command, folder, roots, required, inputs):
+        folder.parent.mkdir(parents=True, exist_ok=True)
+        with (folder.parent / ('.' + folder.name + '.prepare.lock')).open('w') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            # Each existing producer owns these roots. Reuse its exact output
+            # inventory, never another group's success marker or representative file.
+            inputs = dict(identity, **inputs)
+            inputs['recipe'] = hashlib.sha256((ROOT / command).read_bytes()).hexdigest()
+            inputs['pins'] = hashlib.sha256((ROOT / 'scripts/release-downloads.json').read_bytes()).hexdigest()
+
+            def outputs():
+                return sorted({str(path.relative_to(folder)) for name in roots
+                               for path in ([folder / name] if (folder / name).is_file() else (folder / name).rglob('*'))
+                               if path.is_file()})
+
+            if all(any(path.is_file() for path in folder.glob(name)) for name in required) and complete(folder, inputs, outputs()):
+                return
+            staging = Path(tempfile.mkdtemp(prefix='.' + folder.name + '.prepare-', dir=folder.parent))
+            staged_floor = staging / 'floor'
+            staged_floor.mkdir()
+            staged = staged_floor if folder == prefix else staged_floor / folder.name
+            if folder == prefix and (prefix / 'sources').is_dir():
+                shutil.copytree(prefix / 'sources', staged_floor / 'sources')
+            if command.endswith('prepare-r'):
+                for name in ('sources', 'bin', 'Frameworks'):
+                    if (prefix / name).exists():
+                        (staged_floor / name).symlink_to(prefix / name, target_is_directory=True)
+            environment = dict(os.environ, THINKTHEN_RUNTIME_PREFIX=str(staged_floor))
+            try:
+                if not macos and command.endswith('prepare-r'):
+                    prepared('scripts/runtime-floor-build', command, env=environment)
+                else:
+                    prepared(command, env=environment)
+                if not all(any(path.is_file() for path in staged.glob(name)) for name in required):
+                    raise ValueError('floor producer left an incomplete output group: ' + command)
+                if macos and folder == prefix:
+                    # CRAN's compiled install names stay intact. These are the
+                    # same launcher/configuration files the producer relocates.
+                    text_paths = ['bin/R', 'bin/Rscript', 'Frameworks/R.framework/Resources/bin/R',
+                                  'Frameworks/R.framework/Resources/etc/Makeconf',
+                                  'Frameworks/R.framework/Resources/etc/Renviron']
+                    text_paths += [str(p.relative_to(staged)) for p in (staged / 'jansson').rglob('*')
+                                   if p.suffix in ('.pc', '.cmake')]
+                    for name in text_paths:
+                        path = staged / name
+                        path.write_text(path.read_text().replace(str(staged_floor), str(prefix)))
+                previous_folder = folder
+                folder = staged
+                artifacts = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest() for name in outputs()}
+                (folder / 'identity.json').write_text(json.dumps({'inputs': inputs, 'artifacts': artifacts}, sort_keys=True) + '\n')
+                folder = previous_folder
+                names = [*roots, 'identity.json'] if folder == prefix else ['.']
+                published = []
+                try:
+                    for name in names:
+                        target = folder / name if name != '.' else folder
+                        replacement = staged / name if name != '.' else staged
+                        backup = staging / 'previous' / name
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        backup.parent.mkdir(parents=True, exist_ok=True)
+                        existed = target.exists() or target.is_symlink()
+                        if existed:
+                            target.rename(backup)
+                        published.append((target, backup, existed))
+                        replacement.rename(target)
+                except BaseException:
+                    for target, backup, existed in reversed(published):
+                        if target.is_dir() and not target.is_symlink():
+                            shutil.rmtree(target)
+                        else:
+                            target.unlink(missing_ok=True)
+                        if existed:
+                            backup.rename(target)
+                    raise
+            except BaseException:
+                print('floor preparation failed; previous group retained; staging: ' + str(staging), file=sys.stderr)
+                raise
+            shutil.rmtree(staging)
+
+    base = 'scripts/floors/prepare-macos' if macos else 'scripts/floors/prepare-linux'
+    roots = (['Frameworks/R.framework', 'bin/R', 'bin/Rscript', 'include/libintl.h'] if macos else ['bin/sqlite3'])
+    roots += ['jansson', 'sources']
+    required = ['jansson/lib/libjansson.a', 'jansson/include/jansson.h', 'sources/jsonlite_2.0.0.tar.gz']
+    required += ['Frameworks/R.framework/Resources/bin/Rscript', 'bin/R', 'bin/Rscript', 'include/libintl.h', 'sources/R.pkg',
+                 'Frameworks/R.framework/Resources/bin/R',
+                 'Frameworks/R.framework/Resources/etc/Makeconf',
+                 'Frameworks/R.framework/Resources/etc/Renviron'] if macos else ['bin/sqlite3', 'sources/sqlite.zip']
+    produce(base, prefix, roots, required, {})
+    if macos:
+        wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
+        produce('scripts/floors/prepare-duckdb', prefix / 'duckdb',
+                ['static', 'cli', 'duckdb-1.4.3', wheel],
+                ['static/libduckdb_static.a', 'static/libduckdb_yyjson.a', 'cli/duckdb',
+                 'duckdb-1.4.3/src/include/duckdb.hpp', wheel],
+                {'source_recipe': hashlib.sha256((ROOT / 'scripts/duckdb-prepare').read_bytes()).hexdigest()})
+    required = ['library/jsonlite/DESCRIPTION']
+    for archive in PINS['r_sources']:
+        package, version = archive.removesuffix('.tar.gz').split('_')
+        required += ['library/' + package + '/DESCRIPTION', 'packages/' + package + '_' + version + '[._]*']
+    produce('scripts/floors/prepare-r', prefix / 'r-frames', ['library', 'packages'], required,
+            {'sources': PINS['r_sources'], 'runtime_recipe': hashlib.sha256((ROOT / base).read_bytes()).hexdigest()})
+    if not macos:
         prepared('scripts/floors/prepare-swift')
 
 
@@ -126,7 +223,11 @@ def prepare(target):
         raise ValueError(f'{target} needs its matching native build host')
     if not os.environ.get('PM_JOB'):
         raise ValueError('run release preparation through pm job')
-    for name, action in [('host tools', host_tools), ('language inputs', language_inputs), ('floor inputs', floor_inputs)]:
+    actions = [('host tools', host_tools)]
+    if platform.system() == 'Linux':
+        actions.append(('floor image', lambda: prepared('scripts/floors/prepare-image')))
+    actions.extend([('language inputs', language_inputs), ('floor inputs', floor_inputs)])
+    for name, action in actions:
         action()
         print('release prepare: ' + name, flush=True)
     print('release: public host inputs are prepared; candidate builds run offline')

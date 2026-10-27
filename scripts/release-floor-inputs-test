@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Check owned floor producer scheduling against isolated cold and warm caches."""
+import os
+import multiprocessing
+import subprocess
+from pathlib import Path
+import platform
+import runpy
+import shutil
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+import release_images
+
+
+def exercise(scratch, system, runtime=None):
+    module = runpy.run_path(str(ROOT / 'scripts/release_workflow_prepare.py'))
+    action = module['floor_inputs']
+    state = action.__globals__
+    tools = scratch / system / 'tools'
+    source = scratch / system / 'source'
+    for name in ('release-downloads.json', 'duckdb-prepare', 'floors/prepare-r',
+                 'floors/prepare-macos', 'floors/prepare-linux', 'floors/prepare-duckdb'):
+        target = source / 'scripts' / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / 'scripts' / name, target)
+    state['TOOLS'], state['ROOT'] = tools, source
+    if runtime is None:
+        state['PINS'] = {'r_sources': {'cli_3.6.6.tar.gz': 'a' * 64, 'dplyr_1.2.1.tar.gz': 'b' * 64}}
+    from runtime_floors import FLOORS
+    macos = system == 'Darwin'
+    prefix = tools / ('floors/macos' + FLOORS['macos'] if macos else 'floors/linux-glibc' + FLOORS['linux']['glibc'])
+    marker = tools / 'duckdb/1.4.3/python-wheel'
+    marker.parent.mkdir(parents=True)
+    wheel = next((runtime / 'duckdb').glob('*.whl')).name if runtime else 'duckdb-test.whl'
+    marker.write_text(wheel + '\n')
+    calls = []
+    failing = False
+    counter = None
+    protected = {'sqlite-3.41.0/bin/sqlite3': b'selected SQLite floor',
+                 'jansson-2.14.1/provenance': b'independent Jansson producer'}
+    for name, data in protected.items():
+        path = prefix / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    def write(name):
+        path = prefix / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('prepared ' + name)
+
+    # Compiler/download processes stand at the existing prepared() boundary.
+    # The real scheduler and hash validator see independently specified outputs.
+    def prepared(*args, **kwargs):
+        nonlocal prefix
+        original_prefix = prefix
+        prefix = Path(kwargs.get("env", {}).get("THINKTHEN_RUNTIME_PREFIX", prefix))
+        command = args[-1]
+        if command.endswith('prepare-swift'):
+            prefix = original_prefix
+            return
+        calls.append(command)
+        if counter is not None:
+            with counter.get_lock():
+                counter.value += 1
+        if runtime is not None:
+            roots = ['Frameworks/R.framework', 'bin/R', 'bin/Rscript', 'include/libintl.h', 'jansson', 'sources'] if command.endswith('prepare-macos') else ['duckdb'] if command.endswith('prepare-duckdb') else ['r-frames']
+            for name in roots:
+                source_path, target_path = runtime / name, prefix / name
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                if source_path.is_dir():
+                    shutil.copytree(source_path, target_path, symlinks=True)
+                else:
+                    shutil.copy2(source_path, target_path)
+            if command.endswith('prepare-macos'):
+                for name in ('bin/R', 'bin/Rscript', 'Frameworks/R.framework/Resources/bin/R',
+                             'Frameworks/R.framework/Resources/etc/Makeconf',
+                             'Frameworks/R.framework/Resources/etc/Renviron'):
+                    path = prefix / name
+                    path.write_text(path.read_text().replace(str(runtime), str(prefix)))
+            prefix = original_prefix
+            return
+        if command.endswith(('prepare-macos', 'prepare-linux')):
+            names = ['jansson/lib/libjansson.a', 'jansson/include/jansson.h', 'sources/jsonlite_2.0.0.tar.gz']
+            names += ['Frameworks/R.framework/Resources/bin/Rscript', 'bin/R', 'bin/Rscript',
+                      'include/libintl.h', 'sources/R.pkg', 'Frameworks/R.framework/Resources/bin/R',
+                      'Frameworks/R.framework/Resources/etc/Makeconf',
+                      'Frameworks/R.framework/Resources/etc/Renviron'] if macos else ['bin/sqlite3', 'sources/sqlite.zip']
+        elif command.endswith('prepare-duckdb'):
+            names = ['duckdb/static/libduckdb_static.a', 'duckdb/static/libduckdb_yyjson.a',
+                     'duckdb/cli/duckdb', 'duckdb/duckdb-1.4.3/src/include/duckdb.hpp', 'duckdb/duckdb-test.whl']
+        else:
+            names = ['r-frames/library/jsonlite/DESCRIPTION', 'r-frames/library/cli/DESCRIPTION',
+                     'r-frames/library/dplyr/DESCRIPTION', 'r-frames/packages/cli_3.6.6.tgz',
+                     'r-frames/packages/dplyr_1.2.1_R_x86_64-pc-linux-gnu.tar.gz']
+        for name in names:
+            write(name)
+        prefix = original_prefix
+        if failing:
+            raise RuntimeError("producer failed after partial output")
+
+    state['prepared'] = prepared
+    previous_system, previous_image = platform.system, release_images.image
+    try:
+        platform.system = lambda: system
+        release_images.image = lambda name: 'sha256:' + 'a' * 64
+        action()
+        expected = ['scripts/floors/prepare-macos', 'scripts/floors/prepare-duckdb', 'scripts/floors/prepare-r'] if macos else ['scripts/floors/prepare-linux', 'scripts/floors/prepare-r']
+        assert calls == expected, calls
+        assert all((prefix / name).read_bytes() == data for name, data in protected.items())
+        calls.clear()
+        action()
+        assert calls == [], 'complete current groups did not reuse'
+        if runtime is not None:
+            code = 'library(jsonlite); library(cli); stopifnot(packageVersion("jsonlite") == "2.0.0", packageVersion("cli") == "3.6.6"); stopifnot(startsWith(find.package("jsonlite"), Sys.getenv("R_LIBS_USER")), startsWith(find.package("cli"), Sys.getenv("R_LIBS_USER"))); cat("Published R runtime loads published jsonlite and cli\\n")'
+            subprocess.run([prefix / 'bin/Rscript', '--vanilla', '-e', code], check=True,
+                           env=dict(os.environ, R_LIBS_USER=str(prefix / 'r-frames/library'), R_LIBS_SITE=''))
+            return
+        missing = [('jansson/include/jansson.h', expected[0]),
+                   ('sources/jsonlite_2.0.0.tar.gz', expected[0]),
+                   ('r-frames/library/cli/DESCRIPTION', 'scripts/floors/prepare-r'),
+                   ('r-frames/packages/cli_3.6.6.tgz', 'scripts/floors/prepare-r')]
+        if macos:
+            missing += [('duckdb/static/libduckdb_yyjson.a', 'scripts/floors/prepare-duckdb'),
+                        ('duckdb/cli/duckdb', 'scripts/floors/prepare-duckdb'),
+                        ('duckdb/duckdb-test.whl', 'scripts/floors/prepare-duckdb')]
+        for name, owner in missing:
+            (prefix / name).unlink()
+            action()
+            assert calls == [owner], (name, calls)
+            calls.clear()
+        (prefix / 'r-frames/library/dplyr/DESCRIPTION').write_text('changed output')
+        action()
+        assert calls == ['scripts/floors/prepare-r'], calls
+        calls.clear()
+        recipe = source / 'scripts/floors/prepare-r'
+        recipe.write_text(recipe.read_text() + '\n# Changed producer input\n')
+        action()
+        assert calls == ['scripts/floors/prepare-r'], calls
+        calls.clear()
+        before = {str(path.relative_to(prefix)): path.read_bytes() for path in prefix.rglob('*') if path.is_file()}
+        recipe.write_text(recipe.read_text() + '\n# Failed refresh input\n')
+        failing = True
+        try:
+            action()
+        except RuntimeError as error:
+            assert 'partial output' in str(error)
+        else:
+            raise AssertionError('failed producer was accepted')
+        failing = False
+        after = {str(path.relative_to(prefix)): path.read_bytes() for path in prefix.rglob('*')
+                 if path.is_file() and not any(part.startswith('.r-frames.prepare-') for part in path.relative_to(prefix).parts)}
+        assert before == after, 'failed refresh changed the previous group'
+        assert list(prefix.glob('.r-frames.prepare-*')), 'failed staging witness was removed'
+        calls.clear()
+        action()
+        calls.clear()
+        recipe.write_text(recipe.read_text() + '\n# Concurrent refresh input\n')
+        context = multiprocessing.get_context('fork')
+        counter = context.Value('i', 0)
+        start = context.Event()
+
+        def refresh():
+            start.wait()
+            action()
+
+        workers = [context.Process(target=refresh) for _ in range(2)]
+        for worker in workers:
+            worker.start()
+        start.set()
+        for worker in workers:
+            worker.join()
+            assert worker.exitcode == 0, 'concurrent producer did not finish successfully'
+        assert counter.value == 1, 'competing refreshes did not share one completed group'
+        counter = None
+        if not macos:
+            release_images.image = lambda name: 'sha256:' + 'b' * 64
+            action()
+            assert calls == expected, calls
+        assert all((prefix / name).read_bytes() == data for name, data in protected.items())
+        print(system + ' floor groups: cold creation, warm reuse, missing/changed outputs and changed inputs pass')
+    finally:
+        platform.system, release_images.image = previous_system, previous_image
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-floor-inputs-') as temporary:
+    if sys.argv[1:] == ['--macos-runtime']:
+        assert platform.system() == 'Darwin'
+        from runtime_floors import FLOORS
+        exercise(Path(temporary), 'Darwin', Path.home() / ('.local/share/thinkthen-build-tools/floors/macos' + FLOORS['macos']))
+    else:
+        assert not sys.argv[1:]
+        for system in ('Darwin', 'Linux'):
+            exercise(Path(temporary), system)

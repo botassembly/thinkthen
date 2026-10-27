@@ -175,7 +175,7 @@ def candidate(destination):
         for name in ('go', 'cpp', 'swift', 'zig'):
             packages[name] = source_package(stage, out, name, version,
                                             native / 'thinkthen_ffi.dll', native / 'thinkthen_ffi.dll.lib')
-        package_more(stage, out, version, native, packages)
+        package_more(stage, out, version, native, packages, r)
     copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
     copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
     copy(ROOT / 'scripts/release-check', out / 'check')
@@ -202,7 +202,7 @@ def candidate(destination):
     print(out)
 
 
-def package_more(stage, out, version, native, packages):
+def package_more(stage, out, version, native, packages, r):
     run(sys.executable, ROOT / 'scripts/typescript-prepare')
     npm = stage / 'typescript'
     npm.mkdir()
@@ -230,8 +230,8 @@ def package_more(stage, out, version, native, packages):
     copy(gem, packages['ruby'])
     dependency, = (TOOLS / 'windows').glob('ffi-*-x64-mingw-ucrt.gem')
     copy(dependency, out / 'ruby/dependencies' / dependency.name)
-    from release_windows_r import dependencies as r_dependencies
-    r_dependencies(out / 'prerequisites/r')
+    from release_windows_r import bundle_dependencies
+    bundle_dependencies(r, out / 'prerequisites/r')
     # Reuse the language tools' own JAR and NuGet writers in an isolated source.
     loader = SourceFileLoader('candidate_host', str(ROOT / 'scripts/release-candidate'))
     spec = importlib.util.spec_from_loader(loader.name, loader)

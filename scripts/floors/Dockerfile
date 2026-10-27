@@ -3,7 +3,7 @@ FROM quay.io/pypa/manylinux_2_28_x86_64@sha256:076b19ef6e698f28649fa817c49d14443
 RUN dnf install -y readline-devel bzip2-devel xz-devel pcre2-devel libcurl-devel libicu-devel libxml2-devel libedit-devel && dnf clean all
 COPY scripts/release_downloads.py scripts/release-downloads.json /opt/thinkthen-downloads/
 WORKDIR /tmp/sources
-RUN /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://nodejs.org/dist/v22.0.0/node-v22.0.0-linux-x64.tar.xz node.tar.xz \
+RUN /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-x64.tar.xz node.tar.xz \
  && mkdir /opt/node && tar -xf node.tar.xz -C /opt/node --strip-components=1 \
  && /opt/python/cp313-cp313/bin/python3 /opt/thinkthen-downloads/release_downloads.py https://go.dev/dl/go1.23.12.linux-amd64.tar.gz go.tar.gz \
  && tar -xf go.tar.gz -C /opt
