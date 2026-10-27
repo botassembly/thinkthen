@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! One shared span convention reaches answers and nested annotation detail.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{BackendName, Key, OffsetUnit, Request, Settings};

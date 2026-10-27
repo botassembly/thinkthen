@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Name punctuation and category descriptions through the public SDK.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use thinkthen::{Key, Recognize, Record, Settings};

@@ -21,6 +21,25 @@ use std::sync::Arc;
 #[cfg(feature = "stream")]
 use std::task::{Context, Poll};
 
+// Empty queue polls describe host scheduling, not the end of a batch.
+const INPUT_IDLE: std::time::Duration = std::time::Duration::from_millis(100);
+
+#[derive(Clone, Copy)]
+enum InputKind {
+    Open,
+    #[cfg(any(feature = "native", feature = "command"))]
+    Finite,
+}
+impl InputKind {
+    fn waits_for_end(self) -> bool {
+        match self {
+            Self::Open => false,
+            #[cfg(any(feature = "native", feature = "command"))]
+            Self::Finite => true,
+        }
+    }
+}
+
 /// Rows from a question selected at runtime.
 #[non_exhaustive]
 #[derive(Debug)]
@@ -215,6 +234,7 @@ impl Engine {
             None,
             Vec::new(),
             OffsetUnit::CodePoints,
+            InputKind::Open,
         )?;
         Ok(Call {
             sender: call.sender,
@@ -233,6 +253,7 @@ impl Engine {
             request.name().map(str::to_owned),
             request.records().iter().map(Record::json).collect(),
             offsets,
+            InputKind::Open,
         )
     }
     fn open_any(
@@ -241,24 +262,25 @@ impl Engine {
         name: Option<String>,
         initial: Vec<Record>,
         offsets: OffsetUnit,
+        input_kind: InputKind,
     ) -> Result<AnyCall, Error> {
         let engine = self.for_call();
         let input = Queue::new(2, &engine.cancel);
         let sender = RecordSender(Arc::new(SenderOwner {
             input: input.clone(),
         }));
-        let mut flushed = false;
+        let mut flushed = initial.is_empty();
         let records = initial
             .into_iter()
             .map(RecordEvent::Record)
             .chain(std::iter::from_fn(move || {
-                let event = match input.try_receive() {
-                    Some(event) => event,
-                    None if !flushed => {
-                        flushed = true;
-                        return Some(RecordEvent::Flush);
-                    }
-                    None => input.receive(),
+                let event = if flushed || input_kind.waits_for_end() {
+                    input.receive()
+                } else if let Some(event) = input.receive_for(INPUT_IDLE) {
+                    event
+                } else {
+                    flushed = true;
+                    return Some(RecordEvent::Flush);
                 };
                 match event {
                     Received::Item(record) => {

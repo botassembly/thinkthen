@@ -24,6 +24,7 @@ def stage(libraries, destination, notices):
     shutil.copy2(ROOT / 'LICENSE', go / 'LICENSE')
     swift = destination / 'sdk/swift'
     shutil.copytree(ROOT / 'sdk/swift', swift, ignore=shutil.ignore_patterns('Native', '.build'))
+    (swift / 'Sources/CThinkThen/include').mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
                  swift / 'Sources/CThinkThen/include/thinkthen.h')
     import subprocess

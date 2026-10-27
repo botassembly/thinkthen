@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Reusable typed questions keep settings and cancellation in their calls.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{

@@ -8,8 +8,9 @@ import tempfile
 from contextlib import contextmanager
 
 CONSUMER, EXTENSION, LOOPBACK, ROOT = sys.argv[1:5]
+STREAMING_ONLY = sys.argv[5:] == ['--streaming-only']
 ADMISSION_ONLY = sys.argv[5:] == ['--admission-only']
-assert not sys.argv[5:] or ADMISSION_ONLY, sys.argv[5:]
+assert not sys.argv[5:] or ADMISSION_ONLY or STREAMING_ONLY, sys.argv[5:]
 ROOT = Path(ROOT)
 sys.path.insert(0, str(ROOT / "databases"))
 from testing import child_environment
@@ -124,6 +125,12 @@ from migration_cases import command, fixture, forbidden_settings, run_cases
 from admission_cases import cases as admission_cases, diagnostic
 
 
+from consumption import streaming
+if STREAMING_ONLY:
+    streaming(Host, LOOPBACK)
+    sys.exit(0)
+
+
 with Host() as host:
     host.configure({'backend': 'stub'})
     for case, request, expected in admission_cases(ROOT, 'sqlite'):
@@ -135,6 +142,7 @@ with Host() as host:
         diagnostic(case, code, message, expected)
 if ADMISSION_ONLY:
     sys.exit(0)
+streaming(Host, LOOPBACK)
 
 with Host() as host:
     host.configure({'backend':'stub'})

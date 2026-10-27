@@ -68,7 +68,7 @@ jobs:
     needs: [source, qualification]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    permissions: {contents: read}
+    permissions: {contents: read, id-token: write, attestations: write}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -95,6 +95,13 @@ jobs:
           scripts/release-workflow bundle platforms release "$RELEASE_SHA"
           scripts/release-workflow registry platforms registries "$RELEASE_SHA"
           scripts/release-workflow attach registries release "$RELEASE_SHA"
+      # Each matched file becomes a subject with its own digest in the provenance.
+      # https://github.com/actions/attest/tree/v4.2.2#identify-multiple-subjects
+      - name: Attest every release asset
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: 'release/*'
+          create-storage-record: false
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release

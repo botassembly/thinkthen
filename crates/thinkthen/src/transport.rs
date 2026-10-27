@@ -8,13 +8,14 @@ mod excerpt;
 mod response;
 mod scope;
 mod socket;
+mod tls;
 
 pub(crate) fn agent(config: ureq::config::Config) -> ureq::Agent {
-    use ureq::unversioned::transport::{ConnectProxyConnector, Connector, RustlsConnector};
+    use ureq::unversioned::transport::{ConnectProxyConnector, Connector};
     let connector =
         ().chain(ConnectProxyConnector::default())
             .chain(socket::SocketConnector)
-            .chain(RustlsConnector::default())
+            .chain(tls::TrustConnector::default())
             .chain(response::ResponseConnector);
     ureq::Agent::with_parts(
         config,
@@ -148,14 +149,14 @@ fn transport_cause(error: &ureq::Error) -> String {
         ureq::Error::Timeout(_) => "timeout".to_owned(),
         ureq::Error::HostNotFound => "hostname resolution failed".to_owned(),
         ureq::Error::Tls(_) | ureq::Error::Rustls(_) | ureq::Error::TlsRequired => {
-            "TLS failure".to_owned()
+            tls::FAILURE.to_owned()
         }
         ureq::Error::Io(error) => {
             if error
                 .get_ref()
                 .is_some_and(|inner| inner.is::<rustls::Error>())
             {
-                return "TLS failure".to_owned();
+                return tls::FAILURE.to_owned();
             }
             if let Some(inner) = error
                 .get_ref()

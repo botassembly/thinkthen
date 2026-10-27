@@ -3,7 +3,7 @@
 namespace ThinkThen;
 internal static class Contract
 {
-    internal const uint AbiVersion = 131073;
+    internal const uint AbiVersion = 131074;
     internal const string AbiCode = "usage.abi";
     internal const string AbiMessage = "the native ABI is incompatible";
     internal static string? FunctionName(long value) => value switch

@@ -5,7 +5,10 @@ use crate::{BackendTable, Code, Engine, Error, ErrorKind, Question, Request, Set
     clippy::disallowed_types,
     reason = "SQL checks forbidden field presence before typed admission"
 )]
-fn admit(text: &str) -> Result<Settings, Error> {
+/// Admit SQL settings before a host constructs its engine.
+/// # Errors
+/// Rejects caller addresses and credentials through the canonical admission rules.
+pub fn sql_settings(text: &str) -> Result<Settings, Error> {
     let fields: serde_json::Value = serde_json::from_str(text).map_err(|error| {
         Error::from_contract(
             Code::UsageSettings,
@@ -37,7 +40,7 @@ pub fn sql_engine_unrestricted(
     text: &str,
     variable: impl Fn(&str) -> Option<String>,
 ) -> Result<Engine, Error> {
-    admit(text)?.engine(variable)
+    sql_settings(text)?.engine(variable)
 }
 /// Admit PostgreSQL settings under the administrator's backend/model policy.
 /// # Errors
@@ -47,7 +50,14 @@ pub fn sql_engine(
     allowed: Option<&str>,
     variable: impl Fn(&str) -> Option<String>,
 ) -> Result<Engine, Error> {
-    let settings = admit(text)?;
+    sql_settings_with_policy(text, allowed)?.engine(variable)
+}
+
+/// Admit SQL settings under the administrator backend/model policy.
+/// # Errors
+/// Rejects forbidden fields and denied selections before resolving credentials.
+pub fn sql_settings_with_policy(text: &str, allowed: Option<&str>) -> Result<Settings, Error> {
+    let settings = sql_settings(text)?;
     let table = BackendTable::default();
     let (backend, model) = settings.selection(&table)?;
     let permitted = if let Some(allowed) = allowed {
@@ -97,7 +107,7 @@ pub fn sql_engine(
             ),
         ));
     }
-    settings.engine(variable)
+    Ok(settings)
 }
 
 /// Admit literal question text with canonical per-function options.

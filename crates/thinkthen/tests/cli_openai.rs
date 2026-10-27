@@ -1,6 +1,9 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
 //! Backend address and credential ownership through the command.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

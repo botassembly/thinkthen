@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Stated relation rules, ordering and all dependent rounds through the SDK.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use std::sync::{Arc, Mutex};

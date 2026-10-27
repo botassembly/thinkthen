@@ -28,6 +28,7 @@ pyo3 = { version = "=0.29.3", features = ["generate-import-lib"] }
 workspace = true
 
 [dev-dependencies]
+socket2.workspace = true
 loopback.workspace = true
 
 [[test]]

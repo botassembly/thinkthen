@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Choice behavior through the Rust API.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{Choose, Engine, Key, Outcome, Record, Settings, Threshold};

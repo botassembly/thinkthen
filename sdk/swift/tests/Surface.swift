@@ -287,6 +287,11 @@ func surface() async throws {
   try await stressInputStreaming()
   let client = try Client(.init(backend: .stub))
   requireSendable(client)
+  // Feature: host error presentation preserves the library's diagnostic message.
+  let diagnostic = ThinkThenError.unknownCode(
+    rawCode: 9999, message: "A future engine diagnostic", httpStatus: nil, rawName: nil)
+  precondition(diagnostic.localizedDescription == "A future engine diagnostic")
+  precondition(ThinkThenError.cancelled.localizedDescription == "The call was cancelled")
   try redactedSettings()
   try rowRepresentation()
   try await savedQuestions(client)

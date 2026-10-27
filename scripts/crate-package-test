@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Run the published Rust crate outside the repository, with no network access."""
+from pathlib import Path
+import os
+import subprocess
+import tarfile
+import tempfile
+import tomllib
+
+root = Path(__file__).resolve().parent.parent
+version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+subprocess.run(["cargo", "package", "-p", "thinkthen", "--locked", "--offline", "--no-verify"], cwd=root, check=True)
+target = Path(os.environ.get("CARGO_TARGET_DIR", root / "target"))
+if not target.is_absolute():
+    target = root / target
+archive = target / "package" / f"thinkthen-{version}.crate"
+with tempfile.TemporaryDirectory(prefix="thinkthen-crate-") as temporary:
+    with tarfile.open(archive) as package:
+        package.extractall(temporary, filter="data")
+    crate = Path(temporary) / f"thinkthen-{version}"
+    for features in ([], ["--features", "stream"], ["--no-default-features", "--features", "stream"]):
+        subprocess.run(["cargo", "test", "--offline", "--locked", *features], cwd=crate, check=True)
+print("published crate: default, stream, and library-only stream tests passed")

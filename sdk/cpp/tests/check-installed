@@ -21,6 +21,7 @@ lines = subprocess.check_output([*command, str(engines[0])], text=True).splitlin
 actual = {line.split()[-1].removeprefix("_") for line in lines if line.split()}
 assert actual == expected, (actual - expected, expected - actual)
 if platform.system() == "Darwin":
+    subprocess.run(["codesign", "--verify", "--strict", str(engines[0])], check=True)
     identity = subprocess.check_output(["otool", "-D", str(engines[0])], text=True)
     assert "@rpath/" + engines[0].name in identity, identity
 else:

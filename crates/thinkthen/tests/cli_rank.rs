@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Ranking arguments, original records and detailed rows through the command.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 
@@ -192,6 +195,7 @@ fn rank_preserves_text_framing() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn rank_reports_closed_output_for_originals_and_details() {
     for details in [false, true] {

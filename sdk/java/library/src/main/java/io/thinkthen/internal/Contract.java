@@ -2,7 +2,7 @@
 package io.thinkthen.internal;
 final class Contract {
     private Contract() {}
-    static final int ABI_VERSION = 131073;
+    static final int ABI_VERSION = 131074;
     static final String ABI_CODE = "usage.abi";
     static final String ABI_MESSAGE = "the native ABI is incompatible";
     static String functionName(int value) {

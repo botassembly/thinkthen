@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! `score` through the public library.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use thinkthen::{Key, Outcome, Record, Score, Settings};

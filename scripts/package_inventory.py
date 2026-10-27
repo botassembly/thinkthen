@@ -28,7 +28,6 @@ INPUTS = {
                  ('extensions/postgres/*.control', 'share/extension/*.control')],
     'swift': [('sdk/swift/Package.swift', 'Package.swift'), ('sdk/swift/README.md', 'README.md'),
               ('LICENSE', 'LICENSE'), ('sdk/swift/Sources/CThinkThen/anchor.c', 'Sources/CThinkThen/anchor.c'),
-              ('sdk/swift/Sources/CThinkThen/include/*.h', 'Sources/CThinkThen/include/*.h'),
               ('crates/thinkthen-ffi/include/thinkthen.h', 'Sources/CThinkThen/include/thinkthen.h'),
               ('sdk/swift/Sources/ThinkThen/*.swift', 'Sources/ThinkThen/*.swift')],
 }

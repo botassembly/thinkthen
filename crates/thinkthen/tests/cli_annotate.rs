@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Whole toolboxes through the command.
+#![cfg(feature = "command")]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 
 use loopback::{KEY, Loopback};

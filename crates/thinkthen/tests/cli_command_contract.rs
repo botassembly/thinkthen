@@ -1,7 +1,10 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
 //! Approved command contract expectations. These cases deliberately await the
 //! typed engine and command implementation; none are ignored or gated on it.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

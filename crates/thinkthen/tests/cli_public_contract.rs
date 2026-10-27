@@ -1,6 +1,6 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Command translation of shared usage failures.
+#![cfg(feature = "command")]
 mod support;
 
 #[test]

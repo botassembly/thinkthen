@@ -62,6 +62,7 @@ def check(root=ROOT):
             if element.tag == 'PackageReference' and element.get('Include') == 'Botassembly.ThinkThen':
                 equal(path.relative_to(root), element.get('Version'))
     patterns = {
+        'sdk/ruby/lib/thinkthen/version.rb': r'^\s*VERSION = "([^"]+)"',
         'sdk/r/DESCRIPTION': r'^Version: (.+)$',
         'sdk/zig/build.zig.zon': r'^\s*\.version = "([^"]+)"',
         'extensions/postgres/thinkthen.control': r"^default_version = '([^']+)'",

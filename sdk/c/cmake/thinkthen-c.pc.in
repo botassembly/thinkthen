@@ -1,8 +1,8 @@
-prefix=${pcfiledir}/../..
+prefix=${pcfiledir}/@THINKTHEN_PC_PREFIX@
 libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 Name: ThinkThen C
 Description: Ten functions through the shared ThinkThen engine
 Version: @PROJECT_VERSION@
-Libs: -L${libdir} -lthinkthen -Wl,-rpath,${libdir}
+Libs: -L${libdir} -l@THINKTHEN_PC_LIBRARY@
 Cflags: -I${includedir}

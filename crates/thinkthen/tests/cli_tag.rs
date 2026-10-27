@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Label arguments, rendering and exit codes through the command.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

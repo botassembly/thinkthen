@@ -22,6 +22,7 @@ extendr-api = "=0.8.2"
 workspace = true
 
 [dev-dependencies]
+socket2.workspace = true
 loopback.workspace = true
 
 [[test]]

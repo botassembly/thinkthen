@@ -11,7 +11,7 @@ use crate::{
 /// Process-owned test routes. Existing clients retain their admitted snapshots.
 #[derive(Debug)]
 pub struct FixtureHandle {
-    _guard: thinkthen::test_fixture::RouteGuard,
+    _guard: crate::fixture_routes::RouteGuard,
 }
 /// Install both loopback routes only in an explicit debug test artifact.
 /// # Safety
@@ -29,7 +29,7 @@ pub unsafe extern "C" fn thinkthen_fixture_routes_install(
     unsafe {
         operation(error, || {
             out.write(std::ptr::null_mut());
-            let owner = thinkthen::test_fixture::RouteGuard::install(
+            let owner = crate::fixture_routes::RouteGuard::install(
                 text(systemone, systemone_len)?,
                 text(openai, openai_len)?,
             )?;

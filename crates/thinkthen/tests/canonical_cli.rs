@@ -1,6 +1,9 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
 //! The executable preserves complete typed rows across every shared wire fixture.
+#![cfg(feature = "command")]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};

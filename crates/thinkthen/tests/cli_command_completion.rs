@@ -1,8 +1,11 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
-#![cfg(unix)]
 //! Command completion expectations from the approved design. No case is skipped
 //! while the shared engine and command implementation catch up.
+#![cfg(feature = "command")]
+#![cfg(unix)]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

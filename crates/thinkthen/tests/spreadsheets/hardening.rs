@@ -258,7 +258,7 @@ fn unrepresentable_excel_answers_and_details_become_failed_cells() {
         });
         let bad_label = bad.clone();
         let choose = function == "choose";
-        let server = loopback::Loopback::answering(move |question| {
+        let server = crate::loopback::Loopback::answering(move |question| {
             if choose {
                 let good = question["instructions"].as_str().unwrap().contains("evidence 3");
                 json!({"type":"choice","probabilities":{(bad_label.clone()):if good {0.0} else {1.0},"good":if good {1.0} else {0.0}}})
@@ -267,7 +267,7 @@ fn unrepresentable_excel_answers_and_details_become_failed_cells() {
         let mut command = support::command();
         command
             .args([function, "Pick", "--url", server.base(), "--from", "xlsx"])
-            .env("THINKTHEN_API_KEY", loopback::KEY)
+            .env("THINKTHEN_API_KEY", crate::loopback::KEY)
             .arg(&input)
             .args(["--sheet", "Intake", "--column", "Body", "--into", "result"]);
         if function == "choose" {
@@ -326,7 +326,7 @@ fn unrepresentable_annotation_cells_preserve_successful_sibling_columns() {
     workbook(&input);
     let bad = "x".repeat(32_768);
     let invalid = bad.clone();
-    let server = loopback::Loopback::answering(move |question| {
+    let server = crate::loopback::Loopback::answering(move |question| {
         if question["type"] == "choice" {
             json!({"type":"choice","probabilities":{(invalid.clone()):1.0,"good":0.0}})
         } else {
@@ -351,7 +351,7 @@ fn unrepresentable_annotation_cells_preserve_successful_sibling_columns() {
         ])
         .arg(&input)
         .args(["--sheet", "Intake", "--column", "Body"])
-        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .env("THINKTHEN_API_KEY", crate::loopback::KEY)
         .output()
         .unwrap();
     assert_eq!(result.status.code(), Some(6), "{result:?}");

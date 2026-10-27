@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! `thinkthen decide` over a record stream: framing, rows, batch and exit codes.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 
@@ -176,8 +179,6 @@ fn record_failures_keep_their_codes_and_exit_six() {
 
 #[test]
 fn the_batch_option_beats_the_variable() {
-    // Stdin remains an open-ended producer. An available partial batch can
-    // flush before the next line arrives, so request counts are not fixed.
     let cases = [
         (Some("2"), Some("0"), 2),
         (None, Some("1"), 1),
@@ -211,6 +212,7 @@ fn the_batch_option_beats_the_variable() {
             })
             .collect();
         assert_eq!(sizes.iter().sum::<usize>(), 6);
+        assert_eq!(sizes.len(), 6_usize.div_ceil(batch));
         assert!(
             sizes.iter().all(|size| *size <= batch),
             "{flag:?} {variable:?}: {sizes:?}"
@@ -282,6 +284,7 @@ fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn an_output_write_error_stops_the_reading() {
     let (stdout, inherited_reader) = support::closed_output();

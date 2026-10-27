@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! `decide` through the library.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply, UnavailableBackend};
 use serde_json::json;
 use thinkthen::{Decide, Engine, Key, Outcome, Record, Row, Settings, Threshold};

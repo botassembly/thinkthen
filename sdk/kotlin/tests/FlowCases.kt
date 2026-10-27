@@ -18,14 +18,14 @@ private suspend fun earlyStop() = coroutineScope {
             try {
                 produced++
                 emit("alpha")
-                entered.complete(Unit)
-                awaitCancellation()
-            } finally { stopped.complete(Unit) }
+                capturedSignal(entered, "producer entered")
+                run { FlowCapture.event("producer waits for cancellation"); awaitCancellation() }
+            } finally { capturedSignal(stopped, "producer stopped") }
         }
         val rows = client.decideStream("Ready?", records)
-            .onEach { entered.await() }.take(1).toList()
+            .onEach { capturedAwait(entered, "producer entered") }.take(1).toList()
         check(rows.size == 1 && produced == 1)
-        stopped.await()
+        capturedAwait(stopped, "producer stopped")
     }
 }
 
@@ -36,14 +36,14 @@ private suspend fun blockedInput() = coroutineScope {
     ThinkThen { backend = Backend.Stub }.use { client ->
         val collector = launch {
             client.decideStream("Ready?", flow<String> {
-                try { entered.complete(Unit); awaitCancellation() }
-                finally { stopped.complete(Unit) }
+                try { capturedSignal(entered, "producer entered"); run { FlowCapture.event("producer waits for cancellation"); awaitCancellation() } }
+                finally { capturedSignal(stopped, "producer stopped") }
             }).collect()
         }
-        entered.await()
-        collector.cancelAndJoin()
+        capturedAwait(entered, "producer entered")
+        FlowCapture.event("cancel input collector"); collector.cancelAndJoin(); FlowCapture.event("input collector joined")
         check(collector.isCancelled)
-        stopped.await()
+        capturedAwait(stopped, "producer stopped")
     }
 }
 
@@ -60,12 +60,12 @@ private suspend fun exceptionCleanup() = coroutineScope {
         val downstream = IllegalArgumentException("downstream consumer marker")
         try {
             client.decideStream("Ready?", flow {
-                try { emit("alpha"); entered.complete(Unit); awaitCancellation() }
-                finally { stopped.complete(Unit) }
-            }).collect { entered.await(); throw downstream }
+                try { emit("alpha"); capturedSignal(entered, "producer entered"); run { FlowCapture.event("producer waits for cancellation"); awaitCancellation() } }
+                finally { capturedSignal(stopped, "producer stopped") }
+            }).collect { capturedAwait(entered, "producer entered"); throw downstream }
             error("Expected downstream exception")
         } catch (failure: IllegalArgumentException) { check(failure === downstream) }
-        stopped.await()
+        capturedAwait(stopped, "producer stopped")
         check(client.decide("Ready?", "still usable") !is Row.Failed)
     }
 }
@@ -79,13 +79,13 @@ private suspend fun nativeCancellation(mode: String, stream: Boolean) = coroutin
                 if (stream) client.decideStream("Ready?", flowOf("alpha")).collect()
                 else client.decide("Ready?", "alpha")
             }
-            check(fixture.command("arrived") == "arrived")
-            operation.cancel()
-            try { operation.await(); error("Expected coroutine cancellation") }
+            check(capturedCommand(fixture, "arrived") == "arrived")
+            FlowCapture.event("cancel native operation"); operation.cancel()
+            try { capturedOperation(operation); error("Expected coroutine cancellation") }
             catch (_: CancellationException) { }
             check(operation.isCancelled)
-            check(fixture.command("closed") == "closed")
-            client.close()
+            check(capturedCommand(fixture, "closed") == "closed")
+            capturedClose(client)
         }
     }
 }
@@ -98,17 +98,17 @@ private suspend fun clientClose() = coroutineScope {
     try {
         val operation = async {
             client.decideStream("Ready?", flow<String> {
-                try { entered.complete(Unit); awaitCancellation() }
-                finally { stopped.complete(Unit) }
+                try { capturedSignal(entered, "producer entered"); run { FlowCapture.event("producer waits for cancellation"); awaitCancellation() } }
+                finally { capturedSignal(stopped, "producer stopped") }
             }).collect()
         }
-        entered.await()
-        client.close()
-        try { operation.await(); error("Expected client-close cancellation") }
+        capturedAwait(entered, "producer entered")
+        capturedClose(client)
+        try { capturedOperation(operation); error("Expected client-close cancellation") }
         catch (_: CancellationException) { }
-        stopped.await()
-        client.close()
-    } finally { client.close() }
+        capturedAwait(stopped, "producer stopped")
+        capturedClose(client)
+    } finally { capturedClose(client) }
 }
 
 // Feature: cold flows create independent calls, and cancelling one leaves another usable.
@@ -123,11 +123,11 @@ private suspend fun independentCollections() = coroutineScope {
             emit("beta")
         })
         check(collections == 0)
-        val first = async { rows.onEach { entered.complete(Unit); release.await() }.toList() }
-        entered.await()
+        val first = async { rows.onEach { capturedSignal(entered, "producer entered"); capturedAwait(release, "collection release") }.toList() }
+        capturedAwait(entered, "producer entered")
         val other = rows.toList()
         check(other.size == 2 && other.map { it.position } == listOf(1uL, 2uL))
-        first.cancelAndJoin()
+        FlowCapture.event("cancel first collection"); first.cancelAndJoin(); FlowCapture.event("first collection joined")
         check(first.isCancelled && collections == 2)
         check(rows.toList() == other)
         check(collections == 3)
@@ -137,6 +137,7 @@ private suspend fun independentCollections() = coroutineScope {
 // Unknown sources keep rows and original objects while the engine chooses bounded packing.
 private suspend fun remoteRows(directory: Path) {
     for(name in listOf("decide-precision.json","filter-rows.json","rank-top-failures.json")) {
+        FlowCapture.event("remote rows $name")
         val sample = Json.parseToJsonElement(Files.readString(directory.resolve(name))).jsonObject
         val request = sample.required("request").jsonObject
         val question = request.required("question").jsonObject
@@ -176,13 +177,37 @@ private suspend fun remoteRows(directory: Path) {
     }
 }
 
-fun main(args: Array<String>) = runBlocking {
-    earlyStop()
-    blockedInput()
-    exceptionCleanup()
-    nativeCancellation("headers", stream = false)
-    nativeCancellation("body", stream = true)
-    clientClose()
-    independentCollections()
-    remoteRows(Path.of(args.single()))
+fun main(args: Array<String>) = FlowCapture.run(args) { runBlocking {
+    FlowCapture.case("earlyStop") { earlyStop() }
+    FlowCapture.case("blockedInput") { blockedInput() }
+    FlowCapture.case("exceptionCleanup") { exceptionCleanup() }
+    FlowCapture.case("nativeCancellation headers finite") { nativeCancellation("headers", stream = false) }
+    FlowCapture.case("nativeCancellation body stream") { nativeCancellation("body", stream = true) }
+    FlowCapture.case("clientClose") { clientClose() }
+    FlowCapture.case("independentCollections") { independentCollections() }
+    FlowCapture.case("remoteRows") { remoteRows(Path.of(args.single())) }
+} }
+
+private suspend fun capturedAwait(event: CompletableDeferred<Unit>, name: String) {
+    FlowCapture.event("await $name")
+    event.await()
+    FlowCapture.event("received $name")
+}
+private fun capturedSignal(event: CompletableDeferred<Unit>, name: String) {
+    FlowCapture.event("signal $name")
+    event.complete(Unit)
+}
+private suspend fun capturedCommand(fixture: Fixture, command: String): String {
+    FlowCapture.event("await fixture $command")
+    return fixture.command(command).also { FlowCapture.event("received fixture $command") }
+}
+private fun capturedClose(client: ThinkThen) {
+    FlowCapture.event("close client")
+    client.close()
+    FlowCapture.event("client closed")
+}
+private suspend fun capturedOperation(operation: Deferred<*>) {
+    FlowCapture.event("await operation")
+    try { operation.await() }
+    finally { FlowCapture.event("operation await finished") }
 }

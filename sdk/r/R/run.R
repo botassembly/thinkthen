@@ -17,10 +17,13 @@
     if (size > 2^53 - 1) .tt_native("r_question_conversion_error")
     if (isTRUE(getOption("thinkthen.verbose"))) message("ThinkThen ", function_name, " started")
     if (isTRUE(.progress) && interactive()) progress <- cli::cli_progress_bar(total = size)
-    prepared <- lapply(seq_len(size), function(position) .tt_prepare(x, position))
+    prepared <- if (is.data.frame(x)) .tt_prepare_frame(x) else {
+      lapply(seq_len(size), function(position) .tt_prepare(x, position))
+    }
     call <- .tt_native("r_open_finite", client, request, prepared)$value
-    rows <- list()
-    kept <- logical()
+    rows <- vector("list", size)
+    kept <- logical(size)
+    count <- 0L
     repeat {
       event <- .tt_native("r_poll", call)
       if (event$event == "row") {
@@ -28,15 +31,16 @@
         row["id"] <- list(switch(event$id$kind, absent = NULL, string = event$id$text,
                          signed = .tt_id_value(event$id$decimal, "signed"),
                          unsigned = .tt_id_value(event$id$decimal, "unsigned")))
-        rows[[length(rows) + 1L]] <- row
-        if (function_name == "filter") kept <- c(kept, event$kept)
+        count <- count + 1L
+        rows[[count]] <- row
+        if (function_name == "filter") kept[[count]] <- event$kept
         if (isTRUE(getOption("thinkthen.verbose")) && row$status == "failed") {
           message("ThinkThen failed at position ", row$position)
         }
         if (!is.null(progress)) cli::cli_progress_update(id = progress, inc = 1L)
       } else if (event$event == "finished") break
     }
-    result <- .tt_frame(rows, function_name)
+    result <- .tt_frame(rows[seq_len(count)], function_name)
     if (function_name == "annotate") {
       attr(result, ".thinkthen_children") <- lapply(definition$questions, `[[`, "function")
     }
@@ -44,7 +48,7 @@
       result$item <- lapply(result$position, function(position) {
         if (is.data.frame(x)) .tt_subset(x, position) else x[[position]]
       })
-      result$kept <- kept
+      result$kept <- kept[seq_len(count)]
     }
     result
   }, interrupt = function(interrupt) .tt_native("r_cancel_release", call))

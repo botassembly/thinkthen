@@ -77,22 +77,15 @@ go test -c -o "$scratch/loader-consumer"
 case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_cache="$HOME/.cache" ;; esac
 python3 "$root/scripts/loader-cache-check" "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
 # A separate installed prefix exercises pkg-config linkage without embedding.
-mkdir -p "$scratch/system/lib/pkgconfig" "$scratch/system/include"
-cp "$THINKTHEN_GO_ENGINE" "$scratch/system/lib/libthinkthen.$suffix"
-if [ "$(uname -s)" = Darwin ]; then
-    install_name_tool -id "$scratch/system/lib/libthinkthen.$suffix" "$scratch/system/lib/libthinkthen.$suffix"
-    codesign --force --sign - "$scratch/system/lib/libthinkthen.$suffix"
-fi
-cp "$scratch/module/thinkthen.h" "$scratch/system/include/"
-python3 - "$root/sdk/c/cmake/thinkthen-c.pc.in" "$scratch/system/lib/pkgconfig/thinkthen-c.pc" <<'PY'
-from pathlib import Path
-import sys
-source=Path(sys.argv[1]).read_text()
-for key,value in {'CMAKE_INSTALL_LIBDIR':'lib','CMAKE_INSTALL_INCLUDEDIR':'include','PROJECT_VERSION':'0.2.0'}.items():
-    source=source.replace('@'+key+'@',value)
-Path(sys.argv[2]).write_text(source)
-PY
-PKG_CONFIG_PATH="$scratch/system/lib/pkgconfig" go test -tags thinkthen_system -race -count=1 -run='^TestSharedStub$' .
+cmake -S "$root/sdk/c" -B "$scratch/system-build" \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
+    -DCMAKE_INSTALL_PREFIX="$scratch/system" \
+    -DTHINKTHEN_FFI_LIBRARY="$THINKTHEN_GO_ENGINE" \
+    -DTHINKTHEN_FFI_INCLUDE_DIR="$scratch/module"
+cmake --install "$scratch/system-build"
+PKG_CONFIG_PATH="$scratch/system/lib/pkgconfig" \
+    CGO_LDFLAGS="${CGO_LDFLAGS:-} -Wl,-rpath,$scratch/system/lib" \
+    go test -tags thinkthen_system -race -count=1 -run='^TestSharedStub$' .
 
 # darwin/amd64 has no bundled engine, but remains a compilable public module.
 if [ "$(uname -s)" = Darwin ]; then

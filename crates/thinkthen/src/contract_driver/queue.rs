@@ -6,6 +6,7 @@ use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::task::Waker;
 #[cfg(feature = "stream")]
 use std::task::{Context, Poll};
+use std::time::Duration;
 #[derive(Debug)]
 struct State<T> {
     items: VecDeque<T>,
@@ -74,6 +75,7 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
         }
         Ok(())
     }
+    #[cfg(any(feature = "native", feature = "command"))]
     pub(super) fn try_receive(&self) -> Option<Received<T>> {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         if state.items.is_empty() && !state.closed && !state.cancelled {
@@ -96,6 +98,23 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
         self.space.notify_all();
         self.changed();
         result
+    }
+    pub(super) fn receive_for(&self, timeout: Duration) -> Option<Received<T>> {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        let (mut state, _) = self
+            .ready
+            .wait_timeout_while(state, timeout, |s| {
+                s.items.is_empty() && !s.closed && !s.cancelled
+            })
+            .unwrap_or_else(PoisonError::into_inner);
+        if state.items.is_empty() && !state.closed && !state.cancelled {
+            return None;
+        }
+        let result = Self::take(&mut state);
+        drop(state);
+        self.space.notify_all();
+        self.changed();
+        Some(result)
     }
     #[cfg(feature = "stream")]
     pub(super) fn poll(&self, cx: &mut Context<'_>) -> Poll<Received<T>> {

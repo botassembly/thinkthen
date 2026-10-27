@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! One relation invocation supplies every recognized name as well as its relations.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use std::sync::{

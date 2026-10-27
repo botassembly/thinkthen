@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Failed rows explain transport causes without exposing request credentials.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{HeldReply, KEY, Loopback, UnavailableBackend};
 use serde_json::json;
 use thinkthen::{Decide, Outcome, Record, Settings};
@@ -94,7 +97,7 @@ fn tls_handshake_failure_is_named_without_raw_peer_data() {
     assert_eq!(error.code().as_str(), "backend.transport");
     assert_eq!(
         error.message(),
-        "the systemone backend could not be reached: TLS failure"
+        "the systemone backend could not be reached: TLS failure; check the operating system certificate store or THINKTHEN_CA_FILE"
     );
     assert!(!json!(rows).to_string().contains(KEY));
     peer.join().unwrap().unwrap();

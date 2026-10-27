@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
-//! `thinkthen decide` on the command line.
 #![cfg(test)]
+//! `thinkthen decide` on the command line.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

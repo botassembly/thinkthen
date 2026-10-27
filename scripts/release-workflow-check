@@ -1,0 +1,155 @@
+#!/usr/bin/env ruby
+# Check release credential reachability from parsed workflow jobs and steps.
+require 'yaml'
+require 'set'
+
+ROOT = File.expand_path('..', __dir__)
+OWNERS = {
+  'secrets.MAVEN_CENTRAL_USERNAME' => 'maven',
+  'secrets.MAVEN_CENTRAL_PASSWORD' => 'maven',
+  'secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY' => 'maven',
+  'secrets.MAVEN_CENTRAL_GPG_PASSPHRASE' => 'maven',
+  'steps.nuget.outputs.NUGET_API_KEY' => 'nuget',
+  'steps.crates.outputs.token' => 'crates',
+  'secrets.TAP_DEPLOY_KEY' => 'homebrew'
+}.freeze
+REFERENCE = /\b(?:secrets\.[A-Za-z_][A-Za-z_0-9]*|steps\.[A-Za-z_][A-Za-z_0-9]*\.outputs\.[A-Za-z_][A-Za-z_0-9]*)\b/
+
+
+def references(value)
+  case value
+  when Hash then value.values.flat_map { |child| references(child) }
+  when Array then value.flat_map { |child| references(child) }
+  when String
+    normalized = value.gsub(/\[['"]([A-Za-z_][A-Za-z_0-9]*)['"]\]/) { '.' + Regexp.last_match(1) }
+    raise 'unsupported credential reference' if normalized.match?(/\b(?:secrets|steps)\s*\[/i)
+    remainder = normalized.gsub(REFERENCE, '')
+    if remainder.match?(/\b(?:secrets|steps)\b/i)
+      raise 'unsupported credential reference'
+    end
+    normalized.scan(REFERENCE)
+  else []
+  end
+end
+
+
+def active?(condition, site)
+  return true if condition.nil? || condition == true
+  return false if condition == false
+  condition = condition.delete_prefix('${{').delete_suffix('}}').strip
+  match = /\Amatrix\.site\s*(==|!=)\s*'([^']+)'\z/.match(condition)
+  raise "unsupported step condition: #{condition}" unless match
+  (site.downcase == match[2].downcase) == (match[1] == '==')
+end
+
+
+def check(workflow)
+  seen = Set.new
+  workflow.fetch('jobs').each do |job_name, job|
+    matrix = job.dig('strategy', 'matrix')
+    raise 'unsupported release matrix' if matrix && matrix.keys != ['site']
+    sites = matrix ? matrix.fetch('site') : [job_name]
+    inherited = references([workflow.reject { |key, _| key == 'jobs' },
+                            job.reject { |key, _| key == 'steps' }]) - ['secrets.GITHUB_TOKEN']
+    raise "credential reaches inherited environment: #{inherited.join(', ')}" unless inherited.empty?
+    sites.each do |site|
+      job.fetch('steps').each do |step|
+        next unless active?(step['if'], site)
+        environment = (workflow['env'] || {}).merge(job['env'] || {}).merge(step['env'] || {})
+        destination = environment['RELEASE_SITE']
+        values = [workflow['env'], job['env'], step]
+        references(values).each do |reference|
+          next if reference == 'secrets.GITHUB_TOKEN'
+          owner = OWNERS[reference]
+          raise "#{reference} reaches #{site} in #{step['name'] || step['uses']}" unless owner == site
+          if owner != 'homebrew'
+            command = step['run'].to_s
+            expected = %q{python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'}
+            unless step.dig('env', 'RELEASE_SITE') == site && command.strip == expected
+              raise "#{reference} reaches a step without its site's upload command"
+            end
+          end
+          seen.add(reference)
+        end
+        if destination && destination != site
+          raise "upload destination #{destination} differs from matrix site #{site}"
+        end
+      end
+    end
+  end
+  missing = OWNERS.keys.to_set - seen
+  raise "missing release credentials: #{missing.to_a.join(', ')}" unless missing.empty?
+end
+
+
+def self_test(workflow)
+  check(workflow)
+  mutations = {
+    'Secret context copied to npm' => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry['if'] == "matrix.site == 'npm'" }
+      (step['env'] ||= {})['WRONG_KEY'] = '${{ toJSON(secrets) }}'
+    end,
+    'Step context copied to npm' => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry['if'] == "matrix.site == 'npm'" }
+      (step['env'] ||= {})['WRONG_KEY'] = '${{ toJSON(steps) }}'
+    end,
+    'Maven password inherited through container' => lambda do |copy|
+      copy['jobs']['upload']['container'] = {
+        'image' => 'ubuntu', 'env' => {'WRONG_KEY' => '${{ secrets.MAVEN_CENTRAL_PASSWORD }}'}
+      }
+    end,
+    'Unsupported matrix inclusion'  => lambda do |copy|
+      copy['jobs']['upload']['strategy']['matrix']['include'] = [{'site' => 'other'}]
+    end,
+    'Bracket Maven password in npm environment'  => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry['if'] == "matrix.site == 'npm'" }
+      (step['env'] ||= {})['WRONG_KEY'] = %q{${{ secrets['MAVEN_CENTRAL_PASSWORD'] }}}
+    end,
+    'Maven key in npm environment' => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry['if'] == "matrix.site == 'npm'" }
+      (step['env'] ||= {})['WRONG_KEY'] = '${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}'
+    end,
+    'Maven password in workflow environment' => lambda do |copy|
+      copy['env']['WRONG_PASSWORD'] = '${{ secrets.MAVEN_CENTRAL_PASSWORD }}'
+    end,
+    'NuGet token in job environment' => lambda do |copy|
+      copy['jobs']['upload']['env'] = {'WRONG_TOKEN' => '${{ steps.nuget.outputs.NUGET_API_KEY }}'}
+    end,
+    'Maven command changed to npm' => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry.dig('env', 'MAVEN_CENTRAL_PASSWORD') }
+      step['run'] = step['run'].sub('os.environ["RELEASE_SITE"]', '"npm"')
+    end,
+    'Maven secret moved to setup step' => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry.dig('env', 'MAVEN_CENTRAL_PASSWORD') }
+      step['run'] = 'echo setup'
+    end,
+    'Maven step widened to other sites'  => lambda do |copy|
+      step = copy['jobs']['upload']['steps'].find { |entry| entry.dig('env', 'MAVEN_CENTRAL_PASSWORD') }
+      step['if'] = "matrix.site != 'pypi'"
+    end
+  }
+  mutations.each do |name, mutate|
+    copy = Marshal.load(Marshal.dump(workflow))
+    mutate.call(copy)
+    begin
+      check(copy)
+    rescue RuntimeError => error
+      raise error unless error.message.match?(/reaches|unsupported (credential reference|release matrix)/)
+      puts "rejected: #{name}"
+      next
+    end
+    raise "accepted wrong-site credential: #{name}"
+  end
+end
+
+begin
+  arguments = ARGV.dup
+  test = arguments.delete('--self-test')
+  raise 'usage: release-workflow-check [--self-test] [WORKFLOW]' if arguments.length > 1
+  workflow = YAML.safe_load_file(arguments.first || File.join(ROOT, '.github/workflows/release.yml'), aliases: true)
+  test ? self_test(workflow) : check(workflow)
+  puts 'release workflow: credentials reach only their own sites'
+rescue RuntimeError, Psych::Exception => error
+  warn "release-workflow-check: #{error.message}"
+  exit 1
+end

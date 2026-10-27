@@ -2,7 +2,7 @@
 # Generated native requirement. Do not edit.
 module ThinkThen
   module NativeContract
-    ABI_VERSION = 131073
+    ABI_VERSION = 131074
     ABI_CODE = "usage.abi"
     ABI_MESSAGE = "the native ABI is incompatible"
     FUNCTION_NAMES = {

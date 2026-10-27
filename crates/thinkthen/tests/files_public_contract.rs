@@ -1,6 +1,6 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! File admission and access preserve their public codes.
+#![cfg(feature = "command")]
 
 use thinkthen::files::{FileFormat, FileJob, FileOutput};
 use thinkthen::{BackendName, Cancel, Decide, Request, Settings};
@@ -176,7 +176,7 @@ fn diagnostic_workbook(input: &std::path::Path, cell: &str) {
         ),
     ] {
         archive
-            .start_file(name, zip::write::FileOptions::default())
+            .start_file(name, zip::write::SimpleFileOptions::default())
             .unwrap();
         archive
             .write_all(xml.replace("CELL", cell).as_bytes())

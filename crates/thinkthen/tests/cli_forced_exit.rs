@@ -1,7 +1,7 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
-#![cfg(unix)]
 //! A forced command exit releases only its own processes and temporary files.
+#![cfg(feature = "command")]
+#![cfg(unix)]
 mod support;
 
 use std::fs::{self, OpenOptions};

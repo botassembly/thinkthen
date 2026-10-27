@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
-use zip::{ZipArchive, ZipWriter, write::FileOptions};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_SHARED_BYTES: u64 = 512 * 1024 * 1024;
@@ -52,11 +52,11 @@ pub(crate) fn admit(
     for index in 0..zip.len() {
         check_cancel(cancel)?;
         let file = zip.by_index(index).map_err(local)?;
-        let name = file.name();
+        let name = file.name().map_err(local)?;
         if name.starts_with('/')
             || name.split('/').any(|p| p == "..")
             || name.contains('\\')
-            || !names.insert(name.to_owned())
+            || !names.insert(name.to_string())
         {
             return Err(invalid(
                 "workbook has unsafe or duplicate ZIP paths; save a clean .xlsx copy",
@@ -68,13 +68,13 @@ pub(crate) fn admit(
             ));
         }
         expanded = expanded.saturating_add(file.size());
-        check_expansion(expanded, file.name(), file.size())?;
+        check_expansion(expanded, &name, file.size())?;
     }
     expanded = 0;
     for index in 0..zip.len() {
         check_cancel(cancel)?;
         let file = zip.by_index(index).map_err(local)?;
-        let name = file.name().to_owned();
+        let name = file.name().map_err(local)?.into_owned();
         let remaining = (MAX_EXPANDED_BYTES - expanded).min(if name == "xl/sharedStrings.xml" {
             MAX_SHARED_BYTES
         } else {
@@ -496,13 +496,14 @@ pub(crate) fn write(
     for index in 0..archive.len() {
         check_cancel(cancel)?;
         let file = archive.by_index(index).map_err(local)?;
-        if file.name() != sheet.part {
+        if file.name().map_err(local)? != sheet.part {
             zip.raw_copy_file(file).map_err(local)?;
             continue;
         }
-        let options = FileOptions::default()
-            .compression_method(file.compression())
-            .last_modified_time(file.last_modified());
+        let mut options = SimpleFileOptions::default().compression_method(file.compression());
+        if let Some(modified) = file.last_modified() {
+            options = options.last_modified_time(modified);
+        }
         zip.start_file(&sheet.part, options).map_err(local)?;
         let mut writer = Writer::new(&mut zip);
         let mut row = 0;
@@ -749,7 +750,7 @@ fn attr(e: &BytesStart<'_>, key: &[u8]) -> Result<Option<String>, FileError> {
         let a = attribute.map_err(local)?;
         if a.key.as_ref().rsplit(|b| *b == b':').next() == Some(key) {
             return a
-                .unescape_value()
+                .normalized_value(quick_xml::XmlVersion::Implicit1_0)
                 .map(|v| Some(v.into_owned()))
                 .map_err(local);
         }

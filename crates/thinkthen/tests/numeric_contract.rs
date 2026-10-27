@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Validated numeric values preserve the caller's contract through serialization.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use thinkthen::{Code, Cut, Error, Family, Probability, Threshold};
 
 #[test]

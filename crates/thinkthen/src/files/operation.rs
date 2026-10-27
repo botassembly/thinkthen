@@ -178,7 +178,7 @@ impl FileJob {
         check_cancel(cancel)?;
         let mut answers = spool::Answers::new()?;
         let mut inputs = records.reader()?;
-        let mut call = Driver::open(
+        let mut call = Driver::open_finite(
             &client.clone().cancel(cancel.clone()),
             request,
             OffsetUnit::CodePoints,

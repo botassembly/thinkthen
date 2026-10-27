@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Push input and typed pulled rows preserve record and cancellation boundaries.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{Decide, Engine, Filter, Key, OffsetUnit, Question, Record, Request, Settings};

@@ -77,7 +77,8 @@ pub fn Call(comptime function: t.Function) type {
             self.originals = .empty;
             self.done = true;
         }
-        pub fn next(self: *Self, allocator: Allocator, diag: ?*d.Diagnostic) d.Error!?Item(function) {
+        /// Returned rows and retained filter records live in arena until it is reset or freed.
+        pub fn next(self: *Self, arena: Allocator, diag: ?*d.Diagnostic) d.Error!?Item(function) {
             d.clear(diag);
             if (self.done) return null;
             errdefer {
@@ -119,11 +120,11 @@ pub fn Call(comptime function: t.Function) type {
                     },
                     c.THINKTHEN_OK => {
                         defer native.function("thinkthen_row_free")(&row);
-                        const decoded = try r.take(function, allocator, row);
+                        const decoded = try r.take(function, arena, row);
                         if (function == .filter) {
                             const original = self.originals.fetchRemove(row.position) orelse return error.Internal;
                             defer original.value.free(self.allocator);
-                            const copy = try original.value.copy(allocator);
+                            const copy = try original.value.copy(arena);
                             return .{ .row = decoded, .record = copy };
                         } else return decoded;
                     },

@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Quality measurement through the script, real command and canned backend.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
@@ -61,7 +64,7 @@ fn scores_real_answers_with_misses_extras_and_selected_backend() {
     let temporary = std::env::temp_dir().join(format!("thinkthen-quality-{}", std::process::id()));
     std::fs::create_dir_all(&temporary).unwrap();
     let binary = temporary.join("command with spaces");
-    std::os::unix::fs::symlink(env!("CARGO_BIN_EXE_thinkthen"), &binary).unwrap();
+    std::fs::copy(env!("CARGO_BIN_EXE_thinkthen"), &binary).unwrap();
     let cases = [
         json!({"id":"find-right","function":"find","args":["Which?"],"text":"Ada\nAcme","expected":[[0,3]]}),
         json!({"id":"find-wrong","function":"find","args":["Which?"],"text":"Ada\nAcme","expected":[[4,8]]}),

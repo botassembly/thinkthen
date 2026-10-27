@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Selected name and relation evidence survives packing and dependent rounds.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 use thinkthen::{

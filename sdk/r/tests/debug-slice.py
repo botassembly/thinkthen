@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 
@@ -23,7 +24,8 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-r-debug-") as temporary:
     libraries = stage / "inst/libs"
     libraries.mkdir(parents=True)
     shutil.copy2(ROOT / "sdk/r/src/entrypoint.c", scratch / "entrypoint.c")
-    subprocess.run(["R", "CMD", "SHLIB", "entrypoint.c", str(target / "debug/libthinkthen_r.a"),
+    frameworks = shlex.split(subprocess.check_output([str(ROOT / "scripts/native-frameworks")], text=True))
+    subprocess.run(["R", "CMD", "SHLIB", "entrypoint.c", str(target / "debug/libthinkthen_r.a"), *frameworks,
                     "-o", str(libraries / "thinkthen.so")],
                    cwd=scratch, env=environment, check=True)
     library = scratch / "library"

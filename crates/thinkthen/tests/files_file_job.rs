@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Rust callers receive a complete file and the original named-outcome failure.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use std::fs;

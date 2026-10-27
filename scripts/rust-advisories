@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Check prepared, pinned RustSec data and dependency licenses without network access."""
+import argparse
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import tomllib
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def output(*command, cwd=ROOT):
+    return subprocess.check_output(command, cwd=cwd, text=True).strip()
+
+
+def check(database_root):
+    return subprocess.run([
+        "cargo", "deny", "--offline", "--locked", "--all-features",
+        "check", "advisories", "licenses",
+    ], cwd=ROOT, env=dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(database_root)),
+       text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--self-test", action="store_true", help="prove a planted advisory refuses the dependency graph")
+    args = parser.parse_args()
+    pins = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["metadata"]["supply-chain"]
+    actual = output("cargo", "deny", "--version")
+    if actual != "cargo-deny " + pins["cargo-deny"]:
+        raise SystemExit("rust advisories: prepare cargo-deny " + pins["cargo-deny"] + "; found " + actual)
+    database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo")) / "advisory-dbs"))
+    databases = [path for path in database_root.glob("advisory-db-*") if (path / ".git").exists()]
+    matching = [path for path in databases if output("git", "remote", "get-url", "origin", cwd=path).removesuffix(".git").lower() == "https://github.com/rustsec/advisory-db"]
+    if len(matching) != 1:
+        raise SystemExit("rust advisories: prepare the RustSec advisory database at " + str(database_root))
+    database = matching[0]
+    if output("git", "rev-parse", "HEAD", cwd=database) != pins["advisory-revision"] or output("git", "status", "--porcelain", cwd=database):
+        raise SystemExit("rust advisories: require a clean advisory database at " + pins["advisory-revision"])
+    if args.self_test:
+        with tempfile.TemporaryDirectory(prefix="thinkthen-advisory-") as temporary:
+            copied = Path(temporary) / database.name
+            shutil.copytree(database, copied)
+            advisory = copied / "crates" / "serde" / "RUSTSEC-2026-9999.md"
+            advisory.parent.mkdir(parents=True, exist_ok=True)
+            advisory.write_text('''```toml
+[advisory]
+id = "RUSTSEC-2026-9999"
+package = "serde"
+date = "2026-01-01"
+url = "https://rustsec.org/advisories/RUSTSEC-2026-9999.html"
+categories = ["memory-corruption"]
+
+[versions]
+patched = []
+```
+
+# Planted advisory for the offline gate test
+
+Every serde version is affected in this test database only.
+''')
+            result = check(Path(temporary))
+            if result.returncode == 0 or "RUSTSEC-2026-9999" not in result.stdout or "error[vulnerability]" not in result.stdout:
+                raise SystemExit("rust advisories: planted advisory was not refused\n" + result.stdout)
+            print("rust advisories: planted advisory refused offline")
+    else:
+        result = check(database_root)
+        print(result.stdout, end="")
+        if result.returncode:
+            raise SystemExit(result.returncode)
+
+
+if __name__ == "__main__":
+    main()

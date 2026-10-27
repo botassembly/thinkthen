@@ -1,13 +1,13 @@
 {
-  "Cargo.lock": "7e883951376872e58e88f39bd4219039db3d763d3811318f1cb62eb83464e553",
-  "Cargo.toml": "b148bd05547056f5684fcf4f1c936b62702e04063f925bc5cef2da1190fe52fa",
-  "crates/loopback/Cargo.toml": "947edf6c3781d7d0a211780377e55589d617ade10f85b00631f17d63cec8b455",
-  "crates/thinkthen-ffi/Cargo.toml": "a1f6df4dda3c3e44ac667fd6ee8614576bd35b288edd08fc9e05bcffb1bf722f",
+  "Cargo.lock": "035ef60ad99d4632603fce35783ef296140f3be5fbc0b53352917cb95626f1e2",
+  "Cargo.toml": "0164a1c55ee6327b06d44cb2e04860888860ece508a51dffcfb1f3901fd507b5",
+  "crates/loopback/Cargo.toml": "f6814f3c05fe4d7230fb586dc0b490a21a0a085133d1f6aa7df2f79c11369dca",
+  "crates/thinkthen-ffi/Cargo.toml": "4b90637c031e4f5d6f9adb0c510d4c6fd6b56beb2e8d201c81ac2db43b2b39f3",
   "crates/thinkthen-proxy/Cargo.toml": "c17ea6a9d2a672ca9848fecc7a3c2bb5c90f092cc4601afe7bded0bd9cc21140",
   "crates/thinkthen-sql/Cargo.toml": "b9792abe81cdfb466bf7fdc627ca79c59dbbdea383ffaf1f96fb22e9be6f2f14",
-  "crates/thinkthen/Cargo.toml": "391e436c193de0dbb5182a54c63083a3408f5b54804fd771af2d954dccf49e38",
-  "sdk/python/native/Cargo.toml": "1945f0e8dd242e758de08fdf86b80c289b955e32f29d4782d7b8201bb9299d6f",
-  "sdk/r/native/Cargo.toml": "41870e11bb4a5d6f06c570f4e73a409c2e85467e3d0cc0a9e98d45f500833ecc",
+  "crates/thinkthen/Cargo.toml": "788ea74cee36574343111c294e9ace04c0ab61782fc82f3a7d050c7f442763a2",
+  "sdk/python/native/Cargo.toml": "2f5294c0eb21e6874a32586778ff255838e2fd0aa07be62a7533ac5f9bd5dae2",
+  "sdk/r/native/Cargo.toml": "fea9556afc8ae27ff0aebb54d47a2b02515571c26110c94cc1f0304ce78edb46",
   "sdk/r/native/vendor/extendr-ffi/.cargo_vcs_info.json": "754ed8619c172bd8cd6c50f9a4244f06c41e3ef995d193478bc6b572890531c4",
   "sdk/r/native/vendor/extendr-ffi/Cargo.toml": "a4d95a84fd2fbc00ba3ef70b3325c5473bb70d8e030f111bba9abb28dab17bde",
   "sdk/r/native/vendor/extendr-ffi/Cargo.toml.orig": "c4af64f334a33f4642556c43bc9b274a39da83e71c716368295f48cb5d7d9be8",
@@ -22,5 +22,5 @@
   "sdk/r/native/vendor/extendr-ffi/src/lib.rs": "8c260df86ab360f629fb549399377d494b902cbcb207eb7f497e889bcfce854c",
   "sdk/r/native/vendor/extendr-ffi/src/non_api.rs": "db38e3d3814ed2b075656626055a47fb73d390c23960f4fd1ec18d5ca8239471",
   "sdk/r/native/vendor/extendr-ffi/src/symbols.rs": "225327372c8738c5b99c658ef4188b2d900df9041fa8be7d67bd2b3faf5423db",
-  "sdk/typescript/native/Cargo.toml": "0585a26343b562e1d65357f714ca39773a5ff1a5181b23fd1d48e1a5c1141fee"
+  "sdk/typescript/native/Cargo.toml": "28eb5c2f58af9a3eb0dc5cb5f5d7ab5163a2d8dae685a3b65c2f56704b9d9419"
 }

@@ -280,6 +280,7 @@ public final class JavaOwnershipCases {
     }
 
     public static void main(String[] args) throws Exception {
+        io.thinkthen.internal.DriverEventCases.run();
         noCallForRejectedRecords();
         unavailableServer();
         streamsAndCallerFailures();

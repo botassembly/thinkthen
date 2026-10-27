@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Backend credential ownership and the boundary for unencrypted requests.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{Loopback, Reply};
 use serde_json::json;
 use thinkthen::{BackendName, Code, Decide, Family, Key, Outcome, Record, Retry, Settings};

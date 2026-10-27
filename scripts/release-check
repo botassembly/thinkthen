@@ -5,6 +5,7 @@ Usage: check PLATFORM_DIRECTORY. Prints one result per package; errors stop it.
 """
 from release_images import image
 from package_inventory import check as package_inventory
+from release_records import encode_records
 import json
 import io
 import hashlib
@@ -245,7 +246,7 @@ def command():
         path = SCRATCH / 'question.json'
         path.write_text(json.dumps(entry))
         result = run(installed / 'thinkthen', 'run', path, '--backend', 'stub', '--json',
-                     input=''.join(json.dumps(record) + '\n' for record in request['records']), capture_output=True, text=True, check=False)
+                     input=encode_records(request['records']), capture_output=True, check=False)
         failed = any(row['status'] == 'failed' or (row['function'] == 'annotate' and any(entry['status'] == 'failed' for entry in row['answer'].values())) for row in case['expected'])
         assert result.returncode == (6 if failed else 0), result.stderr
         assert [json.loads(line) for line in result.stdout.splitlines()] == case['expected'], function

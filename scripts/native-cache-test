@@ -40,7 +40,7 @@ fi
 git clone --quiet --shared "$root" "$scratch/source"
 cd "$scratch/source"
 test "$(scripts/native-prepare --path)" = "$cache"
-for test_source in crates/thinkthen/tests/stress.rs crates/thinkthen-ffi/tests/consumer.rs crates/thinkthen-sql/tests/public_contract.rs; do
+for test_source in crates/thinkthen/test-support/server/mod.rs crates/thinkthen/tests/stress.rs crates/thinkthen-ffi/tests/consumer.rs crates/thinkthen-sql/tests/public_contract.rs; do
     printf '\n// Native cache test-only input regression.\n' >> "$test_source"
     test "$(scripts/native-prepare --path)" = "$cache"
     git checkout -- "$test_source"

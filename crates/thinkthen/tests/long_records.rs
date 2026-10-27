@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Complete answer histories across several requests in one record's round.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 use thinkthen::{BackendName, Engine, Key, Recognize, Record, Relate, RelationRule, Settings};

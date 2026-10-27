@@ -7,6 +7,7 @@ import io.thinkthen.internal.DriverRecord
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.selects.select
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
@@ -102,13 +103,29 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
                 val active = call
                 var sent = 0uL
                 var ended = false
+                var pendingInput = false
                 while (true) when (val event = native(active) { active.next() }) {
                     is DriverCall.End -> break
                     is DriverCall.NeedsInput -> {
                         check(!ended) { "Native call requested input after end" }
-                        producer.start()
-                        demand.send(Unit)
-                        val next = input.receiveCatching()
+                        if (!pendingInput) {
+                            producer.start()
+                            demand.send(Unit)
+                            pendingInput = true
+                        }
+                        val ready = CompletableDeferred<Unit>()
+                        val wait = translate { active.waitForEvent(event.version()) }
+                        wait.completion().whenComplete { _,error ->
+                            if (error == null) ready.complete(Unit) else ready.completeExceptionally(error)
+                        }
+                        val next = try {
+                            select {
+                                input.onReceiveCatching { it }
+                                ready.onAwait { null }
+                            }
+                        } finally { wait.close() }
+                        if (next == null) continue
+                        pendingInput = false
                         next.exceptionOrNull()?.let { throw it }
                         if (next.isClosed) { ended = true; native(active) { active.endInput() } }
                         else {

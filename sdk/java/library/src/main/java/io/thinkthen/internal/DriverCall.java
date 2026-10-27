@@ -10,13 +10,14 @@ import java.util.concurrent.CompletionStage;
 /** One native operation may run at a time; cancellation alone may race it. */
 public final class DriverCall implements AutoCloseable {
     public sealed interface Event permits NeedsInput, End, DriverRow {}
-    public record NeedsInput() implements Event {}
+    public record NeedsInput(long version) implements Event {}
     public record End() implements Event {}
     public record DriverRow(byte[] fields, byte[] detail, long position) implements Event {}
     private final Object lifetime = new Object();
     private final java.util.concurrent.locks.ReentrantLock serial = new java.util.concurrent.locks.ReentrantLock();
     private final DriverClient client;
     private MemorySegment handle = MemorySegment.NULL;
+    private DriverEvents events;
     private boolean cancelled;
     private boolean releasing;
     private CompletableFuture<?> active;
@@ -44,6 +45,7 @@ public final class DriverCall implements AutoCloseable {
                     }
                     synchronized (lifetime) {
                         handle = out.get(ValueLayout.ADDRESS,0);
+                        events = new DriverEvents(client,handle);
                         if (cancelled) Native.call("call_cancel",handle);
                     }
                 }
@@ -81,10 +83,11 @@ public final class DriverCall implements AutoCloseable {
                 var row = arena.allocate(Native.rowLayout());
                 row.set(ValueLayout.JAVA_INT,Native.offset("struct_size"),(int) Native.rowLayout().byteSize());
                 var error = Native.error(arena);
+                long version = events.version();
                 int status = (int) Native.call("call_next",handle,row,error);
                 Native.check(status,error);
                 if (status == 1) return new End();
-                if (status == 2) return new NeedsInput();
+                if (status == 2) return new NeedsInput(version);
                 try {
                     var fields = Json.MAPPER.createObjectNode();
                     long position = row.get(Native.SIZE,Native.offset("position"));
@@ -101,6 +104,12 @@ public final class DriverCall implements AutoCloseable {
                 } finally { Native.call("row_free",row); }
             }
         });
+    }
+    public DriverEvents.Wait waitForEvent(long version) {
+        synchronized (lifetime) {
+            if (cancelled) throw DriverClient.cancelled();
+            return events.waitForChange(version);
+        }
     }
     public void sendText(String text) {
         operation(() -> {
@@ -137,6 +146,7 @@ public final class DriverCall implements AutoCloseable {
         synchronized (lifetime) {
             cancelled = true;
             if (handle != MemorySegment.NULL) Native.call("call_cancel",handle);
+            if (events != null) events.wake();
         }
     }
     public CompletionStage<Void> releaseCompletion() { return released.minimalCompletionStage(); }
@@ -149,11 +159,16 @@ public final class DriverCall implements AutoCloseable {
             pending = active;
         }
         pending.whenComplete((result,error) -> {
+            DriverEvents retained;
             synchronized (lifetime) {
                 if (handle != MemorySegment.NULL) { Native.call("call_free",handle); handle = MemorySegment.NULL; }
+                retained = events;
             }
-            client.released(this);
-            released.complete(null);
+            var done = retained == null ? CompletableFuture.<Void>completedFuture(null) : retained.close();
+            done.whenComplete((ignored,failure) -> {
+                client.released(this);
+                released.complete(null);
+            });
         });
     }
 }

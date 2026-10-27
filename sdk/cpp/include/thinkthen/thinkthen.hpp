@@ -115,7 +115,6 @@ public:
         if (state_) thinkthen_call_cancel(state_->call);
         state_.reset(); source_ = {};
     }
-    void cancel() const noexcept { if (state_) thinkthen_call_cancel(state_->call); }
     thinkthen::cancel_handle cancel_handle() const noexcept { return thinkthen::cancel_handle(state_); }
     std::optional<row<Q>> next() { return pull(); }
     class iterator {

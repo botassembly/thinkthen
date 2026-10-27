@@ -1,5 +1,5 @@
 """Generated native requirement. Do not edit."""
-ABI_VERSION = 131073
+ABI_VERSION = 131074
 ABI_VERSION_EXPORT = "ABI_VERSION"
 ABI_CODE = "usage.abi"
 ABI_MESSAGE = "the native ABI is incompatible"

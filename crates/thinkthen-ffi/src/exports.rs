@@ -119,7 +119,7 @@ pub unsafe extern "C" fn thinkthen_client_open(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let engine = (*settings).0.engine(|name| std::env::var(name).ok())?;
+            let engine = crate::engine((*settings).0.clone())?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn thinkthen_client_open_json(
         operation(error, || {
             out.write(ptr::null_mut());
             let settings = Settings::from_json(text(settings, len)?)?;
-            let engine = settings.engine(|name| std::env::var(name).ok())?;
+            let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })

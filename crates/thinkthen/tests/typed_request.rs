@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Canonical requests admit only each function's own typed settings.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use serde_json::json;
 use thinkthen::{BackendName, Code, Key, Question, Request, Settings, Threshold, questions};
 

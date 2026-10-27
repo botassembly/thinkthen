@@ -29,7 +29,7 @@ BUILD = ["--offline", "--locked", "--release", "-p", "thinkthen-ffi"]
 # scripts. Keep this list explicit: audit includes and build inputs before
 # excluding another tree or adding a production dependency on one of these.
 TEST_TREES = tuple(Path("crates") / crate / "tests" for crate in
-                   ("thinkthen", "thinkthen-ffi", "thinkthen-sql"))
+                   ("thinkthen", "thinkthen-ffi", "thinkthen-sql")) + (Path("crates/thinkthen/test-support"),)
 
 
 def output(*args):

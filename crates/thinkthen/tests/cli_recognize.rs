@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Name recognition command framing and rendering.
+#![cfg(feature = "command")]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};

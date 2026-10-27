@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Filter callers retain originals and every independent row outcome.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{Filter, Key, Record, Settings, Threshold};

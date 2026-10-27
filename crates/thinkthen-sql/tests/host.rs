@@ -107,17 +107,7 @@ fn canonical_rows_survive_database_chunks_through_both_wires() {
             );
             let requests = server.count() as u64;
             let finite_requests = case["requests"].as_u64().unwrap();
-            // The database supplies an unknown stream; a scheduling gap can flush a batch.
-            if finite_requests == 0 {
-                assert_eq!(requests, 0, "{} / {backend}", case["name"]);
-            } else {
-                let maximum = finite_requests * records.len() as u64;
-                assert!(
-                    requests > 0 && requests <= maximum,
-                    "{} / {backend}: {requests} requests, expected 1..={maximum}",
-                    case["name"]
-                );
-            }
+            assert_eq!(requests, finite_requests, "{} / {backend}", case["name"]);
         }
     }
 }
@@ -168,4 +158,38 @@ fn interrupt_retains_terminal_error_and_drop_closes_held_reply() {
             0
         );
     }
+}
+
+#[test]
+fn single_record_sql_chunks_pack_full_requests() {
+    let server = Loopback::noul(0.9).unwrap();
+    let client = Settings::default()
+        .url(server.base())
+        .api_key(thinkthen::Key::new(KEY).unwrap())
+        .batch(50_u64.try_into().unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let request = Request::new(thinkthen::Decide::new("Ready?").unwrap());
+    let mut call = SqlCall::open(&client, &request).unwrap();
+    let mut sent = 0;
+    let mut seen = 0;
+    loop {
+        match call.poll(WAIT, || false).unwrap() {
+            Some(SqlEvent::NeedsChunk) if sent == 500 => call.end_input(),
+            Some(SqlEvent::NeedsChunk) => {
+                call.send_chunk(vec![SqlRecord::Text(format!("row {sent}"))])
+                    .unwrap();
+                sent += 1;
+            }
+            Some(SqlEvent::Row(row)) => {
+                seen += 1;
+                assert_eq!(row.position(), seen);
+                assert!(row.error().is_none());
+            }
+            Some(SqlEvent::Finished) => break,
+            None => {}
+        }
+    }
+    assert_eq!(seen, 500);
+    assert_eq!(server.count(), 10);
 }

@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Finding lines through the public SDK.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use thinkthen::{BackendName, Cut, Engine, Find, Key, Question, Record, Settings};

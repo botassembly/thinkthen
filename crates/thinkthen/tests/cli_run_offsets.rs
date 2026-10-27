@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Saved canonical requests preserve scalar offsets in answers and detail.
+#![cfg(feature = "command")]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};

@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Every canonical function obeys one shared semantic corpus through both wires.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use std::collections::BTreeSet;

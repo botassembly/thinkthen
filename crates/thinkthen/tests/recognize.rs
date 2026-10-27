@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Valid name paths, membership support and dependent kinds through the SDK.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use thinkthen::{Cut, Engine, Key, Recognize, Record, Settings};

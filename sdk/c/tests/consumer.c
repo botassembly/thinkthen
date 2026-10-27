@@ -1,4 +1,7 @@
 #include <thinkthen.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <math.h>
 #include <string.h>

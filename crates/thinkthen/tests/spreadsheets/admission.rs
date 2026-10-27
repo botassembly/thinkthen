@@ -51,9 +51,10 @@ fn expanding_workbooks_and_oversized_grids_stop_before_requests() {
                 sheet.replace("<c r=\"A2\"", "<c r=\"XFE2\"")
             }),
         }
-        let server =
-            loopback::Loopback::answering(|_| serde_json::json!({"type":"noul","noul":0.99}))
-                .unwrap();
+        let server = crate::loopback::Loopback::answering(
+            |_| serde_json::json!({"type":"noul","noul":0.99}),
+        )
+        .unwrap();
         let output = support::command()
             .args(["decide", "Ready?", "--from", "xlsx"])
             .arg(&input)
@@ -67,7 +68,7 @@ fn expanding_workbooks_and_oversized_grids_stop_before_requests() {
                 "--url",
                 server.base(),
             ])
-            .env("THINKTHEN_API_KEY", loopback::KEY)
+            .env("THINKTHEN_API_KEY", crate::loopback::KEY)
             .output()
             .unwrap();
         assert_eq!(output.status.code(), Some(2), "{name}: {output:?}");
@@ -148,7 +149,8 @@ fn cancel_during_snapshot_admission_stops_before_any_request() {
             .success()
     );
     let server =
-        loopback::Loopback::answering(|_| serde_json::json!({"type":"noul","noul":0.99})).unwrap();
+        crate::loopback::Loopback::answering(|_| serde_json::json!({"type":"noul","noul":0.99}))
+            .unwrap();
     let mut child = support::command()
         .args(["decide", "Ready?", "--from", "csv"])
         .arg(&input)
@@ -160,7 +162,7 @@ fn cancel_during_snapshot_admission_stops_before_any_request() {
             "--url",
             server.base(),
         ])
-        .env("THINKTHEN_API_KEY", loopback::KEY)
+        .env("THINKTHEN_API_KEY", crate::loopback::KEY)
         .env("TMPDIR", directory.path())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

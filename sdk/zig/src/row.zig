@@ -114,6 +114,7 @@ fn outcome(comptime function: t.Function, allocator: Allocator, value: std.json.
         .failed => .{ .failed = try field(d.Failure, allocator, value, "error", options) },
     };
 }
+/// A row borrows all nested values from the arena supplied to next or a One function.
 pub fn Row(comptime function: t.Function) type {
     return struct {
         position: u64,
@@ -206,27 +207,27 @@ fn writeOutcome(comptime function: t.Function, value: Outcome(function), writer:
     }
 }
 pub const AnyRow = union(t.Function) { decide: Row(.decide), choose: Row(.choose), tag: Row(.tag), score: Row(.score), filter: Row(.filter), find: Row(.find), recognize: Row(.recognize), relate: Row(.relate), rank: Row(.rank), annotate: Row(.annotate) };
-fn parse(comptime T: type, allocator: Allocator, buffer: c.thinkthen_buffer) d.Error!T {
-    const decoded = std.json.parseFromSliceLeaky(T, allocator, d.bytes(buffer), .{ .allocate = .alloc_always, .parse_numbers = false }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
+fn parse(comptime T: type, arena: Allocator, buffer: c.thinkthen_buffer) d.Error!T {
+    const decoded = std.json.parseFromSliceLeaky(T, arena, d.bytes(buffer), .{ .allocate = .alloc_always, .parse_numbers = false }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
     return decoded;
 }
-pub fn take(comptime function: t.Function, allocator: Allocator, row: c.thinkthen_row) d.Error!Row(function) {
-    const detail: ?Detail(function) = if (Detail(function) == void or row.detail.len == 0) null else try parse(?Detail(function), allocator, row.detail);
+pub fn take(comptime function: t.Function, arena: Allocator, row: c.thinkthen_row) d.Error!Row(function) {
+    const detail: ?Detail(function) = if (Detail(function) == void or row.detail.len == 0) null else try parse(?Detail(function), arena, row.detail);
     const result: Outcome(function) = switch (row.status) {
-        c.THINKTHEN_STATUS_ANSWERED => .{ .answered = .{ .answer = if (function == .annotate) try annotationAnswer(allocator, row.answer) else try parse(Answer(function), allocator, row.answer), .probability = if (std.math.isNan(row.probability)) null else row.probability, .detail = detail } },
+        c.THINKTHEN_STATUS_ANSWERED => .{ .answered = .{ .answer = if (function == .annotate) try annotationAnswer(arena, row.answer) else try parse(Answer(function), arena, row.answer), .probability = if (std.math.isNan(row.probability)) null else row.probability, .detail = detail } },
         c.THINKTHEN_STATUS_UNSURE => .{ .unsure = .{ .probability = row.probability, .detail = detail } },
         c.THINKTHEN_STATUS_FAILED => blk: {
-            var failure = try parse(d.Failure, allocator, row.@"error");
+            var failure = try parse(d.Failure, arena, row.@"error");
             failure.code = @as(d.ErrorCode, @fromBackingInt(@intCast(row.error_code)));
             break :blk .{ .failed = failure };
         },
         else => return error.Internal,
     };
-    return .{ .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, allocator, row.id), .source = try parse(Source, allocator, row.source), .outcome = result };
+    return .{ .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, arena, row.id), .source = try parse(Source, arena, row.source), .outcome = result };
 }
-fn annotationAnswer(allocator: Allocator, buffer: c.thinkthen_buffer) d.Error![]const NamedAnnotation {
-    const children = try parse(std.json.Value, allocator, buffer);
+fn annotationAnswer(arena: Allocator, buffer: c.thinkthen_buffer) d.Error![]const NamedAnnotation {
+    const children = try parse(std.json.Value, arena, buffer);
     var wrapper: std.json.ObjectMap = .empty;
-    try wrapper.put(allocator, "answer", children);
-    return answer(.annotate, allocator, .{ .object = wrapper }, .{ .allocate = .alloc_always }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
+    try wrapper.put(arena, "answer", children);
+    return answer(.annotate, arena, .{ .object = wrapper }, .{ .allocate = .alloc_always }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
 }

@@ -51,7 +51,7 @@ case "$(uname -s)" in
         extension=thinkthen_sqlite.dylib
         cc -dynamiclib $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" "$scratch/replay.o" $route_object \
             "$archive" "$jansson/lib/libjansson.a" -lpthread -ldl -lm \
-            -framework Security -framework SystemConfiguration -liconv \
+            $(scripts/native-frameworks) -liconv \
             -Wl,-exported_symbol,_sqlite3_thinkthensqlite_init -o "$output/package/$extension"
         ;;
     Linux)

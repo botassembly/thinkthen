@@ -1,15 +1,33 @@
 #![cfg(test)]
 //! Helpers the command's tests share.
 
+#[cfg(unix)]
 use std::net::Shutdown;
+#[cfg(unix)]
 use std::os::fd::OwnedFd;
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
-use std::process::{Command, Output, Stdio};
+#[cfg(unix)]
+use std::process::Stdio;
+use std::process::{Command, Output};
 
 /// A command with isolated settings and credentials that retains coverage output.
 pub(crate) fn command() -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     command.env_clear();
+    for name in [
+        "PATH",
+        "SystemRoot",
+        "WINDIR",
+        "PATHEXT",
+        "COMSPEC",
+        "TEMP",
+        "TMP",
+    ] {
+        if let Some(value) = std::env::var_os(name) {
+            command.env(name, value);
+        }
+    }
     if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
         command.env("LLVM_PROFILE_FILE", profile);
     }
@@ -32,6 +50,7 @@ pub(crate) fn reported(output: &Output) -> String {
     dead_code,
     reason = "Only command tests for output failures use this fixture."
 )]
+#[cfg(unix)]
 pub(crate) fn closed_output() -> (Stdio, UnixStream) {
     let (reader, writer) = UnixStream::pair().unwrap();
     // Keep a duplicate alive to model a reader inherited by another child.

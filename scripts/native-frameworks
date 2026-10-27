@@ -1,0 +1,16 @@
+#!/bin/sh
+# Share the Apple frameworks required by static engine consumers.
+set -eu
+case "${1:-}" in
+    '') separator=' ' ;;
+    --cmake) separator=';' ;;
+    *) echo 'usage: native-frameworks [--cmake]' >&2; exit 2 ;;
+esac
+if [ "$(uname -s)" = Darwin ]; then
+    prefix=
+    for framework in CoreFoundation Security SystemConfiguration; do
+        printf '%s-framework %s' "$prefix" "$framework"
+        prefix=$separator
+    done
+fi
+printf '\n'

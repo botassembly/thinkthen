@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! File framing appends existing judgments and preserves the caller's content.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 #[path = "spreadsheets/admission.rs"]
 mod admission;
@@ -14,7 +17,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::Path;
 use tempfile::TempDir;
-use zip::{ZipArchive, ZipWriter, write::FileOptions};
+use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 fn table(path: &Path, delimiter: u8) -> Vec<Vec<String>> {
     csv::ReaderBuilder::new()
@@ -433,7 +436,7 @@ fn workbook(path: &Path) {
             "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>Keep me</t></is></c></row></sheetData></worksheet>",
         ),
     ] {
-        zip.start_file(name, FileOptions::default()).unwrap();
+        zip.start_file(name, SimpleFileOptions::default()).unwrap();
         zip.write_all(contents.as_bytes()).unwrap();
     }
     zip.finish().unwrap();
@@ -542,13 +545,15 @@ fn change_sheet(path: &Path, change: impl FnOnce(String) -> String) {
         let mut file = archive.by_index(index).unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
-        parts.push((file.name().to_owned(), bytes));
+        parts.push((file.name().unwrap().into_owned(), bytes));
     }
     drop(archive);
     let mut change = Some(change);
     let mut output = ZipWriter::new(fs::File::create(path).unwrap());
     for (name, bytes) in parts {
-        output.start_file(&name, FileOptions::default()).unwrap();
+        output
+            .start_file(&name, SimpleFileOptions::default())
+            .unwrap();
         if name == "xl/worksheets/sheet1.xml" {
             output
                 .write_all(change.take().unwrap()(String::from_utf8(bytes).unwrap()).as_bytes())
@@ -651,15 +656,17 @@ fn replace_member(path: &Path, name: &str, contents: &[u8]) {
         let mut file = archive.by_index(index).unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
-        if file.name() != name {
-            parts.push((file.name().to_owned(), bytes));
+        if file.name().unwrap() != name {
+            parts.push((file.name().unwrap().into_owned(), bytes));
         }
     }
     drop(archive);
     parts.push((name.into(), contents.to_vec()));
     let mut output = ZipWriter::new(fs::File::create(path).unwrap());
     for (name, bytes) in parts {
-        output.start_file(name, FileOptions::default()).unwrap();
+        output
+            .start_file(name, SimpleFileOptions::default())
+            .unwrap();
         output.write_all(&bytes).unwrap();
     }
     output.finish().unwrap();

@@ -2,6 +2,8 @@
 #ifndef THINKTHEN_API
 #if defined(_WIN32) && defined(THINKTHEN_BUILD)
 #define THINKTHEN_API __declspec(dllexport)
+#elif defined(_WIN32)
+#define THINKTHEN_API __declspec(dllimport)
 #elif defined(__GNUC__)
 #define THINKTHEN_API __attribute__((visibility("default")))
 #else
@@ -10,7 +12,7 @@
 #endif
 #ifndef THINKTHEN_REGISTRY_H
 #define THINKTHEN_REGISTRY_H
-#define THINKTHEN_ABI_VERSION 131073u
+#define THINKTHEN_ABI_VERSION 131074u
 #define THINKTHEN_VERSION_MAJOR 0u
 #define THINKTHEN_VERSION_MINOR 2u
 #define THINKTHEN_VERSION_PATCH 0u
@@ -102,6 +104,11 @@ typedef enum thinkthen_code {
  * A call-level error, separate from the row status and code registry.
  */
 #define THINKTHEN_ERROR -1
+
+/**
+ * An independently retained event source, safe after the call is freed.
+ */
+typedef struct thinkthen_events thinkthen_events;
 
 /**
  * One driving thread owns the cell; cancel accesses only its separate token.
@@ -841,6 +848,53 @@ THINKTHEN_API
 int32_t thinkthen_question_function(const struct thinkthen_question *question,
                                     uint32_t *out,
                                     struct thinkthen_error *error);
+
+/**
+ * Retain the call's wake source without changing its input reservation.
+ *
+ * Host sequence: retain once; read events_version BEFORE call_next; on
+ * NEEDS_INPUT select caller input against events_wait(version). If input wins,
+ * call events_wake and join the waiter before sending through the sole driver.
+ * If an event wins, recheck call_next without issuing another input demand.
+ * Output may become ready while the reserved input remains outstanding.
+ *
+ * Cancellation wakes this source through the call's queues. A host also wakes
+ * and joins its waiters on close; it frees the event handle only after all
+ * version/wait/wake operations return. The event handle can outlive call_free.
+ * # Safety
+ * The sole driver owns a live call during this retain operation.
+ */
+THINKTHEN_API struct thinkthen_events *thinkthen_call_events(const struct thinkthen_call *call);
+
+/**
+ * Read the version BEFORE the sole driver checks call readiness.
+ * # Safety
+ * Events stays live until this call returns. Concurrent event operations are safe.
+ */
+THINKTHEN_API uint64_t thinkthen_events_version(const struct thinkthen_events *events);
+
+/**
+ * Wait for a change from version, returning immediately if it already changed.
+ * A wake requests a recheck; it does not promise a row or consume input capacity.
+ * # Safety
+ * Events stays live until this wait returns. Concurrent waits and wakes are safe.
+ */
+THINKTHEN_API void thinkthen_events_wait(const struct thinkthen_events *events, uint64_t version);
+
+/**
+ * Wake waits on earlier versions, including waits not yet entered.
+ * This does not cancel the call or alter its reserved input.
+ * # Safety
+ * Events stays live until this call returns. Concurrent event operations are safe.
+ */
+THINKTHEN_API void thinkthen_events_wake(const struct thinkthen_events *events);
+
+/**
+ * Free an event source after all its operations have returned.
+ * # Safety
+ * Events is uniquely owned and no version, wait or wake operation remains active.
+ */
+THINKTHEN_API void thinkthen_events_free(struct thinkthen_events *events);
 
 /**
  * Return the shared call-level error for host settings conversion failure.

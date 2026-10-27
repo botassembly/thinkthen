@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! OpenAI wire behavior through the public library.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 use thinkthen::{BackendName, Choose, Decide, Engine, Function, Key, Record, Score, Settings, Tag};

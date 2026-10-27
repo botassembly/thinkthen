@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Retry, split and cancellation through the public library API.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 use std::thread;

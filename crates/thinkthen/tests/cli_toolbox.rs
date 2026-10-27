@@ -1,6 +1,6 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Function command questions remain literal even when they resemble filenames.
+#![cfg(feature = "command")]
 mod support;
 use std::io::Write;
 use std::process::Stdio;

@@ -26,6 +26,7 @@ napi-build = "=2.5.0"
 workspace = true
 
 [dev-dependencies]
+socket2.workspace = true
 loopback.workspace = true
 
 [[test]]

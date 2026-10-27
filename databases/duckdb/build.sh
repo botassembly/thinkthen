@@ -8,7 +8,7 @@ cd "$(dirname "$0")/../.."
 : "${THINKTHEN_DUCKDB_OUTPUT:?Set the staging directory}"
 source=$THINKTHEN_DUCKDB_DEPS/duckdb-1.4.3
 case $(uname -s) in
-    Darwin) native='c;m;iconv;System;c;m' ;;
+    Darwin) native="c;m;iconv;System;c;m;$(scripts/native-frameworks --cmake)" ;;
     Linux) native='c;m;rt;pthread;gcc_s;util;rt;pthread;m;dl;c' ;;
     *) exit 2 ;;
 esac

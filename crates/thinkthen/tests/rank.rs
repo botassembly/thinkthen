@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Scale ranking preserves stable ties, original positions and failed records.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use std::num::NonZeroUsize;

@@ -6,7 +6,7 @@ PROFILE = debug
 CARGO_PROFILE =
 endif
 STATLIB = $(CARGO_TARGET_DIR)/$(PROFILE)/libthinkthen_r.a
-PKG_LIBS = $(STATLIB) $(THINKTHEN_COVERAGE_LIBS)
+PKG_LIBS = $(STATLIB) $(shell sh native-frameworks) $(THINKTHEN_COVERAGE_LIBS)
 
 all: $(SHLIB)
 

@@ -30,9 +30,6 @@ else
 fi
 mkdir "$scratch/engine"
 cp "$engine" "$scratch/engine/$asset"
-if [ "$platform" = macos ]; then
-    install_name_tool -id "@rpath/$asset" "$scratch/engine/$asset"
-fi
 cmake -S sdk/c -B "$scratch/build" \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_INSTALL_PREFIX="$output/prefix" \

@@ -27,7 +27,7 @@ def run(*args, cwd=ROOT, **kwargs):
 def fixture(engine, output, rows=False, children=False):
     tools = runpy.run_path(str(ROOT / 'scripts/native-fixtures'))
     registry = json.loads((ROOT / 'schemas/abi.json').read_text())
-    source = tools['source']({'version': 131074, 'forward': True}, registry, engine)
+    source = tools['source']({'version': registry['abi_version'] + 1, 'forward': True}, registry, engine)
     for export in registry['exports']:
         name = export['name']
         if rows or children or name not in ('thinkthen_client_open', 'thinkthen_client_open_json'):
@@ -108,6 +108,7 @@ def bindings(engine, scratch, selected):
             swift = scratch / 'swift'
             shutil.copytree(ROOT / 'sdk/swift', swift)
             shutil.copy2(ROOT / 'sdk/swift/Package.swift', swift / 'Package.swift')
+            (swift / 'Sources/CThinkThen/include').mkdir(parents=True, exist_ok=True)
             shutil.copy2(include / 'thinkthen.h', swift / 'Sources/CThinkThen/include/thinkthen.h')
             run(sys.executable, ROOT / 'sdk/swift/generate-codes.py', ROOT / 'schemas/contract.json', swift / 'Sources/ThinkThen/ErrorCode.swift')
             native = swift / 'Sources/ThinkThen/Native' / current()['rid']

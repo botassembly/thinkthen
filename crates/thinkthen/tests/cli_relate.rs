@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Relation command rules, framing and output.
+#![cfg(feature = "command")]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};

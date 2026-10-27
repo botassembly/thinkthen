@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! A stale pooled connection can be resent only before any HTTP reply byte.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::time::Duration;
 
 use loopback::{CloseAt, ClosingPeer, KEY};

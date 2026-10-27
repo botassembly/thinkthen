@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! A completed call cannot close a pooled socket while another call owns it.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 use std::sync::{Mutex, mpsc};

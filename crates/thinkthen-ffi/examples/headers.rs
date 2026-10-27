@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let directory = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut config = cbindgen::Config::from_file(directory.join("cbindgen.toml"))?;
     let mut header = String::from(
-        "/* Generated from Rust exports and contract registries. Do not edit. */\n#ifndef THINKTHEN_API\n#if defined(_WIN32) && defined(THINKTHEN_BUILD)\n#define THINKTHEN_API __declspec(dllexport)\n#elif defined(__GNUC__)\n#define THINKTHEN_API __attribute__((visibility(\"default\")))\n#else\n#define THINKTHEN_API\n#endif\n#endif\n#ifndef THINKTHEN_REGISTRY_H\n#define THINKTHEN_REGISTRY_H\n",
+        "/* Generated from Rust exports and contract registries. Do not edit. */\n#ifndef THINKTHEN_API\n#if defined(_WIN32) && defined(THINKTHEN_BUILD)\n#define THINKTHEN_API __declspec(dllexport)\n#elif defined(_WIN32)\n#define THINKTHEN_API __declspec(dllimport)\n#elif defined(__GNUC__)\n#define THINKTHEN_API __attribute__((visibility(\"default\")))\n#else\n#define THINKTHEN_API\n#endif\n#endif\n#ifndef THINKTHEN_REGISTRY_H\n#define THINKTHEN_REGISTRY_H\n",
     );
     writeln!(
         header,

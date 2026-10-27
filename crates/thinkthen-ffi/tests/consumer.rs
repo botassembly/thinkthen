@@ -103,10 +103,9 @@ fn single_c_driver_bounds_batches_and_streams_text_and_structured_records() {
                 .len()
         })
         .collect();
-    // Unknown host input can flush between records, but never exceeds the batch cap.
     assert!(counts.iter().all(|&count| (1..=3).contains(&count)));
     assert_eq!(counts.iter().sum::<usize>(), 7);
-    assert!((3..=7).contains(&counts.len()));
+    assert_eq!(counts.len(), 3);
     let empty = run(&json!({"backend":"stub"}), &request, &[]);
     assert_eq!(empty, [json!({"end":true,"needs":1})]);
 }
@@ -205,4 +204,21 @@ fn c_single_record_admission_failure_returns_a_row_without_a_call_error() {
 fn c_threads_share_one_client_and_keep_call_rows_separate() {
     let output = lines(command("concurrent").output().unwrap());
     assert_eq!(output, [json!({"concurrent":true,"rows":32})]);
+}
+
+#[test]
+fn c_stream_packs_individually_sent_records_into_full_requests() {
+    let server = Loopback::noul(0.9).unwrap();
+    let records = (0..500).map(|i| format!("Trow {i}")).collect::<Vec<_>>();
+    let rows = run(
+        &json!({"url":server.base(),"batch":50}),
+        &json!({"question":{"function":"decide","question":"Ready?"}}),
+        &records,
+    );
+    assert_eq!(rows.len(), 501);
+    for (i, row) in rows[..500].iter().enumerate() {
+        assert_eq!(row["position"], i + 1);
+        assert_eq!(row["fields"]["answer"], true);
+    }
+    assert_eq!(server.count(), 10);
 }

@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Final artifacts cannot trace backend credentials through a host logger.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::sync::Mutex;
 
 use loopback::{KEY, Loopback};

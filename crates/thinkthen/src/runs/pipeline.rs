@@ -7,7 +7,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TrySendError};
 use std::time::Duration;
 
-use crate::{Cancel, Engine, Error, ErrorKind, OffsetUnit};
+use crate::core::local;
+use crate::{Cancel, Engine, Error, OffsetUnit};
 
 use crate::contract_driver::driver::{Driver, Event};
 use crate::records::Record;
@@ -393,8 +394,4 @@ fn send(output: &Output, mut line: String, state: &State) -> bool {
         }
     }
     false
-}
-
-fn local(message: &str) -> Error {
-    Error::new(ErrorKind::Io, message)
 }

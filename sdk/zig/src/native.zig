@@ -2,24 +2,38 @@ const std = @import("std");
 const builtin = @import("builtin");
 const c = @import("c");
 
+// Pin the engine to the application folder and allow its system dependencies.
+// https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
 const WindowsLibrary = struct {
-    handle: std.os.windows.PVOID,
-    fn open(_: []const u8) !WindowsLibrary {
-        const windows = std.os.windows;
-        const name = windows.UNICODE_STRING.init(std.unicode.utf8ToUtf16LeStringLiteral("thinkthen_ffi.dll"));
-        var handle: windows.PVOID = undefined;
-        if (windows.ntdll.LdrLoadDll(null, null, &name, &handle) != .SUCCESS) return error.FileNotFound;
+    const windows = std.os.windows;
+    const LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR: u32 = 0x00000100;
+    const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x00000800;
+    extern "kernel32" fn GetModuleFileNameW(?windows.HMODULE, [*]u16, u32) callconv(.winapi) u32;
+    extern "kernel32" fn LoadLibraryExW([*:0]const u16, ?windows.HANDLE, u32) callconv(.winapi) ?windows.HMODULE;
+    extern "kernel32" fn GetProcAddress(windows.HMODULE, [*:0]const u8) callconv(.winapi) ?*anyopaque;
+    extern "kernel32" fn FreeLibrary(windows.HMODULE) callconv(.winapi) windows.BOOL;
+
+    handle: windows.HMODULE,
+    fn open(comptime name: []const u8) !WindowsLibrary {
+        var filename: [windows.PATH_MAX_WIDE:0]u16 = undefined;
+        const length = GetModuleFileNameW(null, &filename, filename.len);
+        if (length == 0 or length >= filename.len) return error.FileNotFound;
+        const directory = 1 + (std.mem.findLastAny(u16, filename[0..length], &.{ '\\', '/' }) orelse return error.FileNotFound);
+        const basename = std.unicode.utf8ToUtf16LeStringLiteral(name);
+        const end = directory + basename.len;
+        if (end >= filename.len) return error.FileNotFound;
+        std.mem.replaceScalar(u16, filename[0..directory], '/', '\\');
+        std.mem.copyForwards(u16, filename[directory..end], basename);
+        filename[end] = 0;
+        const handle = LoadLibraryExW(filename[0..end :0].ptr, null, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32) orelse return error.FileNotFound;
         return .{ .handle = handle };
     }
     fn lookup(self: *WindowsLibrary, comptime T: type, name: [:0]const u8) ?T {
-        const windows = std.os.windows;
-        const symbol = windows.ANSI_STRING.init(std.mem.sliceTo(name, 0));
-        var address: windows.PVOID = undefined;
-        if (windows.ntdll.LdrGetProcedureAddress(self.handle, &symbol, 0, &address) != .SUCCESS) return null;
+        const address = GetProcAddress(self.handle, name) orelse return null;
         return @ptrCast(@alignCast(address));
     }
     fn close(self: *WindowsLibrary) void {
-        _ = std.os.windows.ntdll.LdrUnloadDll(self.handle);
+        _ = FreeLibrary(self.handle);
     }
 };
 const Library = if (builtin.os.tag == .windows) WindowsLibrary else std.DynLib;

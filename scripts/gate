@@ -16,6 +16,7 @@ if [ "$(uname -s)" = Linux ] && ! command -v docker >/dev/null 2>&1; then
 fi
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
 python3 scripts/release_metadata.py
+scripts/release-script-test
 scripts/release-preparation-test
 scripts/release-staging-test
 scripts/release-publish-test
@@ -33,12 +34,14 @@ scripts/bindings-schema
 scripts/contract-schema-check
 scripts/notices --check
 scripts/supply-chain-check
+scripts/rust-advisories
 cargo fmt --all --check
 scripts/core-check
 scripts/fixture-routing-check
-cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo clippy --workspace --all-targets --features thinkthen/stream --locked -- -D warnings
 scripts/c-gate
-cargo test --workspace --locked
+cargo test --workspace --features thinkthen/stream --locked
+scripts/crate-package-test
 guide_root=$PWD
 guide_scratch=$(mktemp -d)
 python3 scripts/surface-example prepare bash "$guide_scratch"

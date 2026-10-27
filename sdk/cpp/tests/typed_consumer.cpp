@@ -146,7 +146,7 @@ static void moved_owners() {
     auto first = owner.decide_each(tt::decide{"Ready?"},
         std::vector<tt::owned_record>{tt::owned_text{"evidence"}});
     auto moved = std::move(first);
-    first.cancel();
+    first.cancel_handle().request_cancel();
     assert(first.begin() == first.end());
     std::size_t count = 0;
     for (const auto& row : moved) { assert(row.value()); ++count; }

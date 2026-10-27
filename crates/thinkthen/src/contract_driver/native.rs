@@ -4,15 +4,18 @@
 //! host supplies its next record. Row publication and input capacity share a
 //! wake source, so neither side requires a second execution producer or polling.
 mod builders;
+mod events;
 mod recording;
 mod sql;
 use super::*;
 use crate::{ABI_VERSION, Code, questions};
 pub use builders::{QuestionBuilder, ToolboxBuilder};
+pub use events::Events;
 pub use recording::{recording_evidence, validate_recording_answer};
 pub use sql::{
     sql_engine, sql_engine_unrestricted, sql_postgres_id_error, sql_postgres_record,
-    sql_postgres_row, sql_question, sql_request, sql_threshold,
+    sql_postgres_row, sql_question, sql_request, sql_settings, sql_settings_with_policy,
+    sql_threshold,
 };
 use std::time::Duration;
 /// Native driver event; record failures remain ordinary rows.
@@ -81,6 +84,11 @@ impl Call {
     #[must_use]
     pub fn cancellation(&self) -> Cancel {
         self.0.cancellation()
+    }
+    /// Retain the independent wake source before any concurrent wait begins.
+    #[must_use]
+    pub fn events(&self) -> Events {
+        Events(self.0.events())
     }
     /// Wait for one event.
     /// # Errors

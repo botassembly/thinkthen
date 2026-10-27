@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Admission and record failures keep distinct public codes.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::time::Duration;
 use thinkthen::{BackendName, Decide, Key, Record, Retry, Settings};
 #[test]

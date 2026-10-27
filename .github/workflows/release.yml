@@ -56,12 +56,36 @@ jobs:
       - uses: rust-lang/crates-io-auth-action@22f31735a55cd45813f26e2edc31c7531e1fb4ed
         if: matrix.site == 'crates'
         id: crates
-      - name: Upload fixed packages
-        if: matrix.site != 'pypi'
+      - name: Upload npm packages
+        if: matrix.site == 'npm'
         env:
-          RELEASE_SITE: ${{ matrix.site }}
-          CARGO_REGISTRY_TOKEN: ${{ steps.crates.outputs.token }}
+          RELEASE_SITE: npm
+        run: |
+          python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'
+      - name: Upload rubygems packages
+        if: matrix.site == 'rubygems'
+        env:
+          RELEASE_SITE: rubygems
+        run: |
+          python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'
+      - name: Upload nuget packages
+        if: matrix.site == 'nuget'
+        env:
+          RELEASE_SITE: nuget
           NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: |
+          python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'
+      - name: Upload crates packages
+        if: matrix.site == 'crates'
+        env:
+          RELEASE_SITE: crates
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates.outputs.token }}
+        run: |
+          python3 -c 'import os,sys;sys.path.insert(0,"scripts");from pathlib import Path;from release_upload import upload;upload(os.environ["RELEASE_SITE"],Path("approved/registries"))'
+      - name: Upload maven packages
+        if: matrix.site == 'maven'
+        env:
+          RELEASE_SITE: maven
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           MAVEN_CENTRAL_GPG_PRIVATE_KEY: ${{ secrets.MAVEN_CENTRAL_GPG_PRIVATE_KEY }}

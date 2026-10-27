@@ -1,7 +1,10 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
-#![cfg(unix)]
 //! Interrupt handling through the command.
+#![cfg(feature = "command")]
+#![cfg(unix)]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 

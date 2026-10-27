@@ -1,9 +1,9 @@
 #![cfg(test)]
-#![cfg(unix)]
 //! Interrupt the real command at observable file and backend boundaries.
+#![cfg(unix)]
 
 use super::support;
-use loopback::{HeldReply, KEY, Loopback};
+use crate::loopback::{HeldReply, KEY, Loopback};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};

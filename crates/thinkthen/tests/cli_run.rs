@@ -1,7 +1,10 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
-#![cfg(unix)]
 //! Saved entries and declared commands through the command boundary.
+#![cfg(feature = "command")]
+#![cfg(unix)]
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 mod support;
 
 use std::io::{BufRead, BufReader, Write};

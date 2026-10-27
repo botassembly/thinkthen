@@ -9,10 +9,13 @@ from types import SimpleNamespace
 from cases import canonical, invocation, quote
 from migration_cases import child_environment, command, fixture, forbidden_settings, run_cases
 from typed_api import admission
+from streaming_cases import first_response, streaming
 
 PACKAGE, LOOPBACK = map(Path, sys.argv[1:3])
+LIMIT_ONLY = sys.argv[3:] == ['--limit-only']
+STREAMING_ONLY = sys.argv[3:] == ['--streaming-only']
 ADMISSION_ONLY = sys.argv[3:] == ['--admission-only']
-assert not sys.argv[3:] or ADMISSION_ONLY, sys.argv[3:]
+assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY, sys.argv[3:]
 
 
 class Host:
@@ -74,8 +77,15 @@ class Host:
                 self.process.wait()
 
 
-admission(SimpleNamespace(package=PACKAGE))
-if ADMISSION_ONLY:
+if LIMIT_ONLY:
+    first_response(Host, LOOPBACK)
+    sys.exit(0)
+if not STREAMING_ONLY:
+    admission(SimpleNamespace(package=PACKAGE))
+    if ADMISSION_ONLY:
+        sys.exit(0)
+streaming(Host, PACKAGE, LOOPBACK)
+if STREAMING_ONLY:
     sys.exit(0)
 
 with Host() as host:

@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Local plaintext credentials bypass proxies; TLS keeps ordinary proxy selection.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::process::Command;
 
 use loopback::{KEY, Loopback, Reply, UnavailableBackend};

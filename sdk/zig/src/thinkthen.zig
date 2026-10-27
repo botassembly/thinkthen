@@ -104,69 +104,70 @@ pub const Client = struct {
     pub fn open(self: *const Client, comptime function: Function, allocator: Allocator, question: QuestionType(function), input: Input, diag: ?*Diagnostic) Error!Call(function) {
         return calls.open(function, self.handle, allocator, question, input, diag);
     }
-    pub fn one(self: *const Client, comptime function: Function, allocator: Allocator, question: QuestionType(function), record: Record, diag: ?*Diagnostic) Error!calls.Item(function) {
-        var call = try self.open(function, allocator, question, .{ .records = &.{record} }, diag);
+    /// The returned row and its nested values live in arena until it is reset or freed.
+    pub fn one(self: *const Client, comptime function: Function, arena: Allocator, question: QuestionType(function), record: Record, diag: ?*Diagnostic) Error!calls.Item(function) {
+        var call = try self.open(function, arena, question, .{ .records = &.{record} }, diag);
         defer call.deinit();
-        return (try call.next(allocator, diag)) orelse error.Internal;
+        return (try call.next(arena, diag)) orelse error.Internal;
     }
     pub fn decide(self: *const Client, allocator: Allocator, question: []const u8, input: Input, options: DecideOptions, diag: ?*Diagnostic) Error!Call(.decide) {
         return self.open(.decide, allocator, .{ .question = question, .options = options }, input, diag);
     }
-    pub fn decideOne(self: *const Client, allocator: Allocator, question: []const u8, record: Record, options: DecideOptions, diag: ?*Diagnostic) Error!calls.Item(.decide) {
-        return self.one(.decide, allocator, .{ .question = question, .options = options }, record, diag);
+    pub fn decideOne(self: *const Client, arena: Allocator, question: []const u8, record: Record, options: DecideOptions, diag: ?*Diagnostic) Error!calls.Item(.decide) {
+        return self.one(.decide, arena, .{ .question = question, .options = options }, record, diag);
     }
     pub fn choose(self: *const Client, allocator: Allocator, question: []const u8, choices: []const Choice, input: Input, options: ChooseOptions, diag: ?*Diagnostic) Error!Call(.choose) {
         return self.open(.choose, allocator, .{ .question = question, .choices = choices, .options = options }, input, diag);
     }
-    pub fn chooseOne(self: *const Client, allocator: Allocator, question: []const u8, choices: []const Choice, record: Record, options: ChooseOptions, diag: ?*Diagnostic) Error!calls.Item(.choose) {
-        return self.one(.choose, allocator, .{ .question = question, .choices = choices, .options = options }, record, diag);
+    pub fn chooseOne(self: *const Client, arena: Allocator, question: []const u8, choices: []const Choice, record: Record, options: ChooseOptions, diag: ?*Diagnostic) Error!calls.Item(.choose) {
+        return self.one(.choose, arena, .{ .question = question, .choices = choices, .options = options }, record, diag);
     }
     pub fn tag(self: *const Client, allocator: Allocator, question: []const u8, labels: []const Choice, input: Input, options: TagOptions, diag: ?*Diagnostic) Error!Call(.tag) {
         return self.open(.tag, allocator, .{ .question = question, .labels = labels, .options = options }, input, diag);
     }
-    pub fn tagOne(self: *const Client, allocator: Allocator, question: []const u8, labels: []const Choice, record: Record, options: TagOptions, diag: ?*Diagnostic) Error!calls.Item(.tag) {
-        return self.one(.tag, allocator, .{ .question = question, .labels = labels, .options = options }, record, diag);
+    pub fn tagOne(self: *const Client, arena: Allocator, question: []const u8, labels: []const Choice, record: Record, options: TagOptions, diag: ?*Diagnostic) Error!calls.Item(.tag) {
+        return self.one(.tag, arena, .{ .question = question, .labels = labels, .options = options }, record, diag);
     }
     pub fn score(self: *const Client, allocator: Allocator, question: []const u8, levels: []const Choice, input: Input, options: ScoreOptions, diag: ?*Diagnostic) Error!Call(.score) {
         return self.open(.score, allocator, .{ .question = question, .levels = levels, .options = options }, input, diag);
     }
-    pub fn scoreOne(self: *const Client, allocator: Allocator, question: []const u8, levels: []const Choice, record: Record, options: ScoreOptions, diag: ?*Diagnostic) Error!calls.Item(.score) {
-        return self.one(.score, allocator, .{ .question = question, .levels = levels, .options = options }, record, diag);
+    pub fn scoreOne(self: *const Client, arena: Allocator, question: []const u8, levels: []const Choice, record: Record, options: ScoreOptions, diag: ?*Diagnostic) Error!calls.Item(.score) {
+        return self.one(.score, arena, .{ .question = question, .levels = levels, .options = options }, record, diag);
     }
     pub fn filter(self: *const Client, allocator: Allocator, question: []const u8, input: Input, options: FilterOptions, diag: ?*Diagnostic) Error!Call(.filter) {
         return self.open(.filter, allocator, .{ .question = question, .options = options }, input, diag);
     }
-    pub fn filterOne(self: *const Client, allocator: Allocator, question: []const u8, record: Record, options: FilterOptions, diag: ?*Diagnostic) Error!calls.Item(.filter) {
-        return self.one(.filter, allocator, .{ .question = question, .options = options }, record, diag);
+    pub fn filterOne(self: *const Client, arena: Allocator, question: []const u8, record: Record, options: FilterOptions, diag: ?*Diagnostic) Error!calls.Item(.filter) {
+        return self.one(.filter, arena, .{ .question = question, .options = options }, record, diag);
     }
     pub fn rank(self: *const Client, allocator: Allocator, question: []const u8, levels: []const Choice, input: Input, options: RankOptions, diag: ?*Diagnostic) Error!Call(.rank) {
         return self.open(.rank, allocator, .{ .question = question, .levels = levels, .options = options }, input, diag);
     }
-    pub fn rankOne(self: *const Client, allocator: Allocator, question: []const u8, levels: []const Choice, record: Record, options: RankOptions, diag: ?*Diagnostic) Error!calls.Item(.rank) {
-        return self.one(.rank, allocator, .{ .question = question, .levels = levels, .options = options }, record, diag);
+    pub fn rankOne(self: *const Client, arena: Allocator, question: []const u8, levels: []const Choice, record: Record, options: RankOptions, diag: ?*Diagnostic) Error!calls.Item(.rank) {
+        return self.one(.rank, arena, .{ .question = question, .levels = levels, .options = options }, record, diag);
     }
     pub fn find(self: *const Client, allocator: Allocator, question: []const u8, input: Input, options: FindOptions, diag: ?*Diagnostic) Error!Call(.find) {
         return self.open(.find, allocator, .{ .question = question, .options = options }, input, diag);
     }
-    pub fn findOne(self: *const Client, allocator: Allocator, question: []const u8, record: Record, options: FindOptions, diag: ?*Diagnostic) Error!calls.Item(.find) {
-        return self.one(.find, allocator, .{ .question = question, .options = options }, record, diag);
+    pub fn findOne(self: *const Client, arena: Allocator, question: []const u8, record: Record, options: FindOptions, diag: ?*Diagnostic) Error!calls.Item(.find) {
+        return self.one(.find, arena, .{ .question = question, .options = options }, record, diag);
     }
     pub fn recognize(self: *const Client, allocator: Allocator, kinds: []const Choice, input: Input, options: RecognizeOptions, diag: ?*Diagnostic) Error!Call(.recognize) {
         return self.open(.recognize, allocator, .{ .kinds = kinds, .options = options }, input, diag);
     }
-    pub fn recognizeOne(self: *const Client, allocator: Allocator, kinds: []const Choice, record: Record, options: RecognizeOptions, diag: ?*Diagnostic) Error!calls.Item(.recognize) {
-        return self.one(.recognize, allocator, .{ .kinds = kinds, .options = options }, record, diag);
+    pub fn recognizeOne(self: *const Client, arena: Allocator, kinds: []const Choice, record: Record, options: RecognizeOptions, diag: ?*Diagnostic) Error!calls.Item(.recognize) {
+        return self.one(.recognize, arena, .{ .kinds = kinds, .options = options }, record, diag);
     }
     pub fn relate(self: *const Client, allocator: Allocator, rules: []const RelationRule, input: Input, options: RelateOptions, diag: ?*Diagnostic) Error!Call(.relate) {
         return self.open(.relate, allocator, .{ .rules = rules, .options = options }, input, diag);
     }
-    pub fn relateOne(self: *const Client, allocator: Allocator, rules: []const RelationRule, record: Record, options: RelateOptions, diag: ?*Diagnostic) Error!calls.Item(.relate) {
-        return self.one(.relate, allocator, .{ .rules = rules, .options = options }, record, diag);
+    pub fn relateOne(self: *const Client, arena: Allocator, rules: []const RelationRule, record: Record, options: RelateOptions, diag: ?*Diagnostic) Error!calls.Item(.relate) {
+        return self.one(.relate, arena, .{ .rules = rules, .options = options }, record, diag);
     }
     pub fn annotate(self: *const Client, allocator: Allocator, toolbox: AnnotationQuestions, input: Input, options: AnnotateOptions, diag: ?*Diagnostic) Error!Call(.annotate) {
         return self.open(.annotate, allocator, .{ .questions = toolbox, .options = options }, input, diag);
     }
-    pub fn annotateOne(self: *const Client, allocator: Allocator, toolbox: AnnotationQuestions, record: Record, options: AnnotateOptions, diag: ?*Diagnostic) Error!calls.Item(.annotate) {
-        return self.one(.annotate, allocator, .{ .questions = toolbox, .options = options }, record, diag);
+    pub fn annotateOne(self: *const Client, arena: Allocator, toolbox: AnnotationQuestions, record: Record, options: AnnotateOptions, diag: ?*Diagnostic) Error!calls.Item(.annotate) {
+        return self.one(.annotate, arena, .{ .questions = toolbox, .options = options }, record, diag);
     }
 };

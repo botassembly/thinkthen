@@ -1,5 +1,5 @@
 //! Shared, bounded fault fixtures for installed surface adapters.
-use crate::{Loopback, Reply, UnavailableBackend, lock};
+use super::{Loopback, Reply, UnavailableBackend, lock};
 use serde_json::{Value, json};
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -59,9 +59,9 @@ impl StressFixture {
                     index -= repeat;
                     continue;
                 }
-                return fault_reply(fault, crate::case::reply(&replies, request));
+                return fault_reply(fault, super::case::reply(&replies, request));
             }
-            crate::case::reply(&replies, request)
+            super::case::reply(&replies, request)
         })?;
         lock(&server.state).recording_limit = Some(8);
         Ok(Self::Server(server))
@@ -80,8 +80,21 @@ impl StressFixture {
         match self {
             Self::Server(server) => {
                 let state = lock(&server.state);
+                let sizes: Vec<_> = state
+                    .seen
+                    .iter()
+                    .map(|request| {
+                        let body = request.json().unwrap_or_default();
+                        match body.get("questions") {
+                            Some(Value::Array(questions)) => questions.len(),
+                            Some(Value::Object(questions)) => questions.len(),
+                            _ => 0,
+                        }
+                    })
+                    .collect();
                 json!({"requests":state.requests,"connections":state.connections,
-                    "active_connections":server.owner.active(),"recorded_requests":state.seen.len()})
+                    "active_connections":server.owner.active(),"recorded_requests":state.seen.len(),
+                    "request_sizes": sizes})
             }
             Self::Refused(_) => {
                 json!({"requests":0,"connections":0,"active_connections":0,"recorded_requests":0})

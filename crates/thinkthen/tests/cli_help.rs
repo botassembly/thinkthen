@@ -1,6 +1,6 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
 //! Help and file diagnostics teach the current command grammar.
+#![cfg(feature = "command")]
 
 mod support;
 

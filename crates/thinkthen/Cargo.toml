@@ -7,6 +7,13 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+include = ["src/**", "examples/**", "tests/support/**", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
+keywords = ["evidence", "classification", "language-model", "decision"]
+categories = ["text-processing", "science"]
+
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["stream"]
 
 [[bin]]
 name = "thinkthen"
@@ -16,8 +23,6 @@ required-features = ["command"]
 [features]
 default = ["command"]
 native = []
-schema = []
-fixture-routing = []
 stream = ["dep:futures-core"]
 command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
 
@@ -34,21 +39,23 @@ clap = { version = "4.5", default-features = false, features = ["std", "derive",
 clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }
 command-group = { version = "5.0.1", default-features = false, optional = true }
-quick-xml = { version = "=0.39.4", optional = true }
-zip = { version = "=0.6.6", default-features = false, features = ["deflate"], optional = true }
-tempfile = { version = "=3.23.0", optional = true }
+quick-xml = { version = "0.41.0", optional = true }
+zip = { version = "9.1.2", default-features = false, features = ["deflate"], optional = true }
+tempfile = { version = "3.23.0", optional = true }
 schemars.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 ureq.workspace = true
-rustls = { version = "0.23", default-features = false, features = ["std"] }
+rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
+rustls-platform-verifier = { version = "=0.7.1", default-features = false }
 
 [dev-dependencies]
-csv = "=1.4.0"
-tempfile = "=3.23.0"
-zip = { version = "=0.6.6", default-features = false, features = ["deflate"] }
+rcgen = "=0.13.2"
+csv = "1.4.0"
+tempfile = "3.23.0"
+zip = { version = "9.1.2", default-features = false, features = ["deflate"] }
 jsonschema = { version = "0.46", default-features = false }
-loopback.workspace = true
+socket2.workspace = true
 serde_json.workspace = true
 
 [lints]

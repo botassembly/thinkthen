@@ -78,8 +78,6 @@ impl Family {
     }
 }
 
-impl ErrorKind {}
-
 /// A failure with its kind and its message.
 #[non_exhaustive]
 #[derive(Debug, Clone, schemars::JsonSchema)]
@@ -249,4 +247,9 @@ impl ErrorKind {
             Self::Toolbox => Code::LocalToolbox,
         }
     }
+}
+
+#[cfg(feature = "command")]
+pub(crate) fn local(message: &str) -> Error {
+    Error::new(ErrorKind::Io, message)
 }

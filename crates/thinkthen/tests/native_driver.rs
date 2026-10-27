@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Native host polling reserves input space and shares ordinary row execution.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 #[cfg(feature = "native")]
 mod tests {
     use thinkthen::{

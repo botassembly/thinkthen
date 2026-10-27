@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Short gate coverage and separately selected loopback volume/soak workloads.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 #[path = "stress/axes.rs"]
 mod axes;
 #[cfg(feature = "command")]

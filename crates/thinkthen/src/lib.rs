@@ -7,11 +7,6 @@
 //! let row = engine.run(&question, Record::text("Please refund my order."))?;
 //! # Ok::<(), thinkthen::Error>(())
 //! ```
-#[cfg(all(feature = "fixture-routing", not(debug_assertions)))]
-compile_error!("fixture routing cannot enter a production release build");
-/// Process-owned loopback routes, available only in explicit test builds.
-#[cfg(all(feature = "fixture-routing", debug_assertions))]
-pub mod test_fixture;
 extern crate self as thinkthen;
 /// The engine package version, shared with its command and bindings.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -48,7 +43,6 @@ pub use records::{Record, RecordId};
 pub use results::*;
 pub use retry::Cancel;
 pub(crate) use retry::RetryPolicy;
-pub use settings::BackendName as Backend;
 pub use settings::{BackendName, Retry, Settings};
 #[cfg(feature = "command")]
 #[path = "cli/main.rs"]

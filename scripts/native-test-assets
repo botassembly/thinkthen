@@ -29,7 +29,7 @@ def identity():
     cache = Path(output(str(ROOT / 'scripts/native-prepare'), '--path'))
     host = output('rustc', '-vV').split('host: ')[1].splitlines()[0]
     producer = digest(Path(__file__))
-    loopback = {name: digest(ROOT / name) for name in output('git', 'ls-files', '--', 'crates/loopback').splitlines()}
+    loopback = {name: digest(ROOT / name) for name in output('git', 'ls-files', '--', 'crates/loopback', 'crates/thinkthen/test-support').splitlines()}
     configuration = hashlib.sha256(json.dumps({'producer': producer, 'loopback': loopback}, sort_keys=True).encode()).hexdigest()
     return cache / 'test-fixtures' / host / configuration, {
         'native_key': cache.name, 'producer': producer, 'target': host,

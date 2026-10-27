@@ -1,5 +1,5 @@
 // Generated native requirement. Do not edit.
-export const ABI_VERSION = 131073;
+export const ABI_VERSION = 131074;
 export const ABI_VERSION_EXPORT = "abiVersion";
 export const ABI_CODE = "usage.abi";
 export const ABI_MESSAGE = "the native ABI is incompatible";

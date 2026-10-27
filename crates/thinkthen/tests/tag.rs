@@ -1,6 +1,9 @@
 #![cfg(test)]
 //! Independent labels through the public Rust API.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback, Reply};
 use serde_json::json;
 use thinkthen::{Batch, Cut, Engine, Key, Question, Record, Settings, Tag};

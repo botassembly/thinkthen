@@ -198,7 +198,7 @@ public struct Settings: Sendable, Codable, Equatable, CustomStringConvertible,
 }
 public struct ABIVersion: Sendable, Equatable { public let major: UInt32, minor: UInt32 }
 public enum IterationIssue: Sendable, Equatable { case alreadyIterated, concurrentNext }
-public enum ThinkThenError: Error, Sendable, Equatable {
+public enum ThinkThenError: LocalizedError, Sendable, Equatable {
   case engine(RowFailure)
   case unknownCode(rawCode: Int32, message: String, httpStatus: UInt16?, rawName: String?)
   case engineUnavailable(message: String)
@@ -209,6 +209,23 @@ public enum ThinkThenError: Error, Sendable, Equatable {
   case toolboxSelection(name: String, expected: FunctionName)
   case iteration(IterationIssue)
   case cancelled
+
+  public var errorDescription: String? {
+    switch self {
+    case .engine(let failure): return failure.message
+    case .unknownCode(_, let message, _, _), .engineUnavailable(let message),
+      .encoding(let message), .contract(let message), .recordSource(let message):
+      return message
+    case .engineVersion(let required, let found):
+      return "Native ABI \(found.major).\(found.minor) does not support required ABI "
+        + "\(required.major).\(required.minor)"
+    case .toolboxSelection(let name, let expected):
+      return "Toolbox question \(name) must use \(expected)"
+    case .iteration(.alreadyIterated): return "Rows have already been iterated"
+    case .iteration(.concurrentNext): return "Rows cannot be advanced concurrently"
+    case .cancelled: return "The call was cancelled"
+    }
+  }
 }
 func typedError(_ error: any Error) -> ThinkThenError {
   if let typed = error as? ThinkThenError { return typed }

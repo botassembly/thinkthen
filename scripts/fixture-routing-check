@@ -2,7 +2,7 @@
 """Prove that the loopback test seam cannot compile into a release artifact."""
 import subprocess
 result = subprocess.run([
-    'cargo', 'check', '--release', '-p', 'thinkthen', '--no-default-features',
+    'cargo', 'check', '--release', '-p', 'thinkthen-ffi', '--no-default-features',
     '--features', 'fixture-routing', '--locked',
 ], capture_output=True, text=True)
 marker = 'fixture routing cannot enter a production release build'

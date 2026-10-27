@@ -44,3 +44,32 @@ input <- data.frame(id = factor(c("second", "first", "second")), body = text)
 rows <- tt_decide(input, "Ready?", evidence = "/body", client = stub)
 stopifnot(nrow(rows) == 3L, all(rows$status == "answered"),
           identical(rows$id, as.list(as.character(input$id))))
+
+# Feature: frame encoding matches canonical per-row JSON for nested host values.
+input <- data.frame(id = factor(c("second", "first", "third")),
+  body = c('quoted "},[\\" text', "βeta", NA_character_),
+  category = factor(c("b", "a", NA)), day = as.Date(c("2026-01-02", NA, "2026-01-04")),
+  number = c(1 / 3, NA_real_, Inf))
+input$nested <- I(list(list(values = list(1, list(text = "a,b}"))), NULL,
+                       list(values = list(TRUE, FALSE))))
+reference <- lapply(seq_len(nrow(input)), function(position) {
+  json <- as.character(jsonlite::toJSON(input[position, , drop = FALSE],
+    dataframe = "rows", auto_unbox = TRUE, null = "null", na = "null", digits = I(17), force = FALSE))
+  jsonlite::fromJSON(json, simplifyVector = FALSE)[[1]]
+})
+actual <- tt_filter(input, "Ready?", client = stub)
+expected <- tt_filter(reference, "Ready?", client = stub)
+stopifnot(identical(actual[names(actual) != "item"], expected[names(expected) != "item"]),
+  identical(actual$item, lapply(seq_len(nrow(input)), function(i) input[i, , drop = FALSE])))
+
+# Feature: an unsupported cell fails its row while serializable neighbors survive.
+input <- data.frame(body = c("alpha", "bravo", "charlie"))
+input$nested <- I(list(list(value = 1), new.env(parent = emptyenv()), list(value = 3)))
+actual <- tt_filter(input, "Ready?", client = stub)
+expected <- tt_filter(lapply(seq_len(nrow(input)), function(i) {
+  list(body = input$body[[i]], nested = input$nested[[i]])
+}), "Ready?", client = stub)
+stopifnot(identical(as.character(actual$status), c("answered", "failed", "answered")),
+  identical(actual[names(actual) != "item"], expected[names(expected) != "item"]))
+
+cat("R canonical frame encoding and isolated conversion failures passed\n")

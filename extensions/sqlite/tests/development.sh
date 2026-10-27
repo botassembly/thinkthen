@@ -16,7 +16,7 @@ cc -std=c11 -Wall -Wextra -Werror -O2 -fPIC -fvisibility=hidden \
     -DTHINKTHEN_TEST_BUILD -DTHINKTHEN_TEST_FIXTURE -I crates/thinkthen-ffi/include \
     -I conformance/native -c databases/duckdb/tests/routes.c -o "$scratch/routes.o"
 case $(uname -s) in
-    Darwin) link='-dynamiclib -framework Security -framework SystemConfiguration -liconv'; suffix=dylib ;;
+    Darwin) link="-dynamiclib $(scripts/native-frameworks) -liconv"; suffix=dylib ;;
     Linux) link=-shared; suffix=so ;;
 esac
 cc $link "$scratch"/*.o "$THINKTHEN_SQL_TEST_ARCHIVE" "$jansson/lib/libjansson.a" \

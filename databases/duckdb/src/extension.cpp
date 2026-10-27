@@ -91,11 +91,15 @@ struct Binding : FunctionData {
         return identity == value.identity && json == value.json && record == value.record && types == value.types;
     }
 };
+struct RetainedChunk {
+    DataChunk source;
+    idx_t remaining = 0;
+};
 struct Invocation : LocalTableFunctionState {
     CallOwner call{nullptr, thinkthen_sql_call_free};
     bool submitted = false, ended = false;
     uint64_t position = 0;
-    std::map<uint64_t, vector<Value>> retained;
+    std::map<uint64_t, RetainedChunk> retained;
 };
 unique_ptr<LocalTableFunctionState> Init(ExecutionContext &context, TableFunctionInitInput &input,
                                        GlobalTableFunctionState *) {
@@ -114,11 +118,14 @@ void CheckInterrupt(ClientContext &context, Invocation &state) {
     if (context.interrupted) { state.call.reset(); throw InterruptException(); }
 }
 void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &state, const Binding &bind) {
-    auto original = state.retained.find(row.position);
-    if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
+    auto original = state.retained.lower_bound(row.position);
+    if (original == state.retained.end() || row.position <= original->first - original->second.source.size())
+        throw InvalidInputException("usage.abi: unknown row position");
+    auto &source = original->second.source;
+    auto offset = row.position - (original->first - source.size()) - 1;
     idx_t col = 0;
-    for (auto &value : original->second) output.SetValue(col++, index, value);
-    state.retained.erase(original);
+    for (; col < source.ColumnCount(); ++col) output.SetValue(col, index, source.GetValue(col, offset));
+    if (--original->second.remaining == 0) state.retained.erase(original);
     auto put = [&](Value value) { output.SetValue(col++, index, value); };
     put(Value::UBIGINT(row.position));
     put(Project(LogicalType::JSON(), row.id));
@@ -140,9 +147,9 @@ void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &
     put(Project(bind.types[col], row.answer));
     if (bind.function == "filter") put(Value::BOOLEAN(row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0));
 }
-int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row) {
+int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row, uint32_t timeout) {
     ErrorOwner error;
-    auto result = thinkthen_sql_call_poll(state.call.get(), 20, Interrupted, &context, &row.value, &error.value);
+    auto result = thinkthen_sql_call_poll(state.call.get(), timeout, Interrupted, &context, &row.value, &error.value);
     CheckInterrupt(context, state);
     Checked(result, error);
     return result;
@@ -153,20 +160,25 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
-        auto result = Poll(context.client, state, row);
+        auto result = Poll(context.client, state, row, count ? 0 : 20);
         if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
+        else if (result == THINKTHEN_PENDING && count) {
+            output.SetCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT;
+        }
         else if (result == THINKTHEN_NEEDS_INPUT) {
             if (state.submitted) { state.submitted = false; output.SetCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
             vector<string> values;
             values.reserve(input.size());
             vector<thinkthen_sql_input> records;
             records.reserve(input.size());
+            state.position += input.size();
+            auto &retained = state.retained[state.position];
+            retained.source.Initialize(context.client, input.GetTypes(), input.size());
+            input.Copy(retained.source);
+            retained.remaining = input.size();
             for (idx_t i = 0; i < input.size(); ++i) {
                 CheckInterrupt(context.client, state);
-                vector<Value> retained;
-                for (idx_t column = 0; column < input.ColumnCount(); ++column) retained.push_back(input.GetValue(column, i));
-                auto value = retained[bind.record];
-                state.retained.emplace(++state.position, std::move(retained));
+                auto value = input.GetValue(bind.record, i);
                 if (value.IsNull()) { records.push_back({THINKTHEN_RECORD_MISSING, nullptr, 0}); continue; }
                 values.push_back(value.GetValue<string>());
                 records.push_back({bind.json ? THINKTHEN_RECORD_JSON : THINKTHEN_RECORD_TEXT,
@@ -189,8 +201,11 @@ OperatorFinalizeResultType Final(ExecutionContext &context, TableFunctionInput &
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
-        auto result = Poll(context.client, state, row);
+        auto result = Poll(context.client, state, row, count ? 0 : 20);
         if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
+        else if (result == THINKTHEN_PENDING && count) {
+            output.SetCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT;
+        }
         else if (result == THINKTHEN_END) {
             output.SetCardinality(count); return OperatorFinalizeResultType::FINISHED;
         }

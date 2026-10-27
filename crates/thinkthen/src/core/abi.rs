@@ -1,8 +1,7 @@
 //! Native discriminator values have one declaration per enum.
 /// The typed contract's native ABI major and minor, independent of package version.
-// Minor one requires the complete typed projection and builder interface.
-// Native 2.0 predates those required symbols and must fail the minimum-minor check.
-pub const ABI_VERSION: u32 = (2 << 16) | 1;
+// Minor two adds independently retained call event waits.
+pub const ABI_VERSION: u32 = (2 << 16) | 2;
 macro_rules! discriminators {
     ($(#[$attr:meta])* pub enum $name:ident { $($(#[$vattr:meta])* $variant:ident=$value:literal),+ $(,)? }) => {
         $(#[$attr])* #[repr(u32)] pub enum $name {$($(#[$vattr])* $variant=$value,)+}

@@ -1,6 +1,6 @@
-#![cfg(feature = "command")]
-//! The command reports its version.
 #![cfg(test)]
+//! The command reports its version.
+#![cfg(feature = "command")]
 
 mod support;
 

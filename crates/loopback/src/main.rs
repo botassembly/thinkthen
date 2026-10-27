@@ -12,6 +12,11 @@ enum Fixture {
         arrived: Receiver<()>,
         closed: Receiver<std::io::Result<usize>>,
     },
+    First {
+        server: StressFixture,
+        arrived: Receiver<()>,
+        closed: Receiver<std::io::Result<usize>>,
+    },
     Unavailable(UnavailableBackend),
 }
 
@@ -25,6 +30,24 @@ impl Fixture {
             "--stress" => Ok(Self::Stress(StressFixture::open(
                 &args.next().ok_or("expected stress scenario name")?,
             )?)),
+            "--first-response" => {
+                let marker = args.next().ok_or("expected first response marker")?;
+                let server = StressFixture::open("healthy")?;
+                let StressFixture::Server(answering) = &server else {
+                    return Err("expected an answering fixture".into());
+                };
+                let (arrived, closed) =
+                    answering.hold_matching(HeldReply::Headers, move |request| {
+                        !request
+                            .json()
+                            .is_ok_and(|body| body.to_string().contains(&marker))
+                    });
+                Ok(Self::First {
+                    server,
+                    arrived,
+                    closed,
+                })
+            }
             "--held" => {
                 let reply = match args.next().as_deref() {
                     Some("reset") => HeldReply::Reset,
@@ -52,14 +75,16 @@ impl Fixture {
         match self {
             Self::Case(server) | Self::Held { server, .. } => server.base(),
             Self::Unavailable(server) => server.base(),
-            Self::Stress(server) => server.base(),
+            Self::Stress(server) | Self::First { server, .. } => server.base(),
         }
     }
 
     fn command(&self, command: &str) -> Result<String, Box<dyn std::error::Error>> {
         match (self, command) {
-            (Self::Stress(server), "stats") => Ok(server.stats().to_string()),
-            (Self::Stress(server), "count") => server
+            (Self::Stress(server) | Self::First { server, .. }, "stats") => {
+                Ok(server.stats().to_string())
+            }
+            (Self::Stress(server) | Self::First { server, .. }, "count") => server
                 .stats()
                 .get("requests")
                 .map(ToString::to_string)
@@ -68,18 +93,20 @@ impl Fixture {
                 Ok(server.count().to_string())
             }
             (Self::Unavailable(_), "count") => Ok("0".to_owned()),
-            (Self::Held { arrived, .. }, "arrived") => {
+            (Self::Held { arrived, .. } | Self::First { arrived, .. }, "arrived") => {
                 arrived.recv()?;
                 Ok("arrived".to_owned())
             }
-            (Self::Held { closed, .. }, "closed") => match closed.recv()? {
-                Ok(0) => Ok("closed".to_owned()),
-                Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => {
-                    Ok("closed".to_owned())
+            (Self::Held { closed, .. } | Self::First { closed, .. }, "closed") => {
+                match closed.recv()? {
+                    Ok(0) => Ok("closed".to_owned()),
+                    Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => {
+                        Ok("closed".to_owned())
+                    }
+                    Ok(_) => Err("held connection received bytes instead of EOF".into()),
+                    Err(error) => Err(error.into()),
                 }
-                Ok(_) => Err("held connection received bytes instead of EOF".into()),
-                Err(error) => Err(error.into()),
-            },
+            }
             _ => Err("expected count, arrived, closed or shutdown for this fixture".into()),
         }
     }

@@ -1,4 +1,5 @@
 #include "duckdb.hpp"
+#include "duckdb/main/stream_query_result.hpp"
 #include "yyjson.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include <cstdlib>
@@ -7,29 +8,42 @@
 #include <thread>
 #include <mutex>
 #include <set>
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
 using namespace duckdb;
 using namespace duckdb_yyjson;
-static void Print(MaterializedQueryResult &result) {
+template <class Read>
+static void PrintRows(const vector<string> &names, idx_t count, Read read, const string &error = "") {
     auto doc = yyjson_mut_doc_new(nullptr);
     auto root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
-    if (result.HasError()) yyjson_mut_obj_add_strcpy(doc, root, "error", result.GetError().c_str());
+    if (!error.empty()) yyjson_mut_obj_add_strcpy(doc, root, "error", error.c_str());
     else {
         auto rows = yyjson_mut_arr(doc);
         yyjson_mut_obj_add_val(doc, root, "rows", rows);
-        for (idx_t i = 0; i < result.RowCount(); ++i) {
+        for (idx_t i = 0; i < count; ++i) {
             auto row = yyjson_mut_obj(doc);
             yyjson_mut_arr_add_val(rows, row);
-            for (idx_t j = 0; j < result.ColumnCount(); ++j) {
-                auto value = result.GetValue(j, i);
+            for (idx_t j = 0; j < names.size(); ++j) {
+                auto value = read(j, i);
                 auto item = value.IsNull() ? yyjson_mut_null(doc) : yyjson_mut_strcpy(doc, value.ToString().c_str());
-                yyjson_mut_obj_add_val(doc, row, result.names[j].c_str(), item);
+                yyjson_mut_obj_add_val(doc, row, names[j].c_str(), item);
             }
         }
     }
     auto text = yyjson_mut_write(doc, 0, nullptr);
     std::cout << text << std::endl;
     std::free(text); yyjson_mut_doc_free(doc);
+}
+static void Print(MaterializedQueryResult &result) {
+    PrintRows(result.names, result.HasError() ? 0 : result.RowCount(),
+              [&](idx_t column, idx_t row) { return result.GetValue(column, row); },
+              result.HasError() ? result.GetError() : "");
+}
+static void CloseStream(StreamQueryResult *result) {
+    result->Close();
+    delete result;
 }
 int main(int argc, char **argv) {
     try {
@@ -41,6 +55,35 @@ int main(int argc, char **argv) {
         Connection connection(database);
         auto load = connection.Query("LOAD '" + string(argv[1]) + "'");
         if (load->HasError()) { Print(*load); return 1; }
+#ifndef _WIN32
+        if (argc > 2 && string(argv[2]) == "--rank-memory") {
+            connection.Query("SET thinkthen_backend='stub'");
+            connection.Query("SET threads=1");
+            auto peak = []() {
+                rusage usage{};
+                if (getrusage(RUSAGE_SELF, &usage)) throw std::runtime_error("cannot read resident memory");
+#ifdef __APPLE__
+                return static_cast<uint64_t>(usage.ru_maxrss);
+#else
+                return static_cast<uint64_t>(usage.ru_maxrss) * 1024;
+#endif
+            };
+            auto before = peak();
+            string source = "SELECT range AS document_id,range::VARCHAR AS record";
+            string mismatch = "status!='answered' OR rank IS NULL OR document_id+1!=position";
+            for (int column = 0; column < 18; ++column) {
+                auto name = "column_" + std::to_string(column);
+                source += ",range+" + std::to_string(column) + " AS " + name;
+                mismatch += " OR " + name + "!=document_id+" + std::to_string(column);
+            }
+            auto result = connection.Query("SELECT count(*),count(*) FILTER (WHERE " + mismatch + ") FROM thinkthen_rank((" +
+                source + " FROM range(100000)), 'Order?', levels := ['low','medium','high'])");
+            if (result->HasError()) { Print(*result); return 1; }
+            std::cout << "{\"rows\":" << result->GetValue(0, 0).ToString() << ",\"misplaced\":" <<
+                result->GetValue(1, 0).ToString() << ",\"growth_bytes\":" << peak() - before << "}" << std::endl;
+            return 0;
+        }
+#endif
         if (argc > 2 && string(argv[2]) == "--cold") {
             connection.Query("SET thinkthen_backend='stub'");
             auto setting = connection.Query("SET threads=4");
@@ -94,6 +137,22 @@ int main(int argc, char **argv) {
         while (std::getline(std::cin, query)) {
             std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)> message(yyjson_read(query.data(), query.size(), 0), yyjson_doc_free);
             if (!message) return 2;
+            auto first = yyjson_obj_get(yyjson_doc_get_root(message.get()), "first");
+            if (first) {
+                auto result = connection.SendQuery(yyjson_get_str(first));
+                if (result->HasError()) throw std::runtime_error(result->GetError());
+                if (result->type != QueryResultType::STREAM_RESULT) throw std::runtime_error("expected a streamed result");
+                std::unique_ptr<StreamQueryResult, decltype(&CloseStream)> stream(
+                    static_cast<StreamQueryResult *>(result.release()), CloseStream);
+                auto names = stream->names;
+                auto chunk = stream->Fetch();
+                stream.reset();
+                auto recovered = connection.Query("SELECT 1 AS alive");
+                if (recovered->HasError()) throw std::runtime_error(recovered->GetError());
+                PrintRows(names, chunk ? chunk->size() : 0,
+                          [&](idx_t column, idx_t row) { return chunk->GetValue(column, row); });
+                continue;
+            }
             auto concurrent = yyjson_obj_get(yyjson_doc_get_root(message.get()), "concurrent");
             if (concurrent) {
                 if (yyjson_arr_size(concurrent) != 2) return 2;

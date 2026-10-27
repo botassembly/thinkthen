@@ -1,5 +1,5 @@
 {
-  "abi_version": 131073,
+  "abi_version": 131074,
   "contract": "contract.json",
   "error": {
     "code": "usage.abi",
@@ -26,6 +26,10 @@
     {
       "declaration": "void thinkthen_call_end_input(struct thinkthen_call *call);",
       "name": "thinkthen_call_end_input"
+    },
+    {
+      "declaration": "struct thinkthen_events *thinkthen_call_events(const struct thinkthen_call *call);",
+      "name": "thinkthen_call_events"
     },
     {
       "declaration": "void thinkthen_call_free(struct thinkthen_call *call);",
@@ -102,6 +106,22 @@
     {
       "declaration": "void thinkthen_error_free(struct thinkthen_error *error);",
       "name": "thinkthen_error_free"
+    },
+    {
+      "declaration": "void thinkthen_events_free(struct thinkthen_events *events);",
+      "name": "thinkthen_events_free"
+    },
+    {
+      "declaration": "uint64_t thinkthen_events_version(const struct thinkthen_events *events);",
+      "name": "thinkthen_events_version"
+    },
+    {
+      "declaration": "void thinkthen_events_wait(const struct thinkthen_events *events, uint64_t version);",
+      "name": "thinkthen_events_wait"
+    },
+    {
+      "declaration": "void thinkthen_events_wake(const struct thinkthen_events *events);",
+      "name": "thinkthen_events_wake"
     },
     {
       "declaration": "int32_t thinkthen_question_add_choice(struct thinkthen_question *question, const uint8_t *data, size_t len, struct thinkthen_error *error);",

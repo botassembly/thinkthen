@@ -196,6 +196,7 @@ def language_packages(out, version, cache, rust):
     for path in (ROOT / 'scripts/release').iterdir():
         if path.is_file(): copy(path, checks / path.name)
     copy(ROOT / 'scripts/release-check', out / 'check')
+    copy(ROOT / 'scripts/release_records.py', out / 'release_records.py')
     copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
     copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
     copy(ROOT / 'scripts/package_inventory.py', out / 'package_inventory.py')

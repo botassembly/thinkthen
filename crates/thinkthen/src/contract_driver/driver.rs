@@ -37,6 +37,23 @@ impl Driver {
     ) -> Result<Self, Error> {
         Ok(Self::from_call(engine.open_request(request, offsets)?))
     }
+    /// Open a finite source whose host sends records while draining results.
+    /// Host work between sends does not end its pending batch.
+    #[cfg(feature = "command")]
+    pub(crate) fn open_finite(
+        engine: &Engine,
+        request: &Request,
+        offsets: OffsetUnit,
+    ) -> Result<Self, Error> {
+        let call = engine.open_any(
+            request.question().clone(),
+            request.name().map(str::to_owned),
+            request.records().iter().map(Record::json).collect(),
+            offsets,
+            InputKind::Finite,
+        )?;
+        Ok(Self::from_call(call))
+    }
     pub(crate) fn open_records(
         engine: &Engine,
         request: &Request,
@@ -51,6 +68,7 @@ impl Driver {
             request.name().map(str::to_owned),
             records,
             offsets,
+            InputKind::Finite,
         )?;
         call.sender.close();
         Ok(Self::from_call(call))
@@ -91,6 +109,10 @@ impl Driver {
     #[cfg(feature = "native")]
     pub(crate) fn cancellation(&self) -> Cancel {
         self.rows.cancel.clone()
+    }
+    #[cfg(feature = "native")]
+    pub(super) fn events(&self) -> Arc<Signal> {
+        self.signal.clone()
     }
     fn ready(&mut self) -> Result<Option<Event>, Error> {
         if self.rows.done {

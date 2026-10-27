@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 project(ThinkThenConsumer LANGUAGES C)
 find_package(ThinkThenC CONFIG REQUIRED)
+find_package(ThinkThenC CONFIG REQUIRED)
 find_package(Threads REQUIRED)
 add_executable(consumer consumer.c)
 target_compile_features(consumer PRIVATE c_std_11)

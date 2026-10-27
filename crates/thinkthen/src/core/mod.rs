@@ -25,9 +25,9 @@ mod threshold;
 pub(crate) use adapter::Adapter;
 pub(crate) use ask::{Ask, AskAnswer, ChoiceOption};
 pub(crate) use error::ErrorKind;
-#[cfg(feature = "command")]
-pub(crate) use error::escape_diagnostic;
 pub use error::{Error, Family};
+#[cfg(feature = "command")]
+pub(crate) use error::{escape_diagnostic, local};
 pub(crate) use function::annotate::Annotate;
 pub(crate) use function::choose::Choose;
 pub(crate) use function::decide::Decide;

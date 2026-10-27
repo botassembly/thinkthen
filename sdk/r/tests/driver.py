@@ -218,7 +218,7 @@ with backend(context_case) as (server, url):
     server.stdin.flush()
     assert int(server.stdout.readline()) == 0, "host conversion contexts made a backend call"
 print(rscript(args.root / "sdk/r/tests/toolbox-json.R", args.root / "conformance/toolbox"), end="", flush=True)
-for script in ("contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R"):
+for script in ("contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R", "frame-serialization.R"):
     print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
 
 print(rscript(args.root / "sdk/r/tests/release-cases.R", args.root / "construction/stub.json"),

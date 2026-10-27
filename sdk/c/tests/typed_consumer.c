@@ -1,4 +1,7 @@
 #include "typed_api_driver.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>

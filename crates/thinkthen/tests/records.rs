@@ -2,6 +2,9 @@
 //! `decide` over a stream of records through the library: ids, pointers,
 //! batching, order and failures.
 
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use std::sync::{Arc, Condvar, Mutex, mpsc};
 use std::thread;
 

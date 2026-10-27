@@ -1,5 +1,5 @@
 # Generated native requirement. Do not edit.
-.tt_abi_version <- 131073L
+.tt_abi_version <- 131074L
 .tt_abi_version_export <- "wrap__r_abi_version"
 .tt_abi_code <- "usage.abi"
 .tt_abi_message <- "the native ABI is incompatible"

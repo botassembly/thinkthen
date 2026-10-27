@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Check release versions, CLI record framing and build attestation contracts."""
+import json
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+import zipfile
+
+from release_workflow import ROOT, version
+import release_windows_check
+
+
+class ReleaseScripts(unittest.TestCase):
+    def test_release_credentials_reach_only_their_own_upload(self):
+        subprocess.run(['ruby', ROOT / 'scripts/release-workflow-check', '--self-test'], check=True)
+
+    def test_ruby_version_mismatch_refuses_release(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-release-version-') as temporary:
+            source = Path(temporary)
+            # Copy only tracked manifests, never warm build trees or home config.
+            tracked = subprocess.check_output(['git', 'ls-files'], cwd=ROOT, text=True).splitlines()
+            names = {'Cargo.toml', 'pyproject.toml', 'package.json', 'package-lock.json',
+                     'pom.xml', 'DESCRIPTION', 'build.zig.zon', 'version.rb', 'thinkthen-c.pc.in'}
+            for name in tracked:
+                path = Path(name)
+                if path.name in names or path.suffix in ('.csproj', '.control', '.sql'):
+                    destination = source / path
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(ROOT / path, destination)
+            (source / 'scripts').mkdir()
+            shutil.copy2(ROOT / 'scripts/release_metadata.py', source / 'scripts/release_metadata.py')
+            command = [sys.executable, source / 'scripts/release_metadata.py']
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            (source / 'sdk/ruby/lib/thinkthen/version.rb').write_text('module ThinkThen\n  VERSION = "0.0.0"\nend\n')
+            result = subprocess.run(command, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'release gate accepted a wrong Ruby version')
+            self.assertIn('sdk/ruby/lib/thinkthen/version.rb', result.stderr)
+
+    def test_windows_smoke_preserves_construction_list_record(self):
+        cases = json.loads((ROOT / 'construction/stub.json').read_text())
+        first = next(case for case in cases if case['request']['question']['function'] == 'decide')
+        self.assertEqual(first['request']['records'], [[]])
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-smoke-') as temporary:
+            package = Path(temporary)
+            checks = package / 'checks'
+            checks.mkdir()
+            shutil.copy2(ROOT / 'construction/stub.json', checks / 'stub.json')
+            shutil.copy2(ROOT / 'schemas/contract.json', checks / 'contract.json')
+            shutil.copy2(ROOT / 'scripts/release/native_cases.py', checks / 'native_cases.py')
+            (checks / 'c-consumer.exe').write_bytes(b'fixture consumer')
+            for family, files in {'command': ['thinkthen.exe'], 'c': ['bin/thinkthen_ffi.dll']}.items():
+                with zipfile.ZipFile(package / (family + '.zip'), 'w') as archive:
+                    for name in files:
+                        archive.writestr(name, b'fixture image')
+            calls = []
+
+            def run(args, **options):
+                calls.append((args, options.get('input')))
+                if args[-1] == '--version':
+                    output = 'thinkthen ' + version() + ' (contract 0)'
+                elif Path(args[-3]).name == 'c-consumer.exe':
+                    case = next(case for case in cases if json.loads(args[-2]) == case['request'])
+                    output = json.dumps({'rows': case['expected']})
+                else:
+                    self.assertIn('jsonl', args)
+                    self.assertEqual(options['input'], b'[]\n')
+                    self.assertEqual(json.loads(options['input']), first['request']['records'][0])
+                    output = json.dumps(first['expected'][0])
+                return subprocess.CompletedProcess(args, 0, output.encode(), b'')
+
+            build = {'version': version(), 'packages': {'command': 'command.zip', 'c': 'c.zip'}}
+            with patch.object(release_windows_check, 'inventory', return_value=build), \
+                 patch.object(release_windows_check, 'pe'), \
+                 patch.object(release_windows_check, 'wine_executable', return_value='fixture-wine'), \
+                 patch.object(release_windows_check.subprocess, 'run', side_effect=run):
+                release_windows_check.smoke(package)
+            self.assertEqual(len(calls), len(cases) + 2)
+
+    def test_release_assets_have_provenance_before_upload(self):
+        workflow = (ROOT / '.github/workflows/release-prepare.yml').read_text()
+        bundle = workflow.split('\n  bundle:\n', 1)[1].split('\n  draft:\n', 1)[0]
+        self.assertIn('id-token: write', bundle)
+        self.assertIn('attestations: write', bundle)
+        attest = re.search(r'uses: actions/attest@[0-9a-f]{40}\b', bundle)
+        self.assertIsNotNone(attest, 'release provenance action must be pinned')
+        self.assertIn("subject-path: 'release/*'", bundle)
+        self.assertNotIn('if: ', bundle[attest.start():].split('- uses: actions/upload-artifact', 1)[0])
+        self.assertLess(bundle.index('scripts/release-workflow attach'), attest.start())
+        self.assertLess(attest.start(), bundle.index('uses: actions/upload-artifact'))
+
+
+if __name__ == '__main__':
+    unittest.main()

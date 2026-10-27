@@ -9,7 +9,8 @@ mod saved_run;
 mod syntax;
 mod table;
 
-use crate::{Cancel, Code, Error, ErrorKind, Family};
+use crate::core::local;
+use crate::{Cancel, Code, Error, Family};
 use std::io::{self, Write};
 use std::process::ExitCode;
 use std::sync::{Arc, Mutex, PoisonError};
@@ -108,11 +109,6 @@ fn broken_pipe(error: &Error) -> bool {
 fn evidence(line: &str) -> &str {
     let line = line.strip_suffix('\n').unwrap_or(line);
     line.strip_suffix('\r').unwrap_or(line)
-}
-
-/// A local failure that says `message`.
-fn local(message: &str) -> Error {
-    Error::new(ErrorKind::Io, message)
 }
 
 fn report(error: &Error) {

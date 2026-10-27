@@ -1,6 +1,9 @@
-#![cfg(feature = "command")]
 #![cfg(test)]
 //! Filtering input bytes and rendering details through the command.
+#![cfg(feature = "command")]
+
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
 
 mod support;
 
@@ -128,6 +131,7 @@ fn invalid_text_reports_failure_and_keeps_preceding_passes() {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn closed_output_reports_local_failure_for_originals_and_details() {
     for args in [&["--from", "lines"][..], &["--from", "lines", "--json"][..]] {

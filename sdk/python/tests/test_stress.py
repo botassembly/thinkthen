@@ -16,6 +16,49 @@ from api_support import isolated_environment  # noqa: F401
 
 import thinkthen as tt
 
+_RESOURCE_CHECK = """import json,runpy,sys
+from pathlib import Path
+root=Path(sys.argv[1])
+sys.path.insert(0,str(root/'scripts'))
+runner=runpy.run_path(str(root/'scripts/stress-adapters.py'))
+table=json.loads((root/'conformance/stress.json').read_text())
+healthy=next(s for s in table['scenarios'] if s['name']=='healthy')
+result={}
+try:
+    runner['run']([sys.executable,sys.argv[2]],table,'systemone',healthy,
+        table['records']['smoke'],rounds=table['records']['soak_rounds'],
+        resources=True,surface='python',result=result)
+finally:
+    print(json.dumps(result),flush=True)
+"""
+
+
+def test_resource_failure_prints_metrics(tmp_path: Path) -> None:
+    (tmp_path / "conformance").mkdir()
+    (tmp_path / "conformance/stress.json").write_text(
+        json.dumps(
+            {
+                "scenarios": [{"name": "healthy"}],
+                "records": {"smoke": 1, "soak_rounds": 20},
+            }
+        )
+    )
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "scripts/stress-adapters.py").write_text(
+        "def run(*args, **kwargs):\n"
+        "    kwargs['result']['resources'] = {'growth': {'passed': False}}\n"
+        "    raise RuntimeError('retained resources fail growth criterion')\n"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", _RESOURCE_CHECK, str(tmp_path), "unused-adapter"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode != 0
+    assert "retained resources fail growth criterion" in completed.stderr
+    assert json.loads(completed.stdout) == {"resources": {"growth": {"passed": False}}}
+
 
 def settings(table: dict[str, Any], wire: str, url: str) -> dict[str, Any]:
     client = table["client"]
@@ -148,15 +191,7 @@ def test_shared_stress_preserves_positions_and_same_client_threads() -> None:
             [
                 sys.executable,
                 "-c",
-                (
-                    "import json,runpy,sys; from pathlib import Path; "
-                    "root=Path(sys.argv[1]); sys.path.insert(0,str(root/'scripts')); "
-                    "runner=runpy.run_path(str(root/'scripts/stress-adapters.py')); "
-                    "table=json.loads((root/'conformance/stress.json').read_text()); "
-                    "healthy=next(s for s in table['scenarios'] if s['name']=='healthy'); "
-                    "runner['run']([sys.executable,sys.argv[2]],table,'systemone',healthy,"
-                    "table['records']['smoke'],rounds=table['records']['soak_rounds'],resources=True,surface='python')"
-                ),
+                _RESOURCE_CHECK,
                 str(root),
                 str(Path(__file__).resolve()),
             ],

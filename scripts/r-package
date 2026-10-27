@@ -21,6 +21,7 @@ out.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory() as temporary:
     stage = pathlib.Path(temporary) / "thinkthen"
     shutil.copytree(root / "sdk/r", stage, ignore=shutil.ignore_patterns("native", "tests"))
+    shutil.copy2(root / "scripts/native-frameworks", stage / "src/native-frameworks")
     description = stage / "DESCRIPTION"
     package = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]
     description.write_text(re.sub(r"Rust \(>= [^)]*\)",

@@ -1,0 +1,25 @@
+[advisories]
+db-path = "$THINKTHEN_ADVISORY_DB_ROOT"
+db-urls = ["https://github.com/RustSec/advisory-db"]
+yanked = "deny"
+# The existing R adapter uses this compile-time macro; product ruling keeps R unchanged.
+ignore = [{ id = "RUSTSEC-2024-0436", reason = "compile-time macro via extendr-api 0.8.2" }]
+
+[licenses]
+include-dev = true
+allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unicode-3.0", "Zlib", "CC0-1.0", "Unlicense", "CDLA-Permissive-2.0"]
+
+# Existing test-only schema dependency.
+[[licenses.exceptions]]
+crate = "borrow-or-share@=0.2.4"
+allow = ["MIT-0"]
+
+# Existing Python build-time target description dependency.
+[[licenses.exceptions]]
+crate = "target-lexicon@=0.13.5"
+allow = ["Apache-2.0 WITH LLVM-exception"]
+
+# Header generation runs only in development; cbindgen ships in no artifact.
+[[licenses.exceptions]]
+crate = "cbindgen@=0.29.4"
+allow = ["MPL-2.0"]

@@ -53,9 +53,10 @@ pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
             } else {
                 Some(text(allowed, allowed_len)?)
             };
-            let engine = thinkthen_sql::client_with_policy(text(settings, len)?, policy, |name| {
-                std::env::var(name).ok()
-            })?;
+            let engine = crate::engine(native::sql_settings_with_policy(
+                text(settings, len)?,
+                policy,
+            )?)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })
@@ -75,8 +76,7 @@ pub unsafe extern "C" fn thinkthen_sql_client_open(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let engine =
-                thinkthen_sql::client(text(settings, len)?, |name| std::env::var(name).ok())?;
+            let engine = crate::engine(native::sql_settings(text(settings, len)?)?)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })

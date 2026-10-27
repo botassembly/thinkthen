@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Failed HTTP rows retain a bounded reason without disclosing credentials.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{Loopback, Reply};
 use serde_json::json;
 use thinkthen::{Decide, Key, Record, Settings};

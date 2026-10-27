@@ -76,7 +76,7 @@ def source_package(stage, out, name, version, native, import_library):
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'include/thinkthen.h')
     if name == 'swift': (package / 'VERSION').write_text(version + '\n')
     copy(ROOT / 'LICENSE', package / 'LICENSE')
-    if name == 'cpp': cmake_config(package, 'Cpp', 'native/win-x64/thinkthen_ffi.dll', 'native/win-x64/thinkthen_ffi.lib', version)
+    if name == 'cpp': cmake_config(package, 'Cpp', c_prefix=stage / 'c')
     result = out / f'{name}/thinkthen-{name}-{version}-windows-x86_64.zip'
     zip_package(package, result)
     return result
@@ -169,7 +169,7 @@ def candidate(destination):
         copy(ROOT / 'sdk/c/README.md', c / 'README.md')
         copy(ROOT / 'LICENSE', c / 'LICENSE')
         for leftover in [*list((c / 'bin').glob('*.lib')), *list((c / 'bin').glob('*.exp'))]: leftover.unlink()
-        cmake_config(c, 'C', 'bin/thinkthen_ffi.dll', 'lib/thinkthen_ffi.lib', version)
+        cmake_config(c, 'C', native=native / 'thinkthen_ffi.dll', import_library=native / 'thinkthen_ffi.dll.lib')
         packages = {'command': command_path, 'c': out / f'c/thinkthen-c-{version}-windows-x86_64.zip'}
         assert not any('jansson' in p.name.lower() for directory in ('bin', 'lib', 'include')
                        for p in (c / directory).rglob('*') if p.is_file())
@@ -289,35 +289,26 @@ def finish_readmes(out, packages):
     (out / 'INSTALL.md').write_text('\n'.join(commands))
 
 
-def cmake_config(package, language, dll, library, version):
-    folder = package / f'lib/cmake/ThinkThen{language}'
-    folder.mkdir(parents=True, exist_ok=True)
-    target = 'C'
-    lines = [
-        'get_filename_component(_thinkthen_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)',
-        f'if(NOT TARGET ThinkThen::{target})',
-        f'  add_library(ThinkThen::{target} SHARED IMPORTED)',
-        f'  set_target_properties(ThinkThen::{target} PROPERTIES',
-        f'    IMPORTED_LOCATION "${{_thinkthen_prefix}}/{dll}"',
-        f'    IMPORTED_IMPLIB "${{_thinkthen_prefix}}/{library}"',
-        '    INTERFACE_INCLUDE_DIRECTORIES "${_thinkthen_prefix}/include")',
-        'endif()',
-    ]
-    if language != 'C':
-        lines = ['include(CMakeFindDependencyMacro)', f'find_dependency(ThinkThenC {version} CONFIG REQUIRED)',
-                 'get_filename_component(_thinkthen_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)']
-        lines += ['add_library(ThinkThen::Cpp INTERFACE IMPORTED)',
-                  'set_target_properties(ThinkThen::Cpp PROPERTIES',
-                  '  INTERFACE_INCLUDE_DIRECTORIES "${_thinkthen_prefix}/include"',
-                  '  INTERFACE_LINK_LIBRARIES ThinkThen::C INTERFACE_COMPILE_FEATURES cxx_std_17)']
-    (folder / f'ThinkThen{language}Config.cmake').write_text('\n'.join(lines) + '\n')
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.cmake') as recipe:
-        recipe.write('include(CMakePackageConfigHelpers)\n'
-                     'write_basic_package_version_file("${OUTPUT}" VERSION "${VERSION}" '
-                     'COMPATIBILITY SameMinorVersion ARCH_INDEPENDENT)\n')
-        recipe.flush()
-        run('cmake', f'-DVERSION={version}',
-            f'-DOUTPUT={folder / f"ThinkThen{language}ConfigVersion.cmake"}', '-P', recipe.name)
+def cmake_config(package, language, *, native=None, import_library=None, c_prefix=None):
+    """Install every platform's configs from the SDK's one CMake source."""
+    with tempfile.TemporaryDirectory() as scratch:
+        options = [
+            '-DCMAKE_SYSTEM_NAME=Windows', '-DCMAKE_C_COMPILER=clang-cl',
+            '-DCMAKE_CXX_COMPILER=clang-cl', '-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY',
+            '-DCMAKE_INSTALL_LIBDIR=lib', f'-DCMAKE_INSTALL_PREFIX={package}',
+        ]
+        if language == 'C':
+            # Use the public import library name on every Windows producer.
+            implib = Path(scratch) / 'thinkthen_ffi.lib'
+            shutil.copy2(import_library, implib)
+            options += [f'-DTHINKTHEN_FFI_LIBRARY={native}',
+                        f'-DTHINKTHEN_FFI_IMPLIB={implib}',
+                        f'-DTHINKTHEN_FFI_INCLUDE_DIR={ROOT / "crates/thinkthen-ffi/include"}']
+        else:
+            options += [f'-DCMAKE_PREFIX_PATH={c_prefix}']
+        run('cmake', '-S', ROOT / 'sdk' / ('c' if language == 'C' else 'cpp'),
+            '-B', scratch, *options)
+        run('cmake', '--install', scratch)
 
 
 
@@ -326,6 +317,7 @@ def check_tools(out):
     copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
     copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
     copy(ROOT / 'scripts/release-check', out / 'check')
+    copy(ROOT / 'scripts/release_records.py', out / 'release_records.py')
     copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
     copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
     copy(ROOT / 'scripts/package_inventory.py', out / 'package_inventory.py')

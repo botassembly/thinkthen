@@ -172,10 +172,6 @@ impl BackendTable {
                 limits: entry.limits,
             });
         };
-        #[cfg(all(feature = "fixture-routing", debug_assertions))]
-        let fixture_base = crate::test_fixture::route(name);
-        #[cfg(all(feature = "fixture-routing", debug_assertions))]
-        let url = fixture_base.as_deref().or(url);
         let base = url
             .map(str::to_owned)
             .or_else(|| entry.address_variable.as_deref().and_then(&variable))

@@ -1,7 +1,7 @@
 //! One public-boundary driver for corpus replay and coverage-guided fuzzing.
 use std::sync::OnceLock;
 use thinkthen::{
-    Backend, Code, Decide, Engine, Error, Family, Question, Record, Settings, Toolbox,
+    BackendName, Code, Decide, Engine, Error, Family, Question, Record, Settings, Toolbox,
 };
 
 fn usage<T>(result: Result<T, Error>) -> Result<T, Code> {
@@ -34,7 +34,7 @@ pub(crate) fn exercise(data: &[u8]) -> Admission {
     static QUESTION: OnceLock<Decide> = OnceLock::new();
     let engine = ENGINE.get_or_init(|| {
         Settings::default()
-            .with_backend(Backend::Stub)
+            .with_backend(BackendName::Stub)
             .engine(|_| None)
             .unwrap()
     });

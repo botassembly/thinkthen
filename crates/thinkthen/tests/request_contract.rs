@@ -1,5 +1,8 @@
 #![cfg(test)]
 //! Request cancellation, canonical schema data and evidence identity.
+#[path = "../../loopback/src/lib.rs"]
+pub mod loopback;
+
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
 use thinkthen::{BackendName, Batch, Cancel, Decide, Key, OffsetUnit, Record, Request, Settings};

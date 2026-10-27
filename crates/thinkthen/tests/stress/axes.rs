@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! The same event-driven axes run with bounded inputs and full-volume inputs.
 use super::{records, rust_rows, stress_engine};
-use loopback::{HeldReply, StressFixture};
+use crate::loopback::{HeldReply, StressFixture};
 use serde_json::Value;
 use std::sync::{Arc, Condvar, Mutex, mpsc};
 use std::time::Duration;
@@ -17,7 +17,7 @@ fn healthy(table: &Value) -> &Value {
         .find(|case| case["name"] == "healthy")
         .unwrap()
 }
-fn server(fixture: &StressFixture) -> &loopback::Loopback {
+fn server(fixture: &StressFixture) -> &crate::loopback::Loopback {
     let StressFixture::Server(server) = fixture else {
         panic!("healthy server required")
     };
@@ -291,7 +291,7 @@ pub(super) fn cases(table: &Value, count: usize) {
     }
 }
 fn bounded(axis: Axis) {
-    let table = loopback::stress_table().unwrap();
+    let table = crate::loopback::stress_table().unwrap();
     let count = table["records"]["smoke"].as_u64().unwrap() as usize;
     run(&table, count, axis);
 }
