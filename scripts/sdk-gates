@@ -4,10 +4,11 @@ set -eu
 cd "$(dirname "$0")/.."
 failed=
 for gate in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate zig-sdk-gate swift-gate go-gate jvm-gate csharp-gate duckdb-gate sqlite-gate postgres-gate; do
-    if [ -f "scripts/$gate" ]; then
-        if ! ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate"; then
-            failed="$failed $gate"
-        fi
+    if [ ! -f "scripts/$gate" ]; then
+        printf 'Missing SDK gate: scripts/%s\n' "$gate" >&2
+        failed="$failed $gate"
+    elif ! ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate"; then
+        failed="$failed $gate"
     fi
 done
 if [ -n "$failed" ]; then

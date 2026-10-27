@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Check library-only credential secrecy through an independent Rust consumer."""
+import json
+from pathlib import Path
+import tempfile
+from library_trace import check
+
+root = Path(__file__).resolve().parent.parent
+with tempfile.TemporaryDirectory(prefix='thinkthen-library-trace-') as temporary:
+    consumer = Path(temporary)
+    (consumer / 'Cargo.toml').write_text(
+        '[package]\nname="library-trace-consumer"\nversion="0.0.0"\nedition="2024"\n'
+        '[dependencies]\nthinkthen={path=' + json.dumps(str(root / 'crates/thinkthen'))
+        + ',default-features=false}\n')
+    check(consumer)

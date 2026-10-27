@@ -134,8 +134,6 @@ def cli():
 if __name__ == '__main__':
     os.chdir(ROOT)
     os.umask(0o077)
-    if not os.environ.get('PM_JOB'):
-        sys.exit('Run Linux binding preparation and gates through pm job')
     try:
         if sys.argv[1:] == ['--prepare']:
             prepare()

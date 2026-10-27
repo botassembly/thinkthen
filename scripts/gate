@@ -2,6 +2,19 @@
 # The gate: formatting, lint with warnings denied, then every test.
 set -eu
 cd "$(dirname "$0")/.."
+# Check host commands before release checks or compilation. SDK-specific prepared
+# tools retain their own selectors and version checks in their owning gates.
+for tool in python3 git cargo rustc cc c++ make cmake pkg-config uv node npm ruby R Rscript staticcheck; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        printf 'gate: required tool is missing: %s\n' "$tool" >&2
+        exit 1
+    fi
+done
+if [ "$(uname -s)" = Linux ] && ! command -v docker >/dev/null 2>&1; then
+    printf 'gate: required tool is missing: docker\n' >&2
+    exit 1
+fi
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
 python3 scripts/release_metadata.py
 scripts/release-preparation-test
 scripts/release-staging-test
@@ -23,7 +36,7 @@ cargo fmt --all --check
 scripts/core-check
 scripts/fixture-routing-check
 cargo clippy --workspace --all-targets --locked -- -D warnings
-if [ -f scripts/c-gate ]; then scripts/c-gate; fi
+scripts/c-gate
 cargo test --workspace --locked
 guide_root=$PWD
 guide_scratch=$(mktemp -d)

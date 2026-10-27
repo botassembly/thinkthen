@@ -11,8 +11,8 @@ license = "MIT"
 repository = "https://github.com/botassembly/thinkthen"
 
 [workspace.dependencies]
-# Final artifacts disable dependency wire tracing; reusable libraries omit this dependency.
-log = { version = "0.4", features = ["max_level_debug"] }
+# Every HTTP consumer disables dependency wire tracing to protect credentials.
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_debug"] }
 thinkthen = { path = "crates/thinkthen", version = "0.2.0", default-features = false }
 loopback = { path = "crates/loopback" }
 serde = { version = "1", features = ["derive"] }

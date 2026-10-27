@@ -422,7 +422,7 @@ fn help_version_and_completions_need_no_backend_and_reveal_no_credentials() {
                 .env("THINKTHEN_API_KEY", KEY)
                 .env("OPENAI_API_KEY", KEY)
                 .env("THINKTHEN_BACKEND", "invalid")
-                .env("THINKTHEN_URL", "not a URL"),
+                .env("THINKTHEN_BASE_URL", "not a URL"),
             b"",
         );
         assert_eq!(output.status.code(), Some(0), "{args:?}: {output:?}");

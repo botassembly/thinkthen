@@ -25,7 +25,7 @@ fn saved_requests_keep_code_point_offsets_in_answers_and_detail() {
         let mut child = support::command()
             .args(["run", "--json"])
             .arg(path)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

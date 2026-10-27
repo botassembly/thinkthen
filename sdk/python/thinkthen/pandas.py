@@ -79,9 +79,11 @@ def _missing(value: object) -> bool:
 
 @pd.api.extensions.register_series_accessor("thinkthen")
 class ThinkThenAccessor(ColumnMethods[pd.DataFrame]):
+    def _missing(self, value: object) -> bool:
+        return _missing(value)
+
     def _records(self) -> Iterable[Any]:
-        for value in self._value:
-            yield None if _missing(value) else value
+        yield from self._value
 
     def _frame(self, function: str, rows: list[Any], question: object) -> pd.DataFrame:
         index = self._value.index.take([row.position - 1 for row in rows])

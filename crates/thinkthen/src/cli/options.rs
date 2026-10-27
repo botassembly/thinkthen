@@ -138,7 +138,7 @@ impl Output {
 
 pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
     let mut settings = Map::new();
-    for key in ["backend", "model", "url", "batch"] {
+    for key in ["backend", "model", "batch"] {
         if let Some(text) = value(matches, key) {
             settings.insert(
                 key.into(),
@@ -150,12 +150,10 @@ pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
             );
         }
     }
-    Settings::from_json(&Value::Object(settings).to_string())?.engine(|key| {
-        // The command's URL option is resolved above; the retired variable is not a fallback.
-        (key != "THINKTHEN_BASE_URL")
-            .then(|| std::env::var(key).ok())
-            .flatten()
-    })
+    if let Some(url) = explicit(matches, "url") {
+        settings.insert("url".into(), url.into());
+    }
+    Settings::from_json(&Value::Object(settings).to_string())?.engine(|key| std::env::var(key).ok())
 }
 
 /// Select diagnostic styling before Clap renders syntax errors or help.

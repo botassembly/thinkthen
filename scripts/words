@@ -10,7 +10,7 @@ import sys
 root = pathlib.Path(__file__).resolve().parent.parent
 paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).split(b"\0")
 forbidden = re.compile(
-    r"legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project",
+    r"legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project|pm\.ticket=[0-9]+",
     re.IGNORECASE,
 )
 if len(sys.argv) > 2:

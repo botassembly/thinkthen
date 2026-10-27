@@ -22,7 +22,7 @@ from ._questions import (
     TagQuestion,
     Toolbox,
 )
-from ._runtime import Cancel
+from ._runtime import Cancel, normalize
 from ._types import RelationRule, Strings, Threshold
 
 
@@ -50,6 +50,9 @@ class ColumnMethods(ABC, Generic[F]):
     def _records(self) -> Iterable[Any]: ...
     @abstractmethod
     def _frame(self, function: str, rows: list[Any], question: object) -> F: ...
+    def _missing(self, value: object) -> bool:
+        return False
+
     def _call(
         self,
         function: str,
@@ -65,6 +68,7 @@ class ColumnMethods(ABC, Generic[F]):
             function,
             question,
             list(self._records()),
+            lambda value: normalize(value, self._missing),
             name=name,
             cancel=cancel,
             **options,

@@ -186,12 +186,12 @@ def images(scratch):
     docker.chmod(0o755)
     env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'])
     capture = scratch / 'docker-request'
-    for ticket in ('0234 first-job', '0085 next-job'):
+    for ticket in ('first-job preparation', 'next-job preparation'):
         subprocess.run([sys.executable, ROOT / 'scripts/floors/prepare-image'],
                        env=dict(env, PM_JOB=ticket, CAPTURE=str(capture)), check=True, capture_output=True)
         request = capture.read_bytes()
         assert b'pm.ticket' not in request
-        if ticket.startswith('0234'):
+        if ticket.startswith('first-job'):
             first = request
         else:
             assert request == first, 'job identity changed the reusable image build'
@@ -234,6 +234,7 @@ def node(scratch):
     try:
         os.environ['HOME'] = str(home)
         os.environ.pop('THINKTHEN_NODE_HOME', None)
+        os.environ.pop('THINKTHEN_FLOOR_BUILD', None)
         os.environ['PATH'] = str(old) + os.pathsep + environment['PATH']
         action()
         assert len(downloads) == 1 and '/v22.12.0/' in downloads[0]
@@ -255,3 +256,5 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-preparation-') as temporary:
     windows(scratch)
     images(scratch)
     node(scratch)
+
+subprocess.run([sys.executable, ROOT / "scripts/release-documentation-test"], check=True)

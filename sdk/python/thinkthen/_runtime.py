@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Callable, Iterable, Iterator
+from datetime import date
 from threading import Lock
 from typing import NoReturn, TypeVar, cast
 from weakref import WeakMethod
@@ -71,33 +73,63 @@ def binding(call: Callable[[], T]) -> T:
         raise kind(typed, message) from None
 
 
-def _converted(convert: Callable[[], str]) -> str | None:
+def _converted(convert: Callable[[], str]) -> str | Exception:
     try:
         value = convert()
         value.encode("utf-8")
         return value
-    except Exception:  # noqa: BLE001 - arbitrary caller conversion can raise.
-        return None
+    except Exception as error:  # noqa: BLE001 - arbitrary caller conversion can raise.
+        return error
 
 
-def _json(value: object) -> str | None:
-    return _converted(lambda: json.dumps(value, ensure_ascii=False, allow_nan=False))
+def _json(
+    value: object, convert: Callable[[object], object] | None = None
+) -> str | Exception:
+    return _converted(
+        lambda: json.dumps(
+            value if convert is None else convert(value),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+    )
 
 
 def encode(value: object, reject: Callable[[], NoReturn]) -> str:
     text = _json(value)
-    if text is None:
+    if isinstance(text, Exception):
         binding(reject)
     return text
 
 
-def source(records: Iterable[Record]) -> Iterator[tuple[bool, str | None, object]]:
-    for record in records:
-        if isinstance(record, str):
-            text = _converted(lambda: record)  # noqa: B023
-            yield text is not None, text, record
+def normalize(value: object, missing: Callable[[object], bool]) -> object:
+    """Translate frame values into JSON values before shared serialization."""
+    if missing(value) or isinstance(value, float) and math.isnan(value):
+        return None
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: normalize(item, missing) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [normalize(item, missing) for item in value]
+    return value
+
+
+def source(
+    records: Iterable[Record],
+    failures: dict[int, str],
+    convert: Callable[[object], object] | None = None,
+) -> Iterator[tuple[bool, str | None, object]]:
+    for position, record in enumerate(records, 1):
+        text = (
+            _converted(lambda: record)  # noqa: B023 - conversion runs immediately.
+            if isinstance(record, str)
+            else _json(record, convert)
+        )
+        if isinstance(text, Exception):
+            failures[position] = f"{type(text).__name__}: {text}"
+            yield False, None, record
         else:
-            yield False, _json(record), record
+            yield isinstance(record, str), text, record
 
 
 class Cancel:

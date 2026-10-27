@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
+from dataclasses import replace
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
@@ -26,12 +27,14 @@ class RowStream(Iterator[R_co], Generic[R_co]):
     def __init__(
         self,
         native: _native.NativeStream,
+        failures: dict[int, str],
         remaining: int = 0,
         *,
         function: str,
         question: object,
     ) -> None:
         self._native = native
+        self._failures = failures
         self._function = function
         self._question = question
         self._remaining = remaining
@@ -50,6 +53,12 @@ class RowStream(Iterator[R_co], Generic[R_co]):
                 raise StopIteration
             self._remaining = max(0, self._remaining - 1)
             row = row_from_json(raw[0], raw[1], raw[3])
+            cause = self._failures.pop(row.position, None)
+            if cause is not None and row.error is not None:
+                row = replace(
+                    row,
+                    error=replace(row.error, message=f"{row.error.message}: {cause}"),
+                )
             if row.error is not None:
                 logging.getLogger("thinkthen").debug(
                     "%s %s", row.function.value, row.error.code.value
@@ -69,6 +78,7 @@ class RowStream(Iterator[R_co], Generic[R_co]):
         if not self._closed:
             self._closed = True
             self._native.close()
+            self._failures.clear()
 
     def __enter__(self) -> RowStream[R_co]:
         return self

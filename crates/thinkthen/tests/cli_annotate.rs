@@ -57,7 +57,7 @@ fn toolbox_command_prints_one_named_row_per_input_line() {
         .arg("annotate")
         .arg(definition)
         .args(["--from", "lines", "--json"])
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -133,7 +133,7 @@ fn flags_override_toolbox_settings_and_entry_failure_sets_exit_code() {
             "3",
         ])
         .env("THINKTHEN_BATCH", "1")
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

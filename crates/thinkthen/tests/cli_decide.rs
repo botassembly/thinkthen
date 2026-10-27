@@ -19,7 +19,7 @@ fn run_on(server: &Loopback, args: &[&str], key: Option<&str>, input: &[u8]) -> 
     let mut command = support::command();
     command
         .args(args)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -71,7 +71,7 @@ fn the_url_option_beats_the_environment() {
     let mut command = support::command();
     let output = command
         .args(["decide", "Is it?", "--url", server.base()])
-        .env("THINKTHEN_URL", "http://127.0.0.1:9/v1")
+        .env("THINKTHEN_BASE_URL", "http://127.0.0.1:9/v1")
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::null())
         .output()

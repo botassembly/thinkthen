@@ -32,7 +32,7 @@ fn rank_prints_originals_or_positions_and_applies_levels_and_top() {
                     "--evidence",
                     "/body",
                 ])
-                .env("THINKTHEN_URL", server.base())
+                .env("THINKTHEN_BASE_URL", server.base())
                 .env("THINKTHEN_API_KEY", KEY)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -125,7 +125,7 @@ fn saved_rank_requests_retain_their_levels_and_evidence() {
             .arg("run")
             .arg("--json")
             .arg(&path)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -178,7 +178,7 @@ fn rank_preserves_text_framing() {
         let mut child = support::command()
             .args(["rank", "Priority?", "--level", "low", "--level", "high"])
             .args(args)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -211,7 +211,7 @@ fn rank_reports_closed_output_for_originals_and_details() {
                 "--from",
                 "lines",
             ])
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(stdout)
@@ -247,7 +247,7 @@ fn rank_refuses_zero_top_before_sending() {
             "--top",
             "0",
         ])
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .output()
         .unwrap();
@@ -286,7 +286,7 @@ fn rank_keeps_valid_rows_and_reports_invalid_text_as_a_failed_record() {
                 "--batch",
                 "1",
             ])
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

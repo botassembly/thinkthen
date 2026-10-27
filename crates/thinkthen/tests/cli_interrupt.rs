@@ -171,7 +171,7 @@ fn completion_cancellation_precedes_a_later_broken_stdout() {
         }
         let mut child = command
             .env("THINKTHEN_API_KEY", KEY)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .stdin(Stdio::piped())
             .stdout(Stdio::from(OwnedFd::from(writer)))
             .stderr(Stdio::piped())

@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Check the limits and upgrade notes delivered in the release note."""
+from release_install import release_note
+
+note = release_note('0.2.0', {})
+for surface in ('Ruby memory', 'C# memory', 'SQLite memory', 'PostgreSQL memory',
+                'SQLite joins', 'DuckDB loading', 'Unsigned macOS', 'Unsigned Windows',
+                'Database cancellation'):
+    assert '| ' + surface in note, surface
+assert note.index('## Known limits') < note.index('## Install')
+assert '## For 0.1 users' in note
+assert 'Botassembly.ThinkThen' in note
+assert 'github.com/botassembly/thinkthen/sdk/go/thinkthen' in note
+assert '0.1.2' in note
+assert r'Unblock-File .\thinkthen-0.2.0-windows-x86_64.zip' in note
+print('Release limits and upgrade notes: PASS')

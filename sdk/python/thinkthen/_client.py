@@ -5,7 +5,7 @@ from __future__ import annotations
 import atexit
 import json
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import fields
 from threading import RLock
 from typing import Any, TypeVar, overload
@@ -175,6 +175,8 @@ class Client:
         function: str,
         question: object,
         records: Iterable[Any],
+        convert: Callable[[object], object] | None = None,
+        /,
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
@@ -208,10 +210,11 @@ class Client:
                 if isinstance(records, (list, tuple))
                 else engine.start
             )
+            failures: dict[int, str] = {}
             native = binding(
                 lambda: start(
                     request,
-                    source(records),
+                    source(records, failures, convert),
                     handle._native,
                     function == "filter",
                     loaded,
@@ -219,6 +222,7 @@ class Client:
             )
             stream: RowStream[Any] = RowStream(
                 native,
+                failures,
                 len(records) if isinstance(records, (list, tuple)) else 0,
                 function=function,
                 question=shape_question,

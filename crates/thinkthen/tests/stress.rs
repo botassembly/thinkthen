@@ -123,12 +123,13 @@ fn spawn_command(
             "--json",
             "--backend",
             backend,
+            "--url",
+            url,
             "--model",
             table["client"]["model"].as_str().unwrap(),
             "--batch",
             &table["client"]["batch"].to_string(),
         ])
-        .env("THINKTHEN_URL", url)
         .env("THINKTHEN_API_KEY", KEY)
         .env("OPENAI_API_KEY", KEY)
         .stdin(input)

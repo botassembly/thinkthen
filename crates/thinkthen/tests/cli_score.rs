@@ -16,7 +16,7 @@ fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
         .arg("score")
         .arg("How urgent?")
         .args(args)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

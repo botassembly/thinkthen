@@ -21,7 +21,7 @@ fn run(server: &Loopback, extra: &[&str], input: &str) -> Output {
             "shipping",
         ])
         .args(extra)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

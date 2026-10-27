@@ -18,7 +18,7 @@ fn run(server: &Loopback, args: &[&str], batch: Option<&str>, input: &[u8]) -> O
         .arg("decide")
         .arg("Is it a refund request?")
         .args(args)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -271,7 +271,7 @@ fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
         let output = support::command()
             .args(["decide", "Is it?"])
             .args(args)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(File::open(".").unwrap())
             .output()
@@ -290,7 +290,7 @@ fn an_output_write_error_stops_the_reading() {
         .args([
             "decide", "Is it?", "--from", "lines", "--json", "--batch", "1",
         ])
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(stdout)

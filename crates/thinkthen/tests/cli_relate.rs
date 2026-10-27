@@ -10,7 +10,7 @@ fn run(server: &Loopback, args: &[&str], input: &str) -> Output {
     let mut child = support::command()
         .arg("relate")
         .args(args)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

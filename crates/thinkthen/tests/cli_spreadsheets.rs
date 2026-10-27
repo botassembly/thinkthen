@@ -880,7 +880,7 @@ fn completion_failed_table_records_exit_six() {
             .args(["--from", "csv", "--column", "body", "--into", "ready"])
             .arg(&input)
             .env("THINKTHEN_API_KEY", loopback::KEY)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .output()
             .unwrap();
         assert_eq!(

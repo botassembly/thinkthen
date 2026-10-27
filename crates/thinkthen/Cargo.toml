@@ -19,7 +19,7 @@ native = []
 schema = []
 fixture-routing = []
 stream = ["dep:futures-core"]
-command = ["dep:log", "dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
+command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
 
 [dependencies]
 futures-core = { version = "0.3", optional = true }
@@ -27,7 +27,8 @@ sha2.workspace = true
 thiserror.workspace = true
 unicode-general-category.workspace = true
 unicode-normalization.workspace = true
-log = { workspace = true, optional = true }
+# Every consumer must disable HTTP wire dumps, including library-only builds.
+log.workspace = true
 ctrlc = { version = "3.5", optional = true }
 clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "color", "suggestions", "string"], optional = true }
 clap_complete = { version = "4.5", optional = true }

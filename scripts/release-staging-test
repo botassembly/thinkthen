@@ -48,6 +48,34 @@ def attachments(scratch):
     print('Draft attachments preserve the independent SQLite archive from every platform', flush=True)
 
 
+def missing_tool(scratch):
+    source = scratch / 'missing-tool/scripts'
+    source.mkdir(parents=True)
+    shutil.copy2(ROOT / 'scripts/gate', source / 'gate')
+    binary = scratch / 'missing-tool/bin'
+    binary.mkdir()
+    # Only Python and shell setup tools are visible. The gate identifies Git before
+    # release script or compiler work in this otherwise incomplete checkout.
+    (binary / 'python3').symlink_to(sys.executable)
+    (binary / 'dirname').symlink_to(shutil.which('dirname'))
+    result = subprocess.run(['/bin/sh', source / 'gate'],
+                            env=dict(os.environ, PATH=str(binary)), capture_output=True, text=True)
+    assert result.returncode != 0, 'gate accepted a missing prerequisite'
+    assert 'gate: required tool is missing: git' in result.stderr, result.stderr
+    assert 'release_metadata' not in result.stderr, result.stderr
+    print('Gate names a missing prerequisite before running consumers', flush=True)
+
+
+def missing_gate(scratch):
+    source = scratch / 'missing-gate/scripts'
+    source.mkdir(parents=True)
+    shutil.copy2(ROOT / 'scripts/sdk-gates', source / 'sdk-gates')
+    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    assert result.returncode != 0, 'SDK dispatcher accepted missing gate scripts'
+    assert 'Missing SDK gate: scripts/python-gate' in result.stderr, result.stderr
+    print('SDK dispatcher rejects an incomplete checkout', flush=True)
+
+
 def zig(scratch, native):
     archive = source_package(scratch / 'stage', scratch / 'packages', 'zig', version(), native, native)
     package = scratch / 'package'
@@ -74,11 +102,11 @@ pub fn build(b: *std.Build) void {
     print('Extracted Windows Zig archive compiles a real consumer against its generated ErrorCode; no engine link', flush=True)
 
 
-if not os.environ.get('PM_JOB'):
-    sys.exit('run staging checks through pm job')
 with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as temporary:
     scratch = Path(temporary)
     checker(scratch)
     attachments(scratch)
+    missing_tool(scratch)
+    missing_gate(scratch)
     if len(sys.argv) == 2:
         zig(scratch, Path(sys.argv[1]).resolve())

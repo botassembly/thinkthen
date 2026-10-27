@@ -23,7 +23,7 @@ pub(super) fn command() -> Command {
             "Backend name [THINKTHEN_BACKEND; default: systemone]",
         ),
         ("model", "Model name [THINKTHEN_MODEL]"),
-        ("url", "Backend address [THINKTHEN_URL]"),
+        ("url", "Backend address"),
         ("batch", "Records per request [THINKTHEN_BATCH]"),
         (
             "from",

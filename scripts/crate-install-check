@@ -13,6 +13,7 @@ import tempfile
 
 from release_workflow import ROOT, run, version
 from release_sites import CRATES
+from build_targets import container_labels
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('crates', type=Path)
@@ -33,10 +34,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-crate-install-') as temporary
     (package / '.cargo-checksum.json').write_text(json.dumps({
         'package': hashlib.sha256(archive.read_bytes()).hexdigest(), 'files': files}))
     shutil.copy2(ROOT / 'scripts/crate_consumer.py', scratch / 'consumer.py')
+    shutil.copy2(ROOT / 'scripts/library_trace.py', scratch / 'library_trace.py')
     if args.container:
         from release_images import image
-        command = ['docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
-                   '--label', 'pm.ticket=0128', '--user', f'{os.getuid()}:{os.getgid()}',
+        command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
+                   '--user', f'{os.getuid()}:{os.getgid()}',
                    '-v', f'{scratch}:/work', '-e', 'HOME=/work/home', '-e', 'CARGO_HOME=/work/cargo',
                    '-e', 'CARGO_TARGET_DIR=/work/target']
         if args.container_image:

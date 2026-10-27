@@ -79,7 +79,18 @@ module ThinkThen
         raise ThreadError, "call already has an active driver"
       end
       begin
-        Thread.handle_interrupt(Exception => :never) { drive }
+        Thread.handle_interrupt(Exception => :never) do
+          begin
+            drive
+          rescue Interrupt => interruption
+            @owner.cancel
+            begin
+              Native.checked { |error| Native.thinkthen_cancelled_error(error) }
+            rescue Cancelled => error
+              raise error, cause: interruption
+            end
+          end
+        end
       ensure
         @driver.unlock
       end
@@ -113,14 +124,6 @@ module ThinkThen
       read = @reader.start(native)
       begin
         Thread.handle_interrupt(Exception => :immediate) { read.value }
-      rescue Interrupt => interruption
-        @owner.cancel
-        begin
-          read.value
-          Native.checked { |error| Native.thinkthen_cancelled_error(error) }
-        rescue Cancelled => error
-          raise error, cause: interruption
-        end
       rescue Exception
         @owner.cancel
         raise
@@ -132,7 +135,8 @@ module ThinkThen
 
     def supply_input
       record = begin
-        @records.next
+        # Caller input may block in Ruby; native storage stays protected outside it.
+        Thread.handle_interrupt(Exception => :immediate) { @records.next }
       rescue StopIteration
         @owner.use { |pointer| Native.thinkthen_call_end_input(pointer) }
         return

@@ -36,7 +36,7 @@ fn annotation_table_columns_follow_the_shared_four_record_case() {
         .arg(&toolbox)
         .arg(&input)
         .args(["--from", "csv", "--column", "body", "--batch", "32"])
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .output()
         .unwrap();

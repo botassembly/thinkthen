@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -174,3 +175,102 @@ def test_stream_converters_keep_empty_types_and_do_not_replay() -> None:
         assert frame["error_code"].iloc[0] == "record.missing"
         assert frame["answer"].iloc[0] is pd.NA
         assert rows.to_list() == []
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_dataframe_missing_values_and_dates_answer_as_json(library: str) -> None:
+    expected: list[dict[str, Any]] = [
+        {
+            "evidence": "first",
+            "number": None,
+            "when": "2026-10-27T12:34:56",
+            "day": "2026-10-27",
+            "nested": {"missing": None},
+        },
+        {
+            "evidence": "second",
+            "number": 2.0,
+            "when": None,
+            "day": None,
+            "nested": {"missing": None},
+        },
+    ]
+    source: Any
+    if library == "pandas":
+        source = pd.DataFrame(
+            {
+                "evidence": ["first", "second"],
+                "number": [float("nan"), 2.0],
+                "when": [pd.Timestamp("2026-10-27T12:34:56"), pd.NaT],
+                "day": [date(2026, 10, 27), None],
+                "nested": [{"missing": pd.NA}, {"missing": None}],
+            },
+            index=["same", "same"],
+        )
+    else:
+        source = pl.DataFrame(expected).with_columns(
+            pl.Series("number", [float("nan"), 2.0])
+        )
+        source = source.with_columns(
+            pl.col("when").str.to_datetime(), pl.col("day").str.to_date()
+        )
+    with tt.Client(backend="stub") as selected:
+        accessor: Any = (
+            ThinkThenFrameAccessor(source)
+            if library == "pandas"
+            else ThinkThenFrameNamespace(source)
+        )
+        result = accessor.decide("Ready?", evidence="/evidence", client=selected)
+        canonical = selected.decide_stream(
+            "Ready?", expected, evidence="/evidence"
+        ).to_list()
+        if library == "pandas":
+            assert result.index.equals(source.index)
+            assert result["status"].tolist() == ["answered", "answered"]
+            assert result["answer"].tolist() == [row.answer for row in canonical]
+            # Asking about all fields makes the stub witness the complete JSON record.
+            whole = accessor.decide("Ready?", client=selected)
+            reference = selected.decide_stream("Ready?", expected).to_list()
+            assert whole["probability"].tolist() == [
+                row.probability for row in reference
+            ]
+        else:
+            assert result.columns == ["result"] and result.height == 2
+            rows = result["result"].struct.unnest()
+            assert rows["status"].to_list() == ["answered", "answered"]
+            assert rows["answer"].to_list() == [row.answer for row in canonical]
+            whole = accessor.decide("Ready?", client=selected)["result"].struct.unnest()
+            reference = selected.decide_stream("Ready?", expected).to_list()
+            assert whole["probability"].to_list() == [
+                row.probability for row in reference
+            ]
+
+
+def test_polars_series_nan_becomes_null_inside_json_records() -> None:
+    source = pl.Series("values", [[float("nan"), 2.0], [3.0, None]])
+    with tt.Client(backend="stub") as selected:
+        result = (
+            ThinkThenNamespace(source).decide("Ready?", client=selected).struct.unnest()
+        )
+        reference = selected.decide_stream(
+            "Ready?", [[None, 2.0], [3.0, None]]
+        ).to_list()
+        assert result["status"].to_list() == ["answered", "answered"]
+        assert result["probability"].to_list() == [row.probability for row in reference]
+        missing = ThinkThenNamespace(pl.Series("values", [float("nan"), 2.0])).decide(
+            "Ready?", client=selected
+        )
+        assert missing.struct.field("error").struct.field("code").to_list() == [
+            "record.missing",
+            None,
+        ]
+
+
+def test_conversion_failure_keeps_its_cause_on_the_failed_row() -> None:
+    with tt.Client(backend="stub") as selected:
+        source = pd.DataFrame({"evidence": [object(), "valid"]})
+        result = ThinkThenFrameAccessor(source).decide("Ready?", client=selected)
+        assert result["status"].tolist() == ["failed", "answered"]
+        assert result["error_code"].iloc[0] == "record.invalid"
+        assert "TypeError" in result["error_message"].iloc[0]
+        assert "not JSON serializable" in result["error_message"].iloc[0]

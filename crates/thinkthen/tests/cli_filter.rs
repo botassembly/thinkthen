@@ -36,7 +36,7 @@ fn command(server: &Loopback, args: &[&str]) -> Command {
         .args(["filter", "Keep?", "--threshold", "0.8"])
         .args(args)
         .env("THINKTHEN_API_KEY", KEY)
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

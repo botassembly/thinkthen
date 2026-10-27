@@ -56,7 +56,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
         let mut child = support::command()
             .args(["find", "Which?"])
             .args(args)
-            .env("THINKTHEN_URL", server.base())
+            .env("THINKTHEN_BASE_URL", server.base())
             .env("THINKTHEN_API_KEY", KEY)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -95,7 +95,7 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
             "--evidence",
             "/body",
         ])
-        .env("THINKTHEN_URL", server.base())
+        .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
