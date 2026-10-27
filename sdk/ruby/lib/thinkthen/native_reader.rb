@@ -31,10 +31,20 @@ module ThinkThen
   class NativeReader
     def initialize(owner)
       @requests = Queue.new
-      @thread = Thread.new do
+      @thread = self.class.worker(@requests, WeakRef.new(owner))
+      ObjectSpace.define_finalizer(self, self.class.finalizer(@requests))
+    end
+
+    def self.finalizer(requests)
+      proc { requests.close }
+    end
+
+    def self.worker(requests, reference)
+      Thread.new do
         Thread.handle_interrupt(Exception => :never) do
-          while (read = @requests.pop)
-            read.run(owner)
+          while (read = requests.pop)
+            read.run(reference.__getobj__)
+            read = nil
           end
         end
       end

@@ -7,4 +7,4 @@ root = Path(__file__).resolve().parent.parent
 codes = json.loads((root / 'schemas/contract.json').read_text())['codes']
 output = Path(sys.argv[1])
 output.mkdir(parents=True, exist_ok=True)
-(output / 'error_codes.rbs').write_text('module ThinkThen\n  type error_code = ' + ' | '.join(':"' + code['name'] + '"' for code in codes) + '\nend\n')
+(output / 'error_codes.rbs').write_text('module ThinkThen\n  type error_code = ' + ' | '.join(':"' + code['name'] + '"' for code in codes) + ' | :unknown\nend\n')

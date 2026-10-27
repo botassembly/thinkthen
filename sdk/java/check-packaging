@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Check publishable child metadata and the release sources archives."""
+import sys
+from pathlib import Path
+import tempfile
+import xml.etree.ElementTree as ET
+import zipfile
+
+root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root / 'scripts'))
+from release_registry import jvm_sources
+
+ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+url = 'https://github.com/botassembly/thinkthen'
+with tempfile.TemporaryDirectory() as temporary:
+    for name, relative in [('java', 'sdk/java/library'), ('kotlin', 'sdk/kotlin')]:
+        folder = root / relative
+        pom = ET.parse(folder / 'pom.xml').getroot()
+        assert pom.findtext('m:name', namespaces=ns), name
+        assert pom.findtext('m:url', namespaces=ns) == url, name
+        assert pom.findtext('m:scm/m:url', namespaces=ns) == url, name
+        assert pom.findtext('m:scm/m:connection', namespaces=ns) == 'scm:git:' + url + '.git', name
+        assert pom.findtext('m:scm/m:developerConnection', namespaces=ns) == 'scm:git:ssh://git@github.com/botassembly/thinkthen.git', name
+        archive = Path(temporary) / (name + '-sources.jar')
+        jvm_sources(folder, name, archive)
+        with zipfile.ZipFile(archive) as jar:
+            extension = 'java' if name == 'java' else 'kt'
+            package = 'io/thinkthen/' + ('' if name == 'java' else 'kotlin/')
+            generated = folder / 'target/generated-sources/contracts' / package / ('ErrorCode.' + extension)
+            assert jar.read(package + 'ErrorCode.' + extension) == generated.read_bytes(), name
+print('JVM publishable metadata and generated ErrorCode sources passed')

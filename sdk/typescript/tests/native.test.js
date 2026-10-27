@@ -42,6 +42,7 @@ for (const action of ["abort", "return", "dispose", "close"]) {
       if (action === "abort") {
         assert(result.error instanceof sdk.CancelledError);
         assert.equal(result.error.code, "local.cancelled");
+        assert.equal(result.error.name, "AbortError");
         assert.notEqual(result.error, controller.signal.reason);
       } else {
         assert.equal(result.error, undefined);
@@ -68,7 +69,7 @@ test("already aborted signals never acquire the source and always use CancelledE
     for (const reason of [undefined, "stop", { stop: true }, new Error("caller error")]) {
       const controller = new AbortController();
       controller.abort(reason);
-      const isCancel = error => error instanceof sdk.CancelledError && error.code === "local.cancelled";
+      const isCancel = error => error instanceof sdk.CancelledError && error.code === "local.cancelled" && error.name === "AbortError";
       await assert.rejects(client.decide("Ready?", "evidence", { signal: controller.signal }), isCancel);
       const stream = client.decideStream("Ready?", source, { signal: controller.signal });
       await assert.rejects(stream.next(), isCancel);

@@ -316,3 +316,30 @@ fn an_output_write_error_stops_the_reading() {
         server.count()
     );
 }
+
+#[test]
+fn record_byte_limit_returns_before_the_input_pipe_closes() {
+    for format in ["text", "lines", "jsonl"] {
+        let mut child = support::command()
+            .args(["decide", "Ready?", "--backend", "stub", "--from", format])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut input = child.stdin.take().unwrap();
+        input.write_all(&vec![b'x'; 64 * 1024 * 1024 + 1]).unwrap();
+        let (send, receive) = std::sync::mpsc::channel();
+        std::thread::spawn(move || send.send(child.wait_with_output().unwrap()).unwrap());
+        // Retain the writer: reading past the limit would wait for EOF.
+        let output = receive
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap();
+        drop(input);
+        assert_eq!(output.status.code(), Some(2), "{format}: {output:?}");
+        assert!(output.stdout.is_empty());
+        let error = String::from_utf8(output.stderr).unwrap();
+        assert!(error.contains("usage.question"), "{error}");
+        assert!(error.contains("record exceeds the 64 MiB limit"), "{error}");
+    }
+}

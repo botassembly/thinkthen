@@ -215,7 +215,11 @@ pub fn take(comptime function: t.Function, allocator: Allocator, row: c.thinkthe
     const result: Outcome(function) = switch (row.status) {
         c.THINKTHEN_STATUS_ANSWERED => .{ .answered = .{ .answer = if (function == .annotate) try annotationAnswer(allocator, row.answer) else try parse(Answer(function), allocator, row.answer), .probability = if (std.math.isNan(row.probability)) null else row.probability, .detail = detail } },
         c.THINKTHEN_STATUS_UNSURE => .{ .unsure = .{ .probability = row.probability, .detail = detail } },
-        c.THINKTHEN_STATUS_FAILED => .{ .failed = try parse(d.Failure, allocator, row.@"error") },
+        c.THINKTHEN_STATUS_FAILED => blk: {
+            var failure = try parse(d.Failure, allocator, row.@"error");
+            failure.code = @as(d.ErrorCode, @fromBackingInt(@intCast(row.error_code)));
+            break :blk .{ .failed = failure };
+        },
         else => return error.Internal,
     };
     return .{ .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, allocator, row.id), .source = try parse(Source, allocator, row.source), .outcome = result };

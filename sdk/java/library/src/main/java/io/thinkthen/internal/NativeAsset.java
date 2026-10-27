@@ -35,8 +35,16 @@ final class NativeAsset {
         byte[] bytes;
         try (var input = url.openStream()) { bytes = input.readAllBytes(); }
         byte[] digest = checksum(bytes);
-        var base = cache();
+        try { return cached(cache(), file, bytes, digest); }
+        catch (java.nio.file.FileSystemException error) {
+            return cached(temporaryCache(), file, bytes, digest);
+        }
+    }
+    private static Path cached(Path base, String file, byte[] bytes, byte[] digest) throws IOException {
         var directory = base.resolve("thinkthen/native").resolve(HexFormat.of().formatHex(digest));
+        for (var path : new Path[]{base, base.resolve("thinkthen"), base.resolve("thinkthen/native"), directory}) {
+            if (Files.exists(path, LinkOption.NOFOLLOW_LINKS)) secure(path, true);
+        }
         Files.createDirectories(base);
         boolean posix = Files.getFileStore(base).supportsFileAttributeView(PosixFileAttributeView.class);
         if (posix) Files.createDirectories(directory, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
@@ -109,13 +117,40 @@ final class NativeAsset {
         try { return MessageDigest.getInstance("SHA-256").digest(bytes); }
         catch (NoSuchAlgorithmException error) { throw new AssertionError(error); }
     }
+    private static Path temporaryCache() throws IOException {
+        String user = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")
+            ? HexFormat.of().formatHex(checksum(System.getProperty("user.name").getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+            : Integer.toString(effectiveUid());
+        var base = Path.of(System.getProperty("java.io.tmpdir"), "thinkthen-" + user);
+        if (!Files.exists(base, LinkOption.NOFOLLOW_LINKS)) {
+            var parent = base.getParent();
+            if (Files.getFileStore(parent).supportsFileAttributeView(PosixFileAttributeView.class)) {
+                try { Files.createDirectory(base, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))); }
+                catch (java.nio.file.FileAlreadyExistsException ignored) { /* Another process created the same private cache. */ }
+            } else {
+                try { Files.createDirectory(base); }
+                catch (java.nio.file.FileAlreadyExistsException ignored) { /* Verify the existing owner and ACL below. */ }
+            }
+        }
+        secure(base, true);
+        return base;
+    }
     private static Path cache() throws IOException {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
+        if (!os.contains("mac")) {
+            String configured = System.getenv(os.contains("windows") ? "LocalAppData" : "XDG_CACHE_HOME");
+            if (configured != null && !configured.isEmpty()) {
+                try {
+                    var path = Path.of(configured);
+                    return path.isAbsolute() ? path : temporaryCache();
+                } catch (java.nio.file.InvalidPathException error) { return temporaryCache(); }
+            }
+            if (os.contains("windows")) return temporaryCache();
+        }
         String home = System.getProperty("user.home");
-        if (os.contains("mac")) return Path.of(home, "Library", "Caches");
-        String configured = System.getenv(os.contains("windows") ? "LocalAppData" : "XDG_CACHE_HOME");
-        if (configured != null && !configured.isEmpty() && Path.of(configured).isAbsolute()) return Path.of(configured);
-        if (os.contains("windows")) throw new IOException("LocalAppData is not set to an absolute cache directory");
-        return Path.of(home, ".cache");
+        try {
+            if (home == null || home.isEmpty() || !Path.of(home).isAbsolute()) return temporaryCache();
+            return os.contains("mac") ? Path.of(home, "Library", "Caches") : Path.of(home, ".cache");
+        } catch (java.nio.file.InvalidPathException error) { return temporaryCache(); }
     }
 }

@@ -70,8 +70,14 @@ module ThinkThen
       end
       fields["probability"] = native[:probability] unless native[:probability].nan?
       if status == "failed"
-        code = Native.discriminator(NativeContract::CODE_NAMES, native[:error_code])
-        raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE) unless fields.fetch("error").fetch("code") == code
+        code = Native.thinkthen_code_name(native[:error_code])
+        if code && NativeContract::CODE_NAMES.key?(native[:error_code])
+          raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE) unless fields.fetch("error").fetch("code") == code
+        else
+          fields.fetch("error")["raw_code"] = native[:error_code]
+          fields.fetch("error")["raw_name"] = code || fields.fetch("error").fetch("code")
+          fields.fetch("error")["code"] = "unknown"
+        end
       end
       source = fields.fetch("source")
       metadata = Source.new(question_identity: Values.freeze_copy(source.fetch("question_identity")),
@@ -96,7 +102,11 @@ module ThinkThen
       klass.new(**values)
     end
     def self.row_error(fields)
-      RowError.new(code: Native.error_symbol(fields.fetch("code")), message: fields.fetch("message"), http_status: fields["http_status"])
+      name = fields.fetch("code")
+      known = NativeContract::CODE_NAMES.value?(name)
+      RowError.new(code: known ? Native.error_symbol(name) : :unknown, message: fields.fetch("message"),
+                   http_status: fields["http_status"], raw_code: fields["raw_code"],
+                   raw_name: fields["raw_name"] || (known ? nil : name))
     end
     def self.relation(fields)
       value(Relation, fields.merge("symmetric" => fields["either"], "source" => value(RelationName, fields.fetch("source")),

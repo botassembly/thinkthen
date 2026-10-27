@@ -109,16 +109,12 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
             bool id_null;
             Oid type = TupleDescAttr(SPI_tuptable->tupdesc, owner->id_column - 1)->atttypid;
             Datum id_value = SPI_getbinval(SPI_tuptable->vals[index], SPI_tuptable->tupdesc, owner->id_column, &id_null);
-            MemoryContext id_previous = MemoryContextSwitchTo(owner->id_context);
             TtId *entry = hash_search(owner->ids, &owner->input_position, HASH_ENTER, NULL);
-            entry->memory = AllocSetContextCreate(owner->id_context, "ThinkThen selected id", ALLOCSET_SMALL_SIZES);
-            MemoryContextSwitchTo(entry->memory);
-            entry->value.data = (const uint8_t *)"null";
-            entry->value.len = 4;
+            char *encoded = "null";
+            size_t id_length;
             if (!id_null) {
                 Oid output;
                 bool variable;
-                char *encoded;
                 getTypeOutputInfo(type, &output, &variable);
                 encoded = OidOutputFunctionCall(output, id_value);
                 if (type == BOOLOID) encoded = DatumGetBool(id_value) ? "true" : "false";
@@ -129,13 +125,11 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
                     escape_json(&quoted, encoded);
                     encoded = quoted.data;
                 }
-                {
-                    size_t id_length;
-                    entry->value.data = (uint8_t *)tt_utf8(encoded, strlen(encoded), &id_length);
-                    entry->value.len = id_length;
-                }
             }
-            MemoryContextSwitchTo(id_previous);
+            encoded = tt_utf8(encoded, strlen(encoded), &id_length);
+            entry->value.data = (uint8_t *)MemoryContextAlloc(owner->id_context, id_length);
+            memcpy((void *)entry->value.data, encoded, id_length);
+            entry->value.len = id_length;
         }
         if (is_null) {
             records[index].kind = THINKTHEN_RECORD_MISSING;

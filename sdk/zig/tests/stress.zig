@@ -49,7 +49,7 @@ fn drive(work: *Work) void {
             .answered => |answer| std.debug.assert(answer.answer and answer.probability.? == work.probability),
             .failed => |failure| {
                 work.failed += 1;
-                std.debug.assert(std.mem.eql(u8, failure.code.name(), work.code));
+                std.debug.assert(std.mem.eql(u8, failure.name(), work.code));
             },
             .unsure => @panic("unexpected unsure row"),
         }

@@ -93,10 +93,8 @@ impl Output {
         let format = values
             .next()
             .flatten()
-            .map(|v| match v.as_str() {
-                "json" => Ok(true),
-                "text" => Ok(false),
-                _ => Err(unknown_value("format", &v, &["text", "json"])),
+            .map(|v| {
+                parse_choice::<OutputFormat>("format", &v).map(|f| matches!(f, OutputFormat::Json))
             })
             .transpose()?;
         let json = boolean("json", values.next().flatten())?;
@@ -122,10 +120,8 @@ impl Output {
         let color = explicit(matches, "color")
             .or_else(|| std::env::var_os("NO_COLOR").map(|_| "never".into()))
             .or_else(|| std::env::var("THINKTHEN_COLOR").ok());
-        if let Some(color) = color
-            && !matches!(color.as_str(), "auto" | "always" | "never")
-        {
-            return Err(unknown_value("color", &color, &["auto", "always", "never"]));
+        if let Some(color) = color {
+            parse_choice::<clap::ColorChoice>("color", &color)?;
         }
         Ok(Self {
             json: json.or(format).unwrap_or(false),
@@ -175,9 +171,34 @@ pub(super) fn diagnostic_color() -> clap::ColorChoice {
     let color = explicit
         .or_else(|| std::env::var_os("NO_COLOR").map(|_| "never".into()))
         .or_else(|| std::env::var("THINKTHEN_COLOR").ok());
-    match color.as_deref() {
-        Some("always") => clap::ColorChoice::Always,
-        Some("never") => clap::ColorChoice::Never,
-        _ => clap::ColorChoice::Auto,
-    }
+    color
+        .and_then(|value| <clap::ColorChoice as clap::ValueEnum>::from_str(&value, false).ok())
+        .unwrap_or(clap::ColorChoice::Auto)
+}
+
+#[derive(Clone, clap::ValueEnum)]
+pub(super) enum OutputFormat {
+    Text,
+    Json,
+}
+pub(super) fn choices<T: clap::ValueEnum>() -> clap::builder::PossibleValuesParser {
+    clap::builder::PossibleValuesParser::new(
+        T::value_variants()
+            .iter()
+            .filter_map(clap::ValueEnum::to_possible_value),
+    )
+}
+pub(super) fn parse_choice<T: clap::ValueEnum>(field: &str, text: &str) -> Result<T, Error> {
+    T::from_str(text, false).map_err(|_| {
+        let names: Vec<_> = T::value_variants()
+            .iter()
+            .filter_map(clap::ValueEnum::to_possible_value)
+            .map(|v| v.get_name().to_owned())
+            .collect();
+        unknown_value(
+            field,
+            text,
+            &names.iter().map(String::as_str).collect::<Vec<_>>(),
+        )
+    })
 }

@@ -8,8 +8,11 @@ int tt_cache_secure(const char *path, int directory);
 import "C"
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"unsafe"
 )
 
@@ -27,4 +30,16 @@ func checkCachePath(path string, directory bool) error {
 		return fmt.Errorf("unsafe ThinkThen native cache owner or permissions: %s", path)
 	}
 	return nil
+}
+
+func temporaryCache() (string, error) {
+	owner, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(os.TempDir(), fmt.Sprintf("thinkthen-%x", sha256.Sum256([]byte(owner.Uid))))
+	if err := os.Mkdir(path, 0700); err != nil && !os.IsExist(err) {
+		return "", err
+	}
+	return path, checkCachePath(path, true)
 }

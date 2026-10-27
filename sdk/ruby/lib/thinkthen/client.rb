@@ -12,6 +12,7 @@ module ThinkThen
     end
     def initialize(backend: nil, model: nil, url: nil, api_key: nil, batch: nil, retry: nil)
       @mutex, @streams = Mutex.new, []
+      @pid = Process.pid
       ThinkThen.send(:native)
       key = api_key.nil? || api_key.is_a?(RedactedKey) ? api_key : RedactedKey.new(api_key)
       @api_key = key
@@ -37,7 +38,11 @@ module ThinkThen
     def inspect = "#<ThinkThen::Client closed=#{closed?}>"
     alias to_s inspect
     def close
-      streams = @mutex.synchronize { @closed = true; @streams.dup }
+      check_process
+      streams = @mutex.synchronize do
+        @closed = true
+        @streams.filter_map { |reference| reference.__getobj__ if reference.weakref_alive? }
+      end
       streams.each(&:close)
       Thread.handle_interrupt(Exception => :never) do
         @mutex.synchronize { @pointer&.free; @pointer = nil }
@@ -214,7 +219,11 @@ module ThinkThen
       nil
     end
     private
+    def check_process
+      raise IOError, "client belongs to another process; create a client after fork" unless @pid == Process.pid
+    end
     def build_question(function, question, options)
+      check_process
       # @type var klass: untyped
       klass = ThinkThen.const_get("#{function.to_s.capitalize}Question")
       # @type var options: Hash[Symbol, untyped]
@@ -236,7 +245,8 @@ module ThinkThen
       stream = Rows.new(self, request, records, cancel, question.value.fetch("function") == "filter")
       @mutex.synchronize do
         raise IOError, "client is closed" if @closed || !@pointer
-        @streams << stream
+        @streams.reject! { |reference| !reference.weakref_alive? }
+        @streams << WeakRef.new(stream)
       end
       stream
     rescue Exception
@@ -248,23 +258,22 @@ module ThinkThen
         raise IOError, "client is closed" if @closed || !@pointer
         Native.bytes(request) do |bytes, length|
           output = FFI::MemoryPointer.new(:pointer)
-          Native.checked do |error|
-            Native.thinkthen_call_open_json(@pointer, bytes, length, NativeContract::OFFSET_NAMES.key("code_points"), output, error)
-          end
           if records
-            Native.thinkthen_call_free(output.read_pointer)
-            output.write_pointer(FFI::Pointer::NULL)
             Native.records(records) do |input, count|
               Native.checked do |error|
                 Native.thinkthen_call_open_records_json(@pointer, bytes, length, input, count, Native::RecordInput.size,
                                                         NativeContract::OFFSET_NAMES.key("code_points"), output, error)
               end
             end
+          else
+            Native.checked do |error|
+              Native.thinkthen_call_open_json(@pointer, bytes, length, NativeContract::OFFSET_NAMES.key("code_points"), output, error)
+            end
           end
           output.read_pointer
         end
       end
     end
-    def forget(stream) = @mutex.synchronize { @streams.delete(stream) }
+    def forget(stream) = @mutex.synchronize { @streams.reject! { |reference| !reference.weakref_alive? || reference.__getobj__.equal?(stream) } }
   end
 end

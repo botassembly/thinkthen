@@ -79,10 +79,6 @@ internal static class Codecs
     internal static Row<A,D> Row<A,D>(uint function, uint status, int errorCode, ulong position, double probability, byte[] id,
         byte[] answer, byte[] detail, byte[] source, byte[] error, string expectedFunction)
     {
-        if (Contract.FunctionName(function) != expectedFunction || Contract.StatusName(status) is null) throw Json.Abi();
-        if (status == 1 && (answer.Length == 0 || error.Length != 0)
-            || status == 2 && (answer.Length != 0 || error.Length != 0 || double.IsNaN(probability))
-            || status == 3 && (answer.Length != 0 || detail.Length != 0 || !double.IsNaN(probability) || error.Length == 0)) throw Json.Abi();
         try
         {
             JsonObject raw = new() { ["function"] = expectedFunction, ["position"] = position,
@@ -105,11 +101,10 @@ internal static class Codecs
             {
                 1 => new Answered<A,D>(kind, position, typedId, typedSource,
                     Answer<A>(expectedFunction, value.GetProperty("answer")), double.IsNaN(probability) ? null : probability, typedDetail),
-                2 when !double.IsNaN(probability) => new Unsure<A,D>(kind, position, typedId, typedSource, probability, typedDetail),
+                2 => new Unsure<A,D>(kind, position, typedId, typedSource, probability, typedDetail),
                 3 => new Failed<A,D>(kind, position, typedId, typedSource, Error(value.GetProperty("error"))),
                 _ => throw Json.Abi()
             };
-            if (result is Failed<A,D> failure ? (int)failure.Error.Code != errorCode : errorCode != 0) throw Json.Abi();
             return result with { Canonical = value.Clone() };
         }
         catch (Exception cause) when (cause is JsonException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)

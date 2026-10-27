@@ -22,6 +22,14 @@ def quiet(*args, **kwargs):
         raise ValueError('package upload command failed; inspect the preceding site response')
 
 
+def verify_download(destination, digest):
+    """Apply the same approved inventory and asset checks before any publication."""
+    sums = destination / 'SHA256SUMS'
+    if hashlib.sha256(sums.read_bytes()).hexdigest() != digest:
+        raise ValueError('draft differs from the PM-approved checksum inventory')
+    checksums(destination)
+
+
 def approved(tag, digest, destination):
     if tag != 'v' + version() or os.environ.get('GITHUB_REF') != 'refs/tags/' + tag:
         raise ValueError('upload must run at the final native package version tag')
@@ -36,10 +44,7 @@ def approved(tag, digest, destination):
     if info['tagName'] != review:
         raise ValueError('the release tag differs from the reviewed version')
     quiet('gh', 'release', 'download', review, '--dir', destination)
-    sums = destination / 'SHA256SUMS'
-    if hashlib.sha256(sums.read_bytes()).hexdigest() != digest:
-        raise ValueError('draft differs from the PM-approved checksum inventory')
-    checksums(destination)
+    verify_download(destination, digest)
     registry = destination / f'thinkthen-{version()}-registries.tar.gz'
     with tarfile.open(registry) as archive:
         archive.extractall(destination / 'registries', filter='data')

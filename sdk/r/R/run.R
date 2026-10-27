@@ -20,6 +20,7 @@
     prepared <- lapply(seq_len(size), function(position) .tt_prepare(x, position))
     call <- .tt_native("r_open_finite", client, request, prepared)$value
     rows <- list()
+    kept <- logical()
     repeat {
       event <- .tt_native("r_poll", call)
       if (event$event == "row") {
@@ -28,6 +29,7 @@
                          signed = .tt_id_value(event$id$decimal, "signed"),
                          unsigned = .tt_id_value(event$id$decimal, "unsigned")))
         rows[[length(rows) + 1L]] <- row
+        if (function_name == "filter") kept <- c(kept, event$kept)
         if (isTRUE(getOption("thinkthen.verbose")) && row$status == "failed") {
           message("ThinkThen failed at position ", row$position)
         }
@@ -42,7 +44,7 @@
       result$item <- lapply(result$position, function(position) {
         if (is.data.frame(x)) .tt_subset(x, position) else x[[position]]
       })
-      result$kept <- !is.na(result$answer) & result$answer
+      result$kept <- kept
     }
     result
   }, interrupt = function(interrupt) .tt_native("r_cancel_release", call))

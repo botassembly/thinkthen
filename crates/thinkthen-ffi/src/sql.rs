@@ -302,7 +302,7 @@ unsafe fn poll(
     unsafe {
         operation(error, || {
             let size = row_size(out)?;
-            out.write(HostRow::empty(size));
+            HostRow::empty(size).write(out);
             let handle = &mut *call;
             let call = &mut handle.call;
             match call.poll(Duration::from_millis(u64::from(timeout_ms)), || {
@@ -315,7 +315,7 @@ unsafe fn poll(
                     } else {
                         row
                     };
-                    out.write(HostRow::from_row(size, row)?);
+                    HostRow::from_row(size, row)?.write(out);
                     Ok(OK)
                 }
                 Some(SqlEvent::Finished) => {
@@ -350,23 +350,22 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
             }
             let value = text((*id).data, (*id).len)?;
             let failure = native::sql_postgres_id_error(value)?;
-            let row = &mut *row;
-            row.id.release();
+            (*row).id.release();
             if let Some(failure) = failure {
-                row.answer.release();
-                row.detail.release();
-                row.error.release();
-                row.status = thinkthen::results::Status::Failed.abi();
-                row.error_code = failure.code().abi();
-                row.probability = f64::NAN;
-                row.answer_bool = 0;
-                row.rank = 0;
-                row.number = 0.0;
-                row.error = crate::Buffer::new(
+                (*row).answer.release();
+                (*row).detail.release();
+                (*row).error.release();
+                (*row).status = thinkthen::results::Status::Failed.abi();
+                (*row).error_code = failure.code().abi();
+                (*row).probability = f64::NAN;
+                (*row).answer_bool = 0;
+                (*row).rank = 0;
+                (*row).number = 0.0;
+                (*row).error = crate::Buffer::new(
                     serde_json::to_string(&failure).map_err(|_| native::internal_error())?,
                 );
             } else {
-                row.id = crate::Buffer::new(value.to_owned());
+                (*row).id = crate::Buffer::new(value.to_owned());
             }
             Ok(OK)
         })

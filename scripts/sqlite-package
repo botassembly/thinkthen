@@ -30,11 +30,12 @@ fi
 [ -f "$archive" ] || { echo 'Prepare the shared native archive before packaging SQLite' >&2; exit 1; }
 scratch="$output/build"
 mkdir -p "$scratch" "$output/package"
+python3 extensions/rules.py "$scratch/rules.h"
 # Coverage flags belong to this build invocation, never the installed SQL API.
 sqlite_flags=${THINKTHEN_SQLITE_CFLAGS:-${CFLAGS:--O2}}
-for source in extension rows source question; do
+for source in extension rows source question replay; do
     cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden $sqlite_flags \
-        -I "$sqlite" -I "$jansson/include" -I crates/thinkthen-ffi/include \
+        -I "$scratch" -I "$sqlite" -I "$jansson/include" -I crates/thinkthen-ffi/include \
         -c "extensions/sqlite/src/$source.c" -o "$scratch/$source.o"
 done
 route_object=
@@ -48,14 +49,14 @@ fi
 case "$(uname -s)" in
     Darwin)
         extension=thinkthen_sqlite.dylib
-        cc -dynamiclib $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" $route_object \
+        cc -dynamiclib $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" "$scratch/replay.o" $route_object \
             "$archive" "$jansson/lib/libjansson.a" -lpthread -ldl -lm \
             -framework Security -framework SystemConfiguration -liconv \
             -Wl,-exported_symbol,_sqlite3_thinkthensqlite_init -o "$output/package/$extension"
         ;;
     Linux)
         extension=thinkthen_sqlite.so
-        cc -shared $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" $route_object \
+        cc -shared $sqlite_flags "$scratch/extension.o" "$scratch/rows.o" "$scratch/source.o" "$scratch/question.o" "$scratch/replay.o" $route_object \
             "$archive" "$jansson/lib/libjansson.a" -lpthread -ldl -lm \
             -Wl,--exclude-libs,ALL -o "$output/package/$extension"
         ;;

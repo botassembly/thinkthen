@@ -34,11 +34,11 @@ module ThinkThen
       super
     end
   end
-  RowError = Data.define(:code, :message, :http_status)
+  RowError = Data.define(:code, :message, :http_status, :raw_code, :raw_name)
   class RowError
     include WireValue
-    def initialize(code:, message:, http_status: nil)
-      super(code: code.to_sym, message: Values.freeze_copy(message), http_status: http_status)
+    def initialize(code:, message:, http_status: nil, raw_code: nil, raw_name: nil)
+      super(code: code.to_sym, message: Values.freeze_copy(message), http_status: http_status, raw_code: raw_code, raw_name: Values.freeze_copy(raw_name))
     end
   end
   RelationRule = Data.define(:source, :target, :relation, :phrase, :symmetric)

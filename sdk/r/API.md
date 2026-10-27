@@ -57,7 +57,7 @@ Detail entries are typed per function. Label detail holds named probabilities. S
 
 `NULL` as the collection means zero records. `list(NULL)` and atomic NA elements are missing records. They make no backend request and return failed rows with `record.missing`. Unsupported record conversion and invalid IDs retain their positions as failed rows. Failed scalar answers use typed NA. Failed list answers use NULL without losing rows. Answered empty collections retain their prototypes.
 
-Failed records return rows, including single-record calls. Call-level failures use rlang conditions under `thinkthen_error`, with classes `thinkthen_usage_error`, `thinkthen_setup_error`, `thinkthen_cancelled_error` or `thinkthen_internal_error`. Conditions carry the shared code and message. Escape and Ctrl-C cancel the engine call and raise `thinkthen_cancelled_error`. The package keeps native code loaded until process exit.
+Failed records return rows, including single-record calls. Call-level failures use rlang conditions under `thinkthen_error`. The class `thinkthen_<family>_error` names the engine family. R argument mistakes use `thinkthen_r_error` with an `r.` code. Cancellation also carries `thinkthen_cancelled_error`. Engine conditions carry the shared code and message. Escape and Ctrl-C cancel the engine call and raise `thinkthen_cancelled_error`. The package keeps native code loaded until process exit.
 
 ## Table helpers
 
@@ -73,4 +73,4 @@ Ordinary integer IDs and safe whole doubles are accepted. Doubles beyond `2^53 -
 
 ## Package
 
-The package imports jsonlite, rlang, cli, vctrs and tibble. dplyr and data.table support their optional table classes. The source archive includes the engine and vendored Rust dependencies. An offline source installation needs these R dependencies, R headers, a C compiler, make and the pinned Rust toolchain.
+The package imports jsonlite, rlang, cli, vctrs and tibble. dplyr and data.table support their optional table classes. The source archive includes the engine and vendored Rust dependencies. An offline source installation needs these R dependencies, R headers, a C compiler, GNU make and Rust >= 1.95.0. Source installation supports Unix platforms. Windows uses the supplied binary package.

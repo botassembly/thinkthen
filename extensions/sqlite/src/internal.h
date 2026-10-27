@@ -8,6 +8,7 @@ SQLITE_EXTENSION_INIT3
 
 typedef struct {
     unsigned references;
+    unsigned generation;
     thinkthen_client *client;
     char *settings;
     size_t settings_len;
@@ -35,6 +36,11 @@ typedef struct {
 typedef struct {
     sqlite3_vtab_cursor base;
     sqlite3_stmt *source;
+    sqlite3 *replay;
+    sqlite3_stmt *save, *read;
+    int complete, replaying, mask;
+    sqlite3_int64 changes, data_version;
+    unsigned generation;
     thinkthen_sql_call *call;
     thinkthen_row row;
     json_t *fields;
@@ -47,6 +53,11 @@ typedef struct {
     sqlite3_int64 rowid;
     int eof;
 } Cursor;
+
+int replay_open(Cursor *cursor);
+int replay_save(Cursor *cursor);
+int replay_next(Cursor *cursor);
+int replay_same(Cursor *cursor,int mask,sqlite3_value **argv);
 
 void connection_release(void *pointer);
 int connection_client(Connection *connection, const char *settings, size_t len,

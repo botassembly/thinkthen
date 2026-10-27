@@ -9,6 +9,7 @@ import { ERROR_CODES } from "./errors.js";
 /** @typedef {{cancel(): void, close(): void, reference(): void, unreference(): void}} Operation */
 /** @typedef {{start(request: string, callback: Callback): Operation, startFinite(request: string, callback: Callback): Operation, close(): void}} NativeClient */
 /** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
+export const RULE_FIELDS = Object.freeze({ name: "relation", phrase: "reads", symmetric: "either" });
 export class ThinkThenError extends Error {
   /** @param {{code: ErrorCode, message: string, httpStatus?: number}} error @param {ErrorOptions} [options] */
   constructor(error, options) {
@@ -20,7 +21,10 @@ export class ThinkThenError extends Error {
 }
 export class UsageError extends ThinkThenError {}
 export class BackendError extends ThinkThenError {}
-export class CancelledError extends ThinkThenError {}
+export class CancelledError extends ThinkThenError {
+  /** @param {ConstructorParameters<typeof ThinkThenError>[0]} error @param {ErrorOptions} [options] */
+  constructor(error, options) { super(error, options); this.name = "AbortError"; }
+}
 /** @param {unknown} value @returns {ThinkThenError} */
 export function engineError(value) {
   if (!value || typeof value !== "object" || !("code" in value) || !("message" in value)
@@ -28,13 +32,15 @@ export function engineError(value) {
     return new UsageError({ code: ABI_CODE, message: ABI_MESSAGE });
   }
   const code = /** @type {ErrorCode} */(value.code);
-  const Kind = code.startsWith("usage.") ? UsageError : code === "local.cancelled" ? CancelledError
-    : code.startsWith("backend.") ? BackendError : ThinkThenError;
+  const family = "family" in value ? value.family : undefined;
+  const Kind = code === "local.cancelled" ? CancelledError : family === "usage" ? UsageError
+    : family === "backend" ? BackendError : ThinkThenError;
   return new Kind({ code, message: value.message,
     ...("http_status" in value && typeof value.http_status === "number" ? {httpStatus: value.http_status} : {}) });
 }
 /** @param {unknown} error @returns {ThinkThenError} */
 export function nativeError(error) {
+  if (error instanceof ThinkThenError) return error;
   try { return engineError(/** @type {unknown} */(JSON.parse(error instanceof Error ? error.message : ""))); }
   catch { return new UsageError({ code: ABI_CODE, message: ABI_MESSAGE }); }
 }
@@ -44,6 +50,10 @@ let cached;
 /** @returns {Native} */
 export function loadNative() {
   if (cached) return cached;
+  if (process.platform === "linux") {
+    const report = /** @type {{header?: {glibcVersionRuntime?: string}}} */(process.report.getReport());
+    if (!report.header?.glibcVersionRuntime) throw new ThinkThenError({code: "local.io", message: "unsupported Linux platform: the native engine requires glibc"});
+  }
   /** @type {unknown} */ let loaded;
   try { loaded = require("./thinkthen.node"); }
   catch (error) { throw new ThinkThenError({ code: "local.io", message: `cannot load native engine ${fileURLToPath(new URL("./thinkthen.node", import.meta.url))}: ${error instanceof Error ? error.message : String(error)}` }); }
@@ -131,9 +141,9 @@ export function hostValue(value) {
     }
   }
   if (typeof fields.relation === "string" && fields.source !== null && typeof fields.source === "object"
-    && fields.target !== null && typeof fields.target === "object" && "either" in fields) {
-    fields.symmetric = fields.either;
-    delete fields.either;
+    && fields.target !== null && typeof fields.target === "object" && RULE_FIELDS.symmetric in fields) {
+    const {[RULE_FIELDS.symmetric]: symmetric, ...relation} = fields;
+    return Object.freeze({...relation, symmetric});
   }
   return Object.freeze(fields);
 }

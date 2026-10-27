@@ -902,3 +902,38 @@ fn completion_failed_table_records_exit_six() {
         );
     }
 }
+
+#[test]
+fn workbook_shared_text_uses_the_record_byte_limit() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("shared-limit.xlsx");
+    workbook(&input);
+    let mut strings =
+        String::from("<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
+    let text = "x".repeat(1024 * 1024);
+    for _ in 0..65 {
+        strings.push_str("<si><t>");
+        strings.push_str(&text);
+        strings.push_str("</t></si>");
+    }
+    // A malformed suffix proves admission stops when the text limit is reached.
+    strings.push_str("<broken");
+    replace_member(&input, "xl/sharedStrings.xml", strings.as_bytes());
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready", "--sheet", "Intake"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert!(output.stdout.is_empty());
+    let error = String::from_utf8(output.stderr).unwrap();
+    assert!(error.contains("usage.question"), "{error}");
+    assert!(error.contains("record exceeds the 64 MiB limit"), "{error}");
+    assert!(
+        !directory
+            .path()
+            .join("shared-limit.thinkthen.xlsx")
+            .exists()
+    );
+}

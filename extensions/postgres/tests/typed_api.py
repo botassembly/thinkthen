@@ -321,24 +321,73 @@ def cancellation(options):
         assert len(query(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')")) == 1
 
 
+def statement_timeout(options):
+    # Feature: PostgreSQL's statement timeout cancels an active engine request.
+    with fixture(options, held=True) as (loopback, environment), server(environment) as database:
+        query(database, "SET thinkthen.allowed_backends='systemone:*'")
+        query(database, "SET statement_timeout='1s'")
+        failure(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')", '57014')
+        assert command(loopback, 'closed') == 'closed'
+        query(database, 'SET statement_timeout=0')
+        assert query(database, 'SELECT 1') == [(1,)]
+
+
+def adapter_contracts():
+    # Feature: planner contracts keep remote calls volatile and serial.
+    with server(child_environment()) as database:
+        assert query(database, "SELECT DISTINCT provolatile, proparallel FROM pg_proc WHERE pronamespace='thinkthen'::regnamespace AND prolang=(SELECT oid FROM pg_language WHERE lanname='c')") == [('v','u')]
+        for setting, value in [('batch', -1), ('max_retries', -1), ('initial_backoff_ms', -1), ('attempt_timeout_ms', 0)]:
+            failure(database, 'SET thinkthen.' + setting + '=' + str(value), '22023')
+        for setting, value in [('batch', 0), ('max_retries', 0), ('initial_backoff_ms', 0), ('attempt_timeout_ms', 1)]:
+            query(database, 'SET thinkthen.' + setting + '=' + str(value))
+            query(database, 'RESET thinkthen.' + setting)
+        shared = subprocess.check_output(['pg_config', '--sharedir'], text=True).strip()
+        direct = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1', '-d', database.dsn,
+                                 '-f', str(Path(shared)/'extension/thinkthen--0.2.0.sql')],
+                                text=True, capture_output=True, check=True, env=child_environment())
+        assert 'CREATE EXTENSION thinkthen' in direct.stdout and 'ERROR' not in direct.stderr, direct
+        query(database, "SET thinkthen.backend='stub'")
+        query(database, "SET thinkthen.allowed_backends='stub:*'")
+        query(database, "CREATE TEMP TABLE memory_sample(bytes bigint, used bigint, contexts bigint)")
+        query(database, """CREATE FUNCTION pg_temp.sample(i integer) RETURNS text LANGUAGE plpgsql VOLATILE AS $$
+            BEGIN
+                IF i=20000 THEN
+                    INSERT INTO memory_sample SELECT coalesce(sum(total_bytes),0), coalesce(sum(used_bytes),0), count(*)
+                    FROM pg_backend_memory_contexts WHERE name IN ('ThinkThen invocation','ThinkThen selected id');
+                END IF;
+                RETURN 'x';
+            END $$""")
+        assert query(database, "SELECT count(*) FROM thinkthen.rank('SELECT i::text AS id, pg_temp.sample(i) AS record FROM generate_series(1,20000) i','Order?',ARRAY['low','high'],id_column=>'id')") == [(20000,)]
+        sample = query(database, "SELECT bytes,used,contexts FROM memory_sample")
+        assert len(sample)==1 and sample[0][0] < 16*1024*1024, sample
+        print('PostgreSQL id memory (allocated bytes, used bytes, contexts):', sample)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('loopback', type=Path)
-    parser.add_argument('--group', choices=['all', 'native', 'ownership', 'conformance', 'admission'], default='all')
+    parser.add_argument('--group', choices=['all', 'native', 'ownership', 'conformance', 'admission', 'adapter'], default='all')
     parser.add_argument('--abi-mismatch-extension', type=Path, required=True)
     parser.add_argument('--systemone-url-env', required=True)
     parser.add_argument('--openai-url-env', required=True)
     options = parser.parse_args()
+    if options.group == 'adapter':
+        adapter_contracts()
+        statement_timeout(options)
+        print('PostgreSQL adapter contracts pass')
+        sys.exit(0)
     admission()
     if options.group == 'admission':
         sys.exit(0)
     if options.group != 'conformance':
         abi_mismatch(options)
         native()
+        adapter_contracts()
     if options.group in ('all', 'conformance'):
         conformance(options)
     if options.group in ('all', 'native'):
         cancellation(options)
+        statement_timeout(options)
     if options.group != 'conformance':
         subprocess.run(['/work/bundle/run-live', '--stub'], check=True, env=child_environment())
     print(f'PostgreSQL {options.group} checks pass')

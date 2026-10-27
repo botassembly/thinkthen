@@ -15,21 +15,28 @@ public final class ConformanceCases {
         var records = ConsumerCases.records(request);
         var definition = request.get("question");
         String function = definition.get("function").asText();
-        if (function.equals("annotate")) return client.annotateStream(annotations(definition.get("questions")),records,AnnotateOptions.builder().evidence(Pointer.of(definition.path("evidence").asText(""))).build());
+        if (function.equals("annotate")) {
+            var options = AnnotateOptions.builder().evidence(Pointer.of(definition.path("evidence").asText("")));
+            if (request.hasNonNull("name")) options.name(request.get("name").asText());
+            return client.annotateStream(annotations(definition.get("questions")),records,options.build());
+        }
         var box = ConsumerCases.JSON.createObjectNode(); box.set("entry",definition);
         var toolbox = Toolbox.parse(box.toString());
         return switch (function) {
-            case "decide" -> client.decideStream(toolbox.decide("entry").orElseThrow(),records);
-            case "choose" -> client.chooseStream(toolbox.choose("entry").orElseThrow(),records);
-            case "tag" -> client.tagStream(toolbox.tag("entry").orElseThrow(),records);
-            case "score" -> client.scoreStream(toolbox.score("entry").orElseThrow(),records);
-            case "filter" -> client.filter(toolbox.filter("entry").orElseThrow(),records).map(ItemRow::row);
-            case "rank" -> client.rank(toolbox.rank("entry").orElseThrow(),records).map(ItemRow::row);
-            case "find" -> client.findStream(toolbox.find("entry").orElseThrow(),records);
-            case "recognize" -> client.recognizeStream(toolbox.recognize("entry").orElseThrow(),records);
-            case "relate" -> client.relateStream(toolbox.relate("entry").orElseThrow(),records);
+            case "decide" -> client.decideStream(named(toolbox.decide("entry").orElseThrow(),request,DecideQuestion::named),records);
+            case "choose" -> client.chooseStream(named(toolbox.choose("entry").orElseThrow(),request,ChooseQuestion::named),records);
+            case "tag" -> client.tagStream(named(toolbox.tag("entry").orElseThrow(),request,TagQuestion::named),records);
+            case "score" -> client.scoreStream(named(toolbox.score("entry").orElseThrow(),request,ScoreQuestion::named),records);
+            case "filter" -> client.filter(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).map(ItemRow::row);
+            case "rank" -> client.rank(named(toolbox.rank("entry").orElseThrow(),request,RankQuestion::named),records).map(ItemRow::row);
+            case "find" -> client.findStream(named(toolbox.find("entry").orElseThrow(),request,FindQuestion::named),records);
+            case "recognize" -> client.recognizeStream(named(toolbox.recognize("entry").orElseThrow(),request,RecognizeQuestion::named),records);
+            case "relate" -> client.relateStream(named(toolbox.relate("entry").orElseThrow(),request,RelateQuestion::named),records);
             default -> throw new AssertionError("Unknown function");
         };
+    }
+    private static <Q> Q named(Q question, JsonNode request, java.util.function.BiFunction<Q,String,Q> rename) {
+        return request.hasNonNull("name") ? rename.apply(question,request.get("name").asText()) : question;
     }
     private static AnnotationQuestions annotations(JsonNode questions) {
         var box = Toolbox.parse(questions.toString()); var result = AnnotationQuestions.builder();

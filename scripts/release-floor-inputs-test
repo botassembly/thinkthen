@@ -9,6 +9,7 @@ import runpy
 import shutil
 import sys
 import tempfile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -58,13 +59,13 @@ def exercise(scratch, system, runtime=None):
         original_prefix = prefix
         prefix = Path(kwargs.get("env", {}).get("THINKTHEN_RUNTIME_PREFIX", prefix))
         command = args[-1]
-        if command.endswith('prepare-swift'):
-            prefix = original_prefix
-            return
         calls.append(command)
         if counter is not None:
             with counter.get_lock():
                 counter.value += 1
+        if command.endswith(('prepare-swift', 'prepare-image')):
+            prefix = original_prefix
+            return
         if runtime is not None:
             roots = ['Frameworks/R.framework', 'bin/R', 'bin/Rscript', 'include/libintl.h', 'jansson', 'sources'] if command.endswith('prepare-macos') else ['duckdb'] if command.endswith('prepare-duckdb') else ['r-frames']
             for name in roots:
@@ -118,6 +119,13 @@ def exercise(scratch, system, runtime=None):
             subprocess.run([prefix / 'bin/Rscript', '--vanilla', '-e', code], check=True,
                            env=dict(os.environ, R_LIBS_USER=str(prefix / 'r-frames/library'), R_LIBS_SITE=''))
             return
+        state['host_tools'] = lambda: None
+        state['language_inputs'] = lambda: None
+        target = 'macos-arm64' if macos else 'linux-x86_64'
+        with patch.object(platform, 'machine', return_value='arm64' if macos else 'x86_64'), patch.dict(os.environ, PM_JOB='floor-inputs-test'):
+            module['prepare'](target)
+        assert calls == ([] if macos else ['scripts/floors/prepare-image', 'scripts/floors/prepare-swift']), calls
+        calls.clear()
         missing = [('jansson/include/jansson.h', expected[0]),
                    ('sources/jsonlite_2.0.0.tar.gz', expected[0]),
                    ('r-frames/library/cli/DESCRIPTION', 'scripts/floors/prepare-r'),

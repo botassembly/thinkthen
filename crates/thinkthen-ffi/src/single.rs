@@ -29,7 +29,7 @@ pub unsafe extern "C" fn thinkthen_run_one(
     unsafe {
         operation(error, || {
             let size = row_size(out)?;
-            out.write(HostRow::empty(size));
+            HostRow::empty(size).write(out);
             let record = crate::finite::admit_record(data, len, kind)?;
             let request = Request::new((*question).0.build()?);
             let mut call = native::Call::open(&(*client).0, &request, OffsetUnit::CodePoints)?;
@@ -50,7 +50,7 @@ pub unsafe extern "C" fn thinkthen_run_one(
                     .source
                     .attach_original(crate::original::input(data, len, kind)?);
             }
-            out.write(result);
+            result.write(out);
             Ok(OK)
         })
     }

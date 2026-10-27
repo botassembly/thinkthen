@@ -19,6 +19,12 @@ def native_abi_cases
           abort "require eagerly loaded the engine" if ThinkThen.const_defined?(:Native, false)
           ThinkThen::Client.open(backend: :stub) do |client|
             row = client.decide("Ready?", ARGV.fetch(0) == "unknown-error" ? nil : "record")
+            if ARGV.fetch(0) == "unknown-error"
+              abort "lost raw code" unless row.error.code == :unknown && row.error.raw_code == 2147483647
+              abort "lost engine message" if row.error.message.empty?
+              puts "unknown"
+              exit
+            end
             abort "wrong row" unless row.function == :decide && row.position == 1 && row.source.backend == :stub
           end
           puts "accepted"
@@ -29,7 +35,7 @@ def native_abi_cases
       RUBY
       output, status = Open3.capture2e(RbConfig.ruby, "-I", temporary, "-e", source, test.fetch("name"))
       assert(status.success?, "ABI child #{test.fetch('name')}: #{output}")
-      equal(test.fetch("accept") ? "accepted" : "rejected", output.strip, "shared ABI #{test.fetch('name')}")
+      equal(test.fetch("name") == "unknown-error" ? "unknown" : test.fetch("accept") ? "accepted" : "rejected", output.strip, "shared ABI #{test.fetch('name')}")
     end
   end
   puts "installed Ruby gem: shared ABI acceptance and refusal cases pass"

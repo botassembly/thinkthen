@@ -181,7 +181,7 @@ test "filter preserves source originals across reuse and retains missing rows" {
     const missing = try client.filterOne(arena.allocator(), "Ready?", .missing, .{}, null);
     try testing.expect(!missing.kept());
     switch (missing.row.outcome) {
-        .failed => |failure| try testing.expectEqual(tt.ErrorCode.record_missing, failure.code),
+        .failed => |failure| try testing.expectEqual(tt.ErrorCode.record_missing, failure.code.?),
         else => return error.ExpectedMissingFailure,
     }
 }
@@ -206,7 +206,7 @@ test "record ids preserve integer extremes and invalid ids remain failed rows" {
         count += 1;
         try testing.expectEqual(@as(u64, count), row.position);
         switch (row.outcome) {
-            .failed => |failure| try testing.expectEqual(tt.ErrorCode.record_invalid, failure.code),
+            .failed => |failure| try testing.expectEqual(tt.ErrorCode.record_invalid, failure.code.?),
             else => return error.ExpectedInvalidIdFailure,
         }
     }

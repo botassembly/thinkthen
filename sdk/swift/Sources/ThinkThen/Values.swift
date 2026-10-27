@@ -200,6 +200,7 @@ public struct ABIVersion: Sendable, Equatable { public let major: UInt32, minor:
 public enum IterationIssue: Sendable, Equatable { case alreadyIterated, concurrentNext }
 public enum ThinkThenError: Error, Sendable, Equatable {
   case engine(RowFailure)
+  case unknownCode(rawCode: Int32, message: String, httpStatus: UInt16?, rawName: String?)
   case engineUnavailable(message: String)
   case engineVersion(required: ABIVersion, found: ABIVersion)
   case encoding(message: String)

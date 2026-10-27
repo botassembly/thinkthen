@@ -4,20 +4,24 @@
   result <- .Call(paste0("wrap__", name), ..., PACKAGE = "thinkthen")
   if (!is.null(result$error)) {
     error <- result$error
-    family <- if (identical(error$code, "local.cancelled")) "cancelled" else {
-      switch(error$family, local = "setup", backend = "setup", error$family)
-    }
     rlang::abort(error$message,
-      class = c(paste0("thinkthen_", family, "_error"), "thinkthen_error"),
+      class = c(paste0("thinkthen_", error$family, "_error"),
+                if (identical(error$code, "local.cancelled")) "thinkthen_cancelled_error",
+                "thinkthen_error"),
       code = error$code, call = NULL, trace = rlang::trace_back(bottom = globalenv()))
   }
   result
 }
 
+.tt_r_error <- function(message, code) {
+  rlang::abort(message, class = c("thinkthen_r_error", "thinkthen_error"),
+               code = paste0("r.", code), call = NULL)
+}
+
 .tt_dots <- function(...) {
   values <- rlang::enquos(..., .ignore_empty = "none")
   if (length(values) && (is.null(names(values)) || anyNA(names(values)) || any(!nzchar(names(values))))) {
-    .tt_native("r_question_conversion_error")
+    .tt_r_error("Arguments in ... must be named.", "arguments")
   }
   list(...)
 }
@@ -63,10 +67,6 @@ tt_client <- function(backend = NULL, ..., api_key = NULL, url = NULL,
   .tt_check_abi()
   dots <- .tt_dots(...)
   force(backend); force(api_key); force(url); force(model); force(batch); force(retry)
-  if (is.character(backend) && length(backend) == 1L && !is.na(backend)) {
-    tryCatch(rlang::arg_match(backend, values = unname(.tt_backend_names)),
-             error = function(error) .tt_native("r_client", .tt_json(list(backend = backend))))
-  }
   if (inherits(retry, "tt_retry")) retry <- .tt_snapshot_value(retry)
   settings <- .tt_options(backend = backend, api_key = api_key, url = url,
                           model = model, batch = batch, retry = retry, .dots = dots)

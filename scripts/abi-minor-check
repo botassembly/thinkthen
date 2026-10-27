@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""Check ABI prefix memory safety and the four bindings' future-code adaptation.
+
+The native argument is a previously verified engine. Only binding checks use it;
+Cargo compiles the changed FFI memory-safety test in the job's own target.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import shutil
+import subprocess
+import sys
+import tempfile
+from native_platform import current
+
+ROOT = Path(__file__).resolve().parent.parent
+MESSAGE = 'settings: expected a JSON-representable settings object; received an incompatible host value (contents redacted)'
+
+
+def run(*args, cwd=ROOT, **kwargs):
+    subprocess.run([str(arg) for arg in args], cwd=cwd, check=True, **kwargs)
+
+
+def fixture(engine, output, rows=False, children=False):
+    tools = runpy.run_path(str(ROOT / 'scripts/native-fixtures'))
+    registry = json.loads((ROOT / 'schemas/abi.json').read_text())
+    source = tools['source']({'version': 131074, 'forward': True}, registry, engine)
+    for export in registry['exports']:
+        name = export['name']
+        if rows or children or name not in ('thinkthen_client_open', 'thinkthen_client_open_json'):
+            continue
+        declaration = export['declaration'].rstrip(';')
+        unused = ' '.join('(void)' + name + ';' for name in tools['parameters'](declaration, name) if name != 'error')
+        body = (unused + ' typedef int32_t (*conversion)(thinkthen_error*); '
+                'int32_t result = ((conversion)resolve("thinkthen_settings_conversion_error"))(error); '
+                'error->code = 2147483647; return result;')
+        source, count = re.subn(r'THINKTHEN_FIXTURE_API ' + re.escape(declaration) + r' \{[^\n]*\}',
+                               'THINKTHEN_FIXTURE_API ' + declaration + ' { ' + body + ' }', source)
+        assert count == 1, name
+    if rows:
+        source = source.replace('return fixture_function(call, out, error);',
+            'int32_t result = fixture_function(call, out, error); '
+            'if (result == THINKTHEN_OK && out->status == THINKTHEN_STATUS_FAILED) out->error_code = 2147483647; return result;')
+    if children:
+        payload = json.dumps({'future': {'function': 'decide', 'status': 'failed',
+            'error': {'code': 'future.problem', 'message': 'future child message'}}})
+        source = source.replace('return fixture_function(call, out, error);',
+            'int32_t result = fixture_function(call, out, error); '
+            'if (result == THINKTHEN_OK && out->function == THINKTHEN_FUNCTION_ANNOTATE) { '
+            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->answer); '
+            'static const char answer[] = ' + json.dumps(payload) + '; '
+            'out->answer.len = sizeof(answer) - 1; out->answer.data = malloc(out->answer.len); '
+            'if (!out->answer.data) abort(); memcpy(out->answer.data, answer, out->answer.len); } return result;')
+        source = source.replace('fixture_function(row);',
+            'if (row->function == THINKTHEN_FUNCTION_ANNOTATE) { free(row->answer.data); '
+            'row->answer.data = NULL; row->answer.len = 0; } fixture_function(row);')
+        source = '#include <string.h>\n' + source
+    declaration = next(item['declaration'].rstrip(';') for item in registry['exports'] if item['name'] == 'thinkthen_code_name')
+    source = re.sub(r'(THINKTHEN_FIXTURE_API ' + re.escape(declaration) + r' \{[^\n]*?)return fixture_function\(value\);',
+                    r'\1if (value == 2147483647) return "future.code"; return fixture_function(value);', source)
+    path = output / engine.name
+    code = output / 'future.c'
+    code.write_text(source)
+    flags = ['-dynamiclib', '-pthread'] if sys.platform == 'darwin' else ['-shared', '-fPIC', '-pthread', '-ldl']
+    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', path, *flags)
+    return path
+
+
+def bindings(engine, scratch, selected):
+    future = fixture(engine, scratch)
+    row_folder = scratch / 'rows'
+    row_folder.mkdir()
+    row_future = fixture(engine, row_folder, rows=True)
+    child_folder = scratch / 'children'
+    child_folder.mkdir()
+    child_future = fixture(engine, child_folder, children=True)
+    include = ROOT / 'crates/thinkthen-ffi/include'
+    failures = []
+    if 'cpp' in selected:
+        try:
+            run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I', include,
+                '-I', ROOT / 'sdk/cpp/include', ROOT / 'sdk/cpp/tests/minor_error.cpp', future,
+                '-Wl,-rpath,' + str(scratch), '-o', scratch / 'cpp')
+            run(scratch / 'cpp', MESSAGE)
+            run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I', include,
+                '-I', ROOT / 'sdk/cpp/include', ROOT / 'sdk/cpp/tests/unknown_code_consumer.cpp', engine,
+                '-Wl,-rpath,' + str(engine.parent), '-o', scratch / 'cpp-row')
+            run(scratch / 'cpp-row')
+        except subprocess.CalledProcessError:
+            failures.append("cpp")
+    if 'ruby' in selected:
+        try:
+            ruby = scratch / 'ruby'
+            shutil.copytree(ROOT / 'sdk/ruby/lib', ruby)
+            shutil.copy2(future, ruby / 'thinkthen' / future.name)
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', MESSAGE)
+            shutil.copy2(row_future, ruby / 'thinkthen' / future.name)
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'the record is missing', 'row')
+            shutil.copy2(child_future, ruby / 'thinkthen' / future.name)
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'future child message', 'child')
+        except subprocess.CalledProcessError:
+            failures.append("ruby")
+    if 'swift' in selected:
+        try:
+            swift = scratch / 'swift'
+            shutil.copytree(ROOT / 'sdk/swift', swift)
+            shutil.copy2(ROOT / 'sdk/swift/Package.swift', swift / 'Package.swift')
+            shutil.copy2(include / 'thinkthen.h', swift / 'Sources/CThinkThen/include/thinkthen.h')
+            run(sys.executable, ROOT / 'sdk/swift/generate-codes.py', ROOT / 'schemas/contract.json', swift / 'Sources/ThinkThen/ErrorCode.swift')
+            native = swift / 'Sources/ThinkThen/Native' / current()['rid']
+            native.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(future, native / future.name)
+            consumer = scratch / 'consumer'
+            consumer.mkdir()
+            shutil.copy2(ROOT / 'sdk/swift/tests/minor/Consumer.swift', consumer / 'MinorError.swift')
+            (consumer / 'Package.swift').write_text('''// swift-tools-version: 6.3
+        import PackageDescription
+        let package = Package(name: "MinorError", platforms: [.macOS("15.0")], dependencies: [.package(path: "../swift")], targets: [
+        .executableTarget(name: "MinorError", dependencies: [.product(name: "ThinkThen", package: "swift")], path: ".")])
+        ''')
+            run('swift', 'format', 'lint', '--strict', '--recursive', ROOT / 'sdk/swift')
+            run('swift', 'build', '--jobs', '2', '--package-path', consumer, '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
+            run(consumer / '.build/debug/MinorError', MESSAGE)
+            for resource in {path.resolve() for path in consumer.rglob(future.name)}:
+                shutil.copy2(row_future, resource)
+            run(consumer / '.build/debug/MinorError', 'the record is missing', 'row')
+            for resource in {path.resolve() for path in consumer.rglob(future.name)}:
+                shutil.copy2(child_future, resource)
+            run(consumer / '.build/debug/MinorError', 'future child message', 'child')
+        except subprocess.CalledProcessError:
+            failures.append("swift")
+    if 'zig' in selected:
+        try:
+            zig = scratch / 'package'
+            shutil.copytree(ROOT / 'sdk/zig', zig)
+            (zig / 'include').mkdir(exist_ok=True)
+            shutil.copy2(include / 'thinkthen.h', zig / 'include/thinkthen.h')
+            runpy.run_path(str(ROOT / 'scripts/zig_codes.py'))['generate'](ROOT, zig / 'src/error_codes.zig')
+            native = zig / 'native' / current()['rid']
+            native.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(future, native / future.name)
+            consumer = scratch / 'zig-consumer'
+            consumer.mkdir()
+            shutil.copy2(ROOT / 'sdk/zig/tests/minor_error.zig', consumer / 'consumer.zig')
+            shutil.copy2(ROOT / 'sdk/zig/tests/build.zig.zon', consumer / 'build.zig.zon')
+            source = (ROOT / 'sdk/zig/tests/build.zig').read_text()
+            source = source[:source.index('    const tests =')] + '}\n'
+            (consumer / 'build.zig').write_text(source)
+            version = re.search(r'minimum_zig_version = "([^"]+)"', (zig / 'build.zig.zon').read_text())[1]
+            executable = Path.home() / '.local/share/thinkthen-build-tools/zig' / version / 'zig'
+            run(executable, 'fmt', '--check', ROOT / 'sdk/zig/src', ROOT / 'sdk/zig/tests/minor_error.zig')
+            run(executable, 'build', '-j2', cwd=consumer)
+            run(consumer / 'zig-out/bin/consumer', MESSAGE)
+            shutil.copy2(row_future, consumer / 'zig-out/bin' / future.name)
+            run(consumer / 'zig-out/bin/consumer', 'the record is missing', 'row')
+            shutil.copy2(child_future, consumer / 'zig-out/bin' / future.name)
+            run(consumer / 'zig-out/bin/consumer', 'future child message', 'child')
+        except subprocess.CalledProcessError:
+            failures.append("zig")
+    if failures:
+        raise SystemExit("ABI binding checks failed: " + ", ".join(failures))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--native', required=True, type=Path)
+    parser.add_argument('--bindings-only', action='store_true')
+    parser.add_argument('--bindings', nargs='+', choices=['cpp', 'ruby', 'swift', 'zig'], default=['cpp', 'ruby', 'swift', 'zig'])
+    args = parser.parse_args()
+    if not args.bindings_only:
+        run('cargo', 'fmt', '--all', '--check')
+        run('cargo', 'test', '--offline', '--locked', '-p', 'thinkthen-ffi', '--lib', 'memory_prefix_tests')
+        run('cargo', 'clippy', '--offline', '--locked', '-p', 'thinkthen-ffi', '--lib', '--tests', '--', '-D', 'warnings')
+        if 'ruby' in args.bindings:
+            run(ROOT / 'sdk/ruby/tests/type-gate', '--dev-gems', Path.home() / '.local/share/thinkthen-build-tools/ruby/dev')
+    with tempfile.TemporaryDirectory(prefix='abi-minor-') as folder:
+        bindings(args.native.resolve(strict=True), Path(folder), args.bindings)
+    print('ABI minor checks pass for selected stages')
+
+
+if __name__ == '__main__':
+    main()

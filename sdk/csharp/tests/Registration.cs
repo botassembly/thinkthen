@@ -18,7 +18,7 @@ internal static partial class Program
             var services = new ServiceCollection();
             if (logging) services.AddSingleton<ILogger<ThinkThenClient>>(captured);
             services.AddThinkThen(o => { o.Backend = Backend.Stub; o.ApiKey = ApiKey.From(secret); });
-            await using var provider = services.BuildServiceProvider();
+            using var provider = services.BuildServiceProvider();
             var client = provider.GetRequiredService<ThinkThenClient>();
             Check(ReferenceEquals(client, provider.GetRequiredService<ThinkThenClient>()),
                 "DI registration must share one client snapshot");
@@ -29,7 +29,7 @@ internal static partial class Program
             Check(captured.Messages.All(message => !message.Contains(secret, StringComparison.Ordinal)),
                 "host logger exposed a key");
             if (logging) Check(captured.Messages.Count > 0, "registered host logger received no lifecycle or error event");
-            await provider.DisposeAsync();
+            provider.Dispose();
             // The host owns disposal of the singleton, including active-call admission.
             await Rejected(async () => { await client.DecideAsync("Ready?", "alpha"); });
         }

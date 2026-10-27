@@ -7,19 +7,15 @@ Value Argument(TableFunctionBindInput &input, const string &name, idx_t position
     return found == input.named_parameters.end() ? Value() : found->second;
 }
 string RequiredList(const string &function) {
-    if (function == "choose") return "choices";
-    if (function == "tag") return "labels";
-    if (function == "score" || function == "rank") return "levels";
-    if (function == "recognize") return "kinds";
-    if (function == "relate") return "rules";
-    if (function == "annotate") return "toolbox";
+    for (auto name : {"choices", "labels", "levels", "kinds", "rules", "toolbox"})
+        if (HasArgument(function, name)) return name;
     return "";
 }
 QuestionOwner Admit(TableFunctionBindInput &input, Binding &bind) {
     ErrorOwner error;
     thinkthen_question *raw = nullptr;
     auto list = RequiredList(bind.function);
-    bool wording = bind.function != "recognize" && bind.function != "relate" && bind.function != "annotate";
+    bool wording = HasArgument(bind.function, "question");
     auto required = list.empty() ? Value() : Argument(input, list, wording ? 2 : 1);
     if (!list.empty() && required.IsNull()) throw BinderException("usage.question: %s is required", list);
     if (bind.function == "relate" || bind.function == "annotate") {
@@ -95,16 +91,11 @@ void Load(ExtensionLoader &loader) {
     if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()))
         throw InvalidInputException("%s: %s", THINKTHEN_ABI_ERROR_CODE, THINKTHEN_ABI_ERROR_MESSAGE);
     auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
-    config.AddExtensionOption("thinkthen_backend", "ThinkThen backend", BackendType(), Value("systemone").DefaultCastAs(BackendType()), Configure<0>, SetScope::SESSION);
-    config.AddExtensionOption("thinkthen_model", "ThinkThen model", LogicalTypeId::VARCHAR, Value(LogicalTypeId::VARCHAR), Configure<1>, SetScope::SESSION);
-    config.AddExtensionOption("thinkthen_batch", "ThinkThen batch", LogicalTypeId::UBIGINT, Value(LogicalTypeId::UBIGINT), Configure<2>, SetScope::SESSION);
-    config.AddExtensionOption("thinkthen_max_retries", "ThinkThen retry count", LogicalTypeId::UBIGINT, Value(LogicalTypeId::UBIGINT), Configure<3>, SetScope::SESSION);
-    config.AddExtensionOption("thinkthen_initial_backoff_ms", "ThinkThen retry backoff", LogicalTypeId::UBIGINT, Value(LogicalTypeId::UBIGINT), Configure<4>, SetScope::SESSION);
-    config.AddExtensionOption("thinkthen_attempt_timeout_ms", "ThinkThen attempt timeout", LogicalTypeId::UBIGINT, Value(LogicalTypeId::UBIGINT), Configure<5>, SetScope::SESSION);
+    TT_REGISTER_SETTINGS
     auto rule = LogicalType::STRUCT({{"name", LogicalTypeId::VARCHAR}, {"source", LogicalTypeId::VARCHAR}, {"target", LogicalTypeId::VARCHAR}, {"reads", LogicalTypeId::VARCHAR}, {"either", LogicalTypeId::BOOLEAN}});
     for (uint32_t id = 1; id <= 10; ++id) {
         string function = FunctionName(id);
-        bool wording = function != "recognize" && function != "relate" && function != "annotate";
+        bool wording = HasArgument(function, "question");
         auto list = RequiredList(function);
         auto list_type = function == "relate" ? LogicalType::LIST(rule) : function == "annotate" ? LogicalType::JSON() : LogicalType::LIST(LogicalTypeId::VARCHAR);
         {
@@ -114,9 +105,9 @@ void Load(ExtensionLoader &loader) {
             fn.named_parameters["name"] = LogicalTypeId::VARCHAR;
             fn.named_parameters["record"] = LogicalTypeId::VARCHAR;
             fn.named_parameters["evidence"] = LogicalTypeId::VARCHAR;
-            if (function != "score" && function != "rank" && function != "annotate") fn.named_parameters["threshold"] = LogicalTypeId::DOUBLE;
-            if (function == "decide" || function == "choose" || function == "filter") { fn.named_parameters["low"] = LogicalTypeId::DOUBLE; fn.named_parameters["high"] = LogicalTypeId::DOUBLE; }
-            if (function == "rank") fn.named_parameters["top"] = LogicalTypeId::UBIGINT;
+            if (HasArgument(function, "threshold")) fn.named_parameters["threshold"] = LogicalTypeId::DOUBLE;
+            if (HasArgument(function, "low")) { fn.named_parameters["low"] = LogicalTypeId::DOUBLE; fn.named_parameters["high"] = LogicalTypeId::DOUBLE; }
+            if (HasArgument(function, "top")) fn.named_parameters["top"] = LogicalTypeId::UBIGINT;
             fn.bind_operator = Bind; fn.init_local = Init; fn.in_out_function = Run; fn.in_out_function_final = Final;
             loader.RegisterFunction(std::move(fn));
         }

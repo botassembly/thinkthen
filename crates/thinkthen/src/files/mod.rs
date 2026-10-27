@@ -15,6 +15,12 @@ use crate::core::diagnostic;
 use crate::{Error, Family};
 use std::path::PathBuf;
 
+pub(crate) const MAX_RECORD_BYTES: usize = 64 * 1024 * 1024;
+pub(crate) const RECORD_LIMIT_MESSAGE: &str = "record exceeds the 64 MiB limit";
+pub(crate) fn record_limit() -> FileError {
+    FileError::Invalid(RECORD_LIMIT_MESSAGE.into())
+}
+
 /// The explicitly selected table encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileFormat {

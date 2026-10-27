@@ -3,7 +3,11 @@
     unsafe_code,
     reason = "the ABI owns foreign pointers and allocated output prefixes"
 )]
-use std::{cell::UnsafeCell, mem::size_of, ptr};
+use std::{
+    cell::UnsafeCell,
+    mem::{ManuallyDrop, offset_of, size_of},
+    ptr,
+};
 use thinkthen::{
     Cancel, Engine, Error, Settings,
     native::{self, QuestionBuilder, ToolboxBuilder},
@@ -84,6 +88,7 @@ impl Buffer {
 }
 /// A sized owned error; code zero means no error and HTTP status zero means absent.
 #[repr(C)]
+#[cfg_attr(test, repr(align(256)))]
 #[derive(Debug)]
 pub struct HostError {
     /// The caller's allocation size, preserved by cleanup.
@@ -115,6 +120,7 @@ impl HostError {
 }
 /// One independently owned typed row. Scalar fields are selected by function/status.
 #[repr(C)]
+#[cfg_attr(test, repr(align(256)))]
 #[derive(Debug)]
 pub struct HostRow {
     /// The caller's allocation size, preserved by cleanup.
@@ -147,6 +153,18 @@ pub struct HostRow {
     pub error: Buffer,
 }
 impl HostRow {
+    pub(crate) unsafe fn read(out: *const Self) -> Self {
+        let mut value = Self::empty(Self::PREFIX_SIZE);
+        /* SAFETY: callers validate a readable 0.2 prefix; copied buffers stay borrowed. */
+        unsafe {
+            ptr::copy_nonoverlapping(
+                out.cast::<u8>(),
+                ptr::from_mut(&mut value).cast::<u8>(),
+                Self::PREFIX_SIZE as usize,
+            );
+        }
+        value
+    }
     pub(crate) fn empty(size: u32) -> Self {
         Self {
             struct_size: size,
@@ -165,17 +183,16 @@ impl HostRow {
             error: Buffer::default(),
         }
     }
-    pub(crate) unsafe fn release(&mut self) {
-        /* SAFETY: a valid prefix owns each distinct buffer independently. */
+    pub(crate) unsafe fn release(out: *mut Self) {
+        /* SAFETY: the validated 0.2 prefix owns each distinct buffer independently. */
         unsafe {
-            self.id.release();
-            self.answer.release();
-            self.detail.release();
-            self.source.release();
-            self.error.release();
+            (*ptr::addr_of_mut!((*out).id)).release();
+            (*ptr::addr_of_mut!((*out).answer)).release();
+            (*ptr::addr_of_mut!((*out).detail)).release();
+            (*ptr::addr_of_mut!((*out).source)).release();
+            (*ptr::addr_of_mut!((*out).error)).release();
+            Self::empty((*out).struct_size).write(out);
         }
-        let size = self.struct_size;
-        *self = Self::empty(size);
     }
 }
 /// An independently retained admitted engine.
@@ -229,7 +246,7 @@ pub(crate) unsafe fn text<'a>(data: *const u8, len: usize) -> Result<&'a str, Er
 }
 pub(crate) unsafe fn row_size(out: *mut HostRow) -> Result<u32, Error> {
     /* SAFETY: a non-NULL output permits reading its first size field. */
-    if out.is_null() || unsafe { (*out).struct_size } < (size_of::<HostRow>() as u32) {
+    if out.is_null() || unsafe { (*out).struct_size } < HostRow::PREFIX_SIZE {
         Err(native::abi_error())
     } else {
         /* SAFETY: size was validated without reading past its prefix. */
@@ -238,10 +255,34 @@ pub(crate) unsafe fn row_size(out: *mut HostRow) -> Result<u32, Error> {
 }
 pub(crate) unsafe fn error_size(out: *mut HostError) -> Option<u32> {
     /* SAFETY: a non-NULL output permits reading its first size field. */
-    if out.is_null() || unsafe { (*out).struct_size } < (size_of::<HostError>() as u32) {
+    if out.is_null() || unsafe { (*out).struct_size } < HostError::PREFIX_SIZE {
         None
     } else {
         /* SAFETY: size is readable and covers the supported prefix. */
         Some(unsafe { (*out).struct_size })
     }
 }
+
+// The 0.2 fields end here even when a later engine appends fields. Neither the
+// minimum accepted size nor output writes follow the engine's full struct size.
+macro_rules! prefix_output {
+    ($output:ty, $last:ident) => {
+        impl $output {
+            pub(crate) const PREFIX_SIZE: u32 =
+                (offset_of!(Self, $last) + size_of::<Buffer>()) as u32;
+            pub(crate) unsafe fn write(self, out: *mut Self) {
+                let value = ManuallyDrop::new(self);
+                /* SAFETY: callers validate a writable 0.2 prefix; ownership moves to out. */
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        ptr::from_ref(&*value).cast::<u8>(),
+                        out.cast::<u8>(),
+                        Self::PREFIX_SIZE as usize,
+                    );
+                }
+            }
+        }
+    };
+}
+prefix_output!(HostRow, error);
+prefix_output!(HostError, message);

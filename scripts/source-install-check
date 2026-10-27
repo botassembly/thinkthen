@@ -15,6 +15,7 @@ from release_registry import native_libraries, one
 from release_registry_check import environment
 from release_notice_check import package_notices
 from release_source import stage
+from release_metadata import source_tags
 from release_workflow import ROOT, run as release_run, version
 
 if os.name == 'nt':
@@ -55,8 +56,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
     run('git', '-C', tag, 'add', '.')
     run('git', '-C', tag, '-c', 'user.name=Release rehearsal', '-c', 'user.email=release@example.invalid',
         'commit', '--quiet', '-m', 'Stage local native release')
-    run('git', '-C', tag, 'tag', 'v' + version())
-    run('git', '-C', tag, 'tag', 'sdk/go/thinkthen/v' + version())
+    for name in source_tags('v' + version()):
+        run('git', '-C', tag, 'tag', name)
     # A file module proxy serves the same tagged module payload as the public site.
     module = 'github.com/botassembly/thinkthen/sdk/go/thinkthen'
     label = 'v' + version()

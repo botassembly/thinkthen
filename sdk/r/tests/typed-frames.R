@@ -20,8 +20,8 @@ for (input in inputs) {
   if (inherits(input, "grouped_df")) {
     stopifnot(identical(dplyr::group_data(result), dplyr::group_data(input)))
   }
-  condition(tt_bind(result, rows, "decision"), "thinkthen_usage_error")
-  condition(tt_bind(input[1, ], rows, "decision"), "thinkthen_usage_error")
+  condition(tt_bind(result, rows, "decision"), "thinkthen_r_error")
+  condition(tt_bind(input[1, ], rows, "decision"), "thinkthen_r_error")
 }
 
 # Feature: filter rows retain originals and failed rows in input order.
@@ -63,7 +63,7 @@ stopifnot(identical(bound$priority_answer,
 limited <- tt_rank(records, "How urgent?", c("low", "high"), top = 1L, client = client)
 stopifnot(nrow(limited) == 2L, sum(limited$status == "failed") == 1L,
           limited$position[limited$status == "failed"] == 2)
-condition(tt_bind(data, limited, "priority"), "thinkthen_usage_error")
+condition(tt_bind(data, limited, "priority"), "thinkthen_r_error")
 # Feature: annotation attachment retains declared columns without answered input.
 questions <- tt_annotation_questions(list(ready = tt_decide_question("Ready?")))
 for (input in list(data.frame(id = logical(), body = character()),

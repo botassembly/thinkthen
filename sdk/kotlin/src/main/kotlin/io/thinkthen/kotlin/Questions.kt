@@ -2,37 +2,37 @@ package io.thinkthen.kotlin
 
 import kotlinx.serialization.json.*
 
-sealed interface Question<out A,out D> {
-    val name: String?
+public sealed interface Question<out A,out D> {
+    public val name: String?
 }
-sealed interface EntryQuestion<out A,out D> : Question<A,D>
-sealed interface AnnotationQuestion<out A,out D> : EntryQuestion<A,D>
-sealed interface SingleQuestion<out A,out D> : Question<A,D>
-class Decide(val question: String, val threshold: Threshold? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Boolean,Nothing>, SingleQuestion<Boolean,Nothing> {
+public sealed interface EntryQuestion<out A,out D> : Question<A,D>
+public sealed interface AnnotationQuestion<out A,out D> : EntryQuestion<A,D>
+public sealed interface SingleQuestion<out A,out D> : Question<A,D>
+public class Decide(public val question: String, public val threshold: Threshold? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Boolean,Nothing>, SingleQuestion<Boolean,Nothing> {
 }
-class Choose(val question: String, choices: List<String>, val threshold: Threshold? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<String,LabelDetail>, SingleQuestion<String,LabelDetail> {
-    val choices: List<String> = immutableList(choices)
+public class Choose(public val question: String, choices: List<String>, public val threshold: Threshold? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<String,LabelDetail>, SingleQuestion<String,LabelDetail> {
+    public val choices: List<String> = immutableList(choices)
 }
-class Tag(val question: String, labels: List<String>, val threshold: Threshold.Cut? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<String>,LabelDetail>, SingleQuestion<List<String>,LabelDetail> {
-    val labels: List<String> = immutableList(labels)
+public class Tag(public val question: String, labels: List<String>, public val threshold: Threshold.Cut? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<String>,LabelDetail>, SingleQuestion<List<String>,LabelDetail> {
+    public val labels: List<String> = immutableList(labels)
 }
-class Score(val question: String, levels: List<String>, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Double,LevelDetail>, SingleQuestion<Double,LevelDetail> {
-    val levels: List<String> = immutableList(levels)
+public class Score(public val question: String, levels: List<String>, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Double,LevelDetail>, SingleQuestion<Double,LevelDetail> {
+    public val levels: List<String> = immutableList(levels)
 }
-class Filter(val question: String, val threshold: Threshold? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Boolean,Nothing> {
+public class Filter(public val question: String, public val threshold: Threshold? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<Boolean,Nothing> {
 }
-class Rank(val question: String, levels: List<String>, val top: Int? = null, val evidence: Pointer? = null, override val name: String? = null) : EntryQuestion<Long,LevelDetail> {
-    val levels: List<String> = immutableList(levels)
+public class Rank(public val question: String, levels: List<String>, public val top: Int? = null, public val evidence: Pointer? = null, override val name: String? = null) : EntryQuestion<Long,LevelDetail> {
+    public val levels: List<String> = immutableList(levels)
 }
-class Find(val question: String, val threshold: Threshold.Cut? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<FindAnswer,Nothing>, SingleQuestion<FindAnswer,Nothing> {
+public class Find(public val question: String, public val threshold: Threshold.Cut? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<FindAnswer,Nothing>, SingleQuestion<FindAnswer,Nothing> {
 }
-class Recognize(kinds: List<String>, val threshold: Threshold.Cut? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<Entity>,RecognizeDetail>, SingleQuestion<List<Entity>,RecognizeDetail> {
-    val kinds: List<String> = immutableList(kinds)
+public class Recognize(kinds: List<String>, public val threshold: Threshold.Cut? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<Entity>,RecognizeDetail>, SingleQuestion<List<Entity>,RecognizeDetail> {
+    public val kinds: List<String> = immutableList(kinds)
 }
-class Relate(rules: List<RelationRule>, val threshold: Threshold.Cut? = null, val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<Relation>,RelationDetail>, SingleQuestion<List<Relation>,RelationDetail> {
-    val rules: List<RelationRule> = immutableList(rules)
+public class Relate(rules: List<RelationRule>, public val threshold: Threshold.Cut? = null, public val evidence: Pointer? = null, override val name: String? = null) : AnnotationQuestion<List<Relation>,RelationDetail>, SingleQuestion<List<Relation>,RelationDetail> {
+    public val rules: List<RelationRule> = immutableList(rules)
 }
-class Annotate(val questions: AnnotationQuestions, val evidence: Pointer? = null, override val name: String? = null) : SingleQuestion<Annotations,Nothing>
+public class Annotate(public val questions: AnnotationQuestions, public val evidence: Pointer? = null, override val name: String? = null) : SingleQuestion<Annotations,Nothing>
 
 internal fun Question<*,*>.definition(): JsonObject = buildJsonObject {
     put("function", when (this@definition) {

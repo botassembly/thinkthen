@@ -16,6 +16,7 @@ package, deps = map(Path, sys.argv[1:])
 root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(root / 'scripts'))
 from package_inventory import INPUTS, DUCKDB_TERMS
+from runtime_floors import FLOORS
 wheel = deps / (deps / 'python-wheel').read_text().strip()
 python_tag, abi_tag = wheel.name.split('-')[2:4]
 if python_tag != f'cp{sys.version_info.major}{sys.version_info.minor}':
@@ -40,7 +41,8 @@ else:
     versions = subprocess.check_output(['readelf', '-V', str(extension)], env=env, text=True)
     libc = max(tuple(map(int, value.split('.'))) for value in re.findall(r'GLIBC_([0-9.]+)', versions))
     cxx = max(tuple(map(int, value.split('.'))) for value in re.findall(r'GLIBCXX_([0-9.]+)', versions))
-    assert libc <= (2, 39), f'package exceeds the glibc 2.39 floor: {libc}'
+    floor = tuple(map(int, FLOORS['linux']['glibc'].split('.')))
+    assert libc <= floor, f'package exceeds the glibc {FLOORS["linux"]["glibc"]} floor: {libc}'
     print('Linux symbol requirements: GLIBC_' + '.'.join(map(str, libc))
           + ', GLIBCXX_' + '.'.join(map(str, cxx)))
 assert 'libduckdb' not in dependencies.lower(), dependencies
@@ -58,6 +60,7 @@ with tempfile.TemporaryDirectory() as temporary:
                    env=env, cwd=temporary, check=True)
 
 prefix = f"LOAD {quote(str(extension))}; SET thinkthen_backend = 'stub';"
+prefix += " SET thinkthen_model='temporary'; RESET thinkthen_model; RESET thinkthen_batch; RESET thinkthen_max_retries; RESET thinkthen_initial_backoff_ms; RESET thinkthen_attempt_timeout_ms;"
 query = "SELECT position,status,error_code::VARCHAR AS error_code FROM thinkthen_decide((SELECT NULL::VARCHAR AS record), 'Ready?')"
 output = subprocess.check_output([str(cli), '-unsigned', '-json', '-init', '/dev/null', ':memory:', prefix + query], env=env, text=True)
 actual = json.loads(output)

@@ -12,7 +12,7 @@
 #include "thinkthen_sql.h"
 #include "utils/hsearch.h"
 #include "utils/jsonb.h"
-typedef struct TtId { uint64 position; thinkthen_text value; MemoryContext memory; } TtId;
+typedef struct TtId { uint64 position; thinkthen_text value; } TtId;
 
 typedef struct TtOwner {
     thinkthen_sql_call *call;

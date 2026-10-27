@@ -60,11 +60,12 @@ struct Session : ClientContextState {
     void Configure(const string &key, const Value &value) {
         std::lock_guard<std::mutex> lock(mutex);
         auto replacement = settings;
-        replacement[key] = Encode(value);
+        if (value.IsNull()) replacement.erase(key);
+        else replacement[key] = Encode(value);
         string json = "{";
         string retry = "{";
         for (auto &item : replacement) {
-            auto &target = item.first == "backend" || item.first == "model" || item.first == "batch" ? json : retry;
+            auto &target = tt_setting(item.first.c_str()) != 4 ? json : retry;
             if (target.size() > 1) target += ",";
             target += Quote(item.first) + ":" + item.second;
         }
@@ -74,10 +75,8 @@ struct Session : ClientContextState {
     }
 };
 template <int Option> void Configure(ClientContext &context, SetScope scope, Value &value) {
-    static const char *keys[] = {"backend", "model", "batch", "max_retries", "initial_backoff_ms", "attempt_timeout_ms"};
     if (scope == SetScope::GLOBAL) throw InvalidInputException("ThinkThen settings are session-only");
-    if (value.IsNull()) throw InvalidInputException("usage.settings: ThinkThen settings cannot be SQL NULL");
-    context.registered_state->GetOrCreate<Session>("thinkthen")->Configure(keys[Option], value);
+    context.registered_state->GetOrCreate<Session>("thinkthen")->Configure(SettingKey(Option), value);
 }
 using QuestionOwner = std::shared_ptr<thinkthen_question>;
 struct Binding : FunctionData {

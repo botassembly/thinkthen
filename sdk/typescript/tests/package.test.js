@@ -31,7 +31,7 @@ test("installed exports share constructors across ESM and CommonJS", async () =>
 });
 
 // Feature: importing types and functions never loads native code eagerly.
-test("import works without an engine", async () => {
+test("import works without an engine and first loads preserve the loader error", async () => {
   const temporary = await mkdtemp(join(tmpdir(), "thinkthen-import-"));
   const copy = join(temporary, "package");
   try {
@@ -39,7 +39,11 @@ test("import works without an engine", async () => {
     await rm(join(copy, "thinkthen.node"), { recursive: true, force: true });
     const sdk = await import(pathToFileURL(join(copy, "runtime.js")).href);
     assert.equal(typeof sdk.decide, "function");
-
+    for (const load of [() => new sdk.ThinkThen({backend:"stub"}),
+      () => sdk.parseToolbox("{}"), () => sdk.serializeToolbox({})]) {
+      assert.throws(load, error => error instanceof sdk.ThinkThenError
+        && error.code === "local.io" && /native engine/.test(error.message));
+    }
   } finally { await rm(temporary, { recursive: true, force: true }); }
 });
 

@@ -13,6 +13,11 @@ def version(root=ROOT):
     return tomllib.loads((root / 'Cargo.toml').read_text())['workspace']['package']['version']
 
 
+def source_tags(tag):
+    """Return the root and nested Go module tags for one release."""
+    return tag, 'sdk/go/thinkthen/' + tag
+
+
 def check(root=ROOT):
     expected = version(root)
 

@@ -50,3 +50,17 @@ for function,row in rows:
         lines.append('if (function == ' + quote(function) + ') return ' + native(row['oneOf'][0]['properties']['detail']) + ';')
 lines.extend(['return LogicalTypeId::SQLNULL;', '}'])
 Path(sys.argv[1]).write_text('\n'.join(lines) + '\n')
+
+sys.path.insert(0, str(root / "extensions"))
+from rules import header, arguments, SETTINGS, CLIENT
+with Path(sys.argv[1]).open("a") as output:
+    output.write(header())
+    output.write("bool HasArgument(const string &function, const char *name) { return tt_argument(function.c_str(), name); }\n")
+    keys = list(SETTINGS)
+    output.write('const char *SettingKey(int index) { static const char *keys[] = {' + ','.join(map(quote, keys)) + '}; return keys[index]; }\n')
+    registrations = []
+    for index, key in enumerate(keys):
+        kind = 'BackendType()' if key == 'backend' else 'LogicalType(LogicalTypeId::VARCHAR)' if key == 'model' else 'LogicalType(LogicalTypeId::UBIGINT)'
+        default = 'Value(TT_DEFAULT_BACKEND_NAME).DefaultCastAs(BackendType())' if key == 'backend' else 'Value(' + kind + ')'
+        registrations.append('config.AddExtensionOption("thinkthen_' + key + '", "ThinkThen ' + key + '", ' + kind + ', ' + default + ', Configure<' + str(index) + '>, SetScope::SESSION);')
+    output.write('#define TT_REGISTER_SETTINGS ' + ' '.join(registrations) + '\n')

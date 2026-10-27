@@ -7,10 +7,6 @@ public final class JavaLive {
         System.out.println(function + " " + ConformanceCases.row(row));
         row.raiseForStatus();
     }
-    public static void report(String function,io.thinkthen.internal.Row<?> row) throws Exception {
-        System.out.println(function + " " + ConsumerCases.row(row));
-        if (row.status() == io.thinkthen.internal.Row.Status.FAILED) throw new IllegalStateException(row.error().code());
-    }
     public static void main(String[] args) {
         String text = "Ada works for Acme.";
         try (var client = ThinkThen.builder().build()) {

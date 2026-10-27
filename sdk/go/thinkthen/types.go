@@ -42,7 +42,7 @@ func RawJSON(value []byte) Record { return Record{2, string(value)} }
 func JSON(value any) (Record, error) {
 	data, err := json.Marshal(value)
 	if err != nil {
-		return Record{}, conversionError(false)
+		return Record{}, &Error{code: CodeRecordJSON, message: "cannot encode record as JSON", cause: err}
 	}
 	return RawJSON(data), nil
 }

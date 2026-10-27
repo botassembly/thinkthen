@@ -52,8 +52,12 @@ def node(packages, destination, scratch):
             shutil.copytree(source, base / 'package')
             (base / 'package/thinkthen.node').unlink()
         else:
-            for name in ('runtime.js', 'index.d.ts', 'package.json'):
-                if (source / name).read_bytes() != (base / 'package' / name).read_bytes():
+            common = lambda folder: {str(path.relative_to(folder)): path.read_bytes()
+                                     for path in folder.rglob('*') if path.is_file()
+                                     and path.relative_to(folder).parts[0] not in ('thinkthen.node', NOTICE)}
+            expected, actual = common(base / 'package'), common(source)
+            for name in sorted(expected.keys() | actual.keys()):
+                if expected.get(name) != actual.get(name):
                     raise ValueError(f'npm {name} differs between platforms')
         native = base / 'package/thinkthen.node'
         native.mkdir(exist_ok=True)
@@ -145,15 +149,21 @@ def jvm(libraries, destination, scratch, notices):
         jar = package / f'thinkthen-{name}-{version()}.jar'
         shutil.copy2(folder / 'target' / jar.name, jar)
         apply(jar, combine(notices), 'META-INF/')
-        sources = folder / ('src/main/java' if name == 'java' else 'src/main/kotlin')
-        with zipfile.ZipFile(package / f'thinkthen-{name}-{version()}-sources.jar', 'w') as archive:
-            for path in sorted(sources.rglob('*')):
-                if path.is_file():
-                    archive.write(path, path.relative_to(sources))
+        jvm_sources(folder, name, package / f'thinkthen-{name}-{version()}-sources.jar')
         readme = ROOT / ('sdk/java' if name == 'java' else 'sdk/kotlin') / 'README.md'
         with zipfile.ZipFile(package / f'thinkthen-{name}-{version()}-javadoc.jar', 'w') as archive:
             archive.writestr('index.html', '<!doctype html><meta charset="utf-8"><pre>' +
                              html.escape(readme.read_text()) + '</pre>')
+
+
+def jvm_sources(folder, name, destination):
+    """Include hand-written and generated declarations used to build the JAR."""
+    sources = folder / ('src/main/java' if name == 'java' else 'src/main/kotlin')
+    with zipfile.ZipFile(destination, 'w') as archive:
+        for source_root in (sources, folder / 'target/generated-sources/contracts'):
+            for path in sorted(source_root.rglob('*')):
+                if path.is_file():
+                    archive.write(path, path.relative_to(source_root))
 
 
 def github_packages(packages, destination):

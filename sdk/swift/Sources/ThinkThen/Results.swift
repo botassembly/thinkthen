@@ -3,9 +3,40 @@ import Foundation
 public enum Status: String, Sendable, Codable { case answered, unsure, failed }
 public struct RowFailure: Error, Sendable, Codable, Equatable, Hashable {
   public let code: ErrorCode, message: String, httpStatus: UInt16?
+  public let rawCode: Int32?
+  public let rawName: String?
+  public init(
+    code: ErrorCode, message: String, httpStatus: UInt16?, rawCode: Int32? = nil,
+    rawName: String? = nil
+  ) {
+    self.code = code
+    self.message = message
+    self.httpStatus = httpStatus
+    self.rawCode = rawCode
+    self.rawName = rawName
+  }
   enum CodingKeys: String, CodingKey {
     case code, message
+    case rawCode = "raw_code"
+    case rawName = "raw_name"
     case httpStatus = "http_status"
+  }
+  public init(from decoder: any Decoder) throws {
+    let fields = try decoder.container(keyedBy: CodingKeys.self)
+    let name = try fields.decode(String.self, forKey: .code)
+    code = ErrorCode(rawValue: name) ?? .unknown
+    message = try fields.decode(String.self, forKey: .message)
+    httpStatus = try fields.decodeIfPresent(UInt16.self, forKey: .httpStatus)
+    rawCode = try fields.decodeIfPresent(Int32.self, forKey: .rawCode)
+    let preservedName = try fields.decodeIfPresent(String.self, forKey: .rawName)
+    rawName = preservedName ?? (code == .unknown ? name : nil)
+  }
+  public func encode(to encoder: any Encoder) throws {
+    var fields = encoder.container(keyedBy: CodingKeys.self)
+    try fields.encode(rawName ?? code.rawValue, forKey: .code)
+    try fields.encode(message, forKey: .message)
+    try fields.encodeIfPresent(httpStatus, forKey: .httpStatus)
+    try fields.encodeIfPresent(rawCode, forKey: .rawCode)
   }
 }
 public enum Outcome<A: Sendable, D: Sendable>: Sendable {

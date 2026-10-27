@@ -3,7 +3,7 @@
 .tt_abi_version_export <- "wrap__r_abi_version"
 .tt_abi_code <- "usage.abi"
 .tt_abi_message <- "the native ABI is incompatible"
-.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_close", "wrap__r_end", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_invalid", "wrap__r_json", "wrap__r_open", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_record_id", "wrap__r_settings_conversion_error", "wrap__r_text")
+.tt_abi_exports <- c("wrap__r_abi_version", "wrap__r_admit", "wrap__r_cancel_release", "wrap__r_client", "wrap__r_client_close", "wrap__r_close", "wrap__r_id_integer", "wrap__r_id_string", "wrap__r_open_finite", "wrap__r_poll", "wrap__r_prepare_record", "wrap__r_question", "wrap__r_question_conversion_error", "wrap__r_settings_conversion_error")
 .tt_function_names <- c(
     "1" = "decide",
     "2" = "choose",

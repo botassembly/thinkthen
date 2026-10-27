@@ -48,34 +48,20 @@ pub(super) fn request(function: &str, args: &ArgMatches) -> Result<Request, Erro
             );
         }
     }
-    for (name, key, env) in [
-        ("choose", "choice", "THINKTHEN_CHOICES"),
-        ("tag", "label", "THINKTHEN_LABELS"),
-        ("score", "level", "THINKTHEN_LEVELS"),
-        ("rank", "level", "THINKTHEN_LEVELS"),
-        ("recognize", "kind", "THINKTHEN_KINDS"),
-    ] {
-        if function == name {
-            let list = options::list(args, key, env)?
-                .ok_or_else(|| usage(key, "a supplied list", "absent option"))?;
-            let field = match key {
-                "choice" => "choices",
-                "label" => "labels",
-                "level" => "levels",
-                _ => "kinds",
-            };
-            question.insert(field.into(), list);
-        }
+    let function_name: crate::FunctionName = serde_json::from_value(function.into())
+        .map_err(|_| usage("function", "a registered function", function))?;
+    let spec = function_name.command();
+    if let Some((key, field, env, _)) = spec.list {
+        let list = options::list(args, key, env)?
+            .ok_or_else(|| usage(key, "a supplied list", "absent option"))?;
+        question.insert(field.into(), list);
     }
     if function == "relate" {
         question.insert("rules".into(), rules(args)?);
     }
-    if matches!(
-        function,
-        "decide" | "choose" | "filter" | "find" | "tag" | "recognize" | "relate"
-    ) {
-        let band = matches!(function, "decide" | "choose" | "filter");
-        let keys: &[&str] = if band {
+    use crate::core::questions::command::ThresholdOption;
+    if !matches!(spec.threshold, ThresholdOption::None) {
+        let keys: &[&str] = if matches!(spec.threshold, ThresholdOption::Band) {
             &["threshold", "low", "high"]
         } else {
             &["threshold"]

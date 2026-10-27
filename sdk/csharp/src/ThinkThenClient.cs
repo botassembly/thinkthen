@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ThinkThen;
 
-public sealed partial class ThinkThenClient : IAsyncDisposable
+public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
 {
     private readonly ClientHandle client;
     private readonly JsonSerializerOptions serializer;
@@ -42,14 +42,21 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
             throw;
         }
     }
+    public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
     public ValueTask DisposeAsync()
     {
-        lock (lifecycle) return new(disposal ??= DisposeCore(active.ToArray()));
+        lock (lifecycle)
+        {
+            if (disposal is null)
+            {
+                CallState[] calls = active.ToArray();
+                disposal = Task.Run(() => DisposeCore(calls));
+            }
+            return new(disposal);
+        }
     }
     private async Task DisposeCore(CallState[] calls)
     {
-        // Yield so admission closes under lifecycle before callbacks can run.
-        await Task.Yield();
         await Task.WhenAll(calls.Select(call => call.Close())).ConfigureAwait(false);
         client.Dispose();
         logger.LogInformation("ThinkThen client closed");
@@ -95,16 +102,19 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
     }
     private sealed record Output<T,A,D>(T Item, Row<A,D> Row);
     private async IAsyncEnumerable<Output<T,A,D>> Run<T,A,D>(Question<A,D> question, IAsyncEnumerable<T> records,
-        Func<T, byte[]> encode, bool originals, string? name, [EnumeratorCancellation] CancellationToken cancellationToken)
+        Func<T, byte[]> encode, bool originals, string? name, [EnumeratorCancellation] CancellationToken cancellationToken, bool owned = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (question is null) throw Json.Conversion(new ArgumentNullException(nameof(question)));
         if (records is null) throw Json.Conversion(new ArgumentNullException(nameof(records)));
-        CallState call = Open(question.Handle, name, cancellationToken);
+        CallState call;
+        try { call = Open(question.Handle, name, cancellationToken); }
+        finally { if (owned) question.Dispose(); }
         Source<T>? source = null;
         bool failed = false;
         var original = originals ? new Dictionary<ulong,T>() : null;
         ulong position = 0;
+        var causes = new Dictionary<ulong,Exception>();
         try
         {
             source = new(records, call.Token);
@@ -128,7 +138,7 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
                             T record = source.Current;
                             position++;
                             if (originals) original!.Add(position, record);
-                            call.Invoke(handle => Send(handle, record, encode));
+                            call.Invoke(handle => Send(handle, record, encode, cause => causes.Add(position, cause)));
                         }
                         else call.Invoke(handle => { Native.EndInput(handle); return 0; });
                     }
@@ -143,6 +153,9 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
                     try { row = Codecs.Row<A,D>(pull.Function, pull.RowStatus, pull.ErrorCode, pull.Position, pull.Probability,
                         pull.Id, pull.Answer, pull.Detail, pull.Source, pull.Error, question.Definition["function"]!.GetValue<string>()); }
                     catch { failed = true; throw; }
+                    if (causes.Remove(pull.Position, out Exception? cause) && row is Failed<A,D> invalid)
+                        row = new Failed<A,D>(invalid.Function, invalid.Position, invalid.Id, invalid.Source,
+                            invalid.Error with { Cause = cause }) { Canonical = invalid.Canonical };
                     if (row is Failed<A,D> failure) logger.LogWarning("ThinkThen row failed: {Code}", failure.Error.Code);
                     yield return new(item, row);
                 }
@@ -158,7 +171,7 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
             if (source is not null) await source.Finish(failed || cancelled, cancellationToken).ConfigureAwait(false);
         }
     }
-    private static int Send<T>(CallHandle handle, T record, Func<T,byte[]> encode)
+    private static int Send<T>(CallHandle handle, T record, Func<T,byte[]> encode, Action<Exception> failed)
     {
         NativeError error = NativeError.Empty;
         int sent;
@@ -174,8 +187,8 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
         {
             byte[] bytes;
             try { bytes = encode(record); }
-            catch (Exception failure) when (failure is JsonException or NotSupportedException or ArgumentException or InvalidOperationException)
-            { Json.Check(Native.SendInvalid(handle, ref error), error); return 0; }
+            catch (Exception failure) when (failure is JsonException or NotSupportedException)
+            { Json.Check(Native.SendInvalid(handle, ref error), error); failed(failure); return 0; }
             sent = Native.SendJson(handle, bytes, (nuint)bytes.Length, ref error);
         }
         Json.Check(sent, error);
@@ -198,16 +211,29 @@ public sealed partial class ThinkThenClient : IAsyncDisposable
         }
         return JsonSerializer.SerializeToUtf8Bytes(record, resolved);
     }
-    private async Task<Row<A,D>> Single<T,A,D>(Question<A,D> question, T record, Func<T,byte[]> encode, string? name, CancellationToken token)
+    private async Task<Row<A,D>> Single<T,A,D>(Question<A,D> question, T record, Func<T,byte[]> encode, string? name, CancellationToken token, bool owned = false)
     {
         Row<A,D>? result = null;
-        await foreach (var output in Run(question, One(record), encode, false, name, token).ConfigureAwait(false)) result = output.Row;
+        await foreach (var output in Run(question, One(record), encode, false, name, token, owned).ConfigureAwait(false)) result = output.Row;
         return result ?? throw Json.Abi();
     }
     private async IAsyncEnumerable<Row<A,D>> Stream<T,A,D>(Question<A,D> question, IAsyncEnumerable<T> records,
-        Func<T,byte[]> encode, string? name, [EnumeratorCancellation] CancellationToken token)
+        Func<T,byte[]> encode, string? name, [EnumeratorCancellation] CancellationToken token, bool owned = false)
     {
-        await foreach (var output in Run(question, records, encode, false, name, token).ConfigureAwait(false)) yield return output.Row;
+        await foreach (var output in Run(question, records, encode, false, name, token, owned).ConfigureAwait(false)) yield return output.Row;
+    }
+    private static async Task<TResult> Own<TQuestion,TResult>(Func<TQuestion> create, Func<TQuestion,Task<TResult>> run)
+        where TQuestion : IDisposable
+    {
+        using var question = create();
+        return await run(question).ConfigureAwait(false);
+    }
+    private static async IAsyncEnumerable<TResult> OwnStream<TQuestion,TResult>(Func<TQuestion> create,
+        Func<TQuestion,IAsyncEnumerable<TResult>> run, [EnumeratorCancellation] CancellationToken token = default)
+        where TQuestion : IDisposable
+    {
+        using var question = create();
+        await foreach (var result in run(question).WithCancellation(token).ConfigureAwait(false)) yield return result;
     }
     private static async IAsyncEnumerable<T> One<T>(T record) { yield return record; await Task.CompletedTask; }
 }

@@ -138,14 +138,14 @@ vec_cast.tt_relation.tt_relation <- function(x, to, ...) x
 }
 
 vec_ptype2.tt_rows.tt_rows <- function(x, y, ...) {
-  if (!identical(class(x), class(y))) .tt_native("r_question_conversion_error")
+  if (!identical(class(x), class(y))) .tt_r_error("Result row types must match.", "rows")
   out <- vctrs::vec_ptype2(tibble::as_tibble(x), tibble::as_tibble(y))
   class(out) <- class(x)
   attr(out, ".thinkthen_function") <- attr(x, ".thinkthen_function")
   out
 }
 vec_cast.tt_rows.tt_rows <- function(x, to, ...) {
-  if (!identical(class(x), class(to))) .tt_native("r_question_conversion_error")
+  if (!identical(class(x), class(to))) .tt_r_error("Result row types must match.", "rows")
   out <- vctrs::vec_cast(tibble::as_tibble(x), tibble::as_tibble(to))
   class(out) <- class(to)
   attr(out, ".thinkthen_function") <- attr(to, ".thinkthen_function")

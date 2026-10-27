@@ -2,6 +2,7 @@
 
 require "json"
 require "ffi"
+require "weakref"
 require_relative "thinkthen/version"
 require_relative "thinkthen/contract"
 
@@ -13,6 +14,13 @@ module ThinkThen
     def initialize(message = nil, code:, http_status: nil)
       @code, @http_status = code.to_sym, http_status
       super(message)
+    end
+  end
+  class UnknownCodeError < Error
+    attr_reader :raw_code, :raw_name
+    def initialize(message = nil, raw_code:, raw_name: nil, http_status: nil)
+      @raw_code, @raw_name = raw_code, raw_name&.dup&.freeze
+      super(message, code: :unknown, http_status: http_status)
     end
   end
   class UsageError < Error; end
@@ -37,14 +45,21 @@ module ThinkThen
       @mutex, @cancelled, @calls = Mutex.new, false, []
     end
     def cancel
-      @mutex.synchronize { @cancelled = true; @calls.each(&:cancel) }
+      @mutex.synchronize do
+        @cancelled = true
+        @calls.each { |reference| reference.__getobj__.cancel if reference.weakref_alive? }
+      end
       nil
     end
     def cancelled? = @mutex.synchronize { @cancelled }
     def attach(owner)
-      @mutex.synchronize { @calls << owner; owner.cancel if @cancelled }
+      @mutex.synchronize do
+        @calls.reject! { |reference| !reference.weakref_alive? }
+        @calls << WeakRef.new(owner)
+        owner.cancel if @cancelled
+      end
     end
-    def detach(owner) = @mutex.synchronize { @calls.delete(owner) }
+    def detach(owner) = @mutex.synchronize { @calls.reject! { |reference| !reference.weakref_alive? || reference.__getobj__.equal?(owner) } }
   end
 end
 require_relative "thinkthen/values"

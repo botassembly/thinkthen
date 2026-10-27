@@ -1,5 +1,5 @@
 // @ts-check
-import { ThinkThenError, conversion, encode, snapshot, loadNative, nativeError } from "./bridge.js";
+import { ThinkThenError, RULE_FIELDS, conversion, encode, snapshot, loadNative, nativeError } from "./bridge.js";
 import { stream } from "./stream.js";
 export { ThinkThenError, UsageError, BackendError, CancelledError } from "./bridge.js";
 export { ERROR_CODES } from "./errors.js";
@@ -17,14 +17,14 @@ function rename(value, names) {
   for (const [key, child] of Object.entries(value)) result[names[key] ?? key] = /** @type {unknown} */(child);
   return result;
 }
+const hostRuleFields = Object.fromEntries(Object.entries(RULE_FIELDS).map(([host, wire]) => [wire, host]));
 /** @param {unknown} value @returns {unknown} */
 function wireQuestion(value) {
   if (!value || typeof value !== "object") return value;
   /** @type {Record<string, unknown>} */ const fields = Object.fromEntries(Object.entries(value).map(([key, child]) => [key, key === "evidence" ? pointer(child) : child]));
   if (Array.isArray(fields.rules)) fields.rules = fields.rules.map((/** @type {unknown} */ rule) => {
     if (!rule || typeof rule !== "object") return rule;
-    const names = { name: "relation", phrase: "reads", symmetric: "either" };
-    return rename(rule, names);
+    return rename(rule, RULE_FIELDS);
   });
   if (fields.questions && typeof fields.questions === "object") fields.questions = Object.fromEntries(Object.entries(fields.questions).map(([key, child]) => [key, wireQuestion(child)]));
   return fields;
@@ -40,7 +40,7 @@ export function parseToolbox(json) {
     const entries = Object.entries(definitions).map(([name, question]) => {
       if (question.function !== "relate") return [name, question];
       const rules = /** @type {readonly object[]} */(question.rules);
-      return [name, {...question, rules: rules.map(rule => rename(rule, {relation: "name", reads: "phrase", either: "symmetric"}))}];
+      return [name, {...question, rules: rules.map(rule => rename(rule, hostRuleFields))}];
     });
     return /** @type {import('./index.d.ts').Toolbox} */(snapshot(Object.fromEntries(entries)));
   } catch (error) { throw nativeError(error); }

@@ -40,12 +40,12 @@ public final class JavaSettingsCases {
         catch (ThinkThenException error) { JavaApiCases.equal(error.code(),ErrorCode.USAGE_SETTINGS,"duration admission retains engine code"); }
     }
     static void registry(Path contract) throws Exception {
-        var codes = ConsumerCases.JSON.readTree(contract.toFile()).get("codes");
+        var codes = io.thinkthen.internal.DriverClient.codes();
         JavaApiCases.equal(ErrorCode.values().length,codes.size(),"complete generated error registry");
         for (var entry : codes) {
-            var code = ErrorCode.fromWire(entry.get("name").asText());
-            JavaApiCases.equal(code.value(),entry.get("value").intValue(),"native code number");
-            JavaApiCases.equal(code.family().name().toLowerCase(java.util.Locale.ROOT),entry.get("family").asText(),"native code family");
+            var code = ErrorCode.fromWire(entry.name());
+            JavaApiCases.equal(code.value(),entry.value(),"native code number");
+            JavaApiCases.equal(code.family().name().toLowerCase(java.util.Locale.ROOT),entry.family(),"native code family");
         }
     }
     public static void main(String[] args) throws Exception { snapshotsAndExecutionName(); registry(Path.of(args[0])); }

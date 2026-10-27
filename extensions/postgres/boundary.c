@@ -33,13 +33,7 @@ void _PG_init(void)
 {
     if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()))
         ereport(ERROR, (errcode(tt_sqlstate(THINKTHEN_CODE_USAGE_ABI)), errmsg("%s", THINKTHEN_ABI_ERROR_MESSAGE), errdetail_internal("%s", THINKTHEN_ABI_ERROR_CODE)));
-    DefineCustomEnumVariable("thinkthen.backend", "Selected backend.", NULL, &backend,
-        TT_DEFAULT_BACKEND, backend_options, PGC_USERSET, 0, NULL, NULL, NULL);
-    DefineCustomStringVariable("thinkthen.model", "Selected model.", NULL, &model, "", PGC_USERSET, 0, NULL, NULL, NULL);
-    DefineCustomIntVariable("thinkthen.batch", "Batch count; zero uses the engine default.", NULL, &batch, 0, INT_MIN, INT_MAX, PGC_USERSET, 0, NULL, NULL, NULL);
-    DefineCustomIntVariable("thinkthen.max_retries", "Retry count.", NULL, &retries, TT_DEFAULT_MAX_RETRIES, INT_MIN, INT_MAX, PGC_USERSET, 0, NULL, NULL, NULL);
-    DefineCustomIntVariable("thinkthen.initial_backoff_ms", "Initial retry backoff.", NULL, &backoff, TT_DEFAULT_INITIAL_BACKOFF_MS, INT_MIN, INT_MAX, PGC_USERSET, 0, NULL, NULL, NULL);
-    DefineCustomIntVariable("thinkthen.attempt_timeout_ms", "Attempt timeout.", NULL, &timeout, TT_DEFAULT_ATTEMPT_TIMEOUT_MS, INT_MIN, INT_MAX, PGC_USERSET, 0, NULL, NULL, NULL);
+    TT_REGISTER_SETTINGS
     DefineCustomStringVariable("thinkthen.allowed_backends", "Allowed backend:model pairs, separated by commas.",
         NULL, &allowed_backends, NULL, PGC_SUSET, 0, NULL, NULL, NULL);
     MarkGUCPrefixReserved("thinkthen");

@@ -13,6 +13,7 @@ int32_t tt_load_code(void) { return load_code; }
 static __typeof__(&thinkthen_abi_version) p_abi_version;
 static __typeof__(&thinkthen_abi_compatible) p_abi_compatible;
 const char *tt_load(const char *path) {
+    load_code = THINKTHEN_CODE_USAGE_ABI;
 #ifdef _WIN32
     if (!path) return THINKTHEN_ABI_ERROR_MESSAGE;
     int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, NULL, 0);
@@ -23,16 +24,17 @@ const char *tt_load(const char *path) {
     HMODULE handle = LoadLibraryW(wide);
     free(wide);
     if (!handle) { load_code = THINKTHEN_CODE_LOCAL_IO; return "cannot load native engine"; }
-#define LOAD(name) p_##name = (__typeof__(p_##name))GetProcAddress(handle, "thinkthen_" #name); if (!p_##name) return THINKTHEN_ABI_ERROR_MESSAGE;
+#define CLOSE() FreeLibrary(handle)
+#define LOAD(name) p_##name = (__typeof__(p_##name))GetProcAddress(handle, "thinkthen_" #name); if (!p_##name) { CLOSE(); return THINKTHEN_ABI_ERROR_MESSAGE; }
 #else
     void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
     if (!handle) { load_code = THINKTHEN_CODE_LOCAL_IO; return dlerror(); }
-    /* The handle stays loaded, including after a symbol lookup failure. */
-#define LOAD(name) p_##name = (__typeof__(p_##name))dlsym(handle, "thinkthen_" #name); if (!p_##name) return THINKTHEN_ABI_ERROR_MESSAGE;
+#define CLOSE() dlclose(handle)
+#define LOAD(name) p_##name = (__typeof__(p_##name))dlsym(handle, "thinkthen_" #name); if (!p_##name) { CLOSE(); return THINKTHEN_ABI_ERROR_MESSAGE; }
 #endif
     LOAD(abi_version)
     LOAD(abi_compatible)
-    if (!p_abi_compatible(THINKTHEN_ABI_VERSION, p_abi_version())) return THINKTHEN_ABI_ERROR_MESSAGE;
+    if (!p_abi_compatible(THINKTHEN_ABI_VERSION, p_abi_version())) { CLOSE(); return THINKTHEN_ABI_ERROR_MESSAGE; }
     SYMBOLS(LOAD)
     return NULL;
 }

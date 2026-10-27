@@ -135,7 +135,7 @@ tt_close(client)'''
 
 assert args.id_values.is_file(), "specialist-approved lossless R ID input fixture is required"
 run(tests / "typed-ids.R", args.id_values)
-for script in ("typed-surface.R", "typed-frames.R"):
+for script in ("contract.R", "typed-surface.R", "typed-frames.R"):
     run(tests / script)
 
 # Feature: incompatible major or insufficient minor fails at namespace load.

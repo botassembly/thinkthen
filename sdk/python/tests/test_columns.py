@@ -61,3 +61,21 @@ def test_empty_columns_preserve_declared_fields(library: str) -> None:
     assert len(frame) == 0
     assert "probability" in frame.columns and "source" in frame.columns
     assert "p" not in frame.columns
+
+
+def test_polars_relate_detail_keeps_recognized_names() -> None:
+    import thinkthen.polars
+
+    with tt.Client(backend="stub") as client:
+        row = client.relate(
+            "Ada knows Bob.", rules=[tt.RelationRule("person", "person", "knows")]
+        )
+        assert row.detail is not None and row.detail.names
+        result = thinkthen.polars.series([row])
+        names = result.struct.field("detail").struct.field("names").to_list()[0]
+        assert names == row.to_dict()["detail"]["names"]
+        empty = thinkthen.polars.series([], "relate")
+        assert (
+            empty.struct.field("detail").struct.field("names").dtype
+            == result.struct.field("detail").struct.field("names").dtype
+        )

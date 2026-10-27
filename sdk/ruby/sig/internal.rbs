@@ -1,3 +1,9 @@
+class WeakRef
+  def initialize: (untyped) -> void
+  def __getobj__: () -> untyped
+  def weakref_alive?: () -> bool
+end
+
 module FFI
   class NotFoundError < LoadError
   end
@@ -64,6 +70,8 @@ module ThinkThen
       def self.release: (untyped) -> void
     end
     def self.thinkthen_abi_version: (*untyped) -> untyped
+    def self.thinkthen_abi_compatible: (Integer, Integer) -> Integer
+    def self.thinkthen_code_name: (Integer) -> String?
     def self.toolbox_json: (String, ?saved: bool, ?definitions: bool) -> String
     def self.thinkthen_toolbox_from_json: (*untyped) -> untyped
     def self.thinkthen_toolbox_from_definitions_json: (*untyped) -> untyped
@@ -100,6 +108,7 @@ module ThinkThen
     def self.thinkthen_row_free: (*untyped) -> untyped
     def self.settings: () -> untyped
     def self.validate_threshold: (Symbol, String?, untyped) -> void
+    def self.thinkthen_question_from_json: (*untyped) -> untyped
     def self.validate_question: (untyped) -> void
     def self.dump: (untyped, ?symbols: bool) -> String
     def self.snapshot: (untyped, ?untyped, ?bool) -> untyped
@@ -172,9 +181,13 @@ module ThinkThen
     def build_question: (Symbol, untyped, untyped) -> untyped
     def open_rows: (untyped, untyped, untyped, untyped) -> untyped
     def admit: (String, ?untyped) -> untyped
+    def check_process: () -> void
     def forget: (untyped) -> untyped
   end
   class CallOwner
+    private
+    def check_process: () -> void
+    public
     def initialize: (untyped) -> void
     def use: () { (untyped) -> untyped } -> untyped
     def close: () -> nil
@@ -226,6 +239,8 @@ module ThinkThen
   class NativeReader
     @requests: untyped
     def initialize: (untyped) -> void
+    def self.finalizer: (untyped) -> untyped
+    def self.worker: (untyped, untyped) -> Thread
     def start: (untyped) -> NativeRead
     def close: () -> nil
   end

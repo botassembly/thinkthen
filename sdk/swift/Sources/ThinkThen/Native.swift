@@ -133,7 +133,8 @@ final class Native: Sendable {
     rowFree = try symbol("thinkthen_row_free", FreeRow.self)
     codeName = try symbol("thinkthen_code_name", CodeName.self)
     for code in ErrorCode.allCases {
-      guard let name = codeName(code.nativeValue), String(cString: name) == code.rawValue else {
+      guard let value = code.nativeValue else { continue }
+      guard let name = codeName(value), String(cString: name) == code.rawValue else {
         throw ThinkThenError.contract(message: "Native error registry does not match this package")
       }
     }
@@ -150,14 +151,14 @@ final class Native: Sendable {
   private func check(_ status: Int32, _ error: inout thinkthen_error) throws {
     defer { errorFree(&error) }
     if status == THINKTHEN_ERROR {
-      guard let code = codeName(error.code) else {
-        throw ThinkThenError.contract(message: "Unknown native error code")
+      let message = String(decoding: copy(error.message), as: UTF8.self)
+      let name = codeName(error.code).map { String(cString: $0) }
+      guard let name, let typed = ErrorCode(rawValue: name) else {
+        throw ThinkThenError.unknownCode(
+          rawCode: error.code, message: message,
+          httpStatus: error.http_status == 0 ? nil : error.http_status, rawName: name)
       }
-      let name = String(cString: code)
       if name == "local.cancelled" { throw ThinkThenError.cancelled }
-      guard let typed = ErrorCode(rawValue: name) else {
-        throw ThinkThenError.contract(message: "Unknown native error code")
-      }
       throw ThinkThenError.engine(
         RowFailure(
           code: typed, message: String(decoding: copy(error.message), as: UTF8.self),
@@ -320,12 +321,23 @@ final class Native: Sendable {
     case THINKTHEN_FUNCTION_ANNOTATE: function = "annotate"
     default: throw ThinkThenError.contract(message: "Unknown native function")
     }
+    var failure = row.error.data == nil ? nil : copy(row.error)
+    if row.status == THINKTHEN_STATUS_FAILED,
+      codeName(row.error_code).flatMap({ ErrorCode(rawValue: String(cString: $0)) }) == nil,
+      let bytes = failure,
+      var fields = try JSONSerialization.jsonObject(with: bytes) as? [String: Any]
+    {
+      fields["raw_name"] = codeName(row.error_code).map { String(cString: $0) } ?? fields["code"]
+      fields["code"] = "unknown"
+      fields["raw_code"] = row.error_code
+      failure = try JSONSerialization.data(withJSONObject: fields)
+    }
     return .row(
       WireRow(
         function: function, id: row.id.data == nil ? nil : copy(row.id), status: rowStatus,
         answer: row.answer.data == nil ? nil : copy(row.answer),
         probability: row.probability.isNaN ? nil : row.probability,
-        error: row.error.data == nil ? nil : copy(row.error),
+        error: failure,
         detail: row.detail.data == nil ? nil : copy(row.detail), source: copy(row.source),
         position: row.position,
         kept: row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0))

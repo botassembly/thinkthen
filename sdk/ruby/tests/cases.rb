@@ -226,11 +226,11 @@ def admission_cases
   JSON.parse(File.read(path, encoding: Encoding::UTF_8)).each do |test|
     equal("admission", test.fetch("kind"), "admission fixture kind")
     boundary = test.fetch("boundary")
-    route = {"question" => "projection: public Question constructor in request envelope",
+    route = {"question" => "direct: public Question constructor",
              "toolbox" => "direct: saved toolbox JSON",
              "settings" => "projection: public Retry value in client options"}.fetch(boundary)
     input = test.fetch("input")
-    expected = boundary == "question" ? "request.#{test.fetch('message')}" : test.fetch("message")
+    expected = test.fetch("message")
     error = raises(ThinkThen::Error) do
       case boundary
       when "question"

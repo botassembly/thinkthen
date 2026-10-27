@@ -171,18 +171,6 @@ internal static partial class Native
     [LibraryImport(Library, EntryPoint = "thinkthen_call_send_invalid")]
     internal static partial int SendInvalid(CallHandle call, ref NativeError error);
     [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [LibraryImport(Library, EntryPoint = "thinkthen_question_new")]
-    internal static partial int QuestionNew(uint function, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] text, nuint length, out nint question, ref NativeError error);
-    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_cut")]
-    internal static partial int SetCut(nint question, double value, ref NativeError error);
-    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_band")]
-    internal static partial int SetBand(nint question, double low, double high, ref NativeError error);
-    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
-    [LibraryImport(Library, EntryPoint = "thinkthen_question_set_evidence")]
-    internal static partial int SetEvidence(nint question, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] data, nuint length, ref NativeError error);
-    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_toolbox_select_as")]
     internal static partial int ToolboxSelectAs(ToolboxHandle toolbox, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] data, nuint length, uint function, out nint question, ref NativeError error);
     [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]

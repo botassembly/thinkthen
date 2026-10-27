@@ -38,6 +38,11 @@ module ThinkThen
     attr_reader http_status: Integer?
     def initialize: (?String?, code: error_code, ?http_status: Integer?) -> void
   end
+  class UnknownCodeError < Error
+    attr_reader raw_code: Integer
+    attr_reader raw_name: String?
+    def initialize: (?String?, raw_code: Integer, ?raw_name: String?, ?http_status: Integer?) -> void
+  end
   class UsageError < Error
   end
   class BackendError < Error
@@ -131,7 +136,9 @@ module ThinkThen
     attr_reader code: error_code
     attr_reader message: String
     attr_reader http_status: Integer?
-    def self.new: (code: error_code, message: String, ?http_status: Integer?) -> RowError
+    attr_reader raw_code: Integer?
+    attr_reader raw_name: String?
+    def self.new: (code: error_code, message: String, ?http_status: Integer?, ?raw_code: Integer?, ?raw_name: String?) -> RowError
     def to_h: () -> Hash[String, json]
   end
   class RelationRule < Data

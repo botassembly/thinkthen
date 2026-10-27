@@ -1,7 +1,7 @@
 .tt_result <- function(rows) {
   producer <- attr(rows, ".thinkthen_function", exact = TRUE)
   if (!inherits(rows, "tt_rows") || !is.character(producer) || length(producer) != 1L || is.na(producer)) {
-    .tt_native("r_question_conversion_error")
+    .tt_r_error("Expected ThinkThen result rows.", "rows")
   }
   producer
 }
@@ -26,12 +26,12 @@ tt_bind <- function(data, rows, prefix) {
       (missing(prefix) || !is.character(prefix) || length(prefix) != 1L || is.na(prefix) || !nzchar(prefix))) ||
       nrow(data) != nrow(rows) ||
       !setequal(rows$position, seq_len(nrow(data))) || anyDuplicated(rows$position)) {
-    .tt_native("r_question_conversion_error")
+    .tt_r_error("Data, rows and prefix must describe matching frame rows and a nonempty prefix.", "bind")
   }
   allowed <- any(vapply(list("data.frame", c("tbl_df", "tbl", "data.frame"),
     c("grouped_df", "tbl_df", "tbl", "data.frame"), c("data.table", "data.frame")),
     function(classes) identical(class(data), classes), logical(1)))
-  if (!allowed) .tt_native("r_question_conversion_error")
+  if (!allowed) .tt_r_error("Unsupported data frame class.", "bind")
   order <- match(seq_len(nrow(data)), rows$position)
   if (producer == "annotate") {
     columns <- list()
@@ -54,7 +54,7 @@ tt_bind <- function(data, rows, prefix) {
     columns <- columns[setdiff(names(columns), c("position", "id", "item", "kept"))]
     names(columns) <- paste0(prefix, "_", names(columns))
   }
-  if (anyDuplicated(names(columns)) || any(names(columns) %in% names(data))) .tt_native("r_question_conversion_error")
+  if (anyDuplicated(names(columns)) || any(names(columns) %in% names(data))) .tt_r_error("Result column names must be unique and absent from data.", "bind")
   if (inherits(data, "data.table")) {
     result <- data.table::copy(data)
     for (name in names(columns)) data.table::set(result, j = name, value = columns[[name]])

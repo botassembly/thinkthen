@@ -40,14 +40,14 @@ pub(crate) unsafe fn operation(
     };
     /* SAFETY: the validated slot owns no live allocation on entry. */
     unsafe {
-        error.write(HostError::empty(size));
+        HostError::empty(size).write(error);
     }
     match catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(native::internal_error())) {
         Ok(status) => status,
         Err(failure) => {
             /* SAFETY: the supported prefix is writable and exclusively owned. */
             unsafe {
-                error.write(HostError::from_error(size, &failure));
+                HostError::from_error(size, &failure).write(error);
             }
             ERROR
         }
@@ -382,7 +382,7 @@ pub unsafe extern "C" fn thinkthen_call_next(
     unsafe {
         operation(error, || {
             let size = row_size(out)?;
-            out.write(HostRow::empty(size));
+            HostRow::empty(size).write(out);
             match (&mut *(*call).call.get()).next_event()? {
                 Event::NeedsInput => Ok(NEEDS_INPUT),
                 Event::Finished => Ok(END),
@@ -392,7 +392,7 @@ pub unsafe extern "C" fn thinkthen_call_next(
                         let original = originals.pop_front().ok_or_else(native::internal_error)?;
                         result.source.attach_original(original);
                     }
-                    out.write(result);
+                    result.write(out);
                     Ok(OK)
                 }
                 _ => Err(native::abi_error()),
@@ -442,7 +442,7 @@ pub unsafe extern "C" fn thinkthen_error_free(error: *mut HostError) {
         /* SAFETY: the supported owned message and prefix are exclusively writable. */
         unsafe {
             (*error).message.release();
-            error.write(HostError::empty(size));
+            HostError::empty(size).write(error);
         }
     }
 }
@@ -455,7 +455,7 @@ pub unsafe extern "C" fn thinkthen_row_free(row: *mut HostRow) {
     if unsafe { row_size(row) }.is_ok() {
         /* SAFETY: every buffer in the valid prefix has one owner. */
         unsafe {
-            (*row).release();
+            HostRow::release(row);
         }
     }
 }

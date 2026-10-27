@@ -450,6 +450,7 @@ fn check_merge(e: &BytesStart<'_>, selected: &[usize], sheet: &mut Sheet) -> Res
 
 fn shared_strings(reader: impl Read, cancel: &Cancel) -> Result<Vec<String>, FileError> {
     let mut strings = Vec::new();
+    let mut total = 0usize;
     let mut item = String::new();
     let mut in_text = false;
     let mut phonetic = false;
@@ -467,9 +468,15 @@ fn shared_strings(reader: impl Read, cancel: &Cancel) -> Result<Vec<String>, Fil
             Event::CData(t) if in_text => item.push_str(&t.decode().map_err(local)?),
             Event::End(e) if main && e.local_name().as_ref() == b"t" => in_text = false,
             Event::End(e) if main && e.local_name().as_ref() == b"si" => {
-                strings.push(decode_string(&item)?)
+                total += item.len();
+                strings.push(decode_string(&item)?);
+                item.clear();
             }
             _ => {}
+        }
+        let text = item.len();
+        if total.saturating_add(text) > super::MAX_RECORD_BYTES {
+            return Err(super::record_limit());
         }
         Ok(())
     })?;

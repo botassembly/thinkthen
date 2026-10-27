@@ -37,8 +37,12 @@ module ThinkThen
       end
     end
 
-    def cancel = @owner.cancel
+    def cancel
+      @client.send(:check_process)
+      @owner.cancel
+    end
     def close
+      @client.send(:check_process)
       @owner.close
       @cancel&.detach(@owner)
       @driver&.synchronize do
@@ -75,6 +79,7 @@ module ThinkThen
     end
 
     def pull
+      @client.send(:check_process)
       unless @driver.try_lock
         raise ThreadError, "call already has an active driver"
       end

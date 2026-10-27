@@ -6,19 +6,18 @@ import java.nio.file.Path
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 
-private fun registry(path: Path) {
-    val codes = Json.parseToJsonElement(Files.readString(path)).jsonObject.required("codes").jsonArray
+private fun registry() {
+    val codes = io.thinkthen.internal.DriverClient.codes()
     check(ErrorCode.entries.size == codes.size)
-    codes.forEach { item ->
-        val expected = item.jsonObject
-        val actual = ErrorCode.entries.single { codeName(it) == expected.required("name").jsonPrimitive.content }
-        check(actual.value == expected.required("value").jsonPrimitive.int)
-        check(actual.family.wireName == expected.required("family").jsonPrimitive.content)
+    codes.forEach { expected ->
+        val actual = ErrorCode.entries.single { codeName(it) == expected.name() }
+        check(actual.value == expected.value())
+        check(actual.family.wireName == expected.family())
     }
 }
 fun main(args: Array<String>) = runBlocking {
     when(args.first()) {
-        "registry" -> registry(Path.of(args[1]))
+        "registry" -> registry()
         "abi" -> {
             val accept = args[1].toBooleanStrict()
             try {

@@ -19,6 +19,8 @@ public:
         : std::runtime_error(std::move(message)), code_(code), http_status_(http) {}
     errc code() const noexcept { return code_; }
     std::optional<std::uint16_t> http_status() const noexcept { return http_status_; }
+    std::int32_t raw_code() const noexcept { return static_cast<std::int32_t>(code_); }
+    bool unknown_code() const noexcept { return !detail::known_code(raw_code()); }
 };
 namespace detail {
 [[noreturn]] inline void incompatible() { throw error(errc::usage_abi, THINKTHEN_ABI_ERROR_MESSAGE); }
@@ -46,7 +48,6 @@ inline std::string copy(thinkthen_text text) {
     return text.len ? std::string(reinterpret_cast<const char*>(text.data), text.len) : std::string{};
 }
 inline errc code(std::int32_t value) {
-    if (!known_code(value)) incompatible();
     return static_cast<errc>(value);
 }
 inline error failure(const thinkthen_error& value) {

@@ -1,4 +1,5 @@
 //! One grammar supplies parsing, help, completions and the packaged manual.
+use crate::core::questions::command::ThresholdOption;
 use clap::{Arg, ArgAction, Command};
 
 fn option(name: &'static str, help: &'static str) -> Arg {
@@ -35,9 +36,9 @@ pub(super) fn command() -> Command {
     ] {
         let mut arg = option(name, help).global(true);
         arg = match name {
-            "from" => arg.value_parser(["text", "lines", "jsonl", "csv", "tsv", "xlsx"]),
-            "format" => arg.value_parser(["text", "json"]),
-            "color" => arg.value_parser(["auto", "always", "never"]),
+            "from" => arg.value_parser(super::options::choices::<super::input::Format>()),
+            "format" => arg.value_parser(super::options::choices::<super::options::OutputFormat>()),
+            "color" => arg.value_parser(super::options::choices::<clap::ColorChoice>()),
             _ => arg,
         };
         command = command.arg(arg);
@@ -89,7 +90,13 @@ pub(super) fn command() -> Command {
 }
 
 fn data_command(name: &str) -> Command {
+    let spec = serde_json::from_value::<crate::FunctionName>(name.into())
+        .ok()
+        .map(crate::FunctionName::command);
     let mut command = Command::new(name.to_owned());
+    if let Some(spec) = &spec {
+        command = command.about(spec.description);
+    }
     if name != "run" {
         command = command.arg(option(
             "name",
@@ -130,44 +137,29 @@ fn data_command(name: &str) -> Command {
             "in-place",
             "Replace source with backup [THINKTHEN_IN_PLACE]",
         ));
-    if matches!(
-        name,
-        "decide" | "filter" | "choose" | "tag" | "find" | "recognize" | "relate"
-    ) {
-        command = command.arg(option("threshold", "Probability cut [THINKTHEN_THRESHOLD]"));
-    }
-    if matches!(name, "decide" | "filter" | "choose") {
-        command = command
-            .arg(option("low", "Band lower bound [THINKTHEN_LOW]"))
-            .arg(option("high", "Band upper bound [THINKTHEN_HIGH]"));
-    }
-    if matches!(name, "decide" | "filter" | "choose" | "find") {
-        command = command.arg(switch(
-            "check",
-            "Return the verdict as an exit code [THINKTHEN_CHECK]",
-        ));
-    }
-    let list = match name {
-        "choose" => Some((
-            "choice",
-            "Choice; repeat in order [THINKTHEN_CHOICES: JSON array]",
-        )),
-        "tag" => Some((
-            "label",
-            "Label; repeat in order [THINKTHEN_LABELS: JSON array]",
-        )),
-        "rank" | "score" => Some((
-            "level",
-            "Scale level; repeat low to high [THINKTHEN_LEVELS: JSON array]",
-        )),
-        "recognize" => Some((
-            "kind",
-            "Kind; repeat in order [THINKTHEN_KINDS: JSON array]",
-        )),
-        _ => None,
-    };
-    if let Some((key, help)) = list {
-        command = command.arg(option(key, help).action(ArgAction::Append));
+    if let Some(spec) = spec {
+        if !matches!(spec.threshold, ThresholdOption::None) {
+            command = command.arg(option("threshold", "Probability cut [THINKTHEN_THRESHOLD]"));
+        }
+        if matches!(spec.threshold, ThresholdOption::Band) {
+            command = command
+                .arg(option("low", "Band lower bound [THINKTHEN_LOW]"))
+                .arg(option("high", "Band upper bound [THINKTHEN_HIGH]"));
+        }
+        if spec.check {
+            command = command.arg(switch(
+                "check",
+                "Return the verdict as an exit code [THINKTHEN_CHECK]",
+            ));
+        }
+        if let Some((key, _, env, help)) = spec.list {
+            command = command.arg(
+                Arg::new(key)
+                    .long(key)
+                    .help(format!("{help} [{env}: JSON array]"))
+                    .action(ArgAction::Append),
+            );
+        }
     }
     if name == "rank" {
         command = command.arg(option("top", "Maximum answered ranks [THINKTHEN_TOP]"));
@@ -205,9 +197,5 @@ fn version() -> String {
         })
         .collect::<Vec<_>>()
         .join(", ");
-    format!(
-        "{} (contract {}; backends {backends})",
-        crate::VERSION,
-        crate::VERSION
-    )
+    format!("{} (backends {backends})", crate::VERSION)
 }

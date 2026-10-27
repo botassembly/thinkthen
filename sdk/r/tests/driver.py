@@ -20,6 +20,8 @@ parser.add_argument("--scratch", type=pathlib.Path, required=True)
 parser.add_argument("--module-abi-only", action="store_true")
 parser.add_argument("--native-module", type=pathlib.Path)
 args = parser.parse_args()
+families = {entry["name"]: entry["family"] for entry in
+            json.loads((args.root / "schemas/contract.json").read_text())["codes"]}
 if args.module_abi_only and args.native_module is None:
     parser.error("--module-abi-only requires --native-module")
 # Copy prepared optional table packages before isolating the installed consumer.
@@ -160,6 +162,7 @@ for name in manifest["cases"]:
                                         env=dict(environment, THINKTHEN_TEST_URL=url)))
             if isinstance(case["expected"], dict):
                 assert actual.get("error") == case["expected"]["error"], (name, provider, actual)
+                assert actual["family"] == f"thinkthen_{families[actual['error']]}_error", actual
                 assert not actual.get("rows"), (name, provider, actual)
                 server.stdin.write("count\n")
                 server.stdin.flush()
@@ -215,7 +218,7 @@ with backend(context_case) as (server, url):
     server.stdin.flush()
     assert int(server.stdout.readline()) == 0, "host conversion contexts made a backend call"
 print(rscript(args.root / "sdk/r/tests/toolbox-json.R", args.root / "conformance/toolbox"), end="", flush=True)
-for script in ("typed-surface.R", "typed-frames.R", "surface.R", "frames.R"):
+for script in ("contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R"):
     print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
 
 print(rscript(args.root / "sdk/r/tests/release-cases.R", args.root / "construction/stub.json"),

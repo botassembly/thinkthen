@@ -6,10 +6,10 @@ input <- data.frame(body = text, category = factor(c("b", "a", "b")),
 rows <- tt_decide(input, "Ready?", evidence = "/body", client = stub)
 
 # Feature: attachment rejects malformed prefixes and unsupported frame classes.
-condition(tt_answer(input), "thinkthen_usage_error")
-for (prefix in list(NULL, NA_character_, "", c("a", "b"), 1)) condition(tt_bind(input, rows, prefix), "thinkthen_usage_error")
-condition(tt_bind(input, rows), "thinkthen_usage_error")
-condition(tt_bind(structure(input, class = c("unknown_frame", "data.frame")), rows, "out"), "thinkthen_usage_error")
+condition(tt_answer(input), "thinkthen_r_error")
+for (prefix in list(NULL, NA_character_, "", c("a", "b"), 1)) condition(tt_bind(input, rows, prefix), "thinkthen_r_error")
+condition(tt_bind(input, rows), "thinkthen_r_error")
+condition(tt_bind(structure(input, class = c("unknown_frame", "data.frame")), rows, "out"), "thinkthen_r_error")
 
 # Feature: column expressions use the same admitted evidence as a frame call.
 answers <- tt_answer(tt_decide(text, "Ready?", client = stub))
@@ -38,3 +38,9 @@ for (data in list(input[FALSE, , drop = FALSE], tibble::tibble(body = character(
 nothing <- tt_find(" \r\n\t\n", "Which line?", client = stub)
 stopifnot(nothing$status == "answered", inherits(tt_answer(nothing), "tt_span"), is.na(tt_answer(nothing)))
 cat("R eager table expressions, names, attributes and prototypes passed\n")
+
+# Feature: factor IDs preserve labels through the public frame call.
+input <- data.frame(id = factor(c("second", "first", "second")), body = text)
+rows <- tt_decide(input, "Ready?", evidence = "/body", client = stub)
+stopifnot(nrow(rows) == 3L, all(rows$status == "answered"),
+          identical(rows$id, as.list(as.character(input$id))))

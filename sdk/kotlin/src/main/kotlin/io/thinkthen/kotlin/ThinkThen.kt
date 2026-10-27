@@ -1,5 +1,3 @@
-@file:OptIn(kotlinx.coroutines.InternalCoroutinesApi::class)
-
 package io.thinkthen.kotlin
 
 import io.thinkthen.internal.DriverCall
@@ -14,8 +12,8 @@ import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
 import kotlin.coroutines.coroutineContext
 
-class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
-    val settings: Settings = Settings(SettingsBuilder().apply(build))
+public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
+    public val settings: Settings = Settings(SettingsBuilder().apply(build))
     @PublishedApi internal val recordJson: Json get() = settings.json
     private val driver: DriverClient
     private val collectors = mutableSetOf<Job>()
@@ -147,10 +145,12 @@ class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
         return if (Charsets.UTF_8.newEncoder().canEncode(json)) DriverRecord.of("json",json.toByteArray(Charsets.UTF_8))
             else DriverRecord.of("invalid",byteArrayOf())
     }
-    private suspend fun <T> native(call: DriverCall, operation: () -> T): T {
-        val cancellation = currentCoroutineContext().job.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { error -> if (error != null) call.cancel() }
-        try { return translate { runInterruptible(Dispatchers.IO) { operation() } } }
-        finally { cancellation.dispose() }
+    private suspend fun <T> native(call: DriverCall, operation: () -> T): T = suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation { call.cancel() }
+        Thread.ofPlatform().daemon().name("thinkthen-kotlin-native").start {
+            try { continuation.resumeWith(Result.success(translate(operation))) }
+            catch (error: Throwable) { continuation.resumeWith(Result.failure(error)) }
+        }
     }
     private fun <A,D> decode(decoder: Decoder<A,D>, packet: DriverCall.DriverRow): Row<A,D> = try { decoder.row(packet) }
     catch (error: Exception) { throw ThinkThenException(ErrorCode.fromWire("internal.bug"),"Invalid native row envelope",cause = error) }
@@ -170,4 +170,4 @@ internal fun <A,D> decoder(question: Question<A,D>): Decoder<A,D> = when(questio
     is Relate -> Decoder.RELATE; is Annotate -> Decoder.ANNOTATE
 } as Decoder<A,D>
 
-inline fun <reified T> ThinkThen.recordSerializer(): KSerializer<T> = recordJson.serializersModule.serializer<T>()
+public inline fun <reified T> ThinkThen.recordSerializer(): KSerializer<T> = recordJson.serializersModule.serializer<T>()

@@ -75,6 +75,7 @@ def ruby_packaging
   %w[source_code_uri changelog_uri bug_tracker_uri documentation_uri].each do |field|
     assert(spec.metadata.fetch(field).start_with?("https://"), "package metadata includes #{field}")
   end
+  equal(spec.homepage + "/blob/v#{ThinkThen::VERSION}/sdk/ruby/API.md", spec.metadata.fetch("documentation_uri"), "documentation matches the installed tag")
   signatures = Dir[File.join(spec.full_gem_path, "sig", "*.rbs")]
   assert(signatures.any? { |path| File.basename(path) == "error_codes.rbs" }, "generated code types ship in the gem")
   assert(signatures.any? { |path| File.basename(path) == "thinkthen.rbs" }, "public RBS ships in the gem")

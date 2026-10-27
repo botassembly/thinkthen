@@ -32,6 +32,7 @@ vec_cast.tt_id_integer.tt_id_integer <- function(x, to, ...) x
   admitted <- NULL
   if (has_id) {
     id <- if (is_frame) value$id[[1]] else value$id
+    if (is.factor(id)) id <- as.character(id)
     admitted <- tryCatch({
       if (inherits(id, "tt_id_integer") && length(id) == 1L && !is.na(id)) {
         .tt_native("r_id_integer", format(id))$value

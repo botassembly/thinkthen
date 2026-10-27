@@ -38,6 +38,7 @@ int connection_client(Connection *connection, const char *settings, size_t len,
     thinkthen_client_free(connection->client);
     sqlite3_free(connection->settings);
     connection->client = client;
+    ++connection->generation;
     connection->settings = copy;
     connection->settings_len = len;
     return SQLITE_OK;
@@ -48,7 +49,8 @@ void cursor_clear(Cursor *cursor) {
     cursor->call = NULL;
     if (cursor->source != NULL) sqlite3_finalize(cursor->source);
     cursor->source = NULL;
-    thinkthen_row_free(&cursor->row);
+    if(!cursor->replaying)thinkthen_row_free(&cursor->row);
+    else {memset(&cursor->row,0,sizeof(cursor->row));cursor->row.struct_size=sizeof(cursor->row);}
     json_decref(cursor->fields);
     cursor->fields = NULL;
     for (int i = 0; i < ARG_COUNT; ++i) {
@@ -59,6 +61,10 @@ void cursor_clear(Cursor *cursor) {
     json_decref(cursor->error);cursor->error=NULL;
     for(size_t n=0;n<cursor->ids_count;n++)sqlite3_value_free(cursor->ids[n]);
     sqlite3_free(cursor->ids);cursor->ids=NULL;cursor->ids_count=cursor->ids_capacity=cursor->ids_start=0;cursor->ids_offset=0;
+    sqlite3_finalize(cursor->read);cursor->read=NULL;
+    sqlite3_finalize(cursor->save);cursor->save=NULL;
+    sqlite3_close(cursor->replay);cursor->replay=NULL;
+    cursor->complete=cursor->replaying=0;
     cursor->eof = 1;
 }
 
@@ -76,15 +82,20 @@ static uint8_t interrupted(void *context) {
 
 int cursor_advance(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
-    if(cursor->row.position && cursor->row.function!=THINKTHEN_FUNCTION_RANK && cursor->row.position>cursor->ids_offset && cursor->row.position-cursor->ids_offset<=cursor->ids_count) {
+    if(!cursor->replaying && cursor->row.position && cursor->row.function!=THINKTHEN_FUNCTION_RANK && cursor->row.position>cursor->ids_offset && cursor->row.position-cursor->ids_offset<=cursor->ids_count) {
         size_t previous=(size_t)(cursor->row.position-cursor->ids_offset)-1;
         sqlite3_value_free(cursor->ids[previous]);cursor->ids[previous]=NULL;cursor->ids_start=previous+1;
     }
-    thinkthen_row_free(&cursor->row);
+    if(!cursor->replaying)thinkthen_row_free(&cursor->row);
     json_decref(cursor->fields);
     cursor->fields = NULL;
     json_decref(cursor->answer);cursor->answer=NULL;
     json_decref(cursor->error);cursor->error=NULL;
+    if(cursor->replaying) {
+        int result=replay_next(cursor);
+        if(result!=SQLITE_OK || cursor->eof)return result;
+        goto decoded;
+    }
     for (;;) {
         if (sqlite3_is_interrupted(table->db))
             return cursor_error(cursor, SQLITE_INTERRUPT, "interrupted");
@@ -110,15 +121,18 @@ int cursor_advance(Cursor *cursor) {
             return code;
         }
         if (result == THINKTHEN_END) {
+            cursor->complete = 1;
             cursor->eof = 1;
             thinkthen_sql_call_free(cursor->call);
             cursor->call = NULL;
             return SQLITE_OK;
         }
+        int saved=replay_save(cursor);if(saved!=SQLITE_OK)return saved;
+        ++cursor->rowid;
+        decoded:
         if(cursor->row.answer.data)cursor->answer=json_loadb((const char*)cursor->row.answer.data,cursor->row.answer.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
         if(cursor->row.error.data)cursor->error=json_loadb((const char*)cursor->row.error.data,cursor->row.error.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
         cursor->eof = 0;
-        ++cursor->rowid;
         return SQLITE_OK;
     }
 }
@@ -167,6 +181,11 @@ int cursor_column(sqlite3_vtab_cursor *base,sqlite3_context *context,int column)
     case COL_START:json_value(context,json_object_get(cursor->answer,"start"));break;
     case COL_END:json_value(context,json_object_get(cursor->answer,"end"));break;
     case COL_ID: {
+        if(cursor->replaying) {
+            if(sqlite3_column_type(cursor->read,1)!=SQLITE_NULL)sqlite3_result_value(context,sqlite3_column_value(cursor->read,1));
+            else result_buffer(context,&cursor->row.id);
+            break;
+        }
         size_t index=(size_t)(cursor->row.position-cursor->ids_offset)-1;
         if(index<cursor->ids_count && cursor->ids[index])sqlite3_result_value(context,cursor->ids[index]);
         else result_buffer(context,&cursor->row.id);

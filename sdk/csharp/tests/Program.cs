@@ -19,6 +19,13 @@ internal static partial class Program
 
     private static async Task Main(string[] args)
     {
+        if (args is ["--registry", var contract])
+        {
+            try { await Registry(contract); }
+            catch (Exception error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
+            return;
+        }
+        if (args is ["--sdk-fixes", var registry]) { await SdkFixes(registry); return; }
         if (args is ["--stress-adapter"]) { await StressAdapter(); return; }
         if (args is ["--abi-refusal"])
         {
@@ -41,6 +48,7 @@ internal static partial class Program
         await OptionCases();
         await SavedToolbox(Path.Combine(args[1], "toolbox"));
         await HostBehavior(args[2], args[1]);
+        await EncoderCauses();
         await LifetimeCases(args[2]);
         await StressCases(args[1]);
         await Registry(Path.Combine(Path.GetDirectoryName(args[1])!, "schemas", "contract.json"));

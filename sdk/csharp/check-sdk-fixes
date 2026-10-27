@@ -1,0 +1,61 @@
+#!/bin/sh
+# Check SDK ownership with a real installed package and an unchanged macOS engine.
+set -eu
+cd "$(dirname "$0")/../.."
+root=$PWD
+native=${1:?supply the prepared macOS native library}
+loopback=${2:-}
+. scripts/native-tools-env
+export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT HUP INT TERM
+export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
+export DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_GENERATE_ASPNET_CERTIFICATE=false
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+# Select the prepared exact SDK even when this host has another SDK installed.
+printf '{"sdk":{"version":"10.0.402","rollForward":"disable"}}\n' > "$stage/global.json"
+printf '<configuration><packageSources><clear/><add key="prepared" value="%s/singlefile-packages"/></packageSources></configuration>\n' "$DOTNET_ROOT" > "$stage/NuGet.Config"
+cd "$stage"
+"$DOTNET_ROOT/dotnet" --version
+"$DOTNET_ROOT/dotnet" pack "$root/sdk/csharp/ThinkThen.csproj" -c Release --configfile "$stage/NuGet.Config" --artifacts-path "$stage/artifacts" -o "$stage/feed" -p:MacNative="$native" -p:DebugType=None -p:DebugSymbols=false
+mkdir "$stage/consumer"
+cp "$root/sdk/csharp/tests/Consumer.csproj" "$root"/sdk/csharp/tests/*.cs "$stage/consumer/"
+printf '<configuration><packageSources><clear/><add key="local" value="%s/feed"/><add key="prepared" value="%s/singlefile-packages"/></packageSources></configuration>\n' "$stage" "$DOTNET_ROOT" > "$stage/consumer/NuGet.Config"
+"$DOTNET_ROOT/dotnet" build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" -o "$stage/bin"
+# Re-export the engine, wrapping only owner creation and release. No engine source builds.
+cc -std=c11 -Wall -Wextra -Werror -dynamiclib "$root/sdk/csharp/tests/handle-counts.c" -I "$root/crates/thinkthen-ffi/include" -Wl,-reexport_library,"$native" -o "$stage/counts.dylib"
+engine_id=$(otool -D "$native" | tail -n 1)
+install_name_tool -change "$engine_id" "$native" "$stage/counts.dylib"
+export THINKTHEN_TEST_ENGINE="$native"
+cp "$stage/counts.dylib" "$stage/bin/runtimes/osx-arm64/native/counts.dylib"
+mv "$stage/bin/runtimes/osx-arm64/native/counts.dylib" "$stage/bin/runtimes/osx-arm64/native/libthinkthen_ffi.dylib"
+"$DOTNET_ROOT/dotnet" "$stage/bin/Consumer.dll" --sdk-fixes "$root/schemas/contract.json"
+# A changed numeric enum contract must be rejected by the same installed consumer.
+python3 - "$root/schemas/contract.json" "$stage/drift.json" <<'PY'
+import json,sys
+value=json.load(open(sys.argv[1])); value['functions'][0]['value']+=100
+with open(sys.argv[2],'w') as output: json.dump(value,output)
+PY
+if "$DOTNET_ROOT/dotnet" "$stage/bin/Consumer.dll" --registry "$stage/drift.json" > "$stage/drift.log" 2>&1; then
+    echo 'enum contract drift was accepted' >&2; exit 1
+fi
+grep -q 'Function names or values differ from contract' "$stage/drift.log"
+echo 'C# enum drift negative passed.'
+# The normal tests use the real asset. Their old engine scope remains explicit.
+cp "$native" "$stage/bin/runtimes/osx-arm64/native/engine.dylib"
+mv "$stage/bin/runtimes/osx-arm64/native/engine.dylib" "$stage/bin/runtimes/osx-arm64/native/libthinkthen_ffi.dylib"
+if [ -n "$loopback" ]; then
+    export THINKTHEN_LOOPBACK="$loopback"
+    unset THINKTHEN_STRESS_FULL
+    "$DOTNET_ROOT/dotnet" "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$loopback"
+else
+    "$DOTNET_ROOT/dotnet" "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
+fi
+"$DOTNET_ROOT/dotnet" publish "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" -o "$stage/single" -p:PublishSingleFile=true -p:SelfContained=false
+"$stage/single/Consumer" "$root/construction/stub.json" --stub-only
+PYTHONPATH="$root/scripts" python3 - "$root" "$stage" <<'PY'
+from pathlib import Path
+import sys
+from csharp_consumers import metadata
+metadata(Path(sys.argv[2]))
+PY

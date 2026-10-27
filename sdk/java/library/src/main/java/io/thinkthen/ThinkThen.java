@@ -30,7 +30,7 @@ public final class ThinkThen implements AutoCloseable {
     private static final System.Logger LOG = System.getLogger("io.thinkthen");
     private final DriverClient driver;
     private final @org.jspecify.annotations.Nullable RecordCodec codec;
-    private final ExecutorService asyncWorkers = Executors.newFixedThreadPool(4,Thread.ofPlatform().daemon().name("thinkthen-async-",0).factory());
+    private final ExecutorService asyncWorkers = Executors.newThreadPerTaskExecutor(Thread.ofPlatform().daemon().name("thinkthen-async-",0).factory());
     private final Set<CompletableFuture<?>> futures = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private volatile boolean closed;
     private ThinkThen(Builder builder) {

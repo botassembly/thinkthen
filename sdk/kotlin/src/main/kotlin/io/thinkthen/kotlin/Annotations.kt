@@ -3,31 +3,31 @@ package io.thinkthen.kotlin
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
-sealed interface EntryOutcome<out A,out D> {
-    data class Answered<A,D> internal constructor(val answer: A, val probability: Double?, val detail: D?) : EntryOutcome<A,D>
-    data class Unsure<D> internal constructor(val probability: Double, val detail: D?) : EntryOutcome<Nothing,D>
-    data class Failed internal constructor(val error: RowError) : EntryOutcome<Nothing,Nothing>
+public sealed interface EntryOutcome<out A,out D> {
+    public data class Answered<A,D> internal constructor(public val answer: A, public val probability: Double?, public val detail: D?) : EntryOutcome<A,D>
+    public data class Unsure<D> internal constructor(public val probability: Double, public val detail: D?) : EntryOutcome<Nothing,D>
+    public data class Failed internal constructor(public val error: RowError) : EntryOutcome<Nothing,Nothing>
 }
-sealed interface EntryResult
-data class DecideResult internal constructor(val outcome: EntryOutcome<Boolean,Nothing>) : EntryResult
-data class ChooseResult internal constructor(val outcome: EntryOutcome<String,LabelDetail>) : EntryResult
-data class TagResult internal constructor(val outcome: EntryOutcome<List<String>,LabelDetail>) : EntryResult
-data class ScoreResult internal constructor(val outcome: EntryOutcome<Double,LevelDetail>) : EntryResult
-data class FilterResult internal constructor(val outcome: EntryOutcome<Boolean,Nothing>) : EntryResult
-data class FindResult internal constructor(val outcome: EntryOutcome<FindAnswer,Nothing>) : EntryResult
-data class RecognizeResult internal constructor(val outcome: EntryOutcome<List<Entity>,RecognizeDetail>) : EntryResult
-data class RelateResult internal constructor(val outcome: EntryOutcome<List<Relation>,RelationDetail>) : EntryResult
-@Serializable(with = AnnotationsSerializer::class) class Annotations internal constructor(entries: Map<String,EntryResult>) {
-    val entries: Map<String,EntryResult> = immutableMap(entries)
-    operator fun get(name: String): EntryResult? = entries[name]
-    fun decide(name: String): EntryOutcome<Boolean,Nothing>? = (entries[name] as? DecideResult)?.outcome
-    fun choose(name: String): EntryOutcome<String,LabelDetail>? = (entries[name] as? ChooseResult)?.outcome
-    fun tag(name: String): EntryOutcome<List<String>,LabelDetail>? = (entries[name] as? TagResult)?.outcome
-    fun score(name: String): EntryOutcome<Double,LevelDetail>? = (entries[name] as? ScoreResult)?.outcome
-    fun filter(name: String): EntryOutcome<Boolean,Nothing>? = (entries[name] as? FilterResult)?.outcome
-    fun find(name: String): EntryOutcome<FindAnswer,Nothing>? = (entries[name] as? FindResult)?.outcome
-    fun recognize(name: String): EntryOutcome<List<Entity>,RecognizeDetail>? = (entries[name] as? RecognizeResult)?.outcome
-    fun relate(name: String): EntryOutcome<List<Relation>,RelationDetail>? = (entries[name] as? RelateResult)?.outcome
+public sealed interface EntryResult
+public data class DecideResult internal constructor(public val outcome: EntryOutcome<Boolean,Nothing>) : EntryResult
+public data class ChooseResult internal constructor(public val outcome: EntryOutcome<String,LabelDetail>) : EntryResult
+public data class TagResult internal constructor(public val outcome: EntryOutcome<List<String>,LabelDetail>) : EntryResult
+public data class ScoreResult internal constructor(public val outcome: EntryOutcome<Double,LevelDetail>) : EntryResult
+public data class FilterResult internal constructor(public val outcome: EntryOutcome<Boolean,Nothing>) : EntryResult
+public data class FindResult internal constructor(public val outcome: EntryOutcome<FindAnswer,Nothing>) : EntryResult
+public data class RecognizeResult internal constructor(public val outcome: EntryOutcome<List<Entity>,RecognizeDetail>) : EntryResult
+public data class RelateResult internal constructor(public val outcome: EntryOutcome<List<Relation>,RelationDetail>) : EntryResult
+@Serializable(with = AnnotationsSerializer::class) public class Annotations internal constructor(entries: Map<String,EntryResult>) {
+    public val entries: Map<String,EntryResult> = immutableMap(entries)
+    public operator fun get(name: String): EntryResult? = entries[name]
+    public fun decide(name: String): EntryOutcome<Boolean,Nothing>? = (entries[name] as? DecideResult)?.outcome
+    public fun choose(name: String): EntryOutcome<String,LabelDetail>? = (entries[name] as? ChooseResult)?.outcome
+    public fun tag(name: String): EntryOutcome<List<String>,LabelDetail>? = (entries[name] as? TagResult)?.outcome
+    public fun score(name: String): EntryOutcome<Double,LevelDetail>? = (entries[name] as? ScoreResult)?.outcome
+    public fun filter(name: String): EntryOutcome<Boolean,Nothing>? = (entries[name] as? FilterResult)?.outcome
+    public fun find(name: String): EntryOutcome<FindAnswer,Nothing>? = (entries[name] as? FindResult)?.outcome
+    public fun recognize(name: String): EntryOutcome<List<Entity>,RecognizeDetail>? = (entries[name] as? RecognizeResult)?.outcome
+    public fun relate(name: String): EntryOutcome<List<Relation>,RelationDetail>? = (entries[name] as? RelateResult)?.outcome
     override fun equals(other: Any?): Boolean = other is Annotations && entries == other.entries
     override fun hashCode(): Int = entries.hashCode()
 }

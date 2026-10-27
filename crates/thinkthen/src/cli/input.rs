@@ -5,7 +5,7 @@ use clap::ArgMatches;
 use std::collections::VecDeque;
 use std::io::{self, BufRead, BufReader, Read};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub(super) enum Format {
     Text,
     Lines,
@@ -16,19 +16,7 @@ pub(super) enum Format {
 }
 impl Format {
     pub(super) fn parse(text: &str) -> Result<Self, Error> {
-        match text {
-            "text" => Ok(Self::Text),
-            "lines" => Ok(Self::Lines),
-            "jsonl" => Ok(Self::Jsonl),
-            "csv" => Ok(Self::Csv),
-            "tsv" => Ok(Self::Tsv),
-            "xlsx" => Ok(Self::Xlsx),
-            _ => Err(super::options::unknown_value(
-                "from",
-                text,
-                &["text", "lines", "jsonl", "csv", "tsv", "xlsx"],
-            )),
-        }
+        super::options::parse_choice("from", text)
     }
     pub(super) const fn table(self) -> bool {
         matches!(self, Self::Csv | Self::Tsv | Self::Xlsx)
@@ -132,11 +120,21 @@ impl Input {
             self.format = format;
             let mut bytes = Vec::new();
             let length = if format == Format::Text {
-                input.read_to_end(&mut bytes)
+                input
+                    .take((crate::files::MAX_RECORD_BYTES + 1) as u64)
+                    .read_to_end(&mut bytes)
             } else {
-                input.read_until(b'\n', &mut bytes)
+                input
+                    .take((crate::files::MAX_RECORD_BYTES + 1) as u64)
+                    .read_until(b'\n', &mut bytes)
             }
             .map_err(|_| super::local(&format!("input {} could not be read", self.origin)))?;
+            if bytes.len() > crate::files::MAX_RECORD_BYTES {
+                return Err(Error::new(
+                    crate::ErrorKind::Question,
+                    crate::files::record_limit().to_string(),
+                ));
+            }
             if format == Format::Text {
                 self.current = None;
             } else if length == 0 {

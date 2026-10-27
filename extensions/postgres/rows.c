@@ -151,7 +151,7 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
     tuplestore_putvalues(result->setResult, result->setDesc, values, nulls);
     if (owner->ids != NULL) {
         TtId *selected = hash_search(owner->ids, &row->position, HASH_FIND, NULL);
-        if (selected != NULL) MemoryContextDelete(selected->memory);
+        if (selected != NULL) pfree((void *)selected->value.data);
         hash_search(owner->ids, &row->position, HASH_REMOVE, NULL);
     }
     TT_BRIDGE(thinkthen_row_free(row));

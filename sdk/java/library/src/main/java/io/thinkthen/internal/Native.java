@@ -54,7 +54,7 @@ final class Native {
             } catch (RuntimeException | Error error) { throw error; }
             catch (Throwable error) { throw new AssertionError("Native ABI handshake failed", error); }
             if (compatible == 0) throw new ThinkThenException(Contract.ABI_CODE, Contract.ABI_MESSAGE);
-            for (String name : new String[]{"code_name", "client_open_json", "settings_conversion_error", "question_conversion_error",
+            for (String name : new String[]{"code_name", "code_count", "code_at", "client_open_json", "settings_conversion_error", "question_conversion_error",
                     "toolbox_from_json", "toolbox_from_definitions_json", "toolbox_to_json", "toolbox_definitions_json", "toolbox_free",
                     "cancelled_error", "client_free", "call_open_json", "call_open_records_json", "call_send_utf16", "call_send_json", "call_send_missing", "call_send_invalid",
                     "call_end_input", "call_next", "call_cancel", "call_free", "buffer_free", "row_free", "error_free"}) {
@@ -90,13 +90,6 @@ final class Native {
     private static long errorOffset(String field) { return NativeLayouts.ERROR.byteOffset(MemoryLayout.PathElement.groupElement(field)); }
     static long offset(String field) { return rowLayout().byteOffset(MemoryLayout.PathElement.groupElement(field)); }
     static byte[] rowBytes(MemorySegment row, String field) { return copy(row.asSlice(offset(field), NativeLayouts.BUFFER.byteSize())); }
-    static RuntimeException conversionError(String context) {
-        try (var arena = Arena.ofConfined()) {
-            var error = error(arena);
-            check((int) call(context + "_conversion_error", error), error);
-            throw new AssertionError("Native conversion error did not fail");
-        }
-    }
     static void check(int status, MemorySegment error) {
         if (status != -1) return;
         try {

@@ -16,6 +16,7 @@ $(SHLIB): $(STATLIB)
 
 $(STATLIB):
 	mkdir -p engine/.cargo "$(CARGO_TARGET_DIR)"
+	@test -d engine/vendor || tar -xzf engine/vendor.tar.gz -C engine
 	cp engine/vendor-config.toml engine/.cargo/config.toml
 	cd engine && \
 	if [ -n "$${THINKTHEN_COVERAGE_ROOT:-}" ]; then \

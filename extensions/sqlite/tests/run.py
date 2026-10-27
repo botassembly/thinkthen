@@ -233,3 +233,24 @@ for mode in ('headers','body','refusal-body'):
         host.configure({'backend':'stub'})
         assert len(host.ok("SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?')"))==1
 print('SQLite typed arguments, native ids, both wires, settings and cancellation pass')
+
+# Feature: repeated filters in one join reuse the cursor's paid result.
+case=next(path for path in (ROOT/'conformance').rglob('*.json') if 'replies' in json.loads(path.read_text()) and json.loads(path.read_text()).get('request',{}).get('question',{}).get('function')=='decide')
+with fixture(LOOPBACK,case) as (server,url),Host(url) as host:
+    host.configure({'backend':'openai'})
+    rows=host.ok("SELECT outer_row.n,t.status FROM (SELECT 1 n UNION ALL SELECT 2 UNION ALL SELECT 3) outer_row LEFT JOIN thinkthen_decide('SELECT 9 AS id, ''x'' AS record','Ready?') t ON 1=1")
+    assert len(rows)==3,rows
+    assert command(server,'count')=='1'
+    rows=host.ok("SELECT t.id FROM (SELECT 1 n UNION ALL SELECT 2 UNION ALL SELECT 1) q LEFT JOIN thinkthen_decide t ON t.source_sql=CASE q.n WHEN 1 THEN 'SELECT 1 AS id, ''x'' AS record' ELSE 'SELECT 2 AS id, ''x'' AS record' END AND t.question='Ready?'")
+    assert rows==[[1],[2],[1]],rows
+    assert command(server,'count')=='4'
+    host.ok("CREATE TABLE events(n)")
+    host.ok("CREATE TRIGGER refuse AFTER INSERT ON events BEGIN SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?'); END")
+    assert host.sql('INSERT INTO events VALUES(1)')['code']==ERROR
+
+# Feature: a source-side settings change invalidates the original client result.
+with fixture(LOOPBACK,case) as (server,url),Host(url) as host:
+    host.configure({'backend':'openai'})
+    rows=host.ok("SELECT t.id FROM (SELECT 1 n UNION ALL SELECT 2) q LEFT JOIN thinkthen_decide(\"SELECT 7 AS id, CASE thinkthen_set('model','changed-model') WHEN 1 THEN 'x' END AS record\",'Ready?') t ON 1=1")
+    assert rows==[[7],[7]],rows
+    assert command(server,'count')=='2'

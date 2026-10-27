@@ -67,7 +67,7 @@ verify "$deps/static.zip" "$static_sum"
 mkdir -p "$deps/static"
 unzip -qo "$deps/static.zip" -d "$deps/static"
 if [ "$(uname -sm)" = 'Linux x86_64' ]; then
-    # Portable CMake runs inside the prepared glibc 2.39 build environment.
+    # Portable CMake runs inside the prepared runtime floor.
     if [ ! -f "$deps/cmake.tar.gz" ]; then
         curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.6/cmake-3.31.6-linux-x86_64.tar.gz -o "$deps/cmake.tar.gz"
     fi

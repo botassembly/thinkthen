@@ -21,8 +21,12 @@ func (v failedEncoding) MarshalJSON() ([]byte, error) { return nil, errors.New(v
 func TestHostConversionErrorsAreRedacted(t *testing.T) {
 	secret := "synthetic-encoding-secret"
 	_, err := tt.JSON(failedEncoding{secret})
-	if !errors.Is(err, tt.ErrUsage) || strings.Contains(err.Error(), secret) {
+	if !errors.Is(err, tt.CodeRecordJSON) || errors.Is(err, tt.ErrUsage) || strings.Contains(err.Error(), secret) {
 		t.Fatal("host conversion exposed its message")
+	}
+	var cause *json.MarshalerError
+	if !errors.As(err, &cause) || cause.Err.Error() != secret {
+		t.Fatal("record conversion lost the JSON cause")
 	}
 	for _, retry := range []tt.Retry{
 		{MaxRetries: -1}, {InitialBackoff: time.Nanosecond}, {AttemptTimeout: -time.Millisecond},

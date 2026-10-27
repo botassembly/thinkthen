@@ -53,18 +53,6 @@ fn r_client(settings: &str) -> List {
     }
 }
 
-// The shared lifecycle diagnostic belongs to call setup in R.
-fn closed_client() -> List {
-    let error = thinkthen::native::closed_client_error();
-    list!(
-        error = list!(
-            code = error.code().as_str(),
-            family = "setup",
-            message = error.to_string()
-        )
-    )
-}
-
 /// Release this client's engine; calls already opened retain their own engine.
 #[extendr]
 fn r_client_close(client: ExternalPtr<NativeClient>) {
@@ -92,21 +80,6 @@ fn r_admit(value: &str, kind: i32) -> List {
     };
     match result {
         Ok(value) => list!(value = value),
-        Err(error) => failure(error),
-    }
-}
-
-/// Open the shared streamed call with code-point positions.
-#[extendr]
-fn r_open(client: ExternalPtr<NativeClient>, request: &str) -> List {
-    let engine = client.0.borrow();
-    let Some(engine) = engine.as_ref() else {
-        return closed_client();
-    };
-    let result = Request::from_json(request)
-        .and_then(|request| Call::open(engine, &request, OffsetUnit::CodePointsInclusive));
-    match result {
-        Ok(call) => list!(value = ExternalPtr::new(NativeCall(RefCell::new(Some(call))))),
         Err(error) => failure(error),
     }
 }
@@ -152,7 +125,7 @@ fn r_prepare_record(value: &str, kind: i32, id: Robj) -> List {
 fn r_open_finite(client: ExternalPtr<NativeClient>, request: &str, records: List) -> List {
     let engine = client.0.borrow();
     let Some(engine) = engine.as_ref() else {
-        return closed_client();
+        return failure(thinkthen::native::closed_client_error());
     };
     let result = (|| {
         let request = Request::from_json(request)?;
@@ -204,6 +177,10 @@ fn r_poll(call: ExternalPtr<NativeCall>) -> List {
             );
             match serde_json::to_string(&row) {
                 Ok(json) => list!(
+                    kept = match &row {
+                        thinkthen::results::AnyRow::Filter(row) => Some(row.kept()),
+                        _ => None,
+                    },
                     event = "row",
                     json = json,
                     id = id,
@@ -221,41 +198,6 @@ fn r_poll(call: ExternalPtr<NativeCall>) -> List {
             *owned = None;
             failure(error)
         }
-    }
-}
-
-fn send(call: &ExternalPtr<NativeCall>, value: &str, json: bool) -> List {
-    let mut owned = call.0.borrow_mut();
-    if let Some(call) = owned.as_mut() {
-        let result = call.send(if json {
-            Record::from_json(value)
-        } else {
-            Record::text(value)
-        });
-        if let Err(error) = result {
-            return failure(error);
-        }
-    }
-    list!()
-}
-
-/// Supply unwrapped UTF-8 text to the shared call.
-#[extendr]
-fn r_text(call: ExternalPtr<NativeCall>, text: &str) -> List {
-    send(&call, text, false)
-}
-
-/// Supply one structured JSON record to the shared call.
-#[extendr]
-fn r_json(call: ExternalPtr<NativeCall>, json: &str) -> List {
-    send(&call, json, true)
-}
-
-/// Finish the input collection.
-#[extendr]
-fn r_end(call: ExternalPtr<NativeCall>) {
-    if let Some(call) = call.0.borrow_mut().as_mut() {
-        call.end_input();
     }
 }
 
@@ -316,32 +258,6 @@ fn r_id_integer(decimal: &str) -> List {
 fn r_id_string(text: &str) -> ExternalPtr<NativeId> {
     ExternalPtr::new(NativeId(RecordId::from(text)))
 }
-/// Supply a record with its separately admitted exact identifier.
-#[extendr]
-fn r_record_id(
-    call: ExternalPtr<NativeCall>,
-    value: &str,
-    kind: i32,
-    id: ExternalPtr<NativeId>,
-) -> List {
-    let record = prepare_record(value, kind, Some(id.0.clone()));
-    if let Some(call) = call.0.borrow_mut().as_mut()
-        && let Err(error) = call.send(record)
-    {
-        return failure(error);
-    }
-    list!()
-}
-/// Retain a host conversion failure as a failed record without a backend call.
-#[extendr]
-fn r_invalid(call: ExternalPtr<NativeCall>) -> List {
-    if let Some(call) = call.0.borrow_mut().as_mut()
-        && let Err(error) = call.send(Record::invalid())
-    {
-        return failure(error);
-    }
-    list!()
-}
 /// Report this direct native module's contract version before client creation.
 #[extendr]
 fn r_abi_version() -> i32 {
@@ -372,15 +288,9 @@ extendr_module! {
     fn r_abi_version;
     fn r_id_integer;
     fn r_id_string;
-    fn r_record_id;
-    fn r_invalid;
     fn r_client;
-    fn r_open;
     fn r_open_finite;
     fn r_prepare_record;
     fn r_poll;
-    fn r_text;
-    fn r_json;
-    fn r_end;
     fn r_close;
 }

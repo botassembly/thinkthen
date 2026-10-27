@@ -40,32 +40,36 @@ public abstract record Threshold
     internal Threshold() { }
     private protected abstract void Closed();
     internal abstract void Write(Utf8JsonWriter writer);
+    internal static void Number(Utf8JsonWriter writer, double value)
+    {
+        if (double.IsFinite(value)) writer.WriteNumberValue(value);
+        else writer.WriteStringValue(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
     public static Threshold Cut(double value) => global::ThinkThen.Cut.From(value);
     public static Threshold Band(double low, double high)
     {
-        Admission.Threshold(low, high);
         return new BandThreshold(low, high);
     }
     private sealed record BandThreshold(double Low, double High) : Threshold
     {
         private protected override void Closed() { }
         internal override void Write(Utf8JsonWriter writer)
-        { writer.WriteStartObject(); writer.WriteNumber("low", Low); writer.WriteNumber("high", High); writer.WriteEndObject(); }
+        { writer.WriteStartObject(); writer.WritePropertyName("low"); Number(writer, Low); writer.WritePropertyName("high"); Number(writer, High); writer.WriteEndObject(); }
     }
 }
 public sealed record Cut : Threshold
 {
     public double Value { get; }
     private Cut(double value) => Value = value;
-    public static Cut From(double value) { Admission.Threshold(value, null); return new(value); }
+    public static Cut From(double value) => new(value);
     private protected override void Closed() { }
-    internal override void Write(Utf8JsonWriter writer) => writer.WriteNumberValue(Value);
+    internal override void Write(Utf8JsonWriter writer) => Number(writer, Value);
 }
 public sealed record Pointer
 {
     public string Value { get; }
     private Pointer(string value) => Value = value;
-    public static Pointer From(string value) { Admission.Pointer(value); return new(value); }
+    public static Pointer From(string value) => new(Json.HostText(value));
 }
 public sealed record RelationRule
 {
@@ -87,7 +91,10 @@ public sealed record RecognizeDetail(ImmutableArray<PieceDetail> Pieces, Immutab
 public sealed record RelateDetail(ImmutableArray<Entity> Names, ImmutableArray<Relation> Pairs);
 public sealed class NoDetail { private NoDetail() { } }
 public sealed record Source(string QuestionIdentity, Backend Backend, string Model, string? Name = null);
-public sealed record RowError(ErrorCode Code, string Message, int? HttpStatus = null);
+public sealed record RowError(ErrorCode Code, string Message, int? HttpStatus = null)
+{
+    [JsonIgnore] public Exception? Cause { get; init; }
+}
 public sealed class ThinkThenException : Exception
 {
     public ErrorCode Code { get; }

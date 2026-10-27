@@ -1,7 +1,7 @@
 """Generated from the engine error registry during package assembly."""
-from enum import Enum
+from ._enums import StringEnum
 
-class ErrorCode(str, Enum):
+class ErrorCode(StringEnum):
     USAGE_THRESHOLD = "usage.threshold"
     USAGE_QUESTION = "usage.question"
     USAGE_NAME = "usage.name"

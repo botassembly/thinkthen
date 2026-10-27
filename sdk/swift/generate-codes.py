@@ -11,10 +11,11 @@ for code in codes:
     parts = code["name"].replace("-", ".").split(".")
     case = parts[0] + "".join(part.title() for part in parts[1:])
     text += f'  case {case} = "{code["name"]}"\n'
-text += "  public var nativeValue: Int32 {\n    switch self {\n"
+text += '  case unknown = "unknown"\n'
+text += "  public var nativeValue: Int32? {\n    switch self {\n"
 for code in codes:
     parts = code["name"].replace("-", ".").split(".")
     case = parts[0] + "".join(part.title() for part in parts[1:])
     text += f'    case .{case}: {code["value"]}\n'
-text += "    }\n  }\n}\n"
+text += "    case .unknown: nil\n    }\n  }\n}\n"
 Path(destination).write_text(text)

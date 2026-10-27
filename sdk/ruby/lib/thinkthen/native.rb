@@ -21,9 +21,11 @@ module ThinkThen
     end
     begin
       attach_function :thinkthen_abi_version, [], :uint32
+      attach_function :thinkthen_abi_compatible, [:uint32, :uint32], :uint8
+      attach_function :thinkthen_code_name, [:int32], :string
       actual = thinkthen_abi_version
       required = NativeContract::ABI_VERSION
-      unless actual >> 16 == required >> 16 && (actual & 0xffff) >= (required & 0xffff)
+      unless thinkthen_abi_compatible(required, actual) != 0
         raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
       end
     rescue FFI::NotFoundError
@@ -64,6 +66,7 @@ module ThinkThen
       attach_function :thinkthen_toolbox_definitions_json, [:pointer, :pointer, :pointer], :int32
       attach_function :thinkthen_toolbox_free, [:pointer], :void
       attach_function :thinkthen_buffer_free, [:pointer], :void
+      attach_function :thinkthen_question_from_json, [:pointer, :size_t, :pointer, :pointer], :int32
       attach_function :thinkthen_question_new, [:uint32, :pointer, :size_t, :pointer, :pointer], :int32
       attach_function :thinkthen_question_set_cut, [:pointer, :double, :pointer], :int32
       attach_function :thinkthen_question_set_band, [:pointer, :double, :double, :pointer], :int32
@@ -133,17 +136,12 @@ module ThinkThen
     end
 
     def self.validate_question(value)
-      client = FFI::MemoryPointer.new(:pointer)
-      call = FFI::MemoryPointer.new(:pointer)
-      bytes('{"backend":"stub"}') do |data, length|
-        checked { |error| thinkthen_client_open_json(data, length, client, error) }
-      end
-      bytes(context_dump({question: value}, :question)) do |data, length|
-        checked { |error| thinkthen_call_open_json(client.read_pointer, data, length, NativeContract::OFFSET_NAMES.key("code_points"), call, error) }
+      question = FFI::MemoryPointer.new(:pointer)
+      bytes(context_dump(value, :question)) do |data, length|
+        checked { |error| thinkthen_question_from_json(data, length, question, error) }
       end
     ensure
-      thinkthen_call_free(call.read_pointer) if call && !call.read_pointer.null?
-      thinkthen_client_free(client.read_pointer) if client && !client.read_pointer.null?
+      thinkthen_question_free(question.read_pointer) if question && !question.read_pointer.null?
     end
 
     def self.toolbox_json(json, saved: false, definitions: false)
@@ -245,7 +243,7 @@ module ThinkThen
     end
 
     def self.error_symbol(value)
-      unless NativeContract::CODE_NAMES.value?(value)
+      unless value == "unknown" || NativeContract::CODE_NAMES.value?(value)
         raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
       end
       # The generated registry guard supplies the literal union at this boundary.
@@ -262,7 +260,10 @@ module ThinkThen
       error = NativeError.new
       result = yield error
       if result == -1
-        code = discriminator(NativeContract::CODE_NAMES, error[:code])
+        code = thinkthen_code_name(error[:code])
+        unless code && NativeContract::CODE_NAMES.key?(error[:code])
+          raise UnknownCodeError.new(copy(error[:message]), raw_code: error[:code], raw_name: code, http_status: error[:http_status].zero? ? nil : error[:http_status])
+        end
         klass = case code
                 when "local.cancelled" then Cancelled
                 when /^usage\./ then UsageError

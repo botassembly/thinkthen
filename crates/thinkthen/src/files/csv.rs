@@ -3,7 +3,7 @@
 use crate::Cancel;
 use crate::files::{FileError, admission::check_cancel};
 
-const MAX_RECORD_BYTES: usize = 64 * 1024 * 1024;
+use super::MAX_RECORD_BYTES;
 use std::io::{BufRead, BufReader, Read};
 
 #[derive(Debug)]
@@ -92,7 +92,7 @@ impl<R: Read> CsvReader<R> {
                 break;
             }
             if raw.len() == MAX_RECORD_BYTES {
-                return Err(self.bad(start, "record exceeds the 64 MiB limit"));
+                return Err(self.bad(start, super::RECORD_LIMIT_MESSAGE));
             }
             raw.push(value);
             if value == b'\n' {

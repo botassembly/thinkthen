@@ -35,20 +35,14 @@
     "wrap__r_client",
     "wrap__r_client_close",
     "wrap__r_close",
-    "wrap__r_end",
     "wrap__r_id_integer",
     "wrap__r_id_string",
-    "wrap__r_invalid",
-    "wrap__r_json",
-    "wrap__r_open",
     "wrap__r_open_finite",
     "wrap__r_poll",
     "wrap__r_prepare_record",
     "wrap__r_question",
     "wrap__r_question_conversion_error",
-    "wrap__r_record_id",
-    "wrap__r_settings_conversion_error",
-    "wrap__r_text"
+    "wrap__r_settings_conversion_error"
   ],
   "typescript": [
     "Client",

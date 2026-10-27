@@ -1,6 +1,7 @@
 #include "internal.h"
 #include <string.h>
 #include <stdlib.h>
+#include "rules.h"
 
 SQLITE_EXTENSION_INIT1
 
@@ -14,19 +15,8 @@ static int is_function(Table *table, const char *name) {
     return strcmp(table->registration->function, name) == 0;
 }
 static int exposed(Table *table, int argument) {
-    switch (argument) {
-    case ARG_QUESTION: return !is_function(table,"recognize") && !is_function(table,"relate") && !is_function(table,"annotate");
-    case ARG_CHOICES: return is_function(table,"choose");
-    case ARG_LABELS: return is_function(table,"tag");
-    case ARG_LEVELS: return is_function(table,"score") || is_function(table,"rank");
-    case ARG_KINDS: return is_function(table,"recognize");
-    case ARG_RULES: return is_function(table,"relate");
-    case ARG_TOOLBOX: return is_function(table,"annotate");
-    case ARG_THRESHOLD: return !is_function(table,"score") && !is_function(table,"rank") && !is_function(table,"annotate");
-    case ARG_LOW: case ARG_HIGH: return is_function(table,"decide") || is_function(table,"choose") || is_function(table,"filter");
-    case ARG_TOP: return is_function(table,"rank");
-    default: return 1;
-    }
+    if (argument == ARG_SOURCE || argument >= ARG_PARAMS) return 1;
+    return tt_argument(table->registration->function, argument_names[argument]);
 }
 static int connect_table(sqlite3 *db, void *aux, int argc, const char *const *argv,
                          sqlite3_vtab **output, char **error) {
@@ -89,7 +79,25 @@ static int close_cursor(sqlite3_vtab_cursor *base) {cursor_clear((Cursor*)base);
 static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, int argc, sqlite3_value **argv) {
     (void)plan;(void)argc;
     Cursor *cursor=(Cursor*)base;Table *table=(Table*)base->pVtab;
+    if(replay_same(cursor,mask,argv)) {
+        while(!cursor->complete) {
+            int result=cursor_advance(cursor);if(result!=SQLITE_OK)return result;
+        }
+    }
+    if(replay_same(cursor,mask,argv)) {
+        if(!cursor->replaying)thinkthen_row_free(&cursor->row);
+        json_decref(cursor->answer);cursor->answer=NULL;
+        json_decref(cursor->error);cursor->error=NULL;
+        cursor->replaying=1;cursor->rowid=0;
+        if(!cursor->read && sqlite3_prepare_v2(cursor->replay,"SELECT * FROM rows ORDER BY rowid",-1,&cursor->read,NULL)!=SQLITE_OK)
+            return cursor_error(cursor,SQLITE_ERROR,"cannot rewind result spool");
+        sqlite3_reset(cursor->read);
+        return cursor_advance(cursor);
+    }
     cursor_clear(cursor);cursor->rowid=0;
+    cursor->mask=mask;cursor->changes=sqlite3_total_changes64(table->db);
+    cursor->generation=table->registration->connection->generation;
+    int opened=replay_open(cursor);if(opened!=SQLITE_OK)return opened;
     int index=0;
     for(int n=0;n<ARG_COUNT;n++) if(mask&(1<<n)) {
         int type=sqlite3_value_type(argv[index]);
@@ -106,6 +114,7 @@ static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, 
         result=connection_client(connection,"{}",2,&message);
         if(result!=SQLITE_OK) {result=cursor_error(cursor,result,message?message:"out of memory");sqlite3_free(message);return result;}
     }
+    cursor->generation=connection->generation;
     result=question_open(cursor);
     return result==SQLITE_OK ? cursor_advance(cursor) : result;
 }
@@ -120,8 +129,9 @@ static void set_setting(sqlite3_context *context,int argc,sqlite3_value **argv) 
     Connection *connection=sqlite3_user_data(context);
     const char *key=(const char*)sqlite3_value_text(argv[0]);
     int type=sqlite3_value_type(argv[1]);
-    int text=key && (!strcmp(key,"backend") || !strcmp(key,"model"));
-    int count=key && (!strcmp(key,"batch") || !strcmp(key,"max_retries") || !strcmp(key,"initial_backoff_ms") || !strcmp(key,"attempt_timeout_ms"));
+    int setting=key ? tt_setting(key) : 0;
+    int text=setting==1;
+    int count=setting==2 || setting==4;
     if(sqlite3_value_type(argv[0])!=SQLITE_TEXT || (key && (size_t)sqlite3_value_bytes(argv[0])!=strlen(key)) || (!text && !count) || (text && type!=SQLITE_TEXT) || (count && type!=SQLITE_INTEGER)) {
         thinkthen_error error={.struct_size=sizeof(error)};char *message=NULL;
         thinkthen_settings_conversion_error(&error);engine_error(&error,&message);
@@ -129,7 +139,7 @@ static void set_setting(sqlite3_context *context,int argc,sqlite3_value **argv) 
     }
     json_t *settings=connection->settings ? json_loadb(connection->settings,connection->settings_len,0,NULL):json_object();
     json_t *target=settings;
-    if(count && strcmp(key,"batch")) {
+    if(setting==4) {
         target=json_object_get(settings,"retry");
         if(!target) {target=json_object();json_object_set_new(settings,"retry",target);}
     }

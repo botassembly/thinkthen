@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Any, Generic, Literal, NamedTuple, NoReturn, TypeAlias, TypeVar, cast
 
 from ._codes import ErrorCode
+from ._enums import StringEnum
 
 Record: TypeAlias = (
     None | bool | int | float | str | list["Record"] | dict[str, "Record"]
@@ -18,7 +18,7 @@ T_co = TypeVar("T_co", covariant=True)
 A_co = TypeVar("A_co", covariant=True)
 
 
-class Backend(str, Enum):
+class Backend(StringEnum):
     SYSTEMONE = "systemone"
     OPENAI = "openai"
     STUB = "stub"
@@ -27,13 +27,13 @@ class Backend(str, Enum):
 BackendInput: TypeAlias = Backend | Literal["systemone", "openai", "stub"]
 
 
-class Status(str, Enum):
+class Status(StringEnum):
     ANSWERED = "answered"
     UNSURE = "unsure"
     FAILED = "failed"
 
 
-class Function(str, Enum):
+class Function(StringEnum):
     DECIDE = "decide"
     FILTER = "filter"
     CHOOSE = "choose"
@@ -46,7 +46,7 @@ class Function(str, Enum):
     ANNOTATE = "annotate"
 
 
-class BoundaryTag(str, Enum):
+class BoundaryTag(StringEnum):
     BEGIN = "BEGIN"
     INSIDE = "INSIDE"
     END = "END"
@@ -85,6 +85,11 @@ class ThinkThenError(Exception):
         self.code = code
         self.http_status = http_status
         super().__init__(message)
+
+    def __reduce__(
+        self,
+    ) -> tuple[object, tuple[ErrorCode, str, int | None], dict[str, Any]]:
+        return type(self), (self.code, str(self), self.http_status), self.__dict__
 
 
 class UsageError(ThinkThenError, ValueError):

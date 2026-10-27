@@ -14,15 +14,35 @@ test "$(go env GOVERSION)" = go1.23.12
 test -z "$(gofmt -l sdk/go/thinkthen/*.go sdk/go/tests/*.go)"
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 export CARGO_TARGET_DIR="${THINKTHEN_GO_TARGET:-$PWD/target-go-api}"
-cargo build --locked -p thinkthen-ffi -p loopback
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-scripts/go-package "$scratch/module" debug
 case "$(uname -s)" in Darwin) suffix=dylib ;; *) suffix=so ;; esac
-scripts/native-fixtures --engine "$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix" --output "$scratch/native"
+if [ -n "${THINKTHEN_GO_ENGINE:-}" ]; then
+    # The caller owns preparation and validates unchanged native inputs.
+    test -f "$THINKTHEN_GO_ENGINE"
+    test -x "$THINKTHEN_LOOPBACK"
+    python3 scripts/package_inventory.py stage go "$scratch/module"
+    mkdir -p "$scratch/module/native"
+    cp "$THINKTHEN_GO_ENGINE" "$scratch/module/native/library"
+else
+    cargo build --locked -p thinkthen-ffi -p loopback
+    scripts/go-package "$scratch/module" debug
+    THINKTHEN_GO_ENGINE="$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix"
+    THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
+fi
+python3 - "$scratch/module" "$THINKTHEN_GO_ENGINE" <<'PYTHON'
+from pathlib import Path
+import sys
+sys.path.insert(0, 'scripts')
+from native_platform import current
+from release_source import stage_go_libraries
+stage_go_libraries({current()['platform']: Path(sys.argv[2])}, Path(sys.argv[1]))
+PYTHON
+scripts/native-fixtures --engine "$THINKTHEN_GO_ENGINE" --output "$scratch/native"
 mkdir -p "$scratch/consumer" "$scratch/home" "$scratch/tmp"
 cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
-export THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback" THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES="$scratch/native" THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
+export THINKTHEN_CONTRACT="$root/schemas/contract.json" THINKTHEN_BOUNDARY_SOURCE="$root/crates/thinkthen/src/core/function/recognize.rs"
+export THINKTHEN_LOOPBACK THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES="$scratch/native" THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
 cd "$scratch/consumer"
@@ -41,7 +61,8 @@ go version -m "$(command -v staticcheck)" | awk -v pin="$staticcheck_pin" '
 '
 go vet github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
 staticcheck github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
-go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" ./...
+mkdir -p "$CARGO_TARGET_DIR"
+go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...
 # Compile the existing checked README example against the staged import path.
 mkdir readme
 python3 - "$scratch/module/README.md" readme/main.go <<'PY'
@@ -57,7 +78,11 @@ case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_c
 python3 "$root/scripts/loader-cache-check" "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
 # A separate installed prefix exercises pkg-config linkage without embedding.
 mkdir -p "$scratch/system/lib/pkgconfig" "$scratch/system/include"
-cp "$CARGO_TARGET_DIR/debug/libthinkthen_ffi.$suffix" "$scratch/system/lib/libthinkthen.$suffix"
+cp "$THINKTHEN_GO_ENGINE" "$scratch/system/lib/libthinkthen.$suffix"
+if [ "$(uname -s)" = Darwin ]; then
+    install_name_tool -id "$scratch/system/lib/libthinkthen.$suffix" "$scratch/system/lib/libthinkthen.$suffix"
+    codesign --force --sign - "$scratch/system/lib/libthinkthen.$suffix"
+fi
 cp "$scratch/module/thinkthen.h" "$scratch/system/include/"
 python3 - "$root/sdk/c/cmake/thinkthen-c.pc.in" "$scratch/system/lib/pkgconfig/thinkthen-c.pc" <<'PY'
 from pathlib import Path
@@ -68,3 +93,51 @@ for key,value in {'CMAKE_INSTALL_LIBDIR':'lib','CMAKE_INSTALL_INCLUDEDIR':'inclu
 Path(sys.argv[2]).write_text(source)
 PY
 PKG_CONFIG_PATH="$scratch/system/lib/pkgconfig" go test -tags thinkthen_system -race -count=1 -run='^TestSharedStub$' .
+
+# darwin/amd64 has no bundled engine, but remains a compilable public module.
+if [ "$(uname -s)" = Darwin ]; then
+    mkdir unsupported
+    cat > unsupported/main.go <<'GO'
+package main
+import (
+    "fmt"
+    "strings"
+    tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
+)
+func main() {
+    _, err := tt.New(tt.Config{Backend: tt.Stub})
+    if err == nil || !strings.Contains(err.Error(), "no bundled ThinkThen native engine for darwin/amd64") { panic(fmt.Sprint(err)) }
+    fmt.Println(err)
+}
+GO
+    GOARCH=amd64 go build -o "$scratch/unsupported-consumer" ./unsupported
+    "$scratch/unsupported-consumer"
+fi
+# Cross-compile the public system mode and require its explicit Windows refusal.
+if command -v zig >/dev/null 2>&1; then
+    if GOOS=windows GOARCH=amd64 CC='zig cc -target x86_64-windows-gnu' ZIG_GLOBAL_CACHE_DIR="$scratch/zig-cache" "$THINKTHEN_GO_HOME/bin/go" build -tags thinkthen_system github.com/botassembly/thinkthen/sdk/go/thinkthen > "$scratch/windows-system.log" 2>&1; then
+        echo 'Windows system mode unexpectedly built' >&2
+        exit 1
+    fi
+    if ! grep 'thinkthen_system_is_not_supported_on_windows' "$scratch/windows-system.log"; then
+        tail -n 40 "$scratch/windows-system.log" >&2
+        exit 1
+    fi
+else
+    echo 'Windows system refusal needs a Windows or Zig compiler' >&2
+    exit 1
+fi
+# An added contract member must fail the public enum comparison.
+python3 - "$THINKTHEN_CONTRACT" "$scratch/changed-contract.json" <<'PYTHON'
+import json
+import sys
+contract = json.load(open(sys.argv[1]))
+contract['backends'].append({'name': 'new-backend', 'value': 99})
+with open(sys.argv[2], 'w') as output:
+    json.dump(contract, output)
+PYTHON
+if THINKTHEN_CONTRACT="$scratch/changed-contract.json" go test -run='^TestEnumsMatchEngineContract$' . > "$scratch/enum-negative.log" 2>&1; then
+    echo 'Go enum test accepted an unknown contract value' >&2
+    exit 1
+fi
+grep 'backends(99)' "$scratch/enum-negative.log"

@@ -3,11 +3,12 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 namespace ThinkThen;
-public abstract record Question<A,D>
+public abstract record Question<A,D> : IDisposable
 {
     internal Question(JsonObject definition, QuestionHandle? handle = null)
     { Definition = definition; Handle = handle ?? Admission.Admit(definition); }
     internal QuestionHandle Handle { get; }
+    public void Dispose() => Handle.Dispose();
     internal JsonObject Definition { get; }
     public Function Function => Json.Function(Definition["function"]!.GetValue<string>());
     private protected abstract void Closed();
@@ -28,7 +29,6 @@ internal static class Admission
         try { Json.Check(result, error); return new(pointer); }
         catch { if (pointer != 0) Native.QuestionFree(pointer); throw; }
     }
-    internal static void Validate(JsonObject value) { using var handle = Admit(value); }
     internal static JsonObject Build(Function function, string? text, JsonNode? domain, string? field,
         Pointer? evidence = null, Threshold? threshold = null, int? top = null)
     {
@@ -50,26 +50,6 @@ internal static class Admission
     private static JsonNode Rule(RelationRule rule) => new JsonObject
     { ["source"] = Json.HostText(rule.Source), ["target"] = Json.HostText(rule.Target), ["relation"] = Json.HostText(rule.Relation),
       ["reads"] = rule.Reads is null ? null : Json.HostText(rule.Reads), ["either"] = rule.Either };
-    internal static void Threshold(double low, double? high)
-    {
-        NativeError error = NativeError.Empty;
-        Json.Check(Native.QuestionNew((uint)Function.Decide, Encoding.UTF8.GetBytes("validate"), 8, out nint question, ref error), error);
-        try
-        {
-            error = NativeError.Empty;
-            int result = high is double upper ? Native.SetBand(question, low, upper, ref error) : Native.SetCut(question, low, ref error);
-            Json.Check(result, error);
-        }
-        finally { Native.QuestionFree(question); }
-    }
-    internal static void Pointer(string value)
-    {
-        byte[] bytes = Encoding.UTF8.GetBytes(Json.HostText(value));
-        NativeError error = NativeError.Empty;
-        Json.Check(Native.QuestionNew((uint)Function.Decide, Encoding.UTF8.GetBytes("validate"), 8, out nint question, ref error), error);
-        try { error = NativeError.Empty; Json.Check(Native.SetEvidence(question, bytes, (nuint)bytes.Length, ref error), error); }
-        finally { Native.QuestionFree(question); }
-    }
 }
 public sealed record DecideQuestion : Question<bool,NoDetail>
 {
@@ -186,14 +166,14 @@ public sealed record AnnotateQuestion : Question<ImmutableDictionary<string, Ann
 {
     private AnnotateQuestion(JsonObject definition, QuestionHandle? handle = null) : base(definition, handle) { }
     private protected override void Closed() { }
-    internal static AnnotateQuestion Admit(JsonObject value, QuestionHandle handle) => new(value, handle);
+    internal static AnnotateQuestion Admit(JsonObject value, QuestionHandle? handle = null) => new(value, handle);
     public static AnnotateQuestion Create(AnnotationQuestions questions, AnnotateOptions? options = null, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         return new(Admission.Build(Function.Annotate, null, Admission.Required(questions).Definition.DeepClone(), "questions", options?.Evidence, null, null));
     }
 }
-public sealed class Toolbox
+public sealed class Toolbox : IDisposable
 {
     internal JsonObject Definition { get; }
     private readonly ToolboxHandle handle;
@@ -219,6 +199,7 @@ public sealed class Toolbox
         }
         catch { owner.Dispose(); throw; }
     }
+    public void Dispose() => handle.Dispose();
     public string ToJson()
     {
         NativeError error = NativeError.Empty;
@@ -270,21 +251,26 @@ public abstract record AnnotationQuestion : ToolboxQuestion
     public sealed record Recognize : AnnotationQuestion { public Recognize(RecognizeQuestion question) : base(Admission.Required(question).Definition) { } private protected override void Closed() { } }
     public sealed record Relate : AnnotationQuestion { public Relate(RelateQuestion question) : base(Admission.Required(question).Definition) { } private protected override void Closed() { } }
 }
-public sealed class AnnotationQuestions
+public sealed class AnnotationQuestions : IDisposable
 {
     internal JsonObject Definition { get; }
-    private AnnotationQuestions(JsonObject definition) => Definition = definition;
+    internal AnnotateQuestion Question { get; }
+    private AnnotationQuestions(JsonObject definition)
+    {
+        Definition = definition;
+        Question = AnnotateQuestion.Admit(Admission.Build(Function.Annotate, null, definition.DeepClone(), "questions"));
+    }
+    public void Dispose() => Question.Dispose();
     public static AnnotationQuestions Create(IReadOnlyDictionary<string, AnnotationQuestion> questions)
     {
         JsonObject value = Admission.Named(questions);
-        Admission.Validate(Admission.Build(Function.Annotate, null, value.DeepClone(), "questions"));
         return new(value);
     }
     public static AnnotationQuestions Parse(string json, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        JsonObject value = Toolbox.Parse(json, cancellationToken).Definition;
-        Admission.Validate(Admission.Build(Function.Annotate, null, value.DeepClone(), "questions"));
+        using var toolbox = Toolbox.Parse(json, cancellationToken);
+        JsonObject value = toolbox.Definition;
         return new(value);
     }
 }

@@ -7,15 +7,6 @@ import (
 )
 
 func typedRow[A, D any](r wireRow) (Row[A, D], error) {
-	var source struct{ Backend string }
-	if err := json.Unmarshal(r.source, &source); err != nil {
-		return Row[A, D]{}, abiError()
-	}
-	switch source.Backend {
-	case "systemone", "openai", "stub":
-	default:
-		return Row[A, D]{}, abiError()
-	}
 	entry, err := typedEntry[A, D](r)
 	return Row[A, D]{entry}, err
 }

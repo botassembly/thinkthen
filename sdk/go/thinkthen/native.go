@@ -8,107 +8,49 @@ package thinkthen
 import "C"
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
-	"runtime"
 	"sync"
 	"unsafe"
 )
 
-var loadOnce sync.Once
-var loadError error
+var loadMutex sync.Mutex
+var nativeLoaded bool
 
 func loadNative() error {
-	loadOnce.Do(func() {
-		path := os.Getenv("THINKTHEN_LIBRARY")
-		if path == "" && installedABI() != 0 {
-			if message := C.tt_load(nil); message != nil {
-				loadError = &Error{code: CodeUsageABI, message: C.GoString(message)}
-			}
-			return
-		}
-		if path == "" {
-			var err error
-			path, err = cachedLibrary()
-			if err != nil {
-				loadError = err
-				return
-			}
-		}
-		name := C.CString(path)
-		defer C.free(unsafe.Pointer(name))
-		if message := C.tt_load(name); message != nil {
-			loadError = &Error{code: Code(C.tt_load_code()), message: C.GoString(message)}
-			if C.tt_load_code() == C.THINKTHEN_CODE_LOCAL_IO {
-				loadError = fmt.Errorf("cannot load native engine %s: %w", path, loadError)
-			}
-		}
-	})
-	return loadError
-}
-
-// Embedding leaves no package file at runtime, so retain one verified cache copy.
-func cachedLibrary() (string, error) {
-	base, err := os.UserCacheDir()
-	if err != nil {
-		return "", err
+	loadMutex.Lock()
+	defer loadMutex.Unlock()
+	if nativeLoaded {
+		return nil
 	}
-	digest := sha256.Sum256(library)
-	dir := filepath.Join(base, "thinkthen", "native", hex.EncodeToString(digest[:]))
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
+	path := os.Getenv("THINKTHEN_LIBRARY")
+	if path == "" && installedABI() != 0 {
+		if message := C.tt_load(nil); message != nil {
+			return &Error{code: CodeUsageABI, message: C.GoString(message)}
+		}
+		nativeLoaded = true
+		return nil
 	}
-	for _, directory := range []string{base, filepath.Join(base, "thinkthen"), filepath.Join(base, "thinkthen", "native"), dir} {
-		if err := checkCachePath(directory, true); err != nil {
-			return "", err
+	if path == "" {
+		var err error
+		path, err = cachedLibrary()
+		if err != nil {
+			return err
 		}
 	}
-	name := "library"
-	if runtime.GOOS == "windows" {
-		name += ".dll"
-	}
-	path := filepath.Join(dir, name)
-	if err := checkCachePath(path, false); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return "", err
-	}
-	if data, err := os.ReadFile(path); err == nil {
-		if sha256.Sum256(data) != digest {
-			return "", errors.New("cached ThinkThen native engine checksum mismatch")
+	name := C.CString(path)
+	defer C.free(unsafe.Pointer(name))
+	if message := C.tt_load(name); message != nil {
+		err := &Error{code: Code(C.tt_load_code()), message: C.GoString(message)}
+		if C.tt_load_code() == C.THINKTHEN_CODE_LOCAL_IO {
+			return fmt.Errorf("cannot load native engine %s: %w", path, err)
 		}
-		return path, nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return "", err
+		return err
 	}
-	file, err := os.CreateTemp(dir, ".library-")
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(file.Name())
-	_, writeErr := file.Write(library)
-	closeErr := file.Close()
-	if writeErr != nil {
-		return "", writeErr
-	}
-	if closeErr != nil {
-		return "", closeErr
-	}
-	// Another process may have published the same immutable library first.
-	if err := os.Rename(file.Name(), path); err != nil {
-		data, readErr := os.ReadFile(path)
-		if readErr != nil || sha256.Sum256(data) != digest {
-			return "", err
-		}
-	}
-	if err := checkCachePath(path, false); err != nil {
-		return "", err
-	}
-	return path, nil
+	nativeLoaded = true
+	return nil
 }
 
 func bytesPointer(value []byte) *C.uint8_t {

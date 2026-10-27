@@ -8,6 +8,7 @@ require_relative "cases"
 isolated_ruby_environment do
   require "thinkthen"
   require_relative "surface"
+  require_relative "lifecycle"
   require_relative "input_interruption"
   require_relative "toolbox_json"
   require_relative "contracts"
@@ -26,6 +27,9 @@ isolated_ruby_environment do
   ruby_record_identity
   ruby_filter_rows
   ruby_row_values
+  ruby_abandoned_streams
+  ruby_single_admission
+  ruby_fork_ownership
   ruby_enumeration
   ruby_input_ownership
   ruby_input_interruptions

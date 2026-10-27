@@ -177,6 +177,13 @@ public final class JavaApiCases {
             }}
             """;
         check(compiles(compiler, good), "required-list and cut signatures compile");
+        check(!compiles(compiler, "import io.thinkthen.internal.Client; final class SignatureCase {}"),
+            "classpath consumers cannot compile against a second client");
+        Path artifact = Path.of(ThinkThen.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        try (var jar = new java.util.jar.JarFile(artifact.toFile())) {
+            check(jar.stream().noneMatch(entry -> entry.getName().startsWith("io/thinkthen/internal/Client")),
+                "built jar contains no internal Client classes");
+        }
         for (String call : List.of("c.choose(\"Q?\", \"x\")", "c.tag(\"Q?\", \"x\")", "c.score(\"Q?\", \"x\")", "c.recognize(\"x\")", "c.relate(\"x\")", "c.rank(\"Q?\", List.of(\"x\"))", "AnnotationQuestions.builder().put(\"r\", RankQuestion.of(\"Q?\", List.of(\"low\", \"high\")))", "c.annotate(Toolbox.builder().build(), \"x\")", "TagOptions.builder().threshold(Threshold.band(0.2, 0.8))", "DecideOptions.builder().threshold(\"0.2:0.8\")", "c.decide(\"Q?\", \"x\").answer()")) {
             String source = "import io.thinkthen.*; import java.util.*; final class SignatureCase { void call(ThinkThen c) { " + call + "; }}";
             check(!compiles(compiler, source), "unsupported API must fail compilation: " + call);

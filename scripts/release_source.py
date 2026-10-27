@@ -31,15 +31,8 @@ def stage(libraries, destination, notices):
     subprocess.run([sys.executable, str(ROOT / 'sdk/swift/generate-codes.py'),
                     str(ROOT / 'schemas/contract.json'),
                     str(swift / 'Sources/ThinkThen/ErrorCode.swift')], check=True)
+    stage_go_libraries(libraries, go)
     for target, library in libraries.items():
-        system, arch = GO[target]
-        relative = f'native/{system}-{arch}/{library.name}'
-        asset = go / relative
-        asset.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(library, asset)
-        (go / f'library_{system}_{arch}.go').write_text(
-            f'//go:build !thinkthen_system && {system} && {arch}\n\npackage thinkthen\n\nimport _ "embed"\n\n'
-            f'//go:embed {relative}\nvar library []byte\n')
         asset = swift / 'Sources/ThinkThen/Native' / RIDS[target] / library.name
         asset.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(library, asset)
@@ -51,6 +44,25 @@ def stage(libraries, destination, notices):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
     shutil.copy2(swift / 'Package.swift', destination / 'Package.swift')
+
+
+
+def stage_go_libraries(libraries, go):
+    """Embed platform assets and keep unsupported targets buildable."""
+    (go / 'library.go').write_text('package thinkthen\n')
+    for target, library in libraries.items():
+        system, arch = GO[target]
+        relative = f'native/{system}-{arch}/{library.name}'
+        asset = go / relative
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(library, asset)
+        (go / f'library_{system}_{arch}.go').write_text(
+            f'//go:build !thinkthen_system && {system} && {arch}\n\npackage thinkthen\n\nimport _ "embed"\n\n'
+            f'//go:embed {relative}\nvar library []byte\n')
+    (go / 'library_unsupported.go').write_text(
+        '//go:build !thinkthen_system && !(' + ' || '.join(
+            f'({system} && {arch})' for system, arch in GO.values()) + ')\n\n'
+        'package thinkthen\n\nvar library []byte\n')
 
 
 def archive_source(destination, output):

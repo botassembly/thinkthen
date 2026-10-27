@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 
 /** The shared JVM driver owns all foreign memory and blocking native operations. */
 public final class DriverClient implements AutoCloseable {
-    private final ExecutorService workers = Executors.newFixedThreadPool(4, Thread.ofPlatform().daemon().name("thinkthen-native-",0).factory());
+    private final ExecutorService workers = Executors.newThreadPerTaskExecutor( Thread.ofPlatform().daemon().name("thinkthen-native-",0).factory());
     private final Set<DriverCall> calls = new HashSet<>();
     private MemorySegment handle;
     private boolean closed;
@@ -98,5 +98,15 @@ public final class DriverClient implements AutoCloseable {
         for (var call : Set.copyOf(calls)) call.close();
         releaseClient();
     }
-    public static java.util.List<DriverCode> codes() { return DriverCode.values(); }
+    public static java.util.List<DriverCode> codes() {
+        long count = (long) Native.call("code_count");
+        var result = new java.util.ArrayList<DriverCode>();
+        for (long index = 0; index < count; index++) {
+            int value = (int) Native.call("code_at", index);
+            var pointer = (MemorySegment) Native.call("code_name", value);
+            String name = pointer.reinterpret(Long.MAX_VALUE).getString(0);
+            result.add(new DriverCode(value, name, name.substring(0, name.indexOf('.'))));
+        }
+        return java.util.List.copyOf(result);
+    }
 }

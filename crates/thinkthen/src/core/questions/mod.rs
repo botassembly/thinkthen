@@ -17,6 +17,8 @@ mod relations;
 mod saved;
 #[cfg(feature = "command")]
 pub(crate) use saved::validate_saved_name;
+#[cfg(feature = "command")]
+pub(crate) mod command;
 mod threshold_input;
 pub use annotation::Annotate;
 pub(crate) use annotation::AnnotateWire;
@@ -45,10 +47,10 @@ fn question_error(message: impl Into<String>) -> Error {
 }
 
 macro_rules! functions {
-    (annotatable { $($member:ident : $member_wire:ident = $member_abi:literal),+ $(,)? } collection { $rank:ident : $rank_wire:ident = $rank_abi:literal }) => {
-        functions!(@all [$($member:$member_wire=$member_abi,)+ $rank:$rank_wire=$rank_abi] [$($member:$member_wire),+]);
+    (annotatable { $($member:ident : $member_wire:ident = $member_abi:literal => $member_command:expr),+ $(,)? } collection { $rank:ident : $rank_wire:ident = $rank_abi:literal => $rank_command:expr } annotation { $annotate_command:expr }) => {
+        functions!(@all [$($member:$member_wire=$member_abi => $member_command,)+ $rank:$rank_wire=$rank_abi => $rank_command] [$($member:$member_wire),+] $annotate_command);
     };
-    (@all [$($variant:ident:$wire:ident=$abi:literal),+] [$($member:ident:$member_wire:ident),+]) => {
+    (@all [$($variant:ident:$wire:ident=$abi:literal => $command:expr),+] [$($member:ident:$member_wire:ident),+] $annotate_command:expr) => {
         /// A question's stable function discriminator.
         #[non_exhaustive]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
@@ -59,6 +61,14 @@ macro_rules! functions {
         impl FunctionName {
             /// Every function in the shared contract.
             pub const ALL:&'static [Self]=&[$(Self::$variant,)+Self::Annotate];
+            #[cfg(feature = "command")]
+            pub(crate) fn command(self) -> command::CommandSpec {
+                let (description, threshold, check, list) = match self {
+                    $(Self::$variant => $command,)+
+                    Self::Annotate => $annotate_command,
+                };
+                command::CommandSpec { description, threshold, check, list }
+            }
             /// Its explicit stable native discriminator.
             #[must_use]
             pub const fn abi(self)->u32{self as u32}
@@ -183,7 +193,22 @@ macro_rules! functions {
         }
     };
 }
-functions! { annotatable { Decide: DecideWire=1, Choose: ChooseWire=2, Tag: TagWire=3, Score: ScoreWire=4, Filter: FilterWire=5, Find: FindWire=7, Recognize: RecognizeWire=8, Relate: RelateWire=9 } collection { Rank: RankWire=6 } }
+functions! {
+    annotatable {
+        Decide: DecideWire=1 => ("Judge whether evidence answers a question", command::ThresholdOption::Band, true, None),
+        Choose: ChooseWire=2 => ("Choose one answer from ordered choices", command::ThresholdOption::Band, true, Some(("choice", "choices", "THINKTHEN_CHOICES", "Choice; repeat in order"))),
+        Tag: TagWire=3 => ("Assign labels to evidence", command::ThresholdOption::Cut, false, Some(("label", "labels", "THINKTHEN_LABELS", "Label; repeat in order"))),
+        Score: ScoreWire=4 => ("Score evidence on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high"))),
+        Filter: FilterWire=5 => ("Keep evidence that answers a question", command::ThresholdOption::Band, true, None),
+        Find: FindWire=7 => ("Find the evidence unit that answers a question", command::ThresholdOption::Cut, true, None),
+        Recognize: RecognizeWire=8 => ("Recognize named kinds in evidence", command::ThresholdOption::Cut, false, Some(("kind", "kinds", "THINKTHEN_KINDS", "Kind; repeat in order"))),
+        Relate: RelateWire=9 => ("Find relations between recognized names", command::ThresholdOption::Cut, false, None)
+    }
+    collection {
+        Rank: RankWire=6 => ("Rank evidence on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high")))
+    }
+    annotation { ("Answer named questions about each record", command::ThresholdOption::None, false, None) }
+}
 impl From<Annotate> for Question {
     fn from(value: Annotate) -> Self {
         Self::Annotate(value)

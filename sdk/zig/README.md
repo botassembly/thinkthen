@@ -23,7 +23,7 @@ pub fn main() !void {
         switch (row.outcome) {
             .answered => |value| std.debug.print("answer: {}\n", .{value.answer}),
             .unsure => std.debug.print("not sure\n", .{}),
-            .failed => |failure| std.debug.print("{s}: {s}\n", .{failure.code.name(), failure.message}),
+            .failed => |failure| std.debug.print("{s}: {s}\n", .{failure.name(), failure.message}),
         }
         _ = arena.reset(.free_all);
     }

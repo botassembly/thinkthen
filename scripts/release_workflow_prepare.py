@@ -207,8 +207,6 @@ def floor_inputs():
         required += ['library/' + package + '/DESCRIPTION', 'packages/' + package + '_' + version + '[._]*']
     produce('scripts/floors/prepare-r', prefix / 'r-frames', ['library', 'packages'], required,
             {'sources': PINS['r_sources'], 'runtime_recipe': hashlib.sha256((ROOT / base).read_bytes()).hexdigest()})
-    if not macos:
-        prepared('scripts/floors/prepare-swift')
 
 
 def prepare(target):
@@ -227,6 +225,8 @@ def prepare(target):
     if platform.system() == 'Linux':
         actions.append(('floor image', lambda: prepared('scripts/floors/prepare-image')))
     actions.extend([('language inputs', language_inputs), ('floor inputs', floor_inputs)])
+    if platform.system() == 'Linux':
+        actions.append(('Swift inputs', lambda: prepared('scripts/floors/prepare-swift')))
     for name, action in actions:
         action()
         print('release prepare: ' + name, flush=True)

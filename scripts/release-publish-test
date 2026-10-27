@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Rehearse publication through its command with a bare remote and stub release API."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def run(*args, **options):
+    return subprocess.run(list(map(str, args)), check=True, capture_output=True, text=True, **options).stdout.strip()
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-publish-test-') as temporary:
+    scratch = Path(temporary)
+    home = scratch / 'home'
+    home.mkdir()
+    env = dict(os.environ, HOME=str(home), XDG_CONFIG_HOME=str(home / 'config'),
+               GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull,
+               PYTHONDONTWRITEBYTECODE='1')
+    for name in tuple(env):
+        if name.startswith(('GH_', 'GITHUB_', 'GIT_CONFIG_')) and name not in ('GIT_CONFIG_NOSYSTEM', 'GIT_CONFIG_GLOBAL'):
+            env.pop(name)
+    source = scratch / 'source'
+    run('git', 'init', '--quiet', '--initial-branch=main', source, env=env)
+    (source / 'source.txt').write_text('qualified source\n')
+    run('git', '-C', source, 'add', '.', env=env)
+    run('git', '-C', source, '-c', 'user.name=Rehearsal', '-c', 'user.email=test@example.invalid',
+        'commit', '--quiet', '-m', 'Create qualified source', env=env)
+    revision = run('git', '-C', source, 'rev-parse', 'HEAD', env=env)
+    remote = scratch / 'remote.git'
+    run('git', 'clone', '--bare', source, remote, env=env)
+    provenance = {'revision': revision, 'version': '0.2.0'}
+    staged = scratch / 'staged'
+    (staged / 'r').mkdir(parents=True)
+    (staged / 'source.json').write_text(json.dumps(provenance))
+    entry = {'package': 'thinkthen', 'url': 'https://github.com/botassembly/thinkthen',
+             'subdir': 'sdk/r', 'branch': '*release'}
+    (staged / 'r/packages.json').write_text(json.dumps([entry]))
+    additions = scratch / 'additions'
+    (additions / 'sdk/go/thinkthen/native').mkdir(parents=True)
+    (additions / 'sdk/go/thinkthen/native/library').write_bytes(b'checked native library')
+    (additions / 'Package.swift').write_text('checked Swift manifest\n')
+    (additions / 'release-source.json').write_text(json.dumps(provenance))
+    assets = scratch / 'assets'
+    assets.mkdir()
+
+    def inventory():
+        with tarfile.open(staged / 'tag-source.tar.gz', 'w:gz') as archive:
+            for path in additions.iterdir():
+                archive.add(path, arcname=path.name)
+        with tarfile.open(assets / 'thinkthen-0.2.0-registries.tar.gz', 'w:gz') as archive:
+            for path in staged.iterdir():
+                archive.add(path, arcname=path.name)
+        (assets / 'SHA256SUMS').write_text(''.join(
+            hashlib.sha256(path.read_bytes()).hexdigest() + '  ' + path.name + '\n'
+            for path in sorted(assets.iterdir()) if path.name != 'SHA256SUMS'))
+        return hashlib.sha256((assets / 'SHA256SUMS').read_bytes()).hexdigest()
+
+    digest = inventory()
+    state = scratch / 'state.json'
+    other = {'package': 'other', 'url': 'https://example.invalid/other'}
+    state.write_text(json.dumps({'calls': [], 'release': {'id': 7, 'draft': True,
+        'tag_name': 'review-v0.2.0', 'target_commitish': revision}, 'packages': [other]}))
+    binary = scratch / 'bin'
+    binary.mkdir()
+    gh = binary / 'gh'
+    gh.write_text('#!' + sys.executable + '\n' + '''import base64,json,os,shutil,sys
+from pathlib import Path
+state=Path(os.environ['REHEARSAL_STATE'])
+data=json.loads(state.read_text())
+args=sys.argv[1:]
+data['calls'].append(args)
+if args[:2]==['release','download']:
+    destination=Path(args[args.index('--dir')+1])
+    for path in Path(os.environ['REHEARSAL_ASSETS']).iterdir(): shutil.copy2(path,destination/path.name)
+elif args[:2]==['release','view']:
+    release=data['release']
+    if args[2]!=release['tag_name']:
+        state.write_text(json.dumps(data))
+        sys.exit(1)
+    print(json.dumps({'databaseId':release['id'],'tagName':release['tag_name'], 'isDraft':release['draft'],'targetCommitish':release['target_commitish']}))
+else:
+    assert args[0]=='api',args
+    endpoint=args[1]
+    assert endpoint in ('repos/botassembly/thinkthen/releases/7', 'repos/botassembly/r-universe/contents/packages.json'),endpoint
+    if '--input' in args:
+        payload=json.load(sys.stdin)
+        if data.get('fail_once')==args[args.index('--method')+1]:
+            data.pop('fail_once')
+            state.write_text(json.dumps(data))
+            sys.exit(1)
+        if '/releases/' in endpoint:
+            assert '--method' in args and args[args.index('--method')+1]=='PATCH'
+            # GitHub ignores target_commitish when the pushed tag exists.
+            payload.pop('target_commitish', None)
+            data['release'].update(payload)
+        else:
+            assert args[args.index('--method')+1]=='PUT'
+            assert payload['sha']=='registry-sha'
+            data['packages']=json.loads(base64.b64decode(payload['content']))
+    else: print(json.dumps({'sha':'registry-sha','content':base64.b64encode(json.dumps(data['packages']).encode()).decode()}))
+state.write_text(json.dumps(data))
+''')
+    gh.chmod(0o755)
+    env.update(PATH=str(binary) + os.pathsep + env['PATH'], REHEARSAL_STATE=str(state), REHEARSAL_ASSETS=str(assets))
+
+    def publish(checksum, approved=True):
+        command = [sys.executable, ROOT / 'scripts/release-publish', 'v0.2.0', checksum,
+                   '--remote', remote]
+        if approved:
+            command.append('--ian-approved')
+        return subprocess.run(list(map(str, command)), env=env, capture_output=True, text=True)
+
+    def no_tags():
+        assert not run('git', '--git-dir', remote, 'tag', env=env)
+        assert json.loads(state.read_text())['release']['draft']
+        assert json.loads(state.read_text())['packages'] == [other]
+
+    result = publish('0' * 64)
+    assert result.returncode and 'checksum' in result.stderr, result
+    no_tags()
+    result = publish(digest, approved=False)
+    assert result.returncode and 'Ian' in result.stderr, result
+    no_tags()
+    bundle = assets / 'thinkthen-0.2.0-registries.tar.gz'
+    original = bundle.read_bytes()
+    bundle.write_bytes(b'changed after approval')
+    result = publish(digest)
+    assert result.returncode and 'checksum' in result.stderr, result
+    no_tags()
+    bundle.write_bytes(original)
+    hook = additions / '.GiT/hooks/pre-commit'
+    hook.parent.mkdir(parents=True)
+    marker = scratch / 'hook-ran'
+    hook.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\n')
+    hook.chmod(0o755)
+    result = publish(inventory())
+    assert result.returncode and 'Git metadata' in result.stderr, result
+    assert not marker.exists()
+    no_tags()
+    shutil.rmtree(additions / '.GiT')
+    digest = inventory()
+
+    def fail_once(method):
+        data = json.loads(state.read_text())
+        data['fail_once'] = method
+        state.write_text(json.dumps(data))
+
+    fail_once('PATCH')
+    result = publish(digest)
+    assert result.returncode, result
+    assert json.loads(state.read_text())['release']['draft']
+    assert json.loads(state.read_text())['packages'] == [other]
+    first_commit = run('git', '--git-dir', remote, 'rev-parse', 'v0.2.0', env=env)
+    fail_once('PUT')
+    result = publish(digest)
+    assert result.returncode, result
+    assert not json.loads(state.read_text())['release']['draft']
+    assert json.loads(state.read_text())['packages'] == [other]
+    result = publish('0' * 64)
+    assert result.returncode and 'checksum' in result.stderr, result
+    assert json.loads(state.read_text())['packages'] == [other]
+    result = publish(digest)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    tags = run('git', '--git-dir', remote, 'tag', env=env).splitlines()
+    assert tags == ['sdk/go/thinkthen/v0.2.0', 'v0.2.0'], tags
+    commit = run('git', '--git-dir', remote, 'rev-parse', 'v0.2.0', env=env)
+    assert commit == first_commit
+    assert run('git', '--git-dir', remote, 'rev-parse', 'sdk/go/thinkthen/v0.2.0', env=env) == commit
+    assert run('git', '--git-dir', remote, 'rev-parse', commit + '^', env=env) == revision
+    assert run('git', '--git-dir', remote, 'rev-parse', 'main', env=env) == revision
+    assert run('git', '--git-dir', remote, 'show', commit + ':sdk/go/thinkthen/native/library', env=env) == 'checked native library'
+    assert json.loads(run('git', '--git-dir', remote, 'show', commit + ':release-source.json', env=env)) == provenance
+    data = json.loads(state.read_text())
+    assert data['release']['tag_name'] == 'v0.2.0' and not data['release']['draft']
+    assert data['release']['target_commitish'] == revision
+    assert data['packages'] == [other, entry]
+    result = publish(digest)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    run('git', '--git-dir', remote, 'update-ref', 'refs/tags/sdk/go/thinkthen/v0.2.0', revision, env=env)
+    result = publish(digest)
+    assert result.returncode and 'approved parent or tree' in result.stderr, result
+    assert run('git', '--git-dir', remote, 'rev-parse', 'sdk/go/thinkthen/v0.2.0', env=env) == revision
+    run('git', '--git-dir', remote, 'update-ref', 'refs/tags/sdk/go/thinkthen/v0.2.0', commit, env=env)
+    print('Publication rehearsal passes: approved assets, off-main tags, draft publication and R-universe update; case-variant Git hooks and mismatched tags refuse; partial publication retries preserve approved tags')

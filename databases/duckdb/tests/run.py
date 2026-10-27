@@ -134,6 +134,8 @@ with Host() as host:
     assert host.query('2:SELECT current_setting(\'thinkthen_model\') AS model') == [{'model': 'second-model'}]
     for option in ('api_key', 'url', 'settings', 'adapter', 'mode', 'key_source'):
         host.failure('SET thinkthen_' + option + '=NULL')
+    for option in ('model', 'batch', 'max_retries', 'initial_backoff_ms', 'attempt_timeout_ms'):
+        host.query('RESET thinkthen_' + option)
     host.failure("SET thinkthen_backend='unregistered'")
     host.failure("SET GLOBAL thinkthen_batch=2", 'session-only')
     host.failure("SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?', name := '')", 'usage.name')

@@ -1,3 +1,5 @@
+\echo Use "CREATE EXTENSION thinkthen" to load this file. \quit
+
 CREATE TYPE thinkthen.status AS ENUM (@STATUSES@);
 
 CREATE TYPE thinkthen.error_code AS ENUM (@CODES@);

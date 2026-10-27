@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+"""Publish an approved draft after Ian authorizes publication."""
+import subprocess
+import sys
+
+from release_publish import main
+
+try:
+    main()
+except (ValueError, OSError, subprocess.CalledProcessError) as error:
+    sys.exit('release-publish: ' + str(error))

@@ -101,9 +101,9 @@ for (call in list(
             grepl("did you mean", conditionMessage(error), fixed = TRUE))
 }
 # Unnamed dots retain the host conversion error without evaluating their values.
-unnamed <- condition(tt_decide_question("Ready?", TRUE), "thinkthen_usage_error")
+unnamed <- condition(tt_decide_question("Ready?", TRUE), "thinkthen_r_error", "r.arguments")
 unevaluated <- condition(tt_decide_question("Ready?", stop("must stay unevaluated")),
-                         "thinkthen_usage_error")
+                         "thinkthen_r_error", "r.arguments")
 stopifnot(identical(conditionMessage(unnamed), conditionMessage(unevaluated)))
 
 # Feature: selected questions own their domain and outlive the toolbox.
@@ -161,7 +161,7 @@ for (i in seq_len(3L)) {
   check_rows(tt_choose("text", selected, client = alias), "choose", 1L)
   tt_close(alias)
   tt_close(alias)
-  closed <- condition(tt_choose("text", selected, client = alias), "thinkthen_setup_error", "usage.abi")
+  closed <- condition(tt_choose("text", selected, client = alias), "thinkthen_usage_error", "usage.abi")
   stopifnot(identical(conditionMessage(closed), "client: expected an open client; received a closed client"))
   rm(alias)
 }

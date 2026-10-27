@@ -38,5 +38,14 @@
     "url": "https://github.com/botassembly/thinkthen.git",
     "directory": "sdk/typescript"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
 }

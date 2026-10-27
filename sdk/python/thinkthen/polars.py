@@ -14,6 +14,7 @@ from ._types import Backend, BoundaryTag, ErrorCode, Function, Status
 _LABELS = pl.List(pl.Struct({"label": pl.String, "probability": pl.Float64}))
 _SPAN = {"text": pl.String, "start": pl.Int64, "end": pl.Int64}
 _NAME = {**_SPAN, "kind": pl.String}
+_SCORED_NAME = pl.Struct({**_NAME, "probability": pl.Float64})
 _RELATION = pl.Struct(
     {
         "source": pl.Struct(_NAME),
@@ -60,7 +61,9 @@ def _shape(
         "tag": pl.Struct({"labels": _LABELS}),
         "score": pl.Struct({"levels": pl.List(pl.Float64)}),
         "rank": pl.Struct({"levels": pl.List(pl.Float64)}),
-        "relate": pl.Struct({"pairs": pl.List(_RELATION)}),
+        "relate": pl.Struct(
+            {"names": pl.List(_SCORED_NAME), "pairs": pl.List(_RELATION)}
+        ),
         "recognize": pl.Struct(
             {
                 "pieces": pl.List(
@@ -87,7 +90,7 @@ def _shape(
         "score": pl.Float64,
         "rank": pl.Int64,
         "find": pl.Struct(_SPAN),
-        "recognize": pl.List(pl.Struct({**_NAME, "probability": pl.Float64})),
+        "recognize": pl.List(_SCORED_NAME),
         "relate": pl.List(_RELATION),
     }
     if function == "annotate":

@@ -71,3 +71,19 @@ fn single_column_diagnostic_names_the_current_evidence_option() {
     assert!(!diagnostic.contains("--details"), "{diagnostic}");
     assert!(!directory.path().join("requests.thinkthen.csv").exists());
 }
+
+#[test]
+fn top_level_help_describes_every_function() {
+    let output = support::command().arg("--help").output().unwrap();
+    assert!(output.status.success());
+    let help = String::from_utf8(output.stdout).unwrap();
+    for function in thinkthen::FunctionName::ALL {
+        let name = serde_json::to_value(function).unwrap();
+        let name = name.as_str().unwrap();
+        let line = help
+            .lines()
+            .find(|line| line.trim_start().starts_with(&format!("{name} ")))
+            .unwrap();
+        assert!(line.split_whitespace().count() > 2, "{line}");
+    }
+}

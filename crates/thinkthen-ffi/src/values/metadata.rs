@@ -157,10 +157,11 @@ pub unsafe extern "C" fn thinkthen_value_error(
     unsafe {
         operation(error, || {
             let size = error_size(result).ok_or_else(native::abi_error)?;
-            result.write(match (*value).error()? {
+            (match (*value).error()? {
                 Some(error) => HostError::from_error(size, error),
                 None => HostError::empty(size),
-            });
+            })
+            .write(result);
             Ok(OK)
         })
     }

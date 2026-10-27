@@ -3,6 +3,8 @@ mod builders;
 mod exports;
 mod finite;
 mod memory;
+#[cfg(test)]
+mod memory_prefix_tests;
 mod original;
 mod row;
 mod single;

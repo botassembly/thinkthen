@@ -35,7 +35,7 @@ impl ValueHandle {
             row_size(row.cast_mut())?;
         }
         /* SAFETY: this row and its unique buffers remain live through this copy. */
-        let row = unsafe { &*row };
+        let row = unsafe { HostRow::read(row) };
         let mut value = serde_json::Map::new();
         value.insert(
             "function".into(),

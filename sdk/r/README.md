@@ -1,6 +1,6 @@
 # ThinkThen for R
 
-Install `jsonlite`, then run `R CMD INSTALL /path/to/thinkthen_0.2.0.tar.gz` with the supplied package. Source packages require R development headers, a C compiler, make and Rust. Binary packages include the native engine.
+Install the imported R packages listed in DESCRIPTION, then run `R CMD INSTALL /path/to/thinkthen_0.2.0.tar.gz` with the supplied package. Source packages require R >= 4.2.0, R development headers, a C compiler, GNU make and Rust >= 1.95.0. Source installation supports Unix platforms. Windows uses the supplied binary package. Binary packages include the native engine.
 
 The example uses the stub backend and needs no key or service.
 

@@ -74,6 +74,10 @@ java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCases "$root/cons
 
 "$jvm_python" "$root/scripts/surface-example" check java "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" Example
 "$jvm_python" "$root/scripts/surface-example" check kotlin "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ExampleKt
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaCacheCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaConcurrencyCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SdkConventionCasesKt
+"$jvm_python" "$root/sdk/java/check-packaging"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaApiCases
 java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaSettingsCases "$root/schemas/contract.json"

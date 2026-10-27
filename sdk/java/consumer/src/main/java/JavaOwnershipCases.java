@@ -24,6 +24,14 @@ public final class JavaOwnershipCases {
             try (var server = new BackendFixture("unavailable"); var client = remote(backend, server)) {
                 JavaApiCases.failed(client.decide("Ready?", null), "record.missing");
                 JavaApiCases.failed(client.decide("Ready?", JsonValue.parse("{\"id\":false,\"body\":\"alpha\"}")), "record.invalid");
+                for (String invalid : List.of("\ud800", "\udc00")) {
+                    JavaApiCases.failed(client.decide("Ready?", invalid), "record.invalid");
+                    try (var rows = client.decideStream("Ready?", List.of(invalid))) {
+                        var output = rows.toList();
+                        JavaApiCases.equal(output.size(), 1, "invalid UTF-16 keeps one failed row");
+                        JavaApiCases.failed(output.getFirst(), "record.invalid");
+                    }
+                }
                 for (Number value : List.<Number>of(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY)) {
                     JavaApiCases.failed(client.decide("Ready?", value), "record.invalid");
                     JavaApiCases.failed(client.decide("Ready?", java.util.Map.of("body", List.of(value))), "record.invalid");
@@ -40,6 +48,16 @@ public final class JavaOwnershipCases {
         } catch (ThinkThenException error) {
             JavaApiCases.equal(error.code().wireName(), "usage.url", "typed setup error");
             JavaApiCases.check(!error.toString().contains(KEY), "setup error redacts direct key");
+        }
+    }
+
+    // Feature: an unavailable backend returns a typed failed row without a request.
+    static void unavailableServer() throws Exception {
+        for (var backend : List.of(Backend.SYSTEMONE, Backend.OPENAI)) {
+            try (var server = new BackendFixture("unavailable"); var client = remote(backend, server)) {
+                JavaApiCases.failed(client.decide("Ready?", "alpha"), "backend.transport");
+                JavaApiCases.equal(server.command("count"), "0", "unavailable reservation accepts no request");
+            }
         }
     }
 
@@ -263,6 +281,7 @@ public final class JavaOwnershipCases {
 
     public static void main(String[] args) throws Exception {
         noCallForRejectedRecords();
+        unavailableServer();
         streamsAndCallerFailures();
         closeFromLifecycleLogger();
         futureCancellation();

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build one offline-installable R source archive from this checkout."""
 import os
+import json
 import pathlib
 import re
 import shutil
@@ -8,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import tarfile
 import tomllib
 
 from release_metadata import check
@@ -20,11 +22,13 @@ with tempfile.TemporaryDirectory() as temporary:
     stage = pathlib.Path(temporary) / "thinkthen"
     shutil.copytree(root / "sdk/r", stage, ignore=shutil.ignore_patterns("native", "tests"))
     description = stage / "DESCRIPTION"
-    version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+    package = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]
+    description.write_text(re.sub(r"Rust \(>= [^)]*\)",
+        "Rust (>= " + package["rust-version"] + ")", description.read_text()))
     check(root)
     engine = stage / "src/engine"
     engine.mkdir()
-    for name in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "clippy.toml", "LICENSE", "README.md"):
+    for name in ("Cargo.toml", "Cargo.lock", "clippy.toml", "LICENSE", "README.md"):
         shutil.copy2(root / name, engine / name)
     for name in ("thinkthen",):
         shutil.copytree(root / "crates" / name, engine / "crates" / name)
@@ -46,6 +50,20 @@ with tempfile.TemporaryDirectory() as temporary:
     subprocess.run(["cargo", "metadata", "--offline", "--format-version", "1"], cwd=engine, env=environment, check=True, stdout=subprocess.DEVNULL)
     vendor = subprocess.run(["cargo", "vendor", "--offline", "--locked", "--versioned-dirs", "vendor"], cwd=engine, env=environment, check=True, capture_output=True, text=True)
     (engine / "vendor-config.toml").write_text(vendor.stdout)
+    # Unix source installs do not use vendored Windows import libraries or Wasm
+    # objects. Upstream test snapshots can also have non-portable filenames.
+    for checksum in (engine / "vendor").glob("*/.cargo-checksum.json"):
+        metadata = json.loads(checksum.read_text())
+        for name in list(metadata["files"]):
+            path = checksum.parent / name
+            if path.suffix in (".a", ".o", ".dll", ".so", ".lib") or "~" in path.name or path.name in ("rust-toolchain", "rust-toolchain.toml"):
+                path.unlink()
+                del metadata["files"][name]
+        checksum.write_text(json.dumps(metadata))
+    # Keep Cargo dependency paths inside a source archive for portable R tar paths.
+    with tarfile.open(engine / "vendor.tar.gz", "w:gz") as archive:
+        archive.add(engine / "vendor", arcname="vendor")
+    shutil.rmtree(engine / "vendor")
     if source_only:
         shutil.copytree(stage, out, dirs_exist_ok=True)
     else:
