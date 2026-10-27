@@ -164,11 +164,14 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
     }
     private suspend fun <T> native(call: DriverCall, operation: () -> T): T = suspendCancellableCoroutine { continuation ->
         continuation.invokeOnCancellation { call.cancel() }
-        Thread.ofPlatform().daemon().name("thinkthen-kotlin-native").start {
-            try { continuation.resumeWith(Result.success(translate(operation))) }
-            catch (error: Throwable) { continuation.resumeWith(Result.failure(error)) }
-        }
+        try {
+            call.submit { translate(operation) }.whenComplete { result,error ->
+                if (error == null) continuation.resumeWith(Result.success(result))
+                else continuation.resumeWith(Result.failure(error))
+            }
+        } catch (error: Throwable) { continuation.resumeWith(Result.failure(error)) }
     }
+
     private fun <A,D> decode(decoder: Decoder<A,D>, packet: DriverCall.DriverRow): Row<A,D> = try { decoder.row(packet) }
     catch (error: Exception) { throw ThinkThenException(ErrorCode.fromWire("internal.bug"),"Invalid native row envelope",cause = error) }
 }

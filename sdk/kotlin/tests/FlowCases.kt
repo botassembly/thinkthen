@@ -178,6 +178,7 @@ private suspend fun remoteRows(directory: Path) {
 }
 
 fun main(args: Array<String>) = FlowCapture.run(args) { runBlocking {
+    FlowCapture.case("streamThreads") { streamThreads() }
     FlowCapture.case("earlyStop") { earlyStop() }
     FlowCapture.case("blockedInput") { blockedInput() }
     FlowCapture.case("exceptionCleanup") { exceptionCleanup() }

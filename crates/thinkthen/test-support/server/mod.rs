@@ -106,6 +106,13 @@ impl Reply {
         }
     }
 
+    /// Add a response header to this reply.
+    #[must_use]
+    pub fn header(mut self, name: &str, value: &str) -> Self {
+        self.headers.push((name.to_owned(), value.to_owned()));
+        self
+    }
+
     /// A redirect response to `location` with no body.
     #[must_use]
     pub fn redirect(status: u16, location: &str) -> Self {

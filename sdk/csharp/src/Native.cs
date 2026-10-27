@@ -91,6 +91,22 @@ internal static partial class Native
         }
     }
 
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_call_events")]
+    internal static partial nint Events(CallHandle call);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_events_version")]
+    internal static partial ulong EventsVersion(nint events);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_events_wait")]
+    internal static partial void EventsWait(nint events, ulong version);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_events_wake")]
+    internal static partial void EventsWake(nint events);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_events_free")]
+    internal static partial void EventsFree(nint events);
+
     internal static byte[] Copy(Buffer value)
     {
         byte[] bytes = new byte[checked((int)value.Length)];

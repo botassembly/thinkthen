@@ -55,9 +55,7 @@ final class Streams {
                 synchronized (this) {
                     ThinkThen.checkCancellation();
                     if (closed || opening.isCancelled()) throw Values.cancelled();
-                    opening.close();
-                    call = owner.driver().openRecords(definition,encoded);
-                    ThinkThen.register(call);
+                    opening.replaceRecords(definition,encoded);
                     if (originals != null) for (int i=0; i<snapshot.size(); i++) originals.put((long)i+1,snapshot.get(i));
                     records = null;
                 }

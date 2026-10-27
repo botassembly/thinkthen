@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 public final class JavaConcurrencyCases {
     private JavaConcurrencyCases() {}
     public static void main(String[] args) throws Exception {
+        JavaStreamThreadCases.main(args);
         try (var fixture = new BackendFixture("headers");
              var client = ThinkThen.builder().backend(Backend.SYSTEMONE).url(URI.create(fixture.base()))
                  .apiKey("loopback-only").retry(RetryPolicy.builder().maxRetries(0)

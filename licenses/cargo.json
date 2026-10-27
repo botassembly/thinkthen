@@ -334,6 +334,14 @@
     },
     "license": "MIT OR Apache-2.0"
   },
+  "httpdate-1.0.3": {
+    "checksum": "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9",
+    "files": {
+      "LICENSE-APACHE": "4d10fe5f3aa176b05b229a248866bad70b834c173f1252a814ff4748d8a13837",
+      "LICENSE-MIT": "934887691e05d69d7c86ad3f2c360980fa30c15b035e351f3c9865e99da4debc"
+    },
+    "license": "MIT OR Apache-2.0"
+  },
   "indexmap-2.14.2": {
     "checksum": "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855",
     "files": {

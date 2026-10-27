@@ -1,7 +1,8 @@
 //! Retry limits and shared cancellation.
 
+use std::hash::BuildHasher;
 use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use crate::{Error, ErrorKind};
 
@@ -9,6 +10,32 @@ pub(crate) const DEFAULT_RETRIES: u32 = 3;
 pub(crate) const DEFAULT_BACKOFF_MS: u64 = 500;
 pub(crate) const DEFAULT_TIMEOUT_MS: std::num::NonZeroU64 =
     std::num::NonZeroU64::MIN.saturating_add(119_999);
+
+/// Server hints cannot hold a worker indefinitely.
+const RETRY_AFTER_CAP: Duration = Duration::from_secs(60);
+const JITTER_CAP: Duration = Duration::from_secs(1);
+
+pub(crate) fn retry_delay(backoff: Duration, retry_after: Option<&str>) -> Duration {
+    let hinted = retry_after
+        .and_then(|value| {
+            value
+                .parse::<u64>()
+                .ok()
+                .map(Duration::from_secs)
+                .or_else(|| {
+                    httpdate::parse_http_date(value)
+                        .ok()
+                        .map(|date| date.duration_since(SystemTime::now()).unwrap_or_default())
+                })
+        })
+        .unwrap_or_default()
+        .min(RETRY_AFTER_CAP);
+    // RandomState seeds from the process random source without a shared worker lock.
+    let random = std::collections::hash_map::RandomState::new().hash_one(());
+    let range = backoff.max(Duration::from_millis(1)).min(JITTER_CAP);
+    let jitter = Duration::from_nanos(random % (range.as_nanos() as u64 + 1));
+    backoff.max(hinted).saturating_add(jitter)
+}
 
 /// Limits for one request. Each split half gets its own retry budget.
 #[derive(Debug, Clone, Copy)]

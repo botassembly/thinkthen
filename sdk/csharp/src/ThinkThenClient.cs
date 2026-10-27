@@ -114,6 +114,7 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
         bool failed = false;
         var original = originals ? new Dictionary<ulong,T>() : null;
         ulong position = 0;
+        Task<bool>? input = null;
         var causes = new Dictionary<ulong,Exception>();
         try
         {
@@ -121,14 +122,29 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
             while (true)
             {
                 Pull pull;
-                try { pull = await Task.Run(() => call.Invoke(handle => Next(handle, call.Token))).ConfigureAwait(false); }
+                ulong version = 0;
+                try
+                {
+                    pull = await call.Dispatch(handle =>
+                    {
+                        version = call.Version();
+                        return Next(handle, call.Token);
+                    }).ConfigureAwait(false);
+                }
                 catch (OperationCanceledException) { failed = true; throw call.Cancelled(); }
                 catch { failed = true; throw; }
                 if (pull.Status == 1) break;
                 if (pull.Status == 2)
                 {
                     bool more;
-                    try { more = await source.Advance().ConfigureAwait(false); }
+                    try
+                    {
+                        input ??= source.Advance();
+                        await call.WaitForInput(input, version).ConfigureAwait(false);
+                        if (!input.IsCompleted) continue;
+                        more = await input.ConfigureAwait(false);
+                        input = null;
+                    }
                     catch (OperationCanceledException) { failed = true; throw call.Cancelled(); }
                     catch { failed = true; throw; }
                     try
@@ -138,9 +154,9 @@ public sealed partial class ThinkThenClient : IDisposable, IAsyncDisposable
                             T record = source.Current;
                             position++;
                             if (originals) original!.Add(position, record);
-                            call.Invoke(handle => Send(handle, record, encode, cause => causes.Add(position, cause)));
+                            await call.Dispatch(handle => Send(handle, record, encode, cause => causes.Add(position, cause))).ConfigureAwait(false);
                         }
-                        else call.Invoke(handle => { Native.EndInput(handle); return 0; });
+                        else await call.Dispatch(handle => { Native.EndInput(handle); return 0; }).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) { failed = true; throw call.Cancelled(); }
                     catch { failed = true; throw; }

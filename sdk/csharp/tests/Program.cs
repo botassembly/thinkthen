@@ -50,6 +50,7 @@ internal static partial class Program
         await HostBehavior(args[2], args[1]);
         await EncoderCauses();
         await LifetimeCases(args[2]);
+        await StreamThreads();
         await StressCases(args[1]);
         await Registry(Path.Combine(Path.GetDirectoryName(args[1])!, "schemas", "contract.json"));
         Console.WriteLine("Installed C# public API consumer completed.");

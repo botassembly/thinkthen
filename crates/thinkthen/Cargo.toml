@@ -27,6 +27,7 @@ stream = ["dep:futures-core"]
 command = ["dep:ctrlc", "dep:clap", "dep:clap_complete", "dep:clap_mangen", "dep:command-group", "dep:quick-xml", "dep:zip", "dep:tempfile"]
 
 [dependencies]
+httpdate = "1.0.3"
 futures-core = { version = "0.3", optional = true }
 sha2.workspace = true
 thiserror.workspace = true

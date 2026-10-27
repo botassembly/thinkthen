@@ -8,20 +8,20 @@ import java.util.concurrent.CompletionStage;
 
 /** Retained signal only: waiting never borrows the mutable native driver. */
 public final class DriverEvents {
-    private final DriverClient client;
+    private final DriverCall driver;
     private final Object lifetime = new Object();
     private MemorySegment handle;
     private boolean closing;
     private final Set<CompletableFuture<Void>> waits = new HashSet<>();
     private final CompletableFuture<Void> released = new CompletableFuture<>();
-    DriverEvents(DriverClient client, MemorySegment call) {
-        this.client = client;
-        handle = (MemorySegment) Native.call("call_events",call);
+    DriverEvents(DriverCall driver, MemorySegment call) {
+        this.driver = driver;
+        handle = NativeStream.call_events(call);
     }
-    long version() { synchronized (lifetime) { return (long) Native.call("events_version",handle); } }
+    long version() { synchronized (lifetime) { return NativeStream.events_version(handle); } }
     void wake() {
         synchronized (lifetime) {
-            if (handle != MemorySegment.NULL) Native.call("events_wake",handle);
+            if (handle != MemorySegment.NULL) NativeStream.events_wake(handle);
         }
     }
     Wait waitForChange(long version) {
@@ -31,7 +31,7 @@ public final class DriverEvents {
             // Register before submitting: close must retain even a queued waiter.
             waits.add(pending);
             try {
-                client.submit(() -> { Native.call("events_wait",handle,version); return null; })
+                driver.submit(() -> { NativeStream.events_wait(handle,version); return null; })
                     .whenComplete((ignored,error) -> finish(pending,error));
             } catch (RuntimeException | Error error) {
                 waits.remove(pending);
@@ -48,7 +48,7 @@ public final class DriverEvents {
     }
     private boolean releaseIfReady() {
         if (!closing || !waits.isEmpty() || handle == MemorySegment.NULL) return false;
-        Native.call("events_free",handle);
+        NativeStream.events_free(handle);
         handle = MemorySegment.NULL;
         return true;
     }

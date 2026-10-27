@@ -131,7 +131,12 @@ pub(crate) fn post(
         if !matches!(status, 429 | 500 | 502 | 503 | 504 | 529) || retries == policy.max_retries {
             return Err(refused);
         }
-        if cancel.wait(delay) {
+        let retry_after = response
+            .headers()
+            .get("retry-after")
+            .and_then(|value| value.to_str().ok());
+        let retry_delay = crate::retry::retry_delay(delay, retry_after);
+        if cancel.wait(retry_delay) {
             return Err(Refused::cancelled());
         }
         retries += 1;

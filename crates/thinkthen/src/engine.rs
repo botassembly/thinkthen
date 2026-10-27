@@ -20,6 +20,8 @@ pub(crate) use contract::RecordEvent;
 
 /// How many requests may be open at once.
 const WORKERS: usize = 4;
+/// Bound queued and completed chunks independently of worker occupancy.
+const REORDER_WINDOW: usize = WORKERS * 4;
 
 enum Split {
     Allowed,
@@ -162,6 +164,8 @@ fn agent(policy: RetryPolicy) -> ureq::Agent {
     let config = ureq::Agent::config_builder()
         .http_status_as_error(false)
         .max_redirects(0)
+        .max_idle_connections(WORKERS)
+        .max_idle_connections_per_host(WORKERS)
         .timeout_global(Some(policy.attempt_timeout))
         .build();
     transport::agent(config)

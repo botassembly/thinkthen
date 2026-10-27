@@ -68,6 +68,7 @@ final class Native {
     private static void bind(Map<String, MethodHandle> functions, SymbolLookup symbols, Linker linker, String name) {
         functions.put(name, linker.downcallHandle(symbols.find("thinkthen_" + name).orElseThrow(() -> new ThinkThenException(Contract.ABI_CODE, Contract.ABI_MESSAGE)), NativeSignatures.descriptor(name)));
     }
+    static MethodHandle function(String name) { return functions().get(name); }
     static Object call(String name, Object... args) {
         try { return functions().get(name).invokeWithArguments(args); }
         catch (RuntimeException | Error error) { throw error; }

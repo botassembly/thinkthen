@@ -40,8 +40,8 @@ impl Engine {
         let (jobs, inbox) = sync_channel(WORKERS);
         let inbox = Mutex::new(inbox);
         let (events, output) = sync_channel(WORKERS);
-        let (permit, permits) = sync_channel(WORKERS);
-        for _ in 0..WORKERS {
+        let (permit, permits) = sync_channel(REORDER_WINDOW);
+        for _ in 0..REORDER_WINDOW {
             permit.send(()).expect("fresh permit queue");
         }
         let mut failure = None;
