@@ -159,17 +159,23 @@ fn spawn_command(
 }
 #[cfg(feature = "command")]
 fn command_call(table: &Value, scenario: &Value, backend: &str, count: usize) {
+    let setup_failure = scenario["code"] == "backend.transport";
     let fixture = StressFixture::open(scenario["name"].as_str().unwrap()).unwrap();
     let (mut child, diagnostics) = command_process(table, backend, fixture.base());
     let mut input = child.stdin.take().unwrap();
     let writer = std::thread::spawn(move || {
         for i in 0..count {
-            writeln!(
+            if let Err(error) = writeln!(
                 input,
                 "{}",
                 serde_json::json!({"id":identifier(i),"body":format!("record {}", record_number(i))})
-            )
-            .unwrap();
+            ) {
+                assert!(
+                    setup_failure && error.kind() == std::io::ErrorKind::BrokenPipe,
+                    "{error}"
+                );
+                break;
+            }
         }
     });
     let mut received = 0;
@@ -185,7 +191,10 @@ fn command_call(table: &Value, scenario: &Value, backend: &str, count: usize) {
     writer.join().unwrap();
     let status = child.wait().unwrap();
     let stderr = diagnostics.join().unwrap();
-    let wanted = if scenario["status"] == "answered" {
+    let wanted = if setup_failure {
+        assert!(String::from_utf8_lossy(&stderr).starts_with("thinkthen: backend.transport: "));
+        4
+    } else if scenario["status"] == "answered" {
         0
     } else {
         6
@@ -196,7 +205,7 @@ fn command_call(table: &Value, scenario: &Value, backend: &str, count: usize) {
         "{}",
         String::from_utf8_lossy(&stderr)
     );
-    assert_eq!(received, count);
+    assert_eq!(received, if setup_failure { 0 } else { count });
     assert!(fixture.stats()["recorded_requests"].as_u64().unwrap() <= 8);
 }
 #[cfg(feature = "command")]

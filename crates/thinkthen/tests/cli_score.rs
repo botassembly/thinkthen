@@ -57,10 +57,8 @@ fn level_arguments_print_the_number_or_backend_failure() {
             }
             None => {
                 assert_eq!(output.status.code(), Some(6));
-                assert_eq!(
-                    serde_json::from_slice::<Value>(&output.stdout).unwrap()["error"]["code"],
-                    "backend.reply"
-                );
+                assert_eq!(output.stdout, b"[1] failed\n");
+                assert_eq!(reported(&output), "backend.reply");
             }
         }
         assert_eq!(

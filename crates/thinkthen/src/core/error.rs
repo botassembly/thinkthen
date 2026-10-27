@@ -169,7 +169,7 @@ pub(crate) fn escape_diagnostic(text: &str) -> String {
                 '\n' => escaped.push_str("\\n"),
                 '\u{000c}' => escaped.push_str("\\f"),
                 '\r' => escaped.push_str("\\r"),
-                value if value.is_control() => {
+                value if value.is_control() || matches!(value, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}') => {
                     escaped.push_str(&format!("\\u{:04x}", u32::from(value)))
                 }
                 value => escaped.push(value),

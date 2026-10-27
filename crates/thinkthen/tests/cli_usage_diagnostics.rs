@@ -174,3 +174,30 @@ fn command_enum_diagnostics_redact_unknown_value_contents() {
         );
     }
 }
+
+#[test]
+fn evidence_pointers_refuse_unstructured_text_before_reading_input() {
+    for framing in [None, Some("text"), Some("lines")] {
+        for environment in [false, true] {
+            let mut command = support::command();
+            command.args(["decide", "Ready?", "--backend", "stub"]);
+            if let Some(framing) = framing {
+                command.args(["--from", framing]);
+            }
+            if environment {
+                command.env("THINKTHEN_EVIDENCE", "/body");
+            } else {
+                command.args(["--evidence", "/body"]);
+            }
+            let output = command.stdin(Stdio::null()).output().unwrap();
+            assert_eq!(output.status.code(), Some(2), "{output:?}");
+            assert!(output.stdout.is_empty());
+            let message = String::from_utf8(output.stderr).unwrap();
+            assert!(
+                message.starts_with("thinkthen: usage.question: "),
+                "{message}"
+            );
+            assert!(message.contains("evidence"), "{message}");
+        }
+    }
+}

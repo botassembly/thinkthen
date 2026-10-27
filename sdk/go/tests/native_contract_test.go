@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -122,7 +123,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 		}
 		return
 	}
-	for _, mode := range []string{"unset", "readonly", "long"} {
+	for _, mode := range []string{"unset", "readonly", "long", "occupied"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cache := filepath.Join(root, "cache")
@@ -149,6 +150,11 @@ func TestNativeTemporaryCache(t *testing.T) {
 				}
 				t.Cleanup(func() { os.Chmod(cache, 0700) })
 			}
+			if mode == "occupied" {
+				if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("thinkthen-%d", os.Geteuid())), []byte("foreign occupant"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
 			command := exec.Command(os.Args[0], "-test.run=^TestNativeTemporaryCache$")
 			for _, entry := range os.Environ() {
 				key, _, _ := strings.Cut(entry, "=")
@@ -157,7 +163,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 				}
 			}
 			command.Env = append(command.Env, "THINKTHEN_TEMP_CACHE_CHILD=1", "TMPDIR="+root)
-			if mode != "unset" {
+			if mode != "unset" && mode != "occupied" {
 				command.Env = append(command.Env, "XDG_CACHE_HOME="+cache)
 				if runtime.GOOS == "darwin" {
 					command.Env = append(command.Env, "HOME="+home)
@@ -167,6 +173,15 @@ func TestNativeTemporaryCache(t *testing.T) {
 				t.Fatalf("%v: %s", err, output)
 			}
 			folders, err := filepath.Glob(filepath.Join(root, "thinkthen-*"))
+			if mode == "occupied" {
+				var private []string
+				for _, folder := range folders {
+					if info, err := os.Lstat(folder); err == nil && info.IsDir() {
+						private = append(private, folder)
+					}
+				}
+				folders = private
+			}
 			if err != nil || len(folders) != 1 {
 				t.Fatalf("missing private fallback: %v %v", folders, err)
 			}
@@ -178,7 +193,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 			if err != nil || len(assets) != 1 {
 				t.Fatalf("fallback did not publish one engine: %v %v", assets, err)
 			}
-			// Private fallback roots reject permissions broader than 0700.
+			// A predictable fallback with broader permissions is left untouched.
 			if err := os.Chmod(folders[0], 0755); err != nil {
 				t.Fatal(err)
 			}
@@ -188,9 +203,27 @@ func TestNativeTemporaryCache(t *testing.T) {
 			if err := os.Chmod(folders[0], 0700); err != nil {
 				t.Fatal(err)
 			}
-			if runErr == nil || !strings.Contains(string(output), "cache owner or permissions") {
-				t.Fatalf("insecure fallback accepted: %v %s", runErr, output)
+			if runErr != nil {
+				t.Fatalf("private replacement failed: %v %s", runErr, output)
 			}
 		})
+	}
+}
+
+// Feature: explicit native library overrides never use the library search path.
+func TestNativeRelativeOverride(t *testing.T) {
+	if os.Getenv("THINKTHEN_RELATIVE_CHILD") == "1" {
+		_, err := thinkthen.New(thinkthen.Config{Backend: thinkthen.Stub})
+		if !errors.Is(err, thinkthen.CodeLocalIO) || !strings.Contains(err.Error(), "must be an absolute path") {
+			t.Fatalf("relative override accepted or misreported: %v", err)
+		}
+		return
+	}
+	for _, path := range []string{"library", "./library", "sub/library"} {
+		command := exec.Command(os.Args[0], "-test.run=^TestNativeRelativeOverride$")
+		command.Env = append(os.Environ(), "THINKTHEN_RELATIVE_CHILD=1", "THINKTHEN_LIBRARY="+path)
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("%v: %s", err, output)
+		}
 	}
 }

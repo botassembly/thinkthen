@@ -57,6 +57,7 @@ main = blocks[0]
 PYTHON
 (cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
 "$scratch/readme/zig-out/bin/consumer"
+if [ "${1:-}" = --readme-only ]; then exit 0; fi
 python3 scripts/surface-example prepare zig "$scratch/readme/src"
 cp "$scratch/readme/src/records.jsonl" "$scratch/readme/records.jsonl"
 (cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")

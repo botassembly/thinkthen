@@ -143,6 +143,14 @@ impl crate::BackendName {
 }
 
 impl BackendTable {
+    #[cfg(feature = "command")]
+    pub(crate) fn key_variables(&self) -> impl Iterator<Item = &str> {
+        self.entries
+            .iter()
+            .map(|entry| entry.key_variable.as_str())
+            .filter(|name| !name.is_empty())
+    }
+
     pub(crate) fn resolve_direct(
         &self,
         name: &str,

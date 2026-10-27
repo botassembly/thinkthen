@@ -70,7 +70,22 @@ fn all_functions_match_the_shared_stub_rows_without_http() {
     assert_eq!(server.count(), 0);
     let expected: Vec<Value> = cases
         .iter()
-        .map(|case| json!({"function":case["request"]["question"]["function"],"rows":case["expected"]}))
+        .map(|case| {
+            let function = &case["request"]["question"]["function"];
+            let mut rows = case["expected"].clone();
+            if function == "filter" {
+                for (row, record) in rows
+                    .as_array_mut()
+                    .unwrap()
+                    .iter_mut()
+                    .zip(case["request"]["records"].as_array().unwrap())
+                {
+                    row["item"] = record.clone();
+                    row["kept"] = json!(row["status"] == "answered" && row["answer"] == true);
+                }
+            }
+            json!({"function":function,"rows":rows})
+        })
         .collect();
     assert_eq!(
         actual,

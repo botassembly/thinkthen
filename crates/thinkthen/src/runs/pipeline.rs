@@ -89,7 +89,10 @@ pub fn execute(
             )));
             return;
         }
+        let mut previous_filter = false;
         for (index, step) in entry.0.iter().enumerate() {
+            let consume_filter = previous_filter;
+            previous_filter = matches!(step, Step::Function(request) if matches!(request.question(), crate::Question::Filter(_)));
             let (send, next) = mpsc::sync_channel(1);
             let prior = std::mem::replace(&mut receiver, next);
             let state = &state;
@@ -102,8 +105,11 @@ pub fn execute(
                         send,
                         state,
                         index + 1 == entry.0.len(),
+                        consume_filter,
                     ),
-                    Step::Shell(args) => shell(args, index + 1, prior, send, state),
+                    Step::Shell { arguments, env } => {
+                        shell(arguments, env, index + 1, prior, send, state)
+                    }
                 })
                 .is_err()
             {
@@ -171,9 +177,10 @@ fn function(
     output: Output,
     state: &State,
     final_step: bool,
+    consume_filter: bool,
 ) {
     let result = if matches!(request.question(), crate::Question::Rank(_)) {
-        finite_records(&input, state).and_then(|records| {
+        finite_records(&input, state, consume_filter).and_then(|records| {
             Driver::open_records(client, request, records, OffsetUnit::CodePoints)
         })
     } else {
@@ -186,6 +193,9 @@ fn function(
             return;
         }
     };
+    let mut originals = std::collections::BTreeMap::new();
+    let mut position = 0_u64;
+    let mut rows = 0_u64;
     while !state.cancel.is_cancelled() {
         let event = match call.poll(POLL) {
             Ok(event) => event,
@@ -197,6 +207,15 @@ fn function(
         match event {
             Some(Event::NeedsInput) => match input.recv_timeout(POLL) {
                 Ok(Ok(line)) => {
+                    let line = if consume_filter {
+                        filtered_item(&line).unwrap_or(line)
+                    } else {
+                        line
+                    };
+                    position += 1;
+                    if matches!(request.question(), crate::Question::Filter(_)) {
+                        originals.insert(position, line.clone());
+                    }
                     if let Err(error) = call.send(Record::from_json(&line)) {
                         state.fail(RunCompletion::Failure(error));
                     }
@@ -210,6 +229,14 @@ fn function(
             },
             Some(Event::Row(row)) => {
                 let failed = row.failure();
+                if rows == 0
+                    && let Some(error) = failed
+                    && error.code() == crate::Code::BackendTransport
+                {
+                    state.fail(RunCompletion::Failure(error.clone()));
+                    return;
+                }
+                rows += 1;
                 if let Some(error) = failed {
                     if !final_step {
                         state.fail(RunCompletion::RecordFailure(error.clone()));
@@ -221,12 +248,26 @@ fn function(
                         *first = Some(error.clone());
                     }
                 }
+                let original = originals.remove(&row.position());
+                if !final_step
+                    && matches!(&row, crate::results::AnyRow::Filter(filter) if !matches!(filter.outcome(), crate::results::Outcome::Answered { answer: true, .. }))
+                {
+                    continue;
+                }
                 let line = match serde_json::to_string(&row) {
                     Ok(line) => line,
                     Err(error) => {
                         state.fail(RunCompletion::Failure(local(&error.to_string())));
                         return;
                     }
+                };
+                let line = if let Some(item) = original {
+                    format!(
+                        "{},\"item\":{item}}}",
+                        line.strip_suffix('}').unwrap_or(&line)
+                    )
+                } else {
+                    line
                 };
                 if !send(&output, line, state) {
                     return;
@@ -241,11 +282,22 @@ fn function(
     call.cancel();
 }
 
-fn finite_records(input: &Input, state: &State) -> Result<Vec<Record>, Error> {
+fn finite_records(
+    input: &Input,
+    state: &State,
+    consume_filter: bool,
+) -> Result<Vec<Record>, Error> {
     let mut records = Vec::new();
     while !state.cancel.is_cancelled() {
         match input.recv_timeout(POLL) {
-            Ok(Ok(line)) => records.push(Record::from_json(&line)),
+            Ok(Ok(line)) => {
+                let line = if consume_filter {
+                    filtered_item(&line).unwrap_or(line)
+                } else {
+                    line
+                };
+                records.push(Record::from_json(&line));
+            }
             Ok(Err(error)) => return Err(error),
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => return Ok(records),
@@ -254,7 +306,14 @@ fn finite_records(input: &Input, state: &State) -> Result<Vec<Record>, Error> {
     Err(crate::retry::cancelled())
 }
 
-fn shell(args: &[String], ordinal: usize, input: Input, output: Output, state: &State) {
+fn shell(
+    args: &[String],
+    env: &[String],
+    ordinal: usize,
+    input: Input,
+    output: Output,
+    state: &State,
+) {
     let Some(program) = args.first() else {
         return;
     };
@@ -264,6 +323,11 @@ fn shell(args: &[String], ordinal: usize, input: Input, output: Output, state: &
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
+    for key in crate::backend::BackendTable::default().key_variables() {
+        if !env.iter().any(|name| name == key) {
+            command.env_remove(key);
+        }
+    }
     let child = match crate::runs::children::OwnedChild::spawn(&mut command) {
         Ok(child) => child,
         Err(_) => {
@@ -394,4 +458,14 @@ fn send(output: &Output, mut line: String, state: &State) -> bool {
         }
     }
     false
+}
+
+fn filtered_item(line: &str) -> Option<String> {
+    let fields = serde_json::from_str::<
+        std::collections::BTreeMap<String, Box<serde_json::value::RawValue>>,
+    >(line)
+    .ok()?;
+    (fields.get("function")?.get() == "\"filter\"")
+        .then(|| fields.get("item").map(|item| item.get().to_owned()))
+        .flatten()
 }

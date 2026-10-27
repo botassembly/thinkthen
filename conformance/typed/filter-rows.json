@@ -3,11 +3,16 @@
   "request": {
     "question": {
       "function": "filter",
-      "question": "Ready?"
+      "question": "Ready?",
+      "threshold": {
+        "low": 0.2,
+        "high": 0.8
+      }
     },
     "records": [
       "refund",
       "parcel",
+      "uncertain",
       null
     ]
   },
@@ -15,6 +20,10 @@
     {
       "contains": "\"refund\"",
       "probability": 0.9
+    },
+    {
+      "contains": "\"uncertain\"",
+      "probability": 0.6
     },
     {
       "probability": 0.1
@@ -38,6 +47,12 @@
     {
       "function": "filter",
       "position": 3,
+      "status": "unsure",
+      "probability": 0.6
+    },
+    {
+      "function": "filter",
+      "position": 4,
       "status": "failed",
       "error": {
         "code": "record.missing"

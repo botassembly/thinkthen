@@ -47,7 +47,7 @@ public final class ConsumerCases {
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             for (var sample : cases) {
                 var actual = JSON.createArrayNode();
-                try (var rows = ConformanceCases.execute(client, sample.get("request"))) {
+                try (var rows = ConformanceCases.execute(client, sample.get("request"), sample.get("expected"))) {
                     rows.forEach(row -> actual.add(canonicalRow(row)));
                 }
                 equal(JSON.readTree(JSON.writeValueAsBytes(actual)), expectedRows(sample.get("expected")), "canonical stub rows");

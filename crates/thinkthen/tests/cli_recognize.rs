@@ -45,13 +45,12 @@ fn names_print_one_json_object_each_and_empty_names_succeed() {
         assert_eq!(output.status.code(), Some(0));
         assert!(output.stderr.is_empty());
         if single {
-            let name: Value = serde_json::from_slice(&output.stdout).unwrap();
-            assert_eq!(name["text"], "Ada");
-            assert_eq!(name["kind"], "ENTITY");
-            assert_eq!(name["start"], 0);
-            assert_eq!(name["end"], 3);
+            assert_eq!(
+                String::from_utf8(output.stdout).unwrap(),
+                "[1]\tENTITY: Ada (0..3)\n"
+            );
         } else {
-            assert!(output.stdout.is_empty());
+            assert_eq!(output.stdout, b"[1]\n");
         }
     }
 }
@@ -98,7 +97,6 @@ fn named_kinds_reach_the_dependent_round() {
     }).unwrap();
     let output = run(&server, &["--kind", "person"], "Ada");
     assert_eq!(output.status.code(), Some(0));
-    let name: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(name["kind"], "person");
+    assert_eq!(output.stdout, b"[1]\tperson: Ada (0..3)\n");
     assert_eq!(server.count(), 2);
 }

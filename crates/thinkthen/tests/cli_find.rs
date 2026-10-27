@@ -22,7 +22,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "answer\n",
             0,
         ),
-        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "", 0),
+        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "\n", 0),
         (
             json!({"u1":0.6,"none":0.4}),
             "answer",
@@ -30,7 +30,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "unsure\n",
             0,
         ),
-        (json!({"u1":0.8,"none":0.2}), " \n", vec![], "", 0),
+        (json!({"u1":0.8,"none":0.2}), " \n", vec![], "\n", 0),
         (
             json!({"u1":0.8,"none":0.2}),
             "answer",
@@ -42,7 +42,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             json!({"u1":0.2,"none":0.8}),
             "answer",
             vec!["--check"],
-            "",
+            "\n",
             1,
         ),
         (

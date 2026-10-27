@@ -36,7 +36,7 @@ impl Fixture {
         let server=Loopback::answering(|q| json!({"type":"noul","noul":if q["instructions"].as_str().unwrap().contains("evidence 5"){0.77}else{0.47}})).unwrap();
         let mut child = support::command()
             .current_dir(&self.0)
-            .arg("run")
+            .args(["run", "--allow-shell"])
             .args(args)
             .args(["--json", "--backend", "systemone", "--url", server.base()])
             .env("THINKTHEN_API_KEY", KEY)
@@ -125,40 +125,48 @@ fn shell_failure_keeps_its_status_and_stops_function_output() {
 }
 
 #[test]
-fn ctrl_c_terminates_the_interpreter_and_its_child() {
-    let fixture = Fixture::new();
-    fixture.write("interrupt.json", &json!({"run":[{"shell":["/bin/sh","-c","sleep 300 & child=$!; printf '%s\\n' \"$child\" >&2; wait \"$child\""]}, question()]}));
-    let mut child = support::command()
-        .current_dir(&fixture.0)
-        .args(["run", "interrupt.json", "--backend", "stub"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    let mut ready = String::new();
-    BufReader::new(child.stderr.as_mut().unwrap())
-        .read_line(&mut ready)
-        .unwrap();
-    let descendant: u32 = ready.trim().parse().unwrap();
-    assert!(
-        Command::new("kill")
-            .args(["-INT", &child.id().to_string()])
-            .status()
-            .unwrap()
-            .success()
-    );
-    let output = child.wait_with_output().unwrap();
-    assert_eq!(output.status.code(), Some(130));
-    assert!(output.stdout.is_empty());
-    assert!(
-        !Command::new("kill")
-            .args(["-0", &descendant.to_string()])
-            .stderr(Stdio::null())
-            .status()
-            .unwrap()
-            .success()
-    );
+fn signals_terminate_the_interpreter_and_its_child() {
+    for signal in ["-INT", "-TERM", "-HUP"] {
+        let fixture = Fixture::new();
+        fixture.write("interrupt.json", &json!({"run":[{"shell":["/bin/sh","-c","sleep 300 & child=$!; printf '%s\\n' \"$child\" >&2; wait \"$child\""]}, question()]}));
+        let mut child = support::command()
+            .current_dir(&fixture.0)
+            .args([
+                "run",
+                "--allow-shell",
+                "interrupt.json",
+                "--backend",
+                "stub",
+            ])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut ready = String::new();
+        BufReader::new(child.stderr.as_mut().unwrap())
+            .read_line(&mut ready)
+            .unwrap();
+        let descendant: u32 = ready.trim().parse().unwrap();
+        assert!(
+            Command::new("kill")
+                .args([signal, &child.id().to_string()])
+                .status()
+                .unwrap()
+                .success()
+        );
+        let output = child.wait_with_output().unwrap();
+        assert_eq!(output.status.code(), Some(130));
+        assert!(output.stdout.is_empty());
+        assert!(
+            !Command::new("kill")
+                .args(["-0", &descendant.to_string()])
+                .stderr(Stdio::null())
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
 }
 
 #[test]
@@ -219,7 +227,7 @@ fn downstream_success_closes_and_reaps_a_still_running_upstream() {
     ]}));
     let mut child = support::command()
         .current_dir(&fixture.0)
-        .args(["run", "early.json", "--backend", "stub"])
+        .args(["run", "--allow-shell", "early.json", "--backend", "stub"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

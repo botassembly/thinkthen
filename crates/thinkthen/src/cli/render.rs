@@ -1,30 +1,23 @@
 //! Text projections preserve original bytes while machine output retains typed rows.
 use super::{local, output_error};
-use crate::files::TemporaryPaths;
 use crate::results::{AnyRow, Outcome};
 use crate::{Cancel, Code, Error};
-use std::io::{self, Read, Seek, SeekFrom, Write};
-use tempfile::NamedTempFile;
+use std::fs::File;
+use std::io::{self, BufWriter, IsTerminal, Read, Seek, SeekFrom, Write};
 
 pub(super) struct Originals {
-    data: NamedTempFile,
-    index: NamedTempFile,
-    _paths: TemporaryPaths,
+    data: BufWriter<File>,
+    index: BufWriter<File>,
 }
 impl Originals {
     pub(super) fn new() -> Result<Self, Error> {
-        let mut paths = TemporaryPaths::default();
-        let data = paths
-            .temporary(None)
-            .map_err(|_| local("original records could not be retained"))?;
-        let index = paths
-            .temporary(None)
-            .map_err(|_| local("original positions could not be retained"))?;
-        Ok(Self {
-            data,
-            index,
-            _paths: paths,
-        })
+        let data = BufWriter::new(
+            tempfile::tempfile().map_err(|_| local("original records could not be retained"))?,
+        );
+        let index = BufWriter::new(
+            tempfile::tempfile().map_err(|_| local("original positions could not be retained"))?,
+        );
+        Ok(Self { data, index })
     }
     pub(super) fn push(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let result = (|| -> io::Result<()> {
@@ -49,13 +42,24 @@ impl Originals {
         let result = (|| -> io::Result<()> {
             self.index.seek(SeekFrom::Start(offset))?;
             let mut number = [0; 8];
-            self.index.read_exact(&mut number)?;
+            self.index.get_mut().read_exact(&mut number)?;
             self.data
                 .seek(SeekFrom::Start(u64::from_le_bytes(number)))?;
-            self.index.read_exact(&mut number)?;
+            self.index.get_mut().read_exact(&mut number)?;
             let length = u64::from_le_bytes(number);
+            if io::stdout().is_terminal() {
+                let mut text = String::new();
+                self.data.get_mut().take(length).read_to_string(&mut text)?;
+                let body = super::evidence(&text);
+                let mut output = io::stdout().lock();
+                write!(output, "{}", terminal_text(body))?;
+                if text.ends_with('\n') {
+                    writeln!(output)?;
+                }
+                return Ok(());
+            }
             let copied = io::copy(
-                &mut self.data.as_file_mut().take(length),
+                &mut self.data.get_mut().take(length),
                 &mut io::stdout().lock(),
             )?;
             if copied != length {
@@ -68,46 +72,150 @@ impl Originals {
 }
 
 pub(super) fn row(row: &AnyRow, json: bool, cancel: &Cancel) -> Result<(), Error> {
+    if json {
+        return json_row(row, cancel);
+    }
     let mut output = io::stdout().lock();
-    if json || row.failure().is_some() || matches!(row, AnyRow::Annotate(_)) {
-        serde_json::to_writer(&mut output, row).map_err(|error| match error.io_error_kind() {
-            Some(kind) => output_error(io::Error::new(kind, error), cancel),
-            None => local("the row could not be encoded"),
-        })?;
-        return writeln!(output).map_err(|error| output_error(error, cancel));
+    if row.error().is_some() {
+        return writeln!(output, "[{}] failed", row.position())
+            .map_err(|error| output_error(error, cancel));
     }
     let value = serde_json::to_value(row).map_err(|_| local("the row could not be encoded"))?;
-    if value.get("status").and_then(serde_json::Value::as_str) == Some("unsure") {
-        return writeln!(output, "unsure").map_err(|error| output_error(error, cancel));
-    }
-    let Some(answer) = value.get("answer") else {
-        return Ok(());
+    let answer = value.get("answer");
+    let marked = matches!(
+        row,
+        AnyRow::Tag(_) | AnyRow::Recognize(_) | AnyRow::Relate(_) | AnyRow::Annotate(_)
+    );
+    let text = if matches!(row, AnyRow::Find(_)) {
+        answer
+            .and_then(|answer| answer.get("text"))
+            .and_then(serde_json::Value::as_str)
+            .map_or_else(
+                || {
+                    if answer.is_some() {
+                        String::new()
+                    } else {
+                        "unsure".to_owned()
+                    }
+                },
+                |text| terminal_text(text).into_owned(),
+            )
+    } else {
+        answer.map_or_else(|| "unsure".to_owned(), text)
     };
-    let result = match row {
-        AnyRow::Find(_) => match answer.get("text").and_then(serde_json::Value::as_str) {
-            Some(text) => writeln!(output, "{text}"),
-            None => Ok(()),
-        },
-        AnyRow::Tag(_) | AnyRow::Recognize(_) | AnyRow::Relate(_) => {
-            for value in answer.as_array().into_iter().flatten() {
-                (if let Some(text) = value.as_str() {
-                    writeln!(output, "{text}")
-                } else {
-                    writeln!(output, "{value}")
-                })
-                .map_err(|error| output_error(error, cancel))?;
-            }
-            Ok(())
-        }
-        _ => match answer.as_str() {
-            Some(text) => writeln!(output, "{text}"),
-            None => writeln!(output, "{answer}"),
-        },
+    let result = if marked {
+        writeln!(
+            output,
+            "[{}]{}{}",
+            row.position(),
+            if text.is_empty() { "" } else { "\t" },
+            text
+        )
+    } else {
+        writeln!(output, "{text}")
     };
     result.map_err(|error| output_error(error, cancel))
+}
+
+pub(super) fn item(
+    bytes: &[u8],
+    format: super::input::Format,
+) -> Result<Box<serde_json::value::RawValue>, Error> {
+    let text = std::str::from_utf8(bytes).ok().map(super::evidence);
+    if format == super::input::Format::Jsonl
+        && let Some(text) = text
+        && let Ok(value) = serde_json::from_str(text)
+    {
+        return Ok(value);
+    }
+    serde_json::value::to_raw_value(&text)
+        .map_err(|_| local("the original item could not be encoded"))
+}
+
+pub(super) fn filter_row(
+    row: &AnyRow,
+    item: &serde_json::value::RawValue,
+    cancel: &Cancel,
+) -> Result<(), Error> {
+    #[derive(serde::Serialize)]
+    struct FilterRow<'a> {
+        #[serde(flatten)]
+        row: &'a AnyRow,
+        item: &'a serde_json::value::RawValue,
+        kept: bool,
+    }
+    json_row(
+        &FilterRow {
+            row,
+            item,
+            kept: keeps(row),
+        },
+        cancel,
+    )
+}
+
+fn json_row(value: &impl serde::Serialize, cancel: &Cancel) -> Result<(), Error> {
+    let mut output = io::stdout().lock();
+    serde_json::to_writer(&mut output, value).map_err(|error| match error.io_error_kind() {
+        Some(kind) => output_error(io::Error::new(kind, error), cancel),
+        None => local("the row could not be encoded"),
+    })?;
+    writeln!(output).map_err(|error| output_error(error, cancel))
+}
+
+fn text(value: &serde_json::Value) -> String {
+    use serde_json::Value;
+    match value {
+        Value::Null => String::new(),
+        Value::String(s) => terminal_text(&s.replace(['\n', '\r', '\t'], " ")).into_owned(),
+        Value::Array(values) => values.iter().map(text).collect::<Vec<_>>().join("\t"),
+        Value::Object(fields) => {
+            if let Some(label) = fields.get("text") {
+                return fields.get("kind").map_or_else(
+                    || text(label),
+                    |kind| {
+                        format!(
+                            "{}: {} ({}..{})",
+                            text(kind),
+                            text(label),
+                            fields.get("start").map_or(String::new(), text),
+                            fields.get("end").map_or(String::new(), text)
+                        )
+                    },
+                );
+            }
+            if let (Some(source), Some(relation), Some(target)) = (
+                fields.get("source"),
+                fields.get("relation"),
+                fields.get("target"),
+            ) {
+                return format!(
+                    "{} --{}--> {}",
+                    text(source.get("text").unwrap_or(source)),
+                    text(relation),
+                    text(target.get("text").unwrap_or(target))
+                );
+            }
+            fields
+                .iter()
+                .filter(|(name, _)| !matches!(name.as_str(), "function" | "detail" | "probability"))
+                .map(|(name, value)| format!("{}: {}", terminal_text(name), text(value)))
+                .collect::<Vec<_>>()
+                .join("\t")
+        }
+        _ => value.to_string(),
+    }
 }
 
 pub(super) fn keeps(row: &AnyRow) -> bool {
     matches!(row, AnyRow::Filter(row) if matches!(row.outcome(), Outcome::Answered { answer: true, .. }))
         || matches!(row, AnyRow::Rank(row) if matches!(row.outcome(), Outcome::Answered { .. }))
+}
+
+/// Escape record controls only when the output is a terminal.
+fn terminal_text(text: &str) -> std::borrow::Cow<'_, str> {
+    if !io::stdout().is_terminal() {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    std::borrow::Cow::Owned(crate::escape_diagnostic(text))
 }

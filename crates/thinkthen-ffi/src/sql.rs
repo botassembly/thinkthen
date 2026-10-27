@@ -256,7 +256,7 @@ unsafe fn send_chunk(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_end_input(call: *mut SqlHandle) {
     // SAFETY: caller grants exclusive access.
-    unsafe { (*call).call.end_input() };
+    let _ = crate::exports::guarded(|| unsafe { (*call).call.end_input() });
 }
 /// Poll on the database thread and probe interruption around the wait.
 /// # Safety
@@ -376,10 +376,12 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
 /// NULL or a unique live owner after driver operations finish.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
-    if !call.is_null() {
-        // SAFETY: caller transfers this unique allocation.
-        drop(unsafe { Box::from_raw(call) });
-    }
+    let _ = crate::exports::guarded(|| {
+        if !call.is_null() {
+            // SAFETY: caller transfers this unique allocation.
+            drop(unsafe { Box::from_raw(call) });
+        }
+    });
 }
 
 /// Request cancellation on the statement's owning database thread.
@@ -388,7 +390,7 @@ pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_cancel(call: *mut SqlHandle) {
     // SAFETY: caller retains the live statement handle.
-    unsafe {
+    let _ = crate::exports::guarded(|| unsafe {
         (*call).call.cancel();
-    }
+    });
 }

@@ -2,9 +2,9 @@
 # Source this file to select the separately prepared shared JVM tools.
 cache=${THINKTHEN_JVM_CACHE:-$HOME/.local/share/thinkthen-build-tools/jvm}
 case "$(uname -sm)" in
-  'Linux x86_64') JAVA_HOME="$cache/jdk-22.0.2+9"; jvm_platform=linux-amd64; jvm_library=libthinkthen_ffi.so ;;
-  'Linux aarch64') JAVA_HOME="$cache/jdk-22.0.2+9"; jvm_platform=linux-aarch64; jvm_library=libthinkthen_ffi.so ;;
-  'Darwin arm64') JAVA_HOME="$cache/jdk-22.0.2+9/Contents/Home"; jvm_platform=macos-arm64; jvm_library=libthinkthen_ffi.dylib ;;
+  'Linux x86_64') JAVA_HOME=${JAVA_HOME:-"$cache/jdk-22.0.2+9"}; jvm_platform=linux-amd64; jvm_library=libthinkthen_ffi.so ;;
+  'Linux aarch64') JAVA_HOME=${JAVA_HOME:-"$cache/jdk-22.0.2+9"}; jvm_platform=linux-aarch64; jvm_library=libthinkthen_ffi.so ;;
+  'Darwin arm64') JAVA_HOME=${JAVA_HOME:-"$cache/jdk-22.0.2+9/Contents/Home"}; jvm_platform=macos-arm64; jvm_library=libthinkthen_ffi.dylib ;;
   *) echo 'Unsupported JVM build host' >&2; exit 1 ;;
 esac
 PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:$PATH"

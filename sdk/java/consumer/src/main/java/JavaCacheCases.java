@@ -17,17 +17,22 @@ public final class JavaCacheCases {
         }
         Path root = Files.createTempDirectory("thinkthen-cache-consumer-");
         try {
-            for (String mode : java.util.List.of("unavailable","unsafe","missing-home","relative")) {
+            for (String mode : java.util.List.of("unavailable","unsafe","missing-home","relative","occupied")) {
                 Path home = Files.createDirectories(root.resolve(mode));
                 boolean mac = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac");
                 Path cache = mac ? home.resolve("Library/Caches") : home.resolve("cache");
                 Files.createDirectories(cache);
                 Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString(mode.equals("unsafe") ? "rwxrwx---" : "r-x------"));
                 Path temporary = Files.createDirectories(home.resolve("temporary"));
+                if (mode.equals("occupied")) {
+                    // Any predictable entry of the wrong type must be left untouched.
+                    String uid = Files.getAttribute(temporary,"unix:uid").toString();
+                    Files.writeString(temporary.resolve("thinkthen-" + uid), "foreign occupant");
+                }
                 var process = new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin/java").toString(),
-                    "--enable-native-access=ALL-UNNAMED", "-Duser.home=" + (mode.equals("missing-home") ? "" : mode.equals("relative") && mac ? "relative-home" : home.toString()), "-Djava.io.tmpdir=" + temporary,
+                    "--enable-native-access=ALL-UNNAMED", "-Duser.home=" + ((mode.equals("missing-home") || mode.equals("occupied")) ? "" : mode.equals("relative") && mac ? "relative-home" : home.toString()), "-Djava.io.tmpdir=" + temporary,
                     "-cp", System.getProperty("java.class.path"), "JavaCacheCases", "child");
-                if (mode.equals("missing-home")) process.environment().remove("XDG_CACHE_HOME");
+                if (mode.equals("missing-home") || mode.equals("occupied")) process.environment().remove("XDG_CACHE_HOME");
                 else process.environment().put("XDG_CACHE_HOME",mode.equals("relative") ? "relative-cache" : cache.toString());
                 var child = process.redirectErrorStream(true).start();
                 String output = new String(child.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);

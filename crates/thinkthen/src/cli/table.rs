@@ -131,7 +131,7 @@ pub(super) fn run(
         value(args, "into"),
         destination,
     )
-    .and_then(|job| job.execute(request, engine, cancel));
+    .and_then(|job| job.execute_for_command(request, engine, cancel));
     let code = render(result, stdout, cancel);
     drop(source_guard);
     code

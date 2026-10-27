@@ -82,12 +82,16 @@ fn request_args(request: &Value, directory: &Path) -> Vec<String> {
         }
     }
     if let Some(threshold) = question.get("threshold") {
-        let text = if let Some(value) = threshold.as_str() {
-            value.to_owned()
+        if threshold.is_object() {
+            args.extend([
+                "--low".to_owned(),
+                threshold["low"].to_string(),
+                "--high".to_owned(),
+                threshold["high"].to_string(),
+            ]);
         } else {
-            threshold.to_string()
-        };
-        args.extend(["--threshold".to_owned(), text]);
+            args.extend(["--threshold".to_owned(), threshold.to_string()]);
+        }
     }
     if let Some(evidence) = question.get("evidence").and_then(Value::as_str) {
         args.extend(["--evidence".to_owned(), evidence.to_owned()]);
@@ -291,7 +295,7 @@ fn filter_preserves_true_false_and_unsure_rows_in_file_order() {
     })
     .unwrap();
     let output = support::command()
-        .arg("run")
+        .args(["run", "--allow-shell"])
         .arg(&entry)
         .args(["--from", "csv"])
         .arg(&input)
@@ -505,7 +509,7 @@ fn saved_function_uses_file_framing_and_shell_chains_refuse_it() {
     )
     .unwrap();
     let output = support::command()
-        .arg("run")
+        .args(["run", "--allow-shell"])
         .arg(&entry)
         .args(["--backend", "stub", "--from", "csv"])
         .arg(&input)
@@ -527,7 +531,7 @@ fn saved_function_uses_file_framing_and_shell_chains_refuse_it() {
     )
     .unwrap();
     let output = support::command()
-        .arg("run")
+        .args(["run", "--allow-shell"])
         .arg(&entry)
         .args(["--backend", "stub", "--from", "csv"])
         .arg(&input)
@@ -879,7 +883,7 @@ fn completion_failed_table_records_exit_six() {
         .unwrap();
         let mut command = support::command();
         if saved {
-            command.arg("run").arg(entry);
+            command.args(["run", "--allow-shell"]).arg(entry);
         } else {
             command.args(["decide", "Ready?"]);
         }

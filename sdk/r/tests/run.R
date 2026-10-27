@@ -80,7 +80,7 @@ result <- tryCatch({
     }
     if (verb == "filter") {
       stopifnot(identical(output$item[[i]], records[[output$position[[i]]]]),
-                identical(output$kept[[i]], isTRUE(row$answer)))
+                identical(output$kept[[i]], if (row$status == "failed") NA else isTRUE(row$answer)))
     }
     if (verb == "find" && !is.null(row$answer)) {
       stopifnot(identical(substr(records[[output$position[[i]]]], row$answer$start, row$answer$end), row$answer$text))

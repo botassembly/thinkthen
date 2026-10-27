@@ -22,6 +22,18 @@ impl<In: Transport> Connector<In> for SocketConnector {
         details: &ConnectionDetails,
         chained: Option<In>,
     ) -> Result<Option<Self::Out>, ureq::Error> {
+        if scope::local_only()
+            && details
+                .addrs
+                .iter()
+                .any(|address| !address.ip().is_loopback())
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "plain HTTP requires every resolved address to be loopback",
+            )
+            .into());
+        }
         if let Some(transport) = chained {
             return Ok(Some(Either::A(transport)));
         }

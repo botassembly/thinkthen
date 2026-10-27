@@ -8,6 +8,7 @@
   <scm><connection>scm:git:https://github.com/botassembly/thinkthen.git</connection><developerConnection>scm:git:ssh://git@github.com/botassembly/thinkthen.git</developerConnection><url>https://github.com/botassembly/thinkthen</url></scm>
   <modules><module>library</module><module>../kotlin</module></modules>
   <properties><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><project.build.outputTimestamp>2000-01-01T00:00:00Z</project.build.outputTimestamp><maven.compiler.release>22</maven.compiler.release><kotlin.version>2.2.21</kotlin.version><kotlin.compiler.daemon>false</kotlin.compiler.daemon></properties>
+  <!-- Supported build JDKs: 22 through 25. Published bytecode stays at Java 22. -->
   <build><pluginManagement><plugins>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.1</version><configuration><compilerArgs><arg>-Xlint:all</arg><arg>-Werror</arg></compilerArgs></configuration></plugin>
     <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>

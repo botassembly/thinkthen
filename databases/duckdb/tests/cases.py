@@ -25,9 +25,9 @@ def public_question(question):
 
 
 def arguments(question):
-    result = []
+    result = [scalar(question['question'])] if 'question' in question else []
     for key, value in question.items():
-        if key == 'function':
+        if key in ('function', 'question'):
             continue
         if key == 'threshold' and isinstance(value, dict):
             result.extend(bound + ' := ' + scalar(number) for bound, number in value.items())
@@ -46,7 +46,7 @@ def arguments(question):
             value = '[' + ','.join(rules) + ']'
         else:
             value = scalar(value)
-        result.append(value if key == 'question' else key + ' := ' + value)
+        result.append(key + ' := ' + value)
     return result
 
 

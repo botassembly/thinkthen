@@ -35,7 +35,7 @@ unicode-general-category.workspace = true
 unicode-normalization.workspace = true
 # Every consumer must disable HTTP wire dumps, including library-only builds.
 log.workspace = true
-ctrlc = { version = "3.5", optional = true }
+ctrlc = { version = "3.5", optional = true, features = ["termination"] }
 clap = { version = "4.5", default-features = false, features = ["std", "derive", "help", "usage", "error-context", "color", "suggestions", "string"], optional = true }
 clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }

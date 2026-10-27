@@ -94,10 +94,34 @@ fn details_print_every_row_including_no_and_failure() {
     );
     assert_eq!(rows[0]["answer"], true);
     assert_eq!(rows[1]["answer"], false);
+    assert_eq!(
+        rows.iter()
+            .map(|row| row["item"].clone())
+            .collect::<Vec<_>>(),
+        vec![
+            json!("refund"),
+            json!("parcel"),
+            json!("maybe"),
+            json!("broken"),
+            json!("refund last")
+        ]
+    );
     assert_eq!(rows[2]["status"], "answered");
     assert_eq!(rows[2]["answer"], false);
     assert_eq!(rows[3]["status"], "failed");
     assert_eq!(rows[3]["error"]["code"], "backend.reply");
+    assert_eq!(
+        rows.iter()
+            .map(|row| row["kept"].clone())
+            .collect::<Vec<_>>(),
+        vec![
+            json!(true),
+            json!(false),
+            json!(false),
+            json!(false),
+            json!(true)
+        ]
+    );
     assert_eq!(output.status.code(), Some(6));
 }
 
@@ -107,6 +131,7 @@ fn empty_single_text_still_has_a_details_row() {
     let row: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(row["position"], 1);
     assert_eq!(row["answer"], false);
+    assert_eq!(row["item"], "");
     assert_eq!(output.status.code(), Some(0));
 }
 
@@ -161,6 +186,10 @@ fn jsonl_filter_output_keeps_all_rows_and_their_original_identifiers() {
         .collect();
     assert_eq!(output.status.code(), Some(6));
     assert_eq!(rows.len(), 4);
+    assert_eq!(rows[0]["item"], json!({"id":1,"body":"refund"}));
+    assert_eq!(rows[1]["item"], json!({"body":"parcel"}));
+    assert_eq!(rows[2]["item"], "invalid");
+    assert_eq!(rows[3]["item"], json!({"body":"refund last"}));
     assert_eq!(rows[0]["id"], 1);
     assert_eq!(rows[0]["answer"], true);
     assert_eq!(rows[1]["answer"], false);
@@ -172,4 +201,30 @@ fn jsonl_filter_output_keeps_all_rows_and_their_original_identifiers() {
             .collect::<Vec<_>>(),
         [1, 2, 3, 4]
     );
+}
+
+#[test]
+fn invalid_utf8_has_a_null_item_and_keeps_the_failed_row() {
+    let output = run(&["--json"], b"invalid\xff\n");
+    assert_eq!(output.status.code(), Some(6));
+    let row: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(row.as_object().unwrap().contains_key("item"));
+    assert_eq!(row["item"], Value::Null);
+    assert_eq!(row["kept"], false);
+    assert_eq!(row["error"]["code"], "record.invalid");
+}
+
+#[test]
+fn json_filter_retains_the_exact_original_json_value() {
+    let original = r#"{ "id": 18446744073709551615, "body": "refund", "number": 1.2300e+2 }"#;
+    let output = run(
+        &["--from", "jsonl", "--json", "--evidence", "/body"],
+        original.as_bytes(),
+    );
+    assert_eq!(output.status.code(), Some(0));
+    let output = String::from_utf8(output.stdout).unwrap();
+    let fields: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
+        serde_json::from_str(&output).unwrap();
+    assert_eq!(fields["item"].get(), original);
+    assert_eq!(fields["id"].get(), "18446744073709551615");
 }

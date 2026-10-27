@@ -80,10 +80,17 @@ pub(super) fn parse() -> ArgMatches {
                     received,
                 )
             };
-            // Clap retains the configured color policy and exit status while its
-            // arbitrary value excerpts are replaced by the library's diagnostic.
-            let message = format!("{}: {failure}", failure.code().as_str());
-            command.color(color).error(error.kind(), message).exit()
+            if color == clap::ColorChoice::Always {
+                use std::io::Write;
+                let _ = writeln!(
+                    std::io::stderr().lock(),
+                    "thinkthen: \x1b[31m{}\x1b[0m: {failure}",
+                    failure.code().as_str()
+                );
+            } else {
+                super::report(&failure);
+            }
+            std::process::exit(2)
         }
     }
 }

@@ -6,10 +6,13 @@ import subprocess
 import sys
 from types import SimpleNamespace
 
+from argument_cases import argument_order
 from cases import canonical, invocation, quote
 from migration_cases import child_environment, command, fixture, forbidden_settings, run_cases
 from typed_api import admission
 from streaming_cases import first_response, streaming
+
+argument_order()
 
 PACKAGE, LOOPBACK = map(Path, sys.argv[1:3])
 LIMIT_ONLY = sys.argv[3:] == ['--limit-only']

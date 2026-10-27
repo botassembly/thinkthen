@@ -214,7 +214,7 @@ fn details_flag_keeps_file_details_in_their_columns() {
 
 #[cfg(unix)]
 #[test]
-fn new_files_use_the_callers_creation_mode() {
+fn new_files_preserve_source_permissions() {
     use std::os::unix::fs::PermissionsExt;
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("mode.csv");
@@ -234,7 +234,7 @@ fn new_files_use_the_callers_creation_mode() {
             .output()
             .unwrap();
         assert!(result.status.success(), "{result:?}");
-        let expected = if mask == "0022" { 0o644 } else { 0o600 };
+        let expected = 0o600;
         assert_eq!(
             fs::metadata(output).unwrap().permissions().mode() & 0o777,
             expected

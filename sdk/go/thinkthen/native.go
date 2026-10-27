@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"sync"
 	"unsafe"
 )
@@ -26,6 +27,9 @@ func loadNative() error {
 		return nil
 	}
 	path := os.Getenv("THINKTHEN_LIBRARY")
+	if path != "" && !filepath.IsAbs(path) {
+		return &Error{code: CodeLocalIO, message: "THINKTHEN_LIBRARY must be an absolute path"}
+	}
 	if path == "" && installedABI() != 0 {
 		if message := C.tt_load(nil); message != nil {
 			return &Error{code: CodeUsageABI, message: C.GoString(message)}

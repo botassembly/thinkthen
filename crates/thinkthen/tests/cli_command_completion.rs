@@ -129,6 +129,7 @@ fn filter_check_drains_every_row_and_reduces_kept_unsure_and_empty_results() {
         assert_eq!(actual.len(), input.lines().count());
         for row in actual {
             assert_eq!(row["status"], status);
+            assert_eq!(row["kept"], probability > 0.8);
             if status == "unsure" {
                 assert!(row.get("answer").is_none());
             }
@@ -249,7 +250,7 @@ fn completed_rows_arrive_before_an_open_writer_sends_its_next_record() {
     .unwrap();
     for arguments in [
         vec!["decide", "Ready?"],
-        vec!["run", saved.to_str().unwrap()],
+        vec!["run", "--allow-shell", saved.to_str().unwrap()],
     ] {
         let server = Loopback::noul(0.9).unwrap();
         let mut child = support::command()

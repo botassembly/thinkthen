@@ -15,6 +15,22 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
+enum TransportFailure {
+    Row,
+    #[cfg(feature = "command")]
+    CallBeforeRows,
+}
+
+impl TransportFailure {
+    const fn is_call(&self) -> bool {
+        match self {
+            Self::Row => false,
+            #[cfg(feature = "command")]
+            Self::CallBeforeRows => true,
+        }
+    }
+}
+
 impl FileJob {
     /// Execute one function over the file and atomically publish complete outcomes.
     ///
@@ -27,6 +43,26 @@ impl FileJob {
         request: &Request,
         client: &Engine,
         cancel: &Cancel,
+    ) -> Result<FileReceipt, FileError> {
+        self.execute_with_transport(request, client, cancel, TransportFailure::Row)
+    }
+
+    #[cfg(feature = "command")]
+    pub(crate) fn execute_for_command(
+        &self,
+        request: &Request,
+        client: &Engine,
+        cancel: &Cancel,
+    ) -> Result<FileReceipt, FileError> {
+        self.execute_with_transport(request, client, cancel, TransportFailure::CallBeforeRows)
+    }
+
+    fn execute_with_transport(
+        &self,
+        request: &Request,
+        client: &Engine,
+        cancel: &Cancel,
+        transport: TransportFailure,
     ) -> Result<FileReceipt, FileError> {
         if !request.records().is_empty() {
             return Err(invalid(
@@ -184,6 +220,7 @@ impl FileJob {
             OffsetUnit::CodePoints,
         )?;
         let mut first_failure = None;
+        let mut rows = 0_u64;
         loop {
             match call.next_event()? {
                 Event::NeedsInput => match inputs.next().transpose()? {
@@ -192,6 +229,14 @@ impl FileJob {
                     None => call.end_input(),
                 },
                 Event::Row(row) => {
+                    if transport.is_call()
+                        && rows == 0
+                        && let Some(error) = row.failure()
+                        && error.code() == crate::Code::BackendTransport
+                    {
+                        return Err(FileError::Engine(error.clone()));
+                    }
+                    rows += 1;
                     let source_row =
                         records.source_row(usize::try_from(row.position()).map_err(local)?)?;
                     let mut failure = row.failure().cloned();
@@ -223,7 +268,7 @@ impl FileJob {
         check_cancel(cancel)?;
         let mut temporary = match self.output {
             FileOutput::InPlace => temporary_paths.temporary(Some(parent)),
-            FileOutput::NewFile(_) => temporary_paths.output(parent),
+            FileOutput::NewFile(_) => temporary_paths.output(parent, &permissions),
         }
         .map_err(local)?;
         if let Some(sheet) = &sheet {

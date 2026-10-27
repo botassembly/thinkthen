@@ -12,6 +12,9 @@ public final class ConformanceCases {
     private ConformanceCases() {}
     public static JsonNode error(String code) { return ConsumerCases.JSON.createObjectNode().put("error",code); }
     static Stream<? extends Row<?,?>> execute(ThinkThen client, JsonNode request) {
+        return execute(client,request,ConsumerCases.JSON.nullNode());
+    }
+    static Stream<? extends Row<?,?>> execute(ThinkThen client, JsonNode request, JsonNode expected) {
         var records = ConsumerCases.records(request);
         var definition = request.get("question");
         String function = definition.get("function").asText();
@@ -27,7 +30,12 @@ public final class ConformanceCases {
             case "choose" -> client.chooseStream(named(toolbox.choose("entry").orElseThrow(),request,ChooseQuestion::named),records);
             case "tag" -> client.tagStream(named(toolbox.tag("entry").orElseThrow(),request,TagQuestion::named),records);
             case "score" -> client.scoreStream(named(toolbox.score("entry").orElseThrow(),request,ScoreQuestion::named),records);
-            case "filter" -> client.filter(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).map(ItemRow::row);
+            case "filter" -> client.filter(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).peek(item -> {
+                if (expected.isArray()) {
+                    var wanted = expected.get(Math.toIntExact(item.row().position() - 1));
+                    ConsumerCases.equal(item.kept(),wanted.path("answer").asBoolean(false),"canonical filter kept");
+                }
+            }).map(ItemRow::row);
             case "rank" -> client.rank(named(toolbox.rank("entry").orElseThrow(),request,RankQuestion::named),records).map(ItemRow::row);
             case "find" -> client.findStream(named(toolbox.find("entry").orElseThrow(),request,FindQuestion::named),records);
             case "recognize" -> client.recognizeStream(named(toolbox.recognize("entry").orElseThrow(),request,RecognizeQuestion::named),records);
@@ -207,7 +215,7 @@ public final class ConformanceCases {
                      .batch(sample.path("client").has("batch") ? sample.get("client").get("batch").intValue() : manifest.get("client").get("batch").intValue()).retry(RetryPolicy.builder().maxRetries(0).build()).recordCodec(value -> { try { return ConsumerCases.JSON.writeValueAsString(value); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } }).build()) {
                 JsonNode actual;
                 var values = ConsumerCases.JSON.createArrayNode();
-                try (var rows = execute(client,sample.get("request"))) {
+                try (var rows = execute(client,sample.get("request"),sample.get("expected"))) {
                     for (var row : rows.toList()) {
                         ConsumerCases.equal(row.source().orElseThrow().backend().name().toLowerCase(java.util.Locale.ROOT),backend.asText(),"typed backend");
                         ConsumerCases.equal(row.source().orElseThrow().model(),"fixture-model","typed model");

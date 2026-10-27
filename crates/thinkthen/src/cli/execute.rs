@@ -44,6 +44,8 @@ pub(super) fn stream(
     engine: &Engine,
     cancel: &Cancel,
 ) -> Result<u8, Error> {
+    let mut items = (output.json && matches!(request.question(), crate::Question::Filter(_)))
+        .then(std::collections::VecDeque::new);
     let originals = !output.json
         && matches!(
             request.question(),
@@ -77,6 +79,9 @@ pub(super) fn stream(
         match call.next_event()? {
             Event::NeedsInput => match input.poll()? {
                 InputEvent::Record(record, bytes) => {
+                    if let Some(items) = &mut items {
+                        items.push_back(super::render::item(&bytes, input.format)?);
+                    }
                     if let Some(originals) = &mut originals {
                         originals.push(&bytes)?;
                     }
@@ -86,6 +91,12 @@ pub(super) fn stream(
                 InputEvent::Pending => {}
             },
             Event::Row(row) => {
+                if completion.rows == 0
+                    && let Some(error) = row.failure()
+                    && error.code() == crate::Code::BackendTransport
+                {
+                    return Err(error.clone());
+                }
                 completion.row(&row);
                 if let Some(error) = row.failure() {
                     if multiple_sources {
@@ -98,7 +109,15 @@ pub(super) fn stream(
                     }
                     super::report(error);
                 }
-                if let Some(originals) = &mut originals {
+                if let Some(items) = &mut items {
+                    let item = items.pop_front().ok_or_else(|| {
+                        Error::from_contract(
+                            crate::Code::InternalBug,
+                            "the engine returned a row without an original item",
+                        )
+                    })?;
+                    super::render::filter_row(&row, &item, cancel)?;
+                } else if let Some(originals) = &mut originals {
                     if super::render::keeps(&row) {
                         originals.write(row.position(), cancel)?;
                     }

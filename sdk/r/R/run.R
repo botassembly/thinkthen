@@ -33,7 +33,7 @@
                          unsigned = .tt_id_value(event$id$decimal, "unsigned")))
         count <- count + 1L
         rows[[count]] <- row
-        if (function_name == "filter") kept[[count]] <- event$kept
+        if (function_name == "filter") kept[[count]] <- if (row$status == "failed") NA else event$kept
         if (isTRUE(getOption("thinkthen.verbose")) && row$status == "failed") {
           message("ThinkThen failed at position ", row$position)
         }

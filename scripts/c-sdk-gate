@@ -6,7 +6,6 @@ root=$PWD
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 scripts/c-package "$scratch/package"
-cargo build --locked -p loopback --bin loopback
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 mkdir "$scratch/installed"
@@ -16,19 +15,19 @@ export PKG_CONFIG_PATH="$scratch/installed/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG
 # Consumers choose runtime lookup; pkg-config supplies only link dependencies.
 flags=$(pkg-config --cflags --libs thinkthen-c)
 case "$flags" in *rpath*) echo 'pkg-config must not choose runtime lookup' >&2; exit 1 ;; esac
+mkdir "$scratch/readme"
+ln -s "$scratch/installed" "$scratch/readme/thinkthen"
+(unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH
+    python3 scripts/readme-example "$scratch/installed/share/thinkthen-c/README.md" c "$scratch/readme/example.c")
+if [ "${1:-}" = --readme-only ]; then exit 0; fi
 flags="$flags -Wl,-rpath,$(pkg-config --variable=libdir thinkthen-c)"
 # Deliberately compile through the installed pkg-config surface, not source paths.
 cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
     $flags -o "$scratch/consumer"
 cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
     $flags -o "$scratch/conformance"
-python3 - "$scratch/installed/share/thinkthen-c/README.md" "$scratch/example.c" <<'PYTHON'
-from pathlib import Path
-import re, sys
-Path(sys.argv[2]).write_text(re.search(r"```c\n(.*?)\n```", Path(sys.argv[1]).read_text(), re.S)[1])
-PYTHON
-cc -std=c11 -Wall -Wextra -Werror "$scratch/example.c" \
-    $flags -o "$scratch/example"
+cc -std=c11 -Wall -Wextra -Werror "$scratch/readme/example.c" $flags -o "$scratch/example"
+cargo build --locked -p loopback --bin loopback
 c_library=$(find "$scratch/installed/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
 case $(uname -s) in Darwin) c_attempted=$(pkg-config --variable=libdir thinkthen-c)/$(basename "$c_library") ;; *) c_attempted=$(basename "$c_library") ;; esac
 python3 scripts/loader-failure-check "$c_library" --attempted "$c_attempted" -- "$scratch/example"

@@ -29,9 +29,9 @@ input <- list("alpha", NULL, "bravo")
 rows <- tt_filter(input, "Ready?", client = client)
 check_rows(rows, "filter", 3L)
 stopifnot(identical(rows$position, c(1, 2, 3)), identical(rows$item, input),
-          is.logical(rows$kept), !rows$kept[[2]], rows$status[[2]] == "failed",
+          is.logical(rows$kept), is.na(rows$kept[[2]]), rows$status[[2]] == "failed",
           as.character(rows$error_code[[2]]) == "record.missing",
-          identical(rows$kept, !is.na(rows$answer) & rows$answer))
+          identical(rows$kept, rows$answer))
 mask <- warned(tt_keep(input, "Ready?", client = client))
 stopifnot(is.logical(mask), length(mask) == 3L, is.na(mask[[2]]))
 

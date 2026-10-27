@@ -163,7 +163,15 @@ fn every_function_serializes_the_shared_rows_from_both_wires() {
                     row
                 })
                 .collect();
-            assert_eq!(json!(actual), case["expected"], "{name} {backend}");
+            let mut expected = case["expected"].clone();
+            if case["request"]["question"]["function"] == "filter" {
+                for row in expected.as_array_mut().unwrap() {
+                    let position = row["position"].as_u64().unwrap() as usize;
+                    row["item"] = case["request"]["records"][position - 1].clone();
+                    row["kept"] = json!(row["status"] == "answered" && row["answer"] == true);
+                }
+            }
+            assert_eq!(json!(actual), expected, "{name} {backend}");
             let failed = actual.iter().any(|row| {
                 row["status"] == "failed"
                     || row["answer"].as_object().is_some_and(|children| {

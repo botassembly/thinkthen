@@ -83,7 +83,7 @@ result <- tryCatch({
     }
     if (verb == "filter") {
       stopifnot(identical(rows$item[[i]], case$request$records[[i]]),
-                identical(rows$kept[[i]], isTRUE(expected$answer)))
+                identical(rows$kept[[i]], if (expected$status == "failed") NA else isTRUE(expected$answer)))
     }
   }
   # Prototype signatures expose backend-dependent shape drift to the driver.

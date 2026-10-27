@@ -9,20 +9,30 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 
 thread_local! {
-    static ACTIVE: RefCell<Option<Cancel>> = const { RefCell::new(None) };
+    static ACTIVE: RefCell<Option<(Cancel, Security)>> = const { RefCell::new(None) };
+}
+
+#[derive(Clone, Copy)]
+pub(super) enum Security {
+    Encrypted,
+    Loopback,
+}
+
+pub(super) fn local_only() -> bool {
+    ACTIVE.with_borrow(|active| matches!(active, Some((_, Security::Loopback))))
 }
 
 /// ureq performs its synchronous exchange on this worker, including TLS I/O.
-pub(super) fn enter(cancel: &Cancel) -> Exchange {
+pub(super) fn enter(cancel: &Cancel, security: Security) -> Exchange {
     Exchange {
-        previous: ACTIVE.replace(Some(cancel.clone())),
+        previous: ACTIVE.replace(Some((cancel.clone(), security))),
         thread: PhantomData,
     }
 }
 
 /// Restore the previous exchange on normal return and during unwinding.
 pub(super) struct Exchange {
-    previous: Option<Cancel>,
+    previous: Option<(Cancel, Security)>,
     thread: PhantomData<Rc<()>>,
 }
 
@@ -33,7 +43,11 @@ impl Drop for Exchange {
 }
 
 pub(super) fn cancelled() -> bool {
-    ACTIVE.with_borrow(|active| active.as_ref().is_some_and(Cancel::is_cancelled))
+    ACTIVE.with_borrow(|active| {
+        active
+            .as_ref()
+            .is_some_and(|(cancel, _)| cancel.is_cancelled())
+    })
 }
 
 #[derive(Debug)]
@@ -65,7 +79,7 @@ impl Drop for Registration {
 /// It expires before ureq can put the connection back in its shared pool.
 pub(super) fn register(socket: &Arc<TcpStream>) -> io::Result<Option<Registration>> {
     let cancel = ACTIVE.with_borrow(Clone::clone);
-    let Some(cancel) = cancel else {
+    let Some((cancel, _)) = cancel else {
         return Ok(None);
     };
     let registration = Registration(Arc::new(SocketWake(Mutex::new(Some(Arc::downgrade(

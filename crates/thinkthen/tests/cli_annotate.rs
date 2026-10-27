@@ -18,7 +18,7 @@ fn single_record_annotations_use_selected_adapter_and_preserve_entry_failure() {
     let rejected = support::command()
         .arg("annotate")
         .arg(definition)
-        .args(["--from", "text"])
+        .args(["--from", "text", "--json"])
         .output()
         .unwrap();
     assert_eq!(rejected.status.code(), Some(2));
@@ -35,7 +35,7 @@ fn single_record_annotations_use_selected_adapter_and_preserve_entry_failure() {
         let output = support::command()
             .arg("annotate")
             .arg(definition)
-            .args(["--from", "text"])
+            .args(["--from", "text", "--json"])
             .args(["--backend", "openai", "--url", server.base()])
             .env("OPENAI_API_KEY", KEY)
             .output()
@@ -193,7 +193,7 @@ fn annotation_admission_preserves_shared_error_codes_before_backend_requests() {
         let output = support::command()
             .arg("annotate")
             .arg(file.path())
-            .args(["--from", "text", "--url", server.base()])
+            .args(["--from", "text", "--json", "--url", server.base()])
             .env("THINKTHEN_API_KEY", KEY)
             .output()
             .unwrap();
@@ -206,7 +206,7 @@ fn annotation_admission_preserves_shared_error_codes_before_backend_requests() {
     let output = support::command()
         .arg("annotate")
         .arg(file.path())
-        .args(["--from", "text", "--url", server.base()])
+        .args(["--from", "text", "--json", "--url", server.base()])
         .env("THINKTHEN_API_KEY", KEY)
         .output()
         .unwrap();

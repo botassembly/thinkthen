@@ -24,9 +24,9 @@ def home():
 
 
 def command():
-    if sys.platform == 'darwin':
-        return str(Path(os.environ.get('THINKTHEN_GO_HOME', home())) / 'bin/go')
-    return str(home() / 'bin/go') if sys.platform == 'linux' else 'go'
+    if 'THINKTHEN_GO_HOME' in os.environ:
+        return str(Path(os.environ['THINKTHEN_GO_HOME']) / 'bin/go')
+    return str(home() / 'bin/go') if sys.platform in ('linux', 'darwin') else 'go'
 
 
 def prepare():

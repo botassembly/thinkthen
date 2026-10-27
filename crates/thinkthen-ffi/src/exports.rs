@@ -30,6 +30,10 @@ pub(crate) const OK: i32 = THINKTHEN_OK;
 pub(crate) const END: i32 = THINKTHEN_END;
 pub(crate) const NEEDS_INPUT: i32 = THINKTHEN_NEEDS_INPUT;
 pub(crate) const ERROR: i32 = THINKTHEN_ERROR;
+pub(crate) fn guarded<T>(run: impl FnOnce() -> T) -> std::thread::Result<T> {
+    catch_unwind(AssertUnwindSafe(run))
+}
+
 pub(crate) unsafe fn operation(
     error: *mut HostError,
     run: impl FnOnce() -> Result<i32, Error>,
@@ -42,7 +46,7 @@ pub(crate) unsafe fn operation(
     unsafe {
         HostError::empty(size).write(error);
     }
-    match catch_unwind(AssertUnwindSafe(run)).unwrap_or_else(|_| Err(native::internal_error())) {
+    match guarded(run).unwrap_or_else(|_| Err(native::internal_error())) {
         Ok(status) => status,
         Err(failure) => {
             /* SAFETY: the supported prefix is writable and exclusively owned. */

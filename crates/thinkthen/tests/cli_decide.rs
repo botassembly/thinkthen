@@ -107,7 +107,12 @@ fn the_model_option_names_the_model_in_the_request() {
 #[test]
 fn input_that_is_not_utf8_returns_a_failed_record_and_sends_nothing() {
     let server = Loopback::noul(0.9).unwrap();
-    let output = run_on(&server, &["decide", "Is it?"], Some(KEY), b"caf\xe9");
+    let output = run_on(
+        &server,
+        &["decide", "Is it?", "--json"],
+        Some(KEY),
+        b"caf\xe9",
+    );
     assert_eq!(output.status.code(), Some(6));
     assert_eq!(
         serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
@@ -135,10 +140,15 @@ fn a_backend_failure_exits_6_and_never_prints_the_key() {
     ] {
         let output = run(&server, args, Some(KEY));
         assert_eq!(output.status.code(), Some(6), "{args:?}");
-        assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
-            "backend.status"
-        );
+        assert_eq!(reported(&output), "backend.status");
+        if args.contains(&"--json") {
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
+                "backend.status"
+            );
+        } else {
+            assert_eq!(output.stdout, b"[1] failed\n");
+        }
         assert!(!text(&output.stdout).contains(KEY));
         assert!(!text(&output.stderr).contains(KEY));
     }

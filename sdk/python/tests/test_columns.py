@@ -79,3 +79,53 @@ def test_polars_relate_detail_keeps_recognized_names() -> None:
             empty.struct.field("detail").struct.field("names").dtype
             == result.struct.field("detail").struct.field("names").dtype
         )
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+@pytest.mark.parametrize("backend", ["systemone", "openai"])
+@pytest.mark.parametrize("surface", ["series", "stream"])
+def test_filter_unsure_is_not_kept_and_failed_stays_missing(
+    library: str, backend: str, surface: str
+) -> None:
+    import json
+
+    from conformance import admitted
+
+    importlib.import_module("thinkthen." + library)
+    path = Path(os.environ["THINKTHEN_CASES"]) / "typed/filter-rows.json"
+    case = json.loads(path.read_text())
+    records = case["request"]["records"]
+    question = admitted(case["request"]["question"])
+    source: Any = (
+        pd.Series(records, index=["same"] * len(records), dtype=object)
+        if library == "pandas"
+        else pl.Series("body", records)
+    )
+    with (
+        Loopback(path) as server,
+        tt.Client(
+            backend=tt.Backend(backend), url=server.url, api_key="synthetic", batch=32
+        ) as client,
+    ):
+        if surface == "stream":
+            with client.filter(question, records) as rows:
+                result = getattr(rows, "to_" + library)()
+        else:
+            result = source.thinkthen.filter(question, client=client)
+        frame = (
+            result
+            if library == "pandas"
+            else (
+                result["result"] if isinstance(result, pl.DataFrame) else result
+            ).struct.unnest()
+        )
+        assert len(frame) == len(case["expected"])
+        for index, expected in enumerate(case["expected"]):
+            assert frame["status"].to_list()[index] == expected["status"]
+            kept = frame["kept"].to_list()[index]
+            if expected["status"] == "failed":
+                assert pd.isna(kept) if library == "pandas" else kept is None
+            else:
+                assert not pd.isna(kept)
+                assert bool(kept) is expected.get("answer", False)
+        assert server.count() == 1

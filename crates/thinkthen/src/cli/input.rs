@@ -59,6 +59,17 @@ impl Input {
                 (path, selected.or(inferred).unwrap_or(default))
             })
             .collect();
+        if value(args, "evidence").is_some()
+            && sources
+                .iter()
+                .any(|(_, format)| matches!(format, Format::Text | Format::Lines))
+        {
+            return Err(usage(
+                "evidence",
+                "JSONL or table framing; omit --evidence for text",
+                "text framing",
+            ));
+        }
         let tables = sources.iter().filter(|(_, f)| f.table()).count();
         if tables != 0 && (tables != sources.len() || sources.len() != 1) {
             return Err(usage(
@@ -146,11 +157,9 @@ impl Input {
             }
             let record = if format == Format::Jsonl {
                 std::str::from_utf8(&bytes).map_or_else(|_| Record::invalid(), Record::from_json)
-            } else if format == Format::Lines {
+            } else {
                 std::str::from_utf8(&bytes)
                     .map_or_else(|_| Record::invalid(), |s| Record::text(super::evidence(s)))
-            } else {
-                Record::from_utf8(&bytes)
             };
             return Ok(Some((record, bytes)));
         }
@@ -163,8 +172,9 @@ pub(super) struct StreamInput {
     cancel: crate::Cancel,
     origins: Vec<(u64, String)>,
     read: u64,
+    pub format: Format,
 }
-type FramedRecord = (Record, Vec<u8>, String);
+type FramedRecord = (Record, Vec<u8>, String, Format);
 pub(super) enum InputEvent {
     Record(Record, Vec<u8>),
     Pending,
@@ -173,10 +183,12 @@ pub(super) enum InputEvent {
 
 impl StreamInput {
     pub(super) fn new(mut input: Input, cancel: crate::Cancel) -> Result<Self, Error> {
+        let format = input.format;
         let receiver = spawn(
             move || {
                 input.next().map(|record| {
-                    record.map(|(record, bytes)| (record, bytes, input.origin.clone()))
+                    record
+                        .map(|(record, bytes)| (record, bytes, input.origin.clone(), input.format))
                 })
             },
             cancel.clone(),
@@ -186,6 +198,7 @@ impl StreamInput {
             cancel,
             origins: Vec::new(),
             read: 0,
+            format,
         })
     }
     pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>)>, Error> {
@@ -202,7 +215,7 @@ impl StreamInput {
         if self.cancel.is_cancelled() {
             return Err(crate::retry::cancelled());
         }
-        let (record, bytes, path) = match self
+        let (record, bytes, path, format) = match self
             .receiver
             .recv_timeout(std::time::Duration::from_millis(20))
         {
@@ -211,6 +224,7 @@ impl StreamInput {
             Err(RecvTimeoutError::Disconnected) => return Ok(InputEvent::Finished),
         };
         self.read += 1;
+        self.format = format;
         if self
             .origins
             .last()

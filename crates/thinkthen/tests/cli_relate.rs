@@ -61,17 +61,9 @@ fn bare_output_has_one_relation_per_line_and_empty_success() {
         );
         assert!(output.stderr.is_empty());
         if expected {
-            let relation: Value = serde_json::from_slice(&output.stdout).unwrap();
-            assert_eq!(relation["relation"], "works_for");
-            assert_eq!(relation["source"]["text"], "Ada");
-            assert_eq!(relation["target"]["text"], "Acme");
-            assert_eq!(relation["probability"], p);
-            assert_eq!(
-                relation.get("either"),
-                args.contains(&"--either").then_some(&json!(true))
-            );
+            assert_eq!(output.stdout, b"[1]\tAda --works_for--> Acme\n");
         } else {
-            assert!(output.stdout.is_empty());
+            assert_eq!(output.stdout, b"[1]\n");
         }
     }
 }

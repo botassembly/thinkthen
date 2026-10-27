@@ -144,6 +144,7 @@ public final class JavaApiCases {
                 equal(output.get(i).row().position(), (long) i + 1, "filter retains original position");
             }
             failed(output.get(1).row(), "record.missing");
+            check(!output.get(1).kept(), "failed filter row is not kept");
         }
         try (Stream<ItemRow<String, Long, RankDetail>> rows = client.rank("Urgency?", input, List.of("low", "high"), RankOptions.builder().top(1).build())) {
             var output = rows.toList();

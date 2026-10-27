@@ -249,7 +249,12 @@ def command():
                      input=encode_records(request['records']), capture_output=True, check=False)
         failed = any(row['status'] == 'failed' or (row['function'] == 'annotate' and any(entry['status'] == 'failed' for entry in row['answer'].values())) for row in case['expected'])
         assert result.returncode == (6 if failed else 0), result.stderr
-        assert [json.loads(line) for line in result.stdout.splitlines()] == case['expected'], function
+        expected = [dict(row) for row in case['expected']]
+        if function == 'filter':
+            for row in expected:
+                row['item'] = request['records'][row['position'] - 1]
+                row['kept'] = row['status'] == 'answered' and row.get('answer') is True
+        assert [json.loads(line) for line in result.stdout.splitlines()] == expected, function
     print('candidate command: ten shared stub cases pass', flush=True)
 
 

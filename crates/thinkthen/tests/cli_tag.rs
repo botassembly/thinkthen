@@ -37,7 +37,9 @@ fn run(server: &Loopback, extra: &[&str], input: &str) -> Output {
 
 #[test]
 fn the_command_prints_each_matching_label_and_always_exits_zero() {
-    for (billing, shipping, expected) in [(0.1, 0.2, ""), (0.5, 0.9, "billing\nshipping\n")] {
+    for (billing, shipping, expected) in
+        [(0.1, 0.2, "[1]\n"), (0.5, 0.9, "[1]\tbilling\tshipping\n")]
+    {
         let server = Loopback::answering(move |q| {
             let p = if q["instructions"]
                 .as_str()

@@ -27,8 +27,36 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
         let output = command.arg("--help").output().unwrap();
         assert!(output.status.success(), "{name:?}: {output:?}");
         let help = String::from_utf8(output.stdout).unwrap();
-        for current in ["--backend", "--evidence", "--from", "--json"] {
+        for current in [
+            "--backend",
+            "--evidence",
+            "--from",
+            "--json",
+            "THINKTHEN_API_KEY",
+            "OPENAI_API_KEY",
+            "THINKTHEN_BASE_URL",
+            "THINKTHEN_CA_FILE",
+            "Exits:",
+            "4 transport",
+        ] {
             assert!(help.contains(current), "{name:?}: missing {current}");
+        }
+        for line in help
+            .lines()
+            .filter(|line| line.starts_with("  ") && !line.trim().is_empty())
+        {
+            if line.trim_start().starts_with(['-', '[', '<']) {
+                assert!(
+                    line.contains("  ")
+                        && line
+                            .trim()
+                            .split("  ")
+                            .filter(|part| !part.is_empty())
+                            .count()
+                            >= 2,
+                    "missing description: {line}"
+                );
+            }
         }
         for retired in [
             "--on",

@@ -51,7 +51,7 @@ public final class ThinkThen implements AutoCloseable {
         public Builder batch(int value) { settings.put("batch",value); return this; }
         public Builder retry(RetryPolicy value) { settings.put("retry",value.values()); return this; }
         public Builder recordCodec(RecordCodec value) { codec = java.util.Objects.requireNonNull(value); return this; }
-        public ThinkThen build() { var result = new ThinkThen(this); settings.remove("api_key"); return result; }
+        public ThinkThen build() { try { return new ThinkThen(this); } finally { settings.remove("api_key"); } }
     }
     DriverClient driver() { if (closed) throw new IllegalStateException("Client is closed"); return driver; }
     @org.jspecify.annotations.Nullable RecordCodec codec() { return codec; }

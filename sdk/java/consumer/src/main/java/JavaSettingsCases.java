@@ -48,5 +48,21 @@ public final class JavaSettingsCases {
             JavaApiCases.equal(code.family().name().toLowerCase(java.util.Locale.ROOT),entry.family(),"native code family");
         }
     }
-    public static void main(String[] args) throws Exception { snapshotsAndExecutionName(); registry(Path.of(args[0])); }
+    // Feature: failed construction consumes the builder's direct API key.
+    static void failedBuildClearsKey() {
+        var builder = ThinkThen.builder().backend(Backend.OPENAI).apiKey("synthetic-builder-key").url(URI.create("http://example.invalid"));
+        try { builder.build().close(); throw new AssertionError("unsafe URL accepted"); }
+        catch (ThinkThenException expected) { JavaApiCases.equal(expected.code().wireName(),"usage.url","initial admission failure"); }
+        try { builder.url(URI.create("https://example.invalid")).build().close(); throw new AssertionError("failed builder retained direct API key"); }
+        catch (ThinkThenException expected) { JavaApiCases.equal(expected.code().wireName(),"usage.key-missing","builder forgets direct API key on failure"); }
+    }
+    public static void main(String[] args) throws Exception {
+        if (args.length == 1 && args[0].equals("cleared-key")) { failedBuildClearsKey(); return; }
+        var child = new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin/java").toString(),
+            "--enable-native-access=ALL-UNNAMED", "-cp", System.getProperty("java.class.path"), "JavaSettingsCases", "cleared-key");
+        child.environment().remove("THINKTHEN_API_KEY"); child.environment().remove("OPENAI_API_KEY");
+        var process = child.inheritIO().start();
+        JavaApiCases.equal(process.waitFor(),0,"failed construction clears builder key");
+        snapshotsAndExecutionName(); registry(Path.of(args[0]));
+    }
 }

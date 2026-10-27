@@ -20,7 +20,7 @@ case "$(uname -s)" in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 if [ -n "${THINKTHEN_GO_ENGINE:-}" ]; then
     # The caller owns preparation and validates unchanged native inputs.
     test -f "$THINKTHEN_GO_ENGINE"
-    test -x "$THINKTHEN_LOOPBACK"
+    if [ "${1:-}" != --readme-only ]; then test -x "$THINKTHEN_LOOPBACK"; fi
     python3 scripts/package_inventory.py stage go "$scratch/module"
     mkdir -p "$scratch/module/native"
     cp "$THINKTHEN_GO_ENGINE" "$scratch/module/native/library"
@@ -38,7 +38,9 @@ from native_platform import current
 from release_source import stage_go_libraries
 stage_go_libraries({current()['platform']: Path(sys.argv[2])}, Path(sys.argv[1]))
 PYTHON
-scripts/native-fixtures --engine "$THINKTHEN_GO_ENGINE" --output "$scratch/native"
+if [ "${1:-}" != --readme-only ]; then
+    scripts/native-fixtures --engine "$THINKTHEN_GO_ENGINE" --output "$scratch/native"
+fi
 mkdir -p "$scratch/consumer" "$scratch/home" "$scratch/tmp"
 cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
 export THINKTHEN_CONTRACT="$root/schemas/contract.json" THINKTHEN_BOUNDARY_SOURCE="$root/crates/thinkthen/src/core/function/recognize.rs"
@@ -47,6 +49,21 @@ unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKT
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
 cd "$scratch/consumer"
 go mod edit -replace="github.com/botassembly/thinkthen/sdk/go/thinkthen=$scratch/module"
+# Run the documented system-library commands against the installed C package.
+system_readme() {
+    cmake -S "$root/sdk/c" -B "$scratch/system-build" \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
+        -DCMAKE_INSTALL_PREFIX="$scratch/system-readme/thinkthen" \
+        -DTHINKTHEN_FFI_LIBRARY="$THINKTHEN_GO_ENGINE" \
+        -DTHINKTHEN_FFI_INCLUDE_DIR="$scratch/module"
+    cmake --install "$scratch/system-build"
+    cp "$scratch/consumer/go.mod" "$scratch/system-readme/go.mod"
+    (unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH CGO_LDFLAGS
+        python3 "$root/scripts/readme-example" "$scratch/module/README.md" go "$scratch/system-readme/main.go")
+}
+system_readme
+
+if [ "${1:-}" = --readme-only ]; then exit 0; fi
 go version
 staticcheck -version
 staticcheck_pin=$(python3 - "$root/scripts/release-tools.json" <<'PYTHON'
@@ -76,17 +93,6 @@ python3 "$root/scripts/surface-example" prepare go "$scratch/consumer/guide"
 go test -c -o "$scratch/loader-consumer"
 case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_cache="$HOME/.cache" ;; esac
 python3 "$root/scripts/loader-cache-check" "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
-# A separate installed prefix exercises pkg-config linkage without embedding.
-cmake -S "$root/sdk/c" -B "$scratch/system-build" \
-    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib \
-    -DCMAKE_INSTALL_PREFIX="$scratch/system" \
-    -DTHINKTHEN_FFI_LIBRARY="$THINKTHEN_GO_ENGINE" \
-    -DTHINKTHEN_FFI_INCLUDE_DIR="$scratch/module"
-cmake --install "$scratch/system-build"
-PKG_CONFIG_PATH="$scratch/system/lib/pkgconfig" \
-    CGO_LDFLAGS="${CGO_LDFLAGS:-} -Wl,-rpath,$scratch/system/lib" \
-    go test -tags thinkthen_system -race -count=1 -run='^TestSharedStub$' .
-
 # darwin/amd64 has no bundled engine, but remains a compilable public module.
 if [ "$(uname -s)" = Darwin ]; then
     mkdir unsupported

@@ -160,7 +160,7 @@ fn completion_cancellation_precedes_a_later_broken_stdout() {
         let (mut reader, writer) = UnixStream::pair().unwrap();
         let mut command = support::command();
         if saved {
-            command.arg("run").arg(&entry);
+            command.args(["run", "--allow-shell"]).arg(&entry);
         } else {
             command.args([
                 "filter",

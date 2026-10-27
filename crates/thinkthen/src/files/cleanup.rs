@@ -86,16 +86,21 @@ impl TemporaryPaths {
         Ok(file)
     }
 
-    pub(crate) fn output(&mut self, parent: &Path) -> io::Result<NamedTempFile> {
+    pub(crate) fn output(
+        &mut self,
+        parent: &Path,
+        permissions: &fs::Permissions,
+    ) -> io::Result<NamedTempFile> {
         let mut registry = paths();
         active(&registry)?;
+        #[cfg(not(unix))]
+        let _ = permissions;
         let builder = tempfile::Builder::new();
         #[cfg(unix)]
         let builder = {
-            use std::os::unix::fs::PermissionsExt;
             // The builder applies the caller's umask at creation without changing it.
             let mut builder = builder;
-            builder.permissions(fs::Permissions::from_mode(0o666));
+            builder.permissions(permissions.clone());
             builder
         };
         let file = builder.tempfile_in(parent)?;

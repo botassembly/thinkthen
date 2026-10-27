@@ -21,7 +21,7 @@ const char *tt_load(const char *path) {
     wchar_t *wide = malloc((size_t)count * sizeof(*wide));
     if (!wide) return "Cannot allocate native library path";
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide, count);
-    HMODULE handle = LoadLibraryW(wide);
+    HMODULE handle = LoadLibraryExW(wide, NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
     free(wide);
     if (!handle) { load_code = THINKTHEN_CODE_LOCAL_IO; return "cannot load native engine"; }
 #define CLOSE() FreeLibrary(handle)

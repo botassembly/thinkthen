@@ -2,26 +2,23 @@
 
 use crate::files::{FileError, local};
 use serde_json::Value;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
-use tempfile::NamedTempFile;
+use std::fs::File;
+use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 
 type RecordReader = Box<dyn Iterator<Item = Result<(usize, Value), FileError>>>;
 
 pub(crate) struct Records {
-    pub(crate) file: NamedTempFile,
+    pub(crate) file: BufWriter<File>,
     pub(crate) count: usize,
-    positions: NamedTempFile,
-    _paths: crate::files::cleanup::TemporaryPaths,
+    positions: BufWriter<File>,
 }
 
 impl Records {
     pub(crate) fn new() -> Result<Self, FileError> {
-        let mut paths = crate::files::cleanup::TemporaryPaths::default();
         Ok(Self {
-            file: paths.temporary(None).map_err(local)?,
+            file: BufWriter::new(tempfile::tempfile().map_err(local)?),
             count: 0,
-            positions: paths.temporary(None).map_err(local)?,
-            _paths: paths,
+            positions: BufWriter::new(tempfile::tempfile().map_err(local)?),
         })
     }
 
@@ -35,8 +32,9 @@ impl Records {
         Ok(())
     }
 
-    pub(crate) fn reader(&self) -> Result<RecordReader, FileError> {
-        let mut file = self.file.reopen().map_err(local)?;
+    pub(crate) fn reader(&mut self) -> Result<RecordReader, FileError> {
+        self.file.flush().map_err(local)?;
+        let mut file = self.file.get_ref().try_clone().map_err(local)?;
         file.rewind().map_err(local)?;
         Ok(Box::new(BufReader::new(file).lines().map(|line| {
             serde_json::from_str(&line.map_err(local)?).map_err(local)
@@ -51,35 +49,31 @@ impl Records {
             .seek(SeekFrom::Start((ordinal as u64) * 8))
             .map_err(local)?;
         let mut row = [0; 8];
-        self.positions.read_exact(&mut row).map_err(local)?;
+        self.positions
+            .get_mut()
+            .read_exact(&mut row)
+            .map_err(local)?;
         usize::try_from(u64::from_le_bytes(row)).map_err(local)
     }
 }
 
 pub(crate) struct Answers {
-    data: NamedTempFile,
-    index: NamedTempFile,
-    _paths: crate::files::cleanup::TemporaryPaths,
+    data: BufWriter<File>,
+    index: BufWriter<File>,
 }
 
 impl Answers {
     pub(crate) fn new() -> Result<Self, FileError> {
-        let mut paths = crate::files::cleanup::TemporaryPaths::default();
-        let mut data = paths.temporary(None).map_err(local)?;
+        let mut data = BufWriter::new(tempfile::tempfile().map_err(local)?);
         data.write_all(b"\n").map_err(local)?; // Offset zero means no outcome.
         Ok(Self {
             data,
-            index: paths.temporary(None).map_err(local)?,
-            _paths: paths,
+            index: BufWriter::new(tempfile::tempfile().map_err(local)?),
         })
     }
 
     pub(crate) fn put(&mut self, row: usize, cells: &[Value]) -> Result<(), FileError> {
-        let offset = self
-            .data
-            .as_file_mut()
-            .seek(SeekFrom::End(0))
-            .map_err(local)?;
+        let offset = self.data.stream_position().map_err(local)?;
         serde_json::to_writer(&mut self.data, cells).map_err(local)?;
         self.data.write_all(b"\n").map_err(local)?;
         self.index
@@ -93,7 +87,7 @@ impl Answers {
             .seek(SeekFrom::Start((row as u64) * 8))
             .map_err(local)?;
         let mut offset = [0; 8];
-        match self.index.read_exact(&mut offset) {
+        match self.index.get_mut().read_exact(&mut offset) {
             Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
             result => result.map_err(local)?,
         }
@@ -103,7 +97,7 @@ impl Answers {
         }
         self.data.seek(SeekFrom::Start(offset)).map_err(local)?;
         let mut line = String::new();
-        BufReader::new(self.data.as_file_mut())
+        BufReader::new(self.data.get_mut())
             .read_line(&mut line)
             .map_err(local)?;
         serde_json::from_str(&line).map(Some).map_err(local)

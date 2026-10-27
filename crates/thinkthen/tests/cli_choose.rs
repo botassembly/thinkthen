@@ -75,8 +75,6 @@ fn an_unknown_reply_option_exits_with_backend_error() {
     .unwrap();
     let output = run(&server, &[]);
     assert_eq!(output.status.code(), Some(6));
-    assert_eq!(
-        serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
-        "backend.reply"
-    );
+    assert_eq!(output.stdout, b"[1] failed\n");
+    assert_eq!(reported(&output), "backend.reply");
 }

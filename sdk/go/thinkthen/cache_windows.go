@@ -41,5 +41,8 @@ func temporaryCache() (string, error) {
 	if err := os.Mkdir(path, 0700); err != nil && !os.IsExist(err) {
 		return "", err
 	}
-	return path, checkCachePath(path, true)
+	if err := checkCachePath(path, true); err == nil {
+		return path, nil
+	}
+	return privateTemporaryCache()
 }

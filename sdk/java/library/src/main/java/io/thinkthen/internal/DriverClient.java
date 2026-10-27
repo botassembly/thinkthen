@@ -98,6 +98,8 @@ public final class DriverClient implements AutoCloseable {
         for (var call : Set.copyOf(calls)) call.close();
         releaseClient();
     }
+    // The ABI returns static NUL-terminated code names that remain valid for the process.
+    @SuppressWarnings("restricted")
     public static java.util.List<DriverCode> codes() {
         long count = (long) Native.call("code_count");
         var result = new java.util.ArrayList<DriverCode>();

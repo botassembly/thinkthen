@@ -90,10 +90,9 @@ final class NativeAsset {
                 AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER, AclEntryPermission.DELETE,
                 AclEntryPermission.DELETE_CHILD);
             for (var entry : acl.getAcl()) {
-                String name = entry.principal().getName();
                 if (entry.type() == AclEntryType.ALLOW && !entry.principal().equals(owner)
-                        && !name.equals("NT AUTHORITY\\SYSTEM") && !name.equals("BUILTIN\\Administrators")
-                        && entry.permissions().stream().anyMatch(writes::contains)) unsafe = true;
+                        && entry.permissions().stream().anyMatch(writes::contains)
+                        && !WindowsIdentity.privileged(entry.principal().getName())) unsafe = true;
             }
         }
         if (unsafe) throw new IOException("Unsafe ThinkThen native cache owner or permissions: " + path);
@@ -132,8 +131,15 @@ final class NativeAsset {
                 catch (java.nio.file.FileAlreadyExistsException ignored) { /* Verify the existing owner and ACL below. */ }
             }
         }
-        secure(base, true);
-        return base;
+        try { secure(base, true); return base; }
+        catch (IOException unsafe) {
+            var parent = base.getParent();
+            var fresh = Files.getFileStore(parent).supportsFileAttributeView(PosixFileAttributeView.class)
+                ? Files.createTempDirectory(parent, "thinkthen-", PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
+                : Files.createTempDirectory(parent, "thinkthen-");
+            try { secure(fresh, true); return fresh; }
+            catch (IOException error) { Files.deleteIfExists(fresh); throw error; }
+        }
     }
     private static Path cache() throws IOException {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);

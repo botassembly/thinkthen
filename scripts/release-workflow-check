@@ -82,6 +82,59 @@ def check(workflow)
 end
 
 
+def check_windows(workflow)
+  job = workflow.fetch('jobs').fetch('windows')
+  steps = job.fetch('steps')
+  native = steps.index { |step| step['id'] == 'native' }
+  trust = steps.index { |step| step['id'] == 'transport-trust' }
+  raise 'Windows transport trust must follow the native build' unless native && trust == native + 1
+  step = steps[trust]
+  expected_environment = {
+    'CARGO_TARGET_DIR' => '${{ runner.temp }}/windows-native-proof/target',
+    'CARGO_BUILD_JOBS' => '2', 'RUSTFLAGS' => '-C target-feature=+crt-static'
+  }
+  commands = [
+    %q{$env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"},
+    'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
+    'Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue',
+    'cargo fetch --locked --target x86_64-pc-windows-msvc',
+    'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }',
+    'cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture',
+    'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'
+  ]
+  unless job['runs-on'] == 'windows-2022' && job.dig('defaults', 'run', 'shell') == 'pwsh' &&
+         step['if'] == "always() && steps.native.outcome == 'success'" &&
+         !step['continue-on-error'] && step['env'] == expected_environment &&
+         step.fetch('run').lines.map(&:strip) == commands
+    raise 'Windows transport trust must fetch locked dependencies and run offline with the native build settings'
+  end
+end
+
+
+def windows_self_test(workflow)
+  check_windows(workflow)
+  mutations = {
+    'missing trust test' => ->(steps) { steps.reject! { |step| step['id'] == 'transport-trust' } },
+    'trust before native build' => ->(steps) { steps.reverse! },
+    'online trust test' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['run'].sub!('--offline ', '') },
+    'ignored fetch failure' => lambda do |steps|
+      steps.find { |step| step['id'] == 'transport-trust' }['run'].sub!("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\n", '')
+    end
+  }
+  mutations.each do |name, mutate|
+    copy = Marshal.load(Marshal.dump(workflow))
+    mutate.call(copy.fetch('jobs').fetch('windows').fetch('steps'))
+    begin
+      check_windows(copy)
+    rescue RuntimeError
+      puts "rejected: #{name}"
+      next
+    end
+    raise "accepted Windows qualification defect: #{name}"
+  end
+end
+
+
 def self_test(workflow)
   check(workflow)
   mutations = {
@@ -148,7 +201,10 @@ begin
   raise 'usage: release-workflow-check [--self-test] [WORKFLOW]' if arguments.length > 1
   workflow = YAML.safe_load_file(arguments.first || File.join(ROOT, '.github/workflows/release.yml'), aliases: true)
   test ? self_test(workflow) : check(workflow)
+  windows = YAML.safe_load_file(File.join(ROOT, '.github/workflows/windows.yml'), aliases: true)
+  test ? windows_self_test(windows) : check_windows(windows)
   puts 'release workflow: credentials reach only their own sites'
+  puts 'Windows workflow: transport trust runs offline after the native build'
 rescue RuntimeError, Psych::Exception => error
   warn "release-workflow-check: #{error.message}"
   exit 1

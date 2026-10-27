@@ -1,6 +1,17 @@
 # ThinkThen for C
 
-Download the matching C archive from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. Save the example as `example.c`. Compile with `cc -std=c11 example.c -o example $(PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig" pkg-config --cflags --libs thinkthen-c)` and run `./example`. The package requires a C11 compiler and pkg-config.
+Download the matching C archive from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. The package requires a C11 compiler and pkg-config. Save the example as `example.c`, then compile and run it:
+
+```sh
+cc -std=c11 example.c -o example $(PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig" pkg-config --cflags --libs thinkthen-c)
+case "$(uname -s)" in
+    Linux) export LD_LIBRARY_PATH="$PWD/thinkthen/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;;
+    Darwin) export DYLD_LIBRARY_PATH="$PWD/thinkthen/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" ;;
+esac
+./example
+```
+
+The loader uses `LD_LIBRARY_PATH` on Linux and `DYLD_LIBRARY_PATH` on macOS to find the installed shared library. Keep the selected variable set when running the program.
 
 The example uses the stub backend and needs no key or service.
 

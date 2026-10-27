@@ -223,6 +223,9 @@ def run_all(directory: Path, scratch: Path) -> None:
                     with request_stream(client, case["request"]) as stream:
                         for row in stream:
                             actual.append(row_json(row))
+                            if case["request"]["question"]["function"] == "filter":
+                                expected = case["expected"][len(actual) - 1]
+                                assert row.kept is expected.get("answer", False)
                 except tt.ThinkThenError as error:
                     assert not actual, (filename, actual)
                     actual = {"error": error.code.value}

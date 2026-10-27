@@ -37,7 +37,7 @@ fn invalid_native_input_is_a_failed_record() {
         .map(|v| v.as_u64().unwrap() as u8)
         .collect();
     let mut child = support::command()
-        .args(["decide", "Ready?", "--backend", "stub"])
+        .args(["decide", "Ready?", "--backend", "stub", "--json"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

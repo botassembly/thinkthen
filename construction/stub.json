@@ -236,26 +236,37 @@
     },
     "expected": [
       {
-        "answer": false,
         "function": "filter",
         "position": 1,
-        "probability": 0.31,
+        "probability": 0.46,
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
+          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
+        },
+        "status": "unsure"
+      },
+      {
+        "answer": true,
+        "function": "filter",
+        "position": 2,
+        "probability": 1.0,
+        "source": {
+          "backend": "stub",
+          "model": "stub",
+          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
         },
         "status": "answered"
       },
       {
-        "answer": false,
+        "answer": true,
         "function": "filter",
-        "position": 2,
-        "probability": 0.36,
+        "position": 3,
+        "probability": 0.95,
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
+          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
         },
         "status": "answered"
       },
@@ -265,11 +276,11 @@
           "message": "the record is missing"
         },
         "function": "filter",
-        "position": 3,
+        "position": 4,
         "source": {
           "backend": "stub",
           "model": "stub",
-          "question_identity": "838f0394b536e500a26c2300a07a73563f0fa664962d9c8120147589b7ede10e"
+          "question_identity": "aba42286e0fa15d4135e5f5d7bc7d47dc7252bddabea66378e0a514287bcacb0"
         },
         "status": "failed"
       }
@@ -277,11 +288,16 @@
     "request": {
       "question": {
         "function": "filter",
-        "question": "Ready?"
+        "question": "Ready?",
+        "threshold": {
+          "high": 0.8,
+          "low": 0.2
+        }
       },
       "records": [
         "refund",
         "parcel",
+        "uncertain",
         null
       ]
     },

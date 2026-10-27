@@ -19,7 +19,10 @@ pub struct RunEntry(pub(crate) Vec<Step>);
 #[derive(Debug)]
 pub(crate) enum Step {
     Function(Box<Request>),
-    Shell(Vec<String>),
+    Shell {
+        arguments: Vec<String>,
+        env: Vec<String>,
+    },
 }
 
 impl RunEntry {
@@ -92,10 +95,17 @@ impl RunEntry {
                 Step::Function(request) => {
                     map(*request).map(|request| Step::Function(Box::new(request)))
                 }
-                Step::Shell(arguments) => Ok(Step::Shell(arguments)),
+                Step::Shell { arguments, env } => Ok(Step::Shell { arguments, env }),
             })
             .collect::<Result<Vec<_>, _>>()
             .map(Self)
+    }
+
+    pub(crate) fn shell_steps(&self) -> impl Iterator<Item = (&[String], &[String])> {
+        self.0.iter().filter_map(|step| match step {
+            Step::Shell { arguments, env } => Some((arguments.as_slice(), env.as_slice())),
+            Step::Function(_) => None,
+        })
     }
 
     /// Borrow the function request when this entry contains exactly one function.
@@ -183,6 +193,8 @@ fn step(text: &str) -> Result<Step, Error> {
     struct ShellStep {
         #[serde(deserialize_with = "shell_arguments")]
         shell: Vec<String>,
+        #[serde(default)]
+        env: Vec<String>,
     }
     let shell: ShellStep = serde_json::from_str(text).map_err(|error| {
         Error::new(
@@ -198,7 +210,19 @@ fn step(text: &str) -> Result<Step, Error> {
             "empty or NUL-containing arguments",
         )));
     }
-    Ok(Step::Shell(args))
+    if shell
+        .env
+        .iter()
+        .any(|name| name.is_empty() || name.contains(['=', '\0']))
+    {
+        return Err(invalid(
+            "shell env requires variable names without NUL or equals",
+        ));
+    }
+    Ok(Step::Shell {
+        arguments: args,
+        env: shell.env,
+    })
 }
 
 fn shell_arguments<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {

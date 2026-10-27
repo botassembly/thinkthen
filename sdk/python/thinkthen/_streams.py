@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import replace
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
@@ -146,7 +148,8 @@ class AsyncRowStream(Generic[R_co]):
         self._cancel_pending = cancel_pending
         self._stream: RowStream[R_co] | None = None
         self._closed = False
-        self._pending: asyncio.Task[Any] | None = None
+        self._pending: asyncio.Future[Any] | None = None
+        self._executor: ThreadPoolExecutor | None = None
 
     def __aiter__(self) -> AsyncRowStream[R_co]:
         return self
@@ -156,11 +159,16 @@ class AsyncRowStream(Generic[R_co]):
             raise StopAsyncIteration
         try:
             if self._stream is None:
-                self._pending = asyncio.create_task(asyncio.to_thread(self._create))
+                self._executor = ThreadPoolExecutor(max_workers=1)
+                self._pending = asyncio.get_running_loop().run_in_executor(
+                    self._executor, copy_context().run, self._create
+                )
                 self._stream = await asyncio.shield(self._pending)
             stream = self._stream
             assert stream is not None
-            self._pending = asyncio.create_task(asyncio.to_thread(_next, stream))
+            self._pending = asyncio.get_running_loop().run_in_executor(
+                self._executor, copy_context().run, _next, stream
+            )
             value = await asyncio.shield(self._pending)
             if value is _END:
                 await self.aclose()
@@ -187,8 +195,14 @@ class AsyncRowStream(Generic[R_co]):
                     self._stream = result
             except BaseException:  # noqa: BLE001, S110 - preserve caller failure during cleanup.
                 pass
-        if self._stream is not None:
-            await asyncio.to_thread(self._stream.close)
+        if self._executor is not None:
+            try:
+                if self._stream is not None:
+                    await asyncio.get_running_loop().run_in_executor(
+                        self._executor, copy_context().run, self._stream.close
+                    )
+            finally:
+                self._executor.shutdown(wait=True)
 
     async def __aenter__(self) -> AsyncRowStream[R_co]:
         return self

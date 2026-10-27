@@ -9,7 +9,13 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, Command, Stdio};
 
 #[test]
-fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
+fn second_signal_removes_owned_children_locks_and_spooled_input() {
+    for signal in ["-INT", "-TERM", "-HUP"] {
+        forced_cleanup(signal);
+    }
+}
+
+fn forced_cleanup(signal: &str) {
     let directory = tempfile::tempdir().unwrap();
     let root = directory.path();
     let unrelated = root.join("keep.csv");
@@ -27,7 +33,13 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
     .unwrap();
     let mut unrelated_process = Command::new("sleep").arg("300").spawn().unwrap();
     let mut run = support::command()
-        .args(["run", toolbox.to_str().unwrap(), "--backend", "stub"])
+        .args([
+            "run",
+            "--allow-shell",
+            toolbox.to_str().unwrap(),
+            "--backend",
+            "stub",
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -48,7 +60,7 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
     assert_eq!(first_byte, [b'"']);
     // Do not drain output: the coordinator cannot finish its row and enter
     // ordinary cancellation cleanup, regardless of how the test is scheduled.
-    twice(&mut run, &mut notice, || {
+    twice(&mut run, &mut notice, signal, || {
         assert!(
             children.iter().all(|pid| alive(pid)),
             "ordinary cleanup ran before the second interrupt"
@@ -99,7 +111,7 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
     assert!(fs::read_dir(&scratch).unwrap().next().is_some());
     let mut notice = BufReader::new(table.stderr.take().unwrap());
     let table_pid = table.id().to_string();
-    twice(&mut table, &mut notice, || {
+    twice(&mut table, &mut notice, signal, || {
         assert!(
             alive(&table_pid),
             "the spreadsheet did not reach forced cleanup"
@@ -124,20 +136,20 @@ fn second_interrupt_removes_owned_children_locks_and_spooled_input() {
     );
 }
 
-fn twice(child: &mut Child, notice: &mut impl BufRead, after_first: impl FnOnce()) {
-    interrupt(child.id());
+fn twice(child: &mut Child, notice: &mut impl BufRead, signal: &str, after_first: impl FnOnce()) {
+    interrupt(child.id(), signal);
     let mut line = String::new();
     notice.read_line(&mut line).unwrap();
     assert_eq!(line, "thinkthen: cancelling; press Ctrl-C again to exit\n");
     after_first();
-    interrupt(child.id());
+    interrupt(child.id(), signal);
     assert_eq!(child.wait().unwrap().code(), Some(130));
 }
 
-fn interrupt(pid: u32) {
+fn interrupt(pid: u32, signal: &str) {
     assert!(
         Command::new("kill")
-            .args(["-INT", &pid.to_string()])
+            .args([signal, &pid.to_string()])
             .status()
             .unwrap()
             .success()

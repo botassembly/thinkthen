@@ -91,3 +91,16 @@ func cacheLibrary(base string) (string, error) {
 	}
 	return path, nil
 }
+
+// A hostile predictable temp entry must not prevent this process from loading.
+func privateTemporaryCache() (string, error) {
+	path, err := os.MkdirTemp("", "thinkthen-")
+	if err != nil {
+		return "", err
+	}
+	if err := checkCachePath(path, true); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	return path, nil
+}

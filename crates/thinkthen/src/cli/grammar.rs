@@ -16,6 +16,7 @@ pub(super) fn command() -> Command {
     let mut command = Command::new("thinkthen")
         .about("Ask typed questions about evidence. Text answers or streaming JSON Lines.")
         .version(version())
+        .after_help(environment_help())
         .subcommand_required(true)
         .arg_required_else_help(true);
     for (name, help) in [
@@ -79,6 +80,7 @@ pub(super) fn command() -> Command {
                 .arg(
                     Arg::new("shell")
                         .required(true)
+                        .help("Shell to generate completions for")
                         .value_parser(clap::value_parser!(clap_complete::Shell)),
                 ),
         )
@@ -93,9 +95,11 @@ fn data_command(name: &str) -> Command {
     let spec = serde_json::from_value::<crate::FunctionName>(name.into())
         .ok()
         .map(crate::FunctionName::command);
-    let mut command = Command::new(name.to_owned());
+    let mut command = Command::new(name.to_owned()).after_help(environment_help());
     if let Some(spec) = &spec {
         command = command.about(spec.description);
+    } else {
+        command = command.about("Run a saved question or pipeline from a toolbox");
     }
     if name != "run" {
         command = command.arg(option(
@@ -104,17 +108,25 @@ fn data_command(name: &str) -> Command {
         ));
     }
     if !matches!(name, "recognize" | "relate") {
-        command = command.arg(Arg::new("question").required(true).value_name(
-            if matches!(name, "annotate" | "run") {
-                "TOOLBOX"
-            } else {
-                "QUESTION"
-            },
-        ));
+        command = command.arg(
+            Arg::new("question")
+                .required(true)
+                .help(if matches!(name, "annotate" | "run") {
+                    "Toolbox path or saved entry name"
+                } else {
+                    "Question to ask about each record"
+                })
+                .value_name(if matches!(name, "annotate" | "run") {
+                    "TOOLBOX"
+                } else {
+                    "QUESTION"
+                }),
+        );
     }
     command = command.arg(
         Arg::new("files")
             .value_name("FILE")
+            .help("Input files; default: standard input")
             .num_args(0..)
             .action(ArgAction::Append),
     );
@@ -180,7 +192,15 @@ fn data_command(name: &str) -> Command {
             ));
     }
     if name == "run" {
-        command = command.arg(option("entry", "Saved entry name [THINKTHEN_ENTRY]"));
+        command = command
+            .arg(option("entry", "Saved entry name [THINKTHEN_ENTRY]"))
+            .arg(
+                option(
+                    "allow-shell",
+                    "Allow the toolbox to execute its declared shell steps",
+                )
+                .action(ArgAction::SetTrue),
+            );
     }
     command
 }
@@ -198,4 +218,8 @@ fn version() -> String {
         .collect::<Vec<_>>()
         .join(", ");
     format!("{} (backends {backends})", crate::VERSION)
+}
+
+fn environment_help() -> &'static str {
+    "Credentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_BASE_URL; certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 transport setup; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe."
 }

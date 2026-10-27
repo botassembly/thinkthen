@@ -27,15 +27,11 @@ func temporaryCache() (string, error) {
 	if err := os.Mkdir(path, 0700); err != nil && !os.IsExist(err) {
 		return "", err
 	}
-	if err := checkCachePath(path, true); err != nil {
-		return "", err
+	if err := checkCachePath(path, true); err == nil {
+		info, err := os.Lstat(path)
+		if err == nil && info.Mode().Perm() == 0700 {
+			return path, nil
+		}
 	}
-	info, err := os.Lstat(path)
-	if err != nil {
-		return "", err
-	}
-	if info.Mode().Perm() != 0700 {
-		return "", fmt.Errorf("unsafe ThinkThen native cache owner or permissions: %s", path)
-	}
-	return path, nil
+	return privateTemporaryCache()
 }

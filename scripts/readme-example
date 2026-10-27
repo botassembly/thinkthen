@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Extract a README example and run its shell commands without changing them."""
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+readme, language, destination = sys.argv[1:]
+text = Path(readme).read_text()
+source, = re.findall(r"```" + language + r"\n(.*?)\n```", text, re.S)
+commands, = re.findall(r"```sh\n(.*?)\n```", text, re.S)
+target = Path(destination)
+target.write_text(source + "\n")
+subprocess.run(["sh", "-eux", "-c", commands], cwd=target.parent, check=True)

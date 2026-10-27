@@ -8,6 +8,8 @@ mod excerpt;
 mod response;
 mod scope;
 mod socket;
+#[cfg(test)]
+mod socket_tests;
 mod tls;
 
 pub(crate) fn agent(config: ureq::config::Config) -> ureq::Agent {
@@ -64,11 +66,16 @@ pub(crate) fn post(
     policy: RetryPolicy,
     cancel: &Cancel,
 ) -> Result<Vec<u8>, Refused> {
-    let _exchange = scope::enter(cancel);
     let uri = crate::backend::validate_url(url).map_err(|error| Refused {
         error,
         too_large: false,
     })?;
+    let security = if uri.scheme_str() == Some("http") {
+        scope::Security::Loopback
+    } else {
+        scope::Security::Encrypted
+    };
+    let _exchange = scope::enter(cancel, security);
     let mut retries = 0;
     let mut connection_retried = false;
     let mut fresh = None;
