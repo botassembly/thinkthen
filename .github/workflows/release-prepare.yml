@@ -1,138 +1,1352 @@
-name: release-prepare
-
-on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release version to build from this source revision (v0.2.0)
-        required: true
-        type: string
-      dry_run:
-        description: Qualify every package without creating a release draft
-        required: true
-        default: true
-        type: boolean
-
-permissions: {}
-concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
-  cancel-in-progress: false
-
+name: Diagnostic stage sweep
+'on':
+  workflow_dispatch: {}
+permissions:
+  contents: read
 env:
   PYTHONDONTWRITEBYTECODE: '1'
-
+  PM_JOB: diagnostic-${{ github.run_id }}
+  CARGO_BUILD_JOBS: '2'
+  RUST_TEST_THREADS: '2'
 jobs:
-  source:
+  macos-gate:
+    needs: macos-input
+    if: always()
+    runs-on: macos-15
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - stage: host-tools
+          command: for tool in python3 git cargo rustc cc c++ make cmake pkg-config uv node npm ruby R Rscript staticcheck; do command -v "$tool" || exit 1; done;
+            python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)'; R --version; Rscript --version
+        - stage: metadata
+          command: python3 scripts/release_metadata.py
+        - stage: release-script-test
+          command: scripts/release-script-test
+        - stage: release-preparation-test
+          command: scripts/release-preparation-test
+        - stage: release-staging-test
+          command: scripts/release-staging-test
+        - stage: release-publish-test
+          command: scripts/release-publish-test
+        - stage: release-floor-inputs-test
+          command: scripts/release-floor-inputs-test
+        - stage: words
+          command: scripts/words
+        - stage: secrets
+          command: scripts/secrets
+        - stage: bindings-schema
+          command: scripts/bindings-schema
+        - stage: contract-schema-check
+          command: scripts/contract-schema-check
+        - stage: notices
+          command: scripts/notices --check
+        - stage: supply-chain-check
+          command: scripts/supply-chain-check
+        - stage: rust-advisories
+          command: scripts/rust-advisories
+        - stage: fmt
+          command: cargo fmt --all --check
+        - stage: core-check
+          command: scripts/core-check
+        - stage: fixture-routing-check
+          command: scripts/fixture-routing-check
+        - stage: clippy
+          command: cargo clippy --workspace --all-targets --features thinkthen/stream --locked -- -D warnings
+        - stage: c-gate
+          command: scripts/c-gate
+        - stage: rust-tests
+          command: cargo test --workspace --features thinkthen/stream --locked
+        - stage: crate-package-test
+          command: scripts/crate-package-test
+        - stage: bash-example
+          command: guide_root=$PWD; guide_scratch=$(mktemp -d); python3 scripts/surface-example prepare bash "$guide_scratch" || exit; command_target=${CARGO_TARGET_DIR:-$PWD/target};
+            case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac; cd "$guide_scratch"; PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example"
+            check bash bash example.sh
+        - stage: python-gate
+          command: scripts/python-gate
+        - stage: typescript-gate
+          command: scripts/typescript-gate
+        - stage: r-gate
+          command: scripts/r-gate
+        - stage: c-sdk-gate
+          command: scripts/c-sdk-gate
+        - stage: cpp-sdk-gate
+          command: scripts/cpp-sdk-gate
+        - stage: ruby-gate
+          command: scripts/ruby-gate
+        - stage: zig-sdk-gate
+          command: scripts/zig-sdk-gate
+        - stage: swift-gate
+          command: scripts/swift-gate
+        - stage: go-gate
+          command: scripts/go-gate
+        - stage: jvm-gate
+          command: scripts/jvm-gate
+        - stage: csharp-gate
+          command: scripts/csharp-gate
+        - stage: duckdb-gate
+          command: scripts/duckdb-gate
+        - stage: sqlite-gate
+          command: scripts/sqlite-gate
+        - stage: postgres-gate
+          command: scripts/postgres-gate
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: Verify exact product source
+      shell: bash
+      run: |
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+    - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: |-
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.cache/uv
+          ~/.local/share/uv
+          ~/.local/share/thinkthen-build-tools
+        key: release-tools-macos-arm64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**',
+          'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION')
+          }}
+        restore-keys: release-tools-macos-arm64-
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      if: always()
+      continue-on-error: true
+      with:
+        name: macos-prepared-input
+        path: ${{ runner.temp }}/macos-input
+    - name: Run independent stage with prepared inputs
+      if: always()
+      env:
+        STAGE: ${{ matrix.stage }}
+        COMMAND: ${{ matrix.command }}
+      run: |
+        mkdir -p diagnostic
+        record() {
+          label="$1"; shift
+          set +e
+          "$@" 2>&1 | tee "diagnostic/$label.log"
+          code=${PIPESTATUS[0]}
+          printf '%s\t%s\n' "$label" "$code" >> diagnostic/outcomes.tsv
+          return 0
+        }
+        record restore-inputs tar -xf "$RUNNER_TEMP/macos-input/prepared.tar" -C "$HOME"
+        set +e
+        . scripts/native-tools-env
+        record native-env bash -c '. scripts/native-env'
+        if [ "$code" -eq 0 ]; then
+          . scripts/native-env
+        fi
+        record "$STAGE" bash -c "$COMMAND"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: macos-${{ matrix.stage }}
+        path: diagnostic/
+        if-no-files-found: warn
+        retention-days: 7
+    - name: Report every outcome
+      if: always()
+      shell: bash
+      run: |
+        cat diagnostic/outcomes.tsv
+        awk -F '\t' '$2 != 0 { bad=1 } END { exit bad }' diagnostic/outcomes.tsv
+  windows-proof:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        stage:
+        - transport-trust
+        - go
+        - jvm
+        - csharp
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: Verify exact product source
+      shell: bash
+      run: |
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+      with:
+        go-version: 1.24.13
+        cache: false
+    - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+      with:
+        distribution: temurin
+        java-version: 22.0.2+9
+    - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+      with:
+        dotnet-version: 10.0.103
+    - name: Run native engine and independent consumer
+      if: always()
+      env:
+        STAGE: ${{ matrix.stage }}
+      run: |
+        mkdir -p diagnostic
+        record() {
+          label="$1"; shift
+          set +e
+          "$@" 2>&1 | tee "diagnostic/$label.log"
+          code=${PIPESTATUS[0]}
+          printf '%s\t%s\n' "$label" "$code" >> diagnostic/outcomes.tsv
+          return 0
+        }
+        record native python scripts/windows-native-proof native "$RUNNER_TEMP/windows-native-proof"
+        if [ "$STAGE" = transport-trust ]; then
+         export CARGO_TARGET_DIR="$RUNNER_TEMP/windows-native-proof/target"
+         export RUSTFLAGS='-C target-feature=+crt-static'
+         export RUSTUP_TOOLCHAIN=$(python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])")
+         unset CARGO_ENCODED_RUSTFLAGS
+         record trust-fetch cargo fetch --locked --target x86_64-pc-windows-msvc
+         record transport-trust cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture
+        else
+         record "$STAGE" python scripts/windows-native-proof "$STAGE" "$RUNNER_TEMP/windows-native-proof"
+        fi
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: windows-${{ matrix.stage }}
+        path: diagnostic/
+        if-no-files-found: warn
+        retention-days: 7
+    - name: Report every outcome
+      if: always()
+      shell: bash
+      run: |
+        cat diagnostic/outcomes.tsv
+        awk -F '\t' '$2 != 0 { bad=1 } END { exit bad }' diagnostic/outcomes.tsv
+  windows-r:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: Verify exact product source
+      shell: bash
+      run: |
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+    - name: Prepare and build current Windows R independently
+      if: always()
+      run: |
+        mkdir -p diagnostic
+        record() {
+          label="$1"; shift
+          set +e
+          "$@" 2>&1 | tee "diagnostic/$label.log"
+          code=${PIPESTATUS[0]}
+          printf '%s\t%s\n' "$label" "$code" >> diagnostic/outcomes.tsv
+          return 0
+        }
+        record windows-r-prepare python3 scripts/release_windows_r.py prepare
+        record windows-r-build python3 scripts/release_windows_r.py build windows-r
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: native-windows-r
+        path: windows-r/
+        if-no-files-found: warn
+        retention-days: 7
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: windows-r-diagnostic
+        path: diagnostic/
+        if-no-files-found: warn
+        retention-days: 7
+    - name: Report every outcome
+      if: always()
+      shell: bash
+      run: |
+        cat diagnostic/outcomes.tsv
+        awk -F '\t' '$2 != 0 { bad=1 } END { exit bad }' diagnostic/outcomes.tsv
+  producer-linux-input:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions: {contents: read}
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: |-
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.cache/uv
+          ~/.local/share/uv
+          ~/.local/share/thinkthen-build-tools
+        key: release-tools-linux-x86_64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**',
+          'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION')
+          }}
+        restore-keys: release-tools-linux-x86_64-
+    - name: prepare-linux-input
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare linux-x86_64
+        ) 2>&1 | tee "sweep-evidence/prepare-linux-input.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-linux-input" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: export-linux-input
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        THINKTHEN_FLOOR_IMAGE=$(docker image inspect thinkthen-floor-build:glibc2.28 --format '{{.Id}}')
+        export THINKTHEN_FLOOR_IMAGE
+        native=$(scripts/native-prepare)
+        echo "floor_image=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_OUTPUT"
+        mkdir -p gate-assets
+        scripts/native-pair export gate-assets/pair.json
+        python3 - "$native" <<'PYTHON'
+        import json, shutil, sys
+        from pathlib import Path
+        source = Path(sys.argv[1])
+        for name in json.loads(Path('gate-assets/pair.json').read_text())['assets']:
+            destination = Path('gate-assets/assets') / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source / name, destination)
+        PYTHON
+        ) 2>&1 | tee "sweep-evidence/export-linux-input.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "export-linux-input" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+      id: native
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: gate-linux-x86_64
+        path: gate-assets/
+        if-no-files-found: error
+        retention-days: 1
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-producer-linux-input
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
     outputs:
-      sha: ${{ steps.resolve.outputs.sha }}
-      tag: ${{ steps.resolve.outputs.tag }}
-      matrix: ${{ steps.resolve.outputs.matrix }}
+      floor_image: ${{ steps.native.outputs.floor_image }}
+  package:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      RELEASE_TARGET: ${{ matrix.target }}
+      RELEASE_SHA: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - name: Refuse sources outside main before preparing or building
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          TAG: ${{ github.ref_name }}
-          RELEASE_TAG: ${{ inputs.tag }}
-        run: |
-          if [ "$EVENT_NAME" = push ]; then
-            scripts/qualification-source "$TAG"
-          else
-            scripts/qualification-source --dispatch "$RELEASE_TAG"
-          fi
-      - id: resolve
-        env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-        run: scripts/release-workflow resolve "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-
-  qualification:
-    # Source refusal always runs; the existing release flag still holds builds.
-    if: vars.RELEASE_ARMED == 'true'
-    needs: source
-    permissions: {contents: read}
-    uses: ./.github/workflows/native-qualification.yml
-    with:
-      revision: ${{ needs.source.outputs.sha }}
-      matrix: ${{ needs.source.outputs.matrix }}
-
-  bundle:
-    needs: [source, qualification]
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: |-
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.cache/uv
+          ~/.local/share/uv
+          ~/.local/share/thinkthen-build-tools
+        key: release-tools-${{ matrix.target || 'linux-x86_64' }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*',
+          'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml',
+          'sdk/r/DESCRIPTION') }}
+        restore-keys: release-tools-${{ matrix.target || 'linux-x86_64' }}-
+    - name: prepare-package
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare "$RELEASE_TARGET"
+        ) 2>&1 | tee "sweep-evidence/prepare-package.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-package" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-linux-runtime-images
+      if: always() && startsWith(matrix.target, 'linux-')
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/qualification-linux --prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-linux-runtime-images.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-linux-runtime-images" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: build-and-installed-checks
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow build "$RELEASE_TARGET" release-files "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/build-and-installed-checks.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "build-and-installed-checks" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: qualify-native-runtime-floor
+      if: always() && matrix.target != 'windows-x86_64'
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        scripts/qualification-candidate "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/qualify-native-runtime-floor.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "qualify-native-runtime-floor" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: validate-package-source-and-digests
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 - "$RELEASE_TARGET" "$RELEASE_SHA" <<'PYTHON'
+        import sys, json, hashlib
+        from pathlib import Path
+        sys.path.insert(0,'scripts')
+        from release_workflow import validate, version
+        p=Path('release-files/candidate') / version() / sys.argv[1]
+        validate(p,sys.argv[1],sys.argv[2])
+        print((p/'build.json').read_text())
+        print((p/'SHA256SUMS').read_text())
+        for p in Path('release-files').glob('*.tar.gz'):
+         print(hashlib.sha256(p.read_bytes()).hexdigest(),p)
+        PYTHON
+        ) 2>&1 | tee "sweep-evidence/validate-package-source-and-digests.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "validate-package-source-and-digests" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: platform-${{ matrix.target }}
+        path: release-files/*.tar.gz
+        if-no-files-found: error
+        retention-days: 7
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-package-${{ matrix.target }}
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - target: linux-x86_64
+          runner: ubuntu-24.04
+        - target: linux-arm64
+          runner: ubuntu-24.04-arm
+        - target: macos-arm64
+          runner: macos-15
+  windows-package-check:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      RELEASE_SHA: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      if: always()
+      continue-on-error: true
+      with:
+        name: platform-windows-x86_64
+        path: windows-candidate
+    - name: prepare-windows-c
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 scripts/qualification-windows-prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-windows-c.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-windows-c" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-windows-installed-runtimes
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare windows-x86_64
+        ) 2>&1 | tee "sweep-evidence/prepare-windows-installed-runtimes.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-windows-installed-runtimes" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-kotlin-readme
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        mvn -B -q -f sdk/java/pom.xml "-Dmaven.repo.local=$HOME/.local/share/thinkthen-build-tools/jvm/m2" dependency:go-offline
+        ) 2>&1 | tee "sweep-evidence/prepare-kotlin-readme.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-kotlin-readme" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: unpack-windows-candidate
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 -c 'import glob, tarfile; tarfile.open(glob.glob("windows-candidate/*.tar.gz")[0]).extractall("windows-installed", filter="data")'
+        ) 2>&1 | tee "sweep-evidence/unpack-windows-candidate.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "unpack-windows-candidate" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: check-every-installed-windows-sdk
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 scripts/qualification-candidate windows-x86_64 windows-installed "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/check-every-installed-windows-sdk.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "check-every-installed-windows-sdk" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-windows-package-check
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
+    needs: package-windows
+    if: always()
+  release-bundle:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions: {contents: read, id-token: write, attestations: write}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      RELEASE_SHA: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: platform-*
-          path: platforms
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with: {node-version: '22'}
-      - name: Prepare registry package tools
-        run: |
-          scripts/jvm-prepare
-          scripts/csharp-prepare
-          scripts/release-workflow prepare-registry
-      - name: Bundle every checked platform and its install guide
-        env:
-          RELEASE_SHA: ${{ needs.source.outputs.sha }}
-        run: |
-          . scripts/native-tools-env
-          scripts/release-workflow bundle platforms release "$RELEASE_SHA"
-          scripts/release-workflow registry platforms registries "$RELEASE_SHA"
-          scripts/release-workflow attach registries release "$RELEASE_SHA"
-      # Each matched file becomes a subject with its own digest in the provenance.
-      # https://github.com/actions/attest/tree/v4.2.2#identify-multiple-subjects
-      - name: Attest every release asset
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: 'release/*'
-          create-storage-record: false
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release
-          path: release/
-          if-no-files-found: error
-          retention-days: 7
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      if: always()
+      continue-on-error: true
+      with:
+        pattern: platform-*
+        path: platforms
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      if: always()
+      with:
+        node-version: '22'
+    - name: prepare-registry-jvm
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/jvm-prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-registry-jvm.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-registry-jvm" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-registry-csharp
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/csharp-prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-registry-csharp.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-registry-csharp" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-registry-validators
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare-registry
+        ) 2>&1 | tee "sweep-evidence/prepare-registry-validators.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-registry-validators" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: bundle-platform-packages
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        scripts/release-workflow bundle platforms release "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/bundle-platform-packages.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "bundle-platform-packages" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+      id: bundle-platform-packages
+    - name: stage-and-check-registry-packages
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        scripts/release-workflow registry platforms registries "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/stage-and-check-registry-packages.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "stage-and-check-registry-packages" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+      id: stage-and-check-registry-packages
+    - name: attach-registry-packages
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        scripts/release-workflow attach registries release "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/attach-registry-packages.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "attach-registry-packages" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+      id: attach-registry-packages
+    - name: verify-release-digests
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 -c 'import sys; from pathlib import Path; sys.path.insert(0,"scripts"); from release_workflow import checksums; checksums(Path("release"))'
+        (cd release && sha256sum *)
+        ) 2>&1 | tee "sweep-evidence/verify-release-digests.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "verify-release-digests" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+      id: release-digests
+    - name: Attest every genuine release asset
+      id: attest
+      if: always() && steps.bundle-platform-packages.outcome == 'success' && steps.stage-and-check-registry-packages.outcome == 'success' && steps.attach-registry-packages.outcome
+        == 'success' && steps.release-digests.outcome == 'success'
+      continue-on-error: true
+      uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+      with:
+        subject-path: release/*
+        create-storage-record: false
+    - name: Record attestation outcome
+      if: always()
+      continue-on-error: true
+      env:
+        ATTEST_OUTCOME: ${{ steps.attest.outcome }}
+      run: "mkdir -p sweep-evidence\ncase \"$ATTEST_OUTCOME\" in success) rc=0;; skipped) rc=125;; *) rc=1;; esac\nprintf 'attest-every-release-asset\t%s\n' \"$rc\"\
+        \ >> sweep-evidence/results.tsv\nprintf '%s\n' \"$ATTEST_OUTCOME\" > sweep-evidence/attestation-outcome.txt\nexit \"$rc\""
+    - name: draft-dry-run
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow draft release v0.2.0 "$RELEASE_SHA" --dry-run
+        ) 2>&1 | tee "sweep-evidence/draft-dry-run.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "draft-dry-run" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: release
+        path: release/
+        if-no-files-found: error
+        retention-days: 7
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-release-bundle
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
+    needs:
+    - package
+    - package-windows
+    if: always()
+  package-windows:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      RELEASE_TARGET: ${{ matrix.target }}
+      RELEASE_SHA: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: |-
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.cache/uv
+          ~/.local/share/uv
+          ~/.local/share/thinkthen-build-tools
+        key: release-tools-${{ matrix.target || 'linux-x86_64' }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*',
+          'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml',
+          'sdk/r/DESCRIPTION') }}
+        restore-keys: release-tools-${{ matrix.target || 'linux-x86_64' }}-
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      if: always() && matrix.target == 'windows-x86_64'
+      continue-on-error: true
+      with:
+        name: native-windows-r
+        path: ${{ runner.temp }}/native-windows-r
+    - name: Select Windows build inputs
+      if: always() && matrix.target == 'windows-x86_64'
+      env:
+        FLOOR_IMAGE: ${{ needs.producer-linux-input.outputs.floor_image }}
+      run: |-
+        echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/native-windows-r" >> "$GITHUB_ENV"
+        echo "THINKTHEN_FLOOR_IMAGE=$FLOOR_IMAGE" >> "$GITHUB_ENV"
+    - name: prepare-package
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare "$RELEASE_TARGET"
+        ) 2>&1 | tee "sweep-evidence/prepare-package.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-package" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-linux-runtime-images
+      if: always() && startsWith(matrix.target, 'linux-')
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/qualification-linux --prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-linux-runtime-images.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-linux-runtime-images" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: build-and-installed-checks
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow build "$RELEASE_TARGET" release-files "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/build-and-installed-checks.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "build-and-installed-checks" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: qualify-native-runtime-floor
+      if: always() && matrix.target != 'windows-x86_64'
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        . scripts/native-tools-env
+        scripts/qualification-candidate "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
+        ) 2>&1 | tee "sweep-evidence/qualify-native-runtime-floor.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "qualify-native-runtime-floor" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: validate-package-source-and-digests
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 - "$RELEASE_TARGET" "$RELEASE_SHA" <<'PYTHON'
+        import sys, json, hashlib
+        from pathlib import Path
+        sys.path.insert(0,'scripts')
+        from release_workflow import validate, version
+        p=Path('release-files/candidate') / version() / sys.argv[1]
+        validate(p,sys.argv[1],sys.argv[2])
+        print((p/'build.json').read_text())
+        print((p/'SHA256SUMS').read_text())
+        for p in Path('release-files').glob('*.tar.gz'):
+         print(hashlib.sha256(p.read_bytes()).hexdigest(),p)
+        PYTHON
+        ) 2>&1 | tee "sweep-evidence/validate-package-source-and-digests.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "validate-package-source-and-digests" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: platform-${{ matrix.target }}
+        path: release-files/*.tar.gz
+        if-no-files-found: error
+        retention-days: 7
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-package-${{ matrix.target }}
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
+    needs:
+    - producer-linux-input
+    - windows-r
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - target: windows-x86_64
+          runner: ubuntu-24.04
+  windows-installed-surface:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      PM_JOB: release-${{ github.run_id }}
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      RELEASE_SHA: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+      SWEEP_SURFACE: ${{ matrix.surface }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: source-and-host
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+        uname -a
+        python3 --version
+        rustc --version
+        cargo --version
+        for tool in node npm java dotnet go ruby Rscript swift docker; do command -v "$tool" || true; done
+        df -h .
+        python3 -c 'import pathlib; print("prepared tools:", pathlib.Path.home().joinpath(".local/share/thinkthen-build-tools").exists())'
+        ) 2>&1 | tee "sweep-evidence/source-and-host.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "source-and-host" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      if: always()
+      continue-on-error: true
+      with:
+        name: platform-windows-x86_64
+        path: windows-candidate
+    - name: prepare-windows-c
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 scripts/qualification-windows-prepare
+        ) 2>&1 | tee "sweep-evidence/prepare-windows-c.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-windows-c" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-windows-installed-runtimes
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        scripts/release-workflow prepare windows-x86_64
+        ) 2>&1 | tee "sweep-evidence/prepare-windows-installed-runtimes.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-windows-installed-runtimes" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: prepare-kotlin-readme
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        mvn -B -q -f sdk/java/pom.xml "-Dmaven.repo.local=$HOME/.local/share/thinkthen-build-tools/jvm/m2" dependency:go-offline
+        ) 2>&1 | tee "sweep-evidence/prepare-kotlin-readme.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "prepare-kotlin-readme" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: unpack-windows-candidate
+      if: always()
+      continue-on-error: true
+      run: |-
+        mkdir -p sweep-evidence
+        set +e
+        ( set -e
+        python3 -c 'import glob, tarfile; tarfile.open(glob.glob("windows-candidate/*.tar.gz")[0]).extractall("windows-installed", filter="data")'
+        ) 2>&1 | tee "sweep-evidence/unpack-windows-candidate.log"
+        rc=${PIPESTATUS[0]}
+        printf "%s\t%s\n" "unpack-windows-candidate" "$rc" >> sweep-evidence/results.tsv
+        exit "$rc"
+    - name: Write diagnostic caller
+      if: always()
+      run: |
+        cat > "$RUNNER_TEMP/installed-surface.py" <<'DIAGNOSTIC'
+        """Run an unchanged installed-candidate surface block from the checked source."""
+        import ast
+        import hashlib
+        import json
+        import os
+        from pathlib import Path
+        import sys
 
-  draft:
-    needs: [source, bundle]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions: {contents: write}
+        ROOT=Path.cwd()
+        sys.path.insert(0,str(ROOT/'scripts'))
+        mode=sys.argv[1]
+        folder=Path(sys.argv[2]).resolve()
+        if '--caller-owned' not in sys.argv:
+            from windows_caller_process import launch
+            launch([sys.executable,str(Path(__file__).resolve()),*sys.argv[1:],'--caller-owned'],cwd=ROOT,env=dict(os.environ))
+            raise SystemExit(0)
+        from release_windows_host import environment
+        os.environ.update(environment())
+        from release_workflow import validate
+        validate(folder,'windows-x86_64','a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8')
+        if mode=='source-installs':
+            import subprocess
+            subprocess.run([sys.executable,'scripts/source-install-check',str(folder),'--readmes'],check=True)
+            raise SystemExit(0)
+        if mode=='readme-examples':
+            import subprocess
+            subprocess.run([sys.executable,'scripts/qualification-readmes',str(folder)],check=True)
+            raise SystemExit(0)
+        path=ROOT/'scripts/release_windows_sdks.py'
+        source=path.read_text()
+        print('exact-source-block',path,hashlib.sha256(path.read_bytes()).hexdigest(),mode,flush=True)
+        tree=ast.parse(source)
+        full=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='full')
+        block=next(n for n in full.body if isinstance(n,ast.With))
+        ranges={'python':(134,138),'typescript':(139,145),'go':(146,157),'java':(158,169),'kotlin':(158,169),'csharp':(170,189),'ruby':(190,196),'r':(197,198),'c':(199,199),'cpp':(199,199),'swift':(200,200),'zig':(200,200),'sqlite':(201,208),'duckdb':(201,208)}
+        start,end=ranges[mode]
+        shared=[n for n in block.body if n.lineno<=133]
+        shared.append(ast.ImportFrom(module='release_windows_cache',names=[ast.alias(name='check_cache')],level=0))
+        chosen=[n for n in block.body if start<=n.lineno<=end]
+        if mode in ('java','kotlin'):
+            chosen[0].iter=ast.List(elts=[ast.Tuple(elts=[ast.Constant(mode),ast.Constant('ConsumerCases' if mode=='java' else 'KotlinCasesKt')],ctx=ast.Load())],ctx=ast.Load())
+        if mode in ('sqlite','duckdb'):
+            chosen[0].iter=ast.Tuple(elts=[ast.Constant(mode)],ctx=ast.Load())
+        block.body=shared+chosen
+        full.body=[n for n in full.body if n.lineno<122]+[block]
+        if mode in ('c','cpp'):
+            helper=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='c_and_cpp')
+            cpp_start=next(n.lineno for n in helper.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='cpp' for t in n.targets))
+            if mode=='c':helper.body=[n for n in helper.body if n.lineno<cpp_start]
+            else:
+                helper.body=[n for n in helper.body if n.lineno>=cpp_start or (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('c','spec','native_cases','registry') for t in n.targets)) or isinstance(n,ast.Import) or (isinstance(n,ast.Expr) and isinstance(n.value,ast.Call) and isinstance(n.value.func,ast.Attribute) and n.value.func.attr=='exec_module')]
+        if mode in ('swift','zig'):
+            helper=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='swift_and_zig')
+            zig_start=next(n.lineno for n in helper.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='zig' for t in n.targets))
+            helper.body=[n for n in helper.body if (n.lineno<zig_start if mode=='swift' else n.lineno>=zig_start)]
+        tree.body=[n for n in tree.body if not (isinstance(n,ast.If) and isinstance(n.test,ast.Compare) and isinstance(n.test.left,ast.Name) and n.test.left.id=='__name__')]
+        namespace={'__name__':'diagnostic_source_blocks','__file__':str(path)}
+        exec(compile(ast.fix_missing_locations(tree),str(path),'exec'),namespace)
+        namespace['full'](folder,json.loads((folder/'build.json').read_text()),caller_owned=True)
+        print('installed candidate surface complete:',mode,flush=True)
+        DIAGNOSTIC
+    - name: Check selected installed surface
+      if: always()
+      continue-on-error: true
+      run: "mkdir -p sweep-evidence\nset +e\npython3 \"$RUNNER_TEMP/installed-surface.py\" \"$SWEEP_SURFACE\" windows-installed/0.2.0/windows-x86_64 2>&1 | tee \"\
+        sweep-evidence/installed-$SWEEP_SURFACE.log\"\nrc=${PIPESTATUS[0]}\nprintf \"%s\t%s\n\" \"installed-$SWEEP_SURFACE\" \"$rc\" >> sweep-evidence/results.tsv\n\
+        exit \"$rc\""
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: evidence-windows-installed-${{ matrix.surface }}
+        path: sweep-evidence/
+        if-no-files-found: error
+        retention-days: 7
+    - name: Preserve failed stage result
+      if: always()
+      run: |-
+        test -f sweep-evidence/results.tsv
+        awk -F '\t' '$2 != 0 { failed=1 } END { exit failed }' sweep-evidence/results.tsv
+    needs: package-windows
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        surface:
+        - python
+        - typescript
+        - go
+        - java
+        - kotlin
+        - csharp
+        - ruby
+        - r
+        - c
+        - cpp
+        - swift
+        - zig
+        - sqlite
+        - duckdb
+        - source-installs
+        - readme-examples
+  macos-input:
+    needs: producer-linux-input
+    if: always()
+    runs-on: macos-15
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: {name: release, path: release}
-      - name: Create a draft for review
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ needs.source.outputs.tag }}
-          RELEASE_SHA: ${{ needs.source.outputs.sha }}
-          DRY_RUN: ${{ inputs.dry_run }}
-        run: |
-          if [ "$DRY_RUN" = true ]; then
-            scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA" --dry-run
-          else
-            scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA"
-          fi
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      with:
+        ref: a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        persist-credentials: false
+    - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+      with:
+        python-version: '3.13'
+    - name: Verify exact product source
+      shell: bash
+      run: |
+        test "$(git rev-parse HEAD)" = a5ceb0badc76edcb8ebe2209f8b29bf8b47e43f8
+        git rev-parse HEAD
+    - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25
+      with:
+        path: |-
+          ~/.cargo/registry
+          ~/.cargo/git
+          ~/.cache/uv
+          ~/.local/share/uv
+          ~/.local/share/thinkthen-build-tools
+        key: release-tools-macos-arm64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**',
+          'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION')
+          }}
+        restore-keys: release-tools-macos-arm64-
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      continue-on-error: true
+      with:
+        name: gate-linux-x86_64
+        path: ${{ runner.temp }}/gate-assets
+    - name: Prepare shared macOS tools and native inputs once
+      if: always()
+      run: |
+        mkdir -p diagnostic
+        record() {
+          label="$1"; shift
+          set +e
+          "$@" 2>&1 | tee "diagnostic/$label.log"
+          code=${PIPESTATUS[0]}
+          printf '%s\t%s\n' "$label" "$code" >> diagnostic/outcomes.tsv
+          return 0
+        }
+        record release-prepare scripts/release-workflow prepare macos-arm64
+        record gate-prepare scripts/qualification-gate-prepare
+        record pair-import bash -c '. scripts/native-tools-env; scripts/native-pair import "$RUNNER_TEMP/gate-assets/pair.json" "$RUNNER_TEMP/gate-assets/assets"'
+        set +e
+        . scripts/native-tools-env
+        THINKTHEN_FLOOR_IMAGE=$(scripts/native-pair image)
+        export THINKTHEN_FLOOR_IMAGE
+        record native-prepare scripts/native-prepare
+        record test-assets scripts/native-test-assets prepare
+        record abi-assets scripts/native-abi-assets prepare
+        record native-env bash -c '. scripts/native-env'
+    - name: Archive existing prepared inputs
+      if: always()
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP/macos-input"
+        paths=()
+        for path in .local/share/thinkthen-build-tools .local/share/uv .cache/uv .local/bin .cargo/registry .cargo/git; do
+          if [ -e "$HOME/$path" ]; then paths+=("$path"); fi
+        done
+        channel=$(python3 -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])")
+        for path in "$HOME/.rustup/toolchains/$channel"-*; do
+          if [ -d "$path" ]; then paths+=("${path#"$HOME/"}"); fi
+        done
+        printf '%s\n' "${paths[@]}" > diagnostic/prepared-paths.txt
+        tar -cf "$RUNNER_TEMP/macos-input/prepared.tar" -C "$HOME" "${paths[@]}"
+        shasum -a 256 "$RUNNER_TEMP/macos-input/prepared.tar" > diagnostic/prepared-tar.sha256
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: macos-prepared-input
+        path: ${{ runner.temp }}/macos-input/prepared.tar
+        compression-level: 0
+        if-no-files-found: error
+        retention-days: 1
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      if: always()
+      with:
+        name: macos-input-diagnostic
+        path: diagnostic/
+        if-no-files-found: warn
+        retention-days: 7
+    - name: Report every outcome
+      if: always()
+      shell: bash
+      run: |
+        cat diagnostic/outcomes.tsv
+        awk -F '\t' '$2 != 0 { bad=1 } END { exit bad }' diagnostic/outcomes.tsv
