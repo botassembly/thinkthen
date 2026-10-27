@@ -7,6 +7,7 @@ engine=$3
 root=$PWD
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 sdk/cpp/tests/process_diagnostics_check.py
 python3 - "$prefix" <<'PYTHON'
 import json, platform, subprocess, sys
 from pathlib import Path
