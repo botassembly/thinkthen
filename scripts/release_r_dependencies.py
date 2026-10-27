@@ -48,6 +48,22 @@ def inventory(description, archives, r_version, standard, suggests=False):
     selected, order = {}, []
     active = set()
 
+    def check_versions(info):
+        for key in ('Depends', 'Imports', 'LinkingTo'):
+            for name, operator, minimum in re.findall(
+                    r'([A-Za-z][A-Za-z0-9.]*)\s*\(\s*(>=|<=|==|!=|>|<)\s*([0-9][0-9.\-]*)\s*\)', info.get(key, '')):
+                actual = (r_version if name == 'R' else available[name][1]['Version'] if name in available
+                          else standard.get(name) if isinstance(standard, dict) else None)
+                if actual is None:
+                    continue  # Missing packages are reported by the closure traversal.
+                left, right = [list(map(int, re.split(r'[.\-]', value))) for value in (actual, minimum)]
+                width = max(len(left), len(right))
+                left += [0] * (width - len(left))
+                right += [0] * (width - len(right))
+                if not {'>=': left >= right, '<=': left <= right, '==': left == right,
+                        '!=': left != right, '>': left > right, '<': left < right}[operator]:
+                    raise ValueError('R dependency version differs: ' + name + ' ' + operator + ' ' + minimum)
+
     def visit(name):
         if name in standard or name == 'R' or name in selected:
             return
@@ -58,6 +74,7 @@ def inventory(description, archives, r_version, standard, suggests=False):
         path, info = available[name]
         if not info['Built'].startswith('R ' + r_version + ';'):
             raise ValueError('R binary version differs: ' + str(path))
+        check_versions(info)
         active.add(name)
         for dependency in sorted(names(info)):
             visit(dependency)
@@ -67,6 +84,7 @@ def inventory(description, archives, r_version, standard, suggests=False):
                           'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
         order.append(path.name)
 
+    check_versions(fields(Path(description).read_bytes()))
     for name in sorted(required):
         visit(name)
     return {'r': r_version, 'packages': selected, 'install_order': order}

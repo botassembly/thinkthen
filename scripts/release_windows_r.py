@@ -25,6 +25,9 @@ def pins():
     from release_r_dependencies import fields, names
     selected = {name: value for name, value in selections()['INPUTS'].items()
                 if name.startswith('R-') or re.fullmatch(r'[A-Za-z][A-Za-z0-9.]*_[0-9].*\.zip', name)}
+    for name, (_, digest) in selected.items():
+        if not re.fullmatch(r'[0-9a-f]{64}', digest):
+            raise ValueError('Missing or invalid pinned Windows R checksum: ' + name)
     available = {name.split('_')[0] for name in selected if '_' in name}
     missing = names(fields((ROOT / 'sdk/r/DESCRIPTION').read_bytes()), ('Imports',)) - available
     if missing:
@@ -33,15 +36,15 @@ def pins():
 
 
 def dependencies(folder, r=None):
-    from release_r_dependencies import bundle, fields
+    from release_r_dependencies import bundle, fields, metadata
     selected = pins()
     installer = next(name for name in selected if name.startswith('R-'))
     r = r or TOOLS / 'windows' / installer.removesuffix('-win.exe')
-    standard = []
+    standard = {}
     for path in (r / 'library').glob('*/DESCRIPTION'):
         info = fields(path.read_bytes())
         if info.get('Priority'):
-            standard.append(info['Package'])
+            standard[info['Package']] = info['Version']
     if not standard:
         raise ValueError('Prepare the pinned R runtime before resolving Windows R dependencies')
     archives = []
@@ -51,6 +54,12 @@ def dependencies(folder, r=None):
         path = TOOLS / 'windows' / name
         if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             raise ValueError('Pinned Windows R binary checksum differs: ' + name)
+        info = metadata(path)
+        built = [part.strip() for part in info['Built'].split(';')]
+        if (len(built) != 4 or built[1] not in ('', 'x86_64-w64-mingw32')
+                or built[3] != 'windows' or info.get('Archs', 'x64') != 'x64'
+                or name != info['Package'] + '_' + info['Version'] + '.zip'):
+            raise ValueError('Pinned R binary is not the selected Windows x64 package: ' + name)
         archives.append(path)
     result = bundle(ROOT / 'sdk/r/DESCRIPTION', archives, folder,
                     installer.removeprefix('R-').removesuffix('-win.exe'), standard)

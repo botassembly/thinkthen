@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Check the production Windows R closure against prepared official binary inputs.
+
+Usage: release-windows-r-check [WINDOWS_INPUTS_DIRECTORY]
+No download or native compilation runs here. Prepare the pinned inputs first.
+"""
+import hashlib
+import json
+from pathlib import Path
+import sys
+import tempfile
+from unittest.mock import patch
+import zipfile
+
+import release_windows_r as producer
+from release_windows_host import selections
+
+
+selected = selections()['INPUTS']
+inputs = Path(sys.argv[1]) if sys.argv[1:] else producer.TOOLS / 'windows'
+producer.TOOLS = inputs.parent
+runtime = inputs / next(name.removesuffix('-win.exe') for name in producer.pins() if name.startswith('R-'))
+
+
+def refuses(action, message):
+    try:
+        action()
+    except ValueError as error:
+        assert message in str(error), error
+    else:
+        raise AssertionError('Accepted ' + message)
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-windows-r-closure-') as temporary:
+    stage = Path(temporary)
+    delivered = stage / 'dependencies'
+    result = producer.dependencies(delivered, runtime)
+    for package in result['packages'].values():
+        # The expected hashes come from the actual production pin table.
+        assert package['sha256'] == selected[package['file']][1]
+    # Every package in the real closure must remain pinned and hashed. This
+    # includes packages that only another binary's DESCRIPTION mentions.
+    for package in result['packages'].values():
+        name = package['file']
+        with patch('release_windows_host.selections', return_value={'INPUTS': {k: v for k, v in selected.items() if k != name}}):
+            refuses(lambda: producer.dependencies(stage / 'omitted', runtime), 'Missing pinned')
+        for digest in ('', '0' * 64):
+            wrong = dict(selected, **{name: (selected[name][0], digest)})
+            with patch('release_windows_host.selections', return_value={'INPUTS': wrong}):
+                refuses(lambda: producer.dependencies(stage / 'unhashed', runtime),
+                        'checksum' if digest else 'Missing or invalid pinned')
+    handoff = stage / 'handoff'
+    handoff.mkdir()
+    for name in producer.files():
+        (handoff / name).write_text(name)
+    with zipfile.ZipFile(handoff / 'prerequisites.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+        for path in delivered.rglob('*'):
+            if path.is_file():
+                archive.write(path, path.relative_to(delivered).as_posix())
+    manifest = {'revision': producer.revision(), 'target': 'x86_64-pc-windows-msvc',
+                'inputs': {name: digest for name, (_, digest) in producer.pins().items()},
+                'files': {name: hashlib.sha256((handoff / name).read_bytes()).hexdigest() for name in producer.files()}}
+    (handoff / 'manifest.json').write_text(json.dumps(manifest))
+    consumed = stage / 'consumed'
+    producer.bundle_dependencies(handoff, consumed)
+    assert json.loads((consumed / 'inventory.json').read_text()) == result
+    assert {p.relative_to(delivered): p.read_bytes() for p in delivered.rglob('*') if p.is_file()} == {
+        p.relative_to(consumed): p.read_bytes() for p in consumed.rglob('*') if p.is_file()}
+    # Source, pin and byte rejection also run in release-preparation-test.
+    (handoff / 'prerequisites.zip').write_bytes(b'changed')
+    refuses(lambda: producer.bundle_dependencies(handoff, stage / 'changed'), 'checksum differs')
+    print('Production Windows R closure, version constraints, x64 metadata, every omitted pin/hash and verified handoff pass')
+    print(json.dumps(result, sort_keys=True))

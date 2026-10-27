@@ -84,14 +84,7 @@ for (name in c("vctrs","jsonlite")) stopifnot(normalizePath(find.package(name)) 
         else:
             raise AssertionError('incomplete R dependency closure was accepted')
     import release_windows_r
-    original = release_windows_r.ROOT
-    (stage / 'sdk/r').mkdir(parents=True)
-    shutil.copy2(description, stage / 'sdk/r/DESCRIPTION')
-    try:
-        release_windows_r.ROOT = stage
-        pinned = release_windows_r.pins()
-    finally:
-        release_windows_r.ROOT = original
+    pinned = release_windows_r.pins()
     if sys.argv[1:]:
         inputs = Path(sys.argv[1])
         archives = []
@@ -103,7 +96,7 @@ for (name in c("vctrs","jsonlite")) stopifnot(normalizePath(find.package(name)) 
                 assert info['Built'].endswith('windows'), name
                 archives.append(path)
         windows = stage / 'windows'
-        result = bundle(description, archives, windows, version, standard)
+        result = bundle(ROOT / "sdk/r/DESCRIPTION", archives, windows, version, standard)
         shutil.copytree(stage / 'licenses', windows / 'licenses')
         for name in result['install_order']:
             path = windows / name

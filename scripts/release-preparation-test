@@ -89,6 +89,7 @@ def pair(scratch):
 
 def windows(scratch):
     module = runpy.run_path(str(ROOT / 'scripts/release_windows_r.py'))
+    module['pins']()  # Check the production table before replacing it with fixtures.
     verify = module['verified']
     state = verify.__globals__
     state['revision'] = lambda: 'a' * 40
@@ -100,7 +101,7 @@ def windows(scratch):
     state['version'] = lambda: '0.2.0'
     runtime = tools / 'windows/R-4.6.1'
     (runtime / 'library/base').mkdir(parents=True)
-    (runtime / 'library/base/DESCRIPTION').write_text('Package: base\nPriority: base\n')
+    (runtime / 'library/base/DESCRIPTION').write_text('Package: base\nVersion: 4.6.1\nPriority: base\n')
     (runtime / 'share/licenses').mkdir(parents=True)
     (runtime / 'share/licenses/GPL-3').write_text('target runtime license')
     selected = {'R-4.6.1-win.exe': ('unused', 'b' * 64)}
@@ -108,13 +109,31 @@ def windows(scratch):
         name = package + '_1.0.zip'
         path = tools / 'windows' / name
         with zipfile.ZipFile(path, 'w') as archive:
-            archive.writestr(package + '/DESCRIPTION', f'Package: {package}\nVersion: 1.0\nLicense: GPL-3\nImports: {imports}\nBuilt: R 4.6.1; x86_64-w64-mingw32;\n')
+            archive.writestr(package + '/DESCRIPTION', f'Package: {package}\nVersion: 1.0\nLicense: GPL-3\nImports: {imports}\nBuilt: R 4.6.1; x86_64-w64-mingw32; date; windows\n')
             archive.writestr(package + '/LICENSE', package + ' terms')
         selected[name] = ('unused', hashlib.sha256(path.read_bytes()).hexdigest())
     state['pins'] = lambda: selected
     produced = scratch / 'windows-prerequisites'
     inventory = state['dependencies'](produced, runtime)
     assert inventory['install_order'] == ['Leaf_1.0.zip', 'Direct_1.0.zip']
+    leaf = tools / 'windows/Leaf_1.0.zip'
+    original = leaf.read_bytes()
+    digest = selected[leaf.name]
+    for built, imports in [('R 4.6.0; x86_64-w64-mingw32; date; windows', 'base'),
+                           ('R 4.6.1; aarch64-w64-mingw32; date; windows', 'base'),
+                           ('R 4.6.1; x86_64-w64-mingw32; date; linux', 'base'),
+                           ('R 4.6.1; x86_64-w64-mingw32; date; windows', 'base (>= 9.0)')]:
+        with zipfile.ZipFile(leaf, 'w') as archive:
+            archive.writestr('Leaf/DESCRIPTION', f'Package: Leaf\nVersion: 1.0\nLicense: GPL-3\nImports: {imports}\nBuilt: {built}\n')
+        selected[leaf.name] = ('unused', hashlib.sha256(leaf.read_bytes()).hexdigest())
+        try:
+            state['dependencies'](scratch / 'invalid-metadata', runtime)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('incompatible Windows R binary metadata accepted')
+    leaf.write_bytes(original)
+    selected[leaf.name] = digest
     assert json.loads((produced / 'runtime.json').read_text()) == {'version': '4.6.1', 'standard_packages': ['base']}
     assert (produced / 'licenses/GPL-3').read_text() == 'target runtime license'
     assert (produced / 'install-order.txt').read_text().splitlines() == inventory['install_order']
