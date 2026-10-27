@@ -135,6 +135,20 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       }
       return
     }
+    if args[1] == "audit-thread-starts" {
+      try await auditStreamThreadStarts(Int(args[2])!)
+      return
+    }
+    if args[1] == "output-input" {
+      try await outputWhileInputWaits(args[2])
+      return
+    }
+    if args[1] == "stream-threads" {
+      try await streamThreadLifetime()
+      try await concurrentStreamThreads()
+
+      return
+    }
     if args[1] == "surface" {
       try await surface()
       return

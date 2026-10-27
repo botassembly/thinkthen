@@ -105,7 +105,7 @@ export class ThinkThen {
         async [Symbol.asyncDispose]() { await this.return(); },
         async toArray() { await this.next(); return []; },
       };
-    } else result = stream(this.#client, request, records, signal, name === "filter", release);
+    } else result = stream(this.#client, request, records, signal, name, release);
     this.#calls.add(result);
     return result;
   }

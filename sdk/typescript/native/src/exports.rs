@@ -1,9 +1,10 @@
 //! Node classes and their macro-generated support methods.
 
-use super::{Bridge, Event, request};
+use super::{Bridge, Event, Replies, request};
 use napi::threadsafe_function::{ThreadSafeCallContext, ThreadsafeFunction};
 use napi::{Env, JsBoolean, JsFunction, JsString, JsUnknown};
 use napi_derive::napi;
+use std::sync::{Arc, OnceLock, mpsc::channel};
 use thinkthen::Cancel;
 
 /// Reject a JavaScript number that has no JSON representation.
@@ -44,6 +45,15 @@ pub fn reject_cancellation() -> napi::Result<()> {
 pub struct Operation {
     cancel: Cancel,
     callback: Option<ThreadsafeFunction<Event>>,
+    replies: Arc<Replies>,
+    worker: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Drop for Operation {
+    fn drop(&mut self) {
+        self.cancel();
+        self.close();
+    }
 }
 
 impl std::fmt::Debug for Operation {
@@ -76,6 +86,9 @@ impl Operation {
     /// Release the callback after the native completion event.
     #[napi]
     pub fn close(&mut self) {
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
         self.callback = None;
     }
 
@@ -83,6 +96,7 @@ impl Operation {
     #[napi]
     pub fn cancel(&self) {
         self.cancel.cancel();
+        self.replies.send("cancel", None);
     }
 }
 
@@ -140,7 +154,7 @@ fn start(
     finite: bool,
 ) -> napi::Result<Operation> {
     let callback: ThreadsafeFunction<Event> = callback.create_threadsafe_function(
-        1,
+        0,
         |context: ThreadSafeCallContext<Event>| -> napi::Result<Vec<JsUnknown>> {
             let event = context.value;
             let reply = context
@@ -164,7 +178,7 @@ fn start(
                     };
                     let record = input_record(units, is_text, invalid, id);
                     // A cancelled operation has already dropped its receiver.
-                    let _ = event.reply.send(record);
+                    event.replies.send(event.kind, record);
                     ctx.env.get_undefined()
                 })?;
             Ok(vec![
@@ -175,20 +189,32 @@ fn start(
         },
     )?;
     let cancel = Cancel::default();
+    let (sender, receive) = channel();
+    let replies = Arc::new(Replies {
+        sender,
+        events: OnceLock::new(),
+    });
     let bridge = Bridge {
         callback: callback.clone(),
         cancel: cancel.clone(),
+        replies: replies.clone(),
+        receive,
     };
-    std::thread::spawn(move || {
-        let result = request::run(&request, &bridge, &client, finite);
-        let data = result
-            .err()
-            .map_or_else(String::new, |error| error_json(&error));
-        let _ = bridge.exchange("done", data);
-    });
+    let worker = std::thread::Builder::new()
+        .name("thinkthen-node".to_owned())
+        .spawn(move || {
+            let result = request::run(&request, &bridge, &client, finite);
+            let data = result
+                .err()
+                .map_or_else(String::new, |error| error_json(&error));
+            bridge.publish("done", data);
+        })
+        .map_err(|_| host_error(thinkthen::native::internal_error()))?;
     Ok(Operation {
         cancel,
         callback: Some(callback),
+        replies,
+        worker: Some(worker),
     })
 }
 

@@ -1,6 +1,11 @@
 #!/bin/sh
 # Fetch the exact native database prerequisite separately from offline gates.
 set -eu
+if [ "${1:-}" = --community ]; then
+    shift
+    exec python3 "$(dirname "$0")/../databases/duckdb/community-prepare.py" "$@"
+fi
+if [ "$#" -ne 0 ]; then echo 'usage: scripts/duckdb-prepare [--community VERSION]' >&2; exit 2; fi
 deps=$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3
 mkdir -p "$deps/lib"
 verify() {

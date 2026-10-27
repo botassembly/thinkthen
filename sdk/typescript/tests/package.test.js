@@ -87,7 +87,7 @@ test("worker_threads loads the installed package and returns a typed row", async
 });
 
 // Feature: completed and abandoned streams release the process event loop.
-for (const state of ["completed", "after-row", "pending-input"]) {
+for (const state of ["completed", "after-row", "pending-input", "pending-after-row"]) {
   test(`a ${state} stream releases the process event loop`, {timeout:10000}, async t => {
     const entry = pathToFileURL(require.resolve("thinkthen")).href;
     const code = `import {ThinkThen} from ${JSON.stringify(entry)};
@@ -95,19 +95,77 @@ for (const state of ["completed", "after-row", "pending-input"]) {
       const state = ${JSON.stringify(state)};
       const records = state === "pending-input"
         ? {[Symbol.asyncIterator](){return this;},next(){return new Promise(()=>{});}}
-        : ["first","second"];
+        : state === "pending-after-row"
+          ? {[Symbol.asyncIterator](){return this;},index:0,next(){return this.index++ === 0 ? Promise.resolve({done:false,value:"first"}) : new Promise(()=>{});}}
+          : ["first","second"];
       const stream = client.decideStream("Ready?",records);
       const pending = stream.next();
       if (state === "completed") { await pending; await stream.toArray(); await stream.next(); await client.close(); }
       else if (state === "after-row") await pending;
+      else if (state === "pending-after-row") { console.log((await pending).value.position); stream.next(); }
       globalThis.retained = {stream,client};`;
     const child = spawn(process.execPath,["--input-type=module","-e",code],{env:osEnvironment(),stdio:["ignore","pipe","pipe"]});
-    const output = [];
+    const output = [], rows = [];
     child.stderr.on("data",data => output.push(data));
+    child.stdout.on("data",data => rows.push(data));
     try {
       const [code,signal] = await once(child,"exit",{signal:t.signal});
       assert.equal(signal,null,Buffer.concat(output).toString());
       assert.equal(code,0,Buffer.concat(output).toString());
+      if (state === "pending-after-row") assert.equal(Buffer.concat(rows).toString(),"1\n");
     } finally { child.kill(); }
   });
 }
+
+// Feature: pending caller input releases Node after native input was admitted.
+for (const name of ["decide", "rank"]) {
+  test(`${name} releases an idle input after a submitted record`, { timeout: 10000 }, async t => {
+    const entry = pathToFileURL(require.resolve("thinkthen")).href;
+    const program = `import {ThinkThen} from ${JSON.stringify(entry)};
+      const client = new ThinkThen({backend:"stub",batch:1});
+      let pulled = 0;
+      const input = {[Symbol.asyncIterator](){return this;},next(){
+        if (++pulled === 1) return Promise.resolve({done:false,value:"record"});
+        console.log("pending input"); return new Promise(()=>{});
+      }};
+      const name = ${JSON.stringify(name)};
+      const stream = name === "rank" ? client.rankStream("Priority?",input,{levels:["low","high"]})
+        : client.decideStream("Ready?",input);
+      stream.next().then(() => stream.next());
+      globalThis.retained = {client,stream};`;
+    const child = spawn(process.execPath, ["--input-type=module", "-e", program], { env: osEnvironment(), stdio: ["ignore", "pipe", "pipe"] });
+    const output = [], errors = [];
+    child.stdout.on("data", data => output.push(data));
+    child.stderr.on("data", data => errors.push(data));
+    try {
+      const [code, signal] = await once(child, "exit", { signal: t.signal });
+      assert.equal(signal, null, Buffer.concat(errors).toString());
+      assert.equal(code, 0, Buffer.concat(errors).toString());
+      assert.equal(Buffer.concat(output).toString(), "pending input\n");
+    } finally { child.kill(); }
+  });
+}
+
+// Feature: closing lazy rank input retains Node through all ranked output.
+test("rank input completion delivers every row before idle exit", { timeout: 10000 }, async t => {
+  const entry = pathToFileURL(require.resolve("thinkthen")).href;
+  const program = `import {ThinkThen} from ${JSON.stringify(entry)};
+    const client = new ThinkThen({backend:"stub",batch:1});
+    async function* input(){yield "one";yield "two";yield "three";}
+    const rows = await client.rankStream("Priority?",input(),{levels:["low","high"]}).toArray();
+    console.log(JSON.stringify(rows.map(row=>({position:row.position,status:row.status,answer:row.answer}))));
+    await client.close();`;
+  const child = spawn(process.execPath, ["--input-type=module", "-e", program], { env: osEnvironment(), stdio: ["ignore", "pipe", "pipe"] });
+  const output = [], errors = [];
+  child.stdout.on("data", data => output.push(data));
+  child.stderr.on("data", data => errors.push(data));
+  try {
+    const [code, signal] = await once(child, "exit", { signal: t.signal });
+    assert.equal(signal, null, Buffer.concat(errors).toString());
+    assert.equal(code, 0, Buffer.concat(errors).toString());
+    const rows = JSON.parse(Buffer.concat(output).toString());
+    assert.deepEqual(rows.map(row => row.position).sort(), [1, 2, 3]);
+    assert.deepEqual(rows.map(row => row.answer), [1, 2, 3]);
+    assert(rows.every(row => row.status === "answered"));
+  } finally { child.kill(); }
+});

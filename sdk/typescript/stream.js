@@ -24,10 +24,11 @@ function packet(text) {
 /**
  * @param {NativeClient} client @param {string} request
  * @param {Iterable<import('./index.d.ts').RecordInput> | AsyncIterable<import('./index.d.ts').RecordInput>} records
- * @param {AbortSignal | undefined} signal @param {boolean} filter @param {() => Promise<void>} release
+ * @param {AbortSignal | undefined} signal @param {string} name @param {() => Promise<void>} release
  * @returns {import('./index.d.ts').RowStream<unknown>}
  */
-export function stream(client, request, records, signal, filter, release) {
+export function stream(client, request, records, signal, name, release) {
+  const filter = name === "filter";
   /** @type {Iterator<import('./index.d.ts').RecordInput> | AsyncIterator<import('./index.d.ts').RecordInput> | undefined} */
   let iterator;
   /** @type {Operation | undefined} */ let operation;
@@ -39,6 +40,10 @@ export function stream(client, request, records, signal, filter, release) {
   /** @type {Promise<void> | undefined} */ let cleaning;
   /** @type {Reply | undefined} */ let acknowledgement;
   let started = false, stopped = false, ended = false, inputEnded = false, position = 0;
+  let reading = false, pulling = false, submitted = 0;
+  // Rank publishes after input closes (contract_driver/execute.rs::rank), so
+  // its pending pull owns no output that could keep Node alive.
+  const outputPending = () => name !== "rank" && submitted > 0;
   let failed = false;
   /** @type {unknown} */ let failure;
   const notify = () => { wake?.(); wake = undefined; };
@@ -78,17 +83,20 @@ export function stream(client, request, records, signal, filter, release) {
     if (error) { reply("", false); fail(nativeError(error)); return; }
     if (stopped) { reply("", false); return; }
     if (kind === "row") {
-      try { events.push({packet: packet(data), reply}); notify(); }
+      try { events.push({packet: packet(data), reply}); submitted--; notify(); }
       catch (error) { reply("", false); fail(error); }
       return;
     }
+    pulling = true;
     void (async () => {
       try {
         iterator ??= Symbol.asyncIterator in records ? records[Symbol.asyncIterator]() : records[Symbol.iterator]();
-        operation?.unreference();
+        if (!outputPending()) operation?.unreference();
         const item = await iterator.next();
-        if (!isStopped()) operation?.reference();
+        pulling = false;
+        if (!isStopped() && reading) operation?.reference();
         if (isStopped() || item.done) { inputEnded ||= item.done === true; reply("", false); return; }
+        submitted++;
         if (filter) originals.set(++position, item.value);
         try {
           const encoded = typeof item.value === "string" ? {data: item.value} : encodeRecord(item.value);
@@ -96,7 +104,7 @@ export function stream(client, request, records, signal, filter, release) {
           else reply(encoded.data, false, false, encoded.idKind, encoded.idValue);
         }
         catch { reply("", false, true); }
-      } catch (error) { reply("", false); fail(error); }
+      } catch (error) { pulling = false; reply("", false); fail(error); }
     })();
   };
   function isStopped() { return stopped; }
@@ -112,11 +120,16 @@ export function stream(client, request, records, signal, filter, release) {
     } catch (error) { completed?.(); fail(nativeError(error)); }
   }
   async function next() {
+    reading = true;
     if (!started && !stopped) start();
-    if (!stopped && !ended) operation?.reference();
+    if (!stopped && !ended) {
+      if (pulling && !outputPending()) operation?.unreference();
+      else operation?.reference();
+    }
     acknowledgement?.("", false); acknowledgement = undefined;
     for (;;) {
       if (stopped || ended && events.length === 0) {
+        reading = false;
         await cleanup();
         if (failed) { failed = false; throw failure; }
         return {done: true, value: undefined};
@@ -124,6 +137,7 @@ export function stream(client, request, records, signal, filter, release) {
       const event = events.shift();
       if (event) {
         acknowledgement = event.reply;
+        reading = false;
         operation?.unreference();
         const row = event.packet.row;
         const item = originals.get(event.packet.position);

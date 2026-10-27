@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 root = pathlib.Path(__file__).resolve().parent.parent
-paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).split(b"\0")
+paths = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=root).split(b"\0")
 forbidden = re.compile(
     r"legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project|pm\.ticket=[0-9]+",
     re.IGNORECASE,
@@ -25,7 +25,10 @@ failed = False
 for entry in paths:
     if not entry:
         continue
-    path = pathlib.Path(entry.decode())
+    metadata, name = entry.split(b"\t", 1)
+    if metadata.split()[0] == b"160000":
+        continue
+    path = pathlib.Path(name.decode())
     if path.as_posix() in {"scripts/words"}:
         continue
     data = (root / path).read_bytes()

@@ -3,47 +3,62 @@
 mod request;
 
 use napi::threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode};
-use std::sync::mpsc::{Sender, channel};
-use std::time::Duration;
-use thinkthen::Cancel;
+use std::sync::{
+    Arc, OnceLock,
+    mpsc::{Receiver, Sender},
+};
+use thinkthen::{Cancel, native::Events};
+
+#[derive(Debug)]
+struct Response {
+    kind: &'static str,
+    record: Option<thinkthen::records::Record>,
+}
+
+#[derive(Debug)]
+struct Replies {
+    sender: Sender<Response>,
+    events: OnceLock<Events>,
+}
+
+impl Replies {
+    fn send(&self, kind: &'static str, record: Option<thinkthen::records::Record>) {
+        let _ = self.sender.send(Response { kind, record });
+        if let Some(events) = self.events.get() {
+            events.wake();
+        }
+    }
+}
 
 #[derive(Debug)]
 struct Event {
     kind: &'static str,
     data: String,
-    reply: Sender<Option<thinkthen::records::Record>>,
+    replies: Arc<Replies>,
 }
 
 struct Bridge {
     callback: ThreadsafeFunction<Event>,
     cancel: Cancel,
+    replies: Arc<Replies>,
+    receive: Receiver<Response>,
 }
 
 impl Bridge {
-    fn exchange(
-        &self,
-        kind: &'static str,
-        data: String,
-    ) -> Option<Option<thinkthen::records::Record>> {
-        if self.cancel.is_cancelled() && kind != "done" {
-            return None;
-        }
-        let (reply, receive) = channel();
+    fn publish(&self, kind: &'static str, data: String) -> bool {
         if self.callback.call(
-            Ok(Event { kind, data, reply }),
-            ThreadsafeFunctionCallMode::Blocking,
+            Ok(Event {
+                kind,
+                data,
+                replies: self.replies.clone(),
+            }),
+            ThreadsafeFunctionCallMode::NonBlocking,
         ) != napi::Status::Ok
         {
             self.cancel.cancel();
-            return None;
+            return false;
         }
-        loop {
-            match receive.recv_timeout(Duration::from_millis(20)) {
-                Ok(value) => return Some(value),
-                Err(std::sync::mpsc::RecvTimeoutError::Timeout) if !self.cancel.is_cancelled() => {}
-                _ => return None,
-            }
-        }
+        true
     }
 }
 

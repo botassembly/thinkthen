@@ -16,6 +16,9 @@ import release_windows_check
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_installer_verifies_release_archives(self):
+        subprocess.run([sys.executable, ROOT / 'scripts/installer-test'], check=True)
+
     def test_release_credentials_reach_only_their_own_upload(self):
         subprocess.run(['ruby', ROOT / 'scripts/release-workflow-check', '--self-test'], check=True)
 

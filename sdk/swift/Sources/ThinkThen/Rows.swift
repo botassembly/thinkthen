@@ -1,32 +1,6 @@
 import Foundation
 import Synchronization
 
-// A single completion races cancellation against an asynchronous source. A late
-// source result has no native pointer and can only resolve this empty slot.
-private final class Completion<T: Sendable>: Sendable {
-  private struct State: Sendable {
-    var continuation: CheckedContinuation<T, any Error>?
-    var result: Result<T, any Error>?
-  }
-  private let state = Mutex(State())
-  func install(_ value: CheckedContinuation<T, any Error>) {
-    let ready = state.withLock { state -> Result<T, any Error>? in
-      if let result = state.result { return result }
-      state.continuation = value
-      return nil
-    }
-    if let ready { value.resume(with: ready) }
-  }
-  func finish(_ value: Result<T, any Error>) {
-    let waiter = state.withLock { state -> CheckedContinuation<T, any Error>? in
-      guard state.result == nil else { return nil }
-      state.result = value
-      defer { state.continuation = nil }
-      return state.continuation
-    }
-    waiter?.resume(with: value)
-  }
-}
 protocol RecordSource: Sendable {
   var finiteRecords: [Record]? { get }
   func next() async throws -> Record?
@@ -62,60 +36,12 @@ func source<S: Sequence & Sendable>(_ input: S) -> any RecordSource where S.Elem
   SynchronousSource(input)
 }
 
-// Only this private wrapper crosses worker boundaries with an imported handle.
-// Its owner serializes driving and frees only after the last queued operation.
-struct NativeHandle: @unchecked Sendable { let pointer: OpaquePointer }
-// The lock protects pointer lifetime against cancel. All other operations run
-// on queue. No caller waits synchronously for that queue or the backend.
-final class NativeCall: Sendable {
-  private let state: Mutex<NativeHandle?>
-  private let queue = DispatchQueue(label: "ThinkThen.call")
-  private let native: Native
-  init(client: Client, request: Data, name: String?, records: [Record]?) throws {
-    native = try Native.loaded.get()
-    state = Mutex(try client.open(request, name: name, records: records))
-  }
-  func cancel() { state.withLock { if let handle = $0 { native.cancel(handle.pointer) } } }
-  func perform<T: Sendable>(_ operation: @escaping @Sendable (OpaquePointer, Native) throws -> T)
-    async throws -> T
-  {
-    try await withCheckedThrowingContinuation { continuation in
-      queue.async { [self] in
-        do {
-          guard let handle = state.withLock({ $0 }) else { throw ThinkThenError.cancelled }
-          continuation.resume(returning: try operation(handle.pointer, native))
-        } catch { continuation.resume(throwing: error) }
-      }
-    }
-  }
-  func close() async {
-    await withCheckedContinuation { continuation in
-      queue.async { [self] in
-        state.withLock { handle in
-          if let handle { native.free(handle.pointer) }
-          handle = nil
-        }
-        continuation.resume()
-      }
-    }
-  }
-  deinit {
-    let handle = state.withLock { handle in
-      let value = handle
-      handle = nil
-      return value
-    }
-    if let handle {
-      let native = native
-      queue.async { native.free(handle.pointer) }
-    }
-  }
-}
 final class Driver<A: Sendable>: Sendable {
   private struct State: Sendable {
     var busy = false, cancelled = false, finished = false
     var call: NativeCall?
-    var interruptInput: (@Sendable () -> Void)?
+    var pump: InputPump?
+    var inputPending = false
     var items: [UInt64: Record] = [:]
     var accepted: UInt64 = 0
   }
@@ -140,41 +66,13 @@ final class Driver<A: Sendable>: Sendable {
     state.withLock { state in
       state.cancelled = true
       state.call?.cancel()
-      state.interruptInput?()
+      state.pump?.cancel()
     }
   }
   func close() async {
     cancel()
     let native = state.withLock { state in state.call }
     await native?.close()
-  }
-  private func input() async throws -> Record? {
-    let completion = Completion<Record?>()
-    let source = self.source
-    let task = Task {
-      do { completion.finish(.success(try await source.next())) } catch {
-        completion.finish(
-          .failure(
-            error is CancellationError
-              ? ThinkThenError.cancelled
-              : ThinkThenError.recordSource(message: String(describing: error))))
-      }
-    }
-    state.withLock { state in
-      let interrupt: @Sendable () -> Void = {
-        task.cancel()
-        completion.finish(.failure(CancellationError()))
-      }
-      state.interruptInput = interrupt
-      if state.cancelled { interrupt() }
-    }
-    defer { state.withLock { state in state.interruptInput = nil } }
-    return try await withTaskCancellationHandler {
-      try await withCheckedThrowingContinuation { completion.install($0) }
-    } onCancel: {
-      task.cancel()
-      completion.finish(.failure(CancellationError()))
-    }
   }
   func next() async throws -> A? {
     let proceed = try state.withLock { state -> Bool in
@@ -224,24 +122,46 @@ final class Driver<A: Sendable>: Sendable {
         }
         while true {
           try Task.checkCancellation()
-          let event = try await native.perform { try $1.next($0) }
+          let event = try await native.perform { [self] handle, events, library in
+            while true {
+              let version = library.eventVersion(events)
+              let event = try library.next(handle)
+              guard case .input = event else { return event }
+              let pump = state.withLock { state in
+                if let pump = state.pump { return pump }
+                let pump = InputPump(source: source) { [weak native] in native?.wake() }
+                state.pump = pump
+                if state.cancelled { pump.cancel() }
+                return pump
+              }
+              let request = state.withLock { state -> Bool in
+                if state.inputPending { return false }
+                state.inputPending = true
+                return true
+              }
+              if request { pump.request() }
+              if let result = pump.take() {
+                state.withLock { $0.inputPending = false }
+                if state.withLock({ $0.cancelled }) { throw ThinkThenError.cancelled }
+                if let record = try result.get() {
+                  if retainItems {
+                    state.withLock {
+                      $0.accepted += 1
+                      $0.items[$0.accepted] = record
+                    }
+                  }
+                  try library.send(handle, record)
+                } else {
+                  library.end(handle)
+                }
+              } else {
+                library.eventWait(events, version)
+              }
+            }
+          }
           if Task.isCancelled || state.withLock({ $0.cancelled }) { throw ThinkThenError.cancelled }
           switch event {
-          case .input:
-            if let record = try await input() {
-              if Task.isCancelled || state.withLock({ $0.cancelled }) {
-                throw ThinkThenError.cancelled
-              }
-              if retainItems {
-                state.withLock {
-                  $0.accepted += 1
-                  $0.items[$0.accepted] = record
-                }
-              }
-              try await native.perform { try $1.send($0, record) }
-            } else {
-              try await native.perform { $1.end($0) }
-            }
+          case .input: continue
           case .row(let wire):
             let item = state.withLock { $0.items.removeValue(forKey: wire.position) }
             return try decode(wire, item)
@@ -250,6 +170,7 @@ final class Driver<A: Sendable>: Sendable {
               state.finished = true
               state.items.removeAll()
             }
+            state.withLock { $0.pump?.cancel() }
             await native.close()
             return nil
           }
@@ -267,7 +188,12 @@ final class Driver<A: Sendable>: Sendable {
       self.cancel()
     }
   }
-  deinit { state.withLock { $0.call }?.cancel() }
+  deinit {
+    state.withLock {
+      $0.pump?.cancel()
+      $0.call?.cancel()
+    }
+  }
 }
 
 // The stream holds the active driver weakly, so breaking iteration releases it.

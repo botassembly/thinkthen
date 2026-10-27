@@ -1,0 +1,16 @@
+# Feature: the community build loads the existing native SQL adapter.
+require thinkthen
+
+statement ok
+SET thinkthen_backend = 'stub'
+
+query I
+SELECT count(DISTINCT function_name) FROM duckdb_functions() WHERE function_name IN ('thinkthen_decide', 'thinkthen_filter', 'thinkthen_choose', 'thinkthen_tag', 'thinkthen_score', 'thinkthen_rank', 'thinkthen_find', 'thinkthen_annotate', 'thinkthen_recognize', 'thinkthen_relate')
+----
+10
+
+# Cross DuckDB's vector boundary through the community-built extension.
+query IIII
+SELECT count(*), min(position), max(position), count(DISTINCT position) FROM thinkthen_decide((SELECT range AS document_id, range::VARCHAR AS record FROM range(5000)), 'Ready?')
+----
+5000	1	5000	5000

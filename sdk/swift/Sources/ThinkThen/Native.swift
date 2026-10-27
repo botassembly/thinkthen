@@ -42,6 +42,9 @@ private typealias Next =
   @convention(c) (
     OpaquePointer?, UnsafeMutablePointer<thinkthen_row>?, UnsafeMutablePointer<thinkthen_error>?
   ) -> Int32
+typealias EventVersion = @convention(c) (OpaquePointer?) -> UInt64
+typealias EventWait = @convention(c) (OpaquePointer?, UInt64) -> Void
+typealias RetainEvents = @convention(c) (OpaquePointer?) -> OpaquePointer?
 private typealias Version = @convention(c) () -> UInt32
 private typealias CodeName = @convention(c) (Int32) -> UnsafePointer<CChar>?
 typealias PointerAction = @convention(c) (OpaquePointer?) -> Void
@@ -62,6 +65,8 @@ final class Native: Sendable {
   private let exportToolbox: ExportJSON, exportDefinitions: ExportJSON
   private let toolboxFree: PointerAction, bufferFree: FreeBuffer
   private let sendMissing: ConversionErrorCall
+  let events: RetainEvents, eventVersion: EventVersion, eventWait: EventWait
+  let eventWake: PointerAction, eventFree: PointerAction
   let clientFree: PointerAction, cancel: PointerAction, free: PointerAction, end: PointerAction
   private init() throws {
     #if os(Linux) && arch(x86_64)
@@ -124,6 +129,11 @@ final class Native: Sendable {
     recordsOpen = try symbol("thinkthen_call_open_records_question", OpenRecords.self)
     sendText = try symbol("thinkthen_call_send_text", Send.self)
     sendJSON = try symbol("thinkthen_call_send_json", Send.self)
+    events = try symbol("thinkthen_call_events", RetainEvents.self)
+    eventVersion = try symbol("thinkthen_events_version", EventVersion.self)
+    eventWait = try symbol("thinkthen_events_wait", EventWait.self)
+    eventWake = try symbol("thinkthen_events_wake", PointerAction.self)
+    eventFree = try symbol("thinkthen_events_free", PointerAction.self)
     nextRow = try symbol("thinkthen_call_next", Next.self)
     clientFree = try symbol("thinkthen_client_free", PointerAction.self)
     cancel = try symbol("thinkthen_call_cancel", PointerAction.self)

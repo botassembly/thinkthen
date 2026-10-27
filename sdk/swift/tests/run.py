@@ -1,6 +1,9 @@
 """Drive the installed Swift consumer with the authoritative typed manifest."""
 from contextlib import contextmanager
 import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Event, Thread
+from urllib.request import Request, urlopen
 import os
 from pathlib import Path
 import shutil
@@ -109,6 +112,45 @@ for stage in ("headers", "body", "refusal-body"):
                 child.kill()
                 child.wait()
 subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "swift", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "swift", consumer], env=network_env | {"THINKTHEN_LOOPBACK": loopback}, check=True)
+# Hold the backend reply until the caller's second input is suspended. This
+# forces output readiness to wake the driver independently of caller input.
+with fixture(str(manifest_path.parent / "decide-precision.json")) as (_, upstream):
+    input_entered = Event()
+
+    class GatedReply(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            assert input_entered.wait(120), "caller never requested its next input"
+            request = Request(upstream.split("/v1")[0] + self.path, data=body,
+                              headers={"Content-Type": "application/json"})
+            with urlopen(request) as response:
+                payload = response.read()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *_):
+            pass
+
+    with HTTPServer(("127.0.0.1", 0), GatedReply) as gate:
+        serving = Thread(target=gate.serve_forever)
+        serving.start()
+        child = subprocess.Popen([consumer, "output-input", f"http://127.0.0.1:{gate.server_port}/v1"],
+                                 stdout=subprocess.PIPE, text=True, env=network_env)
+        try:
+            assert child.stdout.readline() == "input\n"
+            input_entered.set()
+            assert child.wait(timeout=120) == 0
+        finally:
+            input_entered.set()
+            if child.poll() is None:
+                child.kill()
+                child.wait()
+            gate.shutdown()
+            serving.join()
+
+subprocess.run([consumer, "stream-threads"], env=env, check=True, timeout=120)
 result = subprocess.run([consumer, "surface"], env=env, capture_output=True, text=True)
 assert result.returncode == 0, (result.stdout, result.stderr)
 assert result.stdout == "", result.stdout

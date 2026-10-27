@@ -1,0 +1,10 @@
+{
+  "1.4.3": {
+    "duckdb": "d1dc88f950d456d72493df452dabdcd13aa413dd",
+    "extension-ci-tools": "af154d26927bc8bdc9be4b3c58cde1c00d196388"
+  },
+  "1.4.4": {
+    "duckdb": "6ddac802ffa9bcfbcc3f5f0d71de5dff9b0bc250",
+    "extension-ci-tools": "32eb753d9b660bf90bdca42652cf40c1ef64bf67"
+  }
+}
