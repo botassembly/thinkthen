@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Check extracted Windows source consumers, delivered checker imports and draft archives."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
+from release_registry import github_packages, attach
+from release_windows import source_package, check_tools
+from release_workflow import ROOT, TARGETS, version
+
+
+def checker(scratch):
+    delivered = scratch / 'delivered'
+    check_tools(delivered)
+    env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
+    output = subprocess.check_output([sys.executable, '-E', '-s', delivered / 'check', '--help'],
+                                     cwd=scratch, env=env, text=True)
+    assert 'check PLATFORM_DIRECTORY' in output
+    print('Delivered Windows checker starts outside the source tree with its actual shipped imports', flush=True)
+
+
+def attachments(scratch):
+    packages = {}
+    expected = {}
+    for target in TARGETS:
+        package = scratch / target
+        family = package / 'sqlite'
+        family.mkdir(parents=True)
+        archive = family / ('thinkthen-sqlite-' + version() + '-' + target + ('.zip' if target.startswith('windows') else '.tar.gz'))
+        archive.write_bytes(('SQLite archive for ' + target).encode())
+        expected[archive.name] = archive.read_bytes()
+        packages[target] = package
+    registry = scratch / 'registry'
+    (registry / 'github').mkdir(parents=True)
+    github_packages(packages, registry / 'github')
+    (registry / 'source.json').write_text(json.dumps({'revision': 'rehearsal', 'version': version()}))
+    release = scratch / 'draft'
+    release.mkdir()
+    attach(registry, release, 'rehearsal')
+    for name, data in expected.items():
+        assert (release / name).read_bytes() == data, name
+    assert len(expected) == len(TARGETS)
+    print('Draft attachments preserve the independent SQLite archive from every platform', flush=True)
+
+
+def zig(scratch, native):
+    archive = source_package(scratch / 'stage', scratch / 'packages', 'zig', version(), native, native)
+    package = scratch / 'package'
+    with zipfile.ZipFile(archive) as source:
+        source.extractall(package)
+    assert (package / 'src/error_codes.zig').is_file(), 'Windows archive omitted generated error codes'
+    consumer = scratch / 'consumer'
+    consumer.mkdir()
+    shutil.copy2(ROOT / 'sdk/zig/tests/build.zig.zon', consumer / 'build.zig.zon')
+    (consumer / 'consumer.zig').write_text('const t = @import("thinkthen"); export fn errorCode() i32 { return @intFromEnum(t.ErrorCode.usage_abi); }\n')
+    (consumer / 'build.zig').write_text('''const std = @import("std");
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const dependency = b.dependency("thinkthen", .{ .target = target });
+    const object = b.addObject(.{ .name = "consumer", .root_module = b.createModule(.{
+        .root_source_file = b.path("consumer.zig"), .target = target, .link_libc = true,
+    }) });
+    object.root_module.addImport("thinkthen", dependency.module("thinkthen"));
+    b.getInstallStep().dependOn(&object.step);
+}
+''')
+    tool = Path.home() / '.local/share/thinkthen-build-tools/zig/0.17.0/zig'
+    subprocess.run([tool, 'build', '-j2', '-Dtarget=x86_64-windows-msvc'], cwd=consumer, check=True)
+    print('Extracted Windows Zig archive compiles a real consumer against its generated ErrorCode; no engine link', flush=True)
+
+
+if not os.environ.get('PM_JOB'):
+    sys.exit('run staging checks through pm job')
+with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as temporary:
+    scratch = Path(temporary)
+    checker(scratch)
+    attachments(scratch)
+    if len(sys.argv) == 2:
+        zig(scratch, Path(sys.argv[1]).resolve())

@@ -22,6 +22,7 @@ THINKTHEN_SWIFT_NATIVE_ASSETS="$scratch/assets" scripts/swift-package "$scratch/
 mkdir "$scratch/consumer"
 cp sdk/swift/tests/*.swift "$scratch/consumer/"
 python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
+python3 scripts/surface-example prepare swift "$scratch/consumer/Guide"
 swift build --package-path "$scratch/consumer" --disable-sandbox -j 2 -Xswiftc -warnings-as-errors
 THINKTHEN_ZIG_DEBUG_NATIVE=1 THINKTHEN_ZIG_NATIVE_FILE="$engine" scripts/zig-package "$scratch/zig-archive"
 mv "$scratch/zig-archive/thinkthen" "$scratch/package"

@@ -156,6 +156,20 @@ def jvm(libraries, destination, scratch, notices):
                              html.escape(readme.read_text()) + '</pre>')
 
 
+def github_packages(packages, destination):
+    """Keep standalone platform archives for the draft release."""
+    for package in packages.values():
+        for family in ('c', 'cpp', 'zig', 'duckdb', 'sqlite', 'postgres'):
+            for artifact in (package / family).glob('*'):
+                if not artifact.name.endswith(('.tar.gz', '.zip')):
+                    continue
+                copy_unique(artifact, destination / artifact.name)
+        for artifact in package.glob('thinkthen-*'):
+            if not artifact.name.endswith(('.tar.gz', '.zip')):
+                continue
+            copy_unique(artifact, destination / artifact.name)
+
+
 def package_sites(packages, staged, scratch):
     """Create site formats from the admitted platform package directories."""
     for name in ('pypi', 'npm', 'rubygems', 'nuget', 'maven', 'github'):
@@ -163,15 +177,7 @@ def package_sites(packages, staged, scratch):
     for package in packages.values():
         for folder, pattern, site in [('ruby', '*.gem', 'rubygems')]:
             copy_unique(one(package / folder, pattern), staged / site / one(package / folder, pattern).name)
-        for family in ('c', 'cpp', 'zig', 'duckdb', 'postgres'):
-            for artifact in (package / family).glob('*'):
-                if not artifact.name.endswith(('.tar.gz', '.zip')):
-                    continue
-                copy_unique(artifact, staged / 'github' / artifact.name)
-        for artifact in package.glob('thinkthen-*'):
-            if not artifact.name.endswith(('.tar.gz', '.zip')):
-                continue
-            copy_unique(artifact, staged / 'github' / artifact.name)
+    github_packages(packages, staged / 'github')
     python(packages, staged / 'pypi', scratch)
     node(packages, staged / 'npm', scratch)
     libraries = native_libraries(packages, scratch)

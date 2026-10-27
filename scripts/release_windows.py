@@ -68,6 +68,9 @@ def source_package(stage, out, name, version, native, import_library):
         copy(native, package / 'Sources/ThinkThen/Native/win-x64/thinkthen_ffi.dll')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'Sources/CThinkThen/include/thinkthen.h')
     elif name != 'cpp':
+        if name == 'zig':
+            from zig_codes import generate
+            generate(ROOT, package / 'src/error_codes.zig')
         copy(native, package / 'native/win-x64/thinkthen_ffi.dll')
         copy(import_library, package / 'native/win-x64/thinkthen_ffi.lib')
         copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'include/thinkthen.h')
@@ -176,16 +179,7 @@ def candidate(destination):
             packages[name] = source_package(stage, out, name, version,
                                             native / 'thinkthen_ffi.dll', native / 'thinkthen_ffi.dll.lib')
         package_more(stage, out, version, native, packages, r)
-    copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
-    copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
-    copy(ROOT / 'scripts/release-check', out / 'check')
-    copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
-    copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
-    copy(ROOT / 'scripts/release_windows_check.py', out / 'release_windows_check.py')
-    copy(ROOT / 'scripts/production_native.py', out / 'production_native.py')
-    copy(ROOT / 'scripts/release_windows_sdks.py', out / 'release_windows_sdks.py')
-    copy(ROOT / 'scripts/release_windows_cache.py', out / 'release_windows_cache.py')
-    copy(ROOT / 'scripts/windows_caller_process.py', out / 'windows_caller_process.py')
+    check_tools(out)
     check_sources(out)
     (out / 'build.json').write_text(json.dumps({'version': version, 'platform': 'windows-x86_64',
         'target': TARGET, 'toolchain': json.loads((TOOLS / 'windows-msvc/versions.json').read_text()),
@@ -325,6 +319,21 @@ def cmake_config(package, language, dll, library, version):
         run('cmake', f'-DVERSION={version}',
             f'-DOUTPUT={folder / f"ThinkThen{language}ConfigVersion.cmake"}', '-P', recipe.name)
 
+
+
+def check_tools(out):
+    """Ship the checker with its source-free import dependencies."""
+    copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
+    copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
+    copy(ROOT / 'scripts/release-check', out / 'check')
+    copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')
+    copy(ROOT / 'scripts/release_images.py', out / 'release_images.py')
+    copy(ROOT / 'scripts/package_inventory.py', out / 'package_inventory.py')
+    copy(ROOT / 'scripts/release_windows_check.py', out / 'release_windows_check.py')
+    copy(ROOT / 'scripts/production_native.py', out / 'production_native.py')
+    copy(ROOT / 'scripts/release_windows_sdks.py', out / 'release_windows_sdks.py')
+    copy(ROOT / 'scripts/release_windows_cache.py', out / 'release_windows_cache.py')
+    copy(ROOT / 'scripts/windows_caller_process.py', out / 'windows_caller_process.py')
 
 def check_sources(out):
     """Keep portable installed consumers with the candidate, away from the checkout."""

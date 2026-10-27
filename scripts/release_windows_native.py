@@ -118,7 +118,9 @@ def build_databases(native):
     sources = [ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
                ROOT / 'crates/thinkthen-ffi/include/thinkthen_sql.h',
                *sorted((ROOT / 'extensions/sqlite/src').glob('*.[ch]')),
-               ROOT / 'databases/duckdb/src/extension.cpp']
+               *sorted((ROOT / 'databases/duckdb/src').glob('*')),
+               ROOT / 'databases/duckdb/generate-types.py',
+               ROOT / 'schemas/row.schema.json', ROOT / 'schemas/contract.json']
     data = b''.join(path.read_bytes() for path in sources)
     data += Path(__file__).read_bytes()
     digest = hashlib.sha256(data).hexdigest()
@@ -160,8 +162,10 @@ def duckdb_build(stage, native, toolchain):
     output = native / 'duckdb'
     output.mkdir(exist_ok=True)
     extension = output / 'thinkthen.duckdb_extension'
+    import sys
+    run(sys.executable, ROOT / 'databases/duckdb/generate-types.py', build / 'contract_types.hpp')
     compile_windows(extension, [ROOT / 'databases/duckdb/src/extension.cpp'],
-        includes=[source / 'src/include', source / 'third_party/yyjson/include',
+        includes=[build, source / 'src/include', source / 'third_party/yyjson/include',
                   ROOT / 'crates/thinkthen-ffi/include'], cxx=True, definitions=['DUCKDB_STATIC_BUILD'],
         libraries=[native / 'thinkthen_ffi.lib', *sorted(build.rglob('*.lib')), *system_libraries()],
         exports=['thinkthen_duckdb_cpp_init'])

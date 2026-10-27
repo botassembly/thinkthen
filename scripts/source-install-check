@@ -99,6 +99,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
     swift = scratch / 'swift-consumer'
     shutil.copytree(ROOT / 'sdk/swift/tests', swift, ignore=shutil.ignore_patterns('*.py'))
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', package / 'swift/README.md' if args.readmes else ROOT / 'sdk/swift/README.md', swift / 'Readme')
+    run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', swift / 'Guide')
     manifest = swift / 'Package.swift'
     manifest.write_text(manifest.read_text().replace('.package(path: "../ThinkThen")',
         '.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version() + '")'))

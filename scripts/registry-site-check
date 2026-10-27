@@ -29,9 +29,10 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-sites-') as temporary:
     attach(staged, release, 'rehearsal')
     checksums(release)
     for package in platforms.values():
-        for artifact in (package / 'duckdb').iterdir():
-            if artifact.name.endswith(('.tar.gz', '.zip')):
-                assert hashlib.sha256(artifact.read_bytes()).digest() == hashlib.sha256((release / artifact.name).read_bytes()).digest()
+        for family in ('duckdb', 'sqlite'):
+            for artifact in (package / family).iterdir():
+                if artifact.name.endswith(('.tar.gz', '.zip')):
+                    assert hashlib.sha256(artifact.read_bytes()).digest() == hashlib.sha256((release / artifact.name).read_bytes()).digest()
     source = scratch / 'tag-source'
     consumer = scratch / 'go-consumer'
     shutil.copytree(ROOT / 'sdk/go/tests', consumer)
@@ -43,6 +44,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-sites-') as temporary:
     consumer = scratch / 'swift-consumer'
     shutil.copytree(ROOT / 'sdk/swift/tests', consumer, ignore=shutil.ignore_patterns('*.py'))
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
+    run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', consumer / 'Guide')
     manifest = consumer / 'Package.swift'
     manifest.write_text(manifest.read_text().replace('../ThinkThen', str(source)).replace('package: "ThinkThen"', 'package: "tag-source"'))
     if sys.platform == 'darwin':
