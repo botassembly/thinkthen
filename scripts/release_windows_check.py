@@ -91,12 +91,12 @@ def smoke(folder):
         assert banner.startswith('thinkthen ' + build['version'] + ' (backends '), {
             'binary': str(command), 'sha256': hashlib.sha256(command.read_bytes()).hexdigest(),
             'expected_version': build['version'], 'stdout': banner}
-        cases = json.loads((folder / 'checks/stub.json').read_text())
+        cases = json.loads((folder / 'checks/stub.json').read_text(encoding='utf-8'))
         import importlib.util
         spec = importlib.util.spec_from_file_location('native_cases', folder / 'checks/native_cases.py')
         native_cases = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(native_cases)
-        registry = json.loads((folder / 'checks/contract.json').read_text())
+        registry = json.loads((folder / 'checks/contract.json').read_text(encoding='utf-8'))
         for case in cases:
             output = run(scratch / 'c/bin/c-consumer.exe', json.dumps(case['request']), json.dumps(case['client']))
             native_cases.compare(output, case, registry)

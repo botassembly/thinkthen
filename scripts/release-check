@@ -397,7 +397,7 @@ def main():
         return
     VERSION = info['version']
     RID, SUFFIX = {'macos-arm64': ('osx-arm64', 'dylib'), 'linux-x86_64': ('linux-x64', 'so'), 'linux-arm64': ('linux-arm64', 'so')}[info['platform']]
-    CASES = json.loads((CHECKS / 'stub.json').read_text())
+    CASES = json.loads((CHECKS / 'stub.json').read_text(encoding='utf-8'))
     assert len(CASES) == 10
     inventory()
     with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-install-') as temporary:

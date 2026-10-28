@@ -123,7 +123,7 @@ def full(folder, build, *, caller_owned=False):
                cwd=folder, env=dict(os.environ))
         return
     packages = {name: folder / path for name, path in build['packages'].items()}
-    cases = json.loads((folder / 'checks/stub.json').read_text())
+    cases = json.loads((folder / 'checks/stub.json').read_text(encoding='utf-8'))
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-sdks-') as temporary:
         scratch = Path(temporary)
         env = environment(scratch)
@@ -249,7 +249,7 @@ def c_and_cpp(build_consumer, execute, packages, checks, fixture, cases, scratch
     spec = importlib.util.spec_from_file_location('native_cases', checks / 'native_cases.py')
     native_cases = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(native_cases)
-    registry = json.loads((checks / 'contract.json').read_text())
+    registry = json.loads((checks / 'contract.json').read_text(encoding='utf-8'))
     for case in cases:
         rows = execute(c_output, json.dumps(case['request']), json.dumps(case['client']), extra=c_env)
         native_cases.compare(rows, case, registry)

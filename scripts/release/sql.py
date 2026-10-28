@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 kind, executable, extension, fixture = sys.argv[1:]
-cases = [(case, False) for case in json.loads(Path(fixture).read_text())]
+cases = [(case, False) for case in json.loads(Path(fixture).read_text(encoding='utf-8'))]
 if kind == 'sqlite':
     shared = cases[0][0]
     request = shared['request']
@@ -179,7 +179,7 @@ for case, selected_evidence in cases:
             columns = [column[0] for column in result.description]
             result = [dict(zip(columns, row)) for row in result.fetchall()]
     else:
-        completed = subprocess.run(command, input=sql, text=True, capture_output=True)
+        completed = subprocess.run(command, input=sql, text=True, encoding='utf-8', capture_output=True)
         if completed.returncode:
             raise RuntimeError((kind, function, completed.stdout, completed.stderr))
         lines = completed.stdout.strip().splitlines()

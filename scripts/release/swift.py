@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 consumer, fixtures = sys.argv[1:]
-result = subprocess.check_output([consumer, fixtures], text=True)
+result = subprocess.check_output([consumer, fixtures], text=True, encoding='utf-8')
 actual = [json.loads(line) for line in result.splitlines()]
-assert actual == [case['expected'] for case in json.loads(Path(fixtures).read_text())]
+assert actual == [case['expected'] for case in json.loads(Path(fixtures).read_text(encoding='utf-8'))]
 print('candidate Swift: ten shared stub cases pass without a compiler')

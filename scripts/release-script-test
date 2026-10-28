@@ -234,6 +234,16 @@ for platform, fallback in (
     def test_windows_smoke_preserves_construction_list_record(self):
         self.windows_smoke('thinkthen ' + version() + ' (backends stub)\n')
 
+    def test_windows_smoke_reads_utf8_fixtures_with_a_windows_text_encoding(self):
+        read_text = Path.read_text
+
+        def windows_read_text(path, *args, **kwargs):
+            kwargs.setdefault('encoding', 'cp1252')
+            return read_text(path, *args, **kwargs)
+
+        with patch.object(Path, 'read_text', windows_read_text):
+            self.windows_smoke('thinkthen ' + version() + ' (backends stub)\n')
+
     def test_windows_smoke_reports_wrong_banner_and_binary(self):
         for banner, status in [('thinkthen 9.0.0 (backends stub)\n', 0),
                                ('thinkthen ' + version() + '1 (backends stub)\n', 0),
@@ -247,7 +257,7 @@ for platform, fallback in (
             self.assertIn(hashlib.sha256(b'fixture image').hexdigest(), str(failure.exception))
 
     def windows_smoke(self, banner, status=0):
-        cases = json.loads((ROOT / 'construction/stub.json').read_text())
+        cases = json.loads((ROOT / 'construction/stub.json').read_bytes())
         first = next(case for case in cases if case['request']['question']['function'] == 'decide')
         self.assertEqual(first['request']['records'], [[]])
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-smoke-') as temporary:

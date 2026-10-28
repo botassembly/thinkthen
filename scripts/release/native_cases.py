@@ -54,8 +54,8 @@ def compare(output, case, registry, offsets='codepoints'):
 
 if __name__ == '__main__':
     binary, fixtures, registry, *offsets = sys.argv[1:]
-    registry = json.loads(Path(registry).read_text())
-    for case in json.loads(Path(fixtures).read_text()):
-        output = subprocess.check_output([binary, json.dumps(case['request']), json.dumps(case['client'])], text=True)
+    registry = json.loads(Path(registry).read_text(encoding='utf-8'))
+    for case in json.loads(Path(fixtures).read_text(encoding='utf-8')):
+        output = subprocess.check_output([binary, json.dumps(case['request']), json.dumps(case['client'])], text=True, encoding='utf-8')
         compare(output, case, registry, offsets[0] if offsets else 'codepoints')
     print('candidate native consumer: canonical construction rows pass')
