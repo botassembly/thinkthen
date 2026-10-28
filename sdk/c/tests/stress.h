@@ -28,8 +28,14 @@ static void *stress_drive(void *raw) {
                 char record[96];
                 int n = snprintf(record, sizeof record, "{\"id\":\"record-%zu\",\"body\":\"record %zu\"}", work->offset + sent, work->offset + sent);
                 assert(n > 0 && (size_t)n < sizeof record);
-                assert(thinkthen_call_send_json(work->call, (const uint8_t *)record, (size_t)n, &error) == THINKTHEN_OK);
-                ++sent;
+                int32_t admitted = thinkthen_call_send_json(work->call, (const uint8_t *)record, (size_t)n, &error);
+                if (admitted == THINKTHEN_OK) ++sent;
+                else {
+                    /* Cancellation can arrive after the input slot was reserved. */
+                    assert(work->cancel && admitted == THINKTHEN_ERROR);
+                    assert(strcmp(thinkthen_code_name(error.code), "local.cancelled") == 0);
+                    thinkthen_error_free(&error);
+                }
             }
         } else if (status == THINKTHEN_OK) {
             assert(row.position == ++received);

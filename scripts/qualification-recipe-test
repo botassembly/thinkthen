@@ -138,15 +138,20 @@ class QualificationRecipes(unittest.TestCase):
         action = module['main']
         import tomllib
         pins = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']
-        for system in ('Linux', 'Darwin'):
-            with self.subTest(system=system), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
+        for override in (False, True):
+            with self.subTest(override=override), tempfile.TemporaryDirectory() as directory:
+                home = Path(directory) / 'home'
+                root = Path(directory) / 'explicit' if override else home / '.local/share/thinkthen-build-tools/advisory-dbs' / pins['advisory-revision']
                 database = root / 'advisory-db-fixture'
                 (database / '.git').mkdir(parents=True)
                 commands = []
                 state = {}
                 def run(command, **options):
                     commands.append(command)
+                    if command[:2] == ['cargo', 'deny']:
+                        self.assertEqual(options['env']['THINKTHEN_ADVISORY_DB_ROOT'], str(root))
+                    if command[0] == 'git':
+                        self.assertEqual(options['cwd'], database)
                     if command[:2] == ['cargo', 'install']:
                         state['version'] = command[command.index('--version') + 1]
                     if command[:2] == ['git', 'checkout']:
@@ -155,12 +160,16 @@ class QualificationRecipes(unittest.TestCase):
                 def output(*command, **options):
                     if command == ('cargo', 'deny', '--version'):
                         return 'cargo-deny ' + state['version']
+                    self.assertEqual(options['cwd'], database)
                     if command[1] == 'remote':
                         return 'https://github.com/RustSec/advisory-db'
                     if command[1] == 'rev-parse':
                         return state['revision']
                     return ''
-                with patch.dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(root)), patch.dict(action.__globals__, output=output), patch('subprocess.run', run):
+                environment = dict(os.environ, CARGO_HOME=str(Path(directory) / 'unrelated-cargo'))
+                environment.pop('THINKTHEN_ADVISORY_DB_ROOT', None)
+                if override: environment['THINKTHEN_ADVISORY_DB_ROOT'] = str(root)
+                with patch.dict(os.environ, environment, clear=True), patch.object(Path, 'home', return_value=home), patch.dict(action.__globals__, output=output), patch('subprocess.run', run):
                     with patch.object(sys, 'argv', ['rust-advisories', '--prepare']):
                         action()
                     with patch.object(sys, 'argv', ['rust-advisories']):

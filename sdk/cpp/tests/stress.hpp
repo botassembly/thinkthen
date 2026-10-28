@@ -54,7 +54,16 @@ static int stress_main(int argc, char** argv) {
             for (auto& thread : threads) thread.join();
 
         }
+#ifdef _WIN32
+        char* hook = nullptr;
+        std::size_t length = 0;
+        const auto environment_status = _dupenv_s(&hook, &length, "THINKTHEN_STRESS_CHECKPOINT_COMMAND");
+        assert(environment_status == 0);
+        if (hook) assert(std::system(hook) == 0);
+        std::free(hook);
+#else
         if (const auto* hook = std::getenv("THINKTHEN_STRESS_CHECKPOINT_COMMAND")) assert(std::system(hook) == 0);
+#endif
     }
     assert(cancel || (std::string{argv[4]} == "failed" ? failures > 0 : failures == 0));
     std::cout << json{{"identifier_width_mask", widths.load()}, {"calls", workers * rounds}, {"rows", cancel ? 0 : count * workers * rounds}, {"failed", failures.load()}, {"cancelled", cancel}} << '\n';

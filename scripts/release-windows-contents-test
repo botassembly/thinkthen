@@ -108,10 +108,50 @@ def license_cache(source):
     with patch.object(databases, 'ROOT', source):
         before = databases.database_inputs()
         assert databases.database_inputs() == before
-        license = source / 'LICENSE'
-        license.write_bytes(license.read_bytes() + b'\nchanged license\n')
-        assert databases.database_inputs() != before
-    print('Windows database cache: unchanged inputs reuse their key; a license change invalidates it', flush=True)
+        for name in ('LICENSE', 'extensions/rules.py', 'schemas/client.schema.json', 'schemas/request.schema.json'):
+            path = source / name
+            original = path.read_bytes()
+            try:
+                path.write_bytes(original + b'\n')
+                assert databases.database_inputs() != before, name
+            finally:
+                path.write_bytes(original)
+    print('Windows database cache: terms, rule generator and its schema inputs invalidate the key', flush=True)
+
+
+def database_failures(scratch):
+    for failed in ('SQLite', 'DuckDB'):
+        native = scratch / failed
+        native.mkdir(parents=True)
+        marker = native / 'database-inputs'
+        if failed == 'DuckDB':
+            marker.write_text(databases.database_inputs())
+            (native / 'duckdb').mkdir()
+            (native / 'duckdb/thinkthen.duckdb_extension').write_bytes(b'old adapter')
+        attempted = []
+
+        def sqlite(*args):
+            attempted.append('SQLite')
+            if failed == 'SQLite':
+                raise RuntimeError('SQLite compiler fixture failure')
+            (native / 'thinkthen_sqlite.dll').write_bytes(b'repaired adapter')
+
+        def duckdb(*args):
+            attempted.append('DuckDB')
+            if failed == 'DuckDB':
+                raise RuntimeError('DuckDB compiler fixture failure')
+
+        with patch('header_contract.check'), patch.object(databases, 'sqlite_build', sqlite), patch.object(
+                databases, 'duckdb_build', duckdb), patch.object(databases, 'cmake_toolchain'):
+            try:
+                databases.build_databases(native)
+            except RuntimeError as error:
+                assert failed + ' compiler fixture failure' in str(error), error
+            else:
+                raise AssertionError('partial Windows database build accepted')
+        assert attempted == ['SQLite', 'DuckDB'], attempted
+        assert not marker.exists(), 'partial database build retained a success marker'
+    print('Windows database failure: both builds run; fresh and repaired caches keep no success marker', flush=True)
 
 
 def main():
@@ -140,6 +180,7 @@ def main():
         clean_packages(scratch / 'packages', native, source)
         ruby_signatures(scratch / 'ruby', native)
         license_cache(source)
+        database_failures(scratch / 'database-failure')
 
 
 if __name__ == '__main__':

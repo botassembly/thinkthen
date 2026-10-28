@@ -118,6 +118,8 @@ def database_inputs():
                *sorted((ROOT / 'extensions/sqlite/src').glob('*.[ch]')),
                *sorted((ROOT / 'databases/duckdb/src').glob('*')),
                ROOT / 'databases/duckdb/generate-types.py',
+               ROOT / 'extensions/rules.py', ROOT / 'schemas/client.schema.json',
+               ROOT / 'schemas/request.schema.json',
                ROOT / 'schemas/row.schema.json', ROOT / 'schemas/contract.json', ROOT / 'LICENSE']
     data = b''.join(path.read_bytes() for path in sources)
     data += Path(__file__).read_bytes()
@@ -134,25 +136,42 @@ def build_databases(native):
             and (native / 'thinkthen_sqlite.dll').exists()
             and (native / 'duckdb/thinkthen.duckdb_extension').exists()):
         return
+    marker.unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-databases-') as temporary:
         stage = Path(temporary)
         toolchain = stage / 'windows.cmake'
         cmake_toolchain(toolchain)
-        jansson = stage / 'jansson'
-        run('cmake', '-S', TOOLS / 'windows/jansson-2.14.1', '-B', jansson,
+        failures = []
+        for name, build in [('SQLite', sqlite_build), ('DuckDB', duckdb_build)]:
+            try:
+                build(stage, native, toolchain)
+            except (Exception, SystemExit) as error:
+                failures.append(name + ': ' + str(error))
+        if failures:
+            raise RuntimeError('Windows database build failures:\n' + '\n'.join(failures))
+    marker.write_text(digest)
+
+
+def sqlite_build(stage, native, toolchain):
+    import sys
+    run(sys.executable, ROOT / 'extensions/rules.py', stage / 'rules.h')
+    jansson = stage / 'jansson'
+    run('cmake', '-S', TOOLS / 'windows/jansson-2.14.1', '-B', jansson,
             '-DCMAKE_TOOLCHAIN_FILE=' + str(toolchain), '-DCMAKE_BUILD_TYPE=Release',
             '-DCMAKE_POLICY_VERSION_MINIMUM=3.5', '-DCMAKE_POLICY_DEFAULT_CMP0091=NEW', '-DJANSSON_BUILD_SHARED_LIBS=OFF', '-DJANSSON_BUILD_DOCS=OFF', '-DJANSSON_WITHOUT_TESTS=ON')
-        run('cmake', '--build', jansson, '--config', 'Release', '--parallel', '2')
-        library = next(jansson.rglob('jansson.lib'))
-        from release_windows import copy
-        compile_windows(native / 'thinkthen_sqlite.dll',
+    run('cmake', '--build', jansson, '--config', 'Release', '--parallel', workers())
+    library = next(jansson.rglob('jansson.lib'))
+    compile_windows(native / 'thinkthen_sqlite.dll',
             sorted((ROOT / 'extensions/sqlite/src').glob('*.c')),
-            includes=[TOOLS / 'sqlite-3.41.0', TOOLS / 'windows/jansson-2.14.1/src',
+            includes=[stage, TOOLS / 'sqlite-3.41.0', TOOLS / 'windows/jansson-2.14.1/src',
                       jansson / 'include', ROOT / 'crates/thinkthen-ffi/include'],
+            definitions=['THINKTHEN_API='],
             libraries=[native / 'thinkthen_ffi.lib', library, *system_libraries()],
             exports=['sqlite3_thinkthensqlite_init'])
-        duckdb_build(stage, native, toolchain)
-    marker.write_text(digest)
+
+
+def workers():
+    return str(max(1, int(float(os.environ.get('PM_JOB_CORES', '1')))))
 
 
 def duckdb_build(stage, native, toolchain):
@@ -163,7 +182,7 @@ def duckdb_build(stage, native, toolchain):
         '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_UNITTESTS=OFF', '-DBUILD_SHELL=OFF',
         '-DENABLE_EXTENSION_AUTOLOADING=OFF', '-DENABLE_EXTENSION_AUTOINSTALL=OFF',
         '-DDISABLE_BUILTIN_EXTENSIONS=ON', '-DOVERRIDE_GIT_DESCRIBE=v1.4.3')
-    run('cmake', '--build', build, '--target', 'duckdb_static', '--parallel', '2')
+    run('cmake', '--build', build, '--target', 'duckdb_static', '--parallel', workers())
     output = native / 'duckdb'
     output.mkdir(exist_ok=True)
     extension = output / 'thinkthen.duckdb_extension'
@@ -171,7 +190,8 @@ def duckdb_build(stage, native, toolchain):
     run(sys.executable, ROOT / 'databases/duckdb/generate-types.py', build / 'contract_types.hpp')
     compile_windows(extension, [ROOT / 'databases/duckdb/src/extension.cpp'],
         includes=[build, source / 'src/include', source / 'third_party/yyjson/include',
-                  ROOT / 'crates/thinkthen-ffi/include'], cxx=True, definitions=['DUCKDB_STATIC_BUILD'],
+                  ROOT / 'crates/thinkthen-ffi/include'], cxx=True,
+        definitions=['DUCKDB_STATIC_BUILD', 'THINKTHEN_API='],
         libraries=[native / 'thinkthen_ffi.lib', *sorted(build.rglob('*.lib')), *system_libraries()],
         exports=['thinkthen_duckdb_cpp_init'])
     metadata = stage / 'platform'

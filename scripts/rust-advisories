@@ -38,7 +38,7 @@ def main():
     parser.add_argument("--prepare", action="store_true", help="prepare pinned tools and data with network access")
     args = parser.parse_args()
     pins = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["metadata"]["supply-chain"]
-    database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo")) / "advisory-dbs"))
+    database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path.home() / ".local/share/thinkthen-build-tools/advisory-dbs" / pins["advisory-revision"]))
     if args.prepare:
         subprocess.run(["cargo", "install", "--locked", "--version", pins["cargo-deny"], "cargo-deny"], check=True)
         subprocess.run(["cargo", "deny", "fetch"], check=True,

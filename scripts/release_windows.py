@@ -108,15 +108,20 @@ def build_native():
         fcntl.flock(lock, fcntl.LOCK_EX)
         payload = cache / 'rust-artifacts'
         if not complete(payload, inputs, artifacts):
+            from release_windows_native import workers
             env = dict(os.environ, RUSTUP_TOOLCHAIN=channel, RUSTC=compiler,
-                       CARGO_NET_OFFLINE='true', CARGO_BUILD_JOBS='4', RUSTFLAGS='-C target-feature=+crt-static',
+                       CARGO_NET_OFFLINE='true', CARGO_BUILD_JOBS=workers(), RUSTFLAGS='-C target-feature=+crt-static',
                        XWIN_CACHE_DIR=str(TOOLS / 'windows-msvc'), XWIN_ARCH='x86_64',
                        XWIN_VERSION='17', XWIN_SDK_VERSION=pins['sdk'], XWIN_CRT_VERSION=pins['crt'])
             env.pop('CARGO_ENCODED_RUSTFLAGS', None)
-            result = run('cargo', 'xwin', 'build', '--offline', '--locked', '--release', '--target', TARGET,
-                '--message-format=json-render-diagnostics',
-                '-p', 'thinkthen', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
-                '-p', 'thinkthen-node', env=env)
+            try:
+                result = run('cargo', 'xwin', 'build', '--keep-going', '--offline', '--locked', '--release', '--target', TARGET,
+                    '--message-format=json-render-diagnostics',
+                    '-p', 'thinkthen', '-p', 'thinkthen-ffi', '-p', 'thinkthen-python',
+                    '-p', 'thinkthen-node', env=env)
+            except subprocess.CalledProcessError as error:
+                (cache / 'artifacts.json').write_text(error.stdout or '')
+                raise
             (cache / 'artifacts.json').write_text(result.stdout)
             target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve() / TARGET / 'release'
             stage_outputs(target, payload, inputs, artifacts)
