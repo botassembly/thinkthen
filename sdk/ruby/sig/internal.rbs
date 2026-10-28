@@ -8,12 +8,22 @@ module FFI
   class NotFoundError < LoadError
   end
   module Library
+    LIBC: String
     def ffi_lib: (*untyped) -> untyped
     def attach_function: (*untyped, **untyped) -> untyped
   end
   module Platform
     def self.windows?: () -> bool
     def self.mac?: () -> bool
+    IS_LINUX: bool
+  end
+  class DynamicLibrary
+    RTLD_LAZY: Integer
+    RTLD_LOCAL: Integer
+    def self.open: (untyped, Integer) -> untyped
+  end
+  class Function
+    def self.new: (*untyped) -> untyped
   end
   class Pointer
     NULL: untyped
@@ -121,6 +131,12 @@ module ThinkThen
     def self.discriminator: (Hash[Integer, String], Integer) -> String
     def self.checked: () { (untyped) -> untyped } -> untyped
     def self.bytes: (String) { (untyped, Integer) -> untyped } -> untyped
+  end
+  module NativeAllocator
+    @library: untyped
+    @trim: untyped
+    def self.prepare: () -> untyped
+    def self.trim: () -> nil
   end
   module Values
     def self.freeze_copy: (untyped) -> untyped

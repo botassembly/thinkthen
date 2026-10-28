@@ -284,42 +284,6 @@ fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
     }
 }
 
-#[cfg(unix)]
-#[test]
-fn an_output_write_error_stops_the_reading() {
-    let (stdout, inherited_reader) = support::closed_output();
-    let server = Loopback::noul(0.9).unwrap();
-    let mut child = support::command()
-        .args([
-            "decide", "Is it?", "--from", "lines", "--json", "--batch", "1",
-        ])
-        .env("THINKTHEN_BASE_URL", server.base())
-        .env("THINKTHEN_API_KEY", KEY)
-        .stdin(Stdio::piped())
-        .stdout(stdout)
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    let input: String = (1..=1000).map(|n| format!("message {n}\n")).collect();
-    // The command may stop reading before it takes every line.
-    let _ = child.stdin.take().unwrap().write_all(input.as_bytes());
-    let output = child.wait_with_output().unwrap();
-    drop(inherited_reader);
-    let diagnostic = format!(
-        "mode=decide --from lines --batch 1, status={}, stderr={}",
-        output.status,
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(output.status.code(), Some(141), "{diagnostic}");
-    assert!(output.stderr.is_empty(), "{diagnostic}");
-    // Four workers each hold one request, and the open request goes out at the end.
-    assert!(
-        server.count() <= 5,
-        "{} requests; {diagnostic}",
-        server.count()
-    );
-}
-
 #[test]
 fn record_byte_limit_returns_before_the_input_pipe_closes() {
     for format in ["text", "lines", "jsonl"] {

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "contract"
+require_relative "native_allocator"
 
 module ThinkThen
   module Native
@@ -117,6 +118,7 @@ module ThinkThen
     class CallPointer < FFI::AutoPointer
       def self.release(pointer)
         Native.thinkthen_call_free(pointer)
+        NativeAllocator.trim
       end
     end
 

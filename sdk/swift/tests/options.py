@@ -1,11 +1,21 @@
 """Compile public Swift calls that must be refused by their signatures."""
 from pathlib import Path
+import json
+import tempfile
 import subprocess
 import sys
 
 consumer = Path(sys.argv[1])
-source = consumer / "Readme/Readme.swift"
-accepted = source.read_text()
+build = json.loads((consumer / ".build/debug/description.json").read_text())
+compiled = next(item for item in build["swiftCommands"].values() if item["moduleName"] == "Readme")
+arguments = compiled["otherArguments"]
+flags = []
+for flag in ("-target", "-sdk", "-resource-dir", "-swift-version"):
+    if flag in arguments:
+        flags += [flag, arguments[arguments.index(flag) + 1]]
+flags += ["-Xcc", next(value for value in arguments if value.startswith("-fmodule-map-file="))]
+temporary = tempfile.TemporaryDirectory(prefix="thinkthen-swift-signatures-")
+source = Path(temporary.name) / "Readme.swift"
 # Feature: Swift required domains and numeric-only thresholds are compile-time contracts.
 calls = {
     "annotations reject rank": ('client.annotate(AnnotationQuestions(["rank": .rank(RankQuestion("Best?", levels: ["low", "high"]))]), record: .text("a"))', "rank"),
@@ -31,8 +41,8 @@ def compile_source(body):
         + body + "\n}\n}\n"
     )
     return subprocess.run(
-        ["swift", "build", "--package-path", str(consumer), "--disable-sandbox",
-         "--target", "Readme", "-Xswiftc", "-warnings-as-errors"],
+        [compiled["executable"], "-typecheck", "-parse-as-library", "-warnings-as-errors",
+         "-I", compiled["importPath"], *flags, str(source)],
         capture_output=True, text=True,
     )
 
@@ -42,11 +52,11 @@ try:
     for name, (call, field) in calls.items():
         result = compile_source("_ = try await " + call)
         diagnostics = result.stdout + result.stderr
-        assert result.returncode != 0, (name, "invalid public call compiled")
+        assert result.returncode != 0, (name, "invalid public call compiled", diagnostics)
         expected_type = name.split()[0].title() + "Question"
         assert (field in diagnostics or expected_type in diagnostics) and any(fragment in diagnostics for fragment in (
             "missing argument", "extra argument", "cannot convert value", "no exact matches", "has no member"
         )), (name, diagnostics)
 finally:
-    source.write_text(accepted)
+    temporary.cleanup()
 print("Swift refuses missing required domains and unsupported thresholds")

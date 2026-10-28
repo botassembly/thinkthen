@@ -145,6 +145,7 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
     }
     if args[1] == "stream-threads" {
       try await streamThreadLifetime()
+      try await streamThreadCleanup()
       try await concurrentStreamThreads()
 
       return

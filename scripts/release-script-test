@@ -232,6 +232,21 @@ for platform, fallback in (
                 self.assertEqual(set(files), declared_notices(files))
 
     def test_windows_smoke_preserves_construction_list_record(self):
+        self.windows_smoke('thinkthen ' + version() + ' (backends stub)\n')
+
+    def test_windows_smoke_reports_wrong_banner_and_binary(self):
+        for banner, status in [('thinkthen 9.0.0 (backends stub)\n', 0),
+                               ('thinkthen ' + version() + '1 (backends stub)\n', 0),
+                               ('thinkthen ' + version() + ' (contract 0)\n', 0),
+                               ('other ' + version() + ' (backends stub)\n', 0),
+                               ('thinkthen ' + version() + ' (backends stub)\n', 7)]:
+            with self.subTest(banner=banner, status=status), self.assertRaises(AssertionError) as failure:
+                self.windows_smoke(banner, status)
+            self.assertIn(banner.rstrip(), str(failure.exception))
+            self.assertIn('thinkthen.exe', str(failure.exception))
+            self.assertIn(hashlib.sha256(b'fixture image').hexdigest(), str(failure.exception))
+
+    def windows_smoke(self, banner, status=0):
         cases = json.loads((ROOT / 'construction/stub.json').read_text())
         first = next(case for case in cases if case['request']['question']['function'] == 'decide')
         self.assertEqual(first['request']['records'], [[]])
@@ -252,7 +267,7 @@ for platform, fallback in (
             def run(args, **options):
                 calls.append((args, options.get('input')))
                 if args[-1] == '--version':
-                    output = 'thinkthen ' + version() + ' (contract 0)'
+                    return subprocess.CompletedProcess(args, status, banner.encode(), b'')
                 elif Path(args[-3]).name == 'c-consumer.exe':
                     case = next(case for case in cases if json.loads(args[-2]) == case['request'])
                     output = json.dumps({'rows': case['expected']})

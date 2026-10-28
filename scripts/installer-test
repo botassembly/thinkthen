@@ -65,7 +65,7 @@ def main():
         if args.binary:
             shutil.copy2(args.binary.resolve(), binary)
         else:
-            binary.write_text('#!/bin/sh\nprintf "thinkthen 0.2.0 (contract 0.2.0; backends systemone jev-1.13.0, openai gpt-6-luna, stub)\\n"\n')
+            binary.write_text('#!/bin/sh\nprintf "thinkthen 0.2.0 (backends systemone jev-1.13.0, openai gpt-6-luna, stub)\\n"\n')
             binary.chmod(0o755)
         suffix = 'zip' if windows else 'tar.gz'
         asset = f'thinkthen-0.2.0-{host}.{suffix}'
@@ -139,9 +139,9 @@ def main():
             if not windows:
                 probe = scratch / 'probe'
                 for output, status in (
-                    ('thinkthen 0.2.0 (contract 0.2.0; backends stub)', 7),
+                    ('thinkthen 0.2.0 (backends stub)', 7),
                     ('thinkthen 9.0.0', 0),
-                    ('thinkthen 0.2.01 (contract 0.2.0; backends stub)', 0),
+                    ('thinkthen 0.2.01 (backends stub)', 0),
                     ('thinkthen 0.2.0 trailing text', 0),
                     ('thinkthen 0.2.0\nextra line', 0),
                 ):

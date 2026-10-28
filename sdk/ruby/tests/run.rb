@@ -10,6 +10,8 @@ isolated_ruby_environment do
   require_relative "surface"
   require_relative "lifecycle"
   require_relative "input_interruption"
+  require_relative "traversal_lifetime"
+  require_relative "allocator"
   require_relative "toolbox_json"
   require_relative "contracts"
   require_relative "abi"
@@ -31,6 +33,8 @@ isolated_ruby_environment do
   ruby_single_admission
   ruby_fork_ownership
   ruby_enumeration
+  ruby_suspended_traversal
+  ruby_native_allocator
   ruby_input_ownership
   ruby_input_interruptions
   ruby_held_calls

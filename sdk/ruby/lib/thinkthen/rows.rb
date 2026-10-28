@@ -16,6 +16,7 @@ module ThinkThen
       @reader = nil
       @driver = Mutex.new
       @traversal = Mutex.new
+      @traversing = false
       # Steep crashes on super with this native Enumerator constructor block.
       # Only the core initializer crosses this boundary; produce stays checked.
       # @type var initializer: untyped
@@ -28,12 +29,21 @@ module ThinkThen
 
     def each
       return self unless block_given?
-      raise ThreadError, "call already has an active driver" unless @traversal.try_lock
+      entered = false
       begin
+        @traversal.synchronize do
+          raise ThreadError, "call already has an active driver" if @traversing
+          @traversing = entered = true
+        end
         super { |row| yield row }
       ensure
-        close
-        @traversal.unlock
+        if entered
+          begin
+            close
+          ensure
+            @traversal.synchronize { @traversing = false }
+          end
+        end
       end
     end
 

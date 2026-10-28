@@ -81,10 +81,16 @@ def smoke(folder):
         def run(binary, *args, payload=None, code=0):
             result = subprocess.run([*runner, str(binary), *args], input=payload, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, env=env, cwd=scratch, timeout=120)
-            assert result.returncode == code, (binary.name, result.returncode, result.stderr.decode(errors='replace')[-2000:])
+            assert result.returncode == code, {
+                'binary': str(binary), 'sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+                'returncode': result.returncode, 'stdout': result.stdout.decode(errors='replace'),
+                'stderr': result.stderr.decode(errors='replace')[-2000:]}
             return result.stdout.decode()
         command = scratch / 'command/thinkthen.exe'
-        assert run(command, '--version').startswith('thinkthen ' + build['version'] + ' (contract ')
+        banner = run(command, '--version')
+        assert banner.startswith('thinkthen ' + build['version'] + ' (backends '), {
+            'binary': str(command), 'sha256': hashlib.sha256(command.read_bytes()).hexdigest(),
+            'expected_version': build['version'], 'stdout': banner}
         cases = json.loads((folder / 'checks/stub.json').read_text())
         import importlib.util
         spec = importlib.util.spec_from_file_location('native_cases', folder / 'checks/native_cases.py')

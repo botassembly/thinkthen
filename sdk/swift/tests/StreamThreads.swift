@@ -1,16 +1,13 @@
 import Foundation
 import ThinkThen
 
-#if os(macOS)
-  import Darwin
-#endif
-
 private actor StreamBarrier {
   private var entered = 0
   private var waiters: [CheckedContinuation<Void, Never>] = []
   func arrive() async {
     entered += 1
     if entered == 100 {
+      precondition(BridgeAudit.count() == 100, "concurrent streams lost a bridge worker")
       for waiter in waiters { waiter.resume() }
       waiters.removeAll()
     } else {
@@ -35,68 +32,67 @@ private struct ConcurrentRecords: AsyncSequence, Sendable {
   func makeAsyncIterator() -> AsyncIterator { AsyncIterator(barrier: barrier) }
 }
 
-#if os(Linux)
-  private func streamThreads() throws -> Set<String> {
-    let root = URL(fileURLWithPath: "/proc/self/task")
-    return Set(
-      try FileManager.default.contentsOfDirectory(atPath: root.path).filter { id in
-        let name = try? String(
-          contentsOf: root.appendingPathComponent(id + "/comm"), encoding: .utf8)
-        return name?.trimmingCharacters(in: .whitespacesAndNewlines) == "ThinkThen.row"
-      })
-  }
-#endif
-
-#if os(macOS)
-  private func streamThreads() throws -> Set<String> {
-    var threads: thread_act_array_t?
-    var count: mach_msg_type_number_t = 0
-    precondition(task_threads(mach_task_self_, &threads, &count) == KERN_SUCCESS)
-    guard let threads else { return [] }
-    defer {
-      vm_deallocate(
-        mach_task_self_, vm_address_t(UInt(bitPattern: threads)),
-        vm_size_t(Int(count) * MemoryLayout<thread_t>.stride))
-    }
-    var result: Set<String> = []
-    for thread in UnsafeBufferPointer(start: threads, count: Int(count)) {
-      defer { mach_port_deallocate(mach_task_self_, thread) }
-      guard let pthread = pthread_from_mach_thread_np(thread) else { continue }
-      var name = [CChar](repeating: 0, count: 64)
-      guard pthread_getname_np(pthread, &name, name.count) == 0 else { continue }
-      let text = String(
-        decoding: name.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
-      if text == "ThinkThen.row" {
-        var id: UInt64 = 0
-        precondition(pthread_threadid_np(pthread, &id) == 0)
-        result.insert(String(id))
-      }
-    }
-    return result
-  }
-#endif
-
 // Feature: A Swift stream drives every row on one persistent native thread.
 func streamThreadLifetime() async throws {
+  #if os(Linux)
+    let inherited = InheritedLabel()
+    defer { inherited.stop() }
+    await BridgeAudit.join()
+  #endif
   let client = try Client(.init(backend: .stub, batch: 1))
   let records = ConfinedSource(records: (0..<1000).map { .text("record \($0)") })
   var received = 0
-  #if os(Linux) || os(macOS)
-    var threads: Set<String> = []
-  #endif
+  var worker: UInt64?
   for try await row in client.decide("Ready?", records: records) {
     received += 1
     precondition(row.position == UInt64(received))
-    #if os(Linux) || os(macOS)
-      let active = try streamThreads()
-      precondition(active.count == 1, "stream has no dedicated thread")
-      threads.formUnion(active)
-    #endif
+    let active = BridgeAudit.worker()
+    precondition(active != 0, "stream does not have exactly one dedicated bridge thread")
+    if let worker {
+      precondition(active == worker, "stream replaced its dedicated bridge thread")
+    } else {
+      worker = active
+    }
   }
   precondition(received == 1000)
-  #if os(Linux) || os(macOS)
-    precondition(threads.count == 1, "stream replaced its dedicated thread")
-  #endif
+  await BridgeAudit.join()
+}
+
+// Feature: cancellation and iterator release retire the stream's bridge worker.
+func streamThreadCleanup() async throws {
+  let client = try Client(.init(backend: .stub, batch: 1))
+  let entered = Signal()
+  let released = Signal()
+  let returned = Signal()
+  let rows = client.decide(
+    "Ready?", records: StubbornSource(entered: entered, released: released, returned: returned))
+  let pending = Task { try await rows.makeAsyncIterator().next() }
+  await entered.wait()
+  precondition(BridgeAudit.worker() != 0, "waiting input lost its bridge worker")
+  rows.cancel()
+  do {
+    _ = try await pending.value
+    preconditionFailure("cancelled input returned a row")
+  } catch { try requireError(error, equals: .cancelled) }
+  await BridgeAudit.join()
+  await released.fire()
+  await returned.wait()
+
+  let early = client.decide(
+    "Ready?", records: ConfinedSource(records: (0..<1000).map { .text("record \($0)") }))
+  var iterator: DecideRows.AsyncIterator? = early.makeAsyncIterator()
+  let first = try await iterator!.next()
+  precondition(first?.position == 1 && BridgeAudit.worker() != 0)
+  iterator = nil
+  await BridgeAudit.join()
+
+  let unopened = client.decide("Ready?", records: [.text("never sent")])
+  unopened.cancel()
+  do {
+    _ = try await unopened.makeAsyncIterator().next()
+    preconditionFailure("cancellation before iteration was ignored")
+  } catch { try requireError(error, equals: .cancelled) }
+  precondition(BridgeAudit.count() == 0, "an unopened stream started a bridge worker")
 }
 
 // Feature: Swift streams do not hold a shared worker pool slot while awaiting input.
@@ -117,6 +113,7 @@ func concurrentStreamThreads() async throws {
     for try await count in group { received += count }
     precondition(received == 1000)
   }
+  await BridgeAudit.join()
 }
 
 private struct PausedTail: AsyncSequence, Sendable {

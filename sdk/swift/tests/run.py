@@ -13,7 +13,7 @@ import tempfile
 
 consumer, root, loopback = sys.argv[1:]
 root = Path(root)
-env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE", "SystemRoot") if key in os.environ}
+env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE", "SystemRoot", "THINKTHEN_SWIFT_AUDIT_LIBRARY") if key in os.environ}
 subprocess.run([sys.executable, str(root / "sdk/c/tests/toolbox.py"), consumer, str(root)], env=env, check=True)
 network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key", OPENAI_API_KEY="loopback-test-key")
 
@@ -150,7 +150,7 @@ with fixture(str(manifest_path.parent / "decide-precision.json")) as (_, upstrea
             gate.shutdown()
             serving.join()
 
-subprocess.run([consumer, "stream-threads"], env=env, check=True, timeout=120)
+subprocess.run([sys.executable, str(root / "sdk/swift/tests/thread-start-audit.py"), consumer, "lifetime"], env=env, check=True, timeout=120)
 result = subprocess.run([consumer, "surface"], env=env, capture_output=True, text=True)
 assert result.returncode == 0, (result.stdout, result.stderr)
 assert result.stdout == "", result.stdout
