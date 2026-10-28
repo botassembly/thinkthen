@@ -35,6 +35,20 @@ def pins():
     return selected
 
 
+def inputs():
+    """Check every pinned R input before reporting download or checksum failures."""
+    selected = pins()
+    failures = []
+    for name, (url, digest) in selected.items():
+        try:
+            fetch(url, TOOLS / 'windows' / name, digest)
+        except (ValueError, OSError, subprocess.CalledProcessError) as error:
+            failures.append(name + ': ' + str(error))
+    if failures:
+        raise ValueError('Pinned Windows R input failures:\n' + '\n'.join(failures))
+    return selected
+
+
 def dependencies(folder, r=None):
     from release_r_dependencies import bundle, fields, metadata
     selected = pins()
@@ -101,11 +115,9 @@ def bundle_dependencies(source, folder):
 def runtime():
     if os.name != 'nt':
         raise ValueError('Windows R preparation requires native Windows')
-    selected = pins()
+    selected = inputs()
     installer = next(name for name in selected if name.startswith('R-'))
     r = TOOLS / 'windows' / installer.removesuffix('-win.exe')
-    for name, (url, digest) in selected.items():
-        fetch(url, TOOLS / 'windows' / name, digest)
     if not (r / 'bin/x64/R.dll').is_file():
         run(TOOLS / 'windows' / installer, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/DIR=' + str(r))
     with tempfile.TemporaryDirectory(prefix='thinkthen-r-dependencies-') as temporary:

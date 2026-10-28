@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Inspect actual registry archives and source packages without building an engine."""
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -221,6 +222,8 @@ class PackageText(unittest.TestCase):
     def test_zig_archive(self):
         from package_inventory import check as inventory
         from release_readme import tar_bytes
+        from release_notice_packages import apply
+        from release_notice_check import declared_notices, verify
 
         scratch, native = self.scratch, self.native
         if sys.platform == 'darwin':
@@ -244,6 +247,26 @@ class PackageText(unittest.TestCase):
                 expected_native = {f'thinkthen/native/{host["rid"]}/libthinkthen_ffi.{host["suffix"]}'}
                 inventory('zig', archive, expected_native)
                 files = contents(archive)
+                delivered_native = {name: files[name] for name in expected_native}
+                index = json.loads(files['thinkthen/THIRD-PARTY-NOTICES/index.json'])
+                # Final notices use this producer's compiled inventory, which can
+                # omit crates that Cargo metadata resolved but never compiled.
+                removed = {'foldhash-0.2.0', 'errno-0.3.14'} & set(index['crates'])
+                self.assertTrue(removed, index['crates'])
+                final = bundle(target, 'ffi', compiled=set(index['crates']) - removed)
+                supplemental = {'THIRD-PARTY-NOTICES/runtime/index.json': json.dumps({
+                    'components': {'runtime': {'files': {'LICENSE': hashlib.sha256(b'runtime terms').hexdigest()}}}
+                }).encode(), 'THIRD-PARTY-NOTICES/runtime/runtime/LICENSE': b'runtime terms'}
+                apply(archive, supplemental, 'thinkthen/')
+                apply(archive, final, 'thinkthen/')
+                verify(archive, json.loads(final['THIRD-PARTY-NOTICES/index.json']))
+                inventory('zig', archive, expected_native)
+                finalized = contents(archive)
+                self.assertEqual({name: finalized[name] for name in expected_native}, delivered_native)
+                self.assertEqual({name for name in finalized if '/THIRD-PARTY-NOTICES/' in name},
+                                 declared_notices(finalized))
+                for name, value in supplemental.items():
+                    self.assertEqual(finalized['thinkthen/' + name], value)
                 self.assertEqual([name for name in files if name.endswith('/build.zig.zon')],
                                  ['thinkthen/build.zig.zon'])
                 self.assertFalse(any('/tests/' in name for name in files))

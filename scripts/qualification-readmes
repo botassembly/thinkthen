@@ -127,7 +127,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
                 run('c++', '-std=c++17', '-I' + str(installed / 'include'),
                     '-I' + str(native_package / 'include'), source,
                     '-L' + str(native_package / 'lib'), '-lthinkthen', '-Wl,-rpath,' + str(native_package / 'lib'), '-o', binary)
-            run(binary)
+            loader = 'DYLD_LIBRARY_PATH' if sys.platform == 'darwin' else 'LD_LIBRARY_PATH'
+            run(binary, extra={loader: str(native_package / 'lib')
+                + (os.pathsep + env[loader] if env.get(loader) else '')} if name == 'c' else None)
         print('README: ' + name + ' passes', flush=True)
 
     java = example('java', 'java')

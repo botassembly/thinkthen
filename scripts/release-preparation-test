@@ -113,6 +113,24 @@ def windows(scratch):
             archive.writestr(package + '/LICENSE', package + ' terms')
         selected[name] = ('unused', hashlib.sha256(path.read_bytes()).hexdigest())
     state['pins'] = lambda: selected
+    fetched = []
+    original_fetch = state['fetch']
+
+    def changed(url, path, digest):
+        fetched.append(path.name)
+        if path.suffix == '.zip':
+            raise ValueError('checksum differs')
+
+    state['fetch'] = changed
+    try:
+        state['inputs']()
+    except ValueError as error:
+        assert all(name in str(error) for name in selected if name.endswith('.zip')), error
+    else:
+        raise AssertionError('changed R inputs accepted')
+    finally:
+        state['fetch'] = original_fetch
+    assert fetched == list(selected), fetched
     produced = scratch / 'windows-prerequisites'
     inventory = state['dependencies'](produced, runtime)
     assert inventory['install_order'] == ['Leaf_1.0.zip', 'Direct_1.0.zip']

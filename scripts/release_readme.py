@@ -65,7 +65,7 @@ def readme(name, out, artifact, *, root=ROOT):
     return (intro + body + '\n').encode()
 
 
-def tar_bytes(data, updates):
+def tar_bytes(data, updates, remove=()):
     """Change documentation only; retain every other member's bytes and mode."""
     output = io.BytesIO()
     with tarfile.open(fileobj=io.BytesIO(data)) as source:
@@ -88,6 +88,8 @@ def tar_bytes(data, updates):
         with tarfile.open(fileobj=output, mode='w:gz', format=tarfile.GNU_FORMAT) as target:
             for member in members:
                 key = member.name.removeprefix('./')
+                if key in remove:
+                    continue
                 member.pax_headers = {}
                 if key in updates:
                     data = updates.pop(key)

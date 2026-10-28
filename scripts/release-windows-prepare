@@ -45,16 +45,24 @@ INPUTS = {
     # The complete Imports closure comes from each official binary DESCRIPTION.
     # SHA256 values match downloads from cloud.r-project.org and cran.r-project.org;
     # CRAN publishes per-member MD5 files inside these ZIPs, no archive hash index.
-    'cli_3.6.6.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/cli_3.6.6.zip', '8ffcf10cef9d810770623257c8c603844ffb966d2479920ad3625bad6425be0d'),
-    'glue_1.8.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/glue_1.8.1.zip', '8ed0ba3ea03312a11fb652fbbc893fee6deda2199d584195a3fb0238a3d27a05'),
-    'lifecycle_1.0.5.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/lifecycle_1.0.5.zip', '7267651683ef7260c86df74091226b142bd028331394f207f62a81679db2f9b3'),
-    'rlang_1.3.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/rlang_1.3.0.zip', '93f66f7c398c6f66014cea32616d2eff5839ecebbe178ba2ca7c33d00aa28840'),
-    'vctrs_0.7.3.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/vctrs_0.7.3.zip', '65016e8874ff9bf20f5d717e59d8ea543da30cb6738d7cc24137db23d8a764f1'),
-    'tibble_3.3.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/tibble_3.3.1.zip', '35340c4992ea210eb31ca79247b8a1bb989abdc23a9628ebe61cd7b9848fe7a2'),
-    'magrittr_2.0.5.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/magrittr_2.0.5.zip', 'af187e30008002549e57802813baf482fc224a773bc9f3d0d424a225ef16310d'),
-    'pillar_1.11.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/pillar_1.11.1.zip', '475c36caef367fed5337915aa0f965d2eef9b92becc253557ac0239ec54d8a59'),
-    'pkgconfig_2.0.3.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/pkgconfig_2.0.3.zip', '1dcfbfe0b9d2b9e47dfffd8a6aa36a4cc32c86883a1143a60666172f3ec8cea0'),
-    'utf8_1.2.6.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/utf8_1.2.6.zip', '56cba754a938d49926923a72c51339e122f52fdde356ffc8327bbd496b2fe3a6'),
+    # Reviewed every R pin on 2026-10-28: installer and jsonlite match; these ten
+    # URLs now serve CRAN's 2026-10-26 builds, confirmed by the PACKAGES index.
+    # Both CRAN hosts agree. Every member matches its MD5, and DESCRIPTION matches
+    # /src/contrib/<package>_<version>.tar.gz except Built/Archs and line endings.
+    # Every source archive still matches its trusted r_sources hash in release-tools.json.
+    # Retained cli/glue/lifecycle/rlang/vctrs binaries match the former pins and
+    # have 2026-10-21 Built dates. Older bytes for the other five were unavailable;
+    # their binary provenance rests on CRAN metadata and unchanged source hashes.
+    'cli_3.6.6.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/cli_3.6.6.zip', '3f8998560f03f1a623d52d8aee124f3e56796bceee08a59ff976fe979932c4c1'),
+    'glue_1.8.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/glue_1.8.1.zip', 'ff98ba95e1a28aa1f93e633789d9eccc4efaa54d567ceea1db2521660cbe84e3'),
+    'lifecycle_1.0.5.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/lifecycle_1.0.5.zip', 'e06992a4895a4367f53736c211bb7cbc5fe15e113dc78864d8c969c1f5905d0d'),
+    'rlang_1.3.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/rlang_1.3.0.zip', '21a27335337924135ef01fbc184661f94ce204454a77749c3a720d6fcabb78cc'),
+    'vctrs_0.7.3.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/vctrs_0.7.3.zip', '8a22576ec16bd28375be89e349e30589c3fe4b8fc8715bb36c65378635cfbb20'),
+    'tibble_3.3.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/tibble_3.3.1.zip', 'e1249e842e3309f7245a3ec79e8ab05deca0120964f50abfdd44b71dc31d28f4'),
+    'magrittr_2.0.5.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/magrittr_2.0.5.zip', '3bd42b58fa8a8b84a7c53e0525c8c6eec34befdf8592cc725790cc33b94f4cae'),
+    'pillar_1.11.1.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/pillar_1.11.1.zip', '4699f0db8e7ecb4ed3953f30f94a87875e72332b77c08d1cc0db6156714ea008'),
+    'pkgconfig_2.0.3.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/pkgconfig_2.0.3.zip', '0b73c52d2697b26f5bb05af20c6c9ad12221c1cd0dc6e2c6a047b2932c15f090'),
+    'utf8_1.2.6.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/utf8_1.2.6.zip', 'd2ad63de4950c09ef5d2073045bcf0cc1feaca22d850ab9ae6807183aff8ea0f'),
     'ffi-1.17.4-x64-mingw-ucrt.gem': ('https://rubygems.org/downloads/ffi-1.17.4-x64-mingw-ucrt.gem', 'f6ff9618cfccc494138bddade27aa06c74c6c7bc367a1ea1103d80c2fcb9ed35'),
     'duckdb-cli.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/duckdb_cli-windows-amd64.zip', '6af7c45f38d764d1c8345f1cb1b1f2d07d779e11125ddf5dca7f2dfdf50efc7e'),
     'duckdb-lib.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/libduckdb-windows-amd64.zip', '4b26f7febc5e300c642d1a45d2fbc3ab51fd3c80e5f82023c90a3260a4949e13'),
@@ -69,10 +77,12 @@ def run(*arguments, **options):
 
 
 def inputs():
-    from release_windows_r import pins
-    pins()
+    from release_windows_r import inputs as r_inputs
+    checked_r = r_inputs()
     WINDOWS.mkdir(parents=True, exist_ok=True)
     for name, (url, digest) in INPUTS.items():
+        if name in checked_r:
+            continue
         path = WINDOWS / name
         if not path.exists():
             partial = path.with_suffix('.partial')

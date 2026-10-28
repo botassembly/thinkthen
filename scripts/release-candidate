@@ -290,8 +290,11 @@ def ruby_package(out):
     print('candidate: Ruby', flush=True)
 
 
-def zig_package(out, version, host):
-    run('scripts/zig-package', ROOT / '.zig-package')
+def zig_package(out, version, host, rust):
+    # Use the producer whose artifacts.json supplies compiled-crates.json.
+    native = rust / ('libthinkthen_ffi.' + host_info()[3])
+    run('scripts/zig-package', ROOT / '.zig-package',
+        env=dict(os.environ, THINKTHEN_ZIG_NATIVE_FILE=str(native)))
     bundle = next((ROOT / '.zig-package').glob('*.tar.gz'))
     copy(bundle, out / f'zig/thinkthen-zig-{version}-{host}.tar.gz')
     zig_consumer(out, bundle)
@@ -362,9 +365,9 @@ done
     print('candidate: Swift', flush=True)
 
 
-def extra_languages(out, version, host, rid, cache):
+def extra_languages(out, version, host, rid, cache, rust):
     ruby_package(out)
-    zig_package(out, version, host)
+    zig_package(out, version, host, rust)
     swift_package(out, version, host, rid, cache)
 
 def frame_dependencies(out, r_version):
@@ -412,7 +415,7 @@ def build(out, version):
         (out / 'compiled-crates.json').write_text(json.dumps({'target': target, 'crates': names}, indent=2) + '\n')
         host, rid, cache, java, r_version = language_packages(out, version, cache, rust)
         cpp_package(out, version, host)
-        extra_languages(out, version, host, rid, cache)
+        extra_languages(out, version, host, rid, cache, rust)
         frame_dependencies(out, r_version)
         database_packages(out, version, host, rid, cache)
         copy(ROOT / 'LICENSE', out / 'LICENSE')

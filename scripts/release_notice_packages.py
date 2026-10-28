@@ -13,9 +13,9 @@ from release_notices import ROOT, NOTICE, bundle
 from release_readme import tar_bytes
 
 
-def zip_update(path, updates, replace_prefix=None):
+def zip_update(path, updates, replace_prefix=None, remove=()):
     with zipfile.ZipFile(path) as source:
-        infos = source.infolist()
+        infos = [p for p in source.infolist() if p.filename not in remove]
         files = {p.filename: source.read(p) for p in infos}
     if replace_prefix:
         infos = [p for p in infos if not p.filename.startswith(replace_prefix)]
@@ -38,14 +38,19 @@ def zip_update(path, updates, replace_prefix=None):
     temporary.replace(path)
 
 
-def gem_update(path, updates):
+def gem_update(path, updates, remove=()):
     with tarfile.open(path) as source:
         files = {p.name: source.extractfile(p).read() for p in source if p.isfile()}
-    files['data.tar.gz'] = tar_bytes(files['data.tar.gz'], updates.copy())
+    files['data.tar.gz'] = tar_bytes(files['data.tar.gz'], updates.copy(), remove)
     metadata = gzip.decompress(files['metadata.gz']).decode()
     # JSON strings are YAML scalars, including paths containing punctuation.
     listed = re.search(r'(?ms)^files:\n(.*?)(?=^[^ -]|\Z)', metadata)
     existing = set(re.findall(r'^- (.+)$', listed[1], re.M)) if listed else set()
+    if listed and remove:
+        removed = set(remove) | {json.dumps(name) for name in remove}
+        retained = ''.join(line for line in listed[1].splitlines(keepends=True)
+                           if line.rstrip('\n').removeprefix('- ') not in removed)
+        metadata = metadata[:listed.start(1)] + retained + metadata[listed.end(1):]
     additions = ''.join('- ' + json.dumps(name) + '\n' for name in sorted(updates) if name not in existing)
     metadata = re.sub(r'(?m)^files:\n', 'files:\n' + additions, metadata, count=1)
     files['metadata.gz'] = gzip.compress(metadata.encode())
@@ -66,9 +71,19 @@ def gem_update(path, updates):
 
 def apply(path, contents, prefix=''):
     updates = {prefix + name: data for name, data in contents.items()}
-    if path.suffix == '.gem': gem_update(path, updates)
-    elif zipfile.is_zipfile(path): zip_update(path, updates)
-    else: path.write_bytes(tar_bytes(path.read_bytes(), updates))
+    from release_notice_check import contents as archive_contents
+    existing = archive_contents(path)
+    remove = set()
+    for name, data in updates.items():
+        if name.endswith('/index.json') and 'crates' in json.loads(data) and name in existing:
+            old = json.loads(existing[name])
+            directory = name.removesuffix('index.json')
+            remove.update(directory + crate + '/' + filename
+                          for crate, entry in old.get('crates', {}).items() for filename in entry['files'])
+    remove.difference_update(updates)
+    if path.suffix == '.gem': gem_update(path, updates, remove)
+    elif zipfile.is_zipfile(path): zip_update(path, updates, remove=remove)
+    else: path.write_bytes(tar_bytes(path.read_bytes(), updates, remove))
 
 
 def wheel_files(contents, metadata):

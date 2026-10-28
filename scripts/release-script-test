@@ -11,6 +11,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import patch
 import zipfile
 
@@ -19,6 +21,54 @@ import release_windows_check
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_zig_uses_the_compiled_inventory_producer(self):
+        build = runpy.run_path(str(ROOT / 'scripts/release-candidate'))['build']
+        with tempfile.TemporaryDirectory(prefix='thinkthen-zig-producer-') as temporary:
+            scratch = Path(temporary)
+            (scratch / 'LICENSE').write_text('fixture project license\n')
+            rust = scratch / 'producer/artifacts'
+            rust.mkdir(parents=True)
+            native = rust / 'libthinkthen_ffi.so'
+            native.write_bytes(b'shared release producer library')
+            messages = rust.parent / 'artifacts.json'
+            messages.write_text('compiled artifact fixture\n')
+            out = scratch / 'candidate'
+            out.mkdir()
+
+            @contextmanager
+            def prepare(*args):
+                yield scratch / 'different-routine-cache', rust
+
+            def compiled(target, path, root):
+                self.assertEqual(target, 'linux-x86_64')
+                self.assertEqual(path, messages)
+                return ['compiled-fixture-1.0']
+
+            def run(*args, env):
+                self.assertEqual(args[0], 'scripts/zig-package')
+                self.assertEqual(Path(env['THINKTHEN_ZIG_NATIVE_FILE']), native)
+                args[1].mkdir()
+                (args[1] / 'fixture.tar.gz').write_bytes(native.read_bytes())
+
+            noop = lambda *args: None
+            replacements = dict(ROOT=scratch, prepare_native=prepare, run=run,
+                platform=SimpleNamespace(system=lambda: 'Darwin'),
+                host_info=lambda: ('linux-x86_64', 'linux-x64', 'linux-x86-64', 'so'),
+                language_packages=lambda *args: ('linux-x86_64', 'linux-x64', scratch / 'cache', None, None),
+                cpp_package=noop, ruby_package=noop, swift_package=noop, zig_consumer=noop,
+                frame_dependencies=noop, database_packages=noop, finalize=lambda out, *args: out)
+            with patch.dict(build.__globals__, replacements), patch('release_sites.crates'), patch(
+                    'release_notices.compiled_names', side_effect=compiled):
+                build(out, version())
+            artifact = out / f'zig/thinkthen-zig-{version()}-linux-x86_64.tar.gz'
+            self.assertEqual(artifact.read_bytes(), native.read_bytes())
+            self.assertEqual(json.loads((out / 'compiled-crates.json').read_text()),
+                             {'target': 'linux-x86_64', 'crates': ['compiled-fixture-1.0']})
+            print('Zig producer selection: fixture producer/artifacts/libthinkthen_ffi.so '
+                  + hashlib.sha256(native.read_bytes()).hexdigest()
+                  + '; compiled input producer/artifacts.json '
+                  + hashlib.sha256(messages.read_bytes()).hexdigest())
+
     def test_jvm_build_payload_precedes_final_notice_checks(self):
         from jvm_repository import verify
         from package_inventory import check
