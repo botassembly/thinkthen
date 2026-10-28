@@ -25,10 +25,10 @@ def requirements(runtime, system):
     return runtime
 
 
-def check_sources():
+def check_sources(root=ROOT):
     # Native manifests remain ordinary ecosystem files; compare their copies.
     for name in ('sdk/swift/Package.swift', 'sdk/swift/tests/Package.swift'):
-        text = (ROOT / name).read_text()
+        text = (root / name).read_text()
         assert f'.macOS("{FLOORS["macos"]}")' in text, name
     declarations = {
         'python': ('sdk/python/pyproject.toml', r'requires-python = ">=([0-9.]+)"'),
@@ -42,7 +42,7 @@ def check_sources():
     }
     for name, (path, expression) in declarations.items():
         expected = re.search(r'[0-9]+(?:\.[0-9]+)*', FLOORS['runtimes'][name])[0]
-        actual = re.search(expression, (ROOT / path).read_text())[1]
+        actual = re.search(expression, (root / path).read_text())[1]
         assert actual == expected, (name, actual, expected)
 
 

@@ -47,9 +47,10 @@ def zip_package(source, destination):
             if path.is_file(): archive.write(path, str(path.relative_to(source)))
 
 
-def source_package(stage, out, name, version, native, import_library):
+def source_package(stage, out, name, version, native, import_library, *, root=ROOT):
     package = stage / name
-    source = ROOT / 'sdk' / name
+    source = root / 'sdk' / name
+    if name == 'go': source /= 'thinkthen'
     if name == 'cpp':
         shutil.copytree(source / 'include', package / 'include')
         shutil.copytree(TOOLS / 'nlohmann-json/3.11.3/include/nlohmann', package / 'include/nlohmann')
@@ -59,24 +60,24 @@ def source_package(stage, out, name, version, native, import_library):
         shutil.copytree(source, package, ignore=shutil.ignore_patterns('tests', 'examples', 'target', '.build'))
     if name == 'go':
         copy(native, package / 'native/library')
-        copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'thinkthen.h')
+        copy(root / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'thinkthen.h')
     elif name == 'swift':
         (package / 'generate-codes.py').unlink()
-        subprocess.run([sys.executable, str(ROOT / 'sdk/swift/generate-codes.py'),
-                        str(ROOT / 'schemas/contract.json'),
+        subprocess.run([sys.executable, str(root / 'sdk/swift/generate-codes.py'),
+                        str(root / 'schemas/contract.json'),
                         str(package / 'Sources/ThinkThen/ErrorCode.swift')], check=True)
         copy(native, package / 'Sources/ThinkThen/Native/win-x64/thinkthen_ffi.dll')
-        copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'Sources/CThinkThen/include/thinkthen.h')
+        copy(root / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'Sources/CThinkThen/include/thinkthen.h')
     elif name != 'cpp':
         if name == 'zig':
             from zig_codes import generate
-            generate(ROOT, package / 'src/error_codes.zig')
+            generate(root, package / 'src/error_codes.zig')
         copy(native, package / 'native/win-x64/thinkthen_ffi.dll')
         copy(import_library, package / 'native/win-x64/thinkthen_ffi.lib')
-        copy(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'include/thinkthen.h')
+        copy(root / 'crates/thinkthen-ffi/include/thinkthen.h', package / 'include/thinkthen.h')
     if name == 'swift': (package / 'VERSION').write_text(version + '\n')
-    copy(ROOT / 'LICENSE', package / 'LICENSE')
-    if name == 'cpp': cmake_config(package, 'Cpp', c_prefix=stage / 'c')
+    copy(root / 'LICENSE', package / 'LICENSE')
+    if name == 'cpp': cmake_config(package, 'Cpp', c_prefix=stage / 'c', root=root)
     result = out / f'{name}/thinkthen-{name}-{version}-windows-x86_64.zip'
     zip_package(package, result)
     return result
@@ -149,6 +150,8 @@ def candidate(destination):
     with (native / 'distribution.lock').open('w') as lock, tempfile.TemporaryDirectory(prefix='thinkthen-windows-pack-') as temporary:
         fcntl.flock(lock, fcntl.LOCK_EX)
         stage = Path(temporary)
+        source = stage / 'source'
+        run('git', 'clone', '--quiet', '--local', '--no-hardlinks', ROOT, source)
         copy(r / f'thinkthen_{version}.zip', stage / f'thinkthen_{version}.zip')
         command = stage / 'command'
         copy(native / 'thinkthen.exe', command / 'thinkthen.exe')
@@ -174,22 +177,22 @@ def candidate(destination):
         assert not any('jansson' in p.name.lower() for directory in ('bin', 'lib', 'include')
                        for p in (c / directory).rglob('*') if p.is_file())
         zip_package(c, packages['c'])
-        packages['python'] = python_wheel(stage, out, version, native / '_native.dll')
+        packages['python'] = python_wheel(stage, out, version, native / '_native.dll', root=source)
         for name in ('go', 'cpp', 'swift', 'zig'):
             packages[name] = source_package(stage, out, name, version,
-                                            native / 'thinkthen_ffi.dll', native / 'thinkthen_ffi.dll.lib')
+                                            native / 'thinkthen_ffi.dll', native / 'thinkthen_ffi.dll.lib', root=source)
         package_more(stage, out, version, native, packages, r)
-    check_tools(out)
-    check_sources(out)
-    (out / 'build.json').write_text(json.dumps({'version': version, 'platform': 'windows-x86_64',
-        'target': TARGET, 'toolchain': json.loads((TOOLS / 'windows-msvc/versions.json').read_text()),
-        'rust': run('rustc', '--version').stdout.strip(), 'c': run('clang-cl', '--version').stdout.splitlines()[0],
-        'dotnet': run('dotnet', '--version').stdout.strip(), 'dependency_inventory': 'compiled-crates.json',
-        'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-        'packages': {name: str(path.relative_to(out)) for name, path in packages.items()}}, indent=2) + '\n')
-    from release_notice_packages import distribute
-    distribute(out, 'windows-x86_64', ROOT)
-    finish_readmes(out, packages)
+        check_tools(out)
+        check_sources(out)
+        (out / 'build.json').write_text(json.dumps({'version': version, 'platform': 'windows-x86_64',
+            'target': TARGET, 'toolchain': json.loads((TOOLS / 'windows-msvc/versions.json').read_text()),
+            'rust': run('rustc', '--version').stdout.strip(), 'c': run('clang-cl', '--version').stdout.splitlines()[0],
+            'dotnet': run('dotnet', '--version').stdout.strip(), 'dependency_inventory': 'compiled-crates.json',
+            'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+            'packages': {name: str(path.relative_to(out)) for name, path in packages.items()}}, indent=2) + '\n')
+        from release_notice_packages import distribute
+        distribute(out, 'windows-x86_64', source)
+        finish_readmes(out, packages, root=source)
     from release_install import checksums
     checksums(out)
     smoke(out)
@@ -212,14 +215,7 @@ def package_more(stage, out, version, native, packages, r):
     target.mkdir()
     run('npm', 'pack', '--offline', '--ignore-scripts', '--quiet', '--pack-destination', target, cwd=npm)
     packages['typescript'] = next(target.glob('*.tgz'))
-    ruby = stage / 'ruby'
-    shutil.copytree(ROOT / 'sdk/ruby', ruby, ignore=shutil.ignore_patterns('tests'))
-    copy(native / 'thinkthen_ffi.dll', ruby / 'lib/thinkthen/thinkthen_ffi.dll')
-    copy(ROOT / 'LICENSE', ruby / 'LICENSE')
-    (ruby / 'VERSION').write_text(version + '\n')
-    (ruby / 'PLATFORM').write_text('x64-mingw-ucrt\n')
-    run('gem', 'build', '--strict', 'thinkthen.gemspec', cwd=ruby)
-    gem = next(ruby.glob('*.gem'))
+    gem = ruby_package(stage, version, native)
     packages['ruby'] = out / 'ruby' / gem.name
     copy(gem, packages['ruby'])
     dependency, = (TOOLS / 'windows').glob('ffi-*-x64-mingw-ucrt.gem')
@@ -246,6 +242,18 @@ def package_more(stage, out, version, native, packages, r):
     c_consumer(out, native)
 
 
+def ruby_package(stage, version, native):
+    ruby = stage / 'ruby'
+    shutil.copytree(ROOT / 'sdk/ruby', ruby, ignore=shutil.ignore_patterns('tests'))
+    run(sys.executable, ROOT / 'scripts/ruby-code-types', ruby / 'sig')
+    copy(native / 'thinkthen_ffi.dll', ruby / 'lib/thinkthen/thinkthen_ffi.dll')
+    copy(ROOT / 'LICENSE', ruby / 'LICENSE')
+    (ruby / 'VERSION').write_text(version + '\n')
+    (ruby / 'PLATFORM').write_text('x64-mingw-ucrt\n')
+    run('gem', 'build', '--strict', 'thinkthen.gemspec', cwd=ruby)
+    return next(ruby.glob('*.gem'))
+
+
 
 def windows_requirements(out):
     config = json.loads((ROOT / 'scripts/runtime-floors.json').read_text())
@@ -260,11 +268,11 @@ def windows_requirements(out):
         for name, value in runtime.items()}, indent=2) + '\n')
 
 
-def finish_readmes(out, packages):
+def finish_readmes(out, packages, *, root=ROOT):
     from release_readme import readme, update_zip, update_gem, tar_bytes
     from runtime_floors import FLOORS
     for name, artifact in packages.items():
-        document = readme(name, out, artifact)
+        document = readme(name, out, artifact, root=root)
         if artifact.suffix == '.gem':
             update_gem(artifact, document)
         elif artifact.suffix == '.tgz':
@@ -272,6 +280,10 @@ def finish_readmes(out, packages):
         else:
             member = ('META-INF/README.md' if name in ('java', 'kotlin') else
                       'thinkthen/README.md' if name == 'r' else 'README.md')
+            if name == 'python':
+                with zipfile.ZipFile(artifact) as wheel:
+                    member = next(p.rsplit('/', 1)[0] + '/README.md' for p in wheel.namelist()
+                                  if p.endswith('.dist-info/METADATA'))
             update_zip(artifact, member, document)
         if name != 'command': (artifact.parent / 'README.md').write_bytes(document)
     commands = [
@@ -289,7 +301,7 @@ def finish_readmes(out, packages):
     (out / 'INSTALL.md').write_text('\n'.join(commands))
 
 
-def cmake_config(package, language, *, native=None, import_library=None, c_prefix=None):
+def cmake_config(package, language, *, native=None, import_library=None, c_prefix=None, root=ROOT):
     """Install every platform's configs from the SDK's one CMake source."""
     with tempfile.TemporaryDirectory() as scratch:
         options = [
@@ -303,10 +315,10 @@ def cmake_config(package, language, *, native=None, import_library=None, c_prefi
             shutil.copy2(import_library, implib)
             options += [f'-DTHINKTHEN_FFI_LIBRARY={native}',
                         f'-DTHINKTHEN_FFI_IMPLIB={implib}',
-                        f'-DTHINKTHEN_FFI_INCLUDE_DIR={ROOT / "crates/thinkthen-ffi/include"}']
+                        f'-DTHINKTHEN_FFI_INCLUDE_DIR={root / "crates/thinkthen-ffi/include"}']
         else:
             options += [f'-DCMAKE_PREFIX_PATH={c_prefix}']
-        run('cmake', '-S', ROOT / 'sdk' / ('c' if language == 'C' else 'cpp'),
+        run('cmake', '-S', root / 'sdk' / ('c' if language == 'C' else 'cpp'),
             '-B', scratch, *options)
         run('cmake', '--install', scratch)
 

@@ -57,7 +57,7 @@ def go(scratch, native, env, runtime):
     build('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(package), cwd=consumer, env=env)
     binary = scratch / 'Consumer.exe'
     build('go', 'test', '-mod=mod', '-c', '-o', binary, cwd=consumer, env=env)
-    check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v'],
+    check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=30m'],
                 scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json')}, 'library.dll')
 
 
@@ -65,6 +65,7 @@ def jvm(scratch, native, env, runtime):
     source = scratch / 'source/sdk'
     for name in ('java', 'kotlin'):
         shutil.copytree(ROOT / 'sdk' / name, source / name, ignore=shutil.ignore_patterns('target'))
+    build(sys.executable, ROOT / 'scripts/jvm-generated', source / 'java', cwd=scratch, env=env)
     copy(native, source / 'java/library/target/classes/io/thinkthen/native/windows-amd64/thinkthen_ffi.dll')
     repository = scratch / 'm2'
     def mvn(*args):
@@ -131,7 +132,7 @@ def main():
         probe(ROOT, dict(os.environ))
         return
     phase, folder = arguments
-    if phase in ('go', 'jvm') and not isolated:
+    if phase in ('go', 'jvm', 'csharp') and not isolated:
         from windows_caller_process import launch
         launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', phase, folder],
                cwd=ROOT, env=dict(os.environ))

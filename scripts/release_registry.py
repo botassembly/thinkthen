@@ -14,6 +14,7 @@ from release_workflow import ROOT, TARGETS, run, unpack, version
 from release_notices import bundle, combine, NOTICE
 from release_notice_packages import apply
 from release_notice_check import package_notices
+from release_readme import released_readme, update_zip, update_gem
 
 NODE_TARGETS = {
     'linux-x86_64': 'linux-x64', 'linux-arm64': 'linux-arm64',
@@ -54,7 +55,7 @@ def node(packages, destination, scratch):
         else:
             common = lambda folder: {str(path.relative_to(folder)): path.read_bytes()
                                      for path in folder.rglob('*') if path.is_file()
-                                     and path.relative_to(folder).parts[0] not in ('thinkthen.node', NOTICE)}
+                                     and path.relative_to(folder).parts[0] not in ('thinkthen.node', 'README.md', NOTICE)}
             expected, actual = common(base / 'package'), common(source)
             for name in sorted(expected.keys() | actual.keys()):
                 if expected.get(name) != actual.get(name):
@@ -67,6 +68,7 @@ def node(packages, destination, scratch):
         path = base / 'package' / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
+    (base / 'package/README.md').write_bytes(released_readme('typescript'))
     metadata = json.loads((base / 'package/package.json').read_text())
     metadata['files'] = sorted(set(metadata['files']) | {NOTICE})
     metadata['repository'] = json.loads((ROOT / 'sdk/typescript/package.json').read_text())['repository']
@@ -92,6 +94,12 @@ def python(packages, destination, scratch):
             archive.extract(natives[0], stage)
         tag = '-'.join(wheel.stem.split('-')[-3:])
         built = python_wheel(stage, scratch / 'python-packages', version(), stage / natives[0], tag, package_notices(wheel))
+        document = released_readme('python')
+        update_zip(built, f'thinkthen-{version()}.dist-info/README.md', document)
+        with zipfile.ZipFile(built) as archive:
+            root_guide = 'README.md' in archive.namelist()
+        if root_guide:
+            update_zip(built, 'README.md', document)
         copy_unique(built, destination / built.name)
 
 
@@ -149,11 +157,11 @@ def jvm(libraries, destination, scratch, notices):
         jar = package / f'thinkthen-{name}-{version()}.jar'
         shutil.copy2(folder / 'target' / jar.name, jar)
         apply(jar, combine(notices), 'META-INF/')
+        update_zip(jar, 'META-INF/README.md', released_readme(name))
         jvm_sources(folder, name, package / f'thinkthen-{name}-{version()}-sources.jar')
-        readme = ROOT / ('sdk/java' if name == 'java' else 'sdk/kotlin') / 'README.md'
         with zipfile.ZipFile(package / f'thinkthen-{name}-{version()}-javadoc.jar', 'w') as archive:
             archive.writestr('index.html', '<!doctype html><meta charset="utf-8"><pre>' +
-                             html.escape(readme.read_text()) + '</pre>')
+                             html.escape(released_readme(name).decode()) + '</pre>')
 
 
 def jvm_sources(folder, name, destination):
@@ -174,19 +182,32 @@ def github_packages(packages, destination):
                 if not artifact.name.endswith(('.tar.gz', '.zip')):
                     continue
                 copy_unique(artifact, destination / artifact.name)
+        adapter = package / 'cpp/dependencies/nlohmann-json'
+        if adapter.is_dir():
+            path = destination / f'nlohmann-json-{version()}.tar.gz'
+            if not path.exists():
+                with tarfile.open(path, 'w:gz') as archive:
+                    archive.add(adapter, arcname='nlohmann-json')
         for artifact in package.glob('thinkthen-*'):
             if not artifact.name.endswith(('.tar.gz', '.zip')):
                 continue
             copy_unique(artifact, destination / artifact.name)
 
 
+def ruby(packages, destination):
+    """Retain each qualified gem's native payload and render its registry guide."""
+    for package in packages.values():
+        artifact = one(package / 'ruby', '*.gem')
+        copy_unique(artifact, destination / artifact.name)
+    for artifact in destination.glob('*.gem'):
+        update_gem(artifact, released_readme('ruby'))
+
+
 def package_sites(packages, staged, scratch):
     """Create site formats from the admitted platform package directories."""
     for name in ('pypi', 'npm', 'rubygems', 'nuget', 'maven', 'github'):
         (staged / name).mkdir(parents=True)
-    for package in packages.values():
-        for folder, pattern, site in [('ruby', '*.gem', 'rubygems')]:
-            copy_unique(one(package / folder, pattern), staged / site / one(package / folder, pattern).name)
+    ruby(packages, staged / 'rubygems')
     github_packages(packages, staged / 'github')
     python(packages, staged / 'pypi', scratch)
     node(packages, staged / 'npm', scratch)

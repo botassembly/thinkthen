@@ -19,6 +19,47 @@ import tempfile
 ROOT = Path(__file__).resolve().parent
 
 
+def memory_floors():
+    """Feature: short checks bound absolute growth; soaks keep their record floor.
+
+    Numeric boundaries use fixed samples so allocator noise cannot move a verdict.
+    """
+    from stress_resources import METRICS, growth
+    for short_gate, records, delta, passed in (
+        (True, 65, 397312, True),
+        (True, 65, 1048575, True),
+        (True, 65, 1048576, False),
+        (False, 100000, 899999, True),
+        (False, 100000, 900000, False),
+        (False, 65, 397312, False),
+    ):
+        samples = [dict.fromkeys(METRICS, 0) for _ in range(20)]
+        for index, row in enumerate(samples[10:]):
+            row['memory_bytes'] = delta * index // 9
+        options = dict(short_gate=True) if short_gate else {}
+        report = growth(samples, [records] * 20, **options)
+        assert report['passed'] is passed, (short_gate, records, delta, report)
+        memory = report['metrics']['memory_bytes']
+        assert memory['late_half_growth_bytes'] == delta, memory
+        assert memory['verified_records_between_checkpoints'] == 9 * records, memory
+        if short_gate:
+            assert report['criterion'] == 'retained-round-growth-short-gate-floor', report
+            assert memory['short_gate_floor_bytes'] == 1048576, memory
+            # The absolute floor cannot hide a retained non-memory resource.
+            for key in METRICS[1:]:
+                changed = [dict(row) for row in samples]
+                for row in changed[10:]:
+                    row[key] = 1
+                assert not growth(changed, [records] * 20, short_gate=True)['metrics'][key]['passed']
+        else:
+            assert memory['floor_bytes_per_verified_record'] == 1, memory
+    # The bound still needs strictly rising peaks and verified counts.
+    for row in samples[10:]:
+        row['memory_bytes'] = 8 * 1024 * 1024
+    assert growth(samples, [65] * 20, short_gate=True)['passed']
+    assert growth(samples, short_gate=True)['verdict'] == 'unverifiable'
+
+
 def fixture(mode):
     os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps({} if mode == 'missing-counts' else dict(verified_records=32768 if mode == 'below-floor' else 8192))
     if mode == 'invalid-counts':
@@ -184,6 +225,7 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1:
         fixture(sys.argv[2])
     else:
+        memory_floors()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)
         zombie_report = json.loads(zombie_run.stdout.splitlines()[-1])

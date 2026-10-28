@@ -19,22 +19,42 @@ jobs:
     timeout-minutes: 60
     defaults: {run: {shell: pwsh}}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - id: checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {persist-credentials: false}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      - if: always()
+        id: setup-python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with: {python-version: '3.13'}
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      - if: always()
+        id: setup-go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with: {go-version: '1.24.13', cache: false}
-      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+      - if: always()
+        id: setup-java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with: {distribution: temurin, java-version: '22.0.2+9'}
-      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+      - if: always()
+        id: setup-dotnet
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with: {dotnet-version: '10.0.103'}
+      - name: Select the pinned Node runtime
+        id: setup-node
+        if: always()
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '22.12.0'}
+      - name: Select the pinned Ruby runtime
+        id: setup-ruby
+        if: always()
+        uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
+        with: {ruby-version: '3.3.8'}
       - name: Build the current native engine once
         id: native
+        if: always()
         run: python scripts/windows-native-proof native "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove Windows transport trust
         id: transport-trust
-        if: always() && steps.native.outcome == 'success'
+        if: always()
         env:
           CARGO_TARGET_DIR: ${{ runner.temp }}/windows-native-proof/target
           CARGO_BUILD_JOBS: '2'
@@ -48,11 +68,19 @@ jobs:
           cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Prove installed Go cache security
-        if: always() && steps.native.outcome == 'success' && inputs.surface != 'csharp'
+        id: go
+        if: always() && inputs.surface != 'csharp'
         run: python scripts/windows-native-proof go "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove installed Java and Kotlin cache security
-        if: always() && steps.native.outcome == 'success' && inputs.surface != 'csharp'
+        id: jvm
+        if: always() && inputs.surface != 'csharp'
         run: python scripts/windows-native-proof jvm "$env:RUNNER_TEMP/windows-native-proof"
       - name: Prove the installed C# single-file consumer
-        if: always() && steps.native.outcome == 'success' && inputs.surface != 'cache'
+        id: csharp
+        if: always() && inputs.surface != 'cache'
         run: python scripts/windows-native-proof csharp "$env:RUNNER_TEMP/windows-native-proof"
+      - name: Report every Windows qualification failure
+        if: always()
+        env:
+          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
+        run: python scripts/qualification-summary

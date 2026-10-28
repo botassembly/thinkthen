@@ -3,13 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
-zig_release=$(sed -n 's/.*minimum_zig_version = "\([^"]*\)".*/\1/p' sdk/zig/build.zig.zon)
-PATH="$HOME/.local/share/thinkthen-build-tools/zig/$zig_release:$PATH"
-export PATH
-if ! command -v zig >/dev/null 2>&1 || [ "$(zig version)" != "$zig_release" ]; then
-    echo "Prepare Zig $zig_release before running the offline Zig gate" >&2
-    exit 1
-fi
+. scripts/zig-env
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 if [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
@@ -55,12 +49,12 @@ main = blocks[0]
     .replace('"consumer.zig"', '"src/main.zig"'))
 (root / "build.zig.zon").write_text(Path("sdk/zig/tests/build.zig.zon").read_text())
 PYTHON
-(cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
+(cd "$scratch/readme" && zig build -j"${CARGO_BUILD_JOBS:-2}" --cache-dir "$scratch/readme-cache")
 "$scratch/readme/zig-out/bin/consumer"
 if [ "${1:-}" = --readme-only ]; then exit 0; fi
 python3 scripts/surface-example prepare zig "$scratch/readme/src"
 cp "$scratch/readme/src/records.jsonl" "$scratch/readme/records.jsonl"
-(cd "$scratch/readme" && zig build -j2 --cache-dir "$scratch/readme-cache")
+(cd "$scratch/readme" && zig build -j"${CARGO_BUILD_JOBS:-2}" --cache-dir "$scratch/readme-cache")
 (cd "$scratch/readme" && python3 "$root/scripts/surface-example" check zig ./zig-out/bin/consumer)
 cp sdk/zig/tests/*.zig sdk/zig/tests/build.zig.zon "$scratch/consumer/"
 zig fmt --check sdk/zig/src sdk/zig/build.zig sdk/zig/build.zig.zon sdk/zig/tests
@@ -71,10 +65,10 @@ arch = 'aarch64' if platform.machine() in ('arm64', 'aarch64') else 'x86_64'
 print(f'{arch}-macos.{floors["macos"]}' if platform.system() == 'Darwin' else f'{arch}-linux-gnu.{floors["linux"]["glibc"]}')
 PYTHON
 )
-(cd "$scratch/consumer" && zig build -j2 -Dtarget="$zig_target" -Dcpu=baseline -Doptimize=ReleaseSafe --cache-dir "$scratch/cache")
+(cd "$scratch/consumer" && zig build -j"${CARGO_BUILD_JOBS:-2}" -Dtarget="$zig_target" -Dcpu=baseline -Doptimize=ReleaseSafe --cache-dir "$scratch/cache")
 "$scratch/consumer/zig-out/bin/public-api"
 for invalid in invalid_annotation invalid_toolbox; do
-    if (cd "$scratch/consumer" && zig build "$invalid" -j2 --cache-dir "$scratch/cache") >"$scratch/$invalid.log" 2>&1; then
+    if (cd "$scratch/consumer" && zig build "$invalid" -j"${CARGO_BUILD_JOBS:-2}" --cache-dir "$scratch/cache") >"$scratch/$invalid.log" 2>&1; then
         echo "Invalid annotation consumer compiled: $invalid" >&2
         exit 1
     fi

@@ -82,6 +82,9 @@ def publish(tag, digest, remote, repository):
         git('checkout', '--quiet', '--detach', revision)
         # Copy only approved additions. Tar extraction never touches the Git directory.
         import shutil
+        for name in ('sdk/go/thinkthen', 'sdk/swift'):
+            if (additions / name).is_dir() and (checkout / name).is_dir():
+                shutil.rmtree(checkout / name)
         shutil.copytree(additions, checkout, dirs_exist_ok=True)
         git('add', '--force', '.')
         expected_tree = git('write-tree')

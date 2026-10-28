@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Build consumers from Windows source archives and validate delivered gem signatures."""
+import importlib.util
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+from unittest.mock import patch
+import zipfile
+
+import release_windows as windows
+import release_windows_native as databases
+import release_readme
+from release_go import command as go_command
+from release_wheel import python_wheel
+from release_workflow import ROOT, version
+
+
+def run(*args, **options):
+    try:
+        return subprocess.run(list(map(str, args)), check=True, capture_output=True, text=True, **options)
+    except subprocess.CalledProcessError as error:
+        print('\n'.join((error.stdout + error.stderr).splitlines()[-30:]), file=sys.stderr)
+        raise
+
+
+def go_consumer(scratch, native, source, writer=windows.source_package, baseline=False):
+    archive = writer(scratch / 'stage', scratch / 'out', 'go', version(), native, native,
+                     **({} if baseline else {'root': source}))
+    package = scratch / 'package'
+    with zipfile.ZipFile(archive) as contents:
+        contents.extractall(package)
+    consumer = scratch / 'consumer'
+    consumer.mkdir()
+    (consumer / 'go.mod').write_text('module consumer\n\ngo 1.23\n')
+    (consumer / 'main.go').write_text('package main\nimport _ "github.com/botassembly/thinkthen/sdk/go/thinkthen"\nfunc main() {}\n')
+    env = dict(os.environ, GOWORK='off', GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local',
+               GOCACHE=str(scratch / 'go-cache'), CGO_ENABLED='1')
+    run(go_command(), 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(package), cwd=consumer, env=env)
+    run(go_command(), 'build', '-mod=mod', '-p=1', '-o', scratch / 'consumer-binary', '.', cwd=consumer, env=env)
+    assert (package / 'native/library').read_bytes() == native.read_bytes()
+    assert (package / 'thinkthen.h').read_bytes() == (source / 'crates/thinkthen-ffi/include/thinkthen.h').read_bytes()
+    print('Windows Go archive: extracted module builds an independent consumer', flush=True)
+    return archive
+
+
+def ruby_signatures(scratch, native):
+    gem = windows.ruby_package(scratch / 'stage', version(), native.parent)
+    installed = scratch / 'installed'
+    run('gem', 'unpack', gem, '--target', installed)
+    package, = installed.iterdir()
+    assert (package / 'lib/thinkthen/thinkthen_ffi.dll').read_bytes() == native.read_bytes()
+    cache = Path(os.environ.get('THINKTHEN_RUBY_DEV_GEMS',
+                               Path.home() / '.local/share/thinkthen-build-tools/ruby/dev'))
+    env = dict(os.environ, GEM_HOME=str(cache), GEM_PATH=str(cache))
+    run('ruby', cache / 'bin/rbs', '-I', package / 'sig', 'validate', cwd=scratch, env=env)
+    print('Windows Ruby gem: unpacked public signatures type-check', flush=True)
+
+
+def clean_packages(scratch, native, source):
+    # Poison the working source independently of the committed clone passed to writers.
+    dirty = scratch / 'dirty'
+    packages = {}
+    for family in ('go', 'swift', 'zig', 'python'):
+        folder = dirty / 'sdk' / family
+        folder.mkdir(parents=True)
+        (folder / 'README.md').write_text('uncommitted source')
+    (dirty / 'LICENSE').write_text('uncommitted license')
+    with patch.object(windows, 'ROOT', dirty):
+        for family in ('swift', 'zig'):
+            archive = windows.source_package(scratch / 'stage', scratch / 'out', family,
+                                             version(), native, native, root=source)
+            with zipfile.ZipFile(archive) as contents:
+                assert contents.read('README.md') == (source / 'sdk' / family / 'README.md').read_bytes()
+            packages[family] = archive
+        packages['go'] = go_consumer(scratch / 'go', native, source)
+    notices = {'LICENSE': (source / 'LICENSE').read_bytes(),
+               'THIRD-PARTY-NOTICES/index.json': json.dumps({'license_expression': 'MIT'}).encode()}
+    wheel = python_wheel(scratch / 'wheel-stage', scratch / 'out', version(), native,
+                         notices=notices, root=source)
+    with zipfile.ZipFile(wheel) as contents:
+        assert 'README.md' not in contents.namelist()
+        assert contents.read(f'thinkthen-{version()}.dist-info/README.md') == (source / 'sdk/python/README.md').read_bytes()
+        assert contents.read('thinkthen/__init__.py') == (source / 'sdk/python/thinkthen/__init__.py').read_bytes()
+    out = scratch / 'out'
+    packages['python'] = wheel
+    (out / 'build.json').write_text(json.dumps({'version': version()}))
+    (out / 'requirements.json').write_text(json.dumps({name: {'runtime': name, 'platform': 'windows-x86_64'}
+                                                      for name in packages}))
+    with patch.object(release_readme, 'ROOT', dirty):
+        windows.finish_readmes(out, packages, root=source)
+    for name, artifact in packages.items():
+        with zipfile.ZipFile(artifact) as contents:
+            metadata = f'thinkthen-{version()}.dist-info/' if name == 'python' else ''
+            assert b'uncommitted source' not in contents.read(metadata + 'README.md')
+            assert contents.read(metadata + ('licenses/LICENSE' if name == 'python' else 'LICENSE')) == (source / 'LICENSE').read_bytes()
+    with zipfile.ZipFile(wheel) as contents:
+        assert 'README.md' not in contents.namelist(), 'final documentation added a site-packages README'
+        description = contents.read(f'thinkthen-{version()}.dist-info/METADATA').split(b'\n\n', 1)[1]
+        assert b'uncommitted source' not in description, 'final documentation read the working tree'
+        assert contents.read(f'thinkthen-{version()}.dist-info/README.md') == description
+    print('Windows source archives and wheel use committed files; wheel README stays in dist-info', flush=True)
+
+
+def license_cache(source):
+    with patch.object(databases, 'ROOT', source):
+        before = databases.database_inputs()
+        assert databases.database_inputs() == before
+        license = source / 'LICENSE'
+        license.write_bytes(license.read_bytes() + b'\nchanged license\n')
+        assert databases.database_inputs() != before
+    print('Windows database cache: unchanged inputs reuse their key; a license change invalidates it', flush=True)
+
+
+def main():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-windows-contents-') as temporary:
+        scratch = Path(temporary)
+        native = scratch / 'native/thinkthen_ffi.dll'
+        native.parent.mkdir()
+        native.write_bytes(b'archive fixture; consumer builds without loading the engine')
+        source = scratch / 'source'
+        run('git', 'clone', '--quiet', '--local', '--no-hardlinks', ROOT, source)
+        if len(sys.argv) == 3 and sys.argv[1] == '--baseline':
+            script = scratch / 'baseline.py'
+            script.write_bytes(subprocess.check_output(['git', 'show', sys.argv[2] + ':scripts/release_windows.py'], cwd=ROOT))
+            spec = importlib.util.spec_from_file_location('baseline_windows', script)
+            baseline = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(baseline)
+            baseline.ROOT = source
+            try:
+                go_consumer(scratch / 'baseline', native, source, baseline.source_package, baseline=True)
+            except subprocess.CalledProcessError as error:
+                assert 'does not contain package github.com/botassembly/thinkthen/sdk/go/thinkthen' in error.stderr, error.stderr
+                print('Unfixed Windows Go archive fails the consumer build because its module is nested', flush=True)
+            else:
+                raise AssertionError('unfixed Windows Go archive unexpectedly built the consumer')
+            return
+        clean_packages(scratch / 'packages', native, source)
+        ruby_signatures(scratch / 'ruby', native)
+        license_cache(source)
+
+
+if __name__ == '__main__':
+    main()

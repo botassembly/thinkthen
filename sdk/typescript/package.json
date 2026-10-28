@@ -38,6 +38,9 @@
     "url": "https://github.com/botassembly/thinkthen.git",
     "directory": "sdk/typescript"
   },
+  "scripts": {
+    "prepack": "python3 ../../scripts/typescript-prepare"
+  },
   "sideEffects": false,
   "os": [
     "linux",

@@ -103,7 +103,7 @@ def check_windows(workflow)
     'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'
   ]
   unless job['runs-on'] == 'windows-2022' && job.dig('defaults', 'run', 'shell') == 'pwsh' &&
-         step['if'] == "always() && steps.native.outcome == 'success'" &&
+         step['if'] == "always()" &&
          !step['continue-on-error'] && step['env'] == expected_environment &&
          step.fetch('run').lines.map(&:strip) == commands
     raise 'Windows transport trust must fetch locked dependencies and run offline with the native build settings'

@@ -125,6 +125,7 @@ def release_note(version, platforms):
         requirement = value.split(',')[0] if name == 'swift' else value.split(';')[0]
         language_requirements.append(('Kotlin: ' if name == 'kotlin' else '') + requirement)
     lines += ['', 'Language requirements: ' + '; '.join(language_requirements) + '.', '',
+              f'The optional C++ JSON adapter headers and license are in nlohmann-json-{version}.tar.gz on this release.', '',
               f'R requires the {FLOORS["r"]["Linux"]} series on Linux and the {FLOORS["r"]["Darwin"]} series on macOS; Windows requires ' + platforms.get('windows-x86_64', {}).get('r', {}).get('runtime', 'the R version in its archive requirements.json').split(';')[0] + '. C needs a C compiler to build, and C++ needs C++17. See each archive’s requirements.json for its package requirements and supplied runtime dependencies.', '',
               'Database requirements: ' + '; '.join(database_runtimes.values()) + '.', '',
               'ThinkThen uses 0.x APIs. APIs may change between releases.', '']

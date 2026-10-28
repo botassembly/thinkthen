@@ -1,55 +1,59 @@
 #!/bin/sh
-# The gate: formatting, lint with warnings denied, then every test.
+# Run every gate stage and report all failures before refusing the candidate.
 set -eu
 cd "$(dirname "$0")/.."
-# Check host commands before release checks or compilation. SDK-specific prepared
-# tools retain their own selectors and version checks in their owning gates.
+failed=
+stage() {
+    name=$1
+    shift
+    printf 'Gate stage: %s\n' "$name"
+    if "$@"; then
+        printf 'Passed gate stage: %s\n' "$name"
+    else
+        status=$?
+        printf 'Failed gate stage: %s (exit %s)\n' "$name" "$status" >&2
+        failed="$failed $name"
+    fi
+}
+# Missing tools are failures. Later stages still expose independent defects.
 for tool in python3 git cargo rustc cc c++ make cmake pkg-config uv node npm ruby R Rscript staticcheck; do
-    if ! command -v "$tool" >/dev/null 2>&1; then
-        printf 'gate: required tool is missing: %s\n' "$tool" >&2
-        exit 1
-    fi
+    stage "tool-$tool" command -v "$tool"
 done
-if [ "$(uname -s)" = Linux ] && ! command -v docker >/dev/null 2>&1; then
-    printf 'gate: required tool is missing: docker\n' >&2
+if [ "$(uname -s)" = Linux ]; then stage tool-docker command -v docker; fi
+stage python-version python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
+stage release-metadata python3 scripts/release_metadata.py
+for check in release-script-test release-preparation-test release-staging-test release-publish-test release-floor-inputs-test; do
+    stage "$check" "scripts/$check"
+done
+if [ "$(uname -s)" = Linux ]; then
+    stage stress-resource-test scripts/stress-resource-test
+    stage stress-runner-test scripts/stress-runner-test
+fi
+for tool in R Rscript; do stage "runtime-$tool" "$tool" --version; done
+stage words scripts/words ${THINKTHEN_PRIVATE_PATTERNS:+"$THINKTHEN_PRIVATE_PATTERNS"}
+for check in secrets bindings-schema contract-schema-check; do stage "$check" "scripts/$check"; done
+stage notices scripts/notices --check
+stage supply-chain-check scripts/supply-chain-check
+stage rust-advisories scripts/rust-advisories
+stage rust-format cargo fmt --all --check
+stage core-check scripts/core-check
+stage fixture-routing-check scripts/fixture-routing-check
+stage rust-clippy cargo clippy --workspace --all-targets --features thinkthen/stream --locked -- -D warnings
+stage c-gate scripts/c-gate
+stage rust-tests cargo test --workspace --features thinkthen/stream --locked
+stage crate-package-test scripts/crate-package-test
+stage bash-guide sh -eu -c '
+    guide_root=$PWD
+    guide_scratch=$(mktemp -d)
+    trap '\''rm -rf "$guide_scratch"'\'' EXIT HUP INT TERM
+    python3 scripts/surface-example prepare bash "$guide_scratch"
+    command_target=${CARGO_TARGET_DIR:-$PWD/target}
+    case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
+    cd "$guide_scratch"
+    PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh
+'
+stage sdk-gates scripts/sdk-gates
+if [ -n "$failed" ]; then
+    printf 'Failed gate stages:%s\n' "$failed" >&2
     exit 1
 fi
-python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
-python3 scripts/release_metadata.py
-scripts/release-script-test
-scripts/release-preparation-test
-scripts/release-staging-test
-scripts/release-publish-test
-scripts/release-floor-inputs-test
-if [ "$(uname -s)" = Linux ]; then scripts/stress-resource-test; scripts/stress-runner-test; fi
-for tool in R Rscript; do
-    if ! "$tool" --version >/dev/null 2>&1; then
-        printf 'gate: %s is missing or cannot run on %s\n' "$tool" "$(hostname)" >&2
-        exit 1
-    fi
-done
-scripts/words ${THINKTHEN_PRIVATE_PATTERNS:+"$THINKTHEN_PRIVATE_PATTERNS"}
-scripts/secrets
-scripts/bindings-schema
-scripts/contract-schema-check
-scripts/notices --check
-scripts/supply-chain-check
-scripts/rust-advisories
-cargo fmt --all --check
-scripts/core-check
-scripts/fixture-routing-check
-cargo clippy --workspace --all-targets --features thinkthen/stream --locked -- -D warnings
-scripts/c-gate
-cargo test --workspace --features thinkthen/stream --locked
-scripts/crate-package-test
-guide_root=$PWD
-guide_scratch=$(mktemp -d)
-python3 scripts/surface-example prepare bash "$guide_scratch"
-command_target=${CARGO_TARGET_DIR:-$PWD/target}
-case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
-if ! (cd "$guide_scratch" && PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh); then
-    rm -rf "$guide_scratch"
-    exit 1
-fi
-rm -rf "$guide_scratch"
-scripts/sdk-gates

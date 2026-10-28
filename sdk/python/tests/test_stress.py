@@ -27,7 +27,7 @@ result={}
 try:
     runner['run']([sys.executable,sys.argv[2]],table,'systemone',healthy,
         table['records']['smoke'],rounds=table['records']['soak_rounds'],
-        resources=True,surface='python',result=result)
+        resources=True,surface='python',result=result,short_gate=True)
 finally:
     print(json.dumps(result),flush=True)
 """
@@ -46,6 +46,7 @@ def test_resource_failure_prints_metrics(tmp_path: Path) -> None:
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts/stress-adapters.py").write_text(
         "def run(*args, **kwargs):\n"
+        "    assert kwargs['short_gate'] is True\n"
         "    kwargs['result']['resources'] = {'growth': {'passed': False}}\n"
         "    raise RuntimeError('retained resources fail growth criterion')\n"
     )

@@ -1,6 +1,5 @@
 """Prepare public build inputs separately from the offline candidate."""
 import email
-import fcntl
 import hashlib
 import json
 import os
@@ -76,6 +75,13 @@ def language_inputs():
     wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
     abi = wheel.split('-')[2][2:]
     prepared('uv', 'python', 'install', f'{abi[0]}.{abi[1:]}')
+    sdk_tools()
+    python_frames()
+    r_sources()
+
+
+def sdk_tools():
+    """Prepare the same Zig compiler and Ruby runtime gem for either gate."""
     version = re.search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
     zig = TOOLS / 'zig' / version
     if not (zig / 'zig').is_file():
@@ -94,11 +100,10 @@ def language_inputs():
     suffix = '-gnu' if ruby_platform.endswith('-linux') else ''
     filename = f'ffi-1.17.4-{ruby_platform}{suffix}.gem'
     fetch('https://rubygems.org/downloads/' + filename, gems / filename)
-    python_frames()
-    r_sources()
 
 
 def floor_inputs():
+    import fcntl
     from release_native import complete
     from release_images import image
     from runtime_floors import FLOORS

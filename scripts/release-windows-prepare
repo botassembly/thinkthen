@@ -33,8 +33,15 @@ INPUTS = {
     'R-4.6.1-win.exe': ('https://cloud.r-project.org/bin/windows/base/R-4.6.1-win.exe', 'c5424c40cd70ef85765a55d2ff96bb602b5f30ed536938ff004f14db5db3c2df'),
     # R dependency ZIPs use package_version.zip names. Add every Imports dependency
     # with its reviewed checksum; preparation refuses an incomplete pinned closure.
-    # CRAN's Windows 4.6 binary: Built R 4.6.1, 2026-10-21 01:07:16 UTC.
-    'jsonlite_2.0.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/jsonlite_2.0.0.zip', '062aeffa1f311b2cbef49075bf3b592339da63d12ea6d67c40612330e29538e9'),
+    # CRAN rebuilt this version for R 4.6.1 on 2026-10-26 04:10:36 UTC.
+    # Reviewed 2026-10-28: cran.r-project.org and cloud.r-project.org serve
+    # identical bytes; /bin/windows/contrib/4.6/PACKAGES confirms the Built field.
+    # The former 062aeffa1f311b2cbef49075bf3b592339da63d12ea6d67c40612330e29538e9
+    # archive has Built 2026-10-21 01:07:16 UTC; DESCRIPTION differs only by that date.
+    # Both match /src/contrib/jsonlite_2.0.0.tar.gz metadata except Built/Archs.
+    # That source still matches its SHA256 in release-downloads.json. All new
+    # archive members match its MD5 manifest. Keep refusing unreviewed replacements.
+    'jsonlite_2.0.0.zip': ('https://cloud.r-project.org/bin/windows/contrib/4.6/jsonlite_2.0.0.zip', '55791ccd04e72656b8ac3d011cea9049c455576cfa9b4c7b18f0f5a8aeec2213'),
     # The complete Imports closure comes from each official binary DESCRIPTION.
     # SHA256 values match downloads from cloud.r-project.org and cran.r-project.org;
     # CRAN publishes per-member MD5 files inside these ZIPs, no archive hash index.

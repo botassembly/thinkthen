@@ -36,8 +36,8 @@ def verify(root, jars, resources, native_platform, native_input):
     for name, folder in [('java', 'sdk/java/library'), ('kotlin', 'sdk/kotlin')]:
         built, = (root / folder / 'target').glob(f'thinkthen-{name}-*.jar')
         selected, = [Path(p) for p in jars if Path(p).name == built.name]
-        from package_inventory import check
-        check(name, selected, set())
+        from package_inventory import check_build_payload
+        check_build_payload(name, selected, set())
         assert digest(selected) == digest(built), f'JVM artifact differs from this build: {selected}'
         if name == 'java':
             with zipfile.ZipFile(selected) as jar:

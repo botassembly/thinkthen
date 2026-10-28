@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Exercise gate continuation and workflow publication refusal with fake stages."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def workflow(name):
+    return json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+        'puts JSON.generate(YAML.safe_load_file(ARGV[0], aliases: true))',
+        ROOT / '.github/workflows' / name], text=True))
+
+
+class QualificationContinuation(unittest.TestCase):
+    def test_pair_image_validation_failure_fails_workflow_import_step(self):
+        steps = workflow('native-qualification.yml')['jobs']['gate']['steps']
+        step = next(step for step in steps if step.get('id') == 'import-the-linux-native-pair')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts = root / 'scripts'
+            scripts.mkdir()
+            (scripts / 'native-tools-env').touch()
+            pair = scripts / 'native-pair'
+            pair.write_text('#!/bin/sh\ncase "$1" in import) exit 0;; image) echo invalid-pair >&2; exit 7;; esac\n')
+            pair.chmod(0o755)
+            environment = root / 'environment'
+            result = subprocess.run(['bash', '-eo', 'pipefail', '-c', step['run']], cwd=root,
+                env=dict(os.environ, RUNNER_TEMP=directory, GITHUB_ENV=str(environment)), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 7, result.stderr)
+            self.assertIn('invalid-pair', result.stderr)
+            self.assertFalse(environment.exists())
+
+    def test_gate_reaches_later_sdk_after_two_failures_and_missing_tool(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts, binary = root / 'scripts', root / 'bin'
+            scripts.mkdir()
+            binary.mkdir()
+            log = root / 'commands'
+            fake = '#!/bin/sh\nname=$(basename "$0")\nprintf "%s %s\\n" "$name" "$*" >> "$TEST_LOG"\ncase "$name" in release-staging-test) exit 7;; rust-advisories) exit 9;; esac\n'
+            for path in (ROOT / 'scripts').iterdir():
+                if path.is_file():
+                    target = scripts / path.name
+                    target.write_text(fake)
+                    target.chmod(0o755)
+            for name in ('gate', 'sdk-gates'):
+                shutil.copy2(ROOT / 'scripts' / name, scripts / name)
+            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm'):
+                (binary / name).symlink_to(shutil.which(name))
+            for name in ('python3', 'git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake', 'pkg-config', 'uv', 'node', 'npm', 'ruby', 'R', 'Rscript', 'docker'):
+                (binary / name).write_text(fake)
+                (binary / name).chmod(0o755)
+            (binary / 'uname').write_text('#!/bin/sh\necho Linux\n')
+            (binary / 'uname').chmod(0o755)
+            result = subprocess.run([scripts / 'gate'], cwd=root, capture_output=True, text=True,
+                env={'PATH': str(binary), 'HOME': directory, 'TEST_LOG': str(log),
+                     'PYTHONDONTWRITEBYTECODE': '1', 'PM_JOB_CORES': '1', 'CARGO_BUILD_JOBS': '1', 'RUST_TEST_THREADS': '1'})
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Failed gate stages: tool-staticcheck release-staging-test rust-advisories', result.stderr)
+            self.assertIn('release-staging-test (exit 7)', result.stderr)
+            self.assertIn('rust-advisories (exit 9)', result.stderr)
+            calls = log.read_text().splitlines()
+            self.assertGreater(next(i for i, line in enumerate(calls) if line.startswith('postgres-gate ')),
+                               next(i for i, line in enumerate(calls) if line.startswith('rust-advisories ')))
+
+    def test_workflows_attempt_later_stages_and_report_both_failures(self):
+        for name in ('windows.yml', 'native-qualification.yml'):
+            for job_name, job in workflow(name)['jobs'].items():
+                with self.subTest(workflow=name, job=job_name):
+                    if job.get('needs'):
+                        self.assertEqual(job.get('if'), 'always()')
+                    steps = job['steps']
+                    summary = steps[-1]
+                    self.assertEqual(summary['if'], 'always()')
+                    self.assertEqual(summary['env']['QUALIFICATION_STEPS'], '${{ toJSON(steps) }}')
+                    self.assertIn('scripts/qualification-summary', summary['run'])
+                    diagnostics = []
+                    for step in steps[:-1]:
+                        self.assertFalse(step.get('continue-on-error', False))
+                        if 'actions/upload-artifact@' in step.get('uses', ''):
+                            self.assertNotIn('if', step)
+                        else:
+                            self.assertTrue(step.get('if', 'always()' if step['id'] == 'checkout' else '').startswith('always()'), step)
+                            self.assertNotIn('steps.native.outcome', step.get('if', ''))
+                            diagnostics.append(step)
+                    failures = {diagnostics[0]['id'], diagnostics[1]['id']}
+                    outcomes = {}
+                    for step in diagnostics:
+                        result = subprocess.run(['sh', '-c', 'echo "$1"; exit "$2"', 'fake-stage', step['id'], '7' if step['id'] in failures else '0'], capture_output=True, text=True)
+                        outcomes[step['id']] = {'outcome': 'failure' if result.returncode else 'success'}
+                    self.assertEqual(outcomes[diagnostics[-1]['id']]['outcome'], 'success')
+                    result = subprocess.run([sys.executable, ROOT / summary['run'].split()[-1]],
+                        env=dict(os.environ, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    for failed in failures:
+                        self.assertIn(failed, result.stderr)
+                    self.assertIn(diagnostics[-1]['id'] + ': success', result.stdout)
+
+    def test_windows_checker_selects_the_same_pinned_host_runtimes(self):
+        reference = workflow('windows.yml')['jobs']['windows']['steps']
+        actual = workflow('native-qualification.yml')['jobs']['windows-check']['steps']
+        for runtime in ('go', 'java', 'dotnet', 'node', 'ruby'):
+            with self.subTest(runtime=runtime):
+                source = next(step for step in reference if step.get('id') == 'setup-' + runtime)
+                selected = next(step for step in actual if step.get('id') == 'setup-' + runtime)
+                self.assertEqual(selected['uses'], source['uses'])
+                self.assertEqual(selected['with'], source['with'])
+        rust = next(step for step in actual if step.get('id') == 'prepare-rust')
+        self.assertIn('from release_rust import prepare; prepare()', rust['run'])
+        self.assertIn('cargo fetch --locked --target x86_64-pc-windows-msvc', rust['run'])
+
+    def test_failed_qualification_blocks_bundle_draft_and_publication(self):
+        prepare = workflow('release-prepare.yml')['jobs']
+        self.assertEqual(prepare['bundle']['needs'], ['source', 'qualification'])
+        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle'])
+        for name in ('qualification', 'bundle', 'draft'):
+            self.assertFalse(prepare[name].get('continue-on-error', False))
+        for name in ('bundle', 'draft'):
+            self.assertNotIn('if', prepare[name])
+            for step in prepare[name]['steps']:
+                self.assertNotIn('if', step)
+                self.assertFalse(step.get('continue-on-error', False))
+        for job in workflow('release.yml')['jobs'].values():
+            self.assertNotIn('always()', str(job.get('if', '')))
+            self.assertFalse(job.get('continue-on-error', False))
+
+
+if __name__ == '__main__':
+    unittest.main()

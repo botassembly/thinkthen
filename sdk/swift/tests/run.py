@@ -163,17 +163,29 @@ filename = "libthinkthen_ffi.dylib" if sys.platform == "darwin" else "thinkthen_
 resources = list(Path(consumer).parent.rglob(filename))
 assert len(resources) == 1, resources
 library = resources[0]
-original = library.read_bytes()
-try:
-    for case in cases:
-        shutil.copyfile(case["library"], library)
-        result = subprocess.run([consumer, "abi"], env=env, capture_output=True, text=True, check=True)
-        if case["accept"]:
-            assert result.stdout.strip() == "accepted", (case["name"], result.stdout)
-        elif case.get("missing"):
-            assert case["missing"] in result.stdout, (case["name"], result.stdout)
-        else:
-            assert result.stdout.strip() == "version", (case["name"], result.stdout)
-finally:
-    library.write_bytes(original)
+
+
+def replace_library(source):
+    # Give signed code a new inode before the next process loads it.
+    with tempfile.TemporaryDirectory(dir=library.parent) as folder:
+        staged = Path(folder) / library.name
+        shutil.copy2(source, staged)
+        os.replace(staged, library)
+
+
+with tempfile.TemporaryDirectory() as folder:
+    original = Path(folder) / library.name
+    shutil.copy2(library, original)
+    try:
+        for case in cases:
+            replace_library(case["library"])
+            result = subprocess.run([consumer, "abi"], env=env, capture_output=True, text=True, check=True)
+            if case["accept"]:
+                assert result.stdout.strip() == "accepted", (case["name"], result.stdout)
+            elif case.get("missing"):
+                assert case["missing"] in result.stdout, (case["name"], result.stdout)
+            else:
+                assert result.stdout.strip() == "version", (case["name"], result.stdout)
+    finally:
+        replace_library(original)
 print("Installed Swift consumer: typed manifest through both wires, exact IDs, cancellation, owned rows and ABI checks pass")

@@ -3,6 +3,8 @@ import argparse
 import json
 from pathlib import Path
 import re
+import subprocess
+import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
 
@@ -76,6 +78,53 @@ def check(root=ROOT):
         raise ValueError('C pkg-config version must use its configured workspace version')
     if not (root / f'extensions/postgres/thinkthen--{expected}.sql').is_file():
         raise ValueError('PostgreSQL SQL filename differs from the release version')
+    source_versions(root, expected)
+
+
+def source_versions(root, expected):
+    from runtime_floors import check_sources
+    check_sources(root)
+    for name in ('extensions/postgres/Makefile', 'extensions/postgres/package.sh'):
+        versions = re.findall(r'thinkthen--([0-9.]+)\.sql', (root / name).read_text())
+        if not versions or set(versions) != {expected}:
+            raise ValueError(name + ': PostgreSQL SQL version differs from Cargo.toml')
+    for name in ('sdk/c/CMakeLists.txt', 'sdk/cpp/CMakeLists.txt', 'databases/duckdb/CMakeLists.txt'):
+        text = (root / name).read_text()
+        declaration = re.search(r'(?im)^project\(([^\n]+)\)', text)
+        version_field = re.search(r'\bVERSION\s+("[^"]+"|\S+)', declaration[1])
+        # DuckDB's host supplies its extension version; it declares no project version.
+        if version_field is None:
+            if name.startswith('sdk/'): raise ValueError(name + ': missing package version')
+            continue
+        # Let CMake evaluate the real version derivation, including Cargo.toml reads.
+        with tempfile.TemporaryDirectory(prefix='thinkthen-cmake-version-') as temporary:
+            script = Path(temporary) / 'version.cmake'
+            script.write_text('set(CMAKE_CURRENT_SOURCE_DIR "${PACKAGE_SOURCE_DIR}")\n' +
+                              text[:declaration.start()] + '\nfile(WRITE "${OUTPUT}" ' + version_field[1] + ')\n')
+            output = Path(temporary) / 'version'
+            subprocess.run(['cmake', '-DPACKAGE_SOURCE_DIR=' + str((root / name).parent),
+                            '-DOUTPUT=' + str(output), '-P', str(script)], check=True, capture_output=True)
+            if output.read_text() != expected:
+                raise ValueError(name + ': CMake package version differs from Cargo.toml')
+    name = 'scripts/sqlite-package'
+    sqlite = re.search(r'sqlite="\$THINKTHEN_SQLITE_ROOT/sqlite-([0-9.]+)"', (root / name).read_text())
+    prepared = re.search(r"for release in '([0-9.]+) ", (root / 'scripts/sqlite-prepare').read_text())
+    if sqlite is None or sqlite[1] != prepared[1]:
+        raise ValueError(name + ': SQLite package does not use the prepared runtime floor')
+    name = 'databases/duckdb/community-versions.json'
+    versions = json.loads((root / name).read_text())
+    selected = re.search(r'/duckdb-([0-9.]+)', (root / 'databases/duckdb/build.sh').read_text())[1]
+    if selected not in versions:
+        raise ValueError(name + ': DuckDB package runtime has no community revision')
+    for release, pins in versions.items():
+        if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', release) or set(pins) != {'duckdb', 'extension-ci-tools'}:
+            raise ValueError(name + ': invalid DuckDB version declaration')
+        if any(not re.fullmatch(r'[0-9a-f]{40}', pin) for pin in pins.values()):
+            raise ValueError(name + ': invalid upstream revision')
+    indexed = subprocess.check_output(['git', 'ls-files', '--stage', 'duckdb', 'extension-ci-tools'], cwd=root, text=True)
+    pins = {line.split('\t')[1]: line.split()[1] for line in indexed.splitlines()}
+    if pins != versions[selected]:
+        raise ValueError(name + ': DuckDB runtime revisions differ from source gitlinks')
 
 
 if __name__ == '__main__':

@@ -23,26 +23,40 @@ def check(database_root):
        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--self-test", action="store_true", help="prove a planted advisory refuses the dependency graph")
-    args = parser.parse_args()
-    pins = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["metadata"]["supply-chain"]
-    actual = output("cargo", "deny", "--version")
-    if actual != "cargo-deny " + pins["cargo-deny"]:
-        raise SystemExit("rust advisories: prepare cargo-deny " + pins["cargo-deny"] + "; found " + actual)
-    database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo")) / "advisory-dbs"))
+def database(database_root):
     databases = [path for path in database_root.glob("advisory-db-*") if (path / ".git").exists()]
     matching = [path for path in databases if output("git", "remote", "get-url", "origin", cwd=path).removesuffix(".git").lower() == "https://github.com/rustsec/advisory-db"]
     if len(matching) != 1:
         raise SystemExit("rust advisories: prepare the RustSec advisory database at " + str(database_root))
     database = matching[0]
-    if output("git", "rev-parse", "HEAD", cwd=database) != pins["advisory-revision"] or output("git", "status", "--porcelain", cwd=database):
+    return database
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--self-test", action="store_true", help="prove a planted advisory refuses the dependency graph")
+    parser.add_argument("--prepare", action="store_true", help="prepare pinned tools and data with network access")
+    args = parser.parse_args()
+    pins = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["metadata"]["supply-chain"]
+    database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo")) / "advisory-dbs"))
+    if args.prepare:
+        subprocess.run(["cargo", "install", "--locked", "--version", pins["cargo-deny"], "cargo-deny"], check=True)
+        subprocess.run(["cargo", "deny", "fetch"], check=True,
+                       env=dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(database_root)))
+        subprocess.run(["git", "fetch", "origin", pins["advisory-revision"]], cwd=database(database_root), check=True)
+        subprocess.run(["git", "checkout", "--detach", pins["advisory-revision"]], cwd=database(database_root), check=True)
+    actual = output("cargo", "deny", "--version")
+    if actual != "cargo-deny " + pins["cargo-deny"]:
+        raise SystemExit("rust advisories: prepare cargo-deny " + pins["cargo-deny"] + "; found " + actual)
+    selected = database(database_root)
+    if output("git", "rev-parse", "HEAD", cwd=selected) != pins["advisory-revision"] or output("git", "status", "--porcelain", cwd=selected):
         raise SystemExit("rust advisories: require a clean advisory database at " + pins["advisory-revision"])
+    if args.prepare:
+        return
     if args.self_test:
         with tempfile.TemporaryDirectory(prefix="thinkthen-advisory-") as temporary:
-            copied = Path(temporary) / database.name
-            shutil.copytree(database, copied)
+            copied = Path(temporary) / selected.name
+            shutil.copytree(selected, copied)
             advisory = copied / "crates" / "serde" / "RUSTSEC-2026-9999.md"
             advisory.parent.mkdir(parents=True, exist_ok=True)
             advisory.write_text('''```toml

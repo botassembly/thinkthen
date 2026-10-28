@@ -1,7 +1,11 @@
 #![cfg(test)]
 //! Final artifacts cannot trace backend credentials through a host logger.
 
-#[path = "../../loopback/src/lib.rs"]
+#[path = "../test-support/server/mod.rs"]
+#[allow(
+    dead_code,
+    reason = "This fixture subset retains server lifecycle ownership fields."
+)]
 pub mod loopback;
 
 use std::sync::Mutex;

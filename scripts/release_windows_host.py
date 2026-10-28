@@ -59,7 +59,7 @@ def environment():
     selected = subprocess.check_output(f'call "{vcvars}" >nul && set', shell=True, text=True)
     env.update((key.upper(), value) for line in selected.splitlines() if '=' in line and not line.startswith('=') for key, value in [line.split('=', 1)])
     paths = [TOOLS / 'windows/R-4.6.1/bin/x64', TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
-    for variable in ('JAVA_HOME_25_X64', 'JAVA_HOME_22_X64'):
+    for variable in ('JAVA_HOME', 'JAVA_HOME_22_X64'):
         if env.get(variable):
             paths.append(Path(env[variable]) / 'bin')
             break

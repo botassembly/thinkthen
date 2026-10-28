@@ -132,7 +132,7 @@ def identifier_bounds(table, count, concurrency, rounds):
     return basis
 
 
-def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface):
+def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False):
     report = result if result is not None else {}
     report.update(surface=surface, command=shlex.join(command), backend=wire, scenario=scenario['name'],
         case=f"{scenario['name']}/concurrency={concurrency}/rounds={rounds}/cancel={cancel}",
@@ -190,7 +190,8 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                 if monitor is not None:
                     report['resources'] = monitor.finish(rounds,
                         verified_records={'workload': [report['rows'] // rounds] * rounds},
-                        expected_context={key: report[key] for key in ('surface', 'backend', 'case')})
+                        expected_context={key: report[key] for key in ('surface', 'backend', 'case')},
+                        short_gate=short_gate)
                     monitor = None
                     if not report['resources']['growth']['passed']:
                         raise RuntimeError('resource use is unverifiable' if

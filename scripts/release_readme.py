@@ -31,9 +31,10 @@ SOURCES = {
 }
 
 
-def readme(name, out, artifact):
+def released_readme(name, *, root=ROOT):
+    """Render the shared package guide without platform-specific offline steps."""
     source, boundary = SOURCES[name]
-    body = (ROOT / source).read_text()
+    body = (root / source).read_text()
     if boundary:
         body = body.split('\n' + boundary, 1)[0]
     # Process prose only: C++ lambda captures also contain Markdown-like brackets.
@@ -44,6 +45,11 @@ def readme(name, out, artifact):
                                   if not re.search(r'\b(?:API|PACKAGING)\.md\b|\bexamples/|\bscripts/',
                                                    re.sub(r'https?://[^)\s]+', '', p)))
     body = ''.join(parts)
+    return (body.rstrip() + '\n').encode()
+
+
+def readme(name, out, artifact, *, root=ROOT):
+    body = released_readme(name, root=root).decode()
     version = json.loads((out / 'build.json').read_text())['version']
     requirements = json.loads((out / 'requirements.json').read_text())[name]
     python = 'python' if requirements.get('platform') == 'windows-x86_64' else 'python3'

@@ -90,6 +90,8 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
         group = case['resources']['groups']['workload']
         assert len(group['round_samples']) == 8, group
         memory = group['growth']['metrics']['memory_bytes']
+        assert 'short_gate_floor_bytes' not in memory, memory
+        assert memory['floor_bytes_per_verified_record'] == 1, memory
         assert memory['verified_records_between_checkpoints'] == case['rows'] // case['rounds'] * 3, group
         for context in group['context']:
             assert set(context) == {'surface', 'backend', 'case'}, context
@@ -99,6 +101,18 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
             assert len(json.dumps(dict(pid=999999999, required_pid=999999999,
                 backend_port='65535', group='workload', concurrency='1', context=context)).encode()) + 1 <= 1024, context
     assert [json.loads(line) for line in completed.stderr.splitlines()] == long_report['cases']
+    # Feature: the smoke caller explicitly selects the short memory floor.
+    sys.path.insert(0, str(root / 'scripts'))
+    try:
+        runner = runpy.run_path(str(root / 'scripts/stress-adapters.py'))
+        with patch.dict(os.environ, env):
+            short = runner['run'](long_command, table, 'systemone', table['scenarios'][0],
+                table['records']['smoke'], rounds=8, resources=True, surface='fixture', short_gate=True)
+        memory = short['resources']['growth']['metrics']['memory_bytes']
+        assert memory['short_gate_floor_bytes'] == 1048576, memory
+        assert 'floor_bytes_per_verified_record' not in memory, memory
+    finally:
+        sys.path.pop(0)
     # Feature: checkpoints from a different case cannot borrow verified totals.
     matching_adapter = adapter.read_text()
     adapter.write_text(matching_adapter.replace('        subprocess.run(',

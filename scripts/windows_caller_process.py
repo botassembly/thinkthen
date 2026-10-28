@@ -105,7 +105,7 @@ def launch(command, *, cwd, env, probe=False):
         with tempfile.TemporaryDirectory(prefix='thinkthen-caller-process-') as temporary:
             log = Path(temporary) / 'child.log'
             child = [sys.executable, str(Path(__file__).resolve()), '--child', str(log),
-                     '90' if probe else '0', *map(str, command)]
+                     '90' if probe else '3600', *map(str, command)]
             line = subprocess.list2cmdline(child)
             if len(line) >= 32767:
                 raise RuntimeError('Caller-owned proof command exceeds CreateProcessAsUserW limit')
@@ -119,12 +119,9 @@ def launch(command, *, cwd, env, probe=False):
             checked(result, 'CreateProcessAsUserW')
             # The wrapper owns the command timeout, including killing and waiting
             # for PowerShell. Wait for it so cleanup cannot orphan its command.
-            waited = functions['WaitForSingleObject'](process.process, 0xffffffff)
-            checked(waited == 0, 'WaitForSingleObject')
+            stream(log, lambda: functions['WaitForSingleObject'](process.process, 100))
             status = W.DWORD()
             checked(functions['GetExitCodeProcess'](process.process, C.byref(status)), 'GetExitCodeProcess')
-            if log.exists():
-                print('\n'.join(log.read_text(encoding='utf-8', errors='replace').splitlines()[-200:]), flush=True)
             if status.value:
                 print('Caller-owned proof child exited ' + str(status.value), flush=True)
                 raise SystemExit(status.value)
@@ -136,6 +133,24 @@ def launch(command, *, cwd, env, probe=False):
         finally:
             for handle in (process.thread, process.process, duplicate, source):
                 if handle: functions['CloseHandle'](handle)
+
+
+def stream(log, wait):
+    """Forward child output while it runs, then drain its final output."""
+    position = 0
+    while True:
+        status = wait()
+        if log.exists():
+            with log.open('rb') as source:
+                source.seek(position)
+                data = source.read()
+                position = source.tell()
+            if data:
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+        if status == 0:
+            return
+        checked(status == 0x102, 'WaitForSingleObject')
 
 
 def probe(cwd, env):
@@ -168,7 +183,7 @@ def child():
     with open(log, 'w', encoding='utf-8') as output:
         try:
             result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT,
-                                    timeout=int(timeout) or None, check=False)
+                                    timeout=int(timeout), check=False)
             return result.returncode
         except Exception:
             traceback.print_exc(file=output)

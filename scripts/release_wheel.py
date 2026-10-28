@@ -8,8 +8,8 @@ import zipfile
 import tomllib
 
 
-def python_wheel(stage, out, version, native, tag="cp310-abi3-win_amd64", notices=None):
-    root = Path(__file__).resolve().parent.parent
+def python_wheel(stage, out, version, native, tag="cp310-abi3-win_amd64", notices=None, *, root=None):
+    root = root if root is not None else Path(__file__).resolve().parent.parent
     wheel = out / f'python/thinkthen-{version}-{tag}.whl'
     package = stage / 'wheel'
     shutil.copytree(root / 'sdk/python/thinkthen', package / 'thinkthen')
@@ -39,7 +39,7 @@ def python_wheel(stage, out, version, native, tag="cp310-abi3-win_amd64", notice
     (metadata / 'WHEEL').write_text('Wheel-Version: 1.0\nGenerator: ThinkThen\nRoot-Is-Purelib: false\nTag: ' + tag + '\n')
     (metadata / 'licenses').mkdir()
     shutil.copy2(root / 'LICENSE', metadata / 'licenses/LICENSE')
-    shutil.copy2(root / 'sdk/python/README.md', (package if tag.endswith('win_amd64') else metadata) / 'README.md')
+    shutil.copy2(root / 'sdk/python/README.md', metadata / 'README.md')
     rows = []
     for path in sorted(package.rglob('*')):
         if path.is_file():

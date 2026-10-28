@@ -4,6 +4,7 @@ import shutil
 import tarfile
 
 from release_workflow import ROOT, version
+from release_readme import released_readme
 
 RIDS = {'linux-x86_64': 'linux-x64', 'linux-arm64': 'linux-arm64',
         'macos-arm64': 'osx-arm64', 'windows-x86_64': 'win-x64'}
@@ -17,13 +18,16 @@ def stage(libraries, destination, notices):
     check(ROOT)
     go = destination / 'sdk/go/thinkthen'
     shutil.copytree(ROOT / 'sdk/go/thinkthen', go, ignore=shutil.ignore_patterns('native', 'library.go', 'tests'))
-    shutil.copy2(ROOT / 'sdk/go/README.md', go / 'README.md')
+    (go / 'README.md').write_bytes(released_readme('go'))
     # The tag overlays main, so replace its one-platform declaration as well.
     (go / 'library.go').write_text('package thinkthen\n')
     shutil.copy2(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h', go / 'thinkthen.h')
     shutil.copy2(ROOT / 'LICENSE', go / 'LICENSE')
     swift = destination / 'sdk/swift'
-    shutil.copytree(ROOT / 'sdk/swift', swift, ignore=shutil.ignore_patterns('Native', '.build'))
+    shutil.copytree(ROOT / 'sdk/swift', swift, ignore=shutil.ignore_patterns('Native', '.build', 'tests', 'generate-codes.py'))
+    (swift / 'README.md').write_bytes(released_readme('swift'))
+    (swift / 'VERSION').write_text(version() + '\n')
+    shutil.copy2(ROOT / 'LICENSE', swift / 'LICENSE')
     (swift / 'Sources/CThinkThen/include').mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
                  swift / 'Sources/CThinkThen/include/thinkthen.h')
@@ -60,6 +64,8 @@ def stage_go_libraries(libraries, go):
         (go / f'library_{system}_{arch}.go').write_text(
             f'//go:build !thinkthen_system && {system} && {arch}\n\npackage thinkthen\n\nimport _ "embed"\n\n'
             f'//go:embed {relative}\nvar library []byte\n')
+    (go / 'native/dependencies.txt').write_text(''.join(
+        f'{target}: {library.name}\n' for target, library in libraries.items()))
     (go / 'library_unsupported.go').write_text(
         '//go:build !thinkthen_system && !(' + ' || '.join(
             f'({system} && {arch})' for system, arch in GO.values()) + ')\n\n'

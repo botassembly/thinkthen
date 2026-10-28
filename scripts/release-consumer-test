@@ -33,9 +33,8 @@ def swift_staging():
             consumer = scratch / 'Consumer'
             windows = scratch / 'checks/swift'
             for folder in (consumer, windows):
-                folder.mkdir(parents=True)
-                for path in (ROOT / 'sdk/swift/tests').glob('*.swift'):
-                    shutil.copy2(path, folder / path.name)
+                shutil.copytree(ROOT / 'sdk/swift/tests', folder,
+                                ignore=shutil.ignore_patterns('*.py'))
                 shutil.copytree(ROOT / 'sdk/swift', folder.parent / 'ThinkThen',
                                 ignore=shutil.ignore_patterns('tests', '.build'))
             if source.startswith('#!/bin/sh'):
@@ -62,6 +61,11 @@ def swift_staging():
                 ['swift', 'package', '--package-path', str(staged), 'describe', '--type', 'json'], text=True))
             guide = next(target for target in package['targets'] if target['name'] == 'Guide')
             assert guide['sources'] == ['main.swift'], (recipe.name, guide)
+            target = next(target for target in package['targets'] if target['name'] == 'Consumer')
+            assert set(target['sources']) == {
+                path.name for path in (ROOT / 'sdk/swift/tests').glob('*.swift')
+                if path.name != 'Package.swift'
+            }, (recipe.name, target['sources'])
             found.append(recipe.name)
             print('Swift consumer staging: ' + recipe.name + ' resolves Guide and its inputs', flush=True)
     assert found, 'no Swift consumer preparation paths discovered'

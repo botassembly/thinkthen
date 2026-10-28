@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Check release versions, CLI record framing and build attestation contracts."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
 import subprocess
 import sys
@@ -17,6 +19,46 @@ import release_windows_check
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_jvm_build_payload_precedes_final_notice_checks(self):
+        from jvm_repository import verify
+        from package_inventory import check
+
+        with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-inventory-') as temporary:
+            source = Path(temporary)
+            resources = source / 'resources'
+            native = resources / 'fixture/libthinkthen_ffi.so'
+            native.parent.mkdir(parents=True)
+            native.write_bytes(b'engine fixture')
+            repository = source / 'repository'
+            repository.mkdir()
+            jars = []
+            for family, folder in [('java', 'sdk/java/library'), ('kotlin', 'sdk/kotlin')]:
+                target = source / folder / 'target'
+                target.mkdir(parents=True)
+                built = target / f'thinkthen-{family}-{version()}.jar'
+                with zipfile.ZipFile(built, 'w') as archive:
+                    archive.writestr('META-INF/MANIFEST.MF', 'Manifest-Version: 1.0\n')
+                    archive.writestr('io/thinkthen/Fixture.class', b'class fixture')
+                    if family == 'java':
+                        archive.writestr('io/thinkthen/native/fixture/' + native.name, native.read_bytes())
+                selected = repository / built.name
+                shutil.copy2(built, selected)
+                jars.append(selected)
+                with self.assertRaisesRegex(ValueError, 'dependency notice inventory'):
+                    check(family, selected, set())
+            verify(source, jars, resources, 'fixture', native)
+            with zipfile.ZipFile(jars[0], 'a') as archive:
+                archive.writestr('undeclared.bin', b'undeclared payload')
+            with self.assertRaisesRegex(AssertionError, 'undeclared or missing files'):
+                verify(source, jars, resources, 'fixture', native)
+
+    def test_release_package_text(self):
+        subprocess.run([sys.executable, ROOT / "scripts/release-package-text-test"], check=True)
+
+    def test_qualification_recipes(self):
+        subprocess.run([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)
+
     def test_go_selection_preserves_explicit_home_under_isolated_home(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-go-home-') as temporary:
             environment = dict(os.environ, HOME=temporary, PYTHONDONTWRITEBYTECODE='1')
@@ -47,28 +89,97 @@ for platform, fallback in (
     def test_release_credentials_reach_only_their_own_upload(self):
         subprocess.run(['ruby', ROOT / 'scripts/release-workflow-check', '--self-test'], check=True)
 
-    def test_ruby_version_mismatch_refuses_release(self):
+    def test_package_and_runtime_versions_refuse_inconsistent_manifests(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-release-version-') as temporary:
             source = Path(temporary)
             # Copy only tracked manifests, never warm build trees or home config.
             tracked = subprocess.check_output(['git', 'ls-files'], cwd=ROOT, text=True).splitlines()
             names = {'Cargo.toml', 'pyproject.toml', 'package.json', 'package-lock.json',
-                     'pom.xml', 'DESCRIPTION', 'build.zig.zon', 'version.rb', 'thinkthen-c.pc.in'}
+                     'pom.xml', 'DESCRIPTION', 'build.zig.zon', 'version.rb', 'thinkthen-c.pc.in',
+                     'Package.swift', 'go.mod', 'CMakeLists.txt', 'community-versions.json'}
+            inputs = {'scripts/release_metadata.py', 'scripts/runtime_floors.py', 'scripts/runtime-floors.json',
+                      'scripts/sqlite-package', 'scripts/sqlite-prepare', 'sdk/ruby/thinkthen.gemspec',
+                      'extensions/postgres/Makefile', 'extensions/postgres/package.sh', 'databases/duckdb/build.sh'}
             for name in tracked:
                 path = Path(name)
-                if path.name in names or path.suffix in ('.csproj', '.control', '.sql'):
+                if name in inputs or path.name in names or path.suffix in ('.csproj', '.control', '.sql'):
                     destination = source / path
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(ROOT / path, destination)
-            (source / 'scripts').mkdir()
-            shutil.copy2(ROOT / 'scripts/release_metadata.py', source / 'scripts/release_metadata.py')
+            subprocess.run(['git', 'init', '--quiet', source], check=True)
+            gitlinks = subprocess.check_output(['git', 'ls-files', '--stage', 'duckdb', 'extension-ci-tools'], cwd=ROOT)
+            subprocess.run(['git', 'update-index', '--index-info'], cwd=source, input=gitlinks, check=True)
             command = [sys.executable, source / 'scripts/release_metadata.py']
             result = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            (source / 'sdk/ruby/lib/thinkthen/version.rb').write_text('module ThinkThen\n  VERSION = "0.0.0"\nend\n')
-            result = subprocess.run(command, capture_output=True, text=True)
-            self.assertNotEqual(result.returncode, 0, 'release gate accepted a wrong Ruby version')
-            self.assertIn('sdk/ruby/lib/thinkthen/version.rb', result.stderr)
+            mutations = {
+                'sdk/ruby/lib/thinkthen/version.rb': ('0.2.0', '0.0.0'),
+                'sdk/swift/Package.swift': ('swift-tools-version: 6.3', 'swift-tools-version: 5.0'),
+                'sdk/go/thinkthen/go.mod': ('go 1.23', 'go 1.22'),
+                'sdk/c/CMakeLists.txt': ('VERSION "${package_version}"', 'VERSION "0.0.0"'),
+                'sdk/cpp/CMakeLists.txt': ('VERSION "${package_version}"', 'VERSION "0.0.0"'),
+                'databases/duckdb/CMakeLists.txt': ('LANGUAGES C CXX)', 'VERSION 0.0.0 LANGUAGES C CXX)'),
+                'databases/duckdb/community-versions.json': ('d1dc88f950d456d72493df452dabdcd13aa413dd', '0' * 40),
+                'scripts/sqlite-package': ('sqlite-3.41.0', 'sqlite-3.54.1'),
+                'extensions/postgres/Makefile': ('thinkthen--0.2.0.sql', 'thinkthen--0.0.0.sql'),
+                'extensions/postgres/package.sh': ('thinkthen--0.2.0.sql', 'thinkthen--0.0.0.sql'),
+            }
+            for name, (old, new) in mutations.items():
+                with self.subTest(manifest=name):
+                    path = source / name
+                    original = path.read_text()
+                    self.assertIn(old, original)
+                    path.write_text(original.replace(old, new))
+                    result = subprocess.run(command, capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0, 'release gate accepted a wrong version: ' + name)
+                    path.write_text(original)
+
+    def test_command_archive_requires_every_indexed_dependency_notice(self):
+        from package_inventory import check
+        terms = b'the dependency license'
+        files = {'LICENSE': b'project license', 'README.md': b'install the command',
+                 'thinkthen.1': b'command manual', 'thinkthen': b'command image',
+                 'THIRD-PARTY-NOTICES/index.json': json.dumps({'crates': {
+                     'dependency-1.0': {'files': {'LICENSE': hashlib.sha256(terms).hexdigest()}}}}).encode(),
+                 'THIRD-PARTY-NOTICES/dependency-1.0/LICENSE': terms}
+        with tempfile.TemporaryDirectory(prefix='thinkthen-notice-inventory-') as temporary:
+            artifact = Path(temporary) / 'command.zip'
+            for missing in (None, 'THIRD-PARTY-NOTICES/dependency-1.0/LICENSE', 'THIRD-PARTY-NOTICES/index.json'):
+                with self.subTest(missing=missing):
+                    with zipfile.ZipFile(artifact, 'w') as archive:
+                        for name, data in files.items():
+                            if name != missing: archive.writestr(name, data)
+                    if missing is None: check('command', artifact, {'thinkthen'})
+                    else:
+                        with self.assertRaises((AssertionError, ValueError)):
+                            check('command', artifact, {'thinkthen'})
+
+    def test_candidate_checker_preserves_the_final_checksum_inventory(self):
+        from release_install import checksums
+        candidate = runpy.run_path(str(ROOT / 'scripts/release-candidate'))
+        with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-check-') as temporary:
+            out = Path(temporary)
+            (out / 'local_check.py').write_text('message = "verified"\n')
+            check = out / 'check'
+            check.write_text('import local_check\nprint(local_check.message)\n')
+            checksums(out)
+            result = candidate['check_candidate'](out, os.environ)
+            self.assertEqual(result.stdout.strip(), 'verified')
+            self.assertFalse((out / '__pycache__').exists())
+            check.write_text('from pathlib import Path\nPath("late-file").write_text("unlisted")\n')
+            checksums(out)
+            with self.assertRaisesRegex(ValueError, 'incomplete checksum inventory'):
+                candidate['check_candidate'](out, os.environ)
+
+    def test_sqlite_notices_identify_each_platforms_built_jansson(self):
+        from release_notice_packages import native_notices
+        from release_notice_check import declared_notices
+        for target, version in (('macos-arm64', '2.14'), ('linux-x86_64', '2.14.1'), ('windows-x86_64', '2.14.1')):
+            with self.subTest(target=target):
+                files = native_notices('sqlite', target)
+                name = 'THIRD-PARTY-NOTICES/native/jansson-' + version + '/LICENSE'
+                self.assertEqual(files[name], (ROOT / 'licenses/native' / ('jansson-' + version) / 'LICENSE').read_bytes())
+                self.assertEqual(set(files), declared_notices(files))
 
     def test_windows_smoke_preserves_construction_list_record(self):
         cases = json.loads((ROOT / 'construction/stub.json').read_text())

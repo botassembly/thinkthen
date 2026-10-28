@@ -1,5 +1,4 @@
 """Check generated declarations once per clean source tree and compiler context."""
-import fcntl
 import hashlib
 import json
 import os
@@ -32,8 +31,24 @@ def check(root=ROOT):
     folder = Path.home() / '.local/share/thinkthen-build-tools/header-contract'
     folder.mkdir(parents=True, exist_ok=True)
     stamp = folder / (key + '.passed')
-    with (folder / (key + '.lock')).open('w') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with (folder / (key + '.lock')).open('a+b') as lock:
+        if os.name == 'nt':
+            import errno
+            import msvcrt
+            if lock.tell() == 0:
+                lock.write(b'\0')
+                lock.flush()
+            lock.seek(0)
+            while True:
+                try:
+                    msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError as error:
+                    if error.errno != errno.EACCES:
+                        raise
+        else:
+            import fcntl
+            fcntl.flock(lock, fcntl.LOCK_EX)
         if not dirty and stamp.is_file() and stamp.read_text() == key:
             return
         context = 'floor-target' if os.environ.get('THINKTHEN_FLOOR_BUILD') == '1' else 'host-target'

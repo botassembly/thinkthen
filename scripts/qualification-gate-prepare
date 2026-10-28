@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 . scripts/native-tools-env
 scripts/sqlite-prepare --refresh
 cargo fetch --locked
+scripts/rust-advisories --prepare
 rustup component add rustfmt clippy
 scripts/ruby-dev-prepare
 scripts/csharp-prepare
@@ -47,5 +48,7 @@ python3 - <<'PYTHON'
 import sys
 sys.path.insert(0, 'scripts')
 from release_host_tools import source_tools
+from release_workflow_prepare import sdk_tools
+sdk_tools()
 source_tools()
 PYTHON

@@ -30,6 +30,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-publish-test-') as temporary:
     source = scratch / 'source'
     run('git', 'init', '--quiet', '--initial-branch=main', source, env=env)
     (source / 'source.txt').write_text('qualified source\n')
+    (source / 'sdk/swift/tests').mkdir(parents=True)
+    (source / 'sdk/swift/tests/development.swift').write_text('development only\n')
+    (source / 'sdk/swift/generate-codes.py').write_text('development generator\n')
     run('git', '-C', source, 'add', '.', env=env)
     run('git', '-C', source, '-c', 'user.name=Rehearsal', '-c', 'user.email=test@example.invalid',
         'commit', '--quiet', '-m', 'Create qualified source', env=env)
@@ -46,6 +49,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-publish-test-') as temporary:
     additions = scratch / 'additions'
     (additions / 'sdk/go/thinkthen/native').mkdir(parents=True)
     (additions / 'sdk/go/thinkthen/native/library').write_bytes(b'checked native library')
+    (additions / 'sdk/swift').mkdir(parents=True)
+    (additions / 'sdk/swift/VERSION').write_text('0.2.0\n')
     (additions / 'Package.swift').write_text('checked Swift manifest\n')
     (additions / 'release-source.json').write_text(json.dumps(provenance))
     assets = scratch / 'assets'
@@ -178,6 +183,10 @@ state.write_text(json.dumps(data))
     assert run('git', '--git-dir', remote, 'rev-parse', 'main', env=env) == revision
     assert run('git', '--git-dir', remote, 'show', commit + ':sdk/go/thinkthen/native/library', env=env) == 'checked native library'
     assert json.loads(run('git', '--git-dir', remote, 'show', commit + ':release-source.json', env=env)) == provenance
+    tree = run('git', '--git-dir', remote, 'ls-tree', '-r', '--name-only', commit, env=env).splitlines()
+    assert 'sdk/swift/VERSION' in tree
+    assert 'sdk/swift/tests/development.swift' not in tree
+    assert 'sdk/swift/generate-codes.py' not in tree
     data = json.loads(state.read_text())
     assert data['release']['tag_name'] == 'v0.2.0' and not data['release']['draft']
     assert data['release']['target_commitish'] == revision

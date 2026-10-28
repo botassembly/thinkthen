@@ -11,7 +11,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-from release_notice_check import contents
+from release_notice_check import contents, declared_notices
 
 # Each pair names a source glob and its destination glob. Stagers use the same
 # declarations as the source-free checker; generated/native files stay separate.
@@ -117,8 +117,24 @@ def cmake(files):
 
 
 def check(family, path, native):
+    """Check a delivered package's dependency notices and declared payload."""
     files = contents(path)
-    actual = {p for p in files if 'THIRD-PARTY-NOTICES' not in p.split('/')}
+    notices = declared_notices(files)
+    missing = notices - set(files)
+    assert not missing, (path.name, 'missing dependency notices', missing)
+    _check_payload(family, path, native, files, notices)
+
+
+def check_build_payload(family, path, native):
+    """Check build artifacts before release finishing adds dependency notices."""
+    files = contents(path)
+    notices = {name for name in files if 'THIRD-PARTY-NOTICES' in name.split('/')}
+    _check_payload(family, path, native, files, notices)
+
+
+def _check_payload(family, path, native, files, notices):
+    actual = set(files)
+    payload = {name for name in actual if 'THIRD-PARTY-NOTICES' not in name.split('/')}
     if family == 'ruby':
         ruby(path)
         return
@@ -133,21 +149,21 @@ def check(family, path, native):
         return
     if family in INPUTS:
         patterns = [destination for _, destination in INPUTS[family]]
-        expected = {name for name in actual if any(matches(name, pattern) for pattern in patterns)}
+        expected = {name for name in payload if any(matches(name, pattern) for pattern in patterns)}
         expected.update(pattern for pattern in patterns if '*' not in pattern)
         expected.update(native)
         if family in GENERATED: expected.add(GENERATED[family])
         if family == 'duckdb': expected.update(DUCKDB_TERMS)
     elif family in ('c', 'cpp'):
-        expected = cmake({name: files[name] for name in actual}) | set(native)
+        expected = cmake({name: files[name] for name in payload}) | set(native)
     elif family == 'zig':
-        manifest, = [name for name in actual if name.endswith('/build.zig.zon')]
+        manifest, = [name for name in payload if name.endswith('/build.zig.zon')]
         prefix = manifest.removesuffix('build.zig.zon')
         declared = zig_paths(files[manifest].decode())
-        expected = {name for name in actual if any(name == prefix + entry or name.startswith(prefix + entry + '/') for entry in declared)}
+        expected = {name for name in payload if any(name == prefix + entry or name.startswith(prefix + entry + '/') for entry in declared)}
     elif family in ('java', 'kotlin'):
         # A module descriptor is standard JAR metadata, not an application class.
-        expected = {name for name in actual if name.startswith(('META-INF/', 'io/thinkthen/'))
+        expected = {name for name in payload if name.startswith(('META-INF/', 'io/thinkthen/'))
                     or (family == 'java' and name == 'module-info.class')}
     elif family == 'typescript':
         manifest = json.loads(files['package/package.json'])
@@ -156,11 +172,12 @@ def check(family, path, native):
         types = ET.fromstring(files['[Content_Types].xml'])
         extensions = {node.attrib['Extension'] for node in types if node.tag.endswith('}Default')}
         parts = {node.attrib['PartName'].lstrip('/') for node in types if node.tag.endswith('}Override')}
-        expected = {name for name in actual if PurePosixPath(name).name.rsplit('.', 1)[-1] in extensions
+        expected = {name for name in payload if PurePosixPath(name).name.rsplit('.', 1)[-1] in extensions
                     or name in parts or name == 'LICENSE'}
         expected.add('[Content_Types].xml')
     else:
         raise ValueError('no inventory declaration: ' + family)
+    expected.update(notices)
     assert actual == expected, (path.name, 'undeclared or missing files', actual - expected, expected - actual)
 
 

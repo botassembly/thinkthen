@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+"""Inspect actual registry archives and source packages without building an engine."""
+import io
+import json
+import os
+from pathlib import Path
+import shutil
+import runpy
+import subprocess
+import sys
+import tarfile
+import tempfile
+import tomllib
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+from release_registry import node, python, ruby, jvm, github_packages, attach
+from release_source import stage, archive_source
+from release_workflow import collect, checksums, draft, TARGETS, version
+from release_notice_check import contents
+from release_readme import released_readme
+from release_notices import bundle
+from release_registry_check import environment
+
+
+def run(*args, **options):
+    return subprocess.check_output(list(map(str, args)), text=True, **options)
+
+
+def tar(path, files):
+    with tarfile.open(path, 'w:gz') as archive:
+        for name, data in files.items():
+            entry = tarfile.TarInfo(name)
+            entry.size = len(data)
+            archive.addfile(entry, io.BytesIO(data))
+
+
+class PackageText(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Use the complete existing notice builder and checked license catalog.
+        # Cargo metadata resolves sources offline and compiles no engine.
+        cls.notices = bundle('linux-x86_64', 'python')
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='thinkthen-package-text-')
+        self.addCleanup(temporary.cleanup)
+        self.scratch = Path(temporary.name)
+        self.native = self.scratch / '_native.abi3.so'
+        self.native.write_bytes(b'qualified engine fixture')
+
+    def test_universal_npm(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        packages = {}
+        for target in ('linux-x86_64', 'windows-x86_64'):
+            folder = scratch / target
+            (folder / 'typescript').mkdir(parents=True)
+            files = {'package/package.json': (ROOT / 'sdk/typescript/package.json').read_bytes(),
+                     'package/README.md': (target + ' offline install steps').encode(),
+                     'package/thinkthen.node': target.encode(),
+                     'package/runtime.js': b'export const value = 1;'}
+            files.update({'package/' + name: data for name, data in notices.items()})
+            tar(folder / 'typescript/thinkthen.tgz', files)
+            packages[target] = folder
+        output = scratch / 'npm'
+        output.mkdir()
+        with patch.dict(os.environ, environment(scratch), clear=True):
+            node(packages, output, scratch)
+        files = contents(next(output.glob('*.tgz')))
+        assert files['package/README.md'] == released_readme('typescript')
+        assert 'npm install thinkthen' in files['package/README.md'].decode()
+        for target, platform in [('linux-x86_64', 'linux-x64'), ('windows-x86_64', 'win32-x64')]:
+            assert files[f'package/thinkthen.node/{platform}.node'] == target.encode()
+        print('Universal npm archive preserves both bindings and one registry README', flush=True)
+
+    def test_python_wheel(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        import release_wheel
+        # Add source-only packaging prose so the raw and released guides differ.
+        source = scratch / 'python-source'
+        shutil.copytree(ROOT / 'sdk/python', source / 'sdk/python',
+                        ignore=shutil.ignore_patterns('target', '__pycache__'))
+        shutil.copy2(ROOT / 'LICENSE', source / 'LICENSE')
+        with (source / 'sdk/python/README.md').open('a') as guide:
+            guide.write('\n### Packaging and proof after approval\n\nSource-only build instructions.\n')
+        output = scratch / 'pypi'
+        output.mkdir()
+        with patch.object(release_wheel, '__file__', str(source / 'scripts/release_wheel.py')):
+            for target, tag in [('linux-x86_64', 'cp310-abi3-manylinux_2_28_x86_64'),
+                                ('windows-x86_64', 'cp310-abi3-win_amd64')]:
+                folder = scratch / target
+                folder.mkdir()
+                release_wheel.python_wheel(scratch / ('wheel-' + target), folder, version(), native, tag, notices)
+                python({target: folder}, output, scratch)
+        for wheel in output.glob('*.whl'):
+            with self.subTest(wheel=wheel.name):
+                files = contents(wheel)
+                metadata = next(name for name in files if name.endswith('.dist-info/METADATA'))
+                assert files[metadata].split(b'\n\n', 1)[1] == released_readme('python')
+                guides = {name: data for name, data in files.items() if name.endswith('README.md')}
+                assert guides and all(data == released_readme('python') for data in guides.values()), guides.keys()
+                assert b'Source-only build instructions.' not in b''.join(files.values())
+        print('Linux and Windows PyPI wheels carry only the trimmed registry guide', flush=True)
+
+    def test_ruby_gem(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        folder = scratch / 'inputs'
+        folder.mkdir()
+        gem_source = scratch / 'gem-source'
+        gem_source.mkdir()
+        (gem_source / 'README.md').write_text('offline source staging instructions')
+        (gem_source / 'thinkthen.gemspec').write_text(
+            'Gem::Specification.new { |s| s.name="thinkthen"; s.version="0.2.0"; '
+            's.summary="Evidence"; s.authors=["Example"]; s.files=["README.md"]; s.license="MIT" }\n')
+        run('gem', 'build', 'thinkthen.gemspec', cwd=gem_source)
+        (folder / 'ruby').mkdir()
+        shutil.copy2(next(gem_source.glob('*.gem')), folder / 'ruby')
+        output = scratch / 'rubygems'
+        output.mkdir()
+        ruby({'linux-x86_64': folder}, output)
+        gem = next(output.glob('*.gem'))
+        assert contents(gem)['README.md'] == released_readme('ruby')
+        run('ruby', '-rrubygems/package', '-e', 'Gem::Package.new(ARGV.fetch(0)).verify', gem)
+        print('RubyGems archive carries the registry guide and verifies its checksums', flush=True)
+
+    def test_maven_jars(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        libraries = {'linux-x86_64': native}
+        output = scratch / 'maven'
+        output.mkdir()
+        jvm(libraries, output, scratch, {'linux-x86_64': notices})
+        for name in ('java', 'kotlin'):
+            with self.subTest(package=name):
+                jar = next(output.glob(f'**/thinkthen-{name}-{version()}.jar'))
+                assert contents(jar)['META-INF/README.md'] == released_readme(name)
+                documentation = contents(jar.with_name(jar.stem + '-javadoc.jar'))['index.html']
+                assert b'INSTALL.md gives offline' not in documentation
+        print('Compiled Maven archives carry the trimmed guides inside META-INF and documentation', flush=True)
+
+    def test_source_tags(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        libraries = {'linux-x86_64': native}
+        additions = scratch / 'source'
+        # This packaging proof reuses the checked header, without compiling the engine's header generator.
+        with patch('header_contract.check'):
+            stage(libraries, additions, {'linux-x86_64': notices})
+        source = scratch / 'source.tar.gz'
+        archive_source(additions, source)
+        files = contents(source)
+        for name, prefix in [('go', 'sdk/go/thinkthen/'), ('swift', 'sdk/swift/')]:
+            with self.subTest(package=name):
+                assert files[prefix + 'README.md'] == released_readme(name)
+                assert files[prefix + 'LICENSE'] == notices['LICENSE']
+        assert files['sdk/swift/VERSION'].decode().strip() == version()
+        assert files['sdk/go/thinkthen/native/dependencies.txt']
+        assert not any(name.startswith('sdk/swift/tests/') or name == 'sdk/swift/generate-codes.py' for name in files)
+        print('Go and Swift tag archive carries trimmed guides, generated files and licenses', flush=True)
+
+    def test_draft_assets(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        package = scratch / 'cpp'
+        adapter = package / 'cpp/dependencies/nlohmann-json'
+        (adapter / 'include/nlohmann').mkdir(parents=True)
+        (adapter / 'include/nlohmann/json.hpp').write_bytes(b'optional adapter headers')
+        (adapter / 'LICENSE.MIT').write_bytes(b'adapter license')
+        output = scratch / 'github'
+        output.mkdir()
+        github_packages({'linux-x86_64': package}, output)
+        files = contents(next(output.glob('nlohmann-json-*.tar.gz')))
+        assert files['nlohmann-json/include/nlohmann/json.hpp'] == b'optional adapter headers'
+        assert files['nlohmann-json/LICENSE.MIT'] == b'adapter license'
+        output = scratch / 'draft'
+        collect(scratch, output, 'fixture', [])
+        checksums(output)
+        for name in ('install.sh', 'install.ps1'):
+            assert (output / name).read_bytes() == (ROOT / name).read_bytes()
+        registry = scratch / 'registry'
+        registry.mkdir()
+        shutil.move(scratch / 'github', registry / 'github')
+        (registry / 'source.json').write_text(json.dumps({'revision': 'fixture', 'version': version()}))
+        for target in TARGETS:
+            (output / f'thinkthen-{version()}-{target}-packages.tar.gz').write_bytes(target.encode())
+        attach(registry, output, 'fixture')
+        from contextlib import redirect_stdout
+        commands = io.StringIO()
+        with redirect_stdout(commands):
+            draft(output, 'v' + version(), 'fixture', True)
+        command = json.loads(commands.getvalue())
+        assert str(output / 'install.sh') in command and str(output / 'install.ps1') in command
+        print('Draft dry run includes both installers and the optional C++ headers with terms', flush=True)
+
+    def test_plain_npm_pack(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        # Plain npm pack must generate declarations in a clean source tree.
+        source = scratch / 'npm-source'
+        for name in ('sdk/typescript', 'scripts/typescript-prepare', 'schemas/contract.json'):
+            path = ROOT / name
+            destination = source / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            if path.is_dir(): shutil.copytree(path, destination, ignore=shutil.ignore_patterns('node_modules', 'errors.js', 'errors.d.ts', '*.tgz'))
+            else: shutil.copy2(path, destination)
+        output = scratch / 'plain-npm'
+        output.mkdir()
+        run('npm', 'pack', '--offline', '--pack-destination', output, cwd=source / 'sdk/typescript',
+            env=environment(scratch))
+        files = contents(next(output.glob('*.tgz')))
+        assert b'usage.abi' in files['package/errors.js'] and b'usage.abi' in files['package/errors.d.ts']
+        print('Plain npm pack regenerates the public JavaScript and TypeScript error registry', flush=True)
+
+    def test_cargo_crate(self):
+        scratch, notices, native = self.scratch, self.notices, self.native
+        listing = run('cargo', 'package', '-p', 'thinkthen', '--list', '--offline', '--allow-dirty', cwd=ROOT).splitlines()
+        manifest = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())
+        assert 'LICENSE' in listing
+        for target in manifest.get('test', []):
+            assert target['path'] in listing, target
+        print('Cargo package includes its license and every explicit test target', flush=True)
+
+    def test_zig_archive(self):
+        from package_inventory import check as inventory
+        from release_readme import tar_bytes
+
+        scratch, native = self.scratch, self.native
+        if sys.platform == 'darwin':
+            native = scratch / 'fixture.dylib'
+            run('cc', '-dynamiclib', '-x', 'c', '-', '-o', native, input='int fixture(void) { return 0; }\n')
+        targets = {
+            'linux-x86_64': {'rid': 'linux-x64', 'suffix': 'so'},
+            'linux-arm64': {'rid': 'linux-arm64', 'suffix': 'so'},
+            'macos-arm64': {'rid': 'osx-arm64', 'suffix': 'dylib'},
+        }
+        for target, host in targets.items():
+            with self.subTest(platform=target):
+                output = scratch / ('zig-' + target)
+                # Reuse the checked header and fixture engine; this proof builds no engine.
+                with patch('header_contract.check'), patch('native_platform.current', return_value=dict(host, platform=target)), patch.object(
+                        sys, 'argv', ['zig-package', str(output)]), patch.dict(
+                        os.environ, THINKTHEN_ZIG_NATIVE_FILE=str(native),
+                        THINKTHEN_ZIG_DEBUG_CHECKPOINT='', THINKTHEN_ZIG_DEBUG_NATIVE=''):
+                    runpy.run_path(str(ROOT / 'scripts/zig-package'), run_name='__main__')
+                archive, = output.glob('*.tar.gz')
+                expected_native = {f'thinkthen/native/{host["rid"]}/libthinkthen_ffi.{host["suffix"]}'}
+                inventory('zig', archive, expected_native)
+                files = contents(archive)
+                self.assertEqual([name for name in files if name.endswith('/build.zig.zon')],
+                                 ['thinkthen/build.zig.zon'])
+                self.assertFalse(any('/tests/' in name for name in files))
+                self.assertNotIn(b'0.0.0', files['thinkthen/build.zig.zon'])
+                for extra in ('tests/build.zig.zon', 'src/build.zig.zon', 'undeclared.txt'):
+                    with self.subTest(extra=extra):
+                        malformed = output / 'unexpected.tar.gz'
+                        malformed.write_bytes(tar_bytes(archive.read_bytes(), {
+                            'thinkthen/' + extra: (ROOT / 'sdk/zig/tests/build.zig.zon').read_bytes()
+                            if extra.endswith('.zon') else b'undeclared package member',
+                        }))
+                        error = ValueError if extra.endswith('.zon') else AssertionError
+                        with self.assertRaises(error):
+                            inventory('zig', malformed, expected_native)
+                print(f'Zig archive inventory: {target} passes; duplicate manifests and undeclared files refuse', flush=True)
+
+
+if __name__ == '__main__':
+    unittest.main()

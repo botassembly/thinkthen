@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Exercise qualification preparation boundaries without native builds or downloads."""
+import io
+import os
+from pathlib import Path
+import runpy
+import shutil
+import subprocess
+import sys
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+
+class QualificationRecipes(unittest.TestCase):
+    def test_go_and_zig_select_prepared_manifest_compiler_before_home_isolation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'scripts').mkdir()
+            (root / 'sdk/zig').mkdir(parents=True)
+            shutil.copy2(ROOT / 'sdk/zig/build.zig.zon', root / 'sdk/zig/build.zig.zon')
+            (root / 'scripts/native-tools-env').touch()
+            if (ROOT / 'scripts/zig-env').exists():
+                shutil.copy2(ROOT / 'scripts/zig-env', root / 'scripts/zig-env')
+            import re
+            version = re.search(r'minimum_zig_version = "([^"]+)"', (root / 'sdk/zig/build.zig.zon').read_text())[1]
+            home = root / 'prepared'
+            compiler = home / '.local/share/thinkthen-build-tools/zig' / version / 'zig'
+            compiler.parent.mkdir(parents=True)
+            compiler.write_text('#!/bin/sh\nprintf "%s\\n" ' + version + '\n')
+            compiler.chmod(0o755)
+            for name, end in [('go-api-check', 'root=$PWD'), ('zig-sdk-gate', 'scratch=')]:
+                text = (ROOT / 'scripts' / name).read_text()
+                prefix = text[:text.index(end)].split('cd "$(dirname "$0")/.."', 1)[1]
+                result = subprocess.check_output(['sh', '-eu', '-c', prefix + '\nHOME="$1"; export HOME; command -v zig; zig version', 'check', str(root / 'isolated')], cwd=root, env=dict(os.environ, HOME=str(home)), text=True)
+                self.assertEqual(result.splitlines(), [str(compiler), version])
+
+    def test_windows_jvm_stages_generated_contracts_before_maven(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
+        action = module['jvm']
+        class ReachedMaven(Exception):
+            pass
+        def build(*arguments, **options):
+            if arguments[0] == 'mvn':
+                base = Path(options['cwd']) / 'source/sdk/java/library/target/generated-sources/contracts/io/thinkthen'
+                self.assertTrue((base / 'ErrorCode.java').is_file())
+                for name in ('DriverCode', 'NativeLayouts', 'NativeSignatures'):
+                    self.assertTrue((base / 'internal' / (name + '.java')).is_file(), name)
+                self.assertTrue((base.parents[6] / 'kotlin/target/generated-sources/contracts/io/thinkthen/kotlin/ErrorCode.kt').is_file())
+                raise ReachedMaven()
+            subprocess.run(list(map(str, arguments)), **options, check=True)
+        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=build):
+            scratch = Path(directory)
+            native = scratch / 'engine.dll'
+            native.write_bytes(b'native fixture')
+            with self.assertRaises(ReachedMaven):
+                action(scratch, native, {'PATH': os.environ['PATH']}, {})
+
+    def test_csharp_uses_caller_owned_launcher_before_cache_creation(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
+        action = module['main']
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.dict(action.__globals__, os=SimpleNamespace(name='nt', environ=os.environ)), patch.object(sys, 'argv', ['windows-native-proof', 'csharp', directory]), patch('windows_caller_process.launch') as launch:
+                action()
+            self.assertEqual(launch.call_args.args[0][-3:], ['--caller-owned', 'csharp', directory])
+
+    def test_direct_go_executable_has_bounded_test_timeout(self):
+        module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
+        action = module['go']
+        captured = []
+        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=lambda command, *args: captured.append(command)):
+            scratch = Path(directory)
+            native = scratch / 'engine.dll'
+            native.write_bytes(b'native fixture')
+            action(scratch, native, {}, {})
+        self.assertIn('-test.timeout=30m', captured[0])
+
+    def test_installed_go_consumers_share_timeout_and_stream_output(self):
+        import release_windows_sdks as sdks
+        class ReachedCache(Exception):
+            pass
+        calls = []
+        def cache(command, *arguments):
+            direct, options = next((args, options) for args, options in calls if str(args[0]).endswith('consumer.exe'))
+            self.assertTrue(options['stream_output'])
+            self.assertIn('-test.timeout=10m', direct)
+            self.assertEqual(list(direct), command)
+            raise ReachedCache()
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / 'checks/go').mkdir(parents=True)
+            (folder / 'checks/stub.json').write_text('[]')
+            (folder / 'checks/node.mjs').touch()
+            with patch.object(sdks, 'os', SimpleNamespace(name='nt', environ=os.environ)), patch.object(sdks, 'environment', return_value={'PATH': os.environ['PATH']}), patch.object(sdks, 'runtime_environment', return_value={}), patch.object(sdks, 'unpack'), patch.object(sdks, 'run', side_effect=lambda *args, **options: calls.append((args, options))), patch('release_windows_cache.check_cache', cache):
+                with self.assertRaises(ReachedCache):
+                    sdks.full(folder, {'packages': {name: name for name in ('python', 'typescript', 'go')}}, caller_owned=True)
+
+    def test_child_output_is_forwarded_before_child_exit_and_final_bytes_are_drained(self):
+        from windows_caller_process import stream
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'child.log'
+            output = SimpleNamespace(buffer=io.BytesIO())
+            consumer = 'import os,sys; sys.path.insert(0,sys.argv[1]); from release_windows_sdks import run\ntry: run(*sys.argv[2:],cwd=os.getcwd(),env=os.environ,stream_output=True)\nexcept RuntimeError as error: assert "Go finished" in str(error) and "exited 7" in str(error)\nelse: raise AssertionError("nonzero child accepted")'
+            command = [sys.executable, str(ROOT / 'scripts/windows_caller_process.py'), '--child', str(log), '10',
+                       sys.executable, '-u', '-c', consumer, str(ROOT / 'scripts'),
+                       sys.executable, '-u', '-c', 'import sys; print("Go started", flush=True); input(); print("Go finished", file=sys.stderr, flush=True); sys.exit(7)']
+            child = subprocess.Popen(command, stdin=subprocess.PIPE, text=True)
+            signalled = False
+            def wait():
+                nonlocal signalled
+                if output.buffer.getvalue().replace(b'\r\n', b'\n') == b'Go started\n' and not signalled:
+                    self.assertIsNone(child.poll(), 'child exited before its output was forwarded')
+                    child.stdin.write('continue\n')
+                    child.stdin.flush()
+                    signalled = True
+                try:
+                    child.wait(timeout=0.1)
+                    return 0
+                except subprocess.TimeoutExpired:
+                    return 0x102
+            try:
+                with patch('sys.stdout', output):
+                    stream(log, wait)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                child.wait()
+                child.stdin.close()
+            self.assertTrue(signalled, 'child output was buffered until exit')
+            self.assertEqual(output.buffer.getvalue().replace(b'\r\n', b'\n'), b'Go started\nGo finished\n')
+
+    def test_host_preparation_installs_manifest_pins_and_gate_accepts_prepared_state(self):
+        module = runpy.run_path(str(ROOT / 'scripts/rust-advisories'))
+        action = module['main']
+        import tomllib
+        pins = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']
+        for system in ('Linux', 'Darwin'):
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                database = root / 'advisory-db-fixture'
+                (database / '.git').mkdir(parents=True)
+                commands = []
+                state = {}
+                def run(command, **options):
+                    commands.append(command)
+                    if command[:2] == ['cargo', 'install']:
+                        state['version'] = command[command.index('--version') + 1]
+                    if command[:2] == ['git', 'checkout']:
+                        state['revision'] = command[-1]
+                    return subprocess.CompletedProcess(command, 0, stdout='')
+                def output(*command, **options):
+                    if command == ('cargo', 'deny', '--version'):
+                        return 'cargo-deny ' + state['version']
+                    if command[1] == 'remote':
+                        return 'https://github.com/RustSec/advisory-db'
+                    if command[1] == 'rev-parse':
+                        return state['revision']
+                    return ''
+                with patch.dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(root)), patch.dict(action.__globals__, output=output), patch('subprocess.run', run):
+                    with patch.object(sys, 'argv', ['rust-advisories', '--prepare']):
+                        action()
+                    with patch.object(sys, 'argv', ['rust-advisories']):
+                        action()
+                self.assertEqual(state, {'version': pins['cargo-deny'], 'revision': pins['advisory-revision']})
+                self.assertIn(['cargo', 'deny', 'fetch'], commands)
+                self.assertIn('--offline', commands[-1])
+        self.assertIn('scripts/rust-advisories --prepare', (ROOT / 'scripts/qualification-gate-prepare').read_text())
+
+    def test_windows_preparation_modules_import_without_unix_locking(self):
+        subprocess.run([sys.executable, '-c', 'import sys; sys.path.insert(0,"scripts"); sys.modules["fcntl"]=None; import release_workflow_prepare, header_contract'], cwd=ROOT, check=True)
+
+    def test_windows_header_check_retains_lock_and_offline_generator(self):
+        module = runpy.run_path(str(ROOT / 'scripts/header_contract.py'))
+        check = module['check']
+        calls = []
+        def output(arguments, **options):
+            if arguments[0] == 'rustc': return 'rustc pinned\nhost: x86_64-pc-windows-msvc\n'
+            return '' if 'status' in arguments else 'a' * 40
+        locking = SimpleNamespace(LK_LOCK=1, locking=lambda *args: calls.append(args))
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            with patch.dict(check.__globals__, os=SimpleNamespace(name='nt', environ={}, fsencode=os.fsencode)), patch.dict(sys.modules, fcntl=None, msvcrt=locking), patch.object(Path, 'home', return_value=home), patch('subprocess.check_output', output), patch('subprocess.run') as run:
+                check(home)
+                run.assert_called_once()
+                self.assertIn('--offline', run.call_args.args[0])
+                self.assertIn('--locked', run.call_args.args[0])
+                self.assertEqual(calls[0][1:], (locking.LK_LOCK, 1))
+
+    def test_jvm_selection_overrides_hosted_default_for_each_prepared_platform(self):
+        for system, java in [('Linux x86_64', 'jdk-22.0.2+9'), ('Darwin arm64', 'jdk-22.0.2+9/Contents/Home')]:
+            with self.subTest(system=system), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                binary = root / 'bin'
+                binary.mkdir()
+                (binary / 'uname').write_text('#!/bin/sh\nprintf "%s\\n" "' + system + '"\n')
+                (binary / 'uname').chmod(0o755)
+                environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'], JAVA_HOME='/runner/default-jdk', THINKTHEN_JVM_CACHE=str(root / 'jvm'))
+                result = subprocess.check_output(['sh', '-eu', '-c', '. "$1"; printf "%s\\n" "$JAVA_HOME" "$PATH"', 'check', ROOT / 'scripts/jvm-env'], env=environment, text=True).splitlines()
+                self.assertEqual(result[0], str(root / 'jvm' / java))
+                self.assertTrue(result[1].startswith(result[0] + '/bin:'))
+
+    def test_gate_preparation_reuses_the_full_preparation_sdk_tools(self):
+        module = runpy.run_path(str(ROOT / 'scripts/release_workflow_prepare.py'))
+        action = module['sdk_tools']
+        with tempfile.TemporaryDirectory() as directory:
+            tools = Path(directory)
+            version = __import__('re').search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
+            compiler = tools / 'zig' / version / 'zig'
+            compiler.parent.mkdir(parents=True)
+            compiler.touch()
+            with patch.dict(action.__globals__, TOOLS=tools, current=lambda: {'ruby': 'x86_64-linux'}), patch.dict(action.__globals__, fetch=lambda url, path: path) as state:
+                fetched = []
+                state['fetch'] = lambda url, path: fetched.append((url, path))
+                action()
+                self.assertEqual(fetched[0][1], tools / 'ruby/packages/ffi-1.17.4-x86_64-linux-gnu.gem')
+        self.assertIn('sdk_tools()', (ROOT / 'scripts/qualification-gate-prepare').read_text())
+
+    def test_linux_go_gate_uses_preparation_home_and_manifest_version(self):
+        module = runpy.run_path(str(ROOT / 'scripts/release_go.py'))
+        with tempfile.TemporaryDirectory() as directory, patch.dict(module['home'].__globals__, TOOLS=Path(directory), sys=SimpleNamespace(platform='linux')):
+            selected = module['home']()
+            self.assertEqual(selected, Path(directory) / 'gate-go' / ('go' + module['version']()))
+        source = (ROOT / 'scripts/go-api-check').read_text()
+        self.assertIn('from release_go import home; print(home())', source)
+        self.assertIn('from release_go import version; print(version())', source)
+
+
+if __name__ == '__main__':
+    unittest.main()

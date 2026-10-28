@@ -15,7 +15,7 @@ import zipfile
 import xml.etree.ElementTree as ET
 
 
-def run(*arguments, cwd, env, timeout=600, resolve_path=None):
+def run(*arguments, cwd, env, timeout=600, resolve_path=None, stream_output=False):
     command = list(map(str, arguments))
     # Invoke the runtime behind known Windows launchers directly.
     lookup = resolve_path if resolve_path is not None else env['PATH']
@@ -35,8 +35,13 @@ def run(*arguments, cwd, env, timeout=600, resolve_path=None):
         if runtime is None or not script.is_file():
             raise RuntimeError('Missing installed runtime behind ' + executable)
         command = [runtime, str(script), *command[1:]]
-    result = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
-                            text=True, encoding='utf-8', errors='replace', timeout=timeout)
+    if stream_output:
+        from release_windows_cache import run_consumer
+        status, output = run_consumer(command, env, cwd=cwd)
+        result = subprocess.CompletedProcess(command, status, stdout=output, stderr='')
+    else:
+        result = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
+                                text=True, encoding='utf-8', errors='replace', timeout=timeout)
     if result.returncode:
         output = '\n'.join((result.stdout + result.stderr).splitlines()[-30:])
         raise RuntimeError(f'{Path(executable).name} exited {result.returncode}:\n{output}')
@@ -127,8 +132,9 @@ def full(folder, build, *, caller_owned=False):
         fixture = checks / 'stub.json'
         def build_consumer(*args, cwd=scratch, extra=None):
             return run(*args, cwd=cwd, env=env | (extra or {}))
-        def execute(*args, cwd=scratch, extra=None):
-            return run(*args, cwd=cwd, env=runtime | (extra or {}), resolve_path=env['PATH'])
+        def execute(*args, cwd=scratch, extra=None, stream_output=False):
+            return run(*args, cwd=cwd, env=runtime | (extra or {}), resolve_path=env['PATH'],
+                       stream_output=stream_output)
         def passed(name): print('candidate Windows ' + name + ': installed shared stub cases pass', flush=True)
         python = Path(sys.executable)
         execute(python, '-I', '-m', 'venv', scratch / 'python')
@@ -149,10 +155,11 @@ def full(folder, build, *, caller_owned=False):
         build_consumer('go', 'mod', 'edit', '-replace=github.com/botassembly/thinkthen/sdk/go/thinkthen=' + str(go / 'package'), cwd=go / 'consumer')
         go_binary = go / 'consumer.exe'
         build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
-        execute(go_binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v',
+        go_arguments = ['-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=10m']
+        execute(go_binary, *go_arguments, stream_output=True,
                 extra={'THINKTHEN_STUB_CASES': str(fixture)})
         from release_windows_cache import check_cache
-        check_cache([go_binary, '-test.run=^TestSharedStub$', '-test.count=1'],
+        check_cache([go_binary, *go_arguments],
                     scratch / 'go-cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(fixture)}, 'library.dll')
         passed('Go')
         for name, main in [('java', 'ConsumerCases'), ('kotlin', 'KotlinCasesKt')]:
@@ -192,6 +199,9 @@ def full(folder, build, *, caller_owned=False):
         dependencies = sorted((folder / 'ruby/dependencies').glob('*.gem'))
         if not dependencies: raise RuntimeError('Missing bundled Windows ffi dependency')
         execute('gem', 'install', '--local', '--no-document', *dependencies, packages['ruby'], extra=ruby_env)
+        signatures = execute('ruby', '-e', 'puts Gem::Specification.find_by_name("thinkthen").full_gem_path',
+                             extra=ruby_env).strip()
+        build_consumer('ruby', '-S', 'rbs', '-I', Path(signatures) / 'sig', 'validate')
         execute('ruby', checks / 'ruby.rb', fixture, extra=ruby_env)
         passed('Ruby')
         r_cases(execute, folder, scratch, packages['r'], cases)

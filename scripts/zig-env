@@ -1,0 +1,9 @@
+#!/bin/sh
+# Source from the repository root before isolating HOME.
+zig_release=$(sed -n 's/.*minimum_zig_version = "\([^"]*\)".*/\1/p' sdk/zig/build.zig.zon)
+PATH="$HOME/.local/share/thinkthen-build-tools/zig/$zig_release:$PATH"
+export PATH
+if ! command -v zig >/dev/null 2>&1 || [ "$(zig version)" != "$zig_release" ]; then
+    echo "Prepare Zig $zig_release before running the offline Zig gate" >&2
+    exit 1
+fi

@@ -444,7 +444,7 @@ def finalize(out, version, java, r_version):
                     'java': 'Java >=22; bundled Jackson/JSpecify jars',
                     'kotlin': 'Java >=22; bundled Java, Kotlin stdlib and coroutine jars',
                     'csharp': '.NET10', 'r': f'R {r_version}; bundled matching R dependency binaries',
-                    'c': 'C compiler to build; bundled Jansson headers/archive and wrapper/engine libraries',
+                    'c': 'C compiler to build; bundled engine library and ABI header',
                     'cpp': 'C++17 compiler and the matching C package; optional nlohmann_json 3.11.3 adapter headers; standard C++ runtime thereafter',
                     'ruby': 'CRuby >=3.3 and RubyGems; bundled precompiled ffi gem',
                     'zig': 'Zig 0.17.0 compiler to build; operating-system runtime thereafter',
@@ -593,9 +593,18 @@ def main():
     python = text('uv', 'python', 'find', '--offline', f'{tag[2]}.{tag[3:]}')
     sqlite = str(Path(os.environ['THINKTHEN_SQLITE_ROOT']) / 'sqlite-3.41.0/bin/sqlite3')
     env = dict(os.environ, THINKTHEN_CHECK_JAVA=java, THINKTHEN_CHECK_SQLITE=sqlite, THINKTHEN_CHECK_DUCKDB_PYTHON=python, THINKTHEN_CHECK_PYTHON=text('uv', 'python', 'find', '--offline', '3.10'))
-    result = run(sys.executable, out / 'check', out, cwd=out, env=env)
+    result = check_candidate(out, env)
     print(result.stdout, end='')
     print(out)
+
+
+def check_candidate(out, env):
+    from release_workflow import checksums
+    checksums(out)
+    result = run(sys.executable, '-B', out / 'check', out, cwd=out,
+                 env=dict(env, PYTHONDONTWRITEBYTECODE='1'))
+    checksums(out)
+    return result
 
 
 def text_at(directory, *arguments):

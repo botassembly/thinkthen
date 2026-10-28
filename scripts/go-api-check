@@ -3,14 +3,15 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+if [ "${1:-}" != --readme-only ]; then . scripts/zig-env; fi
 root=$PWD
 go() { "$root/scripts/go-build" "$@"; }
 # The prepared floor compiler keeps this check compatible with the declared module floor.
-THINKTHEN_GO_HOME=${THINKTHEN_GO_HOME:-$HOME/.local/share/thinkthen-build-tools/go1.23.12}
+THINKTHEN_GO_HOME=${THINKTHEN_GO_HOME:-$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_go import home; print(home())')}
 test -x "$THINKTHEN_GO_HOME/bin/go"
 PATH="$THINKTHEN_GO_HOME/bin:$PATH"
 export PATH THINKTHEN_GO_HOME GOTOOLCHAIN=local
-test "$(go env GOVERSION)" = go1.23.12
+test "$(go env GOVERSION)" = "go$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_go import version; print(version())')"
 test -z "$(gofmt -l sdk/go/thinkthen/*.go sdk/go/tests/*.go)"
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 export CARGO_TARGET_DIR="${THINKTHEN_GO_TARGET:-$PWD/target-go-api}"

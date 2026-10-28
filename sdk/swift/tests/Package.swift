@@ -7,7 +7,7 @@ let package = Package(
   targets: [
     .executableTarget(
       name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
-      path: ".", exclude: ["Package.swift", "Readme", "Guide"]),
+      path: ".", exclude: ["Package.swift", "Readme", "Guide", "minor"]),
     .executableTarget(
       name: "Readme", dependencies: [.product(name: "ThinkThen", package: "ThinkThen")],
       path: "Readme"),

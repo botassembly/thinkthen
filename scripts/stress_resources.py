@@ -5,7 +5,9 @@ from pathlib import Path
 
 METRICS = ('memory_bytes', 'descriptors', 'backend_connections', 'threads', 'processes')
 CRITERION = 'retained-round-growth-per-record-floor'
+SHORT_GATE_CRITERION = 'retained-round-growth-short-gate-floor'
 MEMORY_BYTES_PER_RECORD_FLOOR = 1
+SHORT_GATE_MEMORY_FLOOR_BYTES = 1024 * 1024
 MEMORY_WINDOWS = 4
 MIN_ROUNDS = 2 * MEMORY_WINDOWS
 # Linux include/linux/sched.h: https://github.com/torvalds/linux/blob/v6.12/include/linux/sched.h
@@ -149,13 +151,14 @@ def sample(roots, backend_port=None, exclude=(), required_pid=None, details=None
     return result
 
 
-def growth(samples, verified_records=None):
+def growth(samples, verified_records=None, *, short_gate=False):
     """Compare retained resources after equal completed workload rounds.
 
     The first half is warmup. RSS fails only when the maxima of four ordered,
     nonempty windows in the later half all strictly rise and endpoint growth
     reaches MEMORY_BYTES_PER_RECORD_FLOOR per verified record between those
-    endpoints. Counts belong to synchronous completed rounds. A single retained RSS
+    endpoints. Explicit short gate checks use SHORT_GATE_MEMORY_FLOOR_BYTES instead.
+    Counts belong to synchronous completed rounds. A single retained RSS
     step can pass. Other resources still fail when their later-half minimum
     exceeds their warmup maximum, including a one-time retained resource leak.
 
@@ -179,7 +182,9 @@ def growth(samples, verified_records=None):
                   later[len(later) * index // MEMORY_WINDOWS:len(later) * (index + 1) // MEMORY_WINDOWS])
               for index in range(MEMORY_WINDOWS)]
     memory = checks['memory_bytes']
-    memory.update(late_window_maxima=maxima, floor_bytes_per_verified_record=MEMORY_BYTES_PER_RECORD_FLOOR,
+    memory.update(**(dict(short_gate_floor_bytes=SHORT_GATE_MEMORY_FLOOR_BYTES) if short_gate else
+                     dict(floor_bytes_per_verified_record=MEMORY_BYTES_PER_RECORD_FLOOR)))
+    memory.update(late_window_maxima=maxima,
                   late_half_growth_bytes=later[-1]['memory_bytes'] - later[0]['memory_bytes'])
     counts_valid = (verified_records is not None and len(verified_records) == len(samples)
                     and all(type(count) is int and count > 0 for count in verified_records))
@@ -187,12 +192,14 @@ def growth(samples, verified_records=None):
         # The first late checkpoint is the baseline, so its completed records
         # precede the measured interval and must not dilute its growth.
         records = sum(verified_records[split + 1:])
+        floor = SHORT_GATE_MEMORY_FLOOR_BYTES if short_gate else records * MEMORY_BYTES_PER_RECORD_FLOOR
         memory.update(verified_records_between_checkpoints=records,
                       bytes_per_verified_record=memory['late_half_growth_bytes'] / records,
                       passed=not (all(before < after for before, after in zip(maxima, maxima[1:]))
-                                  and memory['late_half_growth_bytes'] >= records * MEMORY_BYTES_PER_RECORD_FLOOR))
+                                  and memory['late_half_growth_bytes'] >= floor))
     else:
         memory.update(passed=False, verdict='unverifiable', reason='missing or invalid verified record counts')
-    return dict(criterion=CRITERION, passed=all(c['passed'] for c in checks.values()),
+    return dict(criterion=SHORT_GATE_CRITERION if short_gate else CRITERION,
+                passed=all(c['passed'] for c in checks.values()),
                 warmup_rounds=split, measured_rounds=len(samples) - split, metrics=checks,
                 **({} if counts_valid else dict(verdict='unverifiable')))

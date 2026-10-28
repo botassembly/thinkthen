@@ -119,6 +119,14 @@ def windows(scratch):
     leaf = tools / 'windows/Leaf_1.0.zip'
     original = leaf.read_bytes()
     digest = selected[leaf.name]
+    leaf.write_bytes(original + b'unreviewed replacement')
+    try:
+        state['dependencies'](scratch / 'changed-input', runtime)
+    except ValueError as error:
+        assert 'checksum differs' in str(error), error
+    else:
+        raise AssertionError('changed pinned Windows R binary accepted')
+    leaf.write_bytes(original)
     for built, imports in [('R 4.6.0; x86_64-w64-mingw32; date; windows', 'base'),
                            ('R 4.6.1; aarch64-w64-mingw32; date; windows', 'base'),
                            ('R 4.6.1; x86_64-w64-mingw32; date; linux', 'base'),

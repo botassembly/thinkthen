@@ -111,19 +111,24 @@ def cmake_toolchain(destination):
     ]) + '\n')
 
 
-def build_databases(native):
-    """Build adapters from pinned dependency sources without network access."""
-    from header_contract import check
-    check(ROOT)
+def database_inputs():
+    """Include every source copied into the cached database packages."""
     sources = [ROOT / 'crates/thinkthen-ffi/include/thinkthen.h',
                ROOT / 'crates/thinkthen-ffi/include/thinkthen_sql.h',
                *sorted((ROOT / 'extensions/sqlite/src').glob('*.[ch]')),
                *sorted((ROOT / 'databases/duckdb/src').glob('*')),
                ROOT / 'databases/duckdb/generate-types.py',
-               ROOT / 'schemas/row.schema.json', ROOT / 'schemas/contract.json']
+               ROOT / 'schemas/row.schema.json', ROOT / 'schemas/contract.json', ROOT / 'LICENSE']
     data = b''.join(path.read_bytes() for path in sources)
     data += Path(__file__).read_bytes()
-    digest = hashlib.sha256(data).hexdigest()
+    return hashlib.sha256(data).hexdigest()
+
+
+def build_databases(native):
+    """Build adapters from pinned dependency sources without network access."""
+    from header_contract import check
+    check(ROOT)
+    digest = database_inputs()
     marker = native / 'database-inputs'
     if (marker.exists() and marker.read_text() == digest
             and (native / 'thinkthen_sqlite.dll').exists()

@@ -138,6 +138,8 @@ def collect(source, destination, sha, targets):
         shutil.copy2(matches[0], destination / name)
     from release_install import release_note
     (destination / 'INSTALL.md').write_text(release_note(version(), platforms))
+    for name in ('install.sh', 'install.ps1'):
+        shutil.copy2(ROOT / name, destination / name)
     sums = [f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
             for p in sorted(destination.iterdir())]
     (destination / 'SHA256SUMS').write_text(''.join(sums))
@@ -148,7 +150,7 @@ def draft(source, tag, sha, dry_run):
     if tag != 'v' + version():
         raise ValueError('draft version differs from the qualified release')
     files = sorted(source.iterdir())
-    expected = {'INSTALL.md', 'SHA256SUMS'} | {
+    expected = {'INSTALL.md', 'SHA256SUMS', 'install.sh', 'install.ps1'} | {
         f'thinkthen-{version()}-{target}-packages.tar.gz' for target in TARGETS}
     registry = source / f'thinkthen-{version()}-registries.tar.gz'
     with tarfile.open(registry) as archive:

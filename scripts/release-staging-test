@@ -48,24 +48,6 @@ def attachments(scratch):
     print('Draft attachments preserve the independent SQLite archive from every platform', flush=True)
 
 
-def missing_tool(scratch):
-    source = scratch / 'missing-tool/scripts'
-    source.mkdir(parents=True)
-    shutil.copy2(ROOT / 'scripts/gate', source / 'gate')
-    binary = scratch / 'missing-tool/bin'
-    binary.mkdir()
-    # Only Python and shell setup tools are visible. The gate identifies Git before
-    # release script or compiler work in this otherwise incomplete checkout.
-    (binary / 'python3').symlink_to(sys.executable)
-    (binary / 'dirname').symlink_to(shutil.which('dirname'))
-    result = subprocess.run(['/bin/sh', source / 'gate'],
-                            env=dict(os.environ, PATH=str(binary)), capture_output=True, text=True)
-    assert result.returncode != 0, 'gate accepted a missing prerequisite'
-    assert 'gate: required tool is missing: git' in result.stderr, result.stderr
-    assert 'release_metadata' not in result.stderr, result.stderr
-    print('Gate names a missing prerequisite before running consumers', flush=True)
-
-
 def missing_gate(scratch):
     source = scratch / 'missing-gate/scripts'
     source.mkdir(parents=True)
@@ -106,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as tempora
     scratch = Path(temporary)
     checker(scratch)
     attachments(scratch)
-    missing_tool(scratch)
     missing_gate(scratch)
+    subprocess.run([sys.executable, ROOT / 'scripts/release-windows-contents-test'], check=True)
     if len(sys.argv) == 2:
         zig(scratch, Path(sys.argv[1]).resolve())

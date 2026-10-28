@@ -1,6 +1,15 @@
 #!/bin/sh
 # Source from the repository root to select prepared compilers and runtimes.
 # These are build paths, never library runtime search paths.
+export PYTHONDONTWRITEBYTECODE=1
+if [ -n "${PM_JOB_CORES:-}" ]; then
+    CARGO_BUILD_JOBS=${PM_JOB_CORES%%.*}
+    [ "$CARGO_BUILD_JOBS" -ge 1 ] || CARGO_BUILD_JOBS=1
+    RUST_TEST_THREADS=$CARGO_BUILD_JOBS
+    export CARGO_BUILD_JOBS RUST_TEST_THREADS
+fi
+export RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER=
+
 PATH="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}:${THINKTHEN_NODE_HOME:-$HOME/.local/share/thinkthen-build-tools/node}/bin:$HOME/.local/share/thinkthen-build-tools/swift/macos-commands:/usr/lib/llvm-21/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/opt/ruby@3.3/bin:$HOME/.local/share/thinkthen-build-tools/ruby/runtime/bin:$HOME/.cargo/bin:$HOME/.local/share/thinkthen-build-tools/go/bin:$HOME/.local/share/thinkthen-build-tools/cmake/bin:/opt/zerobrew/bin:/opt/zerobrew/opt/node@22/bin:/opt/zerobrew/opt/ruby@3.3/bin:$PATH"
 for thinkthen_python in "$HOME"/.local/share/uv/python/cpython-3.13-*/bin; do
     if [ -x "$thinkthen_python/python3" ]; then PATH="$thinkthen_python:$PATH"; break; fi

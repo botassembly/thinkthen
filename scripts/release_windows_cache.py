@@ -4,6 +4,20 @@ from functools import partial
 import os
 from pathlib import Path
 import subprocess
+import sys
+
+
+def run_consumer(command, environment, *, cwd=None):
+    """Forward installed consumer output and retain diagnostics for cache assertions."""
+    chunks = []
+    with subprocess.Popen(list(map(str, command)), env=environment, cwd=cwd,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
+        while data := process.stdout.read1(65536):
+            sys.stdout.buffer.write(data)
+            sys.stdout.buffer.flush()
+            chunks.append(data)
+        status = process.wait()
+    return status, b''.join(chunks).decode('utf-8', errors='replace')
 
 
 def _control(environment, script, path, **values):
@@ -93,12 +107,11 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         assert state(path) == saved, 'cache security was not restored: ' + str(path)
 
     def consumer(rejected=False):
-        result = subprocess.run(list(map(str, command)), env=env, capture_output=True, text=True)
-        output = result.stdout + result.stderr
+        status, output = run_consumer(command, env)
         if rejected:
-            assert result.returncode != 0, 'consumer accepted unsafe cache: ' + output
+            assert status != 0, 'consumer accepted unsafe cache: ' + output
             assert 'cache owner or permissions' in output.lower(), output
-        elif result.returncode:
+        elif status:
             raise RuntimeError('installed cache consumer failed: ' + output)
 
     identity = prepare_cache(root, env)

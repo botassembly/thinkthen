@@ -10,6 +10,21 @@ import zipfile
 NOTICE = 'THIRD-PARTY-NOTICES'
 
 
+def declared_notices(files):
+    """Read the notice paths promised by every delivered dependency index."""
+    expected = set()
+    for name, data in files.items():
+        if NOTICE not in name.split('/') or not name.endswith('/index.json'): continue
+        expected.add(name)
+        prefix = name.removesuffix('index.json')
+        index = json.loads(data)
+        for group in ('crates', 'components'):
+            for component, entry in index.get(group, {}).items():
+                expected.update(prefix + component + '/' + relative for relative in entry['files'])
+    if not expected: raise ValueError('package omits dependency notice inventory')
+    return expected
+
+
 def contents(path):
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
@@ -53,13 +68,18 @@ def verify(path, expected=None):
 def candidate(folder):
     """Compare final package inventories with the currently resolved target graphs."""
     from release_notices import bundle
-    from release_notice_packages import package_files, runtime_files
+    from release_notice_packages import package_files, runtime_files, native_notices
     target = json.loads((folder / 'build.json').read_text())['platform']
     produced = json.loads((folder / 'compiled-crates.json').read_text())
     if produced['target'] != target: raise ValueError('compiled target differs')
     for family, path in package_files(folder, target.startswith('windows')):
         expected = json.loads(bundle(target, family, compiled=produced['crates'])[NOTICE + '/index.json'])
         verify(path, expected)
+        files = contents(path)
+        prefix = '' if family == 'sqlite' or target.startswith('windows') else 'share/thinkthen-' + family + '/'
+        for name, data in native_notices(family, target).items():
+            if files.get(prefix + name) != data:
+                raise ValueError('package native notices differ: ' + str(path))
     from release_jvm_notices import check as jvm_notices
     jvm_notices(folder)
     from release_r_dependencies import directories, terms, metadata

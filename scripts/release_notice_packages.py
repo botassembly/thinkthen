@@ -114,6 +114,24 @@ def runtime_files(name, root=ROOT):
             **{NOTICE + '/' + name + '/' + path: data for path, data in entries.items()}}
 
 
+def native_notices(family, target, root=ROOT):
+    if family == 'sqlite':
+        recipe = {'macos': 'scripts/floors/prepare-macos', 'linux': 'scripts/native-build-env',
+                  'windows': 'scripts/release_windows_native.py'}[target.split('-')[0]]
+        pattern = r'jansson/archive/refs/tags/v([0-9.]+)\.tar' if target.startswith('macos') else r'jansson-([0-9.]+)'
+        version = re.search(pattern, (root / recipe).read_text())[1]
+        name = 'jansson-' + version
+        data = (root / 'licenses/native' / name / 'LICENSE').read_bytes()
+    elif family == 'cpp':
+        name, data = 'nlohmann-json', (root / 'sdk/cpp/JSON-LICENSE').read_bytes()
+    else:
+        return {}
+    prefix = NOTICE + '/native/'
+    index = {'components': {name: {'files': {'LICENSE': hashlib.sha256(data).hexdigest()}}}}
+    return {prefix + 'index.json': (json.dumps(index, indent=2) + '\n').encode(),
+            prefix + name + '/LICENSE': data}
+
+
 def distribute(out, target, root=ROOT):
     produced = json.loads((out / 'compiled-crates.json').read_text())
     if produced['target'] != target: raise ValueError('compiled notice target differs')
@@ -122,9 +140,7 @@ def distribute(out, target, root=ROOT):
         key = family if family in ('command', 'python', 'typescript', 'r') else 'ffi'
         if key not in cached: cached[key] = bundle(target, family, root, produced['crates'])
         contents = cached[key].copy()
-        for surface, name, source in [('sqlite', 'jansson', 'licenses/native/jansson-2.14.1/LICENSE'),
-                                      ('cpp', 'nlohmann-json', 'sdk/cpp/JSON-LICENSE')]:
-            if family == surface: contents[NOTICE + '/' + name + '/LICENSE'] = (root / source).read_bytes()
+        contents.update(native_notices(family, target, root))
         if family == 'python':
             wheel_notices(artifact, contents)
             continue

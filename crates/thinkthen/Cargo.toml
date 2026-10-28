@@ -6,8 +6,9 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+license-file = "../../LICENSE"
 repository.workspace = true
-include = ["src/**", "examples/**", "tests/support/**", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
+include = ["src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
 keywords = ["evidence", "classification", "language-model", "decision"]
 categories = ["text-processing", "science"]
 

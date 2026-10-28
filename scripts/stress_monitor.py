@@ -7,7 +7,7 @@ import tempfile
 import threading
 import time
 
-from stress_resources import AccessLost, CRITERION, growth, sample
+from stress_resources import AccessLost, CRITERION, SHORT_GATE_CRITERION, growth, sample
 
 
 class Monitor:
@@ -128,7 +128,8 @@ class Monitor:
         finally:
             self.server.close()
 
-    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None):
+    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None, *, short_gate=False):
+        criterion = SHORT_GATE_CRITERION if short_gate else CRITERION
         self.stop.set()
         self.thread.join()
         self.server.close()
@@ -159,7 +160,7 @@ class Monitor:
                         required_live_pids=self.required_pids.get(group, []),
                         observation_failures=self.observation_failures.get(group, []),
                         expected_rounds=expected_rounds,
-                        growth=dict(criterion=CRITERION, passed=False, verdict='unverifiable'))
+                        growth=dict(criterion=criterion, passed=False, verdict='unverifiable'))
                     continue
                 if len(rounds) != expected_rounds:
                     raise ValueError(f'{group}: expected {expected_rounds} completed-round samples, got {len(rounds)}')
@@ -186,15 +187,15 @@ class Monitor:
                     peak={key: max(row[key] for row in rounds) for key in rounds[0]},
                     peak_scope='completed-round samples', backend_port=self.ports.get(group, self.backend_port),
                     process_samples=self.process_samples[group], context=self.contexts[group],
-                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts))
+                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts, short_gate=short_gate))
             report.update(groups=reports)
             if self.rounds:
                 report.update(first=self.rounds[0], last=self.rounds[-1])
             report['growth'] = (reports['workload']['growth'] if set(reports) == {'workload'} else
-                dict(criterion=CRITERION, passed=all(r['growth']['passed'] for r in reports.values()),
+                dict(criterion=criterion, passed=all(r['growth']['passed'] for r in reports.values()),
                      **(dict(verdict='unverifiable') if any(r['growth'].get('verdict') == 'unverifiable'
                          for r in reports.values()) else {})))
         if self.observation_failures:
             report['observation_failures'] = self.observation_failures
-            report['growth'] = dict(criterion=CRITERION, passed=False, verdict='unverifiable')
+            report['growth'] = dict(criterion=criterion, passed=False, verdict='unverifiable')
         return report

@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Report workflow step outcomes and refuse qualification after any failure."""
+import json
+import os
+import sys
+
+steps = json.loads(os.environ['QUALIFICATION_STEPS'])
+failed = []
+for name, step in steps.items():
+    outcome = step['outcome']
+    print(f'Qualification stage: {name}: {outcome}')
+    if outcome not in ('success', 'skipped'):
+        failed.append(name)
+if failed:
+    sys.exit('Failed qualification stages: ' + ', '.join(failed))
