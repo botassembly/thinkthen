@@ -143,13 +143,15 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       try await outputWhileInputWaits(args[2])
       return
     }
-    if args[1] == "stream-threads" {
-      try await streamThreadLifetime()
-      try await streamThreadCleanup()
-      try await concurrentStreamThreads()
+    #if os(macOS) || os(Linux)
+      if args[1] == "stream-threads" {
+        try await streamThreadLifetime()
+        try await streamThreadCleanup()
+        try await concurrentStreamThreads()
 
-      return
-    }
+        return
+      }
+    #endif
     if args[1] == "surface" {
       try await surface()
       return

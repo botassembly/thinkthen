@@ -81,23 +81,23 @@ class QualificationRecipes(unittest.TestCase):
 
     def test_installed_go_consumers_share_timeout_and_stream_output(self):
         import release_windows_sdks as sdks
-        class ReachedCache(Exception):
-            pass
         calls = []
+        cached = []
         def cache(command, *arguments):
-            direct, options = next((args, options) for args, options in calls if str(args[0]).endswith('consumer.exe'))
-            self.assertTrue(options['stream_output'])
-            self.assertIn('-test.timeout=10m', direct)
-            self.assertEqual(list(direct), command)
-            raise ReachedCache()
+            cached.append(command)
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             (folder / 'checks/go').mkdir(parents=True)
             (folder / 'checks/stub.json').write_text('[]')
             (folder / 'checks/node.mjs').touch()
             with patch.object(sdks, 'os', SimpleNamespace(name='nt', environ=os.environ)), patch.object(sdks, 'environment', return_value={'PATH': os.environ['PATH']}), patch.object(sdks, 'runtime_environment', return_value={}), patch.object(sdks, 'unpack'), patch.object(sdks, 'run', side_effect=lambda *args, **options: calls.append((args, options))), patch('release_windows_cache.check_cache', cache):
-                with self.assertRaises(ReachedCache):
+                with self.assertRaisesRegex(RuntimeError, 'Windows installed SDK checks failed:'):
                     sdks.full(folder, {'packages': {name: name for name in ('python', 'typescript', 'go')}}, caller_owned=True)
+
+        direct, options = next((args, options) for args, options in calls if str(args[0]).endswith('consumer.exe'))
+        self.assertTrue(options['stream_output'])
+        self.assertIn('-test.timeout=10m', direct)
+        self.assertEqual(list(direct), cached[0])
 
     def test_child_output_is_forwarded_before_child_exit_and_final_bytes_are_drained(self):
         from windows_caller_process import stream

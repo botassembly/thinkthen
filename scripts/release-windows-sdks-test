@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""Feature: Windows installed checks report every language before failing."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
+import zipfile
+
+import release_windows_sdks as sdks
+
+LANGUAGES = ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
+             'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
+
+
+def fixture(failure):
+    with tempfile.TemporaryDirectory() as directory:
+        folder = Path(directory)
+        checks = folder / 'checks'
+        for name in ('go', 'zig', 'csharp-source'):
+            (checks / name).mkdir(parents=True)
+        (checks / 'stub.json').write_text('[]')
+        (checks / 'native_cases.py').write_text('')
+        (checks / 'contract.json').write_text('{}')
+        (checks / 'node.mjs').touch()
+        (checks / 'csharp-source/Consumer.csproj').write_text('<Project/>')
+        (checks / 'swift').mkdir()
+        (folder / 'ruby/dependencies').mkdir(parents=True)
+        (folder / 'ruby/dependencies/ffi.gem').touch()
+        (folder / 'prerequisites/r').mkdir(parents=True)
+        (folder / 'prerequisites/r/inventory.json').write_text(
+            json.dumps({'install_order': [], 'packages': {}, 'r': 'fixture'}))
+        packages = {name: name + '.zip' for name in (
+            'python', 'typescript', 'go', 'csharp', 'ruby', 'r', 'c', 'cpp', 'swift',
+            'zig', 'sqlite', 'duckdb')}
+        for filename in packages.values():
+            with zipfile.ZipFile(folder / filename, 'w') as archive:
+                archive.writestr('fixture', b'')
+        calls = []
+        original_run = sdks.run
+
+        def run(*args, **options):
+            args = list(map(str, args))
+            calls.append(args)
+            if failure == 'Swift' and args[0] == 'swift':
+                with patch.object(sdks.subprocess, 'run', return_value=subprocess.CompletedProcess(
+                        args, 19, stdout='', stderr='injected Swift compiler stderr')):
+                    return original_run(*args, **options)
+            if failure == 'C' and args[0] == 'clang-cl' and '/TC' in args:
+                raise RuntimeError('injected C compiler failure')
+            if failure == 'Python' and args[1:4] == ['-I', '-m', 'venv']:
+                raise RuntimeError('injected Python installation failure')
+            if args[0] == 'dotnet':
+                single = Path(args[args.index('-o') + 1])
+                single.mkdir()
+                (single / 'thinkthen_ffi.dll').touch()
+            if args[0] == 'swift':
+                return str(folder / 'bin')
+            return ''
+
+        def environment(scratch):
+            if failure == 'setup':
+                raise RuntimeError('injected shared setup failure')
+            return {'PATH': os.environ['PATH']}
+
+        # Replace external runtimes and Windows setup only. The real full runner,
+        # extraction, staging, language boundaries and final exit run unchanged.
+        with patch.object(sdks, 'os', SimpleNamespace(name='nt', environ={
+                'THINKTHEN_WINDOWS_SINGLEFILE_FEED': str(folder)}, pathsep=os.pathsep)), \
+             patch.object(sdks, 'environment', environment), \
+             patch.object(sdks, 'runtime_environment', return_value={'PATH': ''}), \
+             patch.object(sdks, 'run', run), \
+             patch('release_windows_cache.check_cache'), \
+             patch.object(sdks.shutil, 'which', side_effect=lambda name, **kwargs: name):
+            try:
+                sdks.full(folder, {'version': '0.0.0', 'packages': packages}, caller_owned=True)
+            finally:
+                print('fixture commands: ' + json.dumps(calls), flush=True)
+
+
+if len(sys.argv) == 2:
+    fixture(sys.argv[1])
+else:
+    for failure in ('Swift', 'C', 'Python', 'setup', 'none'):
+        result = subprocess.run([sys.executable, __file__, failure], capture_output=True, text=True)
+        print('\n'.join(line for line in result.stdout.splitlines()
+                        if not line.startswith('fixture commands: ')), flush=True)
+        assert (result.returncode == 0) == (failure == 'none'), result.stderr
+        for language in LANGUAGES:
+            prefix = 'candidate Windows ' + language + ':'
+            assert result.stdout.count(prefix) == 1, (failure, language, result.stdout, result.stderr)
+            status = next(line for line in result.stdout.splitlines() if line.startswith(prefix))
+            expected = 'NOT RUN' if failure == 'setup' else 'FAIL' if failure == language else 'installed shared stub cases pass'
+            assert expected in status, (failure, status)
+        commands = json.loads(result.stdout.split('fixture commands: ')[1].splitlines()[0])
+        if failure != 'setup':
+            assert any(command[0] == 'zig' for command in commands), failure
+            assert any(any('sql.py' in argument for argument in command) and 'duckdb' in command for command in commands), failure
+        if failure == 'Swift':
+            assert 'swift exited 19:' in result.stdout and 'injected Swift compiler stderr' in result.stdout
+        if failure == 'C':
+            assert any('/EHsc' in command for command in commands), 'C++ was hidden by C failure'
+        assert ('every installed SDK passed' in result.stdout) == (failure == 'none')
+    print('Windows installed SDK runner: all results reported; failures remain nonzero')

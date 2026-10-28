@@ -107,6 +107,7 @@ class ReleaseScripts(unittest.TestCase):
 
     def test_qualification_recipes(self):
         subprocess.run([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/release-windows-sdks-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)
 
     def test_go_selection_preserves_explicit_home_under_isolated_home(self):
