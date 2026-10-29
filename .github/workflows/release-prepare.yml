@@ -7,6 +7,11 @@ on:
         description: Release version to build from this source revision (v0.2.0)
         required: true
         type: string
+      prior_run_id:
+        description: Reuse qualified Linux and Mac products for a Windows-only retry
+        required: false
+        default: ''
+        type: string
       dry_run:
         description: Qualify every package without creating a release draft
         required: true
@@ -24,12 +29,13 @@ env:
 jobs:
   source:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions: {contents: read}
+    timeout-minutes: 15
+    permissions: {contents: read, actions: read}
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
       tag: ${{ steps.resolve.outputs.tag }}
       matrix: ${{ steps.resolve.outputs.matrix }}
+      retry: ${{ steps.retry.outputs.enabled }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -49,6 +55,34 @@ jobs:
           else
             scripts/qualification-source --dispatch "$RELEASE_TAG"
           fi
+      - id: retry
+        name: Verify prior qualification and unchanged product source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRIOR_RUN_ID: ${{ inputs.prior_run_id }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ -n "$PRIOR_RUN_ID" ]; then
+            test "$DRY_RUN" = true
+            python3 scripts/release_retry.py "$PRIOR_RUN_ID" reuse
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+          python3 -c 'import json,sys; sys.path.insert(0,"scripts"); from release_retry import git,manifest; from pathlib import Path; Path("source-manifest.json").write_text(json.dumps(manifest(git("rev-parse","HEAD").decode().strip()),sort_keys=True,indent=2)+"\n")'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-source-manifest
+          path: source-manifest.json
+          if-no-files-found: error
+          retention-days: 7
+      - if: steps.retry.outputs.enabled == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: qualified-reuse
+          path: reuse/
+          if-no-files-found: error
+          retention-days: 7
       - id: resolve
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
@@ -63,6 +97,7 @@ jobs:
     with:
       revision: ${{ needs.source.outputs.sha }}
       matrix: ${{ needs.source.outputs.matrix }}
+      windows_retry: ${{ needs.source.outputs.retry == 'true' }}
 
   bundle:
     needs: [source, qualification]
@@ -80,6 +115,12 @@ jobs:
         with:
           pattern: platform-*
           path: platforms
+      - if: needs.source.outputs.retry == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: qualified-reuse, path: platforms/reused}
+      - if: needs.source.outputs.retry == 'true'
+        name: Select verified prior platform provenance
+        run: echo "THINKTHEN_RELEASE_REUSE=$GITHUB_WORKSPACE/platforms/reused/reuse.json" >> "$GITHUB_ENV"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: {node-version: '22'}
       - name: Prepare registry package tools
@@ -98,9 +139,18 @@ jobs:
       # Each matched file becomes a subject with its own digest in the provenance.
       # https://github.com/actions/attest/tree/v4.2.2#identify-multiple-subjects
       - name: Attest every release asset
+        if: needs.source.outputs.retry != 'true'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: 'release/*'
+          create-storage-record: false
+      - name: Attest the release assembly with each original product source
+        if: needs.source.outputs.retry == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: 'release/*'
+          predicate-type: https://github.com/botassembly/thinkthen/attestations/release-assembly/v1
+          predicate-path: release/reuse.json
           create-storage-record: false
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -124,6 +174,9 @@ jobs:
         with: {python-version: '3.13'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: release, path: release}
+      - if: needs.source.outputs.retry == 'true'
+        name: Select verified provenance for the draft rehearsal
+        run: echo "THINKTHEN_RELEASE_REUSE=$GITHUB_WORKSPACE/release/reuse.json" >> "$GITHUB_ENV"
       - name: Create a draft for review
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

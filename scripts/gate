@@ -22,7 +22,7 @@ done
 if [ "$(uname -s)" = Linux ]; then stage tool-docker command -v docker; fi
 stage python-version python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
 stage release-metadata python3 scripts/release_metadata.py
-for check in release-script-test release-preparation-test release-staging-test release-publish-test release-floor-inputs-test; do
+for check in release-script-test release-retry-test release-preparation-test release-staging-test release-publish-test release-floor-inputs-test; do
     stage "$check" "scripts/$check"
 done
 if [ "$(uname -s)" = Linux ]; then

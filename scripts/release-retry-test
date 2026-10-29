@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""Check release retry admission at the source and artifact security boundary."""
+import copy
+import io
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import sys
+import tarfile
+import hashlib
+import unittest
+from unittest.mock import patch
+import zipfile
+
+from release_retry import (ARTIFACTS, CHECKS, REQUIRED, REPOSITORY, VERIFIER_CHANGES,
+                           archive_revision, compare, extract, identity, manifest, r_revision)
+
+SHA = 'a' * 40
+
+
+class RetryAdmission(unittest.TestCase):
+    def setUp(self):
+        self.run = {'id': 123, 'repository': {'full_name': REPOSITORY},
+                    'head_repository': {'full_name': REPOSITORY}, 'path': '.github/workflows/release-prepare.yml',
+                    'event': 'workflow_dispatch', 'head_branch': 'main', 'status': 'completed',
+                    'head_sha': SHA, 'run_attempt': 2}
+        self.jobs = [{'name': name, 'id': number, 'conclusion': 'success', 'run_attempt': 2,
+                      'head_sha': SHA, 'started_at': '2026-10-29T01:00:00Z',
+                      'completed_at': '2026-10-29T01:10:00Z'} for number, name in enumerate(REQUIRED)]
+        self.artifacts = [{'name': name, 'id': number, 'expired': False,
+                           'digest': 'sha256:' + 'b' * 64, 'created_at': '2026-10-29T01:05:00Z',
+                           'workflow_run': {'id': 123, 'head_sha': SHA, 'head_branch': 'main'}}
+                          for number, name in enumerate(ARTIFACTS)]
+
+    def test_only_successful_exact_attempt_products_are_reused(self):
+        self.assertEqual(set(identity(self.run, self.jobs, self.artifacts)), set(ARTIFACTS))
+        for field, wrong in [('conclusion', 'failure'), ('run_attempt', 1), ('head_sha', 'c' * 40)]:
+            jobs = copy.deepcopy(self.jobs)
+            jobs[0][field] = wrong
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                identity(self.run, jobs, self.artifacts)
+        for field, wrong in [('expired', True), ('digest', ''), ('created_at', '2026-10-29T00:05:00Z')]:
+            artifacts = copy.deepcopy(self.artifacts)
+            artifacts[0][field] = wrong
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                identity(self.run, self.jobs, artifacts)
+        artifacts = copy.deepcopy(self.artifacts)
+        artifacts[0]['workflow_run']['head_sha'] = 'c' * 40
+        with self.assertRaises(ValueError):
+            identity(self.run, self.jobs, artifacts)
+        with self.assertRaises(ValueError):
+            identity(self.run, self.jobs + self.jobs[:1], self.artifacts)
+        run = copy.deepcopy(self.run)
+        run['head_repository']['full_name'] = 'other/repository'
+        with self.assertRaises(ValueError):
+            identity(run, self.jobs, self.artifacts)
+
+    def test_actual_git_bytes_modes_gitlinks_and_exact_verifier_pairs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=root, stderr=subprocess.DEVNULL).decode().strip()
+            git('init', '--quiet')
+            (root / 'product').write_text('original product\n')
+            check = root / 'scripts/header_contract.py'
+            check.parent.mkdir()
+            check.write_text('original check\n')
+            git('add', '.')
+            git('update-index', '--add', '--cacheinfo', '160000,' + SHA + ',vendor/dependency')
+            git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Create source')
+            prior = manifest(git('rev-parse', 'HEAD'), root)
+            self.assertEqual(prior['files']['vendor/dependency']['object'], SHA)
+            check.write_text('changed check\n')
+            git('add', 'scripts/header_contract.py')
+            git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Change check')
+            current = manifest(git('rev-parse', 'HEAD'), root)
+            self.assertEqual(compare(prior, current)['changed_checks'], ['scripts/header_contract.py'])
+            for path in ('product', 'new-builder', 'scripts/release-tools.json', 'vendor/dependency'):
+                changed = copy.deepcopy(current)
+                changed['files'][path] = {'mode': '100644', 'kind': 'blob', 'object': 'b' * 40}
+                with self.subTest(path=path), self.assertRaisesRegex(ValueError, 'full release run'):
+                    compare(prior, changed)
+            for path, pair in VERIFIER_CHANGES.items():
+                before = {'files': {path: pair[0]}}
+                after = {'files': {path: pair[1]}}
+                self.assertTrue(compare(before, after)['reviewed_verifier_changes'])
+                after['files'][path] = dict(pair[1], object='f' * 40)
+                with self.assertRaises(ValueError):
+                    compare(before, after)
+            changed = copy.deepcopy(current)
+            changed['files']['product']['mode'] = '100755'
+            with self.assertRaises(ValueError):
+                compare(prior, changed)
+
+    def test_original_archive_and_r_bytes_stay_bound_to_their_source(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / 'platform.tar.gz'
+            archive.write_bytes(b'original archive')
+            r = root / 'r'
+            r.mkdir()
+            (r / 'payload').write_bytes(b'original R binary')
+            (r / 'manifest.json').write_text(json.dumps({'revision': SHA, 'target': 'x86_64-pc-windows-msvc',
+                'inputs': {}, 'files': {'payload': hashlib.sha256((r / 'payload').read_bytes()).hexdigest()}}))
+            receipt = {'packages': {'linux-x86_64': {'revision': SHA, 'archive': archive.name,
+                         'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}},
+                       'prior': {'revision': SHA}, 'artifacts': {'native-windows-r': {'files': {
+                           p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in r.iterdir()}}}}
+            with patch('release_retry.selected', return_value=receipt):
+                self.assertEqual(archive_revision('linux-x86_64', archive, 'new-source'), SHA)
+                self.assertEqual(archive_revision('windows-x86_64', archive, 'new-source'), 'new-source')
+                self.assertEqual(r_revision(r, 'new-source'), SHA)
+                import release_windows_r
+                with patch('release_windows_r.revision', return_value='new-source'), \
+                     patch('release_windows_r.pins', return_value={}), \
+                     patch('release_windows_r.files', return_value=('payload',)):
+                    self.assertEqual(release_windows_r.verified(r), r)
+                    with patch('release_retry.selected', return_value=None), self.assertRaises(ValueError):
+                        release_windows_r.verified(r)
+                archive.write_bytes(b'changed archive')
+                with self.assertRaises(ValueError):
+                    archive_revision('linux-x86_64', archive, 'new-source')
+                (r / 'manifest.json').write_text('{}')
+                with self.assertRaises(ValueError):
+                    r_revision(r, 'new-source')
+            with patch.dict(os.environ, {}, clear=True):
+                self.assertEqual(archive_revision('linux-x86_64', archive, SHA), SHA)
+                self.assertEqual(r_revision(r, SHA), SHA)
+
+    def test_bundle_keeps_original_package_provenance_and_full_mode_is_strict(self):
+        from release_workflow import ROOT, version, unpack
+        current_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+        current = manifest(current_sha)
+        prior = dict(current, revision=SHA)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'packages'
+            source.mkdir()
+            package = root / 'package'
+            package.mkdir()
+            target = 'linux-x86_64'
+            metadata = {'platform': target, 'version': version(), 'revision': SHA}
+            (package / 'build.json').write_text(json.dumps(metadata))
+            (package / 'INSTALL.md').write_text('Install the original package.\n')
+            requirement = {'supported_glibc': '2.28', 'supported_glibcxx': '3.4.25'}
+            (package / 'requirements.json').write_text(json.dumps({'command': requirement, 'swift': requirement}))
+            (package / 'SHA256SUMS').write_text(''.join(
+                hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in sorted(package.iterdir())))
+            archive = source / f'thinkthen-{version()}-{target}-packages.tar.gz'
+            with tarfile.open(archive, 'w:gz') as output:
+                output.add(package, arcname=version() + '/' + target)
+            original = archive.read_bytes()
+            receipt = {'repository': REPOSITORY, 'prior': prior, 'current': current,
+                       'packages': {target: {'revision': SHA, 'archive': archive.name,
+                                            'sha256': hashlib.sha256(original).hexdigest()}}}
+            path = root / 'reuse.json'
+            path.write_text(json.dumps(receipt))
+            command = [sys.executable, ROOT / 'scripts/release-workflow', 'bundle', source, root / 'bundle',
+                       current_sha, '--targets', target]
+            env = dict(os.environ, THINKTHEN_RELEASE_REUSE=str(path))
+            subprocess.run(command, env=env, cwd=ROOT, check=True, capture_output=True)
+            self.assertEqual((root / 'bundle' / archive.name).read_bytes(), original)
+            self.assertEqual(json.loads((root / 'bundle/reuse.json').read_text()), receipt)
+            # Registry staging consumes this same unpack boundary.
+            with patch.dict(os.environ, env):
+                unpacked = unpack(archive, root / 'unpacked', target, current_sha)
+                self.assertEqual(json.loads((unpacked / 'build.json').read_text()), metadata)
+            without_reuse = {key: value for key, value in os.environ.items() if key != 'THINKTHEN_RELEASE_REUSE'}
+            command[4] = root / 'full-bundle'
+            result = subprocess.run(command, env=without_reuse, cwd=ROOT, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('revision differs', result.stderr)
+            receipt['current']['revision'] = SHA
+            path.write_text(json.dumps(receipt))
+            command[4] = root / 'wrong-source-bundle'
+            result = subprocess.run(command, env=env, cwd=ROOT, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('receipt differs from current source', result.stderr)
+
+    def test_prepare_command_checks_official_api_routing_and_downloaded_digests(self):
+        from release_retry import ROOT
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            checkout = root / 'checkout'
+            checkout.mkdir()
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=checkout, stderr=subprocess.DEVNULL).decode().strip()
+            git('init', '--quiet')
+            (checkout / 'scripts').mkdir()
+            import shutil
+            shutil.copy2(ROOT / 'scripts/release_retry.py', checkout / 'scripts/release_retry.py')
+            (checkout / 'product').write_text('original product\n')
+            checker = checkout / 'scripts/header_contract.py'
+            checker.write_text('original checker\n')
+            git('add', '.')
+            git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Create prior product')
+            prior_sha = git('rev-parse', 'HEAD')
+            checker.write_text('changed checker\n')
+            git('add', 'scripts/header_contract.py')
+            git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Correct checker')
+            current_sha = git('rev-parse', 'HEAD')
+            # Git's standard URL mapping isolates the real fetch command locally.
+            git('config', 'url.' + str(checkout) + '/.insteadOf', 'https://github.com/' + REPOSITORY + '.git')
+            run = copy.deepcopy(self.run)
+            run['head_sha'] = prior_sha
+            jobs = copy.deepcopy(self.jobs)
+            for job in jobs:
+                job['head_sha'] = prior_sha
+            artifacts = copy.deepcopy(self.artifacts)
+            routes = {}
+            for artifact in artifacts:
+                artifact['workflow_run']['head_sha'] = prior_sha
+                blob = root / ('artifact-' + str(artifact['id']) + '.zip')
+                with zipfile.ZipFile(blob, 'w') as output:
+                    output.writestr('manifest.json' if artifact['name'] == 'native-windows-r' else 'platform.tar.gz', b'original payload')
+                artifact['digest'] = 'sha256:' + hashlib.sha256(blob.read_bytes()).hexdigest()
+                routes['repos/' + REPOSITORY + f'/actions/artifacts/{artifact["id"]}/zip'] = str(blob)
+            def response(route, body):
+                path = root / ('response-' + hashlib.sha256(route.encode()).hexdigest() + '.json')
+                path.write_text(json.dumps(body))
+                routes['repos/' + REPOSITORY + '/' + route] = str(path)
+            response('actions/runs/123', run)
+            response('actions/runs/123/attempts/2/jobs?per_page=100&page=1', {'jobs': jobs})
+            response('actions/runs/123/artifacts?per_page=100&page=1', {'artifacts': artifacts})
+            routing = root / 'routes.json'
+            routing.write_text(json.dumps(routes))
+            binary = root / 'bin'
+            binary.mkdir()
+            gh = binary / 'gh'
+            gh.write_text('#!' + sys.executable + '\nimport json,os,sys\nfrom pathlib import Path\n'
+                          'assert sys.argv[1:4] == ["api","--hostname","github.com"]\n'
+                          'routes=json.loads(Path(os.environ["RETRY_ROUTES"]).read_text())\n'
+                          'sys.stdout.buffer.write(Path(routes[sys.argv[4]]).read_bytes())\n')
+            gh.chmod(0o755)
+            env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'], RETRY_ROUTES=str(routing),
+                       GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM='1')
+            def invoke(name, expected):
+                destination = root / name
+                result = subprocess.run([sys.executable, checkout / 'scripts/release_retry.py', '123', destination],
+                                        cwd=checkout, env=env, capture_output=True, text=True)
+                if expected is None:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    receipt = json.loads((destination / 'reuse.json').read_text())
+                    self.assertEqual(receipt['prior']['revision'], prior_sha)
+                    self.assertEqual(receipt['current']['revision'], current_sha)
+                    self.assertEqual(len(receipt['packages']), 3)
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(expected, result.stderr)
+                    self.assertFalse((destination / 'reuse.json').exists())
+            invoke('accepted', None)
+            bad = copy.deepcopy(run)
+            bad['id'] = 124
+            response('actions/runs/123', bad)
+            invoke('wrong-run', 'run ID differs')
+            response('actions/runs/123', run)
+            bad_jobs = copy.deepcopy(jobs)
+            bad_jobs[0]['conclusion'] = 'failure'
+            response('actions/runs/123/attempts/2/jobs?per_page=100&page=1', {'jobs': bad_jobs})
+            invoke('failed-job', 'required job did not pass')
+            response('actions/runs/123/attempts/2/jobs?per_page=100&page=1', {'jobs': jobs})
+            response('actions/runs/123/artifacts?per_page=100&page=1', {'artifacts': artifacts[1:]})
+            invoke('missing-artifact', 'expect exactly one prior artifact')
+            bad_artifacts = copy.deepcopy(artifacts)
+            bad_artifacts[0]['digest'] = 'sha256:' + '0' * 64
+            response('actions/runs/123/artifacts?per_page=100&page=1', {'artifacts': bad_artifacts})
+            invoke('changed-zip', 'downloaded artifact digest differs')
+            response('actions/runs/123/artifacts?per_page=100&page=1', {'artifacts': artifacts})
+            (checkout / 'product').write_text('changed product\n')
+            git('add', 'product')
+            git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Change product')
+            invoke('product-change', 'product source differs')
+
+    def test_artifact_paths_cannot_escape_the_download(self):
+        for name in ('../escape', '/absolute', 'nested/../../escape', 'nested\\escape'):
+            data = io.BytesIO()
+            with zipfile.ZipFile(data, 'w') as archive:
+                archive.writestr(name, 'bad')
+            with tempfile.TemporaryDirectory() as temporary, self.subTest(name=name), self.assertRaises(ValueError):
+                extract(data.getvalue(), Path(temporary))
+
+
+if __name__ == '__main__':
+    unittest.main()

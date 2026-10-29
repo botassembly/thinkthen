@@ -1,0 +1,14 @@
+# Generated declarations are compared byte for byte on every platform.
+crates/thinkthen-ffi/include/thinkthen.h text eol=lf
+crates/thinkthen-ffi/include/thinkthen_sql.h text eol=lf
+conformance/native/thinkthen_fixture.h text eol=lf
+conformance/native/modules.json text eol=lf
+conformance/native/manifest.json text eol=lf
+schemas/abi.json text eol=lf
+sdk/python/thinkthen/_contract.py text eol=lf
+sdk/typescript/contract.js text eol=lf
+sdk/r/R/contract.R text eol=lf
+sdk/java/library/src/main/java/io/thinkthen/internal/Contract.java text eol=lf
+sdk/csharp/src/Contract.g.cs text eol=lf
+sdk/ruby/lib/thinkthen/contract.rb text eol=lf
+sdk/cpp/include/thinkthen/codes.hpp text eol=lf

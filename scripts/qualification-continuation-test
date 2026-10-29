@@ -75,7 +75,7 @@ class QualificationContinuation(unittest.TestCase):
             for job_name, job in workflow(name)['jobs'].items():
                 with self.subTest(workflow=name, job=job_name):
                     if job.get('needs'):
-                        self.assertEqual(job.get('if'), 'always()')
+                        self.assertIn(job.get('if'), ('always()', 'always() && !inputs.windows_retry'))
                     steps = job['steps']
                     summary = steps[-1]
                     self.assertEqual(summary['if'], 'always()')
@@ -103,6 +103,43 @@ class QualificationContinuation(unittest.TestCase):
                         self.assertIn(failed, result.stderr)
                     self.assertIn(diagnostics[-1]['id'] + ': success', result.stdout)
 
+    def test_reduced_retry_keeps_windows_and_signed_dry_run_assembly(self):
+        prepare = workflow('release-prepare.yml')['jobs']
+        source = prepare['source']
+        admission = next(step for step in source['steps'] if step.get('id') == 'retry')
+        self.assertEqual(admission['env']['PRIOR_RUN_ID'], '${{ inputs.prior_run_id }}')
+        self.assertIn('test "$DRY_RUN" = true', admission['run'])
+        self.assertIn('python3 scripts/release_retry.py "$PRIOR_RUN_ID" reuse', admission['run'])
+        self.assertEqual(source['outputs']['retry'], '${{ steps.retry.outputs.enabled }}')
+        self.assertEqual(prepare['qualification']['with']['windows_retry'], "${{ needs.source.outputs.retry == 'true' }}")
+        native = workflow('native-qualification.yml')['jobs']
+        self.assertEqual(native['native-gate-inputs']['if'], '${{ !inputs.windows_retry }}')
+        for name in ('gate', 'windows-r'):
+            self.assertEqual(native[name]['if'], 'always() && !inputs.windows_retry')
+        matrix = native['build']['strategy']['matrix']
+        self.assertIn("inputs.windows_retry && '{", matrix)
+        self.assertIn('"target":"windows-x86_64","runner":"ubuntu-24.04"', matrix)
+        self.assertIn('|| inputs.matrix', matrix)
+        for name in ('build', 'windows-check'):
+            self.assertEqual(native[name]['if'], 'always()')
+            self.assertFalse(native[name].get('continue-on-error', False))
+        self.assertTrue(any('scripts/release-workflow build' in step.get('run', '') for step in native['build']['steps']))
+        self.assertTrue(any('scripts/qualification-candidate windows-x86_64' in step.get('run', '') for step in native['windows-check']['steps']))
+        bundle = prepare['bundle']['steps']
+        attest = [step for step in bundle if 'actions/attest@' in step.get('uses', '')]
+        self.assertEqual({step['if'] for step in attest}, {
+            "needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'"})
+        for step in attest:
+            self.assertEqual(step['with']['subject-path'], 'release/*')
+            self.assertFalse(step.get('continue-on-error', False))
+        reused = next(step for step in attest if step['if'].endswith("== 'true'"))
+        self.assertEqual(reused['with']['predicate-path'], 'release/reuse.json')
+        self.assertIn('release-assembly', reused['with']['predicate-type'])
+        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle'])
+        draft = next(step for step in prepare['draft']['steps'] if step.get('name') == 'Create a draft for review')
+        self.assertEqual(draft['env']['DRY_RUN'], '${{ inputs.dry_run }}')
+        self.assertIn('--dry-run', draft['run'])
+
     def test_windows_checker_selects_the_same_pinned_host_runtimes(self):
         reference = workflow('windows.yml')['jobs']['windows']['steps']
         actual = workflow('native-qualification.yml')['jobs']['windows-check']['steps']
@@ -125,7 +162,8 @@ class QualificationContinuation(unittest.TestCase):
         for name in ('bundle', 'draft'):
             self.assertNotIn('if', prepare[name])
             for step in prepare[name]['steps']:
-                self.assertNotIn('if', step)
+                if 'if' in step:
+                    self.assertIn(step['if'], ("needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'"))
                 self.assertFalse(step.get('continue-on-error', False))
         for job in workflow('release.yml')['jobs'].values():
             self.assertNotIn('always()', str(job.get('if', '')))

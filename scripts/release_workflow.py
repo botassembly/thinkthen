@@ -100,6 +100,8 @@ def pack(target, package, destination, sha):
 
 
 def unpack(archive, scratch, target, sha):
+    from release_retry import archive_revision
+    sha = archive_revision(target, archive, sha)
     with tarfile.open(archive) as bundle:
         bundle.extractall(scratch, filter='data')
     package = scratch / version() / target
@@ -136,6 +138,10 @@ def collect(source, destination, sha, targets):
             package = unpack(matches[0], Path(scratch), target, sha)
             platforms[target] = json.loads((package / 'requirements.json').read_text())
         shutil.copy2(matches[0], destination / name)
+    from release_retry import selected
+    reuse = selected(sha)
+    if reuse is not None:
+        (destination / 'reuse.json').write_text(json.dumps(reuse, sort_keys=True, indent=2) + '\n')
     from release_install import release_note
     (destination / 'INSTALL.md').write_text(release_note(version(), platforms))
     for name in ('install.sh', 'install.ps1'):
@@ -152,6 +158,12 @@ def draft(source, tag, sha, dry_run):
     files = sorted(source.iterdir())
     expected = {'INSTALL.md', 'SHA256SUMS', 'install.sh', 'install.ps1'} | {
         f'thinkthen-{version()}-{target}-packages.tar.gz' for target in TARGETS}
+    from release_retry import selected
+    reuse = selected(sha)
+    if reuse is not None:
+        if not dry_run or json.loads((source / 'reuse.json').read_text()) != reuse:
+            raise ValueError('a reduced retry requires its provenance and draft dry-run')
+        expected.add('reuse.json')
     registry = source / f'thinkthen-{version()}-registries.tar.gz'
     with tarfile.open(registry) as archive:
         info = json.load(archive.extractfile('source.json'))

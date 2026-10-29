@@ -5,6 +5,7 @@ on:
     inputs:
       revision: {required: true, type: string}
       matrix: {required: true, type: string}
+      windows_retry: {required: false, type: boolean, default: false}
 
 permissions: {contents: read}
 env:
@@ -12,6 +13,7 @@ env:
 
 jobs:
   native-gate-inputs:
+    if: ${{ !inputs.windows_retry }}
     runs-on: ubuntu-24.04
     outputs:
       floor_image: ${{ steps.native.outputs.floor_image }}
@@ -107,7 +109,7 @@ jobs:
 
   gate:
     needs: native-gate-inputs
-    if: always()
+    if: always() && !inputs.windows_retry
     runs-on: macos-15
     timeout-minutes: 180
     permissions: {contents: read}
@@ -194,7 +196,7 @@ jobs:
 
   windows-r:
     needs: [native-gate-inputs, gate]
-    if: always()
+    if: always() && !inputs.windows_retry
     runs-on: windows-2022
     timeout-minutes: 90
     permissions: {contents: read}
@@ -239,7 +241,7 @@ jobs:
     if: always()
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.matrix) }}
+      matrix: ${{ fromJSON(inputs.windows_retry && '{"include":[{"target":"windows-x86_64","runner":"ubuntu-24.04"}]}' || inputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     # Initial cap; replace with measurements from the first approved run.
     timeout-minutes: 180
@@ -269,17 +271,27 @@ jobs:
           restore-keys: release-tools-${{ matrix.target }}-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         id: download-artifact-native-windows-r
-        if: always() && matrix.target == 'windows-x86_64'
+        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
         with:
           name: native-windows-r
           path: ${{ runner.temp }}/native-windows-r
+      - if: always() && inputs.windows_retry
+        id: download-qualified-reuse
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: qualified-reuse, path: '${{ runner.temp }}/qualified-reuse'}
+      - if: always() && inputs.windows_retry
+        id: select-qualified-reuse
+        name: Select unchanged qualified Windows R input
+        run: |
+          echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/qualified-reuse/native-windows-r" >> "$GITHUB_ENV"
+          echo "THINKTHEN_RELEASE_REUSE=$RUNNER_TEMP/qualified-reuse/reuse.json" >> "$GITHUB_ENV"
       - name: Select the exact-source native Windows R package
         id: select-the-exact-source-native-windows-r-package
-        if: always() && matrix.target == 'windows-x86_64'
+        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
         run: echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/native-windows-r" >> "$GITHUB_ENV"
       - name: Select the paired Linux compiler identity for Windows cross builds
         id: select-the-paired-linux-compiler-identity-for-windows-cross-builds
-        if: always() && matrix.target == 'windows-x86_64'
+        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
         env:
           FLOOR_IMAGE: ${{ needs.native-gate-inputs.outputs.floor_image }}
         run: echo "THINKTHEN_FLOOR_IMAGE=$FLOOR_IMAGE" >> "$GITHUB_ENV"

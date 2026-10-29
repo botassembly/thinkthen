@@ -305,7 +305,9 @@ for platform, fallback in (
         attest = re.search(r'uses: actions/attest@[0-9a-f]{40}\b', bundle)
         self.assertIsNotNone(attest, 'release provenance action must be pinned')
         self.assertIn("subject-path: 'release/*'", bundle)
-        self.assertNotIn('if: ', bundle[attest.start():].split('- uses: actions/upload-artifact', 1)[0])
+        self.assertIn("if: needs.source.outputs.retry != 'true'", bundle)
+        self.assertIn("if: needs.source.outputs.retry == 'true'", bundle)
+        self.assertIn('predicate-path: release/reuse.json', bundle)
         self.assertLess(bundle.index('scripts/release-workflow attach'), attest.start())
         self.assertLess(attest.start(), bundle.index('uses: actions/upload-artifact'))
 
