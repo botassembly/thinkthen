@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Regression checks for release continuation and Windows diagnostic transport."""
+import io
+import json
+import os
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import tarfile
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+
+def probe(name, scripts):
+    if name in ('windows', 'windows-loop'):
+        sys.path.insert(0, str(scripts))
+        import release_windows_sdks
+        with patch.object(release_windows_sdks, 'os', SimpleNamespace(name='nt')), \
+                patch.object(Path, 'read_text', return_value='[]'), \
+                patch.object(release_windows_sdks, 'environment', return_value={'PATH': ''},
+                    side_effect=RuntimeError('setup \u2192 \u6f22') if name == 'windows' else None), \
+                patch.object(release_windows_sdks, 'runtime_environment', return_value={}), \
+                patch.object(release_windows_sdks, 'run', side_effect=RuntimeError('consumer \u2192 \u6f22')):
+            try:
+                release_windows_sdks.full(ROOT, {'packages': {key: 'missing-\u2192' for key in ('python', 'typescript', 'go', 'java', 'kotlin', 'csharp', 'ruby', 'r', 'c', 'cpp', 'swift', 'zig', 'sqlite', 'duckdb')}}, caller_owned=True)
+            except RuntimeError:
+                return
+        raise AssertionError('setup failed without reporting failure')
+    import release_workflow
+    import release_registry
+    import release_registry_check
+    import release_notice_check
+    import release_source
+    with tempfile.TemporaryDirectory() as temporary:
+        package = Path(temporary)
+        (package / 'build.json').write_text(json.dumps({'platform': 'linux-x86_64'}), encoding='utf-8')
+        calls = []
+        def run(*args, **kwargs):
+            command = list(map(str, args[0] if len(args) == 1 and isinstance(args[0], list) else args))
+            calls.append(command)
+            if command[:2] == ['git', 'archive']:
+                with tarfile.open(command[command.index('--output') + 1], 'w') as archive:
+                    entry = tarfile.TarInfo('sdk/go/thinkthen/go.mod')
+                    body = b'module github.com/botassembly/thinkthen/sdk/go/thinkthen\n'
+                    entry.size = len(body)
+                    archive.addfile(entry, io.BytesIO(body))
+                return
+            if command[0] == 'git':
+                return
+            raise RuntimeError('seeded failure: \u2192 \u6f22')
+        def stage(libraries, additions, notices):
+            if name == 'setup':
+                raise RuntimeError('setup \u2192')
+            additions.mkdir()
+        def environment(scratch):
+            return dict(os.environ, HOME=str(scratch / 'home'))
+        with patch('platform.system', return_value='Linux'), patch.object(release_workflow, 'validate'), patch.object(release_workflow, 'prepared', run), \
+                patch.object(release_workflow, 'run', run), patch.object(subprocess, 'run', run), \
+                patch.object(release_registry_check, 'environment', environment), \
+                patch.object(release_registry, 'native_libraries', return_value={}), \
+                patch.object(release_registry, 'one', return_value=package / 'fake'), \
+                patch.object(release_notice_check, 'package_notices', return_value={}), \
+                patch.object(release_source, 'stage', stage):
+            script = 'qualification-candidate' if name == 'candidate' else 'qualification-readmes' if name == 'readmes' else 'source-install-check'
+            sys.argv = [script, 'linux-x86_64', str(package), 'revision'] if name == 'candidate' else [script, str(package)]
+            try:
+                runpy.run_path(str(scripts / script), run_name='__main__')
+            except SystemExit as error:
+                if error.code == 0:
+                    raise AssertionError('failed stages returned success')
+                return
+            raise AssertionError('failed stages returned success')
+
+
+if len(sys.argv) > 1:
+    probe(sys.argv[1], Path(sys.argv[2]))
+else:
+    for name, expected in [
+        ('windows', ['candidate Windows ' + language + ': NOT RUN:' for language in ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R', 'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')]),
+        ('windows-loop', ['candidate Windows ' + language + ': FAIL:' for language in ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R', 'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')]),
+        ('candidate', ['qualification release-check: FAIL', 'qualification source-install-check: FAIL', 'qualification qualification-readmes: FAIL']),
+        ('source', ['source install ' + language + ': FAIL' for language in ('Go', 'Swift', 'Zig', 'Ruby')]),
+        ('setup', ['source install ' + language + ': NOT RUN: shared setup failed:' for language in ('Go', 'Swift', 'Zig', 'Ruby')]),
+        ('readmes', ['README: ' + language + ': FAIL' for language in ('command', 'Python', 'TypeScript', 'c', 'cpp', 'Java', 'Kotlin', 'C#', 'R', 'sqlite', 'duckdb')]),
+    ]:
+        result = subprocess.run([sys.executable, __file__, name, os.environ.get('REPORT_ALL_SCRIPTS', str(ROOT / 'scripts'))],
+            capture_output=True, env=dict(os.environ, PYTHONIOENCODING='cp1252:strict', PYTHONDONTWRITEBYTECODE='1'))
+        output = (result.stdout + result.stderr).decode('cp1252')
+        assert result.returncode == 0, output
+        for marker in expected:
+            assert marker in output, (name, marker, output)
+        assert 'UnicodeEncodeError' not in output, output
+        print(name + ': all stages reported and final failure retained')

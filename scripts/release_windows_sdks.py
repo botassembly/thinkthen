@@ -123,6 +123,8 @@ def full(folder, build, *, caller_owned=False):
         launch([sys.executable, str(Path(__file__).resolve()), '--caller-owned', folder],
                cwd=folder, env=dict(os.environ))
         return
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(errors='backslashreplace')
     from release_windows_cache import check_cache
     languages = ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
                  'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
@@ -197,7 +199,7 @@ def full(folder, build, *, caller_owned=False):
             consumer = scratch / 'dotnet'
             shutil.copytree(checks / 'csharp-source', consumer)
             project = consumer / 'Consumer.csproj'
-            project.write_text(project.read_text().replace('Version="0.0.0"', 'Version="' + build['version'] + '"'))
+            project.write_text(project.read_text(encoding='utf-8').replace('Version="0.0.0"', 'Version="' + build['version'] + '"'), encoding='utf-8')
             config = ET.Element('configuration')
             sources = ET.SubElement(config, 'packageSources')
             ET.SubElement(sources, 'clear')
@@ -244,7 +246,7 @@ def r_cases(execute, folder, scratch, package, cases):
     library = scratch / 'r-library'
     library.mkdir()
     directory = folder / 'prerequisites/r'
-    inventory = json.loads((directory / 'inventory.json').read_text())
+    inventory = json.loads((directory / 'inventory.json').read_text(encoding='utf-8'))
     dependencies = [directory / name for name in inventory['install_order']]
     for dependency in dependencies:
         import hashlib
@@ -314,4 +316,4 @@ if __name__ == '__main__':
     if len(sys.argv) != 3 or sys.argv[1] != '--caller-owned':
         raise SystemExit('Use the installed candidate checker')
     folder = Path(sys.argv[2]).resolve()
-    full(folder, json.loads((folder / 'build.json').read_text()), caller_owned=True)
+    full(folder, json.loads((folder / 'build.json').read_text(encoding='utf-8')), caller_owned=True)

@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 
-from release_prepare_common import ROOT, TOOLS, fetch, run, prepared
+from release_prepare_common import ROOT, TOOLS, PINS, fetch, run, prepared
 
 
 def selections():
@@ -39,6 +39,34 @@ def swift_components(env):
     return None
 
 
+def msys2_home():
+    return TOOLS / 'windows-check/msys2' / PINS['windows_msys2']['release']
+
+
+def prepare_msys2():
+    """Install the exact compiler distribution with its complete package closure."""
+    pin = PINS['windows_msys2']
+    parent = TOOLS / 'windows-check'
+    archive = fetch(pin['archive'], parent / 'msys2.7z')
+    packages = fetch(pin['packages'], parent / 'msys2.packages.txt')
+    destination = msys2_home()
+    # Re-extract verified bytes, including on a warm host with modified tools.
+    # The archive root is the MSYS2 root, as in ruby/setup-msys2-gcc's producer.
+    run('7z', 'x', '-y', '-aoa', archive, '-o' + str(destination))
+    env = dict(os.environ, MSYSTEM='UCRT64', MSYS2_PATH_TYPE='inherit')
+    bash = destination / 'usr/bin/bash.exe'
+    actual = run(bash, '-lc', 'pacman -Q', env=env, capture_output=True, text=True).stdout
+    if actual.splitlines() != packages.read_text().splitlines():
+        raise ValueError('Prepared MSYS2 package closure differs from its pinned distribution')
+    compiler = destination / 'ucrt64/bin/gcc.exe'
+    owner = run(bash, '-lc', 'pacman -Qqo /ucrt64/bin/gcc.exe', env=env, capture_output=True, text=True).stdout.strip()
+    version = run(compiler, '-dumpfullversion', capture_output=True, text=True).stdout.strip()
+    target = run(compiler, '-dumpmachine', capture_output=True, text=True).stdout.strip()
+    if owner != 'mingw-w64-ucrt-x86_64-gcc' or version != pin['gcc'].rsplit('-', 1)[0] or target != 'x86_64-w64-mingw32':
+        raise ValueError('Prepared MSYS2 GCC owner, version or architecture differs')
+    print('release: pinned MSYS2 GCC ' + pin['gcc'] + ': ' + str(compiler))
+
+
 def native_run(command, *arguments, env, **options):
     # Windows executable lookup cannot use subprocess's supplied env PATH.
     # https://docs.python.org/3/library/subprocess.html#popen-constructor
@@ -58,7 +86,7 @@ def environment():
     vcvars = Path(installation) / 'VC/Auxiliary/Build/vcvars64.bat'
     selected = subprocess.check_output(f'call "{vcvars}" >nul && set', shell=True, text=True)
     env.update((key.upper(), value) for line in selected.splitlines() if '=' in line and not line.startswith('=') for key, value in [line.split('=', 1)])
-    paths = [TOOLS / 'windows/R-4.6.1/bin/x64', TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), Path('C:/msys64/ucrt64/bin')]
+    paths = [TOOLS / 'windows/R-4.6.1/bin/x64', TOOLS / 'windows-check/bin', TOOLS / 'zig' / zig_version(), msys2_home() / 'ucrt64/bin']
     for variable in ('JAVA_HOME', 'JAVA_HOME_22_X64'):
         if env.get(variable):
             paths.append(Path(env[variable]) / 'bin')
@@ -70,6 +98,22 @@ def environment():
         env['SDKROOT'] = str(sdk)
     paths.extend(sorted((Path(env['PROGRAMFILES']) / 'R').glob('R-4.6*/bin/x64'), reverse=True)[:1])
     env['PATH'] = os.pathsep.join(map(str, paths)) + os.pathsep + env['PATH']
+    return env
+
+
+def prepare_swift(env, folder):
+    if swift_components(env) is None:
+        # fetch verifies the release-downloads.json SHA256 before the signature
+        # check. Its version matches the Linux Swift closure.
+        version = swift_version()
+        name = f'swift-{version}-RELEASE-windows10.exe'
+        installer = fetch(f'https://download.swift.org/swift-{version}-release/windows10/swift-{version}-RELEASE/{name}', folder / name)
+        run('powershell', '-NoProfile', '-Command',
+            'if ((Get-AuthenticodeSignature -LiteralPath $args[0]).Status -ne "Valid") {exit 1}', installer)
+        run(installer, '-quiet', '-norestart')
+        env = environment()
+        if swift_components(env) is None:
+            raise ValueError('Pinned Swift installation is missing after preparation')
     return env
 
 
@@ -92,20 +136,9 @@ def native():
             archive.extractall(folder / 'zig')
         zig.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(next((folder / 'zig').iterdir()), zig)
+    prepare_msys2()
     env = environment()
-    if swift_components(env) is None:
-        # Official signed installer; its version matches the Linux Swift closure.
-        version = swift_version()
-        name = f'swift-{version}-RELEASE-windows10.exe'
-        installer = fetch(f'https://download.swift.org/swift-{version}-release/windows10/swift-{version}-RELEASE/{name}', folder / name)
-        run('powershell', '-NoProfile', '-Command',
-            'if ((Get-AuthenticodeSignature -LiteralPath $args[0]).Status -ne "Valid") {exit 1}', installer)
-        run(installer, '-quiet', '-norestart')
-        env = environment()
-        if swift_components(env) is None:
-            raise ValueError('Pinned Swift installation is missing after preparation')
-    # The runner provides MSYS2. Install its UCRT compiler for Go's cgo consumer.
-    run('C:/msys64/usr/bin/bash.exe', '-lc', 'pacman --noconfirm -S --needed mingw-w64-ucrt-x86_64-gcc')
+    env = prepare_swift(env, folder)
     sqlite = binary / 'sqlite3.exe'
     if not sqlite.exists():
         url, digest = pins['sqlite-amalgamation-3410000.zip']

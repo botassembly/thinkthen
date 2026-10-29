@@ -99,7 +99,7 @@ jobs:
           name: gate-linux-x86_64
           path: gate-assets/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
       - name: Report every qualification failure
         if: always()
@@ -195,15 +195,19 @@ jobs:
         run: python3 scripts/qualification-summary
 
   windows-r:
-    needs: [native-gate-inputs, gate]
     if: always() && !inputs.windows_retry
     runs-on: windows-2022
     timeout-minutes: 90
     permissions: {contents: read}
     env:
+      PYTHONUTF8: '1'
       PM_JOB: release-${{ github.run_id }}
     defaults: {run: {shell: bash}}
     steps:
+      - name: Preserve source bytes on Windows
+        id: configure-checkout
+        if: always()
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         id: checkout
         if: always()
@@ -228,7 +232,7 @@ jobs:
           name: native-windows-r
           path: windows-r/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
       - name: Report every qualification failure
         if: always()
@@ -237,11 +241,85 @@ jobs:
         run: python3 scripts/qualification-summary
 
   build:
-    needs: [native-gate-inputs, gate, windows-r]
+    if: always() && !inputs.windows_retry
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(inputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    # Initial cap; replace with measurements from the first approved run.
+    timeout-minutes: 180
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        id: checkout
+        if: always()
+        with:
+          ref: ${{ inputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        id: setup-python
+        if: always()
+        with: {python-version: '3.13'}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        id: cache
+        if: always()
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cache/uv
+            ~/.local/share/uv
+            ~/.local/share/thinkthen-build-tools
+          key: release-tools-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-${{ matrix.target }}-
+      - name: Prepare tools and dependencies
+        id: prepare-tools-and-dependencies
+        if: always()
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: scripts/release-workflow prepare "$RELEASE_TARGET"
+      - name: Prepare runtime-only Linux qualification images
+        id: prepare-runtime-only-linux-qualification-images
+        if: always() && startsWith(matrix.target, 'linux-')
+        env:
+          PM_JOB: release-${{ github.run_id }}
+        run: scripts/qualification-linux --prepare
+      - name: Build and check installed packages against the stub
+        id: build-and-check-installed-packages-against-the-stub
+        if: always()
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: scripts/release-workflow build "$RELEASE_TARGET" release-files "$RELEASE_SHA"
+      - name: Qualify packages on their native runtime floors
+        id: qualify-packages-on-their-native-runtime-floors
+        if: always()
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: |
+          . scripts/native-tools-env
+          scripts/qualification-candidate "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        id: upload-artifact-platform-matrix-target
+        with:
+          name: platform-${{ matrix.target }}
+          path: release-files/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Report every qualification failure
+        if: always()
+        env:
+          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/qualification-summary
+
+  build-windows:
+    needs: [native-gate-inputs, windows-r]
     if: always()
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(inputs.windows_retry && '{"include":[{"target":"windows-x86_64","runner":"ubuntu-24.04"}]}' || inputs.matrix) }}
+      matrix: {include: [{target: windows-x86_64, runner: ubuntu-24.04}]}
     runs-on: ${{ matrix.runner }}
     # Initial cap; replace with measurements from the first approved run.
     timeout-minutes: 180
@@ -334,6 +412,7 @@ jobs:
       # Bundle, draft and package publication require every native check below.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         id: upload-artifact-platform-matrix-target
+        if: always()
         with:
           name: platform-${{ matrix.target }}
           path: release-files/*.tar.gz
@@ -347,13 +426,19 @@ jobs:
         run: python3 scripts/qualification-summary
 
   windows-check:
-    needs: build
+    needs: build-windows
     if: always()
     runs-on: windows-2022
-    timeout-minutes: 60
+    timeout-minutes: 120
     permissions: {contents: read}
+    env:
+      PYTHONUTF8: '1'
     defaults: {run: {shell: bash}}
     steps:
+      - name: Preserve source bytes on Windows
+        id: configure-checkout
+        if: always()
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         id: checkout
         if: always()

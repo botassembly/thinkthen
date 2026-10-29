@@ -36,7 +36,7 @@ def reduced_steps(job):
 
 def reduced_prerequisites(prepare, native, report=False):
     """Check the existing path's providers; caches supply no required inputs."""
-    jobs = {'source': prepare['source'], 'build': native['build'],
+    jobs = {'source': prepare['source'], 'build': native['build-windows'],
             'windows-check': native['windows-check'], 'bundle': prepare['bundle'], 'draft': prepare['draft']}
     active = {name: reduced_steps(job) for name, job in jobs.items()}
     uploads = {step['with']['name'].replace('${{ matrix.target }}', 'windows-x86_64'): name
@@ -185,7 +185,7 @@ class QualificationContinuation(unittest.TestCase):
                     for step in steps[:-1]:
                         self.assertFalse(step.get('continue-on-error', False))
                         if 'actions/upload-artifact@' in step.get('uses', ''):
-                            self.assertNotIn('if', step)
+                            self.assertIn(step.get('if'), (None, 'always()'))
                         else:
                             self.assertTrue(step.get('if', 'always()' if step['id'] == 'checkout' else '').startswith('always()'), step)
                             self.assertNotIn('steps.native.outcome', step.get('if', ''))
@@ -216,11 +216,12 @@ class QualificationContinuation(unittest.TestCase):
         self.assertEqual(native['native-gate-inputs']['if'], '${{ !inputs.windows_retry }}')
         for name in ('gate', 'windows-r'):
             self.assertEqual(native[name]['if'], 'always() && !inputs.windows_retry')
-        matrix = native['build']['strategy']['matrix']
-        self.assertIn("inputs.windows_retry && '{", matrix)
-        self.assertIn('"target":"windows-x86_64","runner":"ubuntu-24.04"', matrix)
-        self.assertIn('|| inputs.matrix', matrix)
-        for name in ('build', 'windows-check'):
+        matrix = native['build-windows']['strategy']['matrix']
+        self.assertEqual(matrix, {'include': [{'target': 'windows-x86_64', 'runner': 'ubuntu-24.04'}]})
+        self.assertNotIn('needs', native['build'])
+        self.assertNotIn('needs', native['windows-r'])
+        self.assertEqual(native['build-windows']['needs'], ['native-gate-inputs', 'windows-r'])
+        for name in ('build-windows', 'windows-check'):
             self.assertEqual(native[name]['if'], 'always()')
             self.assertFalse(native[name].get('continue-on-error', False))
         self.assertTrue(any('scripts/release-workflow build' in step.get('run', '') for step in native['build']['steps']))
@@ -245,7 +246,7 @@ class QualificationContinuation(unittest.TestCase):
         prepare = workflow('release-prepare.yml')['jobs']
         native = workflow('native-qualification.yml')['jobs']
         reduced_prerequisites(prepare, native, report=True)
-        for job, missing in [('build', 'restore-paired-compiler-identity'), ('build', 'download-qualified-reuse'),
+        for job, missing in [('build-windows', 'restore-paired-compiler-identity'), ('build-windows', 'download-qualified-reuse'),
                              ('windows-check', 'prepare-rust'), ('windows-check', 'setup-go')]:
             changed = copy.deepcopy(native)
             step = next(step for step in changed[job]['steps'] if step.get('id') == missing)

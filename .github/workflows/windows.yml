@@ -12,6 +12,7 @@ on:
 permissions: {contents: read}
 env:
   PYTHONDONTWRITEBYTECODE: '1'
+  PYTHONUTF8: '1'
 
 jobs:
   windows:
@@ -19,6 +20,10 @@ jobs:
     timeout-minutes: 60
     defaults: {run: {shell: pwsh}}
     steps:
+      - name: Preserve source bytes on Windows
+        id: configure-checkout
+        if: always()
+        run: git config --global core.autocrlf false
       - id: checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {persist-credentials: false}

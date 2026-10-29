@@ -34,7 +34,7 @@ SOURCES = {
 def released_readme(name, *, root=ROOT):
     """Render the shared package guide without platform-specific offline steps."""
     source, boundary = SOURCES[name]
-    body = (root / source).read_text()
+    body = (root / source).read_text(encoding='utf-8')
     if boundary:
         body = body.split('\n' + boundary, 1)[0]
     # Process prose only: C++ lambda captures also contain Markdown-like brackets.
@@ -50,8 +50,8 @@ def released_readme(name, *, root=ROOT):
 
 def readme(name, out, artifact, *, root=ROOT):
     body = released_readme(name, root=root).decode()
-    version = json.loads((out / 'build.json').read_text())['version']
-    requirements = json.loads((out / 'requirements.json').read_text())[name]
+    version = json.loads((out / 'build.json').read_text(encoding='utf-8'))['version']
+    requirements = json.loads((out / 'requirements.json').read_text(encoding='utf-8'))[name]
     python = 'python' if requirements.get('platform') == 'windows-x86_64' else 'python3'
     body = body.replace('pip install thinkthen', f'{python} -m pip install --no-index ./{artifact.name}')
     body = body.replace('npm install thinkthen', f'npm install --offline ./{artifact.name}')
@@ -144,7 +144,7 @@ def update_gem(path, document):
 
 
 def package_readmes(out):
-    for name in json.loads((out / 'requirements.json').read_text()):
+    for name in json.loads((out / 'requirements.json').read_text(encoding='utf-8')):
         folder = out if name == 'command' else out / name
         pattern = {'command': 'thinkthen-*.tar.gz', 'python': '*.whl', 'typescript': '*.tgz',
                    'r': 'thinkthen_*', 'csharp': '*.nupkg', 'ruby': '*.gem',

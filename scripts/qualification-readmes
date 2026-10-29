@@ -4,6 +4,7 @@
 Example changes select the stub, supply language entry points and choose the
 delivered platform archive as the command README instructs.
 """
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -20,8 +21,8 @@ from csharp_consumers import package_config, stub_example
 from release_registry_check import environment, java_arguments
 from release_workflow import ROOT, version
 
-if os.name == 'nt':
-    sys.stdout.reconfigure(encoding='utf-8')
+for stream in (sys.stdout, sys.stderr):
+    stream.reconfigure(errors='backslashreplace')
 
 PACKAGE = Path(sys.argv[1]).resolve()
 WINDOWS = os.name == 'nt'
@@ -44,9 +45,19 @@ def unpack(folder, destination):
 
 
 def example(name, language, match=None):
-    blocks = re.findall(r'```' + language + r'\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(), re.S)
+    blocks = re.findall(r'```' + language + r'\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(encoding='utf-8'), re.S)
     return next(block for block in blocks if match is None or match in block)
 
+
+failures = []
+
+@contextmanager
+def check(name):
+    try:
+        yield
+    except Exception as error:
+        failures.append(name)
+        print(f'README: {name}: FAIL: {error}', flush=True)
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporary:
     scratch = Path(temporary)
@@ -64,127 +75,139 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporar
     def write(name, body):
         path = scratch / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(body)
+        path.write_text(body, encoding='utf-8')
         return path
 
-    artifact = one('', '*.zip' if WINDOWS else '*.tar.gz')
-    command = unpack('', scratch / 'command')
-    readme = (command / 'README.md').read_text()
-    language = 'powershell' if WINDOWS else 'sh'
-    shell = re.search(r'```' + language + r'\n(.*?)\n```', readme, re.S)[1]
-    shutil.copy2(artifact, scratch / artifact.name)
-    if WINDOWS:
-        output = run('powershell', '-NoProfile', '-NonInteractive', '-Command',
-            "$ErrorActionPreference = 'Stop'\n" + shell +
-            '\nif ($LASTEXITCODE -notin @(0,1,3)) { exit $LASTEXITCODE }; exit 0')
-    else:
-        # The README explicitly directs arm64 Linux and Mac users to the matching archive.
-        shell, replacements = re.subn(r'(?<=tar -xzf )[^\s]+', shlex.quote(artifact.name), shell)
-        if replacements != 1:
-            raise ValueError('command README must extract its delivered archive once')
-        output = run('sh', '-eu', '-c', 'status=0; ' + shell + ' || status=$?; case $status in 0|1|3) ;; *) exit "$status";; esac', capture_output=True, text=True).stdout
-    rows = [json.loads(line) for line in output.splitlines() if line.strip()]
-    if len(rows) != 1 or rows[0].get('status') not in ('answered', 'unsure') or not {'answer', 'probability'} <= rows[0].keys():
-        raise ValueError('command README must produce one successful decision row')
-    print('README: command passes', flush=True)
+    with check('command'):
+        artifact = one('', '*.zip' if WINDOWS else '*.tar.gz')
+        command = unpack('', scratch / 'command')
+        readme = (command / 'README.md').read_text(encoding='utf-8')
+        language = 'powershell' if WINDOWS else 'sh'
+        shell = re.search(r'```' + language + r'\n(.*?)\n```', readme, re.S)[1]
+        shutil.copy2(artifact, scratch / artifact.name)
+        if WINDOWS:
+            output = run('powershell', '-NoProfile', '-NonInteractive', '-Command',
+                "$ErrorActionPreference = 'Stop'\n" + shell +
+                '\nif ($LASTEXITCODE -notin @(0,1,3)) { exit $LASTEXITCODE }; exit 0')
+        else:
+            # The README explicitly directs arm64 Linux and Mac users to the matching archive.
+            shell, replacements = re.subn(r'(?<=tar -xzf )[^\s]+', shlex.quote(artifact.name), shell)
+            if replacements != 1:
+                raise ValueError('command README must extract its delivered archive once')
+            output = run('sh', '-eu', '-c', 'status=0; ' + shell + ' || status=$?; case $status in 0|1|3) ;; *) exit "$status";; esac', capture_output=True, text=True, encoding='utf-8').stdout
+        rows = [json.loads(line) for line in output.splitlines() if line.strip()]
+        if len(rows) != 1 or rows[0].get('status') not in ('answered', 'unsure') or not {'answer', 'probability'} <= rows[0].keys():
+            raise ValueError('command README must produce one successful decision row')
+        print('README: command passes', flush=True)
 
-    python_home = scratch / 'python'
-    run(sys.executable, '-m', 'venv', python_home)
-    python = python_home / ('Scripts/python.exe' if WINDOWS else 'bin/python')
-    run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', one('python', '*.whl'))
-    body = example('python', 'python')
-    run(python, write('first.py', body))
-    print('README: Python passes', flush=True)
+    with check('Python'):
+        python_home = scratch / 'python'
+        run(sys.executable, '-m', 'venv', python_home)
+        python = python_home / ('Scripts/python.exe' if WINDOWS else 'bin/python')
+        run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', one('python', '*.whl'))
+        body = example('python', 'python')
+        run(python, write('first.py', body))
+        print('README: Python passes', flush=True)
 
-    node = scratch / 'node'
-    run('npm.cmd' if WINDOWS else 'npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
-        '--cache', scratch / 'npm-cache', '--prefix', node, one('typescript', '*.tgz'))
-    body = example('typescript', 'ts')
-    script = node / 'first.mjs'
-    script.write_text(body)
-    run('node', script)
-    print('README: TypeScript passes', flush=True)
+    with check('TypeScript'):
+        node = scratch / 'node'
+        run('npm.cmd' if WINDOWS else 'npm', 'install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+            '--cache', scratch / 'npm-cache', '--prefix', node, one('typescript', '*.tgz'))
+        body = example('typescript', 'ts')
+        script = node / 'first.mjs'
+        script.write_text(body, encoding='utf-8')
+        run('node', script)
+        print('README: TypeScript passes', flush=True)
 
     for name in ('c', 'cpp'):
-        installed = unpack(name, scratch / name)
-        native_package = installed if name == 'c' else scratch / 'c'
-        extension = 'c' if name == 'c' else 'cpp'
-        source = write('first.' + extension, example(name, extension))
-        binary = scratch / ('first-' + name + ('.exe' if WINDOWS else ''))
-        if WINDOWS:
-            libraries = [native_package / 'lib/thinkthen_ffi.lib']
-            run('clang-cl', '/nologo', '/std:c11' if name == 'c' else '/std:c++17', '/EHsc', '/MD',
-                '/I' + str(installed / 'include'), '/I' + str(native_package / 'include'), source, '/Fe:' + str(binary), '/link', *libraries)
-            native = native_package / 'bin'
-            search = [str(native)]
-            run(binary, extra={'PATH': os.pathsep.join(search) + os.pathsep + env['PATH']})
-        else:
-            if name == 'c':
-                flags = {'PKG_CONFIG_PATH': str(installed / 'lib/pkgconfig') + os.pathsep + env.get('PKG_CONFIG_PATH', '')}
-                result = run('pkg-config', '--cflags', '--libs', 'thinkthen-c', extra=flags, capture_output=True, text=True)
-                run('cc', '-std=c11', source, *shlex.split(result.stdout), '-o', binary)
+        with check(name):
+            installed = unpack(name, scratch / name)
+            native_package = installed if name == 'c' else unpack('c', scratch / 'cpp-native')
+            extension = 'c' if name == 'c' else 'cpp'
+            source = write('first.' + extension, example(name, extension))
+            binary = scratch / ('first-' + name + ('.exe' if WINDOWS else ''))
+            if WINDOWS:
+                libraries = [native_package / 'lib/thinkthen_ffi.lib']
+                run('clang-cl', '/nologo', '/std:c11' if name == 'c' else '/std:c++17', '/EHsc', '/MD',
+                    '/I' + str(installed / 'include'), '/I' + str(native_package / 'include'), source, '/Fe:' + str(binary), '/link', *libraries)
+                native = native_package / 'bin'
+                search = [str(native)]
+                run(binary, extra={'PATH': os.pathsep.join(search) + os.pathsep + env['PATH']})
             else:
-                run('c++', '-std=c++17', '-I' + str(installed / 'include'),
-                    '-I' + str(native_package / 'include'), source,
-                    '-L' + str(native_package / 'lib'), '-lthinkthen', '-Wl,-rpath,' + str(native_package / 'lib'), '-o', binary)
-            loader = 'DYLD_LIBRARY_PATH' if sys.platform == 'darwin' else 'LD_LIBRARY_PATH'
-            run(binary, extra={loader: str(native_package / 'lib')
-                + (os.pathsep + env[loader] if env.get(loader) else '')} if name == 'c' else None)
-        print('README: ' + name + ' passes', flush=True)
+                if name == 'c':
+                    flags = {'PKG_CONFIG_PATH': str(installed / 'lib/pkgconfig') + os.pathsep + env.get('PKG_CONFIG_PATH', '')}
+                    result = run('pkg-config', '--cflags', '--libs', 'thinkthen-c', extra=flags, capture_output=True, text=True, encoding='utf-8')
+                    run('cc', '-std=c11', source, *shlex.split(result.stdout), '-o', binary)
+                else:
+                    run('c++', '-std=c++17', '-I' + str(installed / 'include'),
+                        '-I' + str(native_package / 'include'), source,
+                        '-L' + str(native_package / 'lib'), '-lthinkthen', '-Wl,-rpath,' + str(native_package / 'lib'), '-o', binary)
+                loader = 'DYLD_LIBRARY_PATH' if sys.platform == 'darwin' else 'LD_LIBRARY_PATH'
+                run(binary, extra={loader: str(native_package / 'lib')
+                    + (os.pathsep + env[loader] if env.get(loader) else '')} if name == 'c' else None)
+            print('README: ' + name + ' passes', flush=True)
 
-    java = example('java', 'java')
-    split = java.index('try (')
-    source = write('First.java', java[:split] + '\nclass First { public static void main(String[] args) throws Exception {\n' + java[split:] + '\n}}\n')
-    jars = [*sorted((PACKAGE / 'java').glob('*.jar')), *sorted((PACKAGE / 'java/dependencies').glob('*.jar'))]
-    classpath = os.pathsep.join(map(str, jars))
-    run('javac', '-cp', classpath, source)
-    run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch) + os.pathsep + classpath, 'First')
-    print('README: Java passes', flush=True)
+    with check('Java'):
+        java = example('java', 'java')
+        split = java.index('try (')
+        source = write('First.java', java[:split] + '\nclass First { public static void main(String[] args) throws Exception {\n' + java[split:] + '\n}}\n')
+        jars = [*sorted((PACKAGE / 'java').glob('*.jar')), *sorted((PACKAGE / 'java/dependencies').glob('*.jar'))]
+        classpath = os.pathsep.join(map(str, jars))
+        run('javac', '-cp', classpath, source)
+        run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch) + os.pathsep + classpath, 'First')
+        print('README: Java passes', flush=True)
 
-    kotlin = example('kotlin', 'kotlin')
-    source = write('First.kt', 'import kotlinx.coroutines.runBlocking\n' + kotlin + '\nfun main() = runBlocking { routeMessage() }\n')
-    jars = [*sorted((PACKAGE / 'kotlin').glob('*.jar')), *sorted((PACKAGE / 'kotlin/dependencies').glob('*.jar'))]
-    classpath = os.pathsep.join(map(str, jars))
-    tools = Path.home() / '.local/share/thinkthen-build-tools/jvm/m2'
-    compiler = os.pathsep.join(str(path) for path in tools.rglob('*.jar'))
-    run('java', java_arguments(scratch / 'kotlin-compiler.args', '-cp', compiler,
-        'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
-        '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source))
-    run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
-    print('README: Kotlin passes', flush=True)
+    with check('Kotlin'):
+        kotlin = example('kotlin', 'kotlin')
+        source = write('First.kt', 'import kotlinx.coroutines.runBlocking\n' + kotlin + '\nfun main() = runBlocking { routeMessage() }\n')
+        jars = [*sorted((PACKAGE / 'kotlin').glob('*.jar')), *sorted((PACKAGE / 'kotlin/dependencies').glob('*.jar'))]
+        classpath = os.pathsep.join(map(str, jars))
+        tools = Path.home() / '.local/share/thinkthen-build-tools/jvm/m2'
+        compiler = os.pathsep.join(str(path) for path in tools.rglob('*.jar'))
+        run('java', java_arguments(scratch / 'kotlin-compiler.args', '-cp', compiler,
+            'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
+            '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source))
+        run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
+        print('README: Kotlin passes', flush=True)
 
-    write('dotnet/Program.cs', stub_example(example('csharp', 'csharp')))
-    project = write('dotnet/Example.csproj', '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version() + '" /></ItemGroup></Project>')
-    package_config(PACKAGE / 'csharp', scratch / 'dotnet')
-    run('dotnet', 'run', '--project', project)
-    print('README: C# passes', flush=True)
+    with check('C#'):
+        write('dotnet/Program.cs', stub_example(example('csharp', 'csharp')))
+        project = write('dotnet/Example.csproj', '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version() + '" /></ItemGroup></Project>')
+        package_config(PACKAGE / 'csharp', scratch / 'dotnet')
+        run('dotnet', 'run', '--project', project)
+        print('README: C# passes', flush=True)
 
-    library = scratch / 'r-library'
-    library.mkdir()
-    directory = PACKAGE / ('prerequisites/r' if WINDOWS else 'prerequisites/r-frames')
-    inventory = json.loads((directory / 'inventory.json').read_text())
-    archives = [directory / name for name in inventory['install_order']]
-    archives.extend(sorted((PACKAGE / 'r').glob('thinkthen_*')))
-    r_env = {'R_LIBS_USER': str(library), 'R_LIBS_SITE': ''}
-    expression = 'a <- commandArgs(TRUE); stopifnot(as.character(getRversion()) == a[[2]]); .libPaths(c(a[[1]], .Library)); install.packages(a[-c(1,2)], lib=a[[1]], repos=NULL, type="' + ('win.binary' if WINDOWS else 'source') + '")'
-    run('Rscript', '--vanilla', '-e', expression, library, inventory['r'], *archives, extra=r_env)
-    body = example('r', 'r')
-    run('Rscript', '--vanilla', write('first.R', body), extra=r_env)
-    print('README: R passes', flush=True)
+    with check('R'):
+        library = scratch / 'r-library'
+        library.mkdir()
+        directory = PACKAGE / ('prerequisites/r' if WINDOWS else 'prerequisites/r-frames')
+        inventory = json.loads((directory / 'inventory.json').read_text(encoding='utf-8'))
+        archives = [directory / name for name in inventory['install_order']]
+        archives.extend(sorted((PACKAGE / 'r').glob('thinkthen_*')))
+        r_env = {'R_LIBS_USER': str(library), 'R_LIBS_SITE': ''}
+        expression = 'a <- commandArgs(TRUE); stopifnot(as.character(getRversion()) == a[[2]]); .libPaths(c(a[[1]], .Library)); install.packages(a[-c(1,2)], lib=a[[1]], repos=NULL, type="' + ('win.binary' if WINDOWS else 'source') + '")'
+        run('Rscript', '--vanilla', '-e', expression, library, inventory['r'], *archives, extra=r_env)
+        body = example('r', 'r')
+        run('Rscript', '--vanilla', write('first.R', body), extra=r_env)
+        print('README: R passes', flush=True)
 
 
     for name in ('sqlite', 'duckdb'):
-        installed = unpack(name, scratch / name)
-        blocks = re.findall(r'```sql\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(), re.S)
-        if name == 'sqlite':
-            extension = installed / ('thinkthen_sqlite.' + SUFFIX)
-            sql = blocks[0].replace('./thinkthen_sqlite', extension.as_posix())
-            script = write('first-sqlite.sql', sql)
-            run('sqlite3', '-bail', ':memory:', '.read ' + script.as_posix())
-        else:
-            extension = installed / 'thinkthen.duckdb_extension'
-            sql = blocks[0].replace('/absolute/path/to/thinkthen.duckdb_extension', extension.as_posix())
-            executable = PACKAGE / 'prerequisites/duckdb/duckdb'
-            if WINDOWS: executable = Path(shutil.which('duckdb'))
-            run(executable, '-unsigned', ':memory:', '-c', sql)
-        print('README: ' + name + ' passes', flush=True)
+        with check(name):
+            installed = unpack(name, scratch / name)
+            blocks = re.findall(r'```sql\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(encoding='utf-8'), re.S)
+            if name == 'sqlite':
+                extension = installed / ('thinkthen_sqlite.' + SUFFIX)
+                sql = blocks[0].replace('./thinkthen_sqlite', extension.as_posix())
+                script = write('first-sqlite.sql', sql)
+                run('sqlite3', '-bail', ':memory:', '.read ' + script.as_posix())
+            else:
+                extension = installed / 'thinkthen.duckdb_extension'
+                sql = blocks[0].replace('/absolute/path/to/thinkthen.duckdb_extension', extension.as_posix())
+                executable = PACKAGE / 'prerequisites/duckdb/duckdb'
+                if WINDOWS: executable = Path(shutil.which('duckdb'))
+                run(executable, '-unsigned', ':memory:', '-c', sql)
+            print('README: ' + name + ' passes', flush=True)
+
+if failures:
+    sys.exit('README checks failed: ' + ', '.join(failures))

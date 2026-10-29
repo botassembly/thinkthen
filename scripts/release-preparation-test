@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import re
 import shutil
 import subprocess
 import sys
@@ -89,7 +90,10 @@ def pair(scratch):
 
 def windows(scratch):
     module = runpy.run_path(str(ROOT / 'scripts/release_windows_r.py'))
-    module['pins']()  # Check the production table before replacing it with fixtures.
+    production = module['pins']()
+    for name, (url, _) in production.items():
+        if name.endswith('.zip'):
+            assert re.fullmatch(r'https://packagemanager[.]posit[.]co/cran/2026-10-28/bin/windows/contrib/4[.]6/' + re.escape(name), url), url
     verify = module['verified']
     state = verify.__globals__
     state['revision'] = lambda: 'a' * 40
@@ -113,6 +117,12 @@ def windows(scratch):
             archive.writestr(package + '/LICENSE', package + ' terms')
         selected[name] = ('unused', hashlib.sha256(path.read_bytes()).hexdigest())
     state['pins'] = lambda: selected
+    # Windows R shares one package library within a major.minor series.
+    # Its dated binary snapshot may use an earlier patch than the runtime.
+    leaf = tools / 'windows/Leaf_1.0.zip'
+    with zipfile.ZipFile(leaf, 'w') as archive:
+        archive.writestr('Leaf/DESCRIPTION', 'Package: Leaf\nVersion: 1.0\nLicense: GPL-3\nImports: base\nBuilt: R 4.6.0; x86_64-w64-mingw32; date; windows\n')
+    selected[leaf.name] = ('unused', hashlib.sha256(leaf.read_bytes()).hexdigest())
     fetched = []
     original_fetch = state['fetch']
 
@@ -145,7 +155,9 @@ def windows(scratch):
     else:
         raise AssertionError('changed pinned Windows R binary accepted')
     leaf.write_bytes(original)
-    for built, imports in [('R 4.6.0; x86_64-w64-mingw32; date; windows', 'base'),
+    for built, imports in [('R 4.5.1; x86_64-w64-mingw32; date; windows', 'base'),
+                           ('R 5.6.1; x86_64-w64-mingw32; date; windows', 'base'),
+                           ('R 4.6.2; x86_64-w64-mingw32; date; windows', 'base'),
                            ('R 4.6.1; aarch64-w64-mingw32; date; windows', 'base'),
                            ('R 4.6.1; x86_64-w64-mingw32; date; linux', 'base'),
                            ('R 4.6.1; x86_64-w64-mingw32; date; windows', 'base (>= 9.0)')]:
@@ -158,6 +170,18 @@ def windows(scratch):
             pass
         else:
             raise AssertionError('incompatible Windows R binary metadata accepted')
+    # Exercise the shared inventory boundary directly: the Windows caller's
+    # metadata guard must not hide an older-patch architecture mistake here.
+    from release_r_dependencies import inventory as r_inventory
+    for arch, archs in [('i386-w64-mingw32', 'x64'), ('aarch64-w64-mingw32', 'x64'), ('', 'arm64')]:
+        with zipfile.ZipFile(leaf, 'w') as archive:
+            archive.writestr('Leaf/DESCRIPTION', f'Package: Leaf\nVersion: 1.0\nLicense: GPL-3\nBuilt: R 4.6.0; {arch}; date; windows\nArchs: {archs}\n')
+        try:
+            r_inventory(source / 'sdk/r/DESCRIPTION', [leaf, tools / 'windows/Direct_1.0.zip'], '4.6.1', {'base': '4.6.1'})
+        except ValueError as error:
+            assert 'R binary version differs' in str(error), error
+        else:
+            raise AssertionError('older Windows patch admitted wrong architecture')
     leaf.write_bytes(original)
     selected[leaf.name] = digest
     assert json.loads((produced / 'runtime.json').read_text()) == {'version': '4.6.1', 'standard_packages': ['base']}
@@ -202,6 +226,47 @@ def windows(scratch):
             raise AssertionError('changed handoff accepted: ' + name)
         (folder / name).write_bytes(original)
     print('Windows R: target dependency closure, metadata and licenses survive verified handoff; changed provenance/bytes fail')
+
+
+def windows_tools(scratch):
+    import release_downloads
+    module = runpy.run_path(str(ROOT / 'scripts/release_windows_host.py'))
+    state = module['prepare_msys2'].__globals__
+    state['TOOLS'] = scratch / 'host-tools'
+    calls = []
+    pin = state['PINS']['windows_msys2']
+    assert '/releases/download/' + pin['release'] + '/' in pin['archive']
+    assert '/latest/' not in pin['archive'] and pin['gcc'] == '14.2.0-3'
+    folder = state['TOOLS'] / 'windows-check'
+    folder.mkdir(parents=True)
+    bodies = {pin['archive']: b'pinned compiler archive', pin['packages']: b'pinned package closure\n'}
+    version = state['swift_version']()
+    swift_url = f'https://download.swift.org/swift-{version}-release/windows10/swift-{version}-RELEASE/swift-{version}-RELEASE-windows10.exe'
+    assert swift_url in json.loads(release_downloads.PINS.read_text())
+    bodies[swift_url] = b'pinned signed Swift installer'
+    # Exercise the actual digest boundary with isolated cached bytes. No Windows
+    # process may run when a compiler archive or installer has been replaced.
+    registry = scratch / 'download-pins.json'
+    registry.write_text(json.dumps({url: 'sha256:' + hashlib.sha256(body).hexdigest() for url, body in bodies.items()}))
+    original_registry = release_downloads.PINS
+    release_downloads.PINS = registry
+    try:
+        state['run'] = lambda *args, **kwargs: calls.append(args)
+        state['swift_components'] = lambda env: None
+        for url, filename, prepare in [(pin['archive'], 'msys2.7z', module['prepare_msys2']),
+                (swift_url, f'swift-{version}-RELEASE-windows10.exe', lambda: module['prepare_swift']({}, folder))]:
+            path = folder / filename
+            path.write_bytes(bodies[url] + b'replaced')
+            try:
+                prepare()
+            except ValueError as error:
+                assert 'checksum differs' in str(error), error
+            else:
+                raise AssertionError('changed cached Windows tool accepted: ' + filename)
+            assert calls == [], calls
+    finally:
+        release_downloads.PINS = original_registry
+    print('Windows tools: frozen compiler distribution and Swift pins reject changed cached bytes before execution')
 
 
 def images(scratch):
@@ -280,6 +345,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-preparation-') as temporary:
     scratch = Path(temporary)
     pair(scratch)
     windows(scratch)
+    windows_tools(scratch)
     images(scratch)
     node(scratch)
 

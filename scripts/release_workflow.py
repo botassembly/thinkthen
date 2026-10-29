@@ -47,7 +47,7 @@ def resolve(tag):
         raise ValueError('selected release version and Cargo workspace version must match')
     print(f'sha={sha}\nversion={version()}\ntag={tag}')
     print('matrix=' + json.dumps({'include': [
-        {'target': target, 'runner': runner} for target, runner in TARGETS.items()
+        {'target': target, 'runner': runner} for target, runner in TARGETS.items() if not target.startswith('windows-')
     ]}, separators=(',', ':')))
 
 
@@ -83,7 +83,14 @@ def build(target, destination, sha):
     candidate = ['scripts/release-candidate']
     if target == 'windows-x86_64':
         candidate.append('--windows')
-    prepared(*candidate, destination / 'candidate', env=dict(os.environ, CARGO_NET_OFFLINE='true'))
+    try:
+        prepared(*candidate, destination / 'candidate', env=dict(os.environ, CARGO_NET_OFFLINE='true'))
+    except subprocess.CalledProcessError:
+        # Retain a complete Windows candidate after its Linux smoke fails so
+        # the native runtime can report independent failures in this run.
+        if target == 'windows-x86_64':
+            pack(target, destination / 'candidate' / version() / target, destination, sha)
+        raise
     package = destination / 'candidate' / version() / target
     pack(target, package, destination, sha)
 

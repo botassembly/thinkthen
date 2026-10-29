@@ -16,6 +16,8 @@ CHECKS = frozenset({
     'scripts/header_contract.py', 'scripts/qualification-recipe-test',
     'scripts/qualification-continuation-test', 'scripts/release-script-test',
     'scripts/release_retry.py', 'scripts/release-retry-test',
+    'scripts/release_windows_sdks.py', 'scripts/release_windows_check.py',
+    'scripts/qualification-windows-prepare', 'scripts/release-windows-replay',
 })
 # Exact reviewed verifier changes in mixed producer modules. Other changes refuse.
 VERIFIER_CHANGES = {'.gitattributes': [None, {'mode': '100644', 'kind': 'blob',

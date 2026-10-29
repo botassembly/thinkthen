@@ -72,7 +72,17 @@ def inventory(description, archives, r_version, standard, suggests=False):
         if name not in available:
             raise ValueError('Missing pinned R binary dependency: ' + name)
         path, info = available[name]
-        if not info['Built'].startswith('R ' + r_version + ';'):
+        built = info['Built'].split(';')
+        built_version = built[0].removeprefix('R ').strip()
+        # R for Windows FAQ 2.8 preserves libraries within a major.minor series.
+        # https://cran.r-project.org/bin/windows/base/rw-FAQ.html
+        compatible = built_version == r_version
+        if len(built) == 4 and built[3].strip() == 'windows':
+            left, right = [tuple(map(int, value.split('.'))) for value in (built_version, r_version)]
+            compatible = (len(left) == len(right) == 3 and left[:2] == right[:2] and left <= right
+                          and built[1].strip() in ('', 'x86_64-w64-mingw32')
+                          and info.get('Archs', 'x64') == 'x64')
+        if not compatible:
             raise ValueError('R binary version differs: ' + str(path))
         check_versions(info)
         active.add(name)

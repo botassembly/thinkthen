@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Exercise workflow-derived replay continuation and failed-smoke transport."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+replay = runpy.run_path(str(ROOT / 'scripts/release-windows-replay'))
+sys.path.insert(0, str(ROOT / 'scripts'))
+import release_workflow
+
+
+class ReleaseReplay(unittest.TestCase):
+    def test_own_run_blocks_keep_order_environment_and_all_failures(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            temporary, output = root / 'tmp', root / 'logs'
+            temporary.mkdir()
+            output.mkdir()
+            steps = [
+                {'id': 'first', 'if': 'always()', 'run': 'echo first; echo "REPLAY_VALUE=from-first" >> "$GITHUB_ENV"; exit 7'},
+                {'id': 'second', 'if': 'always()', 'run': 'test "$REPLAY_VALUE" = from-first; echo "snow: 雪"; exit 9'},
+                {'id': 'third', 'if': 'always()', 'env': {'SHA': '${{ inputs.revision }}'},
+                 'run': 'test "$SHA" = abc; echo third'},
+                {'id': 'summary', 'if': 'always()', 'env': {'QUALIFICATION_STEPS': '${{ toJSON(steps) }}'},
+                 'run': f'"{sys.executable}" "{ROOT / "scripts/qualification-summary"}"'},
+            ]
+            results, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps}},
+                'env': {'PYTHONUTF8': '1'}}, 'abc', root, temporary, root / 'unused', {}, output, root)
+            self.assertEqual(failures, ['first', 'second', 'summary'])
+            self.assertEqual([entry['id'] for entry in results], [step['id'] for step in steps])
+            self.assertTrue(all(entry['seconds'] >= 0 for entry in results))
+            for step, entry in zip(steps, results):
+                self.assertEqual(entry['run_sha256'], hashlib.sha256(step['run'].encode()).hexdigest())
+            self.assertIn('雪', (output / '01-second.log').read_text(encoding='utf-8'))
+            self.assertIn('third: success', (output / '03-summary.log').read_text(encoding='utf-8'))
+
+    def test_unknown_setup_cannot_silently_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            step = {'id': 'setup', 'uses': 'actions/new-setup@pinned', 'with': {'version': '1'}}
+            source = {'jobs': {'windows-check': {'steps': [step]}}}
+            _, failures = replay['execute'](source, 'abc', root, root, root / 'unused', {}, root, root)
+            self.assertEqual(failures, ['setup'])
+
+    def test_setup_receipt_cannot_claim_a_different_selected_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / 'go'
+            executable.write_text('#!/bin/sh\necho go version go1.24.12 linux/amd64\n')
+            executable.chmod(0o755)
+            step = {'id': 'setup-go', 'uses': 'actions/setup-go@pinned', 'with': {'go-version': '1.24.13'}}
+            receipt = {'uses': step['uses'], 'with': step['with'], 'evidence': 'claimed go1.24.13',
+                       'environment': {'PATH': str(root)}}
+            environment = dict(os.environ)
+            with self.assertRaisesRegex(ValueError, 'version differs'):
+                replay['setup_equivalent'](step, receipt, environment)
+            self.assertEqual(environment['PATH'], str(root))
+
+    def test_dotnet_requested_install_and_measured_default_stay_distinct(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / 'dotnet'
+            def install(version):
+                executable.write_text('#!/bin/sh\ncase "$1" in --list-sdks) echo "' + version
+                    + ' [/installed/sdk]";; --version) echo 10.0.402;; esac\n')
+                executable.chmod(0o755)
+            step = {'id': 'setup-dotnet', 'uses': 'actions/setup-dotnet@pinned',
+                    'with': {'dotnet-version': '10.0.103'}}
+            receipt = {'uses': step['uses'], 'with': step['with'], 'evidence': 'prepared both SDKs',
+                       'environment': {'PATH': str(root)}, 'selected_version': '10.0.402'}
+            install('10.0.103')
+            result = replay['setup_equivalent'](step, receipt, dict(os.environ))
+            self.assertEqual(result['version_output'].strip(), '10.0.402')
+            self.assertIn('10.0.103', result['installed_sdks'])
+            install('10.0.104')
+            with self.assertRaisesRegex(ValueError, 'not installed'):
+                replay['setup_equivalent'](step, receipt, dict(os.environ))
+            install('10.0.103')
+            receipt['selected_version'] = '10.0.103'
+            with self.assertRaisesRegex(ValueError, 'claimed dotnet default'):
+                replay['setup_equivalent'](step, receipt, dict(os.environ))
+
+    def test_complete_candidate_survives_failed_windows_smoke(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            package = root / 'candidate' / release_workflow.version() / 'windows-x86_64'
+            package.mkdir(parents=True)
+            sha = 'a' * 40
+            (package / 'INSTALL.md').write_text('Install the package.\n')
+            (package / 'build.json').write_text(json.dumps({'platform': 'windows-x86_64',
+                'version': release_workflow.version(), 'revision': sha}))
+            (package / 'SHA256SUMS').write_text(''.join(hashlib.sha256(path.read_bytes()).hexdigest()
+                + '  ' + path.name + '\n' for path in sorted(package.iterdir())))
+            failed = subprocess.CalledProcessError(7, ['release-candidate'])
+            with patch.object(release_workflow, 'output', return_value=sha), patch.object(release_workflow, 'prepared', side_effect=failed):
+                with self.assertRaises(subprocess.CalledProcessError) as caught:
+                    release_workflow.build('windows-x86_64', root, sha)
+            self.assertEqual(caught.exception.returncode, 7)
+            self.assertEqual(len(list(root.glob('*.tar.gz'))), 1)
+            (package / 'INSTALL.md').unlink()
+            next(root.glob('*.tar.gz')).unlink()
+            with patch.object(release_workflow, 'output', return_value=sha), patch.object(release_workflow, 'prepared', side_effect=failed):
+                with self.assertRaises((ValueError, FileNotFoundError)):
+                    release_workflow.build('windows-x86_64', root, sha)
+            self.assertFalse(list(root.glob('*.tar.gz')))
+
+
+if __name__ == '__main__':
+    unittest.main()

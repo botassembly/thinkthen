@@ -21,6 +21,8 @@
   "https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_darwin_arm64.tar.gz": "b90f13bb8c90ab72083d9b0c842e39dafb82c0e5c3f872f407366b7a58909013",
   "https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_arm64.tar.gz": "5f2edbe1f49f7b920f9e06e90759947d3c5dfc16f752fb93aaafc17e9d14cf07",
   "https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz": "9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c",
+  "https://github.com/ruby/setup-msys2-gcc/releases/download/v20261024.010459/msys2-ucrt64-mingw-w64%40r688-gcc%4014.7z": "sha256:265655f80222caec35ca6ce5b6a71f697086f6a07be2af005809b7390109f352",
+  "https://github.com/ruby/setup-msys2-gcc/releases/download/v20261024.010459/msys2-ucrt64-mingw-w64%40r688-gcc%4014.packages.txt": "sha256:29ae5c1dd7f50272007a4769c3c63645d8a46b1301003896790c6b97a06133cf",
   "https://go.dev/dl/go1.23.12.darwin-amd64.tar.gz": "sha256:0f6efdc3ffc6f03b230016acca0aef43c229de022d0ff401e7aa4ad4862eca8e",
   "https://go.dev/dl/go1.23.12.darwin-arm64.tar.gz": "sha256:5bfa117e401ae64e7ffb960243c448b535fe007e682a13ff6c7371f4a6f0ccaa",
   "https://go.dev/dl/go1.23.12.linux-amd64.tar.gz": "sha256:d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90",

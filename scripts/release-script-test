@@ -109,6 +109,8 @@ class ReleaseScripts(unittest.TestCase):
         subprocess.run([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-windows-sdks-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/release-replay-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/release-report-all-test"], check=True)
 
     def test_go_selection_preserves_explicit_home_under_isolated_home(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-go-home-') as temporary:
