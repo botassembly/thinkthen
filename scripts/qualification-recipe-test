@@ -2,7 +2,7 @@
 """Exercise qualification preparation boundaries without native builds or downloads."""
 import io
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import runpy
 import shutil
 import subprocess
@@ -188,15 +188,31 @@ class QualificationRecipes(unittest.TestCase):
         calls = []
         def output(arguments, **options):
             if arguments[0] == 'rustc': return 'rustc pinned\nhost: x86_64-pc-windows-msvc\n'
-            return '' if 'status' in arguments else 'a' * 40
+            return ' M source' if 'status' in arguments else 'a' * 40
         locking = SimpleNamespace(LK_LOCK=1, locking=lambda *args: calls.append(args))
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            with patch.dict(check.__globals__, os=SimpleNamespace(name='nt', environ={}, fsencode=os.fsencode)), patch.dict(sys.modules, fcntl=None, msvcrt=locking), patch.object(Path, 'home', return_value=home), patch('subprocess.check_output', output), patch('subprocess.run') as run:
-                check(home)
-                run.assert_called_once()
-                self.assertIn('--offline', run.call_args.args[0])
-                self.assertIn('--locked', run.call_args.args[0])
+            environment = {}
+            targets = []
+            with patch.dict(check.__globals__, os=SimpleNamespace(name='nt', environ=environment, fsencode=os.fsencode)), patch.dict(sys.modules, fcntl=None, msvcrt=locking), patch.object(Path, 'home', return_value=home), patch('subprocess.check_output', output), patch('subprocess.run') as run:
+                for root in (home / 'first', home / 'second'):
+                    for floor in ('0', '1'):
+                        environment['THINKTHEN_FLOOR_BUILD'] = floor
+                        check(root)
+                        target = Path(run.call_args.kwargs['env']['CARGO_TARGET_DIR'])
+                        targets.append(target)
+                        self.assertIn('--offline', run.call_args.args[0])
+                        self.assertIn('--locked', run.call_args.args[0])
+                        self.assertIn('x86_64-pc-windows-msvc', run.call_args.args[0])
+                        # Reuse the generator without sharing one root or floor's binary.
+                        check(root)
+                        self.assertEqual(target, Path(run.call_args.kwargs['env']['CARGO_TARGET_DIR']))
+                        hosted = PureWindowsPath('C:/Users/runneradmin') / target.relative_to(home)
+                        object_file = hosted / 'x86_64-pc-windows-msvc/debug/build/ring-ccf3a60b43fa418a/out/73090ba2100ad232-curve25519.o'
+                        self.assertLess(len(str(object_file)), 260)
+                self.assertEqual(len(set(targets)), 4)
+                self.assertEqual(run.call_count, 8)
+                self.assertFalse(list(home.rglob('*.passed')))
                 self.assertEqual(calls[0][1:], (locking.LK_LOCK, 1))
 
     def test_jvm_selection_overrides_hosted_default_for_each_prepared_platform(self):

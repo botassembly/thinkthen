@@ -54,6 +54,10 @@ def check(root=ROOT):
         context = 'floor-target' if os.environ.get('THINKTHEN_FLOOR_BUILD') == '1' else 'host-target'
         # The generator embeds CARGO_MANIFEST_DIR, so its executable belongs to this root.
         target = folder / context / host / hashlib.sha256(os.fsencode(root)).hexdigest()
+        if os.name == 'nt':
+            # MSVC also needs room for Cargo's target triple and object paths.
+            identity = json.dumps([context, host, str(root)]).encode()
+            target = folder / hashlib.sha256(identity).hexdigest()
         # This is the existing sole generator, not another declaration parser.
         # Explicit host selection also supports a Windows cross-build caller.
         subprocess.run(['cargo', 'run', '--quiet', '--offline', '--locked', '--target', host,
