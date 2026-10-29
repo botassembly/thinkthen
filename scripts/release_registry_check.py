@@ -1,5 +1,6 @@
 """Install universal packages using the ordinary package managers and shared cases."""
 from csharp_dependencies import prepared_feed
+from jvm_repository import consumer as stage_jvm_consumer
 import os
 import json
 import hashlib
@@ -91,11 +92,14 @@ def install(packages, scratch):
     # Maven install has compiled the current Java/Kotlin libraries. Use the public
     # consumer with a private local repository containing the packaged coordinates.
     consumer = scratch / 'java-consumer'
-    shutil.copytree(ROOT / 'sdk/java/consumer', consumer, ignore=shutil.ignore_patterns('target'))
+    stage_jvm_consumer(ROOT, consumer)
     pom = consumer / 'pom.xml'
     repository = scratch / 'm2'
-    run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', pom, 'package', env=isolated)
-    jars = [consumer / 'target/classes'] + list(repository.rglob('*.jar'))
+    shutil.copytree(packages / 'maven', repository, dirs_exist_ok=True)
+    classpath = scratch / 'jvm-classpath'
+    run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', pom,
+        'package', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath), env=isolated)
+    jars = [consumer / 'target/classes', classpath.read_text().strip()]
     for main in ('ConsumerCases', 'KotlinCasesKt'):
         run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
             '-cp', os.pathsep.join(map(str, jars)), main, ROOT / 'construction/stub.json', '--stub-only'), env=isolated)
