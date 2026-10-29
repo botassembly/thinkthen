@@ -21,6 +21,39 @@ import release_windows_check
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_installed_zig_filter_kept_preserves_strict_rows(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-zig-kept-') as temporary:
+            scratch = Path(temporary)
+            fixtures = scratch / 'cases.json'
+            expected = [{'function': 'filter', 'status': 'answered', 'answer': answer}
+                        for answer in [True, False]]
+            expected += [{'function': 'filter', 'status': status} for status in ['unsure', 'failed']]
+            fixtures.write_text(json.dumps([{'client': {}, 'request': {
+                'question': {'function': 'filter'}}, 'expected': expected}]))
+            consumer = scratch / 'consumer'
+            consumer.write_text('#!' + sys.executable + '\nfrom pathlib import Path\n'
+                                'print(Path(__file__).with_name("rows.json").read_text())\n')
+            consumer.chmod(0o755)
+            rows = [dict(row, kept=row.get('answer') is True) for row in expected]
+            for change in ['valid', 'wrong', 'missing', 'numeric', 'extra']:
+                with self.subTest(change=change):
+                    actual = json.loads(json.dumps(rows))
+                    if change == 'wrong':
+                        actual[1]['kept'] = True
+                    elif change == 'missing':
+                        del actual[0]['kept']
+                    elif change == 'numeric':
+                        actual[0]['kept'] = 1
+                    elif change == 'extra':
+                        actual[0]['unexpected'] = True
+                    (scratch / 'rows.json').write_text(json.dumps(actual))
+                    result = subprocess.run([sys.executable, ROOT / 'scripts/release/zig.py',
+                                             consumer, fixtures], cwd=scratch, capture_output=True, text=True)
+                    if change == 'valid':
+                        self.assertEqual(result.returncode, 0, result.stderr)
+                    else:
+                        self.assertNotEqual(result.returncode, 0, change)
+
     def test_contract_docs_check_public_tree_and_available_planning(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-public-docs-') as temporary:
             root = Path(temporary)

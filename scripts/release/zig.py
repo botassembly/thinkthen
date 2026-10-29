@@ -8,5 +8,10 @@ consumer, fixtures = sys.argv[1:]
 for case in json.loads(Path(fixtures).read_text(encoding='utf-8')):
     result = subprocess.check_output([consumer, 'run', json.dumps(case['client']),
                                       json.dumps(case['request'])], text=True, encoding='utf-8')
-    assert json.loads(result) == case['expected'], case['request']['question']['function']
+    actual = json.loads(result)
+    for row in actual:
+        if row['function'] == 'filter':
+            kept = row.pop('kept')
+            assert type(kept) is bool and kept == (row.get('answer') is True), row
+    assert actual == case['expected'], case['request']['question']['function']
 print('candidate Zig: ten shared stub cases pass without a compiler')
