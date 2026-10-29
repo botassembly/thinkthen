@@ -22,25 +22,29 @@ def fetch(url, path, digest=None):
         raise ValueError('release input needs a pinned digest: ' + url)
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = None
-    source = path
-    try:
-        if not path.is_file():
-            with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + '.', suffix='.partial', delete=False) as stream:
-                temporary = Path(stream.name)
-            source = temporary
-            subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
-                            '--connect-timeout', '20', '--max-time', '600', url, '-o', str(temporary)], check=True)
-        algorithm = 'sha256' if len(digest) == 64 else 'sha512'
+    algorithm = 'sha256' if len(digest) == 64 else 'sha512'
+
+    def verified(source):
         value = hashlib.new(algorithm)
         with source.open('rb') as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b''): value.update(chunk)
-        actual = value.hexdigest()
-        if actual != digest:
+        return value.hexdigest() == digest
+
+    if path.is_file() and verified(path):
+        return path
+    # A restored cache is only a hint. A changed pin or damaged cached archive
+    # must fetch verified bytes before any caller extracts or executes them.
+    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + '.', suffix='.partial', delete=False) as stream:
+        temporary = Path(stream.name)
+    try:
+        subprocess.run(['curl', '--fail', '--location', '--silent', '--show-error', '--retry', '2',
+                        '--connect-timeout', '20', '--max-time', '600', url, '-o', str(temporary)], check=True)
+        if not verified(temporary):
             raise ValueError('release input checksum differs: ' + path.name)
-        if source == temporary: temporary.replace(path)
+        temporary.replace(path)
     finally:
-        if temporary is not None: temporary.unlink(missing_ok=True)
+        temporary.unlink(missing_ok=True)
+
     return path
 
 

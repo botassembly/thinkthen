@@ -42,8 +42,8 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             ~/.local/share/thinkthen-build-tools
-          key: release-tools-linux-x86_64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
-          restore-keys: release-tools-linux-x86_64-
+          key: release-tools-linux-x86_64-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-linux-x86_64-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-
       - name: Prepare Linux gate native inputs
         if: always()
         id: native
@@ -136,7 +136,7 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             ~/.local/share/thinkthen-build-tools
-          key: release-tools-macos-arm64-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          key: release-tools-macos-arm64-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
       - name: Prepare host tools
         id: prepare-host-tools
         if: always()
@@ -270,8 +270,8 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             ~/.local/share/thinkthen-build-tools
-          key: release-tools-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
-          restore-keys: release-tools-${{ matrix.target }}-
+          key: release-tools-${{ matrix.target }}-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-${{ matrix.target }}-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-
       - name: Prepare tools and dependencies
         id: prepare-tools-and-dependencies
         if: always()
@@ -345,8 +345,8 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             ~/.local/share/thinkthen-build-tools
-          key: release-tools-${{ matrix.target }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
-          restore-keys: release-tools-${{ matrix.target }}-
+          key: release-tools-${{ matrix.target }}-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
+          restore-keys: release-tools-${{ matrix.target }}-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         id: download-artifact-native-windows-r
         if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry

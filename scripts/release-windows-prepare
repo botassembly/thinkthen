@@ -19,10 +19,10 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import urllib.request
 import zipfile
 
 from release_home import checked_home
+from release_downloads import fetch
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = checked_home() / '.local/share/thinkthen-build-tools'
@@ -64,13 +64,7 @@ def inputs():
     for name, (url, digest) in INPUTS.items():
         if name in checked_r:
             continue
-        path = WINDOWS / name
-        if not path.exists():
-            partial = path.with_suffix('.partial')
-            urllib.request.urlretrieve(url, partial)
-            partial.replace(path)
-        if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-            raise SystemExit('Windows prerequisite checksum differs: ' + name)
+        fetch(url, WINDOWS / name, digest)
     for name in ('duckdb-cli', 'duckdb-lib'):
         with zipfile.ZipFile(WINDOWS / (name + '.zip')) as archive: archive.extractall(WINDOWS / name)
     for name in ('jansson-2.14.1', 'duckdb-1.4.3'):

@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Exercise pinned input preparation through stale, warm and refused downloads."""
+import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+from threading import Barrier, Thread
+from concurrent.futures import ThreadPoolExecutor
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+from release_downloads import fetch
+import release_windows_r
+
+
+class DownloadCache(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.directory.name)
+        self.bodies, self.requests = {}, []
+        self.barrier = None
+        owner = self
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                owner.requests.append(self.path)
+                if owner.barrier is not None:
+                    owner.barrier.wait()
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(owner.bodies[self.path])
+            def log_message(self, *arguments):
+                pass
+        self.server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        self.worker = Thread(target=self.server.serve_forever)
+        self.worker.start()
+        self.base = 'http://127.0.0.1:' + str(self.server.server_port)
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.worker.join()
+        self.directory.cleanup()
+
+    def test_windows_r_prepare_refreshes_same_name_and_reuses_verified_bytes(self):
+        names = [name for name in release_windows_r.pins() if name.endswith('.zip')]
+        selected = {}
+        for name in names:
+            body = ('dated snapshot ' + name).encode()
+            self.bodies['/' + name] = body
+            selected[name] = (self.base + '/' + name, hashlib.sha256(body).hexdigest())
+            path = self.root / 'windows' / name
+            path.parent.mkdir(exist_ok=True)
+            path.write_bytes(b'old snapshot with the same package version')
+        with patch.object(release_windows_r, 'TOOLS', self.root), patch.object(release_windows_r, 'pins', return_value=selected):
+            self.assertEqual(release_windows_r.inputs(), selected)
+            self.assertCountEqual(self.requests, ['/' + name for name in names])
+            release_windows_r.inputs()
+            self.assertEqual(len(self.requests), len(names))
+            for name in names:
+                self.assertEqual((self.root / 'windows' / name).read_bytes(), self.bodies['/' + name])
+            for name in names:
+                (self.root / 'windows' / name).unlink()
+            release_windows_r.inputs()
+            self.assertEqual(len(self.requests), 2 * len(names))
+
+    def test_invalid_replacement_or_network_failure_never_promotes_bytes(self):
+        path = self.root / 'tool.zip'
+        expected = hashlib.sha512(b'correct pinned tool').hexdigest()
+        self.bodies['/tool'] = b'wrong network payload'
+        url = self.base + '/tool'
+        for old in (None, b'old cached tool'):
+            if old is not None:
+                path.write_bytes(old)
+            with self.assertRaisesRegex(ValueError, 'checksum differs'):
+                fetch(url, path, 'sha512:' + expected)
+            self.assertEqual(path.read_bytes() if path.exists() else None, old)
+            self.assertFalse(list(self.root.glob('*.partial')))
+        with patch('release_downloads.subprocess.run', side_effect=subprocess.CalledProcessError(7, ['curl'])):
+            with self.assertRaises(subprocess.CalledProcessError):
+                fetch(url, path, expected)
+        self.assertEqual(path.read_bytes(), b'old cached tool')
+        self.assertFalse(list(self.root.glob('*.partial')))
+        self.bodies['/tool'] = b'correct pinned tool'
+        self.assertEqual(fetch(url, path, 'sha512:' + expected).read_bytes(), b'correct pinned tool')
+
+    def test_two_callers_refresh_one_stale_destination_atomically(self):
+        path = self.root / 'shared.zip'
+        path.write_bytes(b'old cached archive')
+        self.bodies['/shared'] = b'new pinned shared archive'
+        digest = hashlib.sha256(self.bodies['/shared']).hexdigest()
+        self.barrier = Barrier(2)
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            futures = [workers.submit(fetch, self.base + '/shared', path, digest) for _ in range(2)]
+            for future in futures:
+                self.assertEqual(future.result().read_bytes(), self.bodies['/shared'])
+        self.assertEqual(len(self.requests), 2)
+        self.assertEqual(path.read_bytes(), self.bodies['/shared'])
+        self.assertFalse(list(self.root.glob('*.partial')))
+
+    def test_every_restorable_tool_cache_prefix_includes_the_pin_table(self):
+        source = ROOT / '.github/workflows/native-qualification.yml'
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load_file(ARGV[0], aliases: true))', source], text=True))
+        for job in workflow['jobs'].values():
+            for step in job.get('steps', []):
+                if 'actions/cache@' not in step.get('uses', ''):
+                    continue
+                options = step['with']
+                prefix = options.get('restore-keys')
+                if prefix is None:
+                    continue
+                self.assertIn("hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare')", prefix)
+                self.assertTrue(options['key'].startswith(prefix))
+                self.assertNotIn('\n', prefix)
+
+
+if __name__ == '__main__':
+    unittest.main()

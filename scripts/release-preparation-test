@@ -230,6 +230,7 @@ def windows(scratch):
 
 def windows_tools(scratch):
     import release_downloads
+    from unittest.mock import patch
     module = runpy.run_path(str(ROOT / 'scripts/release_windows_host.py'))
     state = module['prepare_msys2'].__globals__
     state['TOOLS'] = scratch / 'host-tools'
@@ -257,8 +258,12 @@ def windows_tools(scratch):
                 (swift_url, f'swift-{version}-RELEASE-windows10.exe', lambda: module['prepare_swift']({}, folder))]:
             path = folder / filename
             path.write_bytes(bodies[url] + b'replaced')
+            def untrusted(arguments, **options):
+                assert arguments[0] == 'curl', arguments
+                Path(arguments[-1]).write_bytes(b'untrusted downloaded replacement')
             try:
-                prepare()
+                with patch('release_downloads.subprocess.run', side_effect=untrusted):
+                    prepare()
             except ValueError as error:
                 assert 'checksum differs' in str(error), error
             else:
