@@ -193,6 +193,7 @@ def language_packages(out, version, cache, rust):
     checks.mkdir()
     copy(ROOT / 'construction/stub.json', checks / 'stub.json')
     copy(ROOT / 'schemas/contract.json', checks / 'contract.json')
+    copy(ROOT / 'schemas/row.schema.json', out / 'schemas/row.schema.json')
     for path in (ROOT / 'scripts/release').iterdir():
         if path.is_file(): copy(path, checks / path.name)
     copy(ROOT / 'scripts/release-check', out / 'check')

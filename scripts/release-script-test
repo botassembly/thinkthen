@@ -21,6 +21,53 @@ import release_windows_check
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_contract_docs_check_public_tree_and_available_planning(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-public-docs-') as temporary:
+            root = Path(temporary)
+            for name in ['scripts/contract-doc-check', 'schemas/contract.json', 'schemas/README.md']:
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(ROOT / name, target)
+            command = [sys.executable, root / 'scripts/contract-doc-check']
+            result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for name in ['schemas/README.md', 'sdlc/planning/public-contract.md']:
+                document = root / name
+                original = document.read_text() if document.exists() else ''
+                document.parent.mkdir(parents=True, exist_ok=True)
+                document.write_text(original + '\n`usage.removed-code`\n')
+                result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(name + ': usage.removed-code', result.stderr)
+                document.write_text(original)
+            (root / 'schemas/README.md').unlink()
+            result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('schemas/README.md', result.stderr)
+
+    def test_candidate_stages_authoritative_row_schema(self):
+        packages = runpy.run_path(str(ROOT / 'scripts/release-candidate'))['language_packages']
+        with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-schema-') as temporary:
+            out = Path(temporary) / 'candidate'
+            out.mkdir()
+            source_root = Path(temporary) / 'source'
+            shutil.copytree(ROOT / 'schemas', source_root / 'schemas')
+            shutil.copytree(ROOT / 'construction', source_root / 'construction')
+            shutil.copytree(ROOT / 'scripts', source_root / 'scripts')
+            class StopBeforePackages(Exception):
+                pass
+            def copy(source, target):
+                if source == out / 'rust/thinkthen':
+                    raise StopBeforePackages()
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, target)
+            with patch.dict(packages.__globals__, copy=copy, ROOT=source_root), patch.dict(
+                    packages.__globals__, host_info=lambda: ('linux-x86_64', 'linux-x64', 'linux-x86-64', 'so')):
+                with self.assertRaises(StopBeforePackages):
+                    packages(out, version(), out / 'cache', out / 'rust')
+            self.assertEqual((out / 'schemas/row.schema.json').read_bytes(),
+                             (ROOT / 'schemas/row.schema.json').read_bytes())
+
     def test_zig_uses_the_compiled_inventory_producer(self):
         build = runpy.run_path(str(ROOT / 'scripts/release-candidate'))['build']
         with tempfile.TemporaryDirectory(prefix='thinkthen-zig-producer-') as temporary:

@@ -53,6 +53,7 @@ stage bash-guide sh -eu -c '
     PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh
 '
 stage sql-bridge-gate scripts/sql-bridge-gate
+stage abi-platform-routing-test scripts/abi-platform-routing-test
 stage abi-minor-check sh -eu -c 'scripts/abi-minor-check --native "${THINKTHEN_NATIVE_LIBRARY:?Provide the verified host native library}" --bindings-only'
 stage sdk-gates scripts/sdk-gates
 if [ -n "$failed" ]; then

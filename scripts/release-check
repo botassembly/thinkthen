@@ -282,7 +282,7 @@ def native_languages():
     binary.parent.mkdir()
     shutil.copy2(CHECKS / 'c-consumer', binary)
     run(sys.executable, CHECKS / 'native_cases.py', binary, CHECKS / 'stub.json', CHECKS / 'contract.json')
-    run(CHECKS / 'go-consumer', '-test.run=^TestSharedStub$', env=dict(ENV, THINKTHEN_STUB_CASES=str(CHECKS / 'stub.json')))
+    run(CHECKS / 'go-consumer', '-test.run=^TestSharedStub$', env=dict(ENV, THINKTHEN_STUB_CASES=str(CHECKS / 'stub.json'), THINKTHEN_CASES=str(CHECKS)))
     print('candidate C and Go: shared stub cases pass without compilers', flush=True)
     unpack(only('cpp/*.tar.gz'), SCRATCH / 'cpp')
     binary = SCRATCH / 'bin/cpp-consumer'

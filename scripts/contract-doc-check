@@ -7,7 +7,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ['sdlc/planning/architecture.md', 'sdlc/planning/public-contract.md',
-        'sdlc/planning/spreadsheets.md', 'sdlc/planning/sql-host.md', 'schemas/README.md']
+        'sdlc/planning/spreadsheets.md', 'sdlc/planning/sql-host.md']
+DOCS = ['schemas/README.md'] + [name for name in DOCS if (ROOT / name).exists()]
 FILES = {'md', 'json', 'rs', 'h', 'cpp', 'ps1', 'sh', 'toml'}
 
 

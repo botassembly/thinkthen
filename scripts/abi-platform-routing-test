@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Protect ABI consumer routing without requiring host Ruby or Swift tools."""
+import json
+import os
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+
+
+class AbiPlatformRouting(unittest.TestCase):
+    def test_abi_consumers_use_the_platform_runner_while_native_commands_stay_local(self):
+        module = runpy.run_path(str(ROOT / 'scripts/abi-minor-check'))
+        state = module['bindings'].__globals__
+        calls = []
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            engine = scratch / 'engine.so'
+            engine.write_bytes(b'native engine')
+
+            def fixture(engine, output, **kwargs):
+                path = output / engine.name
+                path.write_bytes(b'native fixture')
+                return path
+
+            def record(args, **kwargs):
+                calls.append(args)
+                if args[0].endswith('/zig') and args[1] == 'build':
+                    (Path(kwargs['cwd']) / 'zig-out/bin').mkdir(parents=True)
+            with patch.dict(os.environ, THINKTHEN_SDK_GATE_RUNNER='scripts/linux-binding-gate'), \
+                    patch.dict(state, fixture=fixture), \
+                    patch('subprocess.run', side_effect=record):
+                module['bindings'](engine, scratch, ['cpp', 'ruby', 'swift', 'zig'])
+        routed = [args for args in calls if args[0] == 'scripts/linux-binding-gate']
+        self.assertEqual([args[2] for args in routed].count('ruby'), 3)
+        self.assertEqual([args[2] for args in routed].count('swift'), 5)
+        self.assertTrue(all(args[3:6] == ['--scratch', str(scratch), '--'] for args in routed))
+        self.assertTrue(any(args[0] == 'c++' for args in calls))
+        self.assertTrue(any(args[0].endswith('/zig') for args in calls))
+        self.assertFalse(any(args[0] in ('ruby', 'swift') or args[0].endswith('/MinorError') for args in calls))
+
+    def test_linux_runner_selects_prepared_gems_and_the_pinned_swift_container(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            docker = scratch / 'docker'
+            docker.write_text('#!' + sys.executable + '\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n')
+            docker.chmod(0o755)
+            env = dict(os.environ, PATH=str(scratch) + os.pathsep + os.environ['PATH'],
+                       THINKTHEN_SWIFT_IMAGE='sha256:' + 'a' * 64, THINKTHEN_RUBY_DEV_GEMS=str(scratch / 'dev'))
+            command = [sys.executable, str(ROOT / 'scripts/linux-binding-gate'), '--abi-binding']
+            result = subprocess.run(command + ['ruby', '--scratch', str(scratch), '--', sys.executable, '-c',
+                                    'import json, os; print(json.dumps([os.environ["GEM_HOME"], os.environ["GEM_PATH"]]))'],
+                                    env=env, check=True, capture_output=True, text=True)
+            self.assertEqual(json.loads(result.stdout), [str(scratch / 'dev')] * 2)
+            result = subprocess.run(command + ['swift', '--scratch', str(scratch), '--', 'swift', 'build', '--jobs', '2'],
+                                    env=env, check=True, capture_output=True, text=True)
+            arguments = json.loads(result.stdout)
+            self.assertIn('sha256:' + 'a' * 64, arguments)
+            self.assertIn(str(scratch) + ':' + str(scratch), arguments)
+            self.assertIn('none', arguments)
+            self.assertTrue(any(value.startswith('pm.repo=') for value in arguments))
+            self.assertTrue(any(value.startswith('pm.ticket=') for value in arguments))
+            self.assertEqual(arguments[-5:], [str(Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'),
+                                               'swift', 'build', '--jobs', '2'])
+
+
+if __name__ == '__main__':
+    unittest.main()

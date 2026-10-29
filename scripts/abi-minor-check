@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import runpy
 import shutil
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -20,7 +21,10 @@ ROOT = Path(__file__).resolve().parent.parent
 MESSAGE = 'settings: expected a JSON-representable settings object; received an incompatible host value (contents redacted)'
 
 
-def run(*args, cwd=ROOT, **kwargs):
+def run(*args, cwd=ROOT, binding=None, scratch=None, **kwargs):
+    runner = os.environ.get('THINKTHEN_SDK_GATE_RUNNER')
+    if runner and binding:
+        args = (*shlex.split(runner), '--abi-binding', binding, '--scratch', scratch, '--', *args)
     subprocess.run([str(arg) for arg in args], cwd=cwd, check=True, **kwargs)
 
 
@@ -173,11 +177,11 @@ def bindings(engine, scratch, selected):
             ruby = scratch / 'ruby'
             shutil.copytree(ROOT / 'sdk/ruby/lib', ruby)
             shutil.copy2(future, ruby / 'thinkthen' / future.name)
-            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', MESSAGE)
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', MESSAGE, binding='ruby', scratch=scratch)
             replace_library(row_future, ruby / 'thinkthen' / future.name)
-            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'the record is missing', 'row')
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'the record is missing', 'row', binding='ruby', scratch=scratch)
             replace_library(child_future, ruby / 'thinkthen' / future.name)
-            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'future child message', 'child')
+            run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'future child message', 'child', binding='ruby', scratch=scratch)
         except subprocess.CalledProcessError:
             failures.append("ruby")
     if 'swift' in selected:
@@ -199,15 +203,15 @@ def bindings(engine, scratch, selected):
         let package = Package(name: "MinorError", platforms: [.macOS("15.0")], dependencies: [.package(path: "../swift")], targets: [
         .executableTarget(name: "MinorError", dependencies: [.product(name: "ThinkThen", package: "swift")], path: ".")])
         ''')
-            run('swift', 'format', 'lint', '--strict', '--recursive', ROOT / 'sdk/swift')
-            run('swift', 'build', '--jobs', '2', '--package-path', consumer, '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
-            run(consumer / '.build/debug/MinorError', MESSAGE)
+            run('swift', 'format', 'lint', '--strict', '--recursive', ROOT / 'sdk/swift', binding='swift', scratch=scratch)
+            run('swift', 'build', '--jobs', '2', '--package-path', consumer, '--disable-sandbox', '-Xswiftc', '-warnings-as-errors', binding='swift', scratch=scratch)
+            run(consumer / '.build/debug/MinorError', MESSAGE, binding='swift', scratch=scratch)
             for resource in {path.resolve() for path in consumer.rglob(future.name)}:
                 replace_library(row_future, resource)
-            run(consumer / '.build/debug/MinorError', 'the record is missing', 'row')
+            run(consumer / '.build/debug/MinorError', 'the record is missing', 'row', binding='swift', scratch=scratch)
             for resource in {path.resolve() for path in consumer.rglob(future.name)}:
                 replace_library(child_future, resource)
-            run(consumer / '.build/debug/MinorError', 'future child message', 'child')
+            run(consumer / '.build/debug/MinorError', 'future child message', 'child', binding='swift', scratch=scratch)
         except subprocess.CalledProcessError:
             failures.append("swift")
     if 'zig' in selected:

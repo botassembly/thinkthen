@@ -4,6 +4,7 @@
 Run --prepare online first. CARGO_HOME selects the floor compiler configuration;
 THINKTHEN_HOST_CARGO_HOME selects the separate host loopback configuration.
 """
+import argparse
 import json
 import os
 from pathlib import Path
@@ -75,21 +76,43 @@ def prepare():
     floor('scripts/qualification-gate-prepare', prepare=True)
 
 
+def swift_command(arguments, mounts=(), environment=None):
+    toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
+    command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
+               '--user', f'{os.getuid()}:{os.getgid()}', '--workdir', str(ROOT)]
+    for path in dict.fromkeys((ROOT, Path.home(), *mounts)):
+        command += ['-v', f'{path}:{path}']
+    for name, value in (environment or {}).items():
+        command += ['-e', name + '=' + str(value)]
+    command += ['-e', 'HOME=' + str(Path.home()), image('swift'), 'sh', '-eu', '-c',
+                'export PATH="$1/usr/bin:/usr/bin:/bin"; shift; exec "$@"', 'swift-gate', str(toolchain), *arguments]
+    run(*command)
+
+
 def swift():
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-') as temporary:
         stage = Path(temporary) / 'ThinkThen'
         run('scripts/swift-package', stage)
-        toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
-        command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
-                   '--user', f'{os.getuid()}:{os.getgid()}', '--workdir', str(ROOT)]
-        for path in (ROOT, Path.home(), Path(temporary), Path(os.environ['THINKTHEN_SWIFT_LOOPBACK']).parent):
-            command += ['-v', f'{path}:{path}']
-        for name in ('THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES'):
-            command += ['-e', name + '=' + os.environ[name]]
-        command += ['-e', 'HOME=' + str(Path.home()), '-e', 'THINKTHEN_LOOPBACK=' + os.environ['THINKTHEN_SWIFT_LOOPBACK'],
-                    '-e', 'THINKTHEN_SWIFT_PACKAGE=' + str(stage), image('swift'), 'sh', '-eu', '-c',
-                    'export PATH="$1/usr/bin:/usr/bin:/bin"; exec scripts/swift-gate', 'swift-gate', str(toolchain)]
-        run(*command)
+        names = ('THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES')
+        environment = {name: os.environ[name] for name in names}
+        environment.update(THINKTHEN_LOOPBACK=os.environ['THINKTHEN_SWIFT_LOOPBACK'], THINKTHEN_SWIFT_PACKAGE=stage)
+        swift_command(['scripts/swift-gate'], (Path(temporary), Path(os.environ['THINKTHEN_SWIFT_LOOPBACK']).parent), environment)
+
+
+def abi_binding(arguments):
+    parser = argparse.ArgumentParser(description='Run an ABI consumer with its prepared Linux tools.')
+    parser.add_argument('--abi-binding', choices=['ruby', 'swift'], required=True)
+    parser.add_argument('--scratch', type=Path, required=True)
+    parser.add_argument('command', nargs=argparse.REMAINDER)
+    args = parser.parse_args(arguments)
+    command = args.command[1:] if args.command[:1] == ['--'] else args.command
+    if not command:
+        parser.error('a consumer command is required')
+    if args.abi_binding == 'swift':
+        swift_command(command, (args.scratch,))
+    else:
+        gems = os.environ.get('THINKTHEN_RUBY_DEV_GEMS', str(TOOLS / 'ruby/dev'))
+        run(*command, env=dict(os.environ, GEM_HOME=gems, GEM_PATH=gems))
 
 
 def offline():
@@ -139,6 +162,8 @@ if __name__ == '__main__':
             prepare()
         elif sys.argv[1:] == ['--cli']:
             cli()
+        elif sys.argv[1:2] == ['--abi-binding']:
+            abi_binding(sys.argv[1:])
         elif sys.argv[1:] == ['scripts/swift-gate']:
             swift()
         elif len(sys.argv) == 2 and sys.argv[1].startswith('scripts/'):

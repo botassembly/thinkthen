@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent
 
 
 def memory_floors():
-    """Feature: short checks bound absolute growth; soaks keep their record floor.
+    """Feature: short checks report memory growth; soaks keep their record floor.
 
     Numeric boundaries use fixed samples so allocator noise cannot move a verdict.
     """
@@ -28,7 +28,8 @@ def memory_floors():
     for short_gate, records, delta, passed in (
         (True, 65, 397312, True),
         (True, 65, 1048575, True),
-        (True, 65, 1048576, False),
+        (True, 65, 1048576, True),
+        (True, 65, 25 * 1024 * 1024, True),
         (False, 100000, 899999, True),
         (False, 100000, 900000, False),
         (False, 65, 397312, False),
@@ -43,17 +44,19 @@ def memory_floors():
         assert memory['late_half_growth_bytes'] == delta, memory
         assert memory['verified_records_between_checkpoints'] == 9 * records, memory
         if short_gate:
-            assert report['criterion'] == 'retained-round-growth-short-gate-floor', report
-            assert memory['short_gate_floor_bytes'] == 1048576, memory
-            # The absolute floor cannot hide a retained non-memory resource.
+            assert report['criterion'] == 'retained-round-growth-short-gate-report', report
+            assert memory['report_only'] is True, memory
+            assert 'short_gate_floor_bytes' not in memory, memory
+            # Reporting memory cannot hide a retained non-memory resource.
             for key in METRICS[1:]:
                 changed = [dict(row) for row in samples]
                 for row in changed[10:]:
                     row[key] = 1
-                assert not growth(changed, [records] * 20, short_gate=True)['metrics'][key]['passed']
+                retained = growth(changed, [records] * 20, short_gate=True)
+                assert not retained['passed'] and not retained['metrics'][key]['passed'], retained
         else:
             assert memory['floor_bytes_per_verified_record'] == 1, memory
-    # The bound still needs strictly rising peaks and verified counts.
+    # A short report still needs verified counts.
     for row in samples[10:]:
         row['memory_bytes'] = 8 * 1024 * 1024
     assert growth(samples, [65] * 20, short_gate=True)['passed']

@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from unittest.mock import patch
 
 from release_registry import github_packages, attach
 from release_windows import source_package, check_tools
@@ -52,7 +53,9 @@ def missing_gate(scratch):
     source = scratch / 'missing-gate/scripts'
     source.mkdir(parents=True)
     shutil.copy2(ROOT / 'scripts/sdk-gates', source / 'sdk-gates')
-    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    environment = dict(os.environ)
+    environment.pop('THINKTHEN_SDK_GATE_RUNNER', None)
+    result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
     assert result.returncode != 0, 'SDK dispatcher accepted missing gate scripts'
     assert 'Missing SDK gate: scripts/python-gate' in result.stderr, result.stderr
     print('SDK dispatcher rejects an incomplete checkout', flush=True)
@@ -63,12 +66,12 @@ def missing_gate(scratch):
         path = source / name
         path.write_text('#!/bin/sh\nexit ' + ('77' if name == 'postgres-gate' else '0') + '\n')
         path.chmod(0o755)
-    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
     assert result.returncode == 0, result
     assert 'Skipped SDK gate: postgres-gate' in result.stdout, result.stdout
     assert 'Passed SDK gate: postgres-gate' not in result.stdout, result.stdout
     (source / 'python-gate').write_text('#!/bin/sh\nexit 19\n')
-    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
     assert result.returncode != 0, result
     assert 'Failed SDK gate: python-gate (exit 19)' in result.stderr, result.stderr
     assert 'Passed SDK gate: sqlite-gate' in result.stdout, result.stdout
@@ -106,7 +109,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as tempora
     scratch = Path(temporary)
     checker(scratch)
     attachments(scratch)
-    missing_gate(scratch)
+    with patch.dict(os.environ, THINKTHEN_SDK_GATE_RUNNER='scripts/absent-runner'):
+        missing_gate(scratch)
     subprocess.run([sys.executable, ROOT / 'scripts/release-windows-contents-test'], check=True)
     if len(sys.argv) == 2:
         zig(scratch, Path(sys.argv[1]).resolve())
