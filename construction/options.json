@@ -165,6 +165,10 @@
     },
     "expected_error": "usage.question",
     "name": "choose-missing-domain",
+    "not_applicable": {
+      "postgres": "The public SQL function requires a choices argument before question admission; actual missing-argument refusal runs separately.",
+      "sqlite": "The public SQL function requires a choices argument before question admission; actual missing-argument refusal runs separately."
+    },
     "request": {
       "question": {
         "function": "choose",
@@ -212,6 +216,11 @@
     },
     "expected_error": "usage.threshold",
     "name": "tag-rejects-band",
+    "not_applicable": {
+      "duckdb": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately.",
+      "postgres": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately.",
+      "sqlite": "The public SQL tag function accepts a scalar threshold and refuses a band before question admission; native type refusal runs separately."
+    },
     "request": {
       "question": {
         "function": "tag",
@@ -241,6 +250,13 @@
     },
     "expected_error": "usage.question",
     "name": "annotation-rejects-rank",
+    "not_applicable": {
+      "cpp": "The public annotation_question variant excludes rank at compile time; an actual static_assert refusal witness runs separately.",
+      "go": "The public AnnotationQuestion interface excludes Rank at compile time; TestAnnotationTypesRejectIneligibleQuestions checks the compiler refusal.",
+      "java": "The public AnnotationQuestions.Builder.put accepts only AnnotationQuestion, which excludes rank at compile time. Java exposes no raw annotation parser; the public type rejection is checked separately.",
+      "swift": "The public AnnotationQuestion enum excludes rank at compile time; the Swift signature test checks the compiler refusal.",
+      "zig": "The public AnnotationQuestion union has no rank member; the invalid_annotation consumer checks the compiler refusal."
+    },
     "request": {
       "question": {
         "function": "annotate",

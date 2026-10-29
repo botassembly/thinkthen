@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <sqlite3.h>
+#include "../src/source_limits.h"
 #include <jansson.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -15,6 +16,11 @@ static void tick(sqlite3_context *context, int argc, sqlite3_value **values) {
     (void)argc;
     ++ticks;
     sqlite3_result_value(context, values[0]);
+}
+
+static void source_chunk_limit(sqlite3_context *context, int argc, sqlite3_value **values) {
+    (void)argc; (void)values;
+    sqlite3_result_int(context, TT_SOURCE_CHUNK_RECORDS);
 }
 
 static void native_memory(sqlite3_context *context, int argc, sqlite3_value **values) {
@@ -126,6 +132,7 @@ int main(int argc, char **argv) {
     }
     if (argc == 3) return 3;
     sqlite3_enable_load_extension(database, 0);
+    sqlite3_create_function(database, "source_chunk_limit", 0, SQLITE_UTF8, NULL, source_chunk_limit, NULL, NULL);
     sqlite3_create_function(database, "tick", 1, SQLITE_UTF8, NULL, tick, NULL, NULL);
     sqlite3_create_function(database, "tick_count", 0, SQLITE_UTF8, NULL, tick_count, NULL, NULL);
     sqlite3_create_function(database, "native_memory", 0, SQLITE_UTF8, NULL, native_memory, NULL, NULL);

@@ -1,0 +1,27 @@
+{
+  "name": "decide-no",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "probability": 0.1
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": false,
+      "probability": 0.1
+    }
+  ],
+  "requests": 1
+}

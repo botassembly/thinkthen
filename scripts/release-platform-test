@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Exercise final artifact identity, target routing and consumer continuation."""
+import hashlib
+import json
+from pathlib import Path
+import runpy
+import subprocess
+import sys
+import tarfile
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from release_workflow import ROOT, version
+
+
+class PlatformRelease(unittest.TestCase):
+    def test_rejects_unqualified_artifact_before_any_consumer(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            source = work / 'input'
+            source.mkdir()
+            metadata = source / 'source.json'
+            metadata.write_text(json.dumps({'revision': 'old', 'version': version()}))
+            release = work / 'release'
+            release.mkdir()
+            archive = release / f'thinkthen-{version()}-registries.tar.gz'
+            with tarfile.open(archive, 'w:gz') as packed:
+                packed.add(metadata, arcname='source.json')
+            (release / 'SHA256SUMS').write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+            command = [sys.executable, ROOT / 'scripts/release-platform-check', release, 'current', work / 'scratch']
+            result = subprocess.run(list(map(str, command)), text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('registry source differs', result.stderr)
+            archive.write_bytes(archive.read_bytes() + b'tampered')
+            result = subprocess.run(list(map(str, command[:-1] + [work / 'scratch-two'])), text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('checksum differs', result.stderr)
+            self.assertNotIn('release platform prepare', result.stdout)
+
+    def test_every_registry_consumer_runs_after_a_failed_npm_install(self):
+        import release_registry_check as check
+        seen = []
+        def failed(*_):
+            seen.append('npm')
+            raise RuntimeError('seeded selector failure')
+        with patch.object(check, 'install_node', failed), \
+                patch.object(check, 'install_dotnet', lambda *_: seen.append('nuget')), \
+                patch.object(check, 'install_jvm', lambda *_: seen.append('maven')):
+            with self.assertRaisesRegex(RuntimeError, 'npm'):
+                check.install(Path('packages'), Path('scratch'))
+        self.assertEqual(seen, ['npm', 'nuget', 'maven'])
+
+    def test_python_and_brew_run_after_registry_failure(self):
+        entry = runpy.run_path(str(ROOT / 'scripts/release-platform-check'))
+        seen = []
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary) / 'scratch'
+            def failed(*_):
+                raise RuntimeError('seeded registry failure')
+            with patch.dict(entry['main'].__globals__, {
+                    'admit': lambda *_: Path('packages'), 'install': failed,
+                    'install_python': lambda *_: seen.append('python'),
+                    'brew': lambda *_: seen.append('brew')}), \
+                    patch('release_installed_prepare.dotnet', lambda *_: None), \
+                    patch('release_installed_prepare.jvm', lambda *_: None), \
+                    patch('platform.system', return_value='Darwin'), \
+                    patch.object(sys, 'argv', ['release-platform-check', 'release', 'sha', str(scratch)]):
+                with self.assertRaisesRegex(SystemExit, 'npm-nuget-maven'):
+                    entry['main']()
+            self.assertEqual(seen, ['python', 'brew'])
+            results = json.loads((scratch / 'results.json').read_text())
+            self.assertEqual(results['python']['outcome'], 'success')
+            self.assertEqual(results['npm-nuget-maven']['outcome'], 'failure')
+
+    def test_aggregate_node_selector_refuses_a_wrong_target(self):
+        from release_registry import node, NODE_TARGETS
+        from release_notices import bundle
+        actual = subprocess.check_output(['node', '-p', 'process.platform + "-" + process.arch'], text=True).strip()
+        target, = [key for key, value in NODE_TARGETS.items() if value == actual]
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            packages = {}
+            for platform in NODE_TARGETS:
+                source = work / platform
+                package = source / 'package'
+                package.mkdir(parents=True)
+                (package / 'package.json').write_text(json.dumps({'name': 'thinkthen', 'version': version(),
+                    'main': 'index.cjs', 'files': ['index.cjs', 'thinkthen.node']}))
+                (package / 'index.cjs').write_text('module.exports = require("./thinkthen.node");\n')
+                # A JS payload with the .node extension isolates loader selection;
+                # actual native execution belongs to the installed release jobs.
+                (package / 'thinkthen.node').write_text('module.exports = ' + json.dumps(platform) + ';\n')
+                for name, data in bundle(platform, 'typescript').items():
+                    path = package / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(data)
+                destination = source / 'typescript'
+                destination.mkdir()
+                with tarfile.open(destination / 'binding.tgz', 'w:gz') as archive:
+                    archive.add(package, arcname='package')
+                packages[platform] = source
+            for name, mapping, expected in [('wrong', dict(NODE_TARGETS, **{target: 'invalid-target'}), False),
+                                             ('correct', NODE_TARGETS, True)]:
+                scratch = work / name
+                scratch.mkdir()
+                output = scratch / 'packed'
+                output.mkdir()
+                def execute(*args, **options):
+                    return subprocess.run(list(map(str, args)), check=True, capture_output=True, **options)
+                with patch.dict(node.__globals__, NODE_TARGETS=mapping, run=execute):
+                    node(packages, output, scratch)
+                expanded = scratch / 'installed'
+                with tarfile.open(next(output.glob('*.tgz'))) as archive:
+                    archive.extractall(expanded, filter='data')
+                result = subprocess.run(['node', '-e',
+                    'require.extensions[".node"] = require.extensions[".js"]; console.log(require(process.argv[1]));',
+                    str(expanded / 'package')], text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, expected, result.stderr)
+                if expected:
+                    self.assertEqual(result.stdout.strip(), target)
+
+    def test_windows_frame_closure_refuses_changed_cached_inputs(self):
+        import release_windows_frames as frames
+        import zipfile
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            catalog = work / 'pins.json'
+            with patch.object(frames, 'TOOLS', work), patch.object(frames, 'HASHES', catalog), \
+                    patch.object(frames, 'PINS', {'windows_python_frames': {'example': 'https://example.invalid/example-1.0-py3-none-any.whl'}}):
+                # This fixture wheel has no executable payload; it tests the
+                # offline closure's cache admission before any package build.
+                wheel = work / 'fixture.whl'
+                with zipfile.ZipFile(wheel, 'w') as archive:
+                    archive.writestr('example-1.0.dist-info/METADATA', 'Name: example\nVersion: 1.0\n')
+                catalog.write_text(json.dumps({'example': {'example-1.0-py3-none-any.whl':
+                    hashlib.sha256(wheel.read_bytes()).hexdigest()}}))
+                cached = frames.location() / 'wheels/example-1.0-py3-none-any.whl'
+                cached.parent.mkdir(parents=True)
+                cached.write_bytes(wheel.read_bytes())
+                frames.prepare()
+                output = work / 'candidate'
+                frames.stage(output)
+                self.assertEqual((output / 'prerequisites/python-frames-windows/wheels' / cached.name).read_bytes(), wheel.read_bytes())
+                requirements = cached.parent.parent / 'requirements.txt'
+                original = requirements.read_text()
+                requirements.write_text(original.replace('example==1.0', 'example==2.0'))
+                with self.assertRaisesRegex(ValueError, 'requirements differ'):
+                    frames.stage(work / 'wrong-requirements')
+                requirements.write_text(original)
+                cached.write_bytes(b'tampered wheel')
+                with self.assertRaisesRegex(ValueError, 'checksum differs'):
+                    frames.stage(work / 'wrong-wheel')
+
+    def test_draft_depends_on_all_target_registry_installs(self):
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release-prepare.yml').read_bytes()))
+        job = workflow['jobs']['registry-installed']
+        self.assertFalse(job['strategy']['fail-fast'])
+        self.assertEqual(set(job['strategy']['matrix']['runner']), {'macos-15', 'ubuntu-24.04-arm', 'windows-2022'})
+        self.assertIn('registry-installed', workflow['jobs']['draft']['needs'])
+        self.assertNotIn('always()', workflow['jobs']['draft'].get('if', ''))
+
+    def test_valid_artifact_continues_after_independent_bundle_failure(self):
+        workflow = json.loads(subprocess.check_output(['ruby', '-ryaml', '-rjson', '-e',
+            'puts JSON.generate(YAML.safe_load(STDIN.read, aliases: true))'],
+            input=(ROOT / '.github/workflows/release-prepare.yml').read_bytes()))
+        jobs = workflow['jobs']
+        bundle = jobs['bundle']
+        steps = {step.get('id'): step for step in bundle['steps']}
+        self.assertEqual(bundle.get('outputs', {}).get('artifact-ready'),
+                         "${{ steps.upload-release.outcome == 'success' }}")
+        admission = steps['admit-release']
+        self.assertEqual(admission['if'], "always() && steps.attach-registries.outcome == 'success'")
+        self.assertIn('scripts/release-workflow draft release', admission['run'])
+        self.assertIn('--dry-run', admission['run'])
+        self.assertEqual(steps['upload-release']['if'],
+                         "always() && steps.admit-release.outcome == 'success'")
+        self.assertEqual(jobs['registry-installed']['if'],
+                         "always() && needs.bundle.outputs.artifact-ready == 'true'")
+        self.assertEqual(jobs['draft']['needs'], ['source', 'bundle', 'registry-installed'])
+        self.assertNotIn('if', jobs['draft'])
+        self.assertEqual(steps['no-release-artifact']['if'],
+                         "always() && steps.admit-release.outcome != 'success'")
+        self.assertIn('skipped', steps['no-release-artifact']['run'])
+
+
+if __name__ == '__main__':
+    unittest.main()

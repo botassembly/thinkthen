@@ -56,6 +56,24 @@ def missing_gate(scratch):
     assert result.returncode != 0, 'SDK dispatcher accepted missing gate scripts'
     assert 'Missing SDK gate: scripts/python-gate' in result.stderr, result.stderr
     print('SDK dispatcher rejects an incomplete checkout', flush=True)
+    gates = ('python-gate', 'typescript-gate', 'r-gate', 'c-sdk-gate', 'cpp-sdk-gate',
+             'ruby-gate', 'zig-sdk-gate', 'swift-gate', 'go-gate', 'jvm-gate',
+             'csharp-gate', 'duckdb-gate', 'sqlite-gate', 'postgres-gate')
+    for name in gates:
+        path = source / name
+        path.write_text('#!/bin/sh\nexit ' + ('77' if name == 'postgres-gate' else '0') + '\n')
+        path.chmod(0o755)
+    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    assert result.returncode == 0, result
+    assert 'Skipped SDK gate: postgres-gate' in result.stdout, result.stdout
+    assert 'Passed SDK gate: postgres-gate' not in result.stdout, result.stdout
+    (source / 'python-gate').write_text('#!/bin/sh\nexit 19\n')
+    result = subprocess.run([source / 'sdk-gates'], capture_output=True, text=True)
+    assert result.returncode != 0, result
+    assert 'Failed SDK gate: python-gate (exit 19)' in result.stderr, result.stderr
+    assert 'Passed SDK gate: sqlite-gate' in result.stdout, result.stdout
+    assert 'Skipped SDK gate: postgres-gate' in result.stdout, result.stdout
+    print('SDK dispatcher retains failures, runs later gates, and distinguishes host skips', flush=True)
 
 
 def zig(scratch, native):

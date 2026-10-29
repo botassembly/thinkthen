@@ -1,0 +1,19 @@
+{
+  "name": "relate-zero-records",
+  "request": {
+    "question": {
+      "function": "relate",
+      "rules": [
+        {
+          "relation": "works_for",
+          "source": "person",
+          "target": "company"
+        }
+      ]
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

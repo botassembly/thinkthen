@@ -308,14 +308,14 @@ final class Native: Sendable {
     if status == THINKTHEN_NEEDS_INPUT { return .input }
     if status == THINKTHEN_END { return .end }
     guard status == THINKTHEN_OK else {
-      throw ThinkThenError.contract(message: "Unknown native operation status")
+      throw rowABIFailure("Unknown native operation status")
     }
     let rowStatus: Status
     switch row.status {
     case THINKTHEN_STATUS_ANSWERED: rowStatus = .answered
     case THINKTHEN_STATUS_UNSURE: rowStatus = .unsure
     case THINKTHEN_STATUS_FAILED: rowStatus = .failed
-    default: throw ThinkThenError.contract(message: "Unknown native row status")
+    default: throw rowABIFailure("Unknown native row status")
     }
     let function: String
     switch row.function {
@@ -329,7 +329,7 @@ final class Native: Sendable {
     case THINKTHEN_FUNCTION_RECOGNIZE: function = "recognize"
     case THINKTHEN_FUNCTION_RELATE: function = "relate"
     case THINKTHEN_FUNCTION_ANNOTATE: function = "annotate"
-    default: throw ThinkThenError.contract(message: "Unknown native function")
+    default: throw rowABIFailure("Unknown native function")
     }
     var failure = row.error.data == nil ? nil : copy(row.error)
     if row.status == THINKTHEN_STATUS_FAILED,
@@ -371,6 +371,10 @@ struct WireRow: Sendable {
     do {
       return try JSONDecoder().decode(
         Row<F>.self, from: JSONSerialization.data(withJSONObject: fields))
-    } catch { throw ThinkThenError.contract(message: String(describing: error)) }
+    } catch { throw rowABIFailure(String(describing: error)) }
   }
+}
+
+func rowABIFailure(_ message: String) -> ThinkThenError {
+  .engine(RowFailure(code: .usageAbi, message: message, httpStatus: nil))
 }

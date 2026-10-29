@@ -13,10 +13,17 @@ fn read(path: &Path) -> Value {
     serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
 }
 fn semantic(value: &mut Value) {
-    if let Some(fields) = value.as_object_mut() {
-        fields.remove("source");
+    if let Some(source) = value.get_mut("source").and_then(Value::as_object_mut) {
+        for field in ["backend", "model", "question_identity"] {
+            source.remove(field);
+        }
+        if source.is_empty() {
+            value.as_object_mut().unwrap().remove("source");
+        }
     }
-    if let Some(error) = value.get_mut("error").and_then(Value::as_object_mut) {
+    if let Some(error) = value.get_mut("error").and_then(Value::as_object_mut)
+        && error.get("code").and_then(Value::as_str).is_some()
+    {
         error.remove("message");
     }
     if value
@@ -41,90 +48,92 @@ fn all_functions_share_typed_rows_from_both_backend_wires() {
     let mut failures = Vec::new();
     for file in manifest["cases"].as_array().unwrap() {
         let case = read(&directory.join(file.as_str().unwrap()));
-        requests.validate(&case["request"]).unwrap();
-        if let Some(code) = case["expected"]["error"].as_str() {
-            assert_eq!(
-                Request::from_json(&case["request"].to_string())
-                    .unwrap_err()
-                    .code()
-                    .as_str(),
-                code
-            );
-            continue;
-        }
-        let request = Request::from_json(&case["request"].to_string()).unwrap();
-        covered.insert(serde_json::to_string(&request.question().function()).unwrap());
         let mut identity = None;
         for backend in manifest["backends"].as_array().unwrap() {
             let backend: BackendName = serde_json::from_value(backend.clone()).unwrap();
-            let server = Loopback::case(&case).unwrap();
-            let mut client = manifest["client"].clone();
-            if let Some(extra) = case["client"].as_object() {
-                for (key, value) in extra {
-                    client[key] = value.clone();
+            let checked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let server = Loopback::case(&case).unwrap();
+                let mut client = manifest["client"].clone();
+                if let Some(extra) = case["client"].as_object() {
+                    for (key, value) in extra {
+                        client[key] = value.clone();
+                    }
                 }
-            }
-            client["backend"] = serde_json::to_value(backend).unwrap();
-            let engine = Settings::from_json(&client.to_string())
-                .unwrap()
-                .url(server.base())
-                .api_key(Key::new(KEY).unwrap())
-                .engine(|_| panic!("explicit settings must not read environment"))
-                .unwrap();
-            let call = engine
-                .open_request(&request, OffsetUnit::CodePoints)
-                .unwrap();
-            let sender = call.sender();
-            sender.close();
-            let actual: Vec<_> = call.rows().collect::<Result<Vec<_>, _>>().unwrap();
-            let actual: Vec<_> = actual
-                .into_iter()
-                .map(|row| {
-                    assert_eq!(row.source().backend(), backend);
-                    assert_eq!(
-                        row.source().model(),
-                        manifest["client"]["model"].as_str().unwrap()
-                    );
-                    let hash = row.source().question_identity();
-                    assert_eq!(hash.len(), 64);
-                    assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
-                    if let Some(identity) = &identity {
-                        assert_eq!(hash, identity);
-                    } else {
-                        identity = Some(hash.to_owned());
+                client["backend"] = serde_json::to_value(backend).unwrap();
+                let actual = (|| -> Result<Vec<AnyRow>, thinkthen::Error> {
+                    let request = Request::from_json(&case["request"].to_string())?;
+                    requests.validate(&case["request"]).unwrap();
+                    covered.insert(serde_json::to_string(&request.question().function()).unwrap());
+                    let mut engine = Settings::from_json(&client.to_string())?
+                        .url(server.base())
+                        .api_key(Key::new(KEY).unwrap())
+                        .engine(|_| panic!("explicit settings must not read environment"))?;
+                    if case["cancelled"] == true {
+                        let cancel = thinkthen::Cancel::default();
+                        cancel.cancel();
+                        engine = engine.cancel(cancel);
                     }
-                    let mut value = serde_json::to_value(row).unwrap();
-                    rows.validate(&value)
-                        .unwrap_or_else(|error| panic!("{}: {error}", case["name"]));
-                    let restored: AnyRow = serde_json::from_value(value.clone()).unwrap();
-                    assert_eq!(serde_json::to_value(restored).unwrap(), value);
-                    semantic(&mut value);
-                    value
-                })
-                .collect();
-            if json!(actual) != case["expected"] {
-                failures.push(format!(
-                    "{} / {backend:?}: expected {}, got {}",
-                    case["name"],
-                    case["expected"],
-                    json!(actual)
-                ));
-            }
-            assert_eq!(
-                server.count() as u64,
-                case["requests"].as_u64().unwrap(),
-                "{} / {backend:?}",
-                case["name"]
-            );
-            for sent in server.requests() {
+                    let call = engine.open_request(&request, OffsetUnit::CodePoints)?;
+                    call.sender().close();
+                    call.rows().collect()
+                })();
                 assert_eq!(
-                    sent.path,
-                    if backend == BackendName::SystemOne {
-                        "/v1/systemone"
-                    } else {
-                        "/v1/decisions"
-                    }
+                    server.count() as u64,
+                    case["requests"].as_u64().unwrap(),
+                    "{} / {backend:?}",
+                    case["name"]
                 );
+                for sent in server.requests() {
+                    assert_eq!(
+                        sent.path,
+                        if backend == BackendName::SystemOne {
+                            "/v1/systemone"
+                        } else {
+                            "/v1/decisions"
+                        }
+                    );
+                }
+                if let Some(code) = case["expected"]["error"].as_str() {
+                    assert_eq!(
+                        actual.unwrap_err().code().as_str(),
+                        code,
+                        "{} / {backend:?}",
+                        case["name"]
+                    );
+                    return;
+                }
+                let actual: Vec<_> = actual
+                    .unwrap()
+                    .into_iter()
+                    .map(|row| {
+                        assert_eq!(row.source().backend(), backend);
+                        assert_eq!(row.source().model(), client["model"].as_str().unwrap());
+                        let hash = row.source().question_identity();
+                        assert_eq!(hash.len(), 64);
+                        assert!(hash.chars().all(|character| character.is_ascii_hexdigit()));
+                        if let Some(identity) = &identity {
+                            assert_eq!(hash, identity);
+                        } else {
+                            identity = Some(hash.to_owned());
+                        }
+                        let mut value = serde_json::to_value(row).unwrap();
+                        rows.validate(&value)
+                            .unwrap_or_else(|error| panic!("{}: {error}", case["name"]));
+                        let restored: AnyRow = serde_json::from_value(value.clone()).unwrap();
+                        assert_eq!(serde_json::to_value(restored).unwrap(), value);
+                        semantic(&mut value);
+                        value
+                    })
+                    .collect();
+                assert_eq!(
+                    json!(actual),
+                    case["expected"],
+                    "{} / {backend:?}",
+                    case["name"]
+                );
+            }));
+            if checked.is_err() {
+                failures.push(format!("{} / {backend:?}", case["name"]));
             }
         }
     }

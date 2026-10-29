@@ -52,15 +52,24 @@ int question_open(Cursor *cursor) {
     }
     /* Structured lists use the shared admitted contract, including unknown-field checks. */
     if(code==THINKTHEN_OK && (function==THINKTHEN_FUNCTION_ANNOTATE || function==THINKTHEN_FUNCTION_RELATE)) {
-        json_t *structured=json_loadb(text(cursor,function==THINKTHEN_FUNCTION_ANNOTATE?ARG_TOOLBOX:ARG_RULES),length(cursor,function==THINKTHEN_FUNCTION_ANNOTATE?ARG_TOOLBOX:ARG_RULES),JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
+        int argument=function==THINKTHEN_FUNCTION_ANNOTATE?ARG_TOOLBOX:ARG_RULES;
         json_t *q=json_object();json_object_set_new(q,"function",json_string(table->registration->function));
-        if(structured)json_object_set_new(q,function==THINKTHEN_FUNCTION_ANNOTATE?"questions":"rules",structured);
         if(cursor->arguments[ARG_EVIDENCE])json_object_set_new(q,"evidence",json_stringn(text(cursor,ARG_EVIDENCE),length(cursor,ARG_EVIDENCE)));
         if(cursor->arguments[ARG_THRESHOLD])json_object_set_new(q,"threshold",json_real(sqlite3_value_double(cursor->arguments[ARG_THRESHOLD])));
-        char *encoded=json_dumps(q,JSON_COMPACT);json_decref(q);
+        char *prefix=json_dumps(q,JSON_COMPACT);json_decref(q);
+        sqlite3_str *builder=sqlite3_str_new(table->db);
+        if(prefix) {
+            sqlite3_str_append(builder,prefix,(int)strlen(prefix)-1);
+            sqlite3_str_appendf(builder,",\"%s\":",function==THINKTHEN_FUNCTION_ANNOTATE?"questions":"rules");
+            sqlite3_str_append(builder,text(cursor,argument),(int)length(cursor,argument));
+            sqlite3_str_appendchar(builder,1,'}');
+        }
+        free(prefix);
+        int encoded_length=sqlite3_str_length(builder);
+        char *encoded=sqlite3_str_finish(builder);
         thinkthen_question_free(question);question=NULL;
         if(!encoded)code=thinkthen_question_conversion_error(&error);
-        else {code=thinkthen_sql_question_from_json((const uint8_t*)encoded,strlen(encoded),&question,&error);free(encoded);}
+        else {code=thinkthen_sql_question_from_json((const uint8_t*)encoded,(size_t)encoded_length,&question,&error);sqlite3_free(encoded);}
     }
     if(code==THINKTHEN_OK) {
         thinkthen_text name={(const uint8_t*)text(cursor,ARG_NAME),length(cursor,ARG_NAME)};

@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 	"testing"
+	"time"
 )
 
 // apiCase consumes the regenerated shared fixture grammar. Removed request
 // envelopes are rejected, so stale fixtures cannot silently claim parity.
 type apiCase struct {
-	Client struct {
-		Backend string `json:"backend"`
-		Model   string `json:"model"`
-		Batch   *int   `json:"batch"`
+	NotApplicable map[string]string `json:"not_applicable"`
+	Client        struct {
+		Backend string    `json:"backend"`
+		Model   string    `json:"model"`
+		Batch   *int      `json:"batch"`
+		Retry   *apiRetry `json:"retry"`
 	} `json:"client"`
 	Request struct {
 		Question apiQuestion       `json:"question"`
@@ -44,9 +47,10 @@ type apiExpected struct {
 	Answer, Detail json.RawMessage
 	Probability    *float64 `json:"probability"`
 	Source         struct {
-		QuestionIdentity string `json:"question_identity"`
-		Backend          string `json:"backend"`
-		Model            string `json:"model"`
+		QuestionIdentity string  `json:"question_identity"`
+		Name             *string `json:"name"`
+		Backend          string  `json:"backend"`
+		Model            string  `json:"model"`
 	} `json:"source"`
 	Error *struct {
 		Code, Message string
@@ -162,4 +166,24 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		t.Fatalf("unsupported fixture question %q", q.Function)
 		return nil
 	}
+}
+
+type apiRetry struct {
+	MaxRetries     int    `json:"max_retries"`
+	InitialBackoff *int64 `json:"initial_backoff_ms"`
+	AttemptTimeout *int64 `json:"attempt_timeout_ms"`
+}
+
+func retryFor(r *apiRetry) *tt.Retry {
+	if r == nil {
+		return nil
+	}
+	backoff, timeout := int64(1), int64(10000)
+	if r.InitialBackoff != nil {
+		backoff = *r.InitialBackoff
+	}
+	if r.AttemptTimeout != nil {
+		timeout = *r.AttemptTimeout
+	}
+	return &tt.Retry{MaxRetries: r.MaxRetries, InitialBackoff: time.Duration(backoff) * time.Millisecond, AttemptTimeout: time.Duration(timeout) * time.Millisecond}
 }

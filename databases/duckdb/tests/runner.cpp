@@ -3,6 +3,7 @@
 #include "yyjson.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include <cstdlib>
+#include <atomic>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -121,14 +122,28 @@ int main(int argc, char **argv) {
             if (argc != 4) return 2;
             auto result = connection.Query(argv[3]);
             Print(*result);
-            if (result->HasError() || threads.size() < 2) return 1;
             std::cerr << "DuckDB parallel source threads=" << threads.size() << '\n';
+            if (result->HasError() || threads.size() < 2) return 1;
             return 0;
+        }
+        std::atomic<idx_t> source_rows{0};
+        bool read_ahead = argc > 2 && string(argv[2]) == "--read-ahead";
+        if (read_ahead) {
+            ScalarFunction mark("record_read", {LogicalType::BIGINT}, LogicalType::BIGINT,
+                [&](DataChunk &input, ExpressionState &, Vector &output) {
+                    source_rows += input.size();
+                    output.Reference(input.data[0]);
+                });
+            CreateScalarFunctionInfo info(mark); connection.context->RegisterFunction(info);
         }
         if (argc > 2) {
             std::thread work([&] { auto result = connection.Query(argc > 3 ? argv[3] : "SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?')"); Print(*result); });
             if (std::cin.get() != 'c') return 2;
             connection.Interrupt(); work.join();
+            if (read_ahead) {
+                std::cout << "{\"source_rows\":" << source_rows.load() <<
+                    ",\"native_vector_size\":" << STANDARD_VECTOR_SIZE << "}" << std::endl;
+            }
             auto recovered = connection.Query("SELECT 1 AS alive");
             return recovered->HasError() ? 1 : 0;
         }

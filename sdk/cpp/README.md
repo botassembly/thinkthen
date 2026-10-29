@@ -27,4 +27,6 @@ int main() {
 }
 ```
 
+`thinkthen::error::family()` returns the engine’s error family, or an empty string for an unknown code.
+
 [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/cpp/include/thinkthen/thinkthen.hpp).

@@ -92,6 +92,18 @@ jobs:
           eval "$test_environment"
           scripts/postgres-gate || status=$?
           exit "$status"
+      - name: Prove Linux system certificate store behavior
+        id: linux-system-store
+        if: always()
+        run: |
+          . scripts/native-tools-env
+          python3 scripts/linux-store-trust-check
+      - name: Run Linux command adapter cases inside the prepared floor
+        id: linux-cli
+        if: always()
+        run: |
+          . scripts/native-tools-env
+          scripts/runtime-floor-build python3 scripts/linux-binding-gate --cli
       # Workflow artifacts transport gate inputs; they are never release assets.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         id: upload-artifact-gate-linux-x86-64
@@ -300,6 +312,13 @@ jobs:
         run: |
           . scripts/native-tools-env
           scripts/qualification-candidate "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
+      - name: Install the real candidate through the public install script
+        id: installer
+        if: always()
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: python3 scripts/release-installer-check "$RELEASE_TARGET" release-files/candidate "$RELEASE_SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         id: upload-artifact-platform-matrix-target
         with:
@@ -475,8 +494,23 @@ jobs:
         id: prepare-rust
         if: always()
         run: |
+          python3 -c 'import hashlib,os; from pathlib import Path; target=Path.home()/".local/share/thinkthen-build-tools/windows-native"/hashlib.sha256(os.fsencode(Path.cwd())).hexdigest(); open(os.environ["GITHUB_ENV"],"a",encoding="utf-8").write("CARGO_TARGET_DIR="+str(target)+"\n")'
           python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_rust import prepare; prepare()'
           cargo fetch --locked --target x86_64-pc-windows-msvc
+      - name: Build the pinned native Windows loopback once
+        id: windows-loopback
+        if: always()
+        shell: pwsh
+        env:
+          CARGO_BUILD_JOBS: '2'
+          RUSTFLAGS: '-C target-feature=+crt-static'
+        run: |
+          $env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
+          cargo build --offline --locked --target x86_64-pc-windows-msvc -p loopback --bin loopback
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "THINKTHEN_LOOPBACK=$env:CARGO_TARGET_DIR/x86_64-pc-windows-msvc/debug/loopback.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         id: download-artifact-platform-windows-x86-64
         if: always()
@@ -505,6 +539,33 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.revision }}
         run: python3 scripts/qualification-candidate windows-x86_64 windows-installed "$RELEASE_SHA"
+      - name: Install the real Windows command through PowerShell
+        id: installer
+        if: always()
+        env:
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA"
+      - name: Prove Windows transport trust
+        id: transport-trust
+        shell: pwsh
+        if: always()
+        env:
+          CARGO_BUILD_JOBS: '2'
+          RUSTFLAGS: '-C target-feature=+crt-static'
+        run: |
+          $env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
+          cargo fetch --locked --target x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Prove Windows command cancellation and file cleanup
+        id: windows-cli
+        if: always()
+        env:
+          RELEASE_SHA: ${{ inputs.revision }}
+        run: python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA" --cli
       - name: Report every qualification failure
         if: always()
         env:

@@ -3,6 +3,7 @@
 use loopback::{HeldReply, Loopback, StressFixture, UnavailableBackend};
 use std::io::{BufRead, Write};
 use std::sync::mpsc::Receiver;
+use std::time::Duration;
 
 enum Fixture {
     Case(Loopback),
@@ -93,8 +94,20 @@ impl Fixture {
                 Ok(server.count().to_string())
             }
             (Self::Unavailable(_), "count") => Ok("0".to_owned()),
-            (Self::Held { arrived, .. } | Self::First { arrived, .. }, "arrived") => {
-                arrived.recv()?;
+            (Self::Held { arrived, .. } | Self::First { arrived, .. }, command)
+                if command == "arrived" || command.starts_with("arrived ") =>
+            {
+                let count = command
+                    .strip_prefix("arrived ")
+                    .map(str::parse::<usize>)
+                    .transpose()?
+                    .unwrap_or(1);
+                if count == 0 {
+                    return Err("arrival count must be positive".into());
+                }
+                for _ in 0..count {
+                    arrived.recv_timeout(Duration::from_secs(30))?;
+                }
                 Ok("arrived".to_owned())
             }
             (Self::Held { closed, .. } | Self::First { closed, .. }, "closed") => {
@@ -113,6 +126,10 @@ impl Fixture {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::args().nth(1).as_deref() == Some("--limits") {
+        writeln!(std::io::stdout().lock(), "{}", loopback::limits())?;
+        return Ok(());
+    }
     let fixture = Fixture::open()?;
     let port = fixture
         .base()

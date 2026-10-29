@@ -84,7 +84,7 @@ def test_polars_relate_detail_keeps_recognized_names() -> None:
 @pytest.mark.parametrize("library", ["pandas", "polars"])
 @pytest.mark.parametrize("backend", ["systemone", "openai"])
 @pytest.mark.parametrize("surface", ["series", "stream"])
-def test_filter_unsure_is_not_kept_and_failed_stays_missing(
+def test_filter_unsure_and_failed_are_not_kept(
     library: str, backend: str, surface: str
 ) -> None:
     import json
@@ -123,9 +123,8 @@ def test_filter_unsure_is_not_kept_and_failed_stays_missing(
         for index, expected in enumerate(case["expected"]):
             assert frame["status"].to_list()[index] == expected["status"]
             kept = frame["kept"].to_list()[index]
-            if expected["status"] == "failed":
-                assert pd.isna(kept) if library == "pandas" else kept is None
-            else:
-                assert not pd.isna(kept)
-                assert bool(kept) is expected.get("answer", False)
+            assert not pd.isna(kept)
+            assert bool(kept) is (
+                expected["status"] == "answered" and expected.get("answer") is True
+            )
         assert server.count() == 1

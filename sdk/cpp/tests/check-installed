@@ -37,6 +37,14 @@ cmake --build "$scratch/build" --parallel 2
 cmake --install "$scratch/build"
 rm -rf "$scratch/source" "$scratch/build"
 "$scratch/application/bin/typed_consumer"
+python3 - "$scratch/application/bin/typed_consumer" <<'PYTHON'
+import json, subprocess, sys
+from pathlib import Path
+codes = json.loads(Path('schemas/contract.json').read_text())['codes']
+for value in codes + [{'value':0, 'family':''}, {'value':2147483647, 'family':''}]:
+    actual = subprocess.check_output([sys.argv[1], 'family', str(value['value'])], text=True).strip()
+    assert actual == value['family'], (value, actual)
+PYTHON
 python3 sdk/c/tests/toolbox.py "$scratch/application/bin/typed_consumer" "$root"
 "$scratch/application/bin/ranges_consumer"
 "$scratch/application/bin/unknown_code_consumer"
@@ -71,5 +79,29 @@ for expression in 'thinkthen::annotation_question q = thinkthen::rank{"Rank?", {
         exit 1
     fi
 done
-scripts/native-fixtures --engine "$engine" --output "$scratch/fixtures"
-HOME="$scratch/home" python3 sdk/cpp/tests/abi.py "$prefix" "$scratch/fixtures/manifest.json"
+if [ -n "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
+    test -f "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
+else
+    scripts/native-fixtures --engine "$engine" --output "$scratch/fixtures"
+    THINKTHEN_NATIVE_FIXTURES="$scratch/fixtures"
+fi
+HOME="$scratch/home" python3 sdk/cpp/tests/abi.py "$prefix" "$THINKTHEN_NATIVE_FIXTURES/manifest.json"
+
+python3 - "$prefix" <<'PYTHON'
+import os, subprocess, sys, tempfile
+from pathlib import Path
+prefix = Path(sys.argv[1])
+fixtures = Path(os.environ['THINKTHEN_MALFORMED_ROW_FIXTURES'])
+engines = [p for p in (prefix / 'lib').glob('libthinkthen.*') if not p.is_symlink()]
+assert len(engines) == 1, engines
+suffix = '.dylib' if sys.platform == 'darwin' else '.so'
+with tempfile.TemporaryDirectory(prefix='thinkthen-cpp-row-') as temporary:
+    for kind in ('unknown-function', 'unanswered-answer', 'invalid-json'):
+        library = fixtures / kind / ('libthinkthen_ffi' + suffix)
+        assert library.is_file(), library
+        consumer = Path(temporary) / kind
+        subprocess.run(['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-UNDEBUG',
+            '-I' + str(prefix / 'include'), 'sdk/cpp/tests/malformed_rows.cpp', str(library),
+            '-Wl,-rpath,' + str(library.parent), '-o', str(consumer)], check=True)
+        subprocess.run([consumer, kind], check=True, timeout=30)
+PYTHON

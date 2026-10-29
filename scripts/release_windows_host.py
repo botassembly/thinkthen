@@ -197,5 +197,7 @@ def prepare():
     prepared('sh', '-eu', '-c', 'for tool in clang-cl lld-link llvm-readobj llvm-lib-21 llvm-rc-21; do command -v "$tool"; done')
     pins = selections()
     prepared('scripts/release-windows-prepare', 'inputs')
+    from release_windows_frames import prepare as prepare_frames
+    prepare_frames()
     prepared('scripts/release-windows-prepare', 'msvc', pins['REVIEWED_SDK'], pins['REVIEWED_CRT'])
     print('release: Windows cross inputs are prepared; candidate builds run offline')

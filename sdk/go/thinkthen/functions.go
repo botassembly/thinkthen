@@ -19,6 +19,9 @@ func typedEntry[A, D any](r wireRow) (Entry[A, D], error) {
 			return Entry[A, D]{}, abiError()
 		}
 	case "unsure", "failed":
+		if len(r.answer) != 0 {
+			return Entry[A, D]{}, abiError()
+		}
 	default:
 		return Entry[A, D]{}, abiError()
 	}

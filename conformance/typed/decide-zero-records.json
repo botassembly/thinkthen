@@ -1,0 +1,13 @@
+{
+  "name": "decide-zero-records",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

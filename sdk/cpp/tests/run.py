@@ -18,7 +18,7 @@ for backend in scope["manifest"]["backends"]:
         settings["url"] = url
         result = subprocess.run(
             [scope["consumer"], json.dumps(case["request"]), json.dumps(settings)],
-            env=scope["env"], check=True, capture_output=True, text=True)
+            env=scope["env"], check=True, capture_output=True, text=True, timeout=60)
         rows = json.loads(result.stdout)["rows"]
         scope["normalize"](rows, backend)
         assert len(rows) == 4 and rows[1]["position"] == 2, rows
@@ -29,4 +29,4 @@ for backend in scope["manifest"]["backends"]:
         assert good == case["expected"], good
         server.stdin.write("count\n")
         server.stdin.flush()
-        assert int(server.stdout.readline()) == case["requests"]
+        assert int(scope["line"](server.stdout)) == case["requests"]

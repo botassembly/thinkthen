@@ -1,4 +1,5 @@
 #include "internal.h"
+#include "source_limits.h"
 #include <limits.h>
 #include <string.h>
 
@@ -103,10 +104,9 @@ int source_open(Cursor *cursor) {
 }
 
 int source_chunk(Cursor *cursor) {
-    enum { CHUNK_RECORDS = 128 };
     Table *table = (Table *)cursor->base.pVtab;
-    thinkthen_sql_input records[CHUNK_RECORDS] = {{0}};
-    sqlite3_value *values[CHUNK_RECORDS] = {0};
+    thinkthen_sql_input records[TT_SOURCE_CHUNK_RECORDS] = {{0}};
+    sqlite3_value *values[TT_SOURCE_CHUNK_RECORDS] = {0};
     /* Reuse released slots between chunks; rank keeps every source position. */
     if(cursor->ids_start) {
         cursor->ids_count-=cursor->ids_start;
@@ -118,7 +118,7 @@ int source_chunk(Cursor *cursor) {
     int result = SQLITE_OK;
     int ended = 0;
     char *message = NULL;
-    while (count < CHUNK_RECORDS) {
+    while (count < TT_SOURCE_CHUNK_RECORDS) {
         if (sqlite3_is_interrupted(table->db)) { result = SQLITE_INTERRUPT; break; }
         result = sqlite3_step(cursor->source);
         if (result == SQLITE_DONE) { ended = 1; result = SQLITE_OK; break; }
@@ -159,7 +159,7 @@ int source_chunk(Cursor *cursor) {
         if (thinkthen_sql_call_send_chunk(cursor->call, records, count, &error) != THINKTHEN_OK)
             result = engine_error(&error, &message);
     }
-    for (size_t index = 0; index < CHUNK_RECORDS; ++index)
+    for (size_t index = 0; index < TT_SOURCE_CHUNK_RECORDS; ++index)
         sqlite3_value_free(values[index]);
     if (result != SQLITE_OK) {
         int code = cursor_error(cursor, message == NULL ? SQLITE_NOMEM : result,

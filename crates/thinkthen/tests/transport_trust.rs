@@ -145,6 +145,10 @@ fn trusted_roots_still_require_the_server_name_and_validity() {
 #[test]
 fn container_system_store_is_used_and_extra_roots_preserve_it() {
     if std::env::var_os("THINKTHEN_TEST_CONTAINER_STORE").is_none() {
+        assert!(
+            std::env::var_os("THINKTHEN_EXPECT_CONTAINER_STORE").is_none(),
+            "qualification expected the system-store test but omitted its activation"
+        );
         return;
     }
     let fixture = trust::Certificates::new();
@@ -233,4 +237,24 @@ fn trust_child() {
         assert!(error.message().contains("THINKTHEN_CA_FILE"), "{error}");
         assert!(!error.message().contains(KEY));
     }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn an_expected_container_store_proof_cannot_silently_skip() {
+    let output = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "container_system_store_is_used_and_extra_roots_preserve_it",
+            "--nocapture",
+        ])
+        .env_remove("THINKTHEN_TEST_CONTAINER_STORE")
+        .env("THINKTHEN_EXPECT_CONTAINER_STORE", "1")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("omitted its activation")
+            || String::from_utf8_lossy(&output.stderr).contains("omitted its activation")
+    );
 }

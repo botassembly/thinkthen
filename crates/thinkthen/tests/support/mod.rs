@@ -60,3 +60,48 @@ pub(crate) fn closed_output() -> (Stdio, UnixStream) {
     writer.shutdown(Shutdown::Write).unwrap();
     (Stdio::from(OwnedFd::from(writer)), inherited_reader)
 }
+
+/// Reap a stuck owned command instead of leaving a blocking pipe wait unbounded.
+#[cfg(unix)]
+#[allow(
+    dead_code,
+    reason = "only interruption tests need a whole-command deadline"
+)]
+pub(crate) struct Deadline {
+    done: Option<std::sync::mpsc::Sender<()>>,
+    watcher: Option<std::thread::JoinHandle<bool>>,
+}
+#[cfg(unix)]
+impl Drop for Deadline {
+    fn drop(&mut self) {
+        let _ = self.done.take().unwrap().send(());
+        let expired = self.watcher.take().unwrap().join().unwrap();
+        if !std::thread::panicking() {
+            assert!(!expired, "command exceeded its blocking-wait deadline");
+        }
+    }
+}
+#[cfg(unix)]
+#[allow(
+    dead_code,
+    reason = "only interruption tests need a whole-command deadline"
+)]
+pub(crate) fn deadline(pid: u32) -> Deadline {
+    let (done, received) = std::sync::mpsc::channel();
+    let watcher = std::thread::spawn(move || {
+        if received
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .is_ok()
+        {
+            return false;
+        }
+        let _ = Command::new("kill")
+            .args(["-KILL", &pid.to_string()])
+            .status();
+        true
+    });
+    Deadline {
+        done: Some(done),
+        watcher: Some(watcher),
+    }
+}

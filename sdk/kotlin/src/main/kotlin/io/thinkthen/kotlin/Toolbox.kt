@@ -28,9 +28,13 @@ public class Toolbox private constructor(admitted: io.thinkthen.internal.DriverT
 public class AnnotationQuestions(entries: Map<String,AnnotationQuestion<*,*>>) {
     public val entries: Map<String,AnnotationQuestion<*,*>> = immutableMap(entries)
     public companion object {
-        public fun parse(value: JsonElement): AnnotationQuestions = AnnotationQuestions(value.jsonObject.getValue("questions").jsonObject.mapValues {
-            decodeQuestion(it.value.jsonObject) as? AnnotationQuestion<*,*> ?: throw kotlinx.serialization.SerializationException("Annotation requires a non-ranking question")
-        })
+        public fun parse(value: JsonElement): AnnotationQuestions {
+            val question = if (value is JsonObject) JsonObject(value + ("function" to JsonPrimitive("annotate"))) else value
+            translate { io.thinkthen.internal.DriverClient.validateQuestion(question.toString().toByteArray(Charsets.UTF_8)) }
+            return AnnotationQuestions(question.jsonObject.getValue("questions").jsonObject.mapValues {
+                decodeQuestion(it.value.jsonObject) as AnnotationQuestion<*,*>
+            })
+        }
     }
 }
 @ThinkThenDsl public class ToolboxBuilder {

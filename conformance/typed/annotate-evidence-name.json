@@ -1,0 +1,165 @@
+{
+  "name": "annotate-evidence-name",
+  "request": {
+    "question": {
+      "function": "annotate",
+      "evidence": "/body",
+      "questions": {
+        "decision": {
+          "function": "decide",
+          "question": "Ready?"
+        },
+        "missing": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": "/absent"
+        },
+        "root": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": ""
+        },
+        "choice": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ]
+        },
+        "choice_unsure": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ],
+          "threshold": 0.9
+        },
+        "labels": {
+          "function": "tag",
+          "question": "Which labels?",
+          "labels": [
+            "urgent",
+            "routine"
+          ]
+        },
+        "scale": {
+          "function": "score",
+          "question": "How much?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        }
+      }
+    },
+    "records": [
+      {
+        "id": "r1",
+        "body": "refund"
+      }
+    ],
+    "name": "named-annotate"
+  },
+  "replies": [
+    {
+      "contains": "How much?",
+      "distribution": {
+        "low": 0.25,
+        "high": 0.75
+      }
+    },
+    {
+      "criterion": "z",
+      "distribution": {
+        "z": 0.8123456789012345,
+        "a": 0.1876543210987655
+      }
+    },
+    {
+      "probability": 0.9
+    }
+  ],
+  "expected": [
+    {
+      "function": "annotate",
+      "position": 1,
+      "status": "answered",
+      "answer": {
+        "decision": {
+          "function": "decide",
+          "status": "answered",
+          "answer": true,
+          "probability": 0.9
+        },
+        "missing": {
+          "function": "decide",
+          "status": "failed",
+          "error": {
+            "code": "record.missing"
+          }
+        },
+        "root": {
+          "function": "decide",
+          "status": "answered",
+          "answer": true,
+          "probability": 0.9
+        },
+        "choice": {
+          "function": "choose",
+          "status": "answered",
+          "answer": "z",
+          "probability": 0.8123456789012345,
+          "detail": {
+            "labels": {
+              "z": 0.8123456789012345,
+              "a": 0.1876543210987655
+            }
+          }
+        },
+        "choice_unsure": {
+          "function": "choose",
+          "status": "unsure",
+          "probability": 0.8123456789012345,
+          "detail": {
+            "labels": {
+              "z": 0.8123456789012345,
+              "a": 0.1876543210987655
+            }
+          }
+        },
+        "labels": {
+          "function": "tag",
+          "status": "answered",
+          "answer": [
+            "urgent",
+            "routine"
+          ],
+          "detail": {
+            "labels": {
+              "urgent": 0.9,
+              "routine": 0.9
+            }
+          }
+        },
+        "scale": {
+          "function": "score",
+          "status": "answered",
+          "answer": 0.75,
+          "detail": {
+            "levels": [
+              0.25,
+              0.75
+            ]
+          }
+        }
+      },
+      "id": "r1",
+      "source": {
+        "name": "named-annotate"
+      }
+    }
+  ],
+  "requests": 1
+}

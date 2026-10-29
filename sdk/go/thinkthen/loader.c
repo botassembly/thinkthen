@@ -5,7 +5,7 @@
 #else
 #include <dlfcn.h>
 #endif
-#define SYMBOLS(X) X(toolbox_new) X(toolbox_insert) X(toolbox_from_json) X(toolbox_to_json) X(toolbox_definitions_json) X(toolbox_free) X(buffer_free) X(code_name) X(settings_conversion_error) X(question_conversion_error) X(client_open) X(client_free) X(call_open_question) X(call_open_records_question) X(call_send_text) X(call_send_json) X(call_send_invalid) X(call_end_input) X(call_next) X(call_cancel) X(call_free) X(error_free) X(row_free) X(question_new) X(question_add_choice) X(question_add_label) X(question_add_level) X(question_add_kind) X(question_add_rule) X(question_set_cut) X(question_set_band) X(question_set_evidence) X(question_set_top) X(question_add_entry) X(question_free) X(settings_new) X(settings_set_backend) X(settings_set_api_key) X(settings_set_model) X(settings_set_url) X(settings_set_batch) X(settings_set_retry) X(settings_free)
+#define SYMBOLS(X) X(toolbox_new) X(toolbox_insert) X(toolbox_from_json) X(toolbox_to_json) X(toolbox_definitions_json) X(toolbox_free) X(buffer_free) X(code_name) X(code_family) X(settings_conversion_error) X(question_conversion_error) X(client_open) X(client_free) X(call_open_question) X(call_open_records_question) X(call_send_text) X(call_send_json) X(call_send_invalid) X(call_end_input) X(call_next) X(call_cancel) X(call_free) X(error_free) X(row_free) X(question_new) X(question_add_choice) X(question_add_label) X(question_add_level) X(question_add_kind) X(question_add_rule) X(question_set_cut) X(question_set_band) X(question_set_evidence) X(question_set_top) X(question_add_entry) X(question_free) X(settings_new) X(settings_set_backend) X(settings_set_api_key) X(settings_set_model) X(settings_set_url) X(settings_set_batch) X(settings_set_retry) X(settings_free)
 #define DECLARE(name) static __typeof__(&thinkthen_##name) p_##name;
 SYMBOLS(DECLARE)
 static int32_t load_code = THINKTHEN_CODE_USAGE_ABI;
@@ -39,6 +39,7 @@ const char *tt_load(const char *path) {
     return NULL;
 }
 const char * tt_code_name(int32_t value) { return p_code_name(value); }
+const char *tt_code_family(int32_t value) { return p_code_family(value); }
 int32_t tt_settings_conversion_error(struct thinkthen_error *error) { return p_settings_conversion_error(error); }
 int32_t tt_question_conversion_error(struct thinkthen_error *error) { return p_question_conversion_error(error); }
 int32_t tt_client_open(const struct thinkthen_settings *settings, struct thinkthen_client **out, struct thinkthen_error *error) { return p_client_open(settings,out,error); }

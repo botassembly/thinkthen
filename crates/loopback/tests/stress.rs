@@ -100,3 +100,53 @@ fn stress_process_exposes_faults_statistics_and_owned_shutdown() {
     control.flush().unwrap();
     assert!(child.wait().unwrap().success());
 }
+
+#[test]
+fn held_process_waits_for_the_whole_paid_frontier() {
+    use std::process::{Command, Stdio};
+    let mut child = Command::new(env!("CARGO_BIN_EXE_loopback"))
+        .args(["--held", "headers"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut control = child.stdin.take().unwrap();
+    let mut output = BufReader::new(child.stdout.take().unwrap());
+    let mut line = String::new();
+    output.read_line(&mut line).unwrap();
+    let address = format!("127.0.0.1:{}", line.trim());
+    // The counted command consumes arrivals, just as the previous command does.
+    writeln!(control, "arrived 2").unwrap();
+    control.flush().unwrap();
+    let mut peers = Vec::new();
+    for _ in 0..2 {
+        let mut peer = TcpStream::connect(&address).unwrap();
+        peer.write_all(
+            b"POST /v1/systemone HTTP/1.1\r\nContent-Length: 16\r\n\r\n{\"questions\":{}}",
+        )
+        .unwrap();
+        peers.push(peer);
+    }
+    line.clear();
+    output.read_line(&mut line).unwrap();
+    assert_eq!(line.trim(), "arrived");
+    writeln!(control, "count").unwrap();
+    control.flush().unwrap();
+    line.clear();
+    output.read_line(&mut line).unwrap();
+    assert_eq!(line.trim(), "2");
+    let mut third = TcpStream::connect(&address).unwrap();
+    third
+        .write_all(b"POST /v1/systemone HTTP/1.1\r\nContent-Length: 16\r\n\r\n{\"questions\":{}}")
+        .unwrap();
+    writeln!(control, "arrived").unwrap();
+    control.flush().unwrap();
+    line.clear();
+    output.read_line(&mut line).unwrap();
+    assert_eq!(line.trim(), "arrived");
+    drop(peers);
+    drop(third);
+    writeln!(control, "shutdown").unwrap();
+    control.flush().unwrap();
+    assert!(child.wait().unwrap().success());
+}

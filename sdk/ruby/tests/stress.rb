@@ -9,11 +9,17 @@ settings[:retry] = ThinkThen::Retry.new(**settings.fetch(:retry).transform_keys(
 count = test.fetch("records")
 widths = {}
 failed = 0
+pulled = 0
 mutex = Mutex.new
 ThinkThen::Client.open(**settings) do |client|
   records = ->(offset) { count.times.lazy.map { |i| {"id" => "record-#{offset + i}", "body" => "record #{offset + i}"} } }
   if test.fetch("cancel")
-    rows = client.decide_each("Ready?", records.call(0), evidence: "/body")
+    held_records = count.times.lazy.map do |i|
+      pulled += 1
+      raise "input read ahead exceeded the engine bound" if test["read_ahead_limit"] && pulled > test["read_ahead_limit"]
+      {"id" => "record-#{i}", "body" => "record #{i}"}
+    end
+    rows = client.decide_each("Ready?", held_records, evidence: "/body")
     worker = Thread.new do
       begin
         rows.each { raise "held stream published a row" }
@@ -57,4 +63,4 @@ ThinkThen::Client.open(**settings) do |client|
     raise "wrong failed count" unless test.fetch("scenario").fetch("status") == "failed" ? failed.positive? : failed.zero?
   end
 end
-puts JSON.generate(identifier_width_mask: widths.keys.sum { |width| 1 << width }, calls: test.fetch("cancel") ? 1 : test.fetch("concurrency") * test.fetch("rounds"), rows: test.fetch("cancel") ? 0 : count * test.fetch("concurrency") * test.fetch("rounds"), failed: failed, cancelled: test.fetch("cancel"))
+puts JSON.generate(read_ahead_records: pulled, identifier_width_mask: widths.keys.sum { |width| 1 << width }, calls: test.fetch("cancel") ? 1 : test.fetch("concurrency") * test.fetch("rounds"), rows: test.fetch("cancel") ? 0 : count * test.fetch("concurrency") * test.fetch("rounds"), failed: failed, cancelled: test.fetch("cancel"))

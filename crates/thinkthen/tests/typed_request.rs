@@ -435,3 +435,77 @@ fn admitted_labels_keep_original_bytes_and_execution_identity() {
         }
     }
 }
+
+#[test]
+fn retry_counts_above_the_engine_budget_are_usage_errors() {
+    use std::time::Duration;
+    use thinkthen::Retry;
+    for count in [11_u32, u32::MAX] {
+        let settings = format!(r#"{{"backend":"stub","retry":{{"max_retries":{count}}}}}"#);
+        let error = Settings::from_json(&settings).unwrap_err();
+        assert_eq!(error.code().as_str(), "usage.settings");
+        assert!(Retry::new(count, Duration::ZERO, Duration::from_secs(1)).is_err());
+    }
+    for count in 0..=10 {
+        let settings = format!(r#"{{"backend":"stub","retry":{{"max_retries":{count}}}}}"#);
+        Settings::from_json(&settings).unwrap();
+        Retry::new(count, Duration::ZERO, Duration::from_secs(1)).unwrap();
+    }
+}
+
+#[cfg(feature = "native")]
+#[test]
+fn sql_retry_settings_cannot_raise_the_default_budget() {
+    for count in 0..=10 {
+        let text = format!(r#"{{"backend":"stub","retry":{{"max_retries":{count}}}}}"#);
+        let result = thinkthen::native::sql_settings(&text);
+        if count > 3 {
+            assert_eq!(result.unwrap_err().code().as_str(), "usage.settings");
+        } else {
+            result.unwrap();
+        }
+    }
+}
+
+#[cfg(feature = "native")]
+#[test]
+fn postgres_input_nul_is_not_an_output_representation_failure() {
+    use thinkthen::{AnyRow, Decide, Record, RecordId};
+    let server = loopback::Loopback::noul(0.9).unwrap();
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(loopback::KEY).unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let question = Decide::new("Ready?").unwrap();
+    for text in [
+        r#""before\u0000after""#,
+        r#"{"id":7,"body":"before\u0000after","key\u0000name":"value"}"#,
+    ] {
+        let record = thinkthen::native::sql_postgres_record(text);
+        let row = engine.run(&question, record).unwrap();
+        let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+        let value = serde_json::to_value(row).unwrap();
+        assert_eq!(value["status"], "answered", "{text}");
+        assert_eq!(value["answer"], true);
+    }
+    assert_eq!(server.count(), 2);
+    let record =
+        thinkthen::native::sql_postgres_record(r#"{"id":"bad\u0000id","body":"evidence"}"#);
+    let row = engine.run(&question, record).unwrap();
+    let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+    let value = serde_json::to_value(row).unwrap();
+    assert_eq!(value["status"], "failed");
+    assert_eq!(value["error"]["code"], "record.json");
+    assert!(value.get("id").is_none());
+    assert_eq!(server.count(), 2, "unrepresentable ID sent a paid request");
+    // Output identifiers still obey PostgreSQL's text/jsonb representation limit.
+    let record = Record::text("evidence").with_id(RecordId::String("bad\0id".into()));
+    let row = engine.run(&question, record).unwrap();
+    let row = thinkthen::native::sql_postgres_row(AnyRow::Decide(row)).unwrap();
+    let value = serde_json::to_value(row).unwrap();
+    assert_eq!(value["status"], "failed");
+    assert_eq!(value["error"]["code"], "record.json");
+    assert!(value.get("id").is_none());
+    assert_eq!(server.count(), 3);
+}

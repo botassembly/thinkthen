@@ -21,6 +21,7 @@ public final class DriverCall implements AutoCloseable {
         return thread;
     });
     private final DriverClient client;
+    private final String expectedFunction;
     private final MemorySegment clientHandle;
     private MemorySegment handle = MemorySegment.NULL;
     private DriverEvents events;
@@ -30,6 +31,7 @@ public final class DriverCall implements AutoCloseable {
     private final CompletableFuture<Void> released = new CompletableFuture<>();
     DriverCall(DriverClient client, MemorySegment clientHandle, byte[] request, java.util.List<DriverRecord> initial) {
         this.client = client;
+        expectedFunction = Json.read(request).path("question").path("function").asText();
         this.clientHandle = clientHandle;
         synchronized (lifetime) {
             admission = submit(() -> {
@@ -119,17 +121,41 @@ public final class DriverCall implements AutoCloseable {
                     long position = row.get(Native.SIZE,Native.offset("position"));
                     fields.put("position",position);
                     fields.put("function",Contract.functionName(row.get(ValueLayout.JAVA_INT,Native.offset("function"))));
-                    fields.put("status",Contract.statusName(row.get(ValueLayout.JAVA_INT,Native.offset("status"))));
+                    String nativeStatus = Contract.statusName(row.get(ValueLayout.JAVA_INT,Native.offset("status")));
+                    fields.put("status",nativeStatus);
                     double probability = row.get(ValueLayout.JAVA_DOUBLE,Native.offset("probability"));
                     if (!Double.isNaN(probability)) fields.put("probability",probability);
                     for (String field : new String[]{"id","answer","source","error"}) {
                         byte[] bytes = Native.rowBytes(row,field);
+                        if (field.equals("answer") && bytes.length != 0 && !"answered".equals(nativeStatus))
+                            throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
                         if (bytes.length != 0) fields.set(field,Json.read(bytes));
                     }
-                    return new DriverRow(Json.bytes(fields),Native.rowBytes(row,"detail"),position);
+                    byte[] detail = Native.rowBytes(row,"detail");
+                    if (!expectedFunction.equals(fields.path("function").asText())) throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
+                    validateOutcome(fields,detail.length != 0);
+                    var source = fields.path("source");
+                    if (!source.isObject() || !source.path("question_identity").isTextual() || !source.path("backend").isTextual() || !source.path("model").isTextual()
+                        || (source.hasNonNull("name") && !source.get("name").isTextual())
+                        || source.properties().stream().anyMatch(entry -> !java.util.Set.of("question_identity","backend","model","name").contains(entry.getKey())))
+                        throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
+                    if (expectedFunction.equals("annotate") && fields.path("answer").isObject())
+                        fields.get("answer").forEach(entry -> validateOutcome(entry,entry.has("detail")));
+                    return new DriverRow(Json.bytes(fields),detail,position);
+                } catch (java.io.UncheckedIOException cause) {
+                    throw DriverClient.invalidRow(cause);
                 } finally { NativeStream.row_free(row); }
             }
         });
+    }
+    private static void validateOutcome(com.fasterxml.jackson.databind.JsonNode fields, boolean hasDetail) {
+        boolean valid = switch (fields.path("status").asText()) {
+            case "answered" -> fields.has("answer") && !fields.has("error");
+            case "unsure" -> !fields.has("answer") && !fields.has("error") && fields.path("probability").isNumber();
+            case "failed" -> !fields.has("answer") && !fields.has("probability") && !hasDetail && fields.has("error");
+            default -> false;
+        };
+        if (!valid) throw new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
     }
     public DriverEvents.Wait waitForEvent(long version) {
         synchronized (lifetime) {

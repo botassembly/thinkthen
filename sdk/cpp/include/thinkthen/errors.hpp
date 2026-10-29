@@ -20,6 +20,10 @@ public:
     errc code() const noexcept { return code_; }
     std::optional<std::uint16_t> http_status() const noexcept { return http_status_; }
     std::int32_t raw_code() const noexcept { return static_cast<std::int32_t>(code_); }
+    std::string_view family() const noexcept {
+        const auto* family = thinkthen_code_family(raw_code());
+        return family ? std::string_view{family} : std::string_view{};
+    }
     bool unknown_code() const noexcept { return !detail::known_code(raw_code()); }
 };
 namespace detail {

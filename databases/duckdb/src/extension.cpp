@@ -34,13 +34,16 @@ using Document = std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)>;
 const uint8_t *Bytes(const string &value) { return reinterpret_cast<const uint8_t *>(value.data()); }
 string Text(const thinkthen_buffer &value) { return string(reinterpret_cast<const char *>(value.data), value.len); }
 #include "values.hpp"
+Value EngineCode(int32_t number) {
+    auto code = thinkthen_code_name(number);
+    if (!code) throw InvalidInputException("usage.abi: unknown engine error code");
+    try { return Value(code).DefaultCastAs(CodeType()); }
+    catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
+}
 void Checked(int32_t result, ErrorOwner &error) {
     if (result != THINKTHEN_ERROR) return;
-    auto code = thinkthen_code_name(error.value.code);
-    if (!code) throw InvalidInputException("usage.abi: unknown engine error code");
-    try { Value(code).DefaultCastAs(CodeType()); }
-    catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
-    throw InvalidInputException("%s: %s", code, Text(error.value.message).c_str());
+    auto code = EngineCode(error.value.code).ToString();
+    throw InvalidInputException("%s: %s", code.c_str(), Text(error.value.message).c_str());
 }
 ClientOwner Client(const string &settings) {
     thinkthen_client *client = nullptr;
@@ -133,11 +136,8 @@ void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &
     if (!status) throw InvalidInputException("usage.abi: unknown engine status");
     put(Value(status).DefaultCastAs(StatusType()));
     put(std::isnan(row.probability) ? Value(LogicalTypeId::DOUBLE) : Value::DOUBLE(row.probability));
-    if (row.error_code) {
-        auto code = thinkthen_code_name(row.error_code);
-        try { put(Value(code).DefaultCastAs(CodeType())); }
-        catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
-    } else put(Value(CodeType()));
+    if (row.error_code) put(EngineCode(row.error_code));
+    else put(Value(CodeType()));
     auto error = row.error.data ? Parse(Text(row.error)) : Document(nullptr, yyjson_doc_free);
     auto root = error ? yyjson_doc_get_root(error.get()) : nullptr;
     put(Project(LogicalTypeId::VARCHAR, root ? yyjson_obj_get(root, "message") : nullptr));

@@ -4,6 +4,7 @@
 int32_t tt_load_code(void);
 const char *tt_load(const char *path);
 const char * tt_code_name(int32_t value);
+const char *tt_code_family(int32_t value);
 int32_t tt_settings_conversion_error(struct thinkthen_error *error);
 int32_t tt_question_conversion_error(struct thinkthen_error *error);
 int32_t tt_client_open(const struct thinkthen_settings *settings, struct thinkthen_client **out, struct thinkthen_error *error);

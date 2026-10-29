@@ -95,7 +95,7 @@ int main(void) {
         if(event==THINKTHEN_PENDING)continue;
         ok(event,&error);break;
     }
-    assert(row.status==THINKTHEN_STATUS_FAILED && row.error_code==THINKTHEN_CODE_RECORD_JSON);
+    assert(row.status==THINKTHEN_STATUS_ANSWERED && row.error_code==0);
     assert(row.id.len==2 && !memcmp(row.id.data,"42",2));thinkthen_row_free(&row);
     assert(thinkthen_sql_call_poll_postgres(call,20,NULL,NULL,&row,&error)==THINKTHEN_END);
     thinkthen_question_free(question);question=NULL;

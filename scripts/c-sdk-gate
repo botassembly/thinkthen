@@ -27,18 +27,25 @@ cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
 cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
     $flags -o "$scratch/conformance"
 cc -std=c11 -Wall -Wextra -Werror "$scratch/readme/example.c" $flags -o "$scratch/example"
-cargo build --locked -p loopback --bin loopback
+if [ -n "${THINKTHEN_LOOPBACK:-}" ]; then
+    test -x "$THINKTHEN_LOOPBACK"
+else
+    cargo build --locked -p loopback --bin loopback
+    THINKTHEN_LOOPBACK="$build_target/debug/loopback"
+fi
+export THINKTHEN_LOOPBACK
 c_library=$(find "$scratch/installed/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
 case $(uname -s) in Darwin) c_attempted=$(pkg-config --variable=libdir thinkthen-c)/$(basename "$c_library") ;; *) c_attempted=$(basename "$c_library") ;; esac
 python3 scripts/loader-failure-check "$c_library" --attempted "$c_attempted" -- "$scratch/example"
 "$scratch/example"
 cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $flags -o "$scratch/original"
 "$scratch/original"
+python3 sdk/c/tests/installed_boundaries.py "$root" "$flags" "$c_library"
 mkdir "$scratch/home"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
 python3 sdk/c/tests/toolbox.py "$scratch/consumer" "$root"
-HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$build_target/debug/loopback" "$scratch/conformance" "$root/conformance/typed/manifest.json"
-THINKTHEN_LOOPBACK="$build_target/debug/loopback" python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
+HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$THINKTHEN_LOOPBACK" "$scratch/conformance" "$root/conformance/typed/manifest.json"
+python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
 cmake -S sdk/c/tests -B "$scratch/cmake-consumer" \
     -DCMAKE_PREFIX_PATH="$scratch/installed" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$scratch/cmake-consumer" --parallel 2

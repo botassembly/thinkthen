@@ -2,9 +2,11 @@
 """Check the common binding contract before surface consumers run its fixtures."""
 
 import json
+import runpy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+applicability = runpy.run_path(str(ROOT / "scripts/construction-check"))["applicability"]
 
 
 def read(path):
@@ -53,12 +55,14 @@ require(set(manifest["backends"]) == names(registry["backends"]) - {"stub"},
 covered = set()
 for filename in manifest["cases"]:
     case = read("conformance/typed/" + filename)
+    applicability(case)
     covered.add(case["request"]["question"]["function"])
     require("expected" in case and "requests" in case, "semantic case lacks rows or call count")
 require(covered == functions, "semantic corpus does not cover every function")
 for filename in ("construction/stub.json", "construction/options.json"):
     cases = read(filename)
     for case in cases:
+        applicability(case)
         require("question" in case["request"] and "options" not in case["request"],
                 "construction case retains the removed request envelope")
         require(case.get("expected_error", abi["error"]["code"]) in codes,

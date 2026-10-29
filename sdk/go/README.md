@@ -34,6 +34,8 @@ func main() {
 }
 ```
 
+`Error.Code().Family()` returns the engine’s error family. `errors.Is(err, thinkthen.ErrUsage)` matches usage errors. Unknown code families return an empty string.
+
 [API reference](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/go/thinkthen).
 
 For a system library on Linux or macOS, extract the matching [C archive](../c/README.md) into `thinkthen` and install pkg-config. Save the example as `main.go` in your Go module, then run:

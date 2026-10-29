@@ -4,8 +4,8 @@ set -eu
 cd "$(dirname "$0")/.."
 case "${1:-all}" in all|native|ownership|conformance) ;; *) echo 'usage: scripts/postgres-gate [all|native|ownership|conformance]' >&2; exit 2 ;; esac
 if [ "$(uname -s)" != Linux ]; then
-    echo 'PostgreSQL package targets Linux; its installed gate runs on the Linux builder'
-    exit 0
+    echo 'Skipped PostgreSQL: package targets Linux; installed gate runs on the Linux builder'
+    exit 77
 fi
 job=${PM_JOB:-local}
 root=$PWD

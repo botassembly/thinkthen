@@ -20,4 +20,8 @@ FROM thinkthen_decide(
     'Does the message request a refund?');
 ```
 
+SQL cannot set `max_retries` above the engine default.
+
+DuckDB can buffer one native input vector while a backend request is held. This host buffer is separate from the engine iterator’s read-ahead bound.
+
 [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/databases/duckdb/src/extension.cpp).

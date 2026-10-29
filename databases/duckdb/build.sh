@@ -12,6 +12,10 @@ case $(uname -s) in
     Linux) native='c;m;rt;pthread;gcc_s;util;rt;pthread;m;dl;c' ;;
     *) exit 2 ;;
 esac
+if [ -n "${THINKTHEN_DUCKDB_ABI_HEADER:-}" ]; then
+    [ "${THINKTHEN_SQL_TEST_BUILD:-OFF}" = ON ] || { echo 'ABI override requires a fixture build' >&2; exit 2; }
+    [ -f "$THINKTHEN_DUCKDB_ABI_HEADER" ] || { echo 'Missing job-owned ABI header' >&2; exit 2; }
+fi
 build=$(mktemp -d)
 trap 'rm -rf "$build"' EXIT HUP INT TERM
 mkdir -p "$THINKTHEN_DUCKDB_OUTPUT"
@@ -20,6 +24,7 @@ cmake -S databases/duckdb -B "$build" \
     -DTHINKTHEN_ARCHIVE="$THINKTHEN_SQL_ARCHIVE" -DTHINKTHEN_NATIVE_LIBS="$native" \
     -DTHINKTHEN_TEST_BUILD="${THINKTHEN_SQL_TEST_BUILD:-OFF}" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DTHINKTHEN_ABI_HEADER="${THINKTHEN_DUCKDB_ABI_HEADER:-}" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
 cmake --build "$build" --parallel 2
 cp "$build/thinkthen.duckdb_extension" "$THINKTHEN_DUCKDB_OUTPUT/"

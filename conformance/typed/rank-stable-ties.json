@@ -1,0 +1,65 @@
+{
+  "name": "rank-stable-ties",
+  "request": {
+    "question": {
+      "function": "rank",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ]
+    },
+    "records": [
+      "a",
+      "b",
+      "c"
+    ]
+  },
+  "replies": [
+    {
+      "distribution": {
+        "low": 0.5,
+        "high": 0.5
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "rank",
+      "position": 1,
+      "status": "answered",
+      "answer": 1,
+      "detail": {
+        "levels": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "function": "rank",
+      "position": 2,
+      "status": "answered",
+      "answer": 2,
+      "detail": {
+        "levels": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "function": "rank",
+      "position": 3,
+      "status": "answered",
+      "answer": 3,
+      "detail": {
+        "levels": [
+          0.5,
+          0.5
+        ]
+      }
+    }
+  ],
+  "requests": 1
+}

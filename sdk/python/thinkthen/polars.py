@@ -144,7 +144,7 @@ def _project(value: dict[str, Any], *, child: bool = False) -> dict[str, Any]:
             for key, outcome in value["answer"].items()
         }
     if function == "filter":
-        value["kept"] = None if value["status"] == "failed" else value["answer"] is True
+        value["kept"] = value["status"] == "answered" and value["answer"] is True
     return value
 
 

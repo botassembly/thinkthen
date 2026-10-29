@@ -1,0 +1,20 @@
+{
+  "name": "usage-batch-zero",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      []
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "usage.batch"
+  },
+  "requests": 0,
+  "client": {
+    "batch": 0
+  }
+}

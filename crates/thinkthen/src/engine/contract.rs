@@ -73,13 +73,15 @@ impl Engine {
                         self.backend.limits(),
                         identity,
                     );
+                    // Reserve space before asking the input owner for another batch.
+                    permits.recv().map_err(|_| fault())?;
                     let mut place = 0;
                     let mut send = |chunk| -> Result<(), Error> {
-                        permits.recv().map_err(|_| fault())?;
                         self.cancel.complete(Ok(()))?;
                         producer.send(Event::Queued).map_err(|_| fault())?;
                         jobs.send((place, chunk)).map_err(|_| fault())?;
                         place += 1;
+                        permits.recv().map_err(|_| fault())?;
                         Ok(())
                     };
                     for record in records {

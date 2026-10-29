@@ -108,3 +108,24 @@ def ruby_saved_calls
     end
   end
 end
+
+# Feature: canonical row comparison refuses undeclared answers and numeric coercion.
+def ruby_strict_contract
+  expected = {"function" => "decide", "position" => 1, "status" => "unsure", "probability" => 0.6}
+  raises(RuntimeError) { strict_contract(expected, normalized_contract(expected.merge("answer" => nil))) }
+  raises(RuntimeError) { strict_contract(1, 1.0) }
+end
+
+# Feature: shared row provenance matches the selected client before normalization.
+def ruby_source_contract
+  expected = {"function" => "decide", "position" => 1, "status" => "unsure", "probability" => 0.6}
+  source = {"backend" => "openai", "model" => "fixture-model", "question_identity" => "fixture"}
+  row = expected.merge("source" => source)
+  strict_row_contract(expected, row, "openai", "fixture-model")
+  [source.merge("backend" => "stub"), source.merge("model" => "wrong-model")].each do |wrong|
+    raises(RuntimeError) { strict_row_contract(expected, row.merge("source" => wrong), "openai", "fixture-model") }
+  end
+  labels = {"code" => 0.9, "message" => 0.1}
+  strict_contract(labels, normalized_contract(labels))
+  raises(RuntimeError) { strict_contract(labels.reject { |key, _| key == "message" }, normalized_contract(labels)) }
+end

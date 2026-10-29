@@ -2,7 +2,7 @@ const std = @import("std");
 const c = @import("c");
 const native = @import("native.zig");
 pub const ErrorCode = @import("codes").ErrorCode;
-pub const Error = error{ OutOfMemory, Usage, Setup, Transport, Cancelled, EngineVersion, Internal, UnknownCode, RecordSource };
+pub const Error = error{ OutOfMemory, Usage, Setup, Transport, Cancelled, EngineVersion, Internal, UnknownCode, RecordSource, Record, Backend, Local };
 pub const Failure = struct {
     code: ?ErrorCode,
     message: []const u8,
@@ -80,7 +80,21 @@ pub fn incompatible(diag: ?*Diagnostic) Error {
 }
 pub fn promote(failure: Failure, diag: ?*Diagnostic) Error {
     if (diag) |d| d.set(failure);
-    return if (failure.code) |code| code.operationError() else error.UnknownCode;
+    const code = failure.code orelse return error.UnknownCode;
+    if (code == .usage_abi) return error.EngineVersion;
+    if (code == .local_cancelled) return error.Cancelled;
+    native.ready() catch |failure_to_load| switch (failure_to_load) {
+        error.EngineVersion => return incompatible(diag),
+        error.LoadFailure => return error.Setup,
+    };
+    const raw = native.function("thinkthen_code_family")(@backingInt(code));
+    if (raw == null) return error.UnknownCode;
+    const family = std.mem.span(raw);
+    if (std.mem.eql(u8, family, "usage")) return error.Usage;
+    if (std.mem.eql(u8, family, "record")) return error.Record;
+    if (std.mem.eql(u8, family, "backend")) return error.Backend;
+    if (std.mem.eql(u8, family, "local")) return error.Local;
+    return error.Internal;
 }
 pub fn check(result: i32, err: *c.thinkthen_error, diag: ?*Diagnostic) Error!void {
     if (result == c.THINKTHEN_OK) return;

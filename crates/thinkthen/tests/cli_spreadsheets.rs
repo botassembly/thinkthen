@@ -948,3 +948,48 @@ fn workbook_shared_text_uses_the_record_byte_limit() {
             .exists()
     );
 }
+
+#[test]
+fn spreadsheet_environment_selects_sheet_columns_destination_and_replacement() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("book.xlsx");
+    let destination = directory.path().join("answers.xlsx");
+    workbook(&input);
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub"])
+        .arg(&input)
+        .env("THINKTHEN_FROM", "xlsx")
+        .env("THINKTHEN_SHEET", "Intake")
+        .env("THINKTHEN_COLUMNS", r#"["Body"]"#)
+        .env("THINKTHEN_INTO", "ready")
+        .env("THINKTHEN_OUTPUT", &destination)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let sheet = String::from_utf8(member(&destination, "xl/worksheets/sheet1.xml")).unwrap();
+    assert!(sheet.contains("<t xml:space=\"preserve\">ready_status</t>"));
+    assert!(sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"));
+    assert_eq!(
+        member(&input, "xl/worksheets/sheet2.xml"),
+        member(&destination, "xl/worksheets/sheet2.xml")
+    );
+    let csv = directory.path().join("input.csv");
+    fs::write(&csv, "Body\nevidence\n").unwrap();
+    let output = support::command()
+        .args(["decide", "Ready?", "--backend", "stub"])
+        .arg(&csv)
+        .env("THINKTHEN_COLUMNS", r#"["Body"]"#)
+        .env("THINKTHEN_INTO", "ready")
+        .env("THINKTHEN_IN_PLACE", "true")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert!(table(&csv, b',')[0].contains(&"ready_status".to_owned()));
+    assert!(directory.path().read_dir().unwrap().any(|entry| {
+        entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .contains("backup")
+    }));
+}

@@ -24,6 +24,7 @@ module ThinkThen
       attach_function :thinkthen_abi_version, [], :uint32
       attach_function :thinkthen_abi_compatible, [:uint32, :uint32], :uint8
       attach_function :thinkthen_code_name, [:int32], :string
+      attach_function :thinkthen_code_family, [:int32], :string
       actual = thinkthen_abi_version
       required = NativeContract::ABI_VERSION
       unless thinkthen_abi_compatible(required, actual) != 0
@@ -258,6 +259,16 @@ module ThinkThen
       mapping.fetch(value) { raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE) }
     end
 
+    def self.error_class(value, code)
+      family = thinkthen_code_family(value)
+      klass = {"usage" => UsageError, "backend" => BackendError, "internal" => InternalError,
+               "record" => LocalError, "local" => LocalError}.fetch(family) do
+        raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
+      end
+      code == "local.cancelled" ? Cancelled : klass
+    end
+    private_class_method :error_class
+
     def self.checked
       error = NativeError.new
       result = yield error
@@ -266,13 +277,7 @@ module ThinkThen
         unless code && NativeContract::CODE_NAMES.key?(error[:code])
           raise UnknownCodeError.new(copy(error[:message]), raw_code: error[:code], raw_name: code, http_status: error[:http_status].zero? ? nil : error[:http_status])
         end
-        klass = case code
-                when "local.cancelled" then Cancelled
-                when /^usage\./ then UsageError
-                when /^backend\./ then BackendError
-                when /^internal\./ then InternalError
-                else LocalError
-                end
+        klass = error_class(error[:code], code)
         raise klass.new(copy(error[:message]), code: error_symbol(code), http_status: error[:http_status].zero? ? nil : error[:http_status])
       end
       result

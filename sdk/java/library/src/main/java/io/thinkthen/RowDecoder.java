@@ -11,11 +11,15 @@ final class RowDecoder<A,D extends Detail> {
         this.answer = answer; this.detail = detail;
     }
     Row<A,D> row(io.thinkthen.internal.DriverCall.DriverRow packet) {
+        try { return decode(packet); }
+        catch (RuntimeException cause) { throw Values.error(io.thinkthen.internal.DriverClient.invalidRow(cause)); }
+    }
+    private Row<A,D> decode(io.thinkthen.internal.DriverCall.DriverRow packet) {
         var fields = Values.parse(new String(packet.fields(),java.nio.charset.StandardCharsets.UTF_8));
         var source = fields.path("source");
         var info = new RowInfo(Function.valueOf(fields.get("function").asText().toUpperCase(java.util.Locale.ROOT)),packet.position(),
             fields.has("id") ? Optional.of(Values.json(fields.get("id"))) : Optional.empty(),
-            source.isMissingNode() ? Optional.empty() : Optional.of(new Source(source.get("question_identity").asText(),Backend.valueOf(source.get("backend").asText().toUpperCase(java.util.Locale.ROOT)),source.get("model").asText(),source.has("name") ? Optional.of(source.get("name").asText()) : Optional.empty())));
+            source.isMissingNode() ? Optional.empty() : Optional.of(new Source(source.get("question_identity").asText(),Backend.valueOf(source.get("backend").asText().toUpperCase(java.util.Locale.ROOT)),source.get("model").asText(),source.hasNonNull("name") ? Optional.of(source.get("name").asText()) : Optional.empty())));
         var decoded = outcome(fields,packet.detail().length == 0 ? null : Values.parse(new String(packet.detail(),java.nio.charset.StandardCharsets.UTF_8)));
         return switch (decoded) {
             case AnnotationAnswered<A,D> value -> new Answered<>(info,value.answer(),value.probability(),value.detail());

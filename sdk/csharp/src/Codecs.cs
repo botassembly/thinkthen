@@ -52,7 +52,7 @@ internal static class Json
 }
 public static class ErrorCodes
 {
-    public static ErrorFamily Family(this ErrorCode code) => (Contract.CodeName((int)code)?.Split('.')[0]) switch
+    public static ErrorFamily Family(this ErrorCode code) => (Marshal.PtrToStringUTF8(Native.CodeFamily((int)code))) switch
     { "usage" => ErrorFamily.Usage, "record" => ErrorFamily.Record, "backend" => ErrorFamily.Backend,
       "local" => ErrorFamily.Local, "internal" => ErrorFamily.Internal, _ => throw Json.Abi() };
 }
@@ -81,6 +81,8 @@ internal static class Codecs
     {
         try
         {
+            if (Contract.FunctionName(function) != expectedFunction) throw Json.Abi();
+            if (answer.Length != 0 && Contract.StatusName(status) != "answered") throw Json.Abi();
             JsonObject raw = new() { ["function"] = expectedFunction, ["position"] = position,
                 ["status"] = Contract.StatusName(status), ["source"] = JsonNode.Parse(source) };
             if (id.Length > 0) raw["id"] = JsonNode.Parse(id);
@@ -90,7 +92,10 @@ internal static class Codecs
             if (!double.IsNaN(probability)) raw["probability"] = probability;
             using var document = JsonDocument.Parse(raw.ToJsonString());
             JsonElement value = document.RootElement;
+            ValidateOutcome(value);
             JsonElement route = value.GetProperty("source");
+            foreach (var field in route.EnumerateObject())
+                if (field.Name is not ("question_identity" or "backend" or "model" or "name")) throw Json.Abi();
             Source typedSource = new(route.GetProperty("question_identity").GetString()!,
                 Json.Backend(route.GetProperty("backend").GetString()!), route.GetProperty("model").GetString()!,
                 route.TryGetProperty("name", out var name) ? name.GetString() : null);
@@ -164,6 +169,7 @@ internal static class Codecs
     }
     private static EntryOutcome<A,D> Outcome<A,D>(string function, JsonElement value)
     {
+        ValidateOutcome(value);
         double? probability = value.TryGetProperty("probability", out var p) ? p.GetDouble() : null;
         D? detail = value.TryGetProperty("detail", out var d) ? Detail<D>(function, d) : default;
         return value.GetProperty("status").GetString() switch
@@ -173,6 +179,18 @@ internal static class Codecs
             "failed" => new EntryFailed<A,D>(Error(value.GetProperty("error"))),
             _ => throw Json.Abi()
         };
+    }
+    private static void ValidateOutcome(JsonElement value)
+    {
+        bool Has(string field) => value.TryGetProperty(field, out _);
+        bool valid = value.GetProperty("status").GetString() switch
+        {
+            "answered" => Has("answer") && !Has("error"),
+            "unsure" => !Has("answer") && !Has("error") && Has("probability"),
+            "failed" => !Has("answer") && !Has("probability") && !Has("detail") && Has("error"),
+            _ => false
+        };
+        if (!valid) throw Json.Abi();
     }
     private static AnnotationEntry Entry(JsonElement value) => value.GetProperty("function").GetString() switch
     {

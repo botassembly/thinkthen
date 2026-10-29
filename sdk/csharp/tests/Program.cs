@@ -25,8 +25,25 @@ internal static partial class Program
             catch (Exception error) { Console.Error.WriteLine(error.Message); Environment.ExitCode = 1; }
             return;
         }
+        if (args is ["--entry-forms", var cases, var loopback])
+        {
+            await SharedOptions(Path.Combine(cases,"..","construction","options.json"));
+            await Conformance(Path.Combine(cases,"typed"),loopback);
+            return;
+        }
         if (args is ["--sdk-fixes", var registry]) { await SdkFixes(registry); return; }
         if (args is ["--stress-adapter"]) { await StressAdapter(); return; }
+        if (args.Length >= 1 && args[0] == "--malformed-row")
+        {
+            using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
+            if (args.Length > 1 && args[1] == "unknown-family")
+            {
+                await Code(ErrorCode.UsageAbi, () => Task.FromResult(ErrorCode.UsageSettings.Family()));
+                return;
+            }
+            await Code(ErrorCode.UsageAbi, async () => { await client.DecideAsync<string?>("Ready?",args.Length > 1 && (args[1] == "unanswered-answer" || args[1].StartsWith("failed-", StringComparison.Ordinal)) ? null : "alpha"); });
+            return;
+        }
         if (args is ["--abi-refusal"])
         {
             await Code(ErrorCode.UsageAbi, async () =>
@@ -45,7 +62,9 @@ internal static partial class Program
         await Construction(args[0]);
         await AdmissionCases(args[1]);
         await Conformance(Path.Combine(args[1], "typed"), args[2]);
-        await OptionCases();
+        await OptionCases(args[1]);
+        await SharedOptions(Path.Combine(args[1],"..","construction","options.json"));
+        await SdkUsageErrors();
         await SavedToolbox(Path.Combine(args[1], "toolbox"));
         await HostBehavior(args[2], args[1]);
         await EncoderCauses();
@@ -94,7 +113,7 @@ internal static partial class Program
 
     private static async Task Cancelled(Task task, CancellationToken token = default)
     {
-        try { await task; }
+        try { await task.WaitAsync(TimeSpan.FromSeconds(2)); }
         catch (OperationCanceledException error)
         {
             Check(!token.CanBeCanceled || error.CancellationToken == token,

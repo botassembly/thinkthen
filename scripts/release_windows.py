@@ -142,6 +142,8 @@ def candidate(destination):
     from release_sites import crates
     crates(out)
     windows_requirements(out)
+    from release_windows_frames import stage as stage_frames
+    stage_frames(out)
     from release_windows_r import verified
     r = verified()
     native = build_native()
@@ -348,6 +350,11 @@ def check_sources(out):
     """Keep portable installed consumers with the candidate, away from the checkout."""
     for path in (ROOT / 'scripts/release').iterdir():
         if path.is_file(): copy(path, out / 'checks' / path.name)
+    for source, name in [('sdk/python/tests/frames.py', 'python-frames.py'),
+                         ('sdk/python/tests/conformance.py', 'conformance.py'),
+                         ('scripts/test_control.py', 'test_control.py')]:
+        copy(ROOT / source, out / 'checks' / name)
+    shutil.copytree(ROOT / 'conformance/typed', out / 'checks/conformance/typed')
     for family, patterns in {'go': ['*.go', 'go.mod'], 'c': ['conformance.c', 'rows.h'],
                               'cpp': ['consumer.cpp', '*.hpp'], 'swift': ['*.swift'], 'zig': ['*.zig', '*.zon']}.items():
         for pattern in patterns:

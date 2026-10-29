@@ -27,6 +27,8 @@ def argument_order():
             for variant in variants:
                 sql = invocation({**request, 'question': variant})
                 values = arguments(variant)
+                if 'name' in request:
+                    values.append('name := ' + quote(request['name']))
                 if 'question' in variant:
                     assert values[0] == quote(variant['question']), (path, sql)
                     values = values[1:]

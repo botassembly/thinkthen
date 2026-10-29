@@ -1,0 +1,22 @@
+{
+  "name": "find-empty",
+  "request": {
+    "question": {
+      "function": "find",
+      "question": "Which line?"
+    },
+    "records": [
+      " \r\n\t\n"
+    ]
+  },
+  "replies": [],
+  "expected": [
+    {
+      "function": "find",
+      "position": 1,
+      "status": "answered",
+      "answer": null
+    }
+  ],
+  "requests": 0
+}

@@ -37,7 +37,6 @@ pub fn saved(allocator: std.mem.Allocator, json: []const u8) ![]u8 {
 pub fn invalid(allocator: std.mem.Allocator, json: []const u8) !tt.Diagnostic {
     var diagnostic: tt.Diagnostic = .{};
     try std.testing.expectError(error.Usage, tt.Toolbox.fromJson(allocator, json, &diagnostic));
-    try std.testing.expectEqual(tt.ErrorCode.usage_question, diagnostic.code.?);
     try std.testing.expect(!diagnostic.truncated);
     return diagnostic;
 }

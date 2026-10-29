@@ -26,6 +26,7 @@ internal static partial class Program
             string? engineName = Marshal.PtrToStringUTF8(RegistryNative.CodeName(Convert.ToInt32(code)));
             Check(schema["codes"]!.AsArray().Single(value => value!["name"]!.GetValue<string>() == name)!["value"]!.GetValue<int>() == (int)code, "error numeric value differs from contract");
             Check(engineName == name, $"generated code {code} differs from its stable native value");
+            Check(code.Family().ToString().ToLowerInvariant() == schema["codes"]!.AsArray().Single(value => value!["name"]!.GetValue<string>() == name)!["family"]!.GetValue<string>(), "native error family differs from contract");
             actual.Add(name);
         }
         Check(actual.SetEquals(expected), "generated error enum omitted or invented an engine code");

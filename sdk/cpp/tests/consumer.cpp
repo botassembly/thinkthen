@@ -5,6 +5,8 @@
 namespace tt = thinkthen;
 using json = nlohmann::json;
 using any_question = std::variant<tt::decide, tt::choose, tt::tag, tt::score, tt::filter, tt::rank, tt::find, tt::recognize, tt::relate, tt::annotate>;
+// Feature: annotation construction refuses ranking at the public type boundary.
+static_assert(!std::is_constructible_v<tt::annotation_question, tt::rank>);
 
 template<class Q> Q options(Q q, const json& value) {
     if (value.contains("evidence")) q = q.evidence(value.at("evidence").get<std::string>());
@@ -66,6 +68,11 @@ static tt::settings settings(const json& value) {
 }
 #include "stress.hpp"
 
+template<class Q> static void append_row(json& rows, json& kept, const tt::row<Q>& row) {
+    rows.push_back(row);
+    if constexpr (std::is_same_v<Q, tt::filter>) kept.push_back(row.kept());
+}
+
 int main(int argc, char** argv) {
     if (argc > 1 && std::string{argv[1]}.find("stress") == 0) return stress_main(argc, argv);
     if (argc == 1) {
@@ -85,14 +92,24 @@ int main(int argc, char** argv) {
         assert(row.failure() && row.failure()->code() == tt::errc::record_missing);
         return 0;
     }
-    assert(argc == 3);
+    assert(argc == 3 || (argc == 4 && (std::string{argv[3]} == "cancelled" || std::string{argv[3]} == "shortcut")));
+    const bool shortcut = argc == 4 && std::string{argv[3]} == "shortcut";
     json rows = json::array();
+    json kept = json::array();
     try {
         const auto request = json::parse(argv[1]);
         tt::client owner{settings(json::parse(argv[2]))};
+        // Saved entries admit each representable question before typed conversion.
+        const auto& serialized = request.at("question");
+        json entries = json::object();
+        if (serialized.at("function") == "annotate") {
+            for (auto it = serialized.at("questions").begin(); it != serialized.at("questions").end(); ++it)
+                entries[it.key()] = {{"question", it.value()}};
+        } else entries["case"] = {{"question", serialized}};
+        (void)tt::toolbox::from_json(json{{"entries", entries}}.dump());
         auto q = question(request.at("question"));
         std::vector<tt::owned_record> records;
-        for (const auto& r : request.at("records")) {
+        for (const auto& r : request.value("records", json::array())) {
             if (r.is_null()) records.push_back(tt::missing_record{});
             else if (r.is_string()) records.push_back(tt::owned_text{r.get<std::string>()});
             else records.push_back(tt::json_record(r));
@@ -100,9 +117,19 @@ int main(int argc, char** argv) {
         std::optional<std::string> name;
         if (request.contains("name")) name = request.at("name");
         std::optional<std::string_view> named = name ? std::optional<std::string_view>{*name} : std::nullopt;
+        std::string single_text;
+        tt::record single = tt::missing_record{};
+        if (shortcut) {
+            assert(request.at("records").size() == 1);
+            const auto& input = request.at("records").front();
+            if (!input.is_null()) {
+                single_text = input.is_string() ? input.get<std::string>() : input.dump();
+                single = input.is_string() ? tt::record{tt::text{single_text}} : tt::record{tt::json_text{single_text}};
+            }
+        }
         std::visit([&](const auto& value) {
             using Q = std::decay_t<decltype(value)>;
-#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) for (const auto& row : owner.QNAME##_each(value, records, named)) rows.push_back(row);
+#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) { if (shortcut) append_row(rows, kept, owner.QNAME(value, single, named)); else { auto stream = owner.QNAME##_each(value, records, named); if (argc == 4) stream.cancel_handle().request_cancel(); for (const auto& row : stream) append_row(rows, kept, row); } }
             THINKTHEN_COLLECT(decide) THINKTHEN_COLLECT(choose)
             THINKTHEN_COLLECT(tag) THINKTHEN_COLLECT(score)
             THINKTHEN_COLLECT(filter) THINKTHEN_COLLECT(rank)
@@ -111,8 +138,8 @@ int main(int argc, char** argv) {
 #undef THINKTHEN_COLLECT
         }, q);
     } catch (const tt::error& error) {
-        std::cout << json{{"rows", rows}, {"error", thinkthen_code_name(static_cast<int>(error.code()))}} << '\n';
+        std::cout << json{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(static_cast<int>(error.code()))}} << '\n';
         return 0;
     }
-    std::cout << json{{"rows", rows}} << '\n';
+    std::cout << json{{"rows", rows}, {"kept", kept}} << '\n';
 }

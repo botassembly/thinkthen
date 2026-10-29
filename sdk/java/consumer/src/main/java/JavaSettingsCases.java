@@ -39,6 +39,20 @@ public final class JavaSettingsCases {
         try { ThinkThen.builder().backend(Backend.STUB).retry(RetryPolicy.builder().initialBackoff(Duration.ofNanos(1)).build()).build().close(); throw new AssertionError("fractional engine milliseconds must fail admission"); }
         catch (ThinkThenException error) { JavaApiCases.equal(error.code(),ErrorCode.USAGE_SETTINGS,"duration admission retains engine code"); }
     }
+    // Feature: typed retry settings enforce the engine-owned published bound.
+    static void retryBounds(Path contract) throws Exception {
+        var schema = ConsumerCases.JSON.readTree(contract.resolveSibling("client.schema.json").toFile());
+        int maximum = schema.at("/$defs/Retry/properties/max_retries/maximum").intValue();
+        JavaApiCases.check(maximum > 0, "Missing published retry bound");
+        try (var valid = ThinkThen.builder().backend(Backend.STUB).retry(RetryPolicy.builder().maxRetries(maximum).build()).build()) {
+            valid.decide("Ready?","alpha");
+        }
+        for (int retries : new int[] {-1, maximum + 1}) {
+            try (var invalid = ThinkThen.builder().backend(Backend.STUB).retry(RetryPolicy.builder().maxRetries(retries).build()).build()) {
+                invalid.decide("Ready?","alpha"); throw new AssertionError("Accepted retries outside the engine bound");
+            } catch (ThinkThenException error) { JavaApiCases.equal(error.code(),ErrorCode.USAGE_SETTINGS,"retry bound code"); }
+        }
+    }
     static void registry(Path contract) throws Exception {
         var codes = io.thinkthen.internal.DriverClient.codes();
         JavaApiCases.equal(ErrorCode.values().length,codes.size(),"complete generated error registry");
@@ -63,6 +77,6 @@ public final class JavaSettingsCases {
         child.environment().remove("THINKTHEN_API_KEY"); child.environment().remove("OPENAI_API_KEY");
         var process = child.inheritIO().start();
         JavaApiCases.equal(process.waitFor(),0,"failed construction clears builder key");
-        snapshotsAndExecutionName(); registry(Path.of(args[0]));
+        snapshotsAndExecutionName(); retryBounds(Path.of(args[0])); registry(Path.of(args[0]));
     }
 }

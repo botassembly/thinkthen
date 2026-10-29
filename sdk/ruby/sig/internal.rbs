@@ -82,6 +82,7 @@ module ThinkThen
     def self.thinkthen_abi_version: (*untyped) -> untyped
     def self.thinkthen_abi_compatible: (Integer, Integer) -> Integer
     def self.thinkthen_code_name: (Integer) -> String?
+    def self.thinkthen_code_family: (Integer) -> String?
     def self.toolbox_json: (String, ?saved: bool, ?definitions: bool) -> String
     def self.thinkthen_toolbox_from_json: (*untyped) -> untyped
     def self.thinkthen_toolbox_from_definitions_json: (*untyped) -> untyped
@@ -129,6 +130,7 @@ module ThinkThen
     def self.copy: (untyped) -> String
     def self.error_symbol: (String) -> error_code
     def self.discriminator: (Hash[Integer, String], Integer) -> String
+    def self.error_class: (Integer, String) -> singleton(Error)
     def self.checked: () { (untyped) -> untyped } -> untyped
     def self.bytes: (String) { (untyped, Integer) -> untyped } -> untyped
   end

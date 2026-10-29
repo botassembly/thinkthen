@@ -1,0 +1,74 @@
+{
+  "name": "annotate-cancel-before-call",
+  "request": {
+    "question": {
+      "function": "annotate",
+      "evidence": "/body",
+      "questions": {
+        "decision": {
+          "function": "decide",
+          "question": "Ready?"
+        },
+        "missing": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": "/absent"
+        },
+        "root": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": ""
+        },
+        "choice": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ]
+        },
+        "choice_unsure": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ],
+          "threshold": 0.9
+        },
+        "labels": {
+          "function": "tag",
+          "question": "Which labels?",
+          "labels": [
+            "urgent",
+            "routine"
+          ]
+        },
+        "scale": {
+          "function": "score",
+          "question": "How much?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        }
+      }
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "local.cancelled"
+  },
+  "requests": 0,
+  "cancelled": true,
+  "not_applicable": {
+    "r": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "sqlite": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "duckdb": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "postgres": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "bash": "The command has no persistent cancellation token before a process starts; its interrupt tests cover cancellation during held calls."
+  }
+}

@@ -70,6 +70,7 @@ expected <- tt_filter(lapply(seq_len(nrow(input)), function(i) {
   list(body = input$body[[i]], nested = input$nested[[i]])
 }), "Ready?", client = stub)
 stopifnot(identical(as.character(actual$status), c("answered", "failed", "answered")),
+  identical(actual$kept[[2]], FALSE),
   identical(actual[names(actual) != "item"], expected[names(expected) != "item"]))
 
 cat("R canonical frame encoding and isolated conversion failures passed\n")

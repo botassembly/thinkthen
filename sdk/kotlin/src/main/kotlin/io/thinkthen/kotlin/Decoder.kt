@@ -13,7 +13,7 @@ internal class Decoder<A,D>(private val answer: (JsonElement) -> A, private val 
         val position = packet.position().toULong()
         val id = fields["id"]?.let(RecordIdSerializer::read)
         val source = fields["source"]?.jsonObject?.let {
-            Source(it.text("question_identity"),fixedJson.decodeFromJsonElement(Backend.serializer(),it.getValue("backend")),it.text("model"),it["name"]?.jsonPrimitive?.content)
+            Source(it.text("question_identity"),fixedJson.decodeFromJsonElement(Backend.serializer(),it.getValue("backend")),it.text("model"),it["name"]?.takeUnless { name -> name == JsonNull }?.jsonPrimitive?.content)
         }
         val rawDetail = packet.detail().takeIf { it.isNotEmpty() }?.let { fixedJson.parseToJsonElement(it.toString(Charsets.UTF_8)) }
         return when(val result = outcome(fields,rawDetail)) {

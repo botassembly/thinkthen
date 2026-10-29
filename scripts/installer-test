@@ -28,6 +28,7 @@ from release_install import checksums
 
 
 class Mirror(SimpleHTTPRequestHandler):
+    extensions_map = dict(SimpleHTTPRequestHandler.extensions_map, **{'.ps1': 'text/plain; charset=utf-8'})
     def log_message(self, *_args):
         pass
 
@@ -98,11 +99,11 @@ def main():
             installed = install / binary.name
             receipt = install / 'thinkthen.install.json'
             command = (['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-                        '-File', str(ROOT / 'install.ps1')] if windows else ['sh', str(ROOT / 'install.sh')])
+                        '-File', str(ROOT / 'install.ps1')] if windows else ['dash' if platform.system() == 'Linux' else 'sh', str(ROOT / 'install.sh')])
 
             def run(*options, ok=True, folder=install):
                 current_env = dict(env, THINKTHEN_INSTALL_DIR=str(folder))
-                result = subprocess.run([*command, *options], env=current_env, capture_output=True, text=True)
+                result = subprocess.run([*command, *options], env=current_env, capture_output=True, text=True, timeout=120)
                 assert (result.returncode == 0) == ok, (options, result.stdout, result.stderr)
                 return result
 
@@ -111,6 +112,12 @@ def main():
                 assert re.fullmatch(r'thinkthen ' + re.escape(expected) + r'(?: \([^\r\n]*\))?\r?\n?', result.stdout), result.stdout
                 assert json.loads(receipt.read_text(encoding='utf-8-sig'))['state'] == 'installed'
 
+            if windows:
+                shutil.copy2(ROOT / 'install.ps1', mirror / 'install.ps1')
+                piped = ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
+                         f"irm '{base}/install.ps1' | iex"]
+                subprocess.run(piped, env=dict(env, THINKTHEN_INSTALL_DIR=str(install)), check=True, timeout=120)
+                version()
             run()
             version()
             metadata = releases.read_bytes()

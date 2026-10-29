@@ -151,6 +151,9 @@ internal static partial class Native
     [LibraryImport(Library, EntryPoint = "thinkthen_error_free")]
     internal static partial void ErrorFree(ref NativeError error);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_code_family")]
+    internal static partial nint CodeFamily(int code);
+    [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_code_name")]
     internal static partial nint CodeName(int code);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]

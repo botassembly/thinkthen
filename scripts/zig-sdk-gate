@@ -77,7 +77,9 @@ for invalid in invalid_annotation invalid_toolbox; do
         invalid_toolbox) grep -q "expected type.*AnnotationQuestions.*found.*Toolbox" "$scratch/$invalid.log" ;;
     esac
 done
-if [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
+if [ -n "${THINKTHEN_LOOPBACK:-}" ]; then
+    zig_loopback="$THINKTHEN_LOOPBACK"
+elif [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
     zig_loopback="$THINKTHEN_ZIG_DEBUG_CHECKPOINT/loopback"
 else
     cargo build --offline --locked -p loopback --bin loopback
@@ -86,10 +88,8 @@ build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 zig_native=$(find "$scratch/package/native" -type f -name 'libthinkthen_ffi.*' -print)
 python3 scripts/loader-failure-check "$scratch/consumer/zig-out/bin/$(basename "$zig_native")" --attempted "$([ "$(uname -s)" = Darwin ] && echo '@loader_path/libthinkthen_ffi.dylib' || echo 'libthinkthen_ffi.so')" -- "$scratch/consumer/zig-out/bin/consumer" load
-scripts/native-fixtures --engine "$zig_native" --output "$scratch/abi-fixtures"
-THINKTHEN_ZIG_ABI_FIXTURES="$scratch/abi-fixtures"
+THINKTHEN_ZIG_ABI_FIXTURES="${THINKTHEN_NATIVE_FIXTURES:?source the prepared ABI fixture environment before the Zig gate}"
 export THINKTHEN_ZIG_ABI_FIXTURES
-python3 sdk/zig/tests/run.py "$scratch/consumer/zig-out/bin/consumer" "$root" "${zig_loopback:-$build_target/debug/loopback}"
 if [ -n "${THINKTHEN_ZIG_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_ZIG_ARTIFACT_DIR"
     cp "$scratch/archive"/thinkthen-zig-*.tar.gz "$THINKTHEN_ZIG_ARTIFACT_DIR/"
@@ -97,3 +97,5 @@ if [ -n "${THINKTHEN_ZIG_ARTIFACT_DIR:-}" ]; then
     cp sdk/zig/examples/all-ten.py "$THINKTHEN_ZIG_ARTIFACT_DIR/"
     cp -R conformance/typed "$THINKTHEN_ZIG_ARTIFACT_DIR/typed"
 fi
+
+python3 sdk/zig/tests/run.py "$scratch/consumer/zig-out/bin/consumer" "$root" "${zig_loopback:-$build_target/debug/loopback}"

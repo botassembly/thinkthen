@@ -103,7 +103,9 @@ jobs:
     needs: [source, qualification]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    permissions: {contents: read, id-token: write, attestations: write}
+    permissions: {contents: read}
+    outputs:
+      artifact-ready: ${{ steps.upload-release.outcome == 'success' }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -128,14 +130,137 @@ jobs:
           scripts/jvm-prepare
           scripts/csharp-prepare
           scripts/release-workflow prepare-registry
+          python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_rust import prepare; prepare()'
+          cargo fetch --locked
       - name: Bundle every checked platform and its install guide
+        id: bundle-platforms
+        if: always()
         env:
           RELEASE_SHA: ${{ needs.source.outputs.sha }}
         run: |
           . scripts/native-tools-env
           scripts/release-workflow bundle platforms release "$RELEASE_SHA"
+      - name: Build and validate the final registry packages
+        id: registry-packages
+        if: always()
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+        run: |
+          . scripts/native-tools-env
           scripts/release-workflow registry platforms registries "$RELEASE_SHA"
-          scripts/release-workflow attach registries release "$RELEASE_SHA"
+      - name: Install the final Rust crate offline
+        id: crate-install
+        if: always()
+        run: |
+          . scripts/native-tools-env
+          scripts/crate-install-check registries/crates
+      - name: Attach registry packages and verify complete release checksums
+        id: attach-registries
+        if: always()
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+        run: python3 scripts/release-workflow attach registries release "$RELEASE_SHA"
+      - name: Admit the complete release before transporting it to consumers
+        id: admit-release
+        if: always() && steps.attach-registries.outcome == 'success'
+        env:
+          RELEASE_TAG: ${{ needs.source.outputs.tag }}
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+        run: scripts/release-workflow draft release "$RELEASE_TAG" "$RELEASE_SHA" --dry-run
+      - name: Explain why installed consumers have no candidate
+        id: no-release-artifact
+        if: always() && steps.admit-release.outcome != 'success'
+        run: echo 'Registry platform installs skipped because no complete checksum-validated release artifact exists.'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        id: upload-release
+        if: always() && steps.admit-release.outcome == 'success'
+        with:
+          name: release
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Report every release assembly failure
+        if: always()
+        env:
+          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/qualification-summary
+
+  registry-installed:
+    needs: [source, bundle]
+    if: always() && needs.bundle.outputs.artifact-ready == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, ubuntu-24.04-arm, windows-2022]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions: {contents: read}
+    env:
+      PYTHONUTF8: '1'
+    defaults: {run: {shell: bash}}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        id: checkout
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        id: setup-python
+        if: always()
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        id: setup-node
+        if: always()
+        with: {node-version: '22.12.0'}
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        id: setup-java
+        if: always()
+        with: {distribution: temurin, java-version: '22.0.2+9'}
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        id: setup-dotnet
+        if: always()
+        with: {dotnet-version: '10.0.103'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        id: release-artifact
+        if: always()
+        with: {name: release, path: release}
+      - name: Install every final registry package on its target platform
+        id: installed-registry-packages
+        if: always()
+        env:
+          RELEASE_SHA: ${{ needs.source.outputs.sha }}
+        run: python3 scripts/release-platform-check release "$RELEASE_SHA" "$RUNNER_TEMP/registry-installed"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: registry-installed-${{ matrix.runner }}
+          path: ${{ runner.temp }}/registry-installed/results.json
+          retention-days: 7
+      - name: Report every installed package failure
+        if: always()
+        env:
+          QUALIFICATION_STEPS: ${{ toJSON(steps) }}
+        run: python3 scripts/qualification-summary
+
+  draft:
+    needs: [source, bundle, registry-installed]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {contents: write, id-token: write, attestations: write}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: release, path: release}
+      - if: needs.source.outputs.retry == 'true'
+        name: Select verified provenance for the draft rehearsal
+        run: echo "THINKTHEN_RELEASE_REUSE=$GITHUB_WORKSPACE/release/reuse.json" >> "$GITHUB_ENV"
       # Each matched file becomes a subject with its own digest in the provenance.
       # https://github.com/actions/attest/tree/v4.2.2#identify-multiple-subjects
       - name: Attest every release asset
@@ -152,31 +277,6 @@ jobs:
           predicate-type: https://github.com/botassembly/thinkthen/attestations/release-assembly/v1
           predicate-path: release/reuse.json
           create-storage-record: false
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release
-          path: release/
-          if-no-files-found: error
-          retention-days: 7
-
-  draft:
-    needs: [source, bundle]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions: {contents: write}
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with: {python-version: '3.13'}
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: {name: release, path: release}
-      - if: needs.source.outputs.retry == 'true'
-        name: Select verified provenance for the draft rehearsal
-        run: echo "THINKTHEN_RELEASE_REUSE=$GITHUB_WORKSPACE/release/reuse.json" >> "$GITHUB_ENV"
       - name: Create a draft for review
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

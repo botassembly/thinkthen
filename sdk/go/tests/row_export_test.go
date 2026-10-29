@@ -4,10 +4,52 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 )
+
+var sourceShapeOnce sync.Once
+var sourceShapeError error
+var sourceShape struct {
+	Defs struct {
+		Source struct {
+			Properties map[string]json.RawMessage
+			Required   []string
+		}
+	} `json:"$defs"`
+}
+
+func assertSourceShape(t *testing.T, raw json.RawMessage) {
+	t.Helper()
+	sourceShapeOnce.Do(func() {
+		var encoded []byte
+		encoded, sourceShapeError = os.ReadFile(filepath.Join(os.Getenv("THINKTHEN_CASES"), "..", "schemas", "row.schema.json"))
+		if sourceShapeError == nil {
+			sourceShapeError = json.Unmarshal(encoded, &sourceShape)
+		}
+	})
+	if sourceShapeError != nil {
+		t.Fatal(sourceShapeError)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range sourceShape.Defs.Source.Required {
+		if _, ok := fields[key]; !ok {
+			t.Fatalf("source omits %s: %s", key, raw)
+		}
+	}
+	for key := range fields {
+		if _, ok := sourceShape.Defs.Source.Properties[key]; !ok {
+			t.Fatalf("source adds %s: %s", key, raw)
+		}
+	}
+}
 
 // Feature: row errors follow Go nil comparisons and retain native error identity.
 func TestRowErrorsFollowGoConventions(t *testing.T) {
@@ -68,6 +110,7 @@ func TestRowsMarshalContractJSON(t *testing.T) {
 			if string(fields["id"]) != id || string(fields["function"]) != `"decide"` || string(fields["position"]) != "1" || string(fields["status"]) != `"`+status.String()+`"` {
 				t.Fatalf("row metadata lost in JSON: %s", encoded)
 			}
+			assertSourceShape(t, fields["source"])
 			var source struct {
 				QuestionIdentity string `json:"question_identity"`
 				Backend, Model   string
@@ -117,6 +160,19 @@ func TestRowsMarshalContractJSON(t *testing.T) {
 				if _, present := fields["error"]; present {
 					t.Fatalf("successful row has an error: %s", encoded)
 				}
+			}
+		}
+	}
+}
+
+// Feature: native annotation rows never hide an answer on an unanswered entry.
+func TestUnansweredAnnotationRejectsAnAnswer(t *testing.T) {
+	for _, status := range []string{"unsure", "failed"} {
+		for _, answer := range []string{"true", "null"} {
+			var rows tt.Annotations
+			data := []byte(`{"entry":{"function":"decide","status":"` + status + `","answer":` + answer + `}}`)
+			if err := json.Unmarshal(data, &rows); !errors.Is(err, tt.CodeUsageABI) {
+				t.Fatalf("malformed native entry admitted: %s: %v", data, err)
 			}
 		}
 	}

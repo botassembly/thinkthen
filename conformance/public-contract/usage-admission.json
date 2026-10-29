@@ -45,7 +45,18 @@
     },
     "code": "usage.settings",
     "message": "settings.retry.max_retries: expected u32; received a string (contents redacted)",
-    "kind": "admission"
+    "kind": "admission",
+    "not_applicable": {
+      "java": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately.",
+      "kotlin": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately.",
+      "cpp": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately.",
+      "go": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately.",
+      "sqlite": "The public SQL SET boundary accepts a SQL scalar and refuses its type before JSON deserialization; native SET rejection, error family and secret redaction run separately.",
+      "duckdb": "The public SQL SET boundary accepts a SQL scalar and refuses its type before JSON deserialization; native SET rejection, error family and secret redaction run separately.",
+      "postgres": "The public SQL SET boundary accepts a SQL scalar and refuses its type before JSON deserialization; native SET rejection, error family and secret redaction run separately.",
+      "swift": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately.",
+      "zig": "The typed public retry constructor cannot represent a string retry count; invalid representable numeric settings run separately."
+    }
   },
   {
     "name": "R tags in a serialized question",

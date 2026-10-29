@@ -50,6 +50,11 @@ QuestionOwner Admit(TableFunctionBindInput &input, Binding &bind) {
     }
     auto top = Argument(input, "top");
     if (!top.IsNull()) Checked(thinkthen_question_set_top(question.get(), top.GetValue<uint64_t>(), &error.value), error);
+    // Complete admission at bind time, including an empty input relation.
+    thinkthen_buffer admitted{};
+    auto result = thinkthen_question_to_json(question.get(), &admitted, &error.value);
+    thinkthen_buffer_free(&admitted);
+    Checked(result, error);
     return question;
 }
 unique_ptr<LogicalOperator> Bind(ClientContext &, TableFunctionBindInput &input, idx_t index, vector<string> &names) {

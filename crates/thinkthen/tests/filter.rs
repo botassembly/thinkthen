@@ -46,6 +46,10 @@ fn filter_pairs_every_original_with_its_row_and_keeps_only_answered_true() {
         .unwrap();
     assert_eq!(rows.len(), 6);
     assert_eq!(
+        rows.iter().map(|(_, row)| row.kept()).collect::<Vec<_>>(),
+        [true, false, false, false, true, false]
+    );
+    assert_eq!(
         rows.iter().map(|(text, _)| *text).collect::<Vec<_>>(),
         original
     );

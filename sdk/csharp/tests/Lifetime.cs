@@ -55,7 +55,8 @@ internal static partial class Program
             await using var held = await Fixture.Start(loopback, "--held", "headers");
             await using var remote = new ThinkThenClient(new()
             {
-                Backend = backend, Url = new Uri(held.Url), ApiKey = ApiKey.From("synthetic-loopback-key")
+                Backend = backend, Url = new Uri(held.Url), ApiKey = ApiKey.From("synthetic-loopback-key"),
+                Retry = new() { AttemptTimeout = TimeSpan.FromSeconds(60), MaxRetries = 0 }
             });
             using var cancelled = new CancellationTokenSource();
             using var other = new CancellationTokenSource();
@@ -63,15 +64,22 @@ internal static partial class Program
             Task<Row<bool, NoDetail>> second = remote.DecideAsync("Ready?", "beta", cancellationToken: other.Token);
             Check(await held.Command("arrived") == "arrived", "first call never reached the held backend");
             Check(await held.Command("arrived") == "arrived", "second call never reached the held backend");
+            string paid = await held.Command("count");
+            long cancelledAt = System.Diagnostics.Stopwatch.GetTimestamp();
             cancelled.Cancel();
             await Cancelled(first, cancelled.Token);
             Check(await held.Command("closed") == "closed", "token cancellation left an open native request");
+            Check(System.Diagnostics.Stopwatch.GetElapsedTime(cancelledAt) < TimeSpan.FromSeconds(2), "token cancellation exceeded the socket deadline");
+            Check(await held.Command("count") == paid, "cancel sent another paid request");
             Check(!second.IsCompleted, "cancelling one call cancelled an independent call");
+            long disposedAt = System.Diagnostics.Stopwatch.GetTimestamp();
             Task dispose = remote.DisposeAsync().AsTask();
             Task repeated = remote.DisposeAsync().AsTask();
-            await Task.WhenAll(dispose, repeated);
+            await Task.WhenAll(dispose, repeated).WaitAsync(TimeSpan.FromSeconds(2));
             await Cancelled(second);
             Check(await held.Command("closed") == "closed", "client disposal left an active request");
+            Check(System.Diagnostics.Stopwatch.GetElapsedTime(disposedAt) < TimeSpan.FromSeconds(2), "client disposal exceeded the socket deadline");
+            Check(await held.Command("count") == paid, "disposal sent another paid request");
         }
         await DisposalDuringSourceAdvance();
         await DisposalBeforeFirstEnumeration();

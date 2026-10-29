@@ -1,11 +1,14 @@
 package consumer
 
 import (
+	"encoding/json"
+	"errors"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 )
@@ -62,5 +65,34 @@ func TestCodesMatchGeneratedHeader(t *testing.T) {
 	}
 	if !seen[tt.CodeRecordMissing] {
 		t.Fatal("public missing-record code does not use the engine value")
+	}
+}
+
+// Feature: error classification follows the native contract family for every code.
+func TestErrorFamiliesMatchEngineContract(t *testing.T) {
+	data, err := os.ReadFile(os.Getenv("THINKTHEN_CONTRACT"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var registry struct {
+		Codes []struct {
+			Value  int32
+			Family string
+		}
+	}
+	if err := json.Unmarshal(data, &registry); err != nil {
+		t.Fatal(err)
+	}
+	for _, code := range registry.Codes {
+		if got := tt.Code(code.Value).Family(); got != code.Family {
+			t.Fatalf("family %d: %q; want %q", code.Value, got, code.Family)
+		}
+	}
+	if tt.Code(0).Family() != "" || tt.Code(2147483647).Family() != "" {
+		t.Fatal("unknown code acquired a family")
+	}
+	_, err = tt.New(tt.Config{Backend: tt.Stub, Retry: &tt.Retry{MaxRetries: 11, AttemptTimeout: time.Minute}})
+	if !errors.Is(err, tt.ErrUsage) || !errors.Is(err, tt.CodeUsageSettings) {
+		t.Fatalf("retry cap: %v", err)
 	}
 }

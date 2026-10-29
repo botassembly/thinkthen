@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Refuse documented error codes absent from the generated engine registry."""
+import json
+from pathlib import Path
+import re
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+DOCS = ['sdlc/planning/architecture.md', 'sdlc/planning/public-contract.md',
+        'sdlc/planning/spreadsheets.md', 'sdlc/planning/sql-host.md', 'schemas/README.md']
+FILES = {'md', 'json', 'rs', 'h', 'cpp', 'ps1', 'sh', 'toml'}
+
+
+def unknown(text, codes):
+    return {token for token in re.findall(r'`([a-z][a-z0-9-]*\.[a-z][a-z0-9-]*)`', text)
+            if token.rsplit('.', 1)[1] not in FILES and token not in codes}
+
+
+codes = {code['name'] for code in json.loads((ROOT / 'schemas/contract.json').read_text())['codes']}
+if sys.argv[1:] == ['--self-test']:
+    assert unknown('`usage.removed-code`', codes) == {'usage.removed-code'}
+    assert not unknown('`usage.abi` and `architecture.md`', codes)
+elif sys.argv[1:]:
+    sys.exit('usage: contract-doc-check [--self-test]')
+failures = [str(path) + ': ' + ', '.join(sorted(missing)) for name in DOCS
+            if (missing := unknown((path := ROOT / name).read_text(encoding='utf-8'), codes))]
+if failures:
+    sys.exit('Unknown documented error codes:\n' + '\n'.join(failures))
+print('Contract docs: every named error code exists in the engine registry')

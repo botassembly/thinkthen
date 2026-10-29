@@ -31,6 +31,19 @@ cd "$scratch/consumer-project"
 mvn -o -B -q -Dmaven.repo.local="$scratch/m2" package dependency:build-classpath -Dmdep.outputFile="$scratch/consumer-classpath"
 classpath="target/classes:$(cat "$scratch/consumer-classpath")"
 java() { command "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED "-Duser.home=$scratch/home" -cp "$classpath" "$@"; }
+if [ "${3:-}" = --entry-forms ]; then
+    set +e
+    java ConformanceCases "$root/conformance/typed" --entry-forms
+    java_status=$?
+    java consumer.ConformanceCasesKt "$root/conformance/typed" --entry-forms
+    kotlin_status=$?
+    test "$java_status" -eq 0 && test "$kotlin_status" -eq 0
+    exit $?
+fi
+if [ "${3:-}" = --malformed-only ] || [ "${3:-}" = --with-abi ]; then
+    python3 "$root/sdk/kotlin/tests/abi.py" "$THINKTHEN_NATIVE_FIXTURES/manifest.json" "$classpath" "$JAVA_HOME/bin/java" "$jvm_platform" "$jvm_library" "$scratch"
+    if [ "${3:-}" = --malformed-only ]; then exit 0; fi
+fi
 java JavaCacheCases
 java JavaConcurrencyCases
 java consumer.SdkConventionCasesKt
@@ -38,7 +51,7 @@ java consumer.SdkConventionCasesKt
 if [ "${3:-}" = --conventions-only ]; then
     java JavaSettingsCases "$root/schemas/contract.json"
     java consumer.FlowCasesKt "$root/conformance/typed"
-    java consumer.AbiAndCodesKt registry
+    java consumer.AbiAndCodesKt registry "$root/schemas/contract.json"
     printf '%s\n' 'Installed JVM convention checks passed'
     exit 0
 fi
@@ -52,5 +65,5 @@ java KotlinCasesKt "$root/construction/stub.json"
 java consumer.ConformanceCasesKt "$root/conformance/typed"
 java consumer.SurfaceCasesKt "$root/conformance"
 java consumer.FlowCasesKt "$root/conformance/typed"
-java consumer.AbiAndCodesKt registry
+java consumer.AbiAndCodesKt registry "$root/schemas/contract.json"
 printf '%s\n' 'Installed Java and Kotlin consumers passed with prepared native assets'

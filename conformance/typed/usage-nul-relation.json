@@ -1,0 +1,27 @@
+{
+  "name": "usage-nul-relation",
+  "request": {
+    "question": {
+      "function": "relate",
+      "rules": [
+        {
+          "relation": "bad\u0000name",
+          "source": "person",
+          "target": "company"
+        }
+      ]
+    },
+    "records": [
+      "Ada Acme Bea"
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "usage.name"
+  },
+  "requests": 0,
+  "not_applicable": {
+    "r": "R native strings cannot contain embedded NUL; the native character conversion boundary rejects this input.",
+    "postgres": "PostgreSQL text, text arrays, composite fields and jsonb reject NUL before engine admission; the public host refusal is checked separately."
+  }
+}

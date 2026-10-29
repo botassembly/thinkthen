@@ -20,4 +20,8 @@ FROM thinkthen_decide(
   'Does the message request a refund?');
 ```
 
+SQL cannot set `max_retries` above the engine default.
+
+SQLite fetches source rows in native chunks. Its source buffer rounds the engine iterator’s read-ahead bound up to the next chunk.
+
 [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/extensions/sqlite/src/extension.c).

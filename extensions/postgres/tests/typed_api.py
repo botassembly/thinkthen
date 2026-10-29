@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 import tempfile
 
 import psycopg2
@@ -13,8 +14,9 @@ from psycopg2 import sql
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'databases/duckdb/tests'))
-from typed_api import fixture, command, contract_row
-from migration_cases import semantic
+from typed_api import fixture, contract_row
+from migration_cases import command
+from migration_cases import semantic, expected_row, strict_equal
 from admission_cases import cases as admission_cases, diagnostic
 sys.path.insert(0, str(ROOT / 'databases'))
 from testing import child_environment
@@ -76,7 +78,7 @@ def set_settings(database, settings):
 def invoke(database, request):
     question = request['question']
     arguments = [sql.SQL('%s')]
-    values = ['SELECT value AS record FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY s(value,n) ORDER BY n']
+    values = ['SELECT value AS record FROM json_array_elements($1::json) WITH ORDINALITY s(value,n) ORDER BY n']
     for key, value in question.items():
         if key == 'function':
             continue
@@ -141,6 +143,12 @@ def admission():
     with server(child_environment()) as database:
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
+        # Native integer GUC conversion precedes engine JSON admission.
+        failure(database, "SET thinkthen.max_retries='secret-placeholder'", '22023')
+        settings = query(database, 'SELECT name FROM pg_settings WHERE name LIKE %s ORDER BY name', ('thinkthen.%',))
+        assert [row[0] for row in settings] == [
+            'thinkthen.allowed_backends', 'thinkthen.attempt_timeout_ms', 'thinkthen.backend',
+            'thinkthen.batch', 'thinkthen.initial_backoff_ms', 'thinkthen.max_retries', 'thinkthen.model'], settings
         for case, request, expected in admission_cases(ROOT, 'postgresql'):
             try:
                 invoke(database, request)
@@ -158,6 +166,9 @@ def native():
         guide(database)
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
+        failure(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record',NULL)", '22023', 'usage.question')
+        failure(database, "SELECT * FROM thinkthen.choose('SELECT ''x'' AS record','Which?',ARRAY['one',NULL,'two'])", '22023', 'usage.question')
+        assert query(database, "SELECT status,error_code,kept FROM thinkthen.filter('SELECT NULL::text AS record','Ready?')") == [('failed', 'record.missing', False)]
         query(database, 'CREATE SCHEMA hostile')
         query(database, "SET search_path = hostile,pg_catalog")
         rows = query(database, """SELECT position,id,status,answer,error_code,
@@ -222,11 +233,11 @@ def native():
             assert rows == [('stub',)], (key, rows)
         from sources import verify
         verify(database, query, failure)
-        # Missing process credentials are a call error in the extension's TT class.
+        # Missing process credentials remain an engine usage error.
         query(database, "SET thinkthen.allowed_backends = 'systemone:*'")
         set_settings(database, {'backend': 'systemone'})
         error = failure(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')", code='usage.key-missing')
-        assert error.pgcode.startswith('TT') and error.pgcode != 'TT000', error.pgcode
+        assert error.pgcode == '22023', error.pgcode
         assert query(database, 'SELECT 1') == [(1,)]
 
 
@@ -234,7 +245,19 @@ def abi_mismatch(options):
     # Feature: an incompatible module is rejected before any client can be opened.
     with server(child_environment()) as database:
         error = failure(database, 'LOAD %s', parameters=(str(options.abi_mismatch_extension),), code='usage.abi')
-        assert error.pgcode.startswith('TT'), error.pgcode
+        assert error.pgcode == '22023', error.pgcode
+
+
+def error_families(options):
+    # Contract consumer: the adapter source maps every registered engine code.
+    with server(child_environment()) as database:
+        query(database, "CREATE FUNCTION pg_temp.family_probe(integer) RETURNS void "
+              "AS %s,'thinkthen_family_probe' LANGUAGE C STRICT",
+              (str(options.abi_mismatch_extension.parent / 'family-probe.so'),))
+        registry = json.loads((ROOT / 'schemas/contract.json').read_text())
+        for code in registry['codes']:
+            expected = '22023' if code['family'] == 'usage' else '58000'
+            failure(database, 'SELECT pg_temp.family_probe(%s)', expected, parameters=(code['value'],))
 
 
 def conformance(options):
@@ -244,20 +267,63 @@ def conformance(options):
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
         for case in json.loads((ROOT / 'construction/stub.json').read_text()):
-            assert invoke(database, case['request']) == case['expected'], case['request']
+            assert strict_equal(invoke(database, case['request']), case['expected']), case['request']
+        for case in json.loads((ROOT / 'construction/options.json').read_text()):
+            if 'expected_error' in case:
+                try:
+                    invoke(database, case['request'])
+                except psycopg2.Error as error:
+                    reason = case.get('not_applicable', {}).get('postgres')
+                    if reason is not None:
+                        assert isinstance(reason, str) and reason.strip(), case['name']
+                        print(f"postgres {case['name']}: canonical diagnostic not applicable: {reason}")
+                        assert error.pgcode == '42883', (case['name'], error)
+                    else:
+                        assert error.pgcode == '22023', (case['name'], error)
+                        assert error.diag.message_detail == case['expected_error'], (case['name'], error)
+                else:
+                    raise AssertionError(('option admission succeeded', case['name']))
+            else:
+                request = case.get('equivalent_request', case['request'])
+                actual = invoke(database, request)
+                assert strict_equal(actual, case['expected']), (case['name'], actual, case['expected'])
     directory = ROOT / 'conformance/typed'
     manifest = json.loads((directory / 'manifest.json').read_text())
     for filename in manifest['cases']:
         path = directory / filename
         case = json.loads(path.read_text())
         question = case['request']['question']
+        if case.get('cancelled'):
+            assert case.get('not_applicable', {}).get('postgres'), filename
+            print(f'postgres {filename}: not applicable: ' + case['not_applicable']['postgres'])
+            continue
         for backend in manifest['backends']:
             settings = {**manifest['client'], **case.get('client', {}), 'backend': backend}
             with fixture(options, path) as (loopback, environment), server(environment) as database:
                 query(database, 'SET thinkthen.allowed_backends = %s', (backend + ':*',))
-                set_settings(database, settings)
                 if isinstance(case['expected'], dict):
+                    reason = case.get('not_applicable', {}).get('postgres')
+                    if reason is not None:
+                        assert isinstance(reason, str) and reason.strip(), filename
+                        zero_byte = r'\u0000' in json.dumps(case['request'])
+                        retry_bound = (case['expected']['error'] == 'usage.settings' and
+                            'max_retries' in case.get('client', {}).get('retry', {}))
+                        assert zero_byte or retry_bound, filename
+                        try:
+                            set_settings(database, settings)
+                            invoke(database, case['request'])
+                        except ValueError as error:
+                            assert zero_byte, error
+                            assert 'NUL' in str(error) or '0x00' in str(error), error
+                        except psycopg2.Error as error:
+                            assert error.pgcode in (('22021', '22P05') if zero_byte else ('22023',)), error
+                        else:
+                            raise AssertionError(('host accepted a zero byte', filename))
+                        assert int(command(loopback, 'count')) == 0, filename
+                        print(f'postgres {filename}: canonical diagnostic not applicable: {reason}')
+                        continue
                     try:
+                        set_settings(database, settings)
                         invoke(database, case['request'])
                     except psycopg2.Error as error:
                         assert error.diag.message_detail == case['expected']['error'], error
@@ -265,22 +331,17 @@ def conformance(options):
                         raise AssertionError(('admission succeeded', path))
                     assert int(command(loopback, 'count')) == case['requests'], path
                     continue
+                set_settings(database, settings)
                 actual = invoke(database, case['request'])
                 for row in actual:
                     source = row['source']
                     assert source['backend'] == backend and source['model'] == settings['model'], source
                     assert len(source['question_identity']) == 64, source
                     assert source.get('name') == case['request'].get('name'), source
-                assert [semantic(row) for row in actual] == case['expected'], (path, backend, actual, case['expected'])
+                assert len(actual) == len(case['expected']), (path, backend, len(actual), len(case['expected']))
+                assert strict_equal([semantic(row, expected) for row, expected in zip(actual, case['expected'])], [expected_row(row) for row in case['expected']]), (path, backend, actual, case['expected'])
                 requests = int(command(loopback, 'count'))
-                # Unknown-length SQL input can flush a batch at a scheduling gap.
-                if case.get('exact_requests'):
-                    assert requests == case['requests'], (case['name'], backend, requests)
-                elif case['requests'] == 0:
-                    assert requests == 0, (path, backend, requests)
-                else:
-                    maximum = case['requests'] * len(case['request']['records'])
-                    assert 0 < requests <= maximum, (path, backend, requests, maximum)
+                assert requests == case['requests'], (path, backend, requests, case['requests'])
                 missing = query(database, "SELECT position,status,answer,error_code FROM thinkthen.decide('SELECT NULL::text AS record','Ready?')")
                 assert missing == [(1, 'failed', None, 'record.missing')], missing
                 assert int(command(loopback, 'count')) == requests, (path, backend)
@@ -290,35 +351,36 @@ def conformance(options):
 
 
 def cancellation(options):
-    # Feature: query cancellation retains native SQLSTATE and releases the source cursor.
-    with fixture(options, held=True) as (loopback, environment), server(environment) as database:
-        query(database, "SET thinkthen.allowed_backends = 'systemone:*'")
-        with ThreadPoolExecutor(max_workers=1) as workers:
-            future = workers.submit(query, database,
-                "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')")
-            try:
-                assert command(loopback, 'arrived') == 'arrived'
-                with closing(psycopg2.connect(database.dsn)) as independent:
-                    independent.autocommit = True
-                    query(independent, "SET thinkthen.allowed_backends = 'stub:*'")
-                    set_settings(independent, {'backend': 'stub'})
-                    assert len(query(independent, "SELECT * FROM thinkthen.decide('SELECT ''other'' AS record','Ready?')")) == 1
-                database.cancel()
+    # Feature: every SQL function cancels a paid held request and releases its cursor.
+    for case in json.loads((ROOT / 'construction/stub.json').read_text()):
+        with fixture(options, held=True) as (loopback, environment), server(environment) as database:
+            query(database, "SET thinkthen.allowed_backends = 'systemone:*'")
+            set_settings(database, {'retry': {'attempt_timeout_ms': 120000}})
+            with ThreadPoolExecutor(max_workers=1) as workers:
+                future = workers.submit(invoke, database, case['request'])
                 try:
-                    future.result(timeout=30)
-                except psycopg2.Error as error:
-                    assert error.pgcode == '57014', error
-                else:
-                    raise AssertionError('cancel returned a normal result')
-                assert command(loopback, 'closed') == 'closed'
-            finally:
-                if not future.done():
+                    assert command(loopback, 'arrived') == 'arrived'
+                    paid = int(command(loopback, 'count'))
+                    assert paid > 0
+                    started = time.monotonic()
                     database.cancel()
-        assert query(database, 'SELECT 1') == [(1,)]
-        assert query(database, 'SELECT count(*) FROM pg_cursors') == [(0,)]
-        query(database, "SET thinkthen.allowed_backends = 'stub:*'")
-        set_settings(database, {'backend': 'stub'})
-        assert len(query(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')")) == 1
+                    assert command(loopback, 'closed', timeout=2) == 'closed'
+                    assert time.monotonic() - started < 2, case['request']['question']['function']
+                    try:
+                        future.result(timeout=2)
+                    except psycopg2.Error as error:
+                        assert error.pgcode == '57014', error
+                    else:
+                        raise AssertionError('cancel returned a normal result')
+                finally:
+                    if not future.done():
+                        database.cancel()
+            assert query(database, 'SELECT 1') == [(1,)]
+            assert query(database, 'SELECT count(*) FROM pg_cursors') == [(0,)]
+            assert int(command(loopback, 'count')) == paid
+            query(database, "SET thinkthen.allowed_backends = 'stub:*'")
+            set_settings(database, {'backend': 'stub'})
+            assert len(query(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')")) == 1
 
 
 def statement_timeout(options):
@@ -336,9 +398,14 @@ def adapter_contracts():
     # Feature: planner contracts keep remote calls volatile and serial.
     with server(child_environment()) as database:
         assert query(database, "SELECT DISTINCT provolatile, proparallel FROM pg_proc WHERE pronamespace='thinkthen'::regnamespace AND prolang=(SELECT oid FROM pg_language WHERE lanname='c')") == [('v','u')]
-        for setting, value in [('batch', -1), ('max_retries', -1), ('initial_backoff_ms', -1), ('attempt_timeout_ms', 0)]:
+        assert query(database, "SHOW thinkthen.batch") == [('0',)]
+        query(database, 'SET thinkthen.batch=7')
+        assert query(database, "SHOW thinkthen.batch") == [('7',)]
+        query(database, 'RESET thinkthen.batch')
+        assert query(database, "SHOW thinkthen.batch") == [('0',)]
+        for setting, value in [('batch', -1), ('batch', 0), ('max_retries', -1), ('max_retries', 4), ('initial_backoff_ms', -1), ('attempt_timeout_ms', 0)]:
             failure(database, 'SET thinkthen.' + setting + '=' + str(value), '22023')
-        for setting, value in [('batch', 0), ('max_retries', 0), ('initial_backoff_ms', 0), ('attempt_timeout_ms', 1)]:
+        for setting, value in [('batch', 7), ('max_retries', 0), ('initial_backoff_ms', 0), ('attempt_timeout_ms', 1)]:
             query(database, 'SET thinkthen.' + setting + '=' + str(value))
             query(database, 'RESET thinkthen.' + setting)
         shared = subprocess.check_output(['pg_config', '--sharedir'], text=True).strip()
@@ -374,6 +441,8 @@ if __name__ == '__main__':
     if options.group == 'adapter':
         adapter_contracts()
         statement_timeout(options)
+        from read_ahead import verify as read_ahead
+        read_ahead(options, server, query, set_settings, fixture, child_environment)
         print('PostgreSQL adapter contracts pass')
         sys.exit(0)
     admission()
@@ -381,8 +450,13 @@ if __name__ == '__main__':
         sys.exit(0)
     if options.group != 'conformance':
         abi_mismatch(options)
+        error_families(options)
         native()
         adapter_contracts()
+        from request_counts import verify as request_counts
+        request_counts(options, server, query, set_settings, child_environment)
+        from read_ahead import verify as read_ahead
+        read_ahead(options, server, query, set_settings, fixture, child_environment)
     if options.group in ('all', 'conformance'):
         conformance(options)
     if options.group in ('all', 'native'):

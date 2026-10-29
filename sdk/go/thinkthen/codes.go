@@ -69,6 +69,14 @@ func (c Code) String() string {
 }
 func (c Code) Error() string { return c.String() }
 
+// Family returns the engine contract family, or an empty string for an unknown code.
+func (c Code) Family() string {
+	if err := loadNative(); err != nil {
+		return ""
+	}
+	return C.GoString(C.tt_code_family(C.int32_t(c)))
+}
+
 var ErrUsage = errors.New("thinkthen: usage")
 var ErrTransport = errors.New("thinkthen: transport")
 var ErrClosed = errors.New("thinkthen: closed")
@@ -93,7 +101,7 @@ func (e *Error) Is(target error) bool {
 	if code, ok := target.(Code); ok {
 		return e.code == code
 	}
-	return target == ErrUsage && e.code >= CodeUsageThreshold && e.code <= CodeUsageABI || target == ErrTransport && e.code == CodeBackendTransport
+	return target == ErrUsage && e.code.Family() == "usage" || target == ErrTransport && e.code == CodeBackendTransport
 }
 
 type Backend uint32

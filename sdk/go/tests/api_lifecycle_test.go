@@ -2,10 +2,15 @@ package consumer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"iter"
+	"os"
+	"os/exec"
 	"reflect"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -29,7 +34,7 @@ func apiClientFor(t *testing.T, cfg tt.Config) *tt.Client {
 // Feature: context cancellation interrupts a single native call.
 func TestSingleCallCancellationClosesHeldConnection(t *testing.T) {
 	b := startBackend(t, "--held", "headers")
-	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only")})
+	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only"), Retry: &tt.Retry{MaxRetries: 0, AttemptTimeout: 2 * time.Minute}})
 	ctx, cancel := context.WithCancelCause(context.Background())
 	sentinel := errors.New("caller cancellation cause")
 	defer cancel(nil)
@@ -45,21 +50,26 @@ func TestSingleCallCancellationClosesHeldConnection(t *testing.T) {
 	if b.command(t, "arrived") != "arrived" {
 		t.Fatal("request did not arrive")
 	}
+	paid := b.command(t, "count")
+	deadline := time.Now().Add(2 * time.Second)
 	cancel(sentinel)
-	err := <-result
+	err := receiveBefore(t, result, deadline)
 	var native *tt.Error
 	if !errors.Is(err, sentinel) || !errors.Is(err, context.Canceled) || !errors.As(err, &native) || native.Code().String() != "local.cancelled" {
 		t.Fatalf("cancellation lost its cause: %v", err)
 	}
-	if b.command(t, "closed") != "closed" {
+	if b.commandBefore(t, "closed", deadline) != "closed" {
 		t.Fatal("connection survived cancellation")
+	}
+	if b.command(t, "count") != paid {
+		t.Fatal("requests continued after cancellation")
 	}
 }
 
 // Feature: iteration yields cancellation once as a terminal error.
 func TestIterationCancellationIsOneTerminalError(t *testing.T) {
 	b := startBackend(t, "--held", "headers")
-	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only")})
+	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only"), Retry: &tt.Retry{MaxRetries: 0, AttemptTimeout: 2 * time.Minute}})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	done := make(chan error, 1)
@@ -87,12 +97,17 @@ func TestIterationCancellationIsOneTerminalError(t *testing.T) {
 	if b.command(t, "arrived") != "arrived" {
 		t.Fatal("no request")
 	}
+	paid := b.command(t, "count")
+	deadline := time.Now().Add(2 * time.Second)
 	cancel()
-	if err := <-done; err != nil {
+	if err := receiveBefore(t, done, deadline); err != nil {
 		t.Fatal(err)
 	}
-	if b.command(t, "closed") != "closed" {
+	if b.commandBefore(t, "closed", deadline) != "closed" {
 		t.Fatal("native call remained live")
+	}
+	if b.command(t, "count") != paid {
+		t.Fatal("requests continued after cancellation")
 	}
 }
 
@@ -165,9 +180,9 @@ func TestInputErrorAndCooperativeCancellation(t *testing.T) {
 		}
 		done <- last
 	}()
-	<-entered
+	receiveBefore(t, entered, time.Now().Add(30*time.Second))
 	cancel()
-	if err := <-done; !errors.Is(err, context.Canceled) {
+	if err := receiveBefore(t, done, time.Now().Add(30*time.Second)); !errors.Is(err, context.Canceled) {
 		t.Fatalf("input cancellation: %v", err)
 	}
 }
@@ -261,7 +276,9 @@ func TestConcurrentCallsAndRepeatedRanges(t *testing.T) {
 		wg.Add(1)
 		go func() { defer wg.Done(); results <- collect(t, seq) }()
 	}
-	wg.Wait()
+	joined := make(chan struct{})
+	go func() { wg.Wait(); close(joined) }()
+	receiveBefore(t, joined, time.Now().Add(30*time.Second))
 	close(results)
 	var first []tt.DecideRow
 	for rows := range results {
@@ -320,9 +337,88 @@ func TestClientCloseRacesWithOpeningCalls(t *testing.T) {
 	if err := c.Close(); err != nil {
 		t.Fatal(err)
 	}
-	workers.Wait()
+	joined := make(chan struct{})
+	go func() { workers.Wait(); close(joined) }()
+	receiveBefore(t, joined, time.Now().Add(30*time.Second))
 	close(results)
 	for err := range results {
 		t.Error(err)
+	}
+}
+
+// Feature: a held request bounds the pull adapter's consumption by batch and window.
+func TestHeldPullReadAheadRemainsBounded(t *testing.T) {
+	output, err := exec.Command(os.Getenv("THINKTHEN_LOOPBACK"), "--limits").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var limits struct {
+		Window  int `json:"read_ahead_window"`
+		Workers int `json:"workers"`
+	}
+	if err := json.Unmarshal(output, &limits); err != nil || limits.Window <= 0 {
+		t.Fatalf("engine limits: %s %v", output, err)
+	}
+	for _, wire := range []tt.Backend{tt.SystemOne, tt.OpenAI} {
+		t.Run(wire.String(), func(t *testing.T) {
+			b := startBackend(t, "--held", "headers")
+			batch := 2
+			c := apiClientFor(t, tt.Config{Backend: wire, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: &batch, Retry: &tt.Retry{AttemptTimeout: 2 * time.Minute}})
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			var pulled atomic.Int64
+			bound := int64(batch*limits.Window + 1)
+			exceeded := make(chan struct{}, 1)
+			input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
+				for i := int64(0); i < bound+2; i++ {
+					if pulled.Add(1) > bound {
+						select {
+						case exceeded <- struct{}{}:
+						default:
+						}
+					}
+					if !yield(tt.Text("held evidence"), nil) {
+						return
+					}
+				}
+			})
+			done := make(chan error, 1)
+			go func() {
+				for _, err := range c.DecideAll(ctx, tt.NewDecide("Ready?"), input) {
+					if err != nil {
+						done <- err
+						return
+					}
+				}
+				done <- errors.New("held call completed without cancellation")
+			}()
+			if b.command(t, fmt.Sprintf("arrived %d", limits.Workers)) != "arrived" {
+				t.Fatal("request did not arrive")
+			}
+			// Observe the adapter while the backend stays held. An excess pull is
+			// a behavior failure; the timer ends this bounded negative observation.
+			timer := time.NewTimer(2 * time.Second)
+			select {
+			case <-exceeded:
+				timer.Stop()
+				t.Fatal("pull adapter exceeded batch times window plus one")
+			case <-timer.C:
+			}
+			paid := b.command(t, "count")
+			deadline := time.Now().Add(2 * time.Second)
+			cancel()
+			if err := receiveBefore(t, done, deadline); !errors.Is(err, context.Canceled) {
+				t.Fatal(err)
+			}
+			if got := pulled.Load(); got > bound {
+				t.Fatalf("read ahead %d; bound %d", got, bound)
+			}
+			if b.commandBefore(t, "closed", deadline) != "closed" {
+				t.Fatal("held socket remained open")
+			}
+			if b.command(t, "count") != paid {
+				t.Fatal("paid requests continued after pull cancellation")
+			}
+		})
 	}
 }

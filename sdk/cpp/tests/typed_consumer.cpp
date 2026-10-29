@@ -231,6 +231,11 @@ static void saved_toolbox(const char* json) {
     std::cout << saved;
 }
 int main(int argc, char** argv) {
+    if (argc == 3 && std::string_view(argv[1]) == "family") {
+        tt::error value{static_cast<tt::errc>(std::stoi(argv[2])), "synthetic"};
+        std::cout << value.family() << '\n';
+        return 0;
+    }
     if (argc == 2 && std::string_view(argv[1]) == "admission-surface") {
         std::cout << "cpp\n";
         return 0;
@@ -243,6 +248,12 @@ int main(int argc, char** argv) {
     if (argc == 3 && std::string_view(argv[1]) == "toolbox") {
         saved_toolbox(argv[2]);
         return 0;
+    }
+    {
+        auto config = stub_settings();
+        config.retry = tt::retry_policy{11, std::chrono::milliseconds{1}, std::chrono::milliseconds{120000}};
+        try { tt::client rejected{config}; assert(false); }
+        catch (const tt::error& error) { assert(error.code() == tt::errc::usage_settings && error.family() == "usage"); }
     }
     typed_signatures();
     snapshots_and_names();

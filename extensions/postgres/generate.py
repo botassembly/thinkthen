@@ -51,7 +51,8 @@ for key, (nested, definition) in SETTINGS.items():
     else:
         default = str(definition.get('default', 0))
         minimum = str(definition.get('minimum', 0)) if nested else '0'
-        call = 'DefineCustomIntVariable(' + name + ', ' + default + ', ' + minimum + ', INT_MAX'
-    registrations.append(call + ', PGC_USERSET, 0, NULL, NULL, NULL);')
+        call = 'DefineCustomIntVariable(' + name + ', ' + default + ', ' + minimum + ', ' + str(definition['default'] if key == 'max_retries' else definition.get('maximum', 'INT_MAX'))
+    hook = 'tt_check_batch' if key == 'batch' else 'NULL'
+    registrations.append(call + ', PGC_USERSET, 0, ' + hook + ', NULL, NULL);')
 with (path.parent / 'registry.h').open('a') as output:
     output.write('#define TT_REGISTER_SETTINGS ' + ' '.join(registrations) + '\n')

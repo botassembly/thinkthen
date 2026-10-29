@@ -27,6 +27,10 @@ def reduced_steps(job):
                  "matrix.target == 'windows-x86_64'": True, "matrix.target != 'windows-x86_64'": False,
                  "startsWith(matrix.target, 'linux-')": False,
                  "needs.source.outputs.retry == 'true'": True, "needs.source.outputs.retry != 'true'": False,
+                 "needs.bundle.outputs.artifact-ready == 'true'": True,
+                 "steps.attach-registries.outcome == 'success'": True,
+                 "steps.admit-release.outcome == 'success'": True,
+                 "steps.admit-release.outcome != 'success'": False,
                  "steps.retry.outputs.enabled == 'true'": True, "vars.RELEASE_ARMED == 'true'": True}
         return all(atoms[part.strip()] for part in condition.split('&&'))
     if not active(job.get('if', 'always()')):
@@ -37,7 +41,8 @@ def reduced_steps(job):
 def reduced_prerequisites(prepare, native, report=False):
     """Check the existing path's providers; caches supply no required inputs."""
     jobs = {'source': prepare['source'], 'build': native['build-windows'],
-            'windows-check': native['windows-check'], 'bundle': prepare['bundle'], 'draft': prepare['draft']}
+            'windows-check': native['windows-check'], 'bundle': prepare['bundle'],
+            'registry-installed': prepare['registry-installed'], 'draft': prepare['draft']}
     active = {name: reduced_steps(job) for name, job in jobs.items()}
     uploads = {step['with']['name'].replace('${{ matrix.target }}', 'windows-x86_64'): name
                for name, steps in active.items() for step in steps if 'actions/upload-artifact@' in step.get('uses', '')}
@@ -115,7 +120,7 @@ def reduced_prerequisites(prepare, native, report=False):
     for runtime in ('go', 'java', 'dotnet', 'node', 'ruby'):
         assert any(step.get('id') == 'setup-' + runtime for step in active['windows-check']), 'missing Windows runtime: ' + runtime
     assert any('actions/setup-node@' in step.get('uses', '') for step in active['bundle']), 'missing registry Node'
-    assert any('actions/attest@' in step.get('uses', '') for step in active['bundle']), 'missing real assembly attestation'
+    assert any('actions/attest@' in step.get('uses', '') for step in active['draft']), 'missing real assembly attestation'
 
 
 class QualificationContinuation(unittest.TestCase):
@@ -226,8 +231,7 @@ class QualificationContinuation(unittest.TestCase):
             self.assertFalse(native[name].get('continue-on-error', False))
         self.assertTrue(any('scripts/release-workflow build' in step.get('run', '') for step in native['build']['steps']))
         self.assertTrue(any('scripts/qualification-candidate windows-x86_64' in step.get('run', '') for step in native['windows-check']['steps']))
-        bundle = prepare['bundle']['steps']
-        attest = [step for step in bundle if 'actions/attest@' in step.get('uses', '')]
+        attest = [step for step in prepare['draft']['steps'] if 'actions/attest@' in step.get('uses', '')]
         self.assertEqual({step['if'] for step in attest}, {
             "needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'"})
         for step in attest:
@@ -236,7 +240,7 @@ class QualificationContinuation(unittest.TestCase):
         reused = next(step for step in attest if step['if'].endswith("== 'true'"))
         self.assertEqual(reused['with']['predicate-path'], 'release/reuse.json')
         self.assertIn('release-assembly', reused['with']['predicate-type'])
-        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle'])
+        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle', 'registry-installed'])
         draft = next(step for step in prepare['draft']['steps'] if step.get('name') == 'Create a draft for review')
         self.assertEqual(draft['env']['DRY_RUN'], '${{ inputs.dry_run }}')
         self.assertIn('--dry-run', draft['run'])
@@ -281,14 +285,17 @@ class QualificationContinuation(unittest.TestCase):
     def test_failed_qualification_blocks_bundle_draft_and_publication(self):
         prepare = workflow('release-prepare.yml')['jobs']
         self.assertEqual(prepare['bundle']['needs'], ['source', 'qualification'])
-        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle'])
+        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle', 'registry-installed'])
         for name in ('qualification', 'bundle', 'draft'):
             self.assertFalse(prepare[name].get('continue-on-error', False))
         for name in ('bundle', 'draft'):
             self.assertNotIn('if', prepare[name])
             for step in prepare[name]['steps']:
                 if 'if' in step:
-                    self.assertIn(step['if'], ("needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'"))
+                    self.assertIn(step['if'], ('always()', "needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'",
+                                               "always() && steps.attach-registries.outcome == 'success'",
+                                               "always() && steps.admit-release.outcome == 'success'",
+                                               "always() && steps.admit-release.outcome != 'success'"))
                 self.assertFalse(step.get('continue-on-error', False))
         for job in workflow('release.yml')['jobs'].values():
             self.assertNotIn('always()', str(job.get('if', '')))

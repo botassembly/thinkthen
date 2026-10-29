@@ -12,7 +12,7 @@ import zipfile
 
 import release_windows_sdks as sdks
 
-LANGUAGES = ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
+LANGUAGES = ('Python', 'Python frames', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
              'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
 
 
@@ -24,6 +24,7 @@ def fixture(failure):
             (checks / name).mkdir(parents=True)
         (checks / 'stub.json').write_text('[]')
         (checks / 'native_cases.py').write_text('')
+        (checks / 'loopback.exe').touch()
         (checks / 'contract.json').write_text('{}')
         (checks / 'node.mjs').touch()
         (checks / 'csharp-source/Consumer.csproj').write_text('<Project/>')
@@ -69,7 +70,8 @@ def fixture(failure):
         # Replace external runtimes and Windows setup only. The real full runner,
         # extraction, staging, language boundaries and final exit run unchanged.
         with patch.object(sdks, 'os', SimpleNamespace(name='nt', environ={
-                'THINKTHEN_WINDOWS_SINGLEFILE_FEED': str(folder)}, pathsep=os.pathsep)), \
+                'THINKTHEN_WINDOWS_SINGLEFILE_FEED': str(folder),
+                'THINKTHEN_LOOPBACK': str(checks / 'loopback.exe')}, pathsep=os.pathsep)), \
              patch.object(sdks, 'environment', environment), \
              patch.object(sdks, 'runtime_environment', return_value={'PATH': ''}), \
              patch.object(sdks, 'run', run), \

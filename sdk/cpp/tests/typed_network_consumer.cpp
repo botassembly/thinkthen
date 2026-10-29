@@ -1,6 +1,7 @@
 #include <thinkthen/thinkthen.hpp>
 #include <thinkthen.h>
 #include <cassert>
+#include <atomic>
 #include <cstdint>
 #include <exception>
 #include <iostream>
@@ -14,10 +15,9 @@ static std::string code_name(tt::errc code) {
     return thinkthen_code_name(static_cast<std::int32_t>(code));
 }
 
-/* The fixture runner supplies isolated configuration, a loopback URL and the
- * selected wire format. It verifies the explicit synthetic key in the request,
- * and supplies a different key in that backend's environment. This consumer
- * never prints either key. No test requires real credentials or a remote host.
+/* The runner supplies isolated configuration, a loopback URL and the selected
+ * wire format. The public settings use an explicit synthetic key. No test
+ * requires real credentials or a remote host.
  */
 static tt::settings settings(const char* wire, const char* url) {
     const std::string backend = wire;
@@ -27,6 +27,7 @@ static tt::settings settings(const char* wire, const char* url) {
     value.url = url;
     value.api_key = decltype(value.api_key){"explicit-synthetic-consumer-key"};
     value.batch = 1;
+    value.retry = tt::retry_policy{0, std::chrono::milliseconds{1}, std::chrono::milliseconds{120000}};
     return value;
 }
 
@@ -66,10 +67,13 @@ static void failed_stream(const tt::settings& config) {
  * The parent sends c only after the actual loopback request has arrived.
  * It then observes connection closure before completing the fixture.
  */
-static void cancelled_stream(const tt::settings& config) {
+static void cancelled_stream(const tt::settings& config, std::size_t read_bound = 0) {
     tt::client owner(config);
-    auto rows = owner.decide_each(tt::decide{"Ready?"},
-        std::vector<tt::owned_record>{tt::owned_text{"evidence"}});
+    std::atomic<std::size_t> consumed{0};
+    auto rows = read_bound ? owner.decide_each(tt::decide{"Ready?"}, [&]() -> std::optional<tt::owned_record> {
+        assert(++consumed <= read_bound);
+        return tt::owned_text{"evidence"};
+    }) : owner.decide_each(tt::decide{"Ready?"}, std::vector<tt::owned_record>{tt::owned_text{"evidence"}});
     auto stop = rows.cancel_handle();
     std::exception_ptr failure;
     std::size_t published = 0;
@@ -88,37 +92,12 @@ static void cancelled_stream(const tt::settings& config) {
     assert(rows.begin() == rows.end());
 }
 
-/* Feature: the C++ loader refuses incompatible engines before client setup.
- * The runner supplies either a different ABI major or an older ABI minor and
- * checks its fixture engine saw no client-open operation. A matching major
- * with the required or a newer minor instead uses the abi-accept mode.
- */
-static void rejected_abi() {
-    tt::settings config;
-    config.backend = tt::backend::stub;
-    bool rejected = false;
-    try { tt::client owner(config); }
-    catch (const tt::error& error) {
-        assert(code_name(error.code()) == "usage.abi");
-        rejected = true;
-    }
-    assert(rejected);
-}
-
 int main(int argc, char** argv) {
     assert(argc >= 2);
     const std::string mode = argv[1];
-    if (mode == "abi-reject") { assert(argc == 2); rejected_abi(); return 0; }
-    if (mode == "abi-accept") {
-        assert(argc == 2);
-        tt::settings config;
-        config.backend = tt::backend::stub;
-        tt::client owner(config);
-        return 0;
-    }
-    assert(argc == 4);
+    assert(argc == 4 || (argc == 5 && mode == "read-ahead"));
     const auto config = settings(argv[2], argv[3]);
     if (mode == "projection") typed_wire_projection(config);
     else if (mode == "failed-stream") failed_stream(config);
-    else { assert(mode == "cancel"); cancelled_stream(config); }
+    else { assert(mode == "cancel" || mode == "read-ahead"); cancelled_stream(config, mode == "read-ahead" ? std::stoull(argv[4]) : 0); }
 }

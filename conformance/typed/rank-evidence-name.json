@@ -1,0 +1,59 @@
+{
+  "name": "rank-evidence-name",
+  "request": {
+    "question": {
+      "function": "rank",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ],
+      "top": 1,
+      "evidence": "/selected"
+    },
+    "records": [
+      {
+        "selected": "a",
+        "ignored": "different evidence"
+      },
+      {
+        "selected": "b",
+        "ignored": "different evidence"
+      }
+    ],
+    "name": "named-rank"
+  },
+  "replies": [
+    {
+      "contains": "\"b\"",
+      "distribution": {
+        "low": 0.1,
+        "high": 0.9
+      }
+    },
+    {
+      "distribution": {
+        "low": 0.8,
+        "high": 0.2
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "rank",
+      "position": 2,
+      "status": "answered",
+      "answer": 1,
+      "detail": {
+        "levels": [
+          0.1,
+          0.9
+        ]
+      },
+      "source": {
+        "name": "named-rank"
+      }
+    }
+  ],
+  "requests": 1
+}

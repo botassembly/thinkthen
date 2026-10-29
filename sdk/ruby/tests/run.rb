@@ -22,6 +22,7 @@ isolated_ruby_environment do
   ruby_packaging
   shared_cases
   admission_cases
+  shared_options
   ruby_saved_calls
   ruby_toolbox_json
   ruby_questions
@@ -44,6 +45,8 @@ isolated_ruby_environment do
   ruby_scheduler_cancellation
   ruby_execution_names
   ruby_conversion_contract
+  ruby_strict_contract
+  ruby_source_contract
   ruby_key_snapshots
   ruby_configuration
   native_abi_cases

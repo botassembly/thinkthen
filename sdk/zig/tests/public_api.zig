@@ -349,3 +349,21 @@ test "choice exposes only its label and encodes as a string" {
     defer testing.allocator.free(encoded);
     try testing.expectEqualStrings("\"billing\"", encoded);
 }
+
+// Feature: a projected failed row keeps its code and uses the live engine family.
+test "failed row projections classify each engine family" {
+    const codes = [_]tt.ErrorCode{ .usage_question, .record_missing, .backend_reply, .local_io, .internal_bug };
+    const errors = [_]tt.Error{ error.Usage, error.Record, error.Backend, error.Local, error.Internal };
+    for (codes, errors) |code, expected| {
+        const row: tt.Row(.decide) = .{
+            .position = 1,
+            .id = null,
+            .source = .{ .question_identity = "fixture", .backend = .stub, .model = "stub" },
+            .outcome = .{ .failed = .{ .code = code, .message = "preserve this failure" } },
+        };
+        var diagnostic: tt.Diagnostic = .{};
+        try testing.expectError(expected, row.intoResult(&diagnostic));
+        try testing.expectEqual(code, diagnostic.code.?);
+        try testing.expectEqualStrings("preserve this failure", diagnostic.message());
+    }
+}

@@ -74,6 +74,8 @@ A JSON object record can carry an exact string or integer id. Preserve the retur
 
 Pass the whole table in one call to batch it. Batch settings also obey byte and backend limits; one record may require multiple questions. Reexecuting a query sends another call. Materialize results once before inspecting, joining or exporting them. An annotation can be answered while a child is unsure or failed; inspect each answer field's status and error. Rank cannot be an annotation entry.
 
+An outer `LIMIT` may wait for other requests or their timeout and may pay for rows it never returns. Put `LIMIT` inside the input subquery to bound input work. While a request is held, DuckDB can buffer one 2048-row input vector separately from the engine iterator's read-ahead bound.
+
 Use read_csv/read_json or host file IO to load records and an annotation question map. The annotation toolbox is a flat named question map; no shell toolbox-run API exists. After checking all outer and nested failures, export a materialized outcome table with `COPY outcomes TO 'answers.csv' (HEADER, DELIMITER ',')`. DuckDB can also export JSON through COPY; CSV cells containing nested values retain their textual representations. XLSX needs an appropriate table library or extension outside this package.
 
 Call `thinkthen_relate` alone when you need names and relations from the same evidence. `detail.names` contains all admitted names, including names with no returned relation, and `detail.pairs` contains scored relation pairs. The `answer` contains accepted relations. Do not run recognize first for that task.

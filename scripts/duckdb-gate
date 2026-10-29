@@ -43,6 +43,35 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     export LLVM_PROFILE_FILE="$build_target/duckdb-%p-%m.profraw"
 fi
 python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"
+python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" --limit-only
+"$scratch/consumer/sql" "$scratch/consumer/thinkthen.duckdb_extension" --parallel \
+    "SELECT count(*) AS total FROM thinkthen_decide((SELECT record_thread(i)::VARCHAR AS record FROM evidence ORDER BY record), 'Ready?')"
+community="$HOME/.local/share/thinkthen-build-tools/duckdb-community/1.4.3"
+THINKTHEN_DUCKDB_SOURCE="$community/duckdb" EXTENSION_CI_TOOLS="$community/extension-ci-tools" \
+    python3 databases/duckdb/tests/community-recipe.py
+python3 databases/duckdb/tests/community_cases.py "$scratch/consumer"
+python3 - "$root" "$scratch/stale-contract.h" <<'PYTHON'
+import json
+from pathlib import Path
+import sys
+root, output = map(Path, sys.argv[1:])
+version = json.loads((root / 'schemas/abi.json').read_text())['abi_version']
+output.write_text('#include "thinkthen.h"\n#undef THINKTHEN_ABI_VERSION\n#define THINKTHEN_ABI_VERSION ' + str(version + (1 << 16)) + 'u\n')
+PYTHON
+THINKTHEN_SQL_ARCHIVE=$fixture_archive THINKTHEN_SQL_TEST_BUILD=ON \
+    THINKTHEN_DUCKDB_ABI_HEADER="$scratch/stale-contract.h" \
+    THINKTHEN_DUCKDB_OUTPUT="$scratch/incompatible" scripts/duckdb-build
+python3 databases/duckdb/tests/typed_api.py "$scratch/consumer" \
+    --abi-mismatch-extension "$scratch/incompatible/thinkthen.duckdb_extension"
+# A compatible future engine may return a code this consumer cannot name.
+printf '%s\n' '#include "thinkthen.h"' '#define thinkthen_code_name(value) ((const char *)0)' > "$scratch/unknown-code.h"
+THINKTHEN_SQL_ARCHIVE=$fixture_archive THINKTHEN_SQL_TEST_BUILD=ON \
+    THINKTHEN_DUCKDB_ABI_HEADER="$scratch/unknown-code.h" \
+    THINKTHEN_DUCKDB_OUTPUT="$scratch/unknown-code" scripts/duckdb-build
+python3 databases/unknown-code-check.py duckdb "$scratch/consumer/sql" \
+    "$scratch/unknown-code/thinkthen.duckdb_extension"
+python3 databases/duckdb/tests/scan-gitlinks.py
+
 THINKTHEN_LOOPBACK="${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" \
     python3 scripts/stress-adapters.py --surface duckdb -- python3 databases/duckdb/tests/stress.py "$scratch/consumer"
 python3 scripts/sql-stress-lifetime-test "$root" duckdb "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" "$scratch/consumer"

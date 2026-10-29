@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 )
 
 type backend struct {
@@ -36,23 +37,59 @@ func startBackend(t *testing.T, args ...string) *backend {
 	t.Cleanup(func() {
 		fmt.Fprintln(input, "shutdown")
 		input.Close()
-		if err := child.Wait(); err != nil {
+		done := make(chan error, 1)
+		go func() { done <- child.Wait() }()
+		if err := receiveBefore(t, done, time.Now().Add(30*time.Second)); err != nil {
 			t.Error(err)
 		}
 	})
-	if !b.output.Scan() {
-		t.Fatal("loopback did not publish its port")
-	}
-	b.url = "http://127.0.0.1:" + b.output.Text() + "/v1"
+	b.url = "http://127.0.0.1:" + b.lineBefore(t, time.Now().Add(30*time.Second)) + "/v1"
 	return b
 }
-func (b *backend) command(t *testing.T, command string) string {
+func receiveBefore[T any](t *testing.T, result <-chan T, deadline time.Time) T {
+	t.Helper()
+	timer := time.NewTimer(time.Until(deadline))
+	defer timer.Stop()
+	select {
+	case value := <-result:
+		return value
+	case <-timer.C:
+		t.Fatal("blocking test operation exceeded its deadline")
+	}
+	var zero T
+	return zero
+}
+func (b *backend) lineBefore(t *testing.T, deadline time.Time) string {
+	t.Helper()
+	done := make(chan string, 1)
+	go func() {
+		if b.output.Scan() {
+			done <- b.output.Text()
+		} else {
+			done <- ""
+		}
+	}()
+	timer := time.NewTimer(time.Until(deadline))
+	defer timer.Stop()
+	select {
+	case value := <-done:
+		if value == "" {
+			t.Fatal("loopback ended before its response")
+		}
+		return value
+	case <-timer.C:
+		_ = b.child.Process.Kill()
+		t.Fatal("loopback response exceeded its deadline")
+	}
+	return ""
+}
+func (b *backend) commandBefore(t *testing.T, command string, deadline time.Time) string {
 	t.Helper()
 	if _, err := fmt.Fprintln(b.input, command); err != nil {
 		t.Fatal(err)
 	}
-	if !b.output.Scan() {
-		t.Fatal("loopback did not answer " + command)
-	}
-	return b.output.Text()
+	return b.lineBefore(t, deadline)
+}
+func (b *backend) command(t *testing.T, command string) string {
+	return b.commandBefore(t, command, time.Now().Add(30*time.Second))
 }

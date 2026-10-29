@@ -1,0 +1,38 @@
+{
+  "name": "tag-backend-reply",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "What applies?",
+      "labels": [
+        "billing",
+        "refund",
+        "shipping"
+      ],
+      "threshold": 0.7
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "body": {},
+      "status": 200
+    }
+  ],
+  "expected": [
+    {
+      "function": "tag",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.reply"
+      }
+    }
+  ],
+  "requests": 1,
+  "client": {
+    "batch": 2
+  }
+}

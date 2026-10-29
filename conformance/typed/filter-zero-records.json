@@ -1,0 +1,17 @@
+{
+  "name": "filter-zero-records",
+  "request": {
+    "question": {
+      "function": "filter",
+      "question": "Ready?",
+      "threshold": {
+        "low": 0.2,
+        "high": 0.8
+      }
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

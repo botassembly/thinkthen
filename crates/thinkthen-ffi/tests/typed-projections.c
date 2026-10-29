@@ -126,11 +126,12 @@ static void body(thinkthen_value *value, thinkthen_error *error) {
     uint8_t has_detail = 0; ok(thinkthen_value_has_detail(value, &has_detail, error), error); if (has_detail) { fputs(",\"detail\":", stdout); detail(value, function, error); }
 }
 int main(int argc, char **argv) {
-    assert(argc == 3); assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()));
+    assert(argc == 3 || (argc == 4 && strcmp(argv[3], "cancelled") == 0)); assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()));
     thinkthen_error error = {0}; error.struct_size = sizeof(error);
-    thinkthen_client *client = NULL; ok(thinkthen_client_open_json((const uint8_t *)argv[1], strlen(argv[1]), &client, &error), &error);
+    thinkthen_client *client = NULL;
+    int32_t opened = thinkthen_client_open_json((const uint8_t *)argv[1], strlen(argv[1]), &client, &error);
     thinkthen_call *call = NULL;
-    int32_t opened = thinkthen_call_open_json(client, (const uint8_t *)argv[2], strlen(argv[2]), THINKTHEN_OFFSET_CODE_POINTS, &call, &error);
+    if (opened == THINKTHEN_OK) opened = thinkthen_call_open_json(client, (const uint8_t *)argv[2], strlen(argv[2]), THINKTHEN_OFFSET_CODE_POINTS, &call, &error);
     thinkthen_client_free(client);
     if (opened == THINKTHEN_ERROR) {
         assert(call == NULL);
@@ -138,14 +139,28 @@ int main(int argc, char **argv) {
         thinkthen_error_free(&error);
         return 0;
     }
-    ok(opened, &error); thinkthen_call_end_input(call);
+    ok(opened, &error);
+    if (argc == 4) thinkthen_call_cancel(call);
+    thinkthen_call_end_input(call);
     for (;;) {
-        thinkthen_row row = {0}; row.struct_size = sizeof(row); int32_t result = thinkthen_call_next(call, &row, &error); if (result == THINKTHEN_END) break; ok(result, &error);
+        thinkthen_row row = {0}; row.struct_size = sizeof(row);
+        int32_t result = thinkthen_call_next(call, &row, &error);
+        if (result == THINKTHEN_END) break;
+        if (result == THINKTHEN_ERROR) {
+            assert(row.answer.data == NULL && row.detail.data == NULL);
+            printf("{\"error\":\"%s\"}\n", thinkthen_code_name(error.code));
+            assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
+            break;
+        }
+        ok(result, &error);
         thinkthen_value *value = NULL; ok(thinkthen_row_values(&row, &value, &error), &error); uint64_t position = row.position; thinkthen_row_free(&row);
         putchar('{'); body(value, &error); printf(",\"position\":%" PRIu64, position);
         thinkthen_id id = {0}; ok(thinkthen_value_id(value, &id, &error), &error);
         if (id.kind != THINKTHEN_ID_ABSENT) { fputs(",\"id\":", stdout); if (id.kind == THINKTHEN_ID_STRING) text(id.text); else if (id.kind == THINKTHEN_ID_SIGNED) printf("%" PRId64, id.signed_value); else { assert(id.kind == THINKTHEN_ID_UNSIGNED); printf("%" PRIu64, id.unsigned_value); } }
-        thinkthen_source source = {0}; ok(thinkthen_value_source(value, &source, &error), &error); printf(",\"source\":{\"backend\":%u,\"model\":", source.backend); text(source.model); fputs(",\"question_identity\":", stdout); text(source.question_identity); fputs("}}\n", stdout);
+        thinkthen_source source = {0}; ok(thinkthen_value_source(value, &source, &error), &error); printf(",\"source\":{\"backend\":%u,\"model\":", source.backend); text(source.model); fputs(",\"question_identity\":", stdout); text(source.question_identity);
+        thinkthen_text name = {0}; ok(thinkthen_value_source_name(value, &name, &error), &error);
+        if (name.data) { fputs(",\"name\":", stdout); text(name); }
+        fputs("}}\n", stdout);
         thinkthen_value_free(value);
     }
     thinkthen_call_free(call); thinkthen_error_free(&error); return 0;

@@ -1,0 +1,47 @@
+{
+  "name": "score-evidence-name",
+  "request": {
+    "question": {
+      "function": "score",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ],
+      "evidence": "/selected"
+    },
+    "records": [
+      {
+        "selected": "evidence",
+        "ignored": "different evidence"
+      }
+    ],
+    "name": "named-score"
+  },
+  "replies": [
+    {
+      "distribution": {
+        "low": 0.2,
+        "high": 0.8
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "score",
+      "position": 1,
+      "answer": 0.8,
+      "status": "answered",
+      "detail": {
+        "levels": [
+          0.2,
+          0.8
+        ]
+      },
+      "source": {
+        "name": "named-score"
+      }
+    }
+  ],
+  "requests": 1
+}

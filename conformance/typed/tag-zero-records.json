@@ -1,0 +1,22 @@
+{
+  "name": "tag-zero-records",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "What applies?",
+      "labels": [
+        "billing",
+        "refund",
+        "shipping"
+      ],
+      "threshold": 0.7
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0,
+  "client": {
+    "batch": 2
+  }
+}

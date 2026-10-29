@@ -32,9 +32,12 @@ def verify(database, query, failure):
     results = [query(database, "SELECT position,status,answer,detail,(source).question_identity FROM thinkthen.relate(%s,rules=>ARRAY[" + rule + "]::thinkthen.rule[]) t", (source,)) for rule in statements]
     assert len(results[0]) == 1 and results[0][0][1] == 'answered', results
     assert results[0] == results[1], results
+    # Feature: escaped zero bytes in JSON evidence do not require output conversion.
+    source = "SELECT '{\"body\":\"\\u0000\"}'::json AS record"
+    rows = query(database, "SELECT position,id,status,error_code FROM thinkthen.decide(%s,'Ready?')", (source,))
+    assert rows == [(1, None, 'answered', None)], rows
     # Feature: host representation failures remain failed rows with source and position.
-    for source, selected in [("SELECT '{\"body\":\"\\u0000\"}'::json AS record", False),
-                             ("SELECT '\"\\u0000\"'::json AS key,'alpha'::text AS record", True),
+    for source, selected in [("SELECT '\"\\u0000\"'::json AS key,'alpha'::text AS record", True),
                              ("SELECT '[1e1000,\"\\u0000\"]'::json AS key,'alpha'::text AS record", True),
                              ("SELECT '{\"\\u0000\":1e1000}'::json AS key,'alpha'::text AS record", True),
                              ("SELECT '{\"x\":\"\\u0000\",\"x\":1e1000}'::json AS key,'alpha'::text AS record", True)]:
@@ -53,7 +56,7 @@ def verify(database, query, failure):
             connection.autocommit = True
             query(connection, "SET thinkthen.allowed_backends = %s", ('stub:*' if allowed else '',))
             query(connection, "SET thinkthen.backend = 'stub'")
-            barrier.wait()
+            barrier.wait(timeout=30)
             if allowed:
                 result = query(connection, "SELECT count(*) FROM thinkthen.decide(%s,'Ready?',record_column=>'body')", (source,))
                 assert result == [(1025,)], result

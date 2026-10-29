@@ -24,8 +24,11 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
+import math
 
 from stress_monitor import Monitor
+from test_control import read_line
 from stress_resources import adopt_daemons
 
 
@@ -35,19 +38,22 @@ class Fixture:
             [os.environ['THINKTHEN_LOOPBACK'], *arguments], stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, text=True)
         try:
-            port = self.process.stdout.readline().strip()
+            port = self.read()
             self.url = f'http://127.0.0.1:{int(port)}/v1'
         except BaseException:
             self.process.kill()
-            self.process.wait()
+            self.process.wait(timeout=120)
             self.process.stdin.close()
             self.process.stdout.close()
             raise
 
-    def command(self, command):
+    def read(self, timeout=30):
+        return read_line(self.process.stdout, timeout=timeout).strip()
+
+    def command(self, command, timeout=30):
         self.process.stdin.write(command + '\n')
         self.process.stdin.flush()
-        response = self.process.stdout.readline().strip()
+        response = self.read(timeout)
         if not response:
             raise RuntimeError(f'loopback stopped during {command}')
         return response
@@ -61,7 +67,7 @@ class Fixture:
                 raise RuntimeError('loopback failed')
         except (BrokenPipeError, subprocess.TimeoutExpired):
             self.process.kill()
-            self.process.wait()
+            self.process.wait(timeout=120)
         finally:
             try:
                 self.process.stdin.close()
@@ -70,7 +76,7 @@ class Fixture:
             self.process.stdout.close()
             if self.process.poll() is None:
                 self.process.kill()
-                self.process.wait()
+                self.process.wait(timeout=120)
 
 
 class Capture:
@@ -89,21 +95,26 @@ class Capture:
                 self.data.extend(block[:max(0, 4096 - len(self.data))])
 
     def finish(self):
-        self.thread.join()
+        self.thread.join(timeout=30)
+        if self.thread.is_alive():
+            raise RuntimeError("adapter output remained open after its deadline")
         return self.data.decode(errors='replace')
 
 
-def arrived_or_exited(fixture, process):
+def arrived_or_exited(fixture, process, arrivals=1):
     """An adapter that fails before opening its request cannot strand arrival."""
     events = queue.Queue()
     def arrival():
         try:
-            events.put(('arrival', fixture.command('arrived')))
+            events.put(('arrival', fixture.command('arrived' if arrivals == 1 else f'arrived {arrivals}')))
         except Exception as error:
             events.put(('error', str(error)))
     threading.Thread(target=arrival, daemon=True).start()
-    threading.Thread(target=lambda: events.put(('exit', process.wait())), daemon=True).start()
-    kind, value = events.get()
+    threading.Thread(target=lambda: events.put(('exit', process.wait(timeout=120))), daemon=True).start()
+    try:
+        kind, value = events.get(timeout=30)
+    except queue.Empty as error:
+        raise RuntimeError("adapter did not open a request before its deadline") from error
     if kind != 'arrival' or value != 'arrived':
         raise RuntimeError(f'adapter stopped before request arrival: {kind} {value}')
 
@@ -114,7 +125,7 @@ def stop_adapter(process):
         os.killpg(process.pid, signal.SIGKILL)
     except ProcessLookupError:
         pass
-    process.wait()
+    process.wait(timeout=120)
 
 
 def identifier_bounds(table, count, concurrency, rounds):
@@ -136,7 +147,14 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
     report = result if result is not None else {}
     report.update(surface=surface, command=shlex.join(command), backend=wire, scenario=scenario['name'],
         case=f"{scenario['name']}/concurrency={concurrency}/rounds={rounds}/cancel={cancel}",
-        concurrency=concurrency, rounds=rounds, cancelled=cancel)
+        concurrency=concurrency, rounds=rounds, cancelled=cancel, records=count)
+    read_ahead_limit = None
+    limits = json.loads(subprocess.check_output([os.environ['THINKTHEN_LOOPBACK'], '--limits'], text=True, timeout=30)) if cancel else None
+    if cancel and surface in {'python', 'typescript', 'ruby'}:
+        read_ahead_limit = table['client']['batch'] * limits['read_ahead_window'] + 1
+        count = max(count, read_ahead_limit + table['client']['batch'])
+        report['records'] = count
+        report['read_ahead_limit'] = read_ahead_limit
     basis = identifier_bounds(table, count, concurrency, rounds)
     fixture = Fixture(['--held', 'body'] if cancel else ['--stress', scenario['name']])
     process = None
@@ -145,9 +163,11 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
         with tempfile.TemporaryDirectory(prefix='thinkthen-stress-') as directory:
             path = Path(directory) / 'case.json'
             client = dict(table['client'], backend=wire, url=fixture.url, api_key='loopback-only')
+            if cancel:
+                client["retry"] = dict(client["retry"], attempt_timeout_ms=60000)
             path.write_text(json.dumps(dict(client=client, scenario=scenario, records=count,
                 probability=table['replies'][0]['probability'], concurrency=concurrency,
-                rounds=rounds, cancel=cancel, identifier_base=basis)))
+                rounds=rounds, cancel=cancel, identifier_base=basis, read_ahead_limit=read_ahead_limit)))
             env = dict(os.environ, THINKTHEN_STRESS_CASE=str(path),
                 THINKTHEN_STRESS_CONTEXT=json.dumps({key: report[key] for key in ('surface', 'backend', 'case')}))
             if resources:
@@ -160,11 +180,15 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
             output, errors = Capture(process.stdout), Capture(process.stderr)
             try:
                 if cancel:
-                    arrived_or_exited(fixture, process)
+                    arrivals = min(math.ceil(count / client["batch"]), limits["workers"])
+                    arrived_or_exited(fixture, process, arrivals)
+                    report["held_arrivals"] = arrivals
+                    before_cancel = int(fixture.command('count'))
+                    cancelled_at = time.monotonic()
                     process.stdin.write(b'cancel\n')
                     process.stdin.flush()
                 process.stdin.close()
-                status = process.wait()
+                status = process.wait(timeout=2 if cancel else 120 * max(1, rounds))
                 report['exit_code'] = status
                 stop_adapter(process)
                 result, diagnostic = output.finish(), errors.finish()
@@ -178,8 +202,28 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                     raise RuntimeError(f'adapter lost calls, rows or cancellation: {report}')
                 if not cancel and (report['failed'] > 0) != (scenario['status'] == 'failed'):
                     raise RuntimeError(f'adapter lost expected failure rows: {report}')
-                if cancel and fixture.command('closed') != 'closed':
-                    raise RuntimeError('cancelled request remained open')
+                if cancel:
+                    if fixture.command('closed', timeout=max(0.001, 2 - (time.monotonic() - cancelled_at))) != 'closed':
+                        raise RuntimeError('cancelled request remained open')
+                    report['cancel_seconds'] = time.monotonic() - cancelled_at
+                    if report['cancel_seconds'] > 2:
+                        raise RuntimeError('cancelled socket did not close within two seconds')
+                    requests = int(fixture.command('count'))
+                    if requests != before_cancel:
+                        raise RuntimeError(f'requests continued after cancel: {before_cancel} -> {requests}')
+                else:
+                    requests = int(fixture.command('count'))
+                    retries = sum(fault.get('repeat', 1) for fault in scenario.get('faults', [])
+                                  if fault['kind'] == 'status' and fault.get('status') in (429, 503))
+                    expected_requests = (0 if scenario['name'] == 'refused' else
+                                         math.ceil(count / client['batch']) * expected_calls + retries)
+                    if requests != expected_requests:
+                        raise RuntimeError(f'exact backend requests: expected {expected_requests}, got {requests}')
+                report['requests'] = requests
+                if read_ahead_limit is not None:
+                    pulled = report.get('read_ahead_records')
+                    if type(pulled) is not int or not 0 < pulled <= read_ahead_limit:
+                        raise RuntimeError(f'input adapter did not prove its pull bound: {pulled} > {read_ahead_limit}')
                 mask = report.pop('identifier_width_mask')
                 widths = [width for width in range(mask.bit_length()) if mask & (1 << width)]
                 if not cancel and len(widths) != 1:
@@ -201,7 +245,7 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
             except BaseException as error:
                 stop_adapter(process)
                 fixture.process.kill()
-                fixture.process.wait()
+                fixture.process.wait(timeout=120)
                 raise RuntimeError(f'{error}; adapter diagnostics: {errors.finish()}') from error
     finally:
         if process is not None:
@@ -241,13 +285,16 @@ def main():
         cases = [(s, 1, 1, False) for s in table['scenarios']]
         pair = (healthy, 1, 2, False) if args.sequential else (healthy, 2, 1, False)
         cases += [pair, (healthy, 1, 1, True)]
-        if args.full:
+        if args.full or not args.sanitizer:
             cases += [(healthy, 1, table['records']['soak_rounds'], False)]
         for scenario, concurrency, rounds, cancel in cases:
             result = {}
             try:
-                run(command, table, wire, scenario, count, concurrency, rounds, cancel,
-                    resources=args.full and not args.sanitizer and rounds == table['records']['soak_rounds'],
+                run(command, table, wire, scenario,
+                    min(count, table["client"]["batch"]) if scenario["status"] == "failed" else count,
+                    concurrency, rounds, cancel,
+                    resources=not args.sanitizer and rounds == table['records']['soak_rounds'] and Path('/proc/self/status').exists(),
+                    short_gate=not args.full,
                     result=result, surface=args.surface)
                 totals = calls + result['calls'], rows + result['rows'], failed + result['failed']
             except Exception as error:
@@ -261,7 +308,9 @@ def main():
             break
     print(json.dumps(dict(adapter=command[0], full=args.full, execution="sequential" if args.sequential else "concurrent", calls=calls, rows=rows, failed=failed, cases=reports, sanitizer=args.sanitizer,
         resource_growth='not measured under sanitizer instrumentation' if args.sanitizer else
-            ('completed-round verdicts' if args.full else 'not measured in smoke workload'))), flush=True)
+            ('completed-round verdicts' if any('resources' in case for case in reports) else
+             'not measured: Linux /proc unavailable' if not Path('/proc/self/status').exists() else
+             'not measured: suite stopped before its resource workload'))), flush=True)
     return int('error' in reports[-1])
 
 

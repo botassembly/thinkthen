@@ -20,4 +20,10 @@ SELECT * FROM thinkthen.decide(
   'Does the message request a refund?');
 ```
 
+SQL cannot set `max_retries` above the engine default.
+
+PostgreSQL fetches source rows in native chunks. Its source buffer rounds the engine iterator’s read-ahead bound up to the next chunk.
+
+PostgreSQL evaluates the full function before applying an outer `LIMIT`. Limit the query in `source_sql` to limit paid requests.
+
 [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/extensions/postgres/thinkthen--0.2.0.sql).

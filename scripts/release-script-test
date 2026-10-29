@@ -137,6 +137,9 @@ for platform, fallback in (
     assert command() == str(provided / 'bin/go'), (platform, command())
 '''], cwd=ROOT, env=environment, check=True)
 
+    def test_final_registry_packages(self):
+        subprocess.run([sys.executable, ROOT / 'scripts/release-platform-test'], check=True)
+
     def test_installer_verifies_release_archives(self):
         subprocess.run([sys.executable, ROOT / 'scripts/installer-test'], check=True)
 
@@ -300,19 +303,25 @@ for platform, fallback in (
                 release_windows_check.smoke(package)
             self.assertEqual(len(calls), len(cases) + 2)
 
-    def test_release_assets_have_provenance_before_upload(self):
+    def test_release_assets_have_provenance_after_platform_checks(self):
         workflow = (ROOT / '.github/workflows/release-prepare.yml').read_text()
-        bundle = workflow.split('\n  bundle:\n', 1)[1].split('\n  draft:\n', 1)[0]
-        self.assertIn('id-token: write', bundle)
-        self.assertIn('attestations: write', bundle)
-        attest = re.search(r'uses: actions/attest@[0-9a-f]{40}\b', bundle)
+        bundle = workflow.split('\n  bundle:\n', 1)[1].split('\n  registry-installed:\n', 1)[0]
+        draft = workflow.split('\n  draft:\n', 1)[1]
+        self.assertNotIn('actions/attest@', bundle)
+        self.assertNotIn('id-token: write', bundle)
+        self.assertNotIn('attestations: write', bundle)
+        self.assertIn('needs: [source, bundle, registry-installed]', draft)
+        self.assertIn('id-token: write', draft)
+        self.assertIn('attestations: write', draft)
+        attest = re.search(r'uses: actions/attest@[0-9a-f]{40}\b', draft)
         self.assertIsNotNone(attest, 'release provenance action must be pinned')
-        self.assertIn("subject-path: 'release/*'", bundle)
-        self.assertIn("if: needs.source.outputs.retry != 'true'", bundle)
-        self.assertIn("if: needs.source.outputs.retry == 'true'", bundle)
-        self.assertIn('predicate-path: release/reuse.json', bundle)
-        self.assertLess(bundle.index('scripts/release-workflow attach'), attest.start())
-        self.assertLess(attest.start(), bundle.index('uses: actions/upload-artifact'))
+        self.assertIn("subject-path: 'release/*'", draft)
+        self.assertIn("if: needs.source.outputs.retry != 'true'", draft)
+        self.assertIn("if: needs.source.outputs.retry == 'true'", draft)
+        self.assertIn('predicate-path: release/reuse.json', draft)
+        self.assertLess(draft.index('uses: actions/download-artifact'), attest.start())
+        self.assertLess(attest.start(), draft.index('name: Create a draft for review'))
+
 
 
 if __name__ == '__main__':

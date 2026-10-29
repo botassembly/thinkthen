@@ -1,0 +1,28 @@
+{
+  "name": "rank-top-zero",
+  "request": {
+    "question": {
+      "function": "rank",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ],
+      "top": 0
+    },
+    "records": [
+      "a",
+      "b",
+      null,
+      {
+        "id": true,
+        "body": "ignored"
+      }
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "usage.question"
+  },
+  "requests": 0
+}

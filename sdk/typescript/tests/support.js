@@ -11,6 +11,15 @@ for (const name of ["OPENAI_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_BATCH", "
 process.env.THINKTHEN_API_KEY = "sk-test-0123456789";
 export const sdk = await import(pathToFileURL(process.env.THINKTHEN_NODE_PACKAGE).href);
 
+async function deadline(pending, label) {
+  let timer;
+  try {
+    return await Promise.race([pending, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`fixture ${label} deadline expired`)), 30000);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+
 export async function backend(source) {
   let directory;
   let path = source;
@@ -25,15 +34,25 @@ export async function backend(source) {
   });
   const exited = once(child, "exit");
   const lines = createInterface({ input: child.stdout })[Symbol.asyncIterator]();
-  const port = (await lines.next()).value;
+  let port;
+  try { port = (await deadline(lines.next(), "startup")).value; }
+  catch (error) {
+    child.kill();
+    await deadline(exited, "failed startup cleanup");
+    if (directory) await rm(directory, { recursive: true });
+    throw error;
+  }
   return {
     url: `http://127.0.0.1:${port}/v1`,
-    async event(name) { child.stdin.write(`${name}\n`); return (await lines.next()).value; },
-    async count() { child.stdin.write("count\n"); return Number((await lines.next()).value); },
+    async event(name) { child.stdin.write(`${name}\n`); return (await deadline(lines.next(), name)).value; },
+    async count() { child.stdin.write("count\n"); return Number((await deadline(lines.next(), "count")).value); },
     async close() {
       child.stdin.end("shutdown\n");
-      await exited;
-      await lines.return();
+      try {
+        const [code] = await deadline(exited, "shutdown");
+        if (code !== 0) throw new Error(`fixture exited with ${code}`);
+        await deadline(lines.return(), "pipe close");
+      } finally { child.kill(); }
       if (directory) await rm(directory, { recursive: true });
     },
   };

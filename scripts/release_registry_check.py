@@ -4,13 +4,25 @@ from jvm_repository import consumer as stage_jvm_consumer
 import os
 import json
 import hashlib
+from xml.sax.saxutils import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import shutil
 import sys
 import threading
 
-from release_workflow import ROOT, run, version
+from release_workflow import ROOT, run as command, version
+
+
+def run(*args, **options):
+    # CreateProcess does not search PATHEXT for Maven/npm batch launchers.
+    if os.name == 'nt':
+        executable = shutil.which(str(args[0]))
+        if executable is None:
+            raise RuntimeError('Missing package consumer tool: ' + str(args[0]))
+        args = (executable, *args[1:])
+    options.setdefault('timeout', 600)
+    return command(*args, **options)
 
 
 def java_arguments(path, *arguments):
@@ -64,7 +76,12 @@ def environment(scratch):
                        XDG_CACHE_HOME=str(scratch / 'cache'), XDG_CONFIG_HOME=str(scratch / 'config'),
                        NUGET_PACKAGES=str(scratch / 'nuget-cache'), DOTNET_CLI_TELEMETRY_OPTOUT='1',
                        DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_GENERATE_ASPNET_CERTIFICATE='false')
-    for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH'):
+    environment.update(USERPROFILE=str(scratch / 'home'), APPDATA=str(scratch / 'config'),
+                       NPM_CONFIG_USERCONFIG=str(scratch / 'config/npmrc'), PYTHONNOUSERSITE='1')
+    for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH',
+                 'PYTHONPATH', 'NODE_PATH', 'NODE_OPTIONS', 'CLASSPATH', 'JAVA_TOOL_OPTIONS',
+                 '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS', 'MAVEN_OPTS',
+                 'DOTNET_ADDITIONAL_DEPS', 'DOTNET_SHARED_STORE'):
         environment.pop(name, None)
     if os.name == 'nt':
         from release_windows_cache import prepare_cache
@@ -74,21 +91,29 @@ def environment(scratch):
     return environment
 
 
-def install(packages, scratch):
+def install_node(packages, scratch):
     isolated = environment(scratch)
     node = scratch / 'node-consumer'
     node.mkdir()
     node_install(packages, node, scratch, isolated)
     shutil.copy2(ROOT / 'scripts/release/node.mjs', node / 'check.mjs')
     run('node', node / 'check.mjs', ROOT / 'construction/stub.json', env=isolated)
+
+
+def install_dotnet(packages, scratch):
+    isolated = environment(scratch)
     consumer = scratch / 'dotnet-consumer'
     shutil.copytree(ROOT / 'sdk/csharp/tests', consumer)
     project = consumer / 'Consumer.csproj'
     config = consumer / 'NuGet.Config'
-    config.write_text(f'<configuration><packageSources><clear/><add key="local" value="{packages / "nuget"}"/><add key="prepared" value="{prepared_feed()}"/></packageSources></configuration>')
+    config.write_text(f'<configuration><packageSources><clear/><add key="local" value="{escape(str(packages / "nuget"), {chr(34): "&quot;"})}"/><add key="prepared" value="{escape(str(prepared_feed()), {chr(34): "&quot;"})}"/></packageSources></configuration>', encoding='utf-8')
     run('dotnet', 'build', project, '--configfile', config, '--artifacts-path', scratch / 'dotnet-artifacts',
         '-o', scratch / 'dotnet-bin', env=isolated)
     run('dotnet', scratch / 'dotnet-bin/Consumer.dll', ROOT / 'construction/stub.json', '--stub-only', env=isolated)
+
+
+def install_jvm(packages, scratch):
+    isolated = environment(scratch)
     # Maven install has compiled the current Java/Kotlin libraries. Use the public
     # consumer with a private local repository containing the packaged coordinates.
     consumer = scratch / 'java-consumer'
@@ -99,13 +124,13 @@ def install(packages, scratch):
     classpath = scratch / 'jvm-classpath'
     run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', pom,
         'package', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath), env=isolated)
-    jars = [consumer / 'target/classes', classpath.read_text().strip()]
+    jars = [consumer / 'target/classes', classpath.read_text(encoding='utf-8').strip()]
     for main in ('ConsumerCases', 'KotlinCasesKt'):
         run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
             '-cp', os.pathsep.join(map(str, jars)), main, ROOT / 'construction/stub.json', '--stub-only'), env=isolated)
     run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
         '-cp', os.pathsep.join(map(str, jars)), 'JavaApiCases', '--stub-only'), env=isolated)
-    print('registry: clean npm, NuGet and JVM consumers pass the shared stub cases')
+
 
 
 def install_python(packages, scratch):
@@ -116,3 +141,22 @@ def install_python(packages, scratch):
     run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', packages / 'pypi',
         'thinkthen==' + version(), env=isolated)
     run(python, ROOT / 'scripts/release/python.py', ROOT / 'construction/stub.json', env=isolated)
+
+
+def install(packages, scratch, report=None):
+    """Report every aggregate package failure before refusing the release."""
+    failures = []
+    for name, check in [('npm', install_node), ('nuget', install_dotnet), ('maven', install_jvm)]:
+        try:
+            check(packages, scratch)
+        except Exception as error:
+            failures.append(name)
+            print(f'registry {name}: FAIL: {error}', flush=True)
+            if report:
+                report(name, {'outcome': 'failure', 'error': str(error)})
+        else:
+            print(f'registry {name}: PASS', flush=True)
+            if report:
+                report(name, {'outcome': 'success'})
+    if failures:
+        raise RuntimeError('Failed registry consumers: ' + ', '.join(failures))

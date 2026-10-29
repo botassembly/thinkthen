@@ -10,11 +10,18 @@ scripts/cpp-package "$scratch/cpp-package"
 mkdir "$scratch/relocated"
 tar -xzf "$scratch/c-package"/*.tar.gz -C "$scratch/relocated"
 tar -xzf "$scratch/cpp-package"/*.tar.gz -C "$scratch/relocated"
-cargo build --locked --offline -p loopback --bin loopback
+if [ -n "${THINKTHEN_LOOPBACK:-}" ]; then
+    test -x "$THINKTHEN_LOOPBACK"
+else
+    cargo build --locked --offline -p loopback --bin loopback
+    THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-target}/debug/loopback"
+    case "$THINKTHEN_LOOPBACK" in /*) ;; *) THINKTHEN_LOOPBACK="$root/$THINKTHEN_LOOPBACK" ;; esac
+fi
+export THINKTHEN_LOOPBACK
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 library=$(find "$scratch/relocated/lib" -maxdepth 1 -type f -name 'libthinkthen*' -print)
-sdk/cpp/tests/check-installed "$scratch/relocated" "$build_target/debug/loopback" "$library"
+sdk/cpp/tests/check-installed "$scratch/relocated" "$THINKTHEN_LOOPBACK" "$library"
 if [ -n "${THINKTHEN_CPP_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_CPP_ARTIFACT_DIR"
     cp "$scratch/cpp-package"/*.tar.gz "$THINKTHEN_CPP_ARTIFACT_DIR/"

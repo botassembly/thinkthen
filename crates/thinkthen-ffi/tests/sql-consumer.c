@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     thinkthen_question *question = NULL;
     assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, BYTES(wording), &question, &error) == THINKTHEN_OK);
     memset(wording, 'x', strlen(wording));
-    assert(thinkthen_sql_call_open_question(client, question, &call, &error) == THINKTHEN_OK);
+    assert(thinkthen_sql_call_open_question(client, question, NULL, &call, &error) == THINKTHEN_OK);
     thinkthen_question_free(question);
     thinkthen_client_free(client);
     char record[] = "evidence";

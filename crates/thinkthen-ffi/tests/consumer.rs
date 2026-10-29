@@ -125,45 +125,72 @@ fn failed_admission_returns_its_usage_code_as_owned_json() {
 
 #[test]
 fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
-    for mode in ["cancel", "free-held"] {
-        let (arrived, request) = mpsc::channel();
-        let (release, held) = mpsc::channel();
-        let held = Arc::new(Mutex::new(held));
-        let server = Loopback::start(move |_| {
-            arrived.send(()).unwrap();
-            held.lock().unwrap().recv().unwrap();
-            Reply::json(200, &json!({}))
-        })
-        .unwrap();
-        let mut process = command(mode);
-        process
-            .env("THINKTHEN_API_KEY", KEY)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        let mut child = process.spawn().unwrap();
-        let mut input = child.stdin.take().unwrap();
-        writeln!(
-            input,
-            "{}\n{}",
-            json!({"url":server.base()}),
-            json!({"question":{"function":"decide","question":"Ready?"},"records":["held"]})
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../conformance/typed");
+    for function in [
+        "decide",
+        "choose",
+        "tag",
+        "score",
+        "filter",
+        "rank",
+        "find",
+        "recognize",
+        "relate",
+        "annotate",
+    ] {
+        let case: Value = serde_json::from_slice(
+            &std::fs::read(root.join(format!("{function}-cancel-before-call.json"))).unwrap(),
         )
         .unwrap();
-        input.flush().unwrap();
-        request.recv().unwrap();
-        input.write_all(b"x").unwrap();
-        drop(input);
-        let output = lines(child.wait_with_output().unwrap());
-        if mode == "cancel" {
-            assert_eq!(output.len(), 1, "{output:?}");
-            assert_eq!(output[0]["error"]["code"], "local.cancelled");
-        } else {
-            assert_eq!(output.len(), 1);
-            assert_eq!(output[0]["freed"], true);
+        for backend in ["systemone", "openai"] {
+            for mode in ["cancel", "free-held"] {
+                let (arrived, request) = mpsc::channel();
+                let (release, held) = mpsc::channel();
+                let held = Arc::new(Mutex::new(held));
+                let server = Loopback::start(move |_| {
+                    arrived.send(()).unwrap();
+                    held.lock().unwrap().recv().unwrap();
+                    Reply::json(200, &json!({}))
+                })
+                .unwrap();
+                let mut process = command(mode);
+                process
+                    .env(
+                        if backend == "systemone" {
+                            "THINKTHEN_API_KEY"
+                        } else {
+                            "OPENAI_API_KEY"
+                        },
+                        KEY,
+                    )
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped());
+                let mut child = process.spawn().unwrap();
+                let mut input = child.stdin.take().unwrap();
+                writeln!(
+                    input,
+                    "{}\n{}",
+                    json!({"url":server.base(),"backend":backend}),
+                    case["request"]
+                )
+                .unwrap();
+                input.flush().unwrap();
+                request.recv().unwrap();
+                input.write_all(b"x").unwrap();
+                drop(input);
+                let output = lines(child.wait_with_output().unwrap());
+                if mode == "cancel" {
+                    assert_eq!(output.len(), 1, "{output:?}");
+                    assert_eq!(output[0]["error"]["code"], "local.cancelled");
+                } else {
+                    assert_eq!(output.len(), 1);
+                    assert_eq!(output[0]["freed"], true);
+                }
+                assert_eq!(server.count(), 1);
+                release.send(()).unwrap();
+            }
         }
-        assert_eq!(server.count(), 1);
-        release.send(()).unwrap();
     }
 }
 

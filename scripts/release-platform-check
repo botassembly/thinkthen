@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Install final release packages on this platform and report every failure.
+
+Usage: release-platform-check RELEASE SHA SCRATCH
+No release, tag or public registry write occurs. Dependencies are prepared before
+isolated, offline package consumers; npm uses a private loopback registry.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+
+from release_workflow import checksums, run, version
+from release_registry_check import install, install_python
+import release_installed_prepare
+
+
+def admit(release, revision, scratch):
+    checksums(release)
+    destination = scratch / 'registries'
+    with tarfile.open(release / f'thinkthen-{version()}-registries.tar.gz') as archive:
+        archive.extractall(destination, filter='data')
+    if json.loads((destination / 'source.json').read_text(encoding='utf-8')) != {
+            'revision': revision, 'version': version()}:
+        raise ValueError('registry source differs from the qualified release')
+    return destination
+
+
+def brew(packages, release, scratch):
+    """Use the generated formula unchanged and seed its exact release download."""
+    tap = 'botassembly/release-check'
+    name = tap + '/thinkthen'
+    env = dict(os.environ, HOMEBREW_NO_AUTO_UPDATE='1', HOMEBREW_NO_INSTALL_CLEANUP='1',
+               HOMEBREW_NO_ANALYTICS='1', HOMEBREW_CACHE=str(scratch / 'brew-cache'))
+    run('brew', 'tap-new', '--no-git', tap, env=env)
+    installed = False
+    try:
+        repository = Path(subprocess.check_output(['brew', '--repository', tap], env=env, text=True).strip())
+        formula = repository / 'Formula/thinkthen.rb'
+        shutil.copy2(packages / 'homebrew/thinkthen.rb', formula)
+        cached = Path(subprocess.check_output(['brew', '--cache', '--formula', name], env=env, text=True).strip())
+        archive = release / f'thinkthen-{version()}-macos-arm64.tar.gz'
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(archive, cached)
+        run('brew', 'install', '--formula', name, env=env)
+        installed = True
+        run('brew', 'test', name, env=env)
+    finally:
+        if installed:
+            run('brew', 'uninstall', '--formula', name, env=env)
+        run('brew', 'untap', tap, env=env)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('release', type=Path)
+    parser.add_argument('revision')
+    parser.add_argument('scratch', type=Path)
+    args = parser.parse_args()
+    release, scratch = args.release.resolve(), args.scratch.resolve()
+    scratch.mkdir(parents=True)
+    packages = admit(release, args.revision, scratch)
+    failures = []
+    outcomes = {}
+    phases = [('prepare-nuget', lambda: release_installed_prepare.dotnet(scratch)),
+              ('prepare-maven', lambda: release_installed_prepare.jvm(packages, scratch)),
+              ('npm-nuget-maven', lambda: install(packages, scratch, lambda name, result: outcomes.update({name: result}))),
+              ('python', lambda: install_python(packages, scratch))]
+    if __import__('platform').system() == 'Darwin':
+        phases.append(('homebrew', lambda: brew(packages, release, scratch)))
+    for name, check in phases:
+        try:
+            check()
+        except Exception as error:
+            outcomes[name] = {'outcome': 'failure', 'error': str(error)}
+            failures.append(name)
+        else:
+            outcomes[name] = {'outcome': 'success'}
+        print(f'release platform {name}: {outcomes[name]}', flush=True)
+    (scratch / 'results.json').write_text(json.dumps(outcomes, indent=2) + '\n', encoding='utf-8')
+    if failures:
+        raise SystemExit('Failed release platform checks: ' + ', '.join(failures))
+
+
+if __name__ == '__main__':
+    main()

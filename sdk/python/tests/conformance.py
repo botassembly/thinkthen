@@ -15,6 +15,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 import thinkthen as tt
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+from test_control import read_line  # type: ignore[import-not-found]
+
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -35,20 +38,31 @@ class Loopback:
             env=child_environment(),
         )
         assert self.process.stdout is not None
-        self.url = f"http://127.0.0.1:{self.process.stdout.readline().strip()}/v1"
+        try:
+            port = int(read_line(self.process.stdout).strip())
+        except BaseException:
+            self.process.kill()
+            self.process.communicate(timeout=30)
+            raise
+        self.url = f"http://127.0.0.1:{port}/v1"
 
     def count(self) -> int:
         assert self.process.stdin is not None
         assert self.process.stdout is not None
         self.process.stdin.write("count\n")
         self.process.stdin.flush()
-        return int(self.process.stdout.readline())
+        return int(read_line(self.process.stdout))
 
     def close(self) -> None:
         assert self.process.stdin is not None
         self.process.stdin.write("shutdown\n")
         self.process.stdin.flush()
-        _, stderr = self.process.communicate()
+        try:
+            _, stderr = self.process.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.communicate(timeout=30)
+            raise
         assert self.process.returncode == 0, stderr
 
     def __enter__(self) -> Self:
@@ -78,11 +92,14 @@ def plain(value: Any) -> Any:
 
 
 def outcome_json(row: Any) -> dict[str, Any]:
-    result: dict[str, Any] = {"function": row.function, "status": row.status}
+    result: dict[str, Any] = {
+        "function": plain(row.function),
+        "status": plain(row.status),
+    }
     if row.status == "answered":
         result["answer"] = plain(row.answer)
     if row.error is not None:
-        result["error"] = {"code": row.error.code, "message": row.error.message}
+        result["error"] = {"code": plain(row.error.code), "message": row.error.message}
         if row.error.http_status is not None:
             result["error"]["http_status"] = row.error.http_status
     if row.probability is not None:
@@ -116,10 +133,13 @@ def admitted(value: dict[str, Any]) -> Any:
     )
 
 
-def request_stream(client: tt.Client, request: dict[str, Any]) -> tt.RowStream[Any]:
+def request_stream(
+    client: tt.Client, request: dict[str, Any], cancel: tt.Cancel | None = None
+) -> tt.RowStream[Any]:
     definition = request["question"]
     function = definition["function"]
     records = request.get("records", [])
+    options = {"name": request.get("name"), "cancel": cancel}
     if function == "annotate":
         return client.annotate_stream(
             tt.AnnotationQuestions(
@@ -130,25 +150,52 @@ def request_stream(client: tt.Client, request: dict[str, Any]) -> tt.RowStream[A
             ),
             records,
             evidence=definition.get("evidence"),
+            name=request.get("name"),
+            cancel=cancel,
         )
     question = admitted(definition)
     if function in {"filter", "rank"}:
-        return cast(tt.RowStream[Any], getattr(client, function)(question, records))
+        return cast(
+            tt.RowStream[Any], getattr(client, function)(question, records, **options)
+        )
     if function in {"recognize", "relate"}:
         return cast(
             tt.RowStream[Any],
-            getattr(client, function + "_stream")(question, records),
+            getattr(client, function + "_stream")(question, records, **options),
         )
     return cast(
-        tt.RowStream[Any], getattr(client, function + "_stream")(question, records)
+        tt.RowStream[Any],
+        getattr(client, function + "_stream")(question, records, **options),
     )
+
+
+def normalized_row(value: Any) -> Any:
+    """Remove engine-owned provenance and unstable error messages, nothing else."""
+    if isinstance(value, list):
+        return [normalized_row(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    result = {}
+    for key, item in value.items():
+        if key == "message" and isinstance(value.get("code"), str):
+            continue
+        if key == "source" and isinstance(item, dict) and "question_identity" in item:
+            item = {
+                name: entry
+                for name, entry in item.items()
+                if name not in {"backend", "model", "question_identity"}
+            }
+            if not item:
+                continue
+        result[key] = normalized_row(item)
+    return result
 
 
 def assert_expected(actual: Any, expected: Any) -> None:
     """Shared cases omit messages and source, but every declared value is exact."""
     if isinstance(expected, dict):
         assert isinstance(actual, dict)
-        assert set(actual) - set(expected) <= {"source", "message"}
+        assert set(actual) == set(expected), (actual, expected)
         for name, value in expected.items():
             assert name in actual
             assert_expected(actual[name], value)
@@ -157,7 +204,7 @@ def assert_expected(actual: Any, expected: Any) -> None:
         for item, wanted in zip(actual, expected, strict=False):
             assert_expected(item, wanted)
     else:
-        assert actual == expected
+        assert type(actual) is type(expected) and actual == expected, (actual, expected)
 
 
 def admission_cases(directory: Path) -> None:
@@ -169,11 +216,6 @@ def admission_cases(directory: Path) -> None:
             continue
         value = case["input"]
         message = case["message"]
-        if case["boundary"] == "settings":
-            print(
-                f"Admission unsupported: {case['name']}: retry fields convert before admission"
-            )
-            continue
         projection = case["boundary"] == "question" and "tags" in value
         if projection:
             # TagQuestion rejects unknown keywords before entering the library.
@@ -181,7 +223,11 @@ def admission_cases(directory: Path) -> None:
             message = "toolbox.entries.[0]." + message
         route = "public projection (saved entry)" if projection else "direct"
         try:
-            if case["boundary"] == "toolbox" or projection:
+            if case["boundary"] == "settings":
+                settings = dict(value)
+                settings["retry"] = tt.RetryPolicy(**settings["retry"])
+                tt.Client(**settings).close()
+            elif case["boundary"] == "toolbox" or projection:
                 tt.Toolbox.from_json(json.dumps(value))
             else:
                 admitted(value)
@@ -194,11 +240,48 @@ def admission_cases(directory: Path) -> None:
         print(f"Admission {route}: {case['name']}")
 
 
+def settings_options(directory: Path) -> None:
+    cases = json.loads((directory / "construction/options.json").read_text())
+    for case in cases:
+        settings = dict(case["client"])
+        policy = settings.pop("retry", {})
+        settings["retry"] = tt.RetryPolicy(
+            max_retries=policy.get("max_retries"),
+            initial_backoff=policy.get("initial_backoff_ms", 0) / 1000,
+            attempt_timeout=policy.get("attempt_timeout_ms", 120000) / 1000,
+        )
+        with tt.Client(**settings) as client:
+            try:
+                if "expected_error" in case:
+                    tt.Toolbox.from_json(
+                        json.dumps(
+                            {
+                                "entries": {
+                                    "fixture": {"question": case["request"]["question"]}
+                                }
+                            }
+                        )
+                    )
+                with request_stream(client, case["request"]) as stream:
+                    actual = [row_json(row) for row in stream]
+            except tt.ThinkThenError as error:
+                assert error.code.value == case["expected_error"], case["name"]
+            else:
+                assert "expected_error" not in case, case["name"]
+                assert_expected(actual, case["expected"])
+        print(f"Settings options: {case['name']}")
+
+
 def run_all(directory: Path, scratch: Path) -> None:
-    admission_cases(directory.parent if directory.name == "typed" else directory)
+    root = directory.parent.parent if directory.name == "typed" else directory.parent
+    admission_cases(root / "conformance")
+    settings_options(root)
     if not (directory / "manifest.json").exists():
         directory = directory / "typed"
     manifest = json.loads((directory / "manifest.json").read_text())
+    from entry_forms import shared_entry_forms
+
+    shared_entry_forms(directory)
     count = 0
     for backend in manifest["backends"]:
         for filename in manifest["cases"]:
@@ -211,33 +294,38 @@ def run_all(directory: Path, scratch: Path) -> None:
                 | {"backend": backend, "api_key": "synthetic-loopback-key"}
             )
             with Loopback(path) as server:
-                client = tt.Client(
-                    backend=settings["backend"],
-                    api_key=settings["api_key"],
-                    url=server.url,
-                    model=settings["model"],
-                    batch=settings["batch"],
-                )
                 actual: Any = []
+                client = None
                 try:
-                    with request_stream(client, case["request"]) as stream:
+                    client = tt.Client(
+                        backend=settings["backend"],
+                        api_key=settings["api_key"],
+                        url=server.url,
+                        model=settings["model"],
+                        batch=settings["batch"],
+                        retry=tt.RetryPolicy(
+                            max_retries=settings["retry"]["max_retries"]
+                        ),
+                    )
+                    cancel = tt.Cancel()
+                    if case.get("cancelled"):
+                        cancel.cancel()
+                    with request_stream(client, case["request"], cancel) as stream:
                         for row in stream:
-                            actual.append(row_json(row))
+                            wire_row = row_json(row)
+                            assert wire_row["source"]["backend"] == backend
+                            assert wire_row["source"]["model"] == settings["model"]
+                            actual.append(normalized_row(wire_row))
                             if case["request"]["question"]["function"] == "filter":
                                 expected = case["expected"][len(actual) - 1]
                                 assert row.kept is expected.get("answer", False)
                 except tt.ThinkThenError as error:
                     assert not actual, (filename, actual)
                     actual = {"error": error.code.value}
+                finally:
+                    if client is not None:
+                        client.close()
                 assert_expected(actual, case["expected"])
-                for row in actual if isinstance(actual, list) else []:
-                    assert set(row["source"]) == {
-                        "backend",
-                        "model",
-                        "question_identity",
-                    }
-                    assert row["source"]["backend"] == backend
-                    assert row["source"]["model"] == settings["model"]
                 assert server.count() == case["requests"], (backend, filename)
                 count += 1
     print(f"Installed wheel: {count} canonical backend cases passed")

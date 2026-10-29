@@ -30,7 +30,7 @@ pub fn sql_settings(text: &str) -> Result<Settings, Error> {
             ));
         }
     }
-    Settings::from_json(text)
+    Settings::from_json(text)?.sql_retry_limit()
 }
 
 /// Admit database settings without an administrator selection restriction.
@@ -267,25 +267,16 @@ fn raw_zero(value: &serde_json::value::RawValue) -> bool {
     false
 }
 
-/// Admit PostgreSQL JSON data that its native jsonb result cannot represent.
+/// Admit PostgreSQL JSON input while rejecting an unrepresentable output identifier.
 /// Missing records keep their shared missing semantics and require no request.
 #[must_use]
 pub fn sql_postgres_record(json: &str) -> crate::Record {
     let record = crate::Record::from_json(json);
-    let Ok(value) = serde_json::from_str::<serde_json::Value>(json) else {
-        return record;
-    };
-    if !zero(&value) {
+    if !matches!(record.id(), Some(crate::RecordId::String(text)) if text.contains('\0')) {
         return record;
     }
     let error = representation_error();
-    let failure = crate::Record::failed(error.code(), error.message());
-    match record.id() {
-        Some(id) if !matches!(id, crate::RecordId::String(text) if text.contains('\0')) => {
-            failure.with_id(id.clone())
-        }
-        _ => failure,
-    }
+    crate::Record::failed(error.code(), error.message())
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]

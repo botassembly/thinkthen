@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-from typed_api import Host, literal
+from typed_api import Host, literal, read_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from stress import check_round, environment, report, settings, workload
@@ -40,7 +40,7 @@ def round_rows(host, case, round_index):
         assert case['concurrency'] == 2, 'DuckDB host owns two connections'
         host.process.stdin.write(json.dumps({'concurrent': statements}) + '\n')
         host.process.stdin.flush()
-        results = [json.loads(host.process.stdout.readline()) for _ in range(2)]
+        results = [json.loads(read_line(host.process.stdout)) for _ in range(2)]
     for prefix, result in zip(prefixes, results):
         yield prefix, decode(result)
 
@@ -58,9 +58,9 @@ def main():
         process = subprocess.Popen([str(package / 'sql'), str(package / 'thinkthen.duckdb_extension'), 'cancel', sql],
                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=environment(case))
         try:
-            assert sys.stdin.readline().strip() == 'cancel'
+            assert read_line(sys.stdin).strip() == 'cancel'
             process.stdin.write('c'); process.stdin.flush()
-            result = json.loads(process.stdout.readline())
+            result = json.loads(read_line(process.stdout))
             assert 'interrupt' in result.get('error', '').lower(), result
             assert process.wait(timeout=30) == 0
         finally:

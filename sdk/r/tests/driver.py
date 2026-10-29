@@ -1,16 +1,13 @@
 """Exercise the installed R package against shared rows and held local requests."""
 import argparse
 import contextlib
-import http.server
 import hashlib
 import json
 import os
 import pathlib
-import signal
 import shutil
 import socket
 import subprocess
-import threading
 import sys
 
 parser = argparse.ArgumentParser()
@@ -18,8 +15,11 @@ parser.add_argument("--root", type=pathlib.Path, required=True)
 parser.add_argument("--library", type=pathlib.Path, required=True)
 parser.add_argument("--scratch", type=pathlib.Path, required=True)
 parser.add_argument("--module-abi-only", action="store_true")
+parser.add_argument("--interrupt-only", action="store_true")
 parser.add_argument("--native-module", type=pathlib.Path)
 args = parser.parse_args()
+sys.path.insert(0, str(args.root / "scripts"))
+from test_control import read_line, request as fixture_request
 families = {entry["name"]: entry["family"] for entry in
             json.loads((args.root / "schemas/contract.json").read_text())["codes"]}
 if args.module_abi_only and args.native_module is None:
@@ -48,12 +48,19 @@ environment.update(HOME=str(args.scratch / "home"), R_LIBS_USER=str(args.library
 
 
 def rscript(script, *values, env=None, argument_error=False):
-    result = subprocess.run(["Rscript", "--vanilla", str(script), *map(str, values)], env=env or environment, cwd=args.scratch, capture_output=True, text=True)
+    result = subprocess.run(["Rscript", "--vanilla", str(script), *map(str, values)], env=env or environment, cwd=args.scratch, capture_output=True, text=True, timeout=120)
     if argument_error:
         assert result.returncode != 0 and "unused arguments" in result.stderr, result.stderr
         return
     assert result.returncode == 0, (str(script), values, result.stdout + result.stderr)
     return result.stdout
+
+
+if args.interrupt_only:
+    from interrupts import check as check_interrupts
+    check_interrupts(args.root, args.scratch, environment)
+    print("R all-function bounded interruption passed")
+    sys.exit(0)
 
 
 def guide():
@@ -99,12 +106,12 @@ if args.module_abi_only:
 def backend(path):
     server = subprocess.Popen([environment["THINKTHEN_LOOPBACK"], str(path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment)
     try:
-        url = f"http://127.0.0.1:{server.stdout.readline().strip()}/v1"
+        url = f"http://127.0.0.1:{read_line(server.stdout).strip()}/v1"
         yield server, url
     finally:
         server.stdin.write("shutdown\n")
         server.stdin.flush()
-        _, error = server.communicate()
+        _, error = server.communicate(timeout=30)
         assert server.returncode == 0, error
 
 
@@ -121,19 +128,7 @@ def expected_r(value):
     return result
 
 
-def assert_fields(actual, expected, context):
-    if isinstance(expected, dict):
-        assert isinstance(actual, dict), (context, actual, expected)
-        for key, value in expected.items():
-            assert key in actual, (context, "missing", key, actual)
-            assert_fields(actual[key], value, context)
-    elif isinstance(expected, list):
-        assert isinstance(actual, list) and len(actual) == len(expected), (context, actual, expected)
-        for got, want in zip(actual, expected):
-            assert_fields(got, want, context)
-    else:
-        assert type(actual) is type(expected) or isinstance(actual, (int, float)) and isinstance(expected, (int, float)), (context, actual, expected)
-        assert actual == expected, (context, actual, expected)
+from comparison import typed_numbers, assert_fields, shared_rows
 
 
 manifest = json.loads((args.root / "conformance/typed/manifest.json").read_text())
@@ -141,6 +136,9 @@ coverage = {name: set() for name in manifest["backends"]}
 count_failures = []
 for name in manifest["cases"]:
     original = json.loads((args.root / "conformance/typed" / name).read_text())
+    if "r" in original.get("not_applicable", {}):
+        print("R shared case not applicable:", name, original["not_applicable"]["r"], flush=True)
+        continue
     for provider in manifest["backends"]:
         case = dict(original)
         case["client"] = dict(manifest["client"], **original.get("client", {}), backend=provider)
@@ -158,21 +156,21 @@ for name in manifest["cases"]:
         path = args.scratch / f"{provider}-{name}"
         path.write_text(json.dumps(case))
         with backend(path) as (server, url):
-            actual = json.loads(rscript(args.root / "sdk/r/tests/run.R", path,
-                                        env=dict(environment, THINKTHEN_TEST_URL=url)))
+            actual = typed_numbers(json.loads(rscript(args.root / "sdk/r/tests/run.R", path,
+                                        env=dict(environment, THINKTHEN_TEST_URL=url))))
             if isinstance(case["expected"], dict):
                 assert actual.get("error") == case["expected"]["error"], (name, provider, actual)
                 assert actual["family"] == f"thinkthen_{families[actual['error']]}_error", actual
                 assert not actual.get("rows"), (name, provider, actual)
                 server.stdin.write("count\n")
                 server.stdin.flush()
-                assert int(server.stdout.readline()) == case["requests"], (name, provider)
+                assert int(read_line(server.stdout)) == case["requests"], (name, provider)
                 continue
             assert "rows" in actual, (name, provider, actual)
             rows = actual["rows"]
             expected = expected_r(case["expected"])
             assert len(rows) == len(expected), (name, rows, expected)
-            assert_fields(rows, expected, (name, provider))
+            assert_fields(shared_rows(rows, provider, case["client"]["model"]), expected, (name, provider))
             for row in rows:
                 assert row["source"]["backend"] == provider
                 assert row["source"]["model"] == case["client"]["model"]
@@ -184,7 +182,7 @@ for name in manifest["cases"]:
                     assert "answer" not in row
             server.stdin.write("count\n")
             server.stdin.flush()
-            actual_count = int(server.stdout.readline())
+            actual_count = int(read_line(server.stdout))
             if actual_count != case["requests"]:
                 failure = (name, provider, actual_count, case["requests"])
                 count_failures.append(failure)
@@ -198,15 +196,29 @@ for index, case in enumerate(json.loads((args.root / "construction/stub.json").r
     path = args.scratch / f"stub-{index}.json"
     path.write_text(json.dumps(case))
     with backend(path) as (server, url):
-        actual = json.loads(rscript(args.root / "sdk/r/tests/run.R", path,
-                                    env=dict(environment, THINKTHEN_TEST_URL=url)))
+        actual = typed_numbers(json.loads(rscript(args.root / "sdk/r/tests/run.R", path,
+                                    env=dict(environment, THINKTHEN_TEST_URL=url))))
         assert "rows" in actual, (index, actual)
         assert len(actual["rows"]) == len(case["expected"]), index
         assert_fields(actual["rows"], expected_r(case["expected"]), ("stub", index))
         server.stdin.write("count\n")
         server.stdin.flush()
-        assert int(server.stdout.readline()) == 0, ("stub made an HTTP call", index)
+        assert int(read_line(server.stdout)) == 0, ("stub made an HTTP call", index)
 print("R regenerated stub construction cases passed", flush=True)
+# Shared settings/question construction cases use the same installed runner.
+for index, original in enumerate(json.loads((args.root / "construction/options.json").read_text())):
+    case = dict(original)
+    case["request"] = dict(case["request"], records=case["request"].get("records", []))
+    if "expected_error" in case:
+        case["expected"] = {"error": case["expected_error"]}
+    path = args.scratch / f"options-{index}.json"
+    path.write_text(json.dumps(case))
+    actual = typed_numbers(json.loads(rscript(args.root / "sdk/r/tests/run.R", path)))
+    if "expected_error" in case:
+        assert actual["error"] == case["expected_error"], (case["name"], actual)
+    else:
+        assert_fields(actual["rows"], expected_r(case["expected"]), ("options", case["name"]))
+print(rscript(args.root / "sdk/r/tests/admission.R", args.root / "conformance/public-contract/usage-admission.json"), end="", flush=True)
 # Conversion failures must finish before any backend request, on either route.
 context_case = args.scratch / "conversion-contexts.json"
 context_case.write_text(json.dumps({"replies": [], "requests": 0}))
@@ -216,7 +228,7 @@ with backend(context_case) as (server, url):
                       env=dict(environment, THINKTHEN_TEST_URL=url)), end="", flush=True)
     server.stdin.write("count\n")
     server.stdin.flush()
-    assert int(server.stdout.readline()) == 0, "host conversion contexts made a backend call"
+    assert int(read_line(server.stdout)) == 0, "host conversion contexts made a backend call"
 print(rscript(args.root / "sdk/r/tests/toolbox-json.R", args.root / "conformance/toolbox"), end="", flush=True)
 for script in ("contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R", "frame-serialization.R"):
     print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
@@ -233,42 +245,11 @@ with socket.socket() as reservation:
     case = {"client": {"retry": {"max_retries": 0}}, "request": {"question": {"function": "filter", "question": "Ready?"}, "records": ["alpha"]}, "expected": [{"status": "failed"}]}
     path = args.scratch / "unreachable.json"
     path.write_text(json.dumps(case))
-    actual = json.loads(rscript(args.root / "sdk/r/tests/run.R", path, env=child))
+    actual = typed_numbers(json.loads(rscript(args.root / "sdk/r/tests/run.R", path, env=child)))
     assert actual["rows"][0]["status"] == "failed" and actual["rows"][0]["error"]["code"] == "backend.transport", actual
 
-seen = threading.Event()
-closed = threading.Event()
-
-
-class Held(http.server.BaseHTTPRequestHandler):
-    def do_POST(self):
-        self.rfile.read(int(self.headers["Content-Length"]))
-        seen.set()
-        # Cancellation closes the active connection. Read the event, not a clock.
-        assert self.rfile.read(1) == b""
-        closed.set()
-
-    def log_message(self, *_):
-        pass
-
-
-with http.server.ThreadingHTTPServer(("127.0.0.1", 0), Held) as server:
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    expression = '''library(thinkthen)
-client <- tt_client(url=Sys.getenv("THINKTHEN_TEST_URL"), api_key="synthetic-local-test-key")
-interrupted <- tryCatch(tt_decide("held", "Ready?", client=client), thinkthen_cancelled_error=identity)
-stopifnot(inherits(interrupted, "thinkthen_cancelled_error"), interrupted$code == "local.cancelled")
-stopifnot(tt_decide("alpha", "Ready?", client=tt_client(backend="stub"))$status == "answered")
-cat("interrupted and still usable\\n")'''
-    child = subprocess.Popen(["Rscript", "--vanilla", "-e", expression], cwd=args.scratch, env=dict(environment, THINKTHEN_TEST_URL=f"http://127.0.0.1:{server.server_port}/v1"), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    seen.wait()
-    child.send_signal(signal.SIGINT)
-    output, error = child.communicate()
-    assert child.returncode == 0 and "interrupted and still usable" in output, (output, error)
-    closed.wait()
-    server.shutdown()
-    thread.join()
+from interrupts import check as check_interrupts
+check_interrupts(args.root, args.scratch, environment)
 print("R unreachable code and held-request interrupt passed", flush=True)
 subprocess.run([sys.executable, str(args.root / "scripts/stress-adapters.py"), "--surface", "r", "--sequential", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], env=environment, cwd=args.scratch, check=True)
 guide()

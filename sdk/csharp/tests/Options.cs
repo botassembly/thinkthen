@@ -5,7 +5,7 @@ using ThinkThen;
 
 internal static partial class Program
 {
-    private static async Task OptionCases()
+    private static async Task OptionCases(string directory)
     {
         await using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
         const string toolboxJson = """
@@ -56,6 +56,13 @@ internal static partial class Program
             await using var fractional = new ThinkThenClient(new()
             { Backend = Backend.Stub, Retry = new() { InitialBackoff = TimeSpan.FromTicks(1) } });
         });
+
+        JsonNode schema = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(directory,"..","schemas","client.schema.json")))!;
+        int maximum = schema["$defs"]!["Retry"]!["properties"]!["max_retries"]!["maximum"]!.GetValue<int>();
+        using (var valid = new ThinkThenClient(new() { Backend = Backend.Stub, Retry = new() { MaxRetries = maximum } }))
+            Successful(await valid.DecideAsync("Ready?","alpha"));
+        foreach (int retries in new[] {-1,maximum+1})
+            await Code(ErrorCode.UsageSettings, () => { using var invalid = new ThinkThenClient(new() { Backend = Backend.Stub, Retry = new() { MaxRetries = retries } }); return Task.CompletedTask; });
 
         // Invalid host question containers use the same engine error as invalid JSON.
         foreach (Action admit in new Action[]

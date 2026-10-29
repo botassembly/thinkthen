@@ -1,0 +1,33 @@
+{
+  "name": "usage-annotation-rank",
+  "request": {
+    "question": {
+      "function": "annotate",
+      "questions": {
+        "ranking": {
+          "function": "rank",
+          "question": "How much?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        }
+      }
+    },
+    "records": [
+      "fixture"
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "usage.question"
+  },
+  "requests": 0,
+  "not_applicable": {
+    "java": "The public AnnotationQuestions.Builder.put accepts only AnnotationQuestion, which excludes rank at compile time. Java exposes no raw annotation parser; the public type rejection is checked separately.",
+    "cpp": "The public annotation_question variant excludes rank at compile time; an actual static_assert refusal witness runs separately.",
+    "go": "The public AnnotationQuestion interface excludes Rank at compile time; TestAnnotationTypesRejectIneligibleQuestions checks the compiler refusal.",
+    "swift": "The public AnnotationQuestion enum excludes rank at compile time; the Swift signature test checks the compiler refusal.",
+    "zig": "The public AnnotationQuestion union has no rank member; the invalid_annotation consumer checks the compiler refusal."
+  }
+}

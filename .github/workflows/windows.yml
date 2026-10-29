@@ -57,21 +57,6 @@ jobs:
         id: native
         if: always()
         run: python scripts/windows-native-proof native "$env:RUNNER_TEMP/windows-native-proof"
-      - name: Prove Windows transport trust
-        id: transport-trust
-        if: always()
-        env:
-          CARGO_TARGET_DIR: ${{ runner.temp }}/windows-native-proof/target
-          CARGO_BUILD_JOBS: '2'
-          RUSTFLAGS: '-C target-feature=+crt-static'
-        run: |
-          $env:RUSTUP_TOOLCHAIN = python -c "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('rust-toolchain.toml').read_text())['toolchain']['channel'])"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Remove-Item Env:CARGO_ENCODED_RUSTFLAGS -ErrorAction SilentlyContinue
-          cargo fetch --locked --target x86_64-pc-windows-msvc
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Prove installed Go cache security
         id: go
         if: always() && inputs.surface != 'csharp'

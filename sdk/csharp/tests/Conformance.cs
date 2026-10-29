@@ -50,6 +50,38 @@ internal static partial class Program
         Check(count > 0, "No C# admission cases classified");
     }
 
+    // Feature: installed C# questions execute the shared option boundaries.
+    private static async Task SharedOptions(string path)
+    {
+        var samples = JsonNode.Parse(await File.ReadAllTextAsync(path))!.AsArray();
+        foreach (var sample in samples)
+        {
+            ThinkThenOptions settings = sample!["client"]!.Deserialize<ThinkThenOptions>(JsonOptions)!;
+            await using var client = new ThinkThenClient(settings);
+            JsonNode request = sample["request"]!;
+            if (sample["expected_error"] is JsonNode code)
+                await Code(code.Deserialize<ErrorCode>(JsonOptions), () =>
+                {
+                    if (request["question"]!["function"]!.GetValue<string>() == "annotate")
+                    {
+                        using var rejected = AnnotationQuestions.Parse(request["question"]!["questions"]!.ToJsonString());
+                    }
+                    else
+                    {
+                        using var rejected = Toolbox.Parse(new JsonObject { ["case"] = request["question"]!.DeepClone() }.ToJsonString());
+                    }
+                    return Task.CompletedTask;
+                });
+            else
+            {
+                JsonNode actual = await ContractRows(client,request,default,new());
+                JsonNode equivalent = await ContractRows(client,sample["equivalent_request"]!,default,new());
+                Check(JsonNode.DeepEquals(WithoutMessages(actual),WithoutMessages(sample["expected"]!)), $"shared C# options changed: {sample["name"]}");
+                Check(JsonNode.DeepEquals(actual,equivalent), "equivalent typed options changed the rows");
+            }
+        }
+    }
+
     private static async Task Conformance(string directory, string loopback)
     {
         JsonNode manifest = JsonNode.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "manifest.json")))!;
@@ -65,15 +97,22 @@ internal static partial class Program
                 foreach (var field in overrides) settings[field.Key] = field.Value?.DeepClone();
             settings["backend"] = backend!.DeepClone();
             settings["url"] = server.Url;
-            ThinkThenOptions admitted = settings.Deserialize<ThinkThenOptions>(JsonOptions)!;
-            admitted.ApiKey = ApiKey.From("synthetic-loopback-key");
-            await using var client = new ThinkThenClient(admitted);
+            ThinkThenClient Client()
+            {
+                ThinkThenOptions options = settings.Deserialize<ThinkThenOptions>(JsonOptions)!;
+                options.ApiKey = ApiKey.From("synthetic-loopback-key");
+                return new ThinkThenClient(options);
+            }
+            using var stop = new CancellationTokenSource();
+            bool cancelled = fixture["cancelled"]?.GetValue<bool>() ?? false;
+            if (cancelled) stop.Cancel();
             if (fixture["expected"] is JsonObject failure)
             {
                 var output = new JsonArray();
                 try
                 {
-                    await ContractRows(client, request, default, output);
+                    await using var rejected = Client();
+                    await ContractRows(rejected, request, stop.Token, output);
                     throw new Exception($"Expected admission failure: {name}");
                 }
                 catch (ThinkThenException error)
@@ -81,17 +120,25 @@ internal static partial class Program
                     Check(output.Count == 0, "admission returned rows");
                     Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.Code, JsonOptions), failure["error"]), "admission error code");
                 }
+                catch (OperationCanceledException error)
+                {
+                    Check(cancelled && output.Count == 0 && error.CancellationToken == stop.Token, "pre-cancelled call lost its token or returned rows");
+                    Check(failure["error"]!.GetValue<string>() == "local.cancelled", "unexpected cancellation");
+                }
                 Check(int.Parse(await server.Command("count")) == fixture["requests"]!.GetValue<int>(), "admission sent a request");
                 continue;
             }
-            JsonArray actual = (JsonArray)await ContractRows(client, request, default, new());
+            await using var client = Client();
+            JsonArray actual = (JsonArray)await ContractRows(client, request, stop.Token, new());
             foreach (var row in actual)
             {
                 Check(row!["source"]!["backend"]!.GetValue<string>() == backend.GetValue<string>(), "row source backend");
-                Check(row["source"]!["model"]!.GetValue<string>() == admitted.Model, "row source model");
+                Check(row["source"]!["model"]!.GetValue<string>() == settings["model"]!.GetValue<string>(), "row source model");
                 Check(row["source"]!["question_identity"]!.GetValue<string>().Length > 0, "row source identity");
-                Check(row["source"]!["name"] is null, "toolbox selection supplied an execution name");
-                row.AsObject().Remove("source");
+                Check(row["source"]!["name"]?.GetValue<string>() == request["name"]?.GetValue<string>(), "execution name changed");
+                if (row["source"]!["name"] is JsonNode executionName)
+                    row["source"] = new JsonObject { ["name"] = executionName.DeepClone() };
+                else row.AsObject().Remove("source");
             }
             JsonNode expected = fixture["expected"]!.DeepClone();
             ExpectedUtf16(expected, request);
@@ -99,9 +146,8 @@ internal static partial class Program
                 $"{backend}/{name}: {actual} != {expected}");
             int requests = int.Parse(await server.Command("count"));
             int finiteRequests = fixture["requests"]!.GetValue<int>();
-            int count = request["records"]!.AsArray().Count;
-            Check(finiteRequests == 0 ? requests == 0 : requests > 0 && requests <= finiteRequests * count,
-                $"{backend}/{name}: async input used {requests} requests outside its canonical bound");
+            Check(requests == finiteRequests,
+                $"{backend}/{name}: sent {requests} requests, expected exactly {finiteRequests}");
         }
     }
 
@@ -173,7 +219,10 @@ internal static partial class Program
                 string? pointer = definition["evidence"]?.GetValue<string>() ?? question["evidence"]?.GetValue<string>();
                 if (pointer is not null)
                     foreach (string part in pointer.Split('/').Skip(1))
-                        selected = selected?[part.Replace("~1", "/").Replace("~0", "~")];
+                    {
+                        string key = part.Replace("~1", "/").Replace("~0", "~");
+                        selected = selected is JsonArray array ? array[int.Parse(key)] : selected?[key];
+                    }
                 return selected is JsonValue text && text.TryGetValue<string>(out var value)
                     ? value : selected?.ToJsonString() ?? "null";
             }

@@ -1,0 +1,31 @@
+{
+  "name": "record-nul-text",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      "before\u0000after"
+    ]
+  },
+  "replies": [
+    {
+      "probability": 0.8123456789012345,
+      "contains": "before\\u0000after"
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345
+    }
+  ],
+  "requests": 1,
+  "not_applicable": {
+    "r": "R native strings cannot contain embedded NUL; the public R conversion boundary rejects this input and Unicode text runs separately."
+  }
+}

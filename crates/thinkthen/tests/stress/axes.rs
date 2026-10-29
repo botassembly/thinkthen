@@ -4,7 +4,7 @@ use super::{records, rust_rows, stress_engine};
 use crate::loopback::{HeldReply, StressFixture};
 use serde_json::Value;
 use std::sync::{Arc, Condvar, Mutex, mpsc};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use thinkthen::{Cancel, Decide};
 
 const GUARD: Duration = Duration::from_secs(30);
@@ -90,7 +90,12 @@ fn rust_cancel(table: &Value, backend: &str, count: usize, stage: HeldReply) {
         );
         assert!(rows.next().is_none());
     });
-    arrived.recv_timeout(GUARD).unwrap();
+    let batch = table["client"]["batch"].as_u64().unwrap() as usize;
+    let workers = crate::loopback::limits()["workers"].as_u64().unwrap() as usize;
+    let frontier = count.div_ceil(batch).min(workers);
+    for _ in 0..frontier {
+        arrived.recv_timeout(GUARD).unwrap();
+    }
     // Keep the other call inside an actual backend exchange while cancelling.
     let (seen, received) = mpsc::channel();
     let (release, released) = mpsc::channel();
@@ -105,14 +110,27 @@ fn rust_cancel(table: &Value, backend: &str, count: usize, stage: HeldReply) {
     });
     std::thread::scope(|scope| {
         let survivor = engine.clone().cancel(Cancel::default());
-        let survivor = scope.spawn(move || rust_rows(&survivor, healthy(table), count, "survivor"));
+        // One held survivor batch cannot add unrelated requests after the snapshot.
+        let survivor_count = count.min(batch);
+        let survivor =
+            scope.spawn(move || rust_rows(&survivor, healthy(table), survivor_count, "survivor"));
         received.recv_timeout(GUARD).unwrap();
+        let paid = server.count();
+        let deadline = Instant::now() + Duration::from_secs(2);
         cancel.cancel();
-        worker.join().unwrap();
-        assert_closed(closed.recv_timeout(GUARD).unwrap());
-        for _ in arrived.try_iter() {
-            assert_closed(closed.recv_timeout(GUARD).unwrap());
+        for _ in 0..frontier {
+            assert_closed(
+                closed
+                    .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                    .unwrap(),
+            );
         }
+        worker.join().unwrap();
+        assert_eq!(
+            server.count(),
+            paid,
+            "cancelled call sent another paid request"
+        );
         release.send(()).unwrap();
         survivor.join().unwrap();
     });
@@ -235,7 +253,7 @@ fn command_interrupt(table: &Value, backend: &str, count: usize, stage: HeldRepl
             .unwrap()
             .success()
     );
-    assert_closed(closed.recv_timeout(GUARD).unwrap());
+    assert_closed(closed.recv_timeout(Duration::from_secs(2)).unwrap());
     let mut output = Vec::new();
     call.child
         .stdout

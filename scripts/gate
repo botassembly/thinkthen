@@ -38,9 +38,9 @@ stage rust-advisories scripts/rust-advisories
 stage rust-format cargo fmt --all --check
 stage core-check scripts/core-check
 stage fixture-routing-check scripts/fixture-routing-check
-stage rust-clippy cargo clippy --workspace --all-targets --features thinkthen/stream --locked -- -D warnings
+stage rust-clippy cargo clippy --workspace --all-targets --features thinkthen/stream --locked --keep-going -- -D warnings
 stage c-gate scripts/c-gate
-stage rust-tests cargo test --workspace --features thinkthen/stream --locked
+stage rust-tests cargo test --workspace --features thinkthen/stream --locked --no-fail-fast
 stage crate-package-test scripts/crate-package-test
 stage bash-guide sh -eu -c '
     guide_root=$PWD
@@ -52,6 +52,8 @@ stage bash-guide sh -eu -c '
     cd "$guide_scratch"
     PATH="$command_target/debug:$PATH" python3 "$guide_root/scripts/surface-example" check bash bash example.sh
 '
+stage sql-bridge-gate scripts/sql-bridge-gate
+stage abi-minor-check sh -eu -c 'scripts/abi-minor-check --native "${THINKTHEN_NATIVE_LIBRARY:?Provide the verified host native library}" --bindings-only'
 stage sdk-gates scripts/sdk-gates
 if [ -n "$failed" ]; then
     printf 'Failed gate stages:%s\n' "$failed" >&2

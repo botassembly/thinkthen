@@ -316,8 +316,8 @@ fn cancelling_an_open_exchange_closes_its_connection_without_retry() {
         let worker = thread::spawn(move || done.send(run(&runner, &["one"])).unwrap());
         arrived.recv_timeout(Duration::from_secs(30)).unwrap();
         cancel.cancel();
+        let ending = closed.recv_timeout(Duration::from_secs(2)).unwrap();
         let rows = result.recv_timeout(Duration::from_secs(30)).unwrap();
-        let ending = closed.recv_timeout(Duration::from_secs(30)).unwrap();
         assert!(
             matches!(ending, Ok(0))
                 || matches!(ending, Err(ref error) if error.kind() == std::io::ErrorKind::ConnectionReset),

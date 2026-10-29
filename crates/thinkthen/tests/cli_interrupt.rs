@@ -10,6 +10,7 @@ mod support;
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, Command, Stdio};
+use std::time::Duration;
 
 use loopback::{HeldReply, KEY, Loopback};
 
@@ -17,10 +18,11 @@ use loopback::{HeldReply, KEY, Loopback};
 fn one_interrupt_closes_the_open_request_and_exits_130() {
     let (server, received, closed) = Loopback::holding(HeldReply::Headers).unwrap();
     let mut child = command(&server);
+    let _deadline = support::deadline(child.id());
     child.stdin.take().unwrap().write_all(b"one\n").unwrap();
-    received.recv().unwrap();
+    received.recv_timeout(Duration::from_secs(30)).unwrap();
     interrupt_and_observe(&mut child);
-    assert_peer_closed(closed.recv().unwrap());
+    assert_peer_closed(closed.recv_timeout(Duration::from_secs(2)).unwrap());
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(130));
     assert!(output.stdout.is_empty());
@@ -32,10 +34,11 @@ fn one_interrupt_closes_the_open_request_and_exits_130() {
 fn two_interrupts_exit_130_with_input_still_open() {
     let (server, received, closed) = Loopback::holding(HeldReply::Headers).unwrap();
     let mut child = command(&server);
+    let _deadline = support::deadline(child.id());
     let mut input = child.stdin.take().unwrap();
     // The push driver flushes an available record while input remains open.
     input.write_all(b"one\n").unwrap();
-    received.recv().unwrap();
+    received.recv_timeout(Duration::from_secs(30)).unwrap();
     interrupt_and_observe(&mut child);
     assert!(child.try_wait().unwrap().is_none());
     interrupt(child.id());
@@ -44,7 +47,7 @@ fn two_interrupts_exit_130_with_input_still_open() {
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
     assert_eq!(server.count(), 1);
-    assert_peer_closed(closed.recv().unwrap());
+    assert_peer_closed(closed.recv_timeout(Duration::from_secs(2)).unwrap());
     drop(input);
 }
 
@@ -81,11 +84,12 @@ fn cancellation_exits_while_the_notice_sink_is_full() {
         .stderr(Stdio::from(OwnedFd::from(writer)))
         .spawn()
         .unwrap();
+    let _deadline = support::deadline(child.id());
     child.stdin.take().unwrap().write_all(b"one\n").unwrap();
-    received.recv().unwrap();
+    received.recv_timeout(Duration::from_secs(30)).unwrap();
     interrupt(child.id());
     // Observe cancellation without reading bytes from the full notice sink.
-    assert_peer_closed(closed.recv().unwrap());
+    assert_peer_closed(closed.recv_timeout(Duration::from_secs(2)).unwrap());
     assert_eq!(child.wait().unwrap().code(), Some(130));
 }
 
@@ -180,6 +184,7 @@ fn completion_cancellation_precedes_a_later_broken_stdout() {
             .stderr(Stdio::piped())
             .spawn()
             .unwrap();
+        let _deadline = support::deadline(child.id());
         let mut input = child.stdin.take().unwrap();
         if !saved {
             writeln!(input, "{record}").unwrap();

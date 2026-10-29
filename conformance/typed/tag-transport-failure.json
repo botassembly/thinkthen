@@ -1,0 +1,38 @@
+{
+  "name": "tag-transport-failure",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "What applies?",
+      "labels": [
+        "billing",
+        "refund",
+        "shipping"
+      ],
+      "threshold": 0.7
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [
+    {
+      "status": 0,
+      "body": null
+    }
+  ],
+  "expected": [
+    {
+      "function": "tag",
+      "position": 1,
+      "status": "failed",
+      "error": {
+        "code": "backend.transport"
+      }
+    }
+  ],
+  "requests": 1,
+  "client": {
+    "batch": 2
+  }
+}

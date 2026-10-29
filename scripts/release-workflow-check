@@ -83,14 +83,24 @@ end
 
 
 def check_windows(workflow)
-  job = workflow.fetch('jobs').fetch('windows')
+  job = workflow.fetch('jobs').fetch('windows-check')
   steps = job.fetch('steps')
-  native = steps.index { |step| step['id'] == 'native' }
+  native = steps.index { |step| step['id'] == 'prepare-rust' }
   trust = steps.index { |step| step['id'] == 'transport-trust' }
-  raise 'Windows transport trust must follow the native build' unless native && trust == native + 1
+  raise 'Windows transport trust must follow the native build' unless native && trust && trust > native
+  provider = steps[native].fetch('run')
+  unless provider.include?('target=Path.home()/".local/share/thinkthen-build-tools/windows-native"/hashlib.sha256(os.fsencode(Path.cwd())).hexdigest()') &&
+         provider.include?('open(os.environ["GITHUB_ENV"],"a",encoding="utf-8").write("CARGO_TARGET_DIR="+str(target)+"\\n")')
+    raise 'Windows native Rust builds need the short checkout-specific build folder'
+  end
+  loopback = steps.index { |entry| entry['id'] == 'windows-loopback' }
+  unless loopback && native < loopback && loopback < trust &&
+         !steps[loopback].fetch('env').key?('CARGO_TARGET_DIR') &&
+         !steps[trust].fetch('env').key?('CARGO_TARGET_DIR')
+    raise 'Windows loopback and trust builds must share the prepared short build folder'
+  end
   step = steps[trust]
   expected_environment = {
-    'CARGO_TARGET_DIR' => '${{ runner.temp }}/windows-native-proof/target',
     'CARGO_BUILD_JOBS' => '2', 'RUSTFLAGS' => '-C target-feature=+crt-static'
   }
   commands = [
@@ -102,7 +112,7 @@ def check_windows(workflow)
     'cargo test --offline --locked --target x86_64-pc-windows-msvc -p thinkthen --no-default-features --features native --test transport_trust -- --nocapture',
     'if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }'
   ]
-  unless job['runs-on'] == 'windows-2022' && job.dig('defaults', 'run', 'shell') == 'pwsh' &&
+  unless job['runs-on'] == 'windows-2022' && step['shell'] == 'pwsh' &&
          step['if'] == "always()" &&
          !step['continue-on-error'] && step['env'] == expected_environment &&
          step.fetch('run').lines.map(&:strip) == commands
@@ -115,6 +125,9 @@ def windows_self_test(workflow)
   check_windows(workflow)
   mutations = {
     'missing trust test' => ->(steps) { steps.reject! { |step| step['id'] == 'transport-trust' } },
+    'missing short build folder' => ->(steps) { steps.find { |step| step['id'] == 'prepare-rust' }['run'].sub!('CARGO_TARGET_DIR=', 'WRONG_TARGET=') },
+    'loopback overrides short build folder' => ->(steps) { steps.find { |step| step['id'] == 'windows-loopback' }['env']['CARGO_TARGET_DIR'] = 'long/target' },
+    'trust overrides short build folder' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['env']['CARGO_TARGET_DIR'] = 'long/target' },
     'trust before native build' => ->(steps) { steps.reverse! },
     'online trust test' => ->(steps) { steps.find { |step| step['id'] == 'transport-trust' }['run'].sub!('--offline ', '') },
     'ignored fetch failure' => lambda do |steps|
@@ -123,7 +136,7 @@ def windows_self_test(workflow)
   }
   mutations.each do |name, mutate|
     copy = Marshal.load(Marshal.dump(workflow))
-    mutate.call(copy.fetch('jobs').fetch('windows').fetch('steps'))
+    mutate.call(copy.fetch('jobs').fetch('windows-check').fetch('steps'))
     begin
       check_windows(copy)
     rescue RuntimeError
@@ -201,7 +214,7 @@ begin
   raise 'usage: release-workflow-check [--self-test] [WORKFLOW]' if arguments.length > 1
   workflow = YAML.safe_load_file(arguments.first || File.join(ROOT, '.github/workflows/release.yml'), aliases: true)
   test ? self_test(workflow) : check(workflow)
-  windows = YAML.safe_load_file(File.join(ROOT, '.github/workflows/windows.yml'), aliases: true)
+  windows = YAML.safe_load_file(File.join(ROOT, '.github/workflows/native-qualification.yml'), aliases: true)
   test ? windows_self_test(windows) : check_windows(windows)
   puts 'release workflow: credentials reach only their own sites'
   puts 'Windows workflow: transport trust runs offline after the native build'

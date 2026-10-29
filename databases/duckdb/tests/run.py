@@ -4,12 +4,14 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 from types import SimpleNamespace
 
 from argument_cases import argument_order
+from join_cases import joins
 from cases import canonical, invocation, quote
-from migration_cases import child_environment, command, fixture, forbidden_settings, run_cases
-from typed_api import admission
+from migration_cases import read_line, child_environment, command, fixture, forbidden_settings, run_cases, options_cases, SqlError
+from typed_api import admission, contract_row
 from streaming_cases import first_response, streaming
 
 argument_order()
@@ -22,6 +24,7 @@ assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY, sys.a
 
 
 class Host:
+    surface = "duckdb"
     def __init__(self, url=None):
         env = child_environment()
         if url:
@@ -32,8 +35,9 @@ class Host:
     def query(self, statement):
         self.process.stdin.write(json.dumps(statement) + '\n')
         self.process.stdin.flush()
-        result = json.loads(self.process.stdout.readline())
-        assert 'error' not in result, result
+        result = json.loads(read_line(self.process.stdout))
+        if 'error' in result:
+            raise SqlError(result['error'])
         return result['rows']
 
     def configure(self, settings):
@@ -46,22 +50,28 @@ class Host:
         for key, value in settings.items():
             if key == 'backend':
                 continue
-            self.failure('SET thinkthen_' + key + ' = ' + ('NULL' if value is None else quote(value)))
+            self.failure('SET thinkthen_' + key + ' = ' + ('NULL' if value is None else quote(value) if isinstance(value, str) else str(value)),
+                         code if key == 'max_retries' else None)
 
     def failure(self, statement, text=None):
         self.process.stdin.write(json.dumps(statement) + '\n')
         self.process.stdin.flush()
-        result = json.loads(self.process.stdout.readline())
+        result = json.loads(read_line(self.process.stdout))
         assert 'error' in result and (text is None or text in result['error']), result
 
     def call_failure(self, request, code):
         self.failure('SELECT * FROM ' + invocation(request), code)
 
+    def native_failure(self, request):
+        self.failure('SELECT * FROM ' + invocation(request))
+
     def call(self, request):
         rows = self.query('SELECT to_json(t) AS result FROM ' + invocation(request) + ' AS t')
         output = []
         for item in rows:
-            row = canonical(json.loads(item['result']), request['question']['function'])
+            native = json.loads(item['result'])
+            contract_row(native, request['question']['function'])
+            row = canonical(native, request['question']['function'])
             output.append(tuple(row.get(name) if name in ('position', 'status', 'probability', 'kept') else
                                 json.dumps(row[name]) if name in row else None
                                 for name in ('position','status','answer','probability','error','detail','kept','id','source')))
@@ -94,21 +104,31 @@ if STREAMING_ONLY:
 with Host() as host:
     forbidden_settings(host)
     assert host.query('SELECT 1 AS alive') == [{'alive': '1'}]
+joins(Host, LOOPBACK)
+options_cases(Host)
 run_cases(Host, LOOPBACK)
-for mode in ('headers', 'body', 'refusal-body'):
-    with fixture(LOOPBACK, '--held', mode) as (server, url):
-        env = dict(child_environment(), THINKTHEN_TEST_LOOPBACK_URL=url, THINKTHEN_API_KEY='loopback-test-key')
-        with subprocess.Popen([str(PACKAGE / 'sql'), str(PACKAGE / 'thinkthen.duckdb_extension'), 'cancel'],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env) as process:
-            try:
-                assert command(server, 'arrived') == 'arrived'
-                process.stdin.write('c'); process.stdin.flush()
-                assert command(server, 'closed') == 'closed'
-                assert 'interrupt' in json.loads(process.stdout.readline())['error'].lower()
-                assert process.wait(timeout=30) == 0
-            finally:
-                if process.poll() is None:
-                    process.kill(); process.wait()
+for case in json.loads((Path(__file__).resolve().parents[3] / 'construction/stub.json').read_text()):
+    function = case['request']['question']['function']
+    for mode in ('headers', 'body', 'refusal-body'):
+        with fixture(LOOPBACK, '--held', mode) as (server, url):
+            env = dict(child_environment(), THINKTHEN_TEST_LOOPBACK_URL=url, THINKTHEN_API_KEY='loopback-test-key')
+            statement = "SET thinkthen_attempt_timeout_ms=120000; SELECT * FROM " + invocation(case['request'])
+            with subprocess.Popen([str(PACKAGE / 'sql'), str(PACKAGE / 'thinkthen.duckdb_extension'), 'cancel', statement],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env) as process:
+                try:
+                    assert command(server, 'arrived') == 'arrived'
+                    paid = int(command(server, 'count'))
+                    assert paid > 0
+                    started = time.monotonic()
+                    process.stdin.write('c'); process.stdin.flush()
+                    assert command(server, 'closed', timeout=2) == 'closed'
+                    assert time.monotonic() - started < 2, (function, mode)
+                    assert 'interrupt' in json.loads(read_line(process.stdout, timeout=2))['error'].lower()
+                    assert process.wait(timeout=2) == 0
+                    assert int(command(server, 'count')) == paid, (function, mode)
+                finally:
+                    if process.poll() is None:
+                        process.kill(); process.wait()
 
 
 # Native DuckDB parameters, typed result layouts and position-bound source values.

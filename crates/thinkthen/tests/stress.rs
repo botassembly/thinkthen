@@ -42,7 +42,7 @@ fn rust_call(table: &Value, scenario: &Value, backend: &str, count: usize, round
             resource_checkpoint("rust", backend, &fixture, std::process::id(), widths, count);
         }
     }
-    assert!(fixture.stats()["recorded_requests"].as_u64().unwrap() <= 8);
+    assert_request_count(table, scenario, &fixture, count, rounds);
 }
 fn stress_engine(table: &Value, backend: &str, url: &str) -> thinkthen::Engine {
     let mut settings = table["client"].clone();
@@ -206,7 +206,7 @@ fn command_call(table: &Value, scenario: &Value, backend: &str, count: usize) {
         String::from_utf8_lossy(&stderr)
     );
     assert_eq!(received, if setup_failure { 0 } else { count });
-    assert!(fixture.stats()["recorded_requests"].as_u64().unwrap() <= 8);
+    assert_request_count(table, scenario, &fixture, count, 1);
 }
 #[cfg(feature = "command")]
 fn command_soak(table: &Value, backend: &str, count: usize, rounds: usize) {
@@ -290,10 +290,15 @@ fn cases(full: bool) {
         .as_u64()
         .unwrap() as usize;
     for scenario in table["scenarios"].as_array().unwrap() {
+        let records = if matches!(scenario["name"].as_str(), Some("closed" | "truncated")) {
+            count.min(table["client"]["batch"].as_u64().unwrap() as usize)
+        } else {
+            count
+        };
         for backend in backends() {
-            rust_call(&table, scenario, backend, count, 1);
+            rust_call(&table, scenario, backend, records, 1);
             #[cfg(feature = "command")]
-            command_call(&table, scenario, backend, count);
+            command_call(&table, scenario, backend, records);
         }
     }
     if full {
@@ -370,4 +375,51 @@ fn soak_identifiers_keep_their_type_width_and_unique_ordinals() {
     }
     assert_eq!(identifiers.len(), 8);
     assert_eq!(widths.len(), 1);
+}
+
+fn assert_request_count(
+    table: &Value,
+    scenario: &Value,
+    fixture: &StressFixture,
+    count: usize,
+    rounds: usize,
+) {
+    let batch = table["client"]["batch"].as_u64().unwrap() as usize;
+    let extra: u64 = scenario["faults"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|fault| fault["kind"] == "status")
+        .map(|fault| fault["repeat"].as_u64().unwrap_or(1))
+        .sum();
+    let expected = if scenario["name"] == "refused" || count == 0 {
+        0
+    } else {
+        (count.div_ceil(batch) * rounds) as u64 + extra
+    };
+    let stats = fixture.stats();
+    assert_eq!(
+        stats["requests"].as_u64().unwrap(),
+        expected,
+        "{}: {stats}",
+        scenario["name"]
+    );
+    assert!(
+        stats["recorded_requests"].as_u64().unwrap() <= 8,
+        "fixture retained unbounded request bodies"
+    );
+}
+
+#[test]
+fn rust_short_resource_check_keeps_one_engine_for_twenty_rounds() {
+    let table = stress_table().unwrap();
+    for backend in backends() {
+        rust_call(
+            &table,
+            &table["scenarios"][0],
+            backend,
+            table["records"]["smoke"].as_u64().unwrap() as usize,
+            table["records"]["soak_rounds"].as_u64().unwrap() as usize,
+        );
+    }
 }

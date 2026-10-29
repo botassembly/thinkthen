@@ -1,0 +1,62 @@
+{
+  "name": "annotate-zero-records",
+  "request": {
+    "question": {
+      "function": "annotate",
+      "evidence": "/body",
+      "questions": {
+        "decision": {
+          "function": "decide",
+          "question": "Ready?"
+        },
+        "missing": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": "/absent"
+        },
+        "root": {
+          "function": "decide",
+          "question": "Ready?",
+          "evidence": ""
+        },
+        "choice": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ]
+        },
+        "choice_unsure": {
+          "function": "choose",
+          "question": "Which?",
+          "choices": [
+            "z",
+            "a"
+          ],
+          "threshold": 0.9
+        },
+        "labels": {
+          "function": "tag",
+          "question": "Which labels?",
+          "labels": [
+            "urgent",
+            "routine"
+          ]
+        },
+        "scale": {
+          "function": "score",
+          "question": "How much?",
+          "levels": [
+            "low",
+            "high"
+          ]
+        }
+      }
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

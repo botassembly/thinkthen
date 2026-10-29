@@ -1,0 +1,31 @@
+{
+  "name": "find-no-answer",
+  "request": {
+    "question": {
+      "function": "find",
+      "question": "Which line?"
+    },
+    "records": [
+      "first\nsecond"
+    ]
+  },
+  "replies": [
+    {
+      "distribution": {
+        "none": 0.7,
+        "u1": 0.1,
+        "u2": 0.2
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "find",
+      "position": 1,
+      "status": "answered",
+      "answer": null,
+      "probability": 0.7
+    }
+  ],
+  "requests": 1
+}

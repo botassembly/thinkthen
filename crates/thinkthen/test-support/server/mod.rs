@@ -17,6 +17,14 @@ use socket2::{Domain, Protocol, Socket, Type};
 /// The API key tests send. Output must never show it.
 pub const KEY: &str = "sk-test-0123456789";
 
+/// Bind an owned loopback listener on an available local port.
+///
+/// # Errors
+/// Returns the operating system's listener setup error.
+pub fn listener() -> std::io::Result<TcpListener> {
+    TcpListener::bind("127.0.0.1:0")
+}
+
 /// An unavailable backend whose TCP port stays reserved until it is dropped.
 #[derive(Debug)]
 pub struct UnavailableBackend {
@@ -168,7 +176,7 @@ impl Loopback {
     pub fn start(
         rule: impl Fn(&Request) -> Reply + Send + Sync + 'static,
     ) -> std::io::Result<Self> {
-        let listener = TcpListener::bind("127.0.0.1:0")?;
+        let listener = listener()?;
         let base = format!("http://{}/v1", listener.local_addr()?);
         let state = Arc::new(Mutex::new(State::default()));
         let rule: Arc<Rule> = Arc::new(rule);
@@ -390,3 +398,12 @@ mod tls;
 pub use tls::invalid_tls_reply;
 
 mod lifecycle;
+
+#[path = "../../src/engine/limits.rs"]
+mod engine_limits;
+
+/// Scheduling bounds read from the production engine source, for adapter proofs.
+#[must_use]
+pub fn limits() -> serde_json::Value {
+    serde_json::json!({"workers":engine_limits::WORKERS, "read_ahead_window":engine_limits::REORDER_WINDOW})
+}

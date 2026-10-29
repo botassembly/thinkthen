@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 from contextlib import contextmanager
 
@@ -13,7 +15,7 @@ ADMISSION_ONLY = sys.argv[5:] == ['--admission-only']
 assert not sys.argv[5:] or ADMISSION_ONLY or STREAMING_ONLY, sys.argv[5:]
 ROOT = Path(ROOT)
 sys.path.insert(0, str(ROOT / "databases"))
-from testing import child_environment
+from testing import child_environment, read_line
 DONE, ROW, ERROR, INTERRUPT = 101, 100, 1, 9
 
 
@@ -31,6 +33,7 @@ def public_question(question):
 
 
 class Host:
+    surface = "sqlite"
     def __init__(self, url=None):
         env = environment()
         if url:
@@ -43,7 +46,7 @@ class Host:
         self.process.stdin.flush()
 
     def receive(self):
-        line = self.process.stdout.readline()
+        line = read_line(self.process.stdout)
         assert line, "SQLite host exited before reporting its statement result"
         return json.loads(line)
 
@@ -53,7 +56,8 @@ class Host:
 
     def ok(self, sql, parameters=(), **extra):
         result = self.sql(sql, parameters, **extra)
-        assert result["code"] in (DONE, ROW), result
+        if result["code"] not in (DONE, ROW):
+            raise SqlError(result["message"])
         return result["rows"]
 
     def configure(self, settings):
@@ -61,10 +65,21 @@ class Host:
             for name,item in (value.items() if key=='retry' else [(key,value)]):
                 self.ok('SELECT thinkthen_set(?,?)',[name,item])
 
+    def configure_failure(self, settings, code):
+        for key, value in settings.items():
+            if key != "backend":
+                result = self.sql("SELECT thinkthen_set(?,?)", [key, value])
+                assert result["code"] == ERROR, result
+                assert code in result["message"], result
+
     def call_failure(self, request, code):
         self.call(request, code)
 
-    def call(self, request, expected_error=None, raw=False):
+    def native_failure(self, request):
+        result = self.call(request, raw=True)
+        assert result['code'] == ERROR and not result['rows'], result
+
+    def call(self, request, expected_error=None, raw=False, interruptible=False):
         self.ok('DROP TABLE IF EXISTS input')
         self.ok('CREATE TABLE input(n INTEGER PRIMARY KEY,record TEXT)')
         for index,record in enumerate(request.get('records',[]),1):
@@ -80,7 +95,7 @@ class Host:
                 name='toolbox' if name=='questions' else name
                 constraints.append(name+' = ?');values.append(json.dumps(value) if isinstance(value,(dict,list)) else value)
         if 'name' in request: constraints.append('name = ?');values.append(request['name'])
-        result=self.sql('SELECT * FROM thinkthen_'+question['function']+' WHERE '+' AND '.join(constraints),values)
+        result=self.sql('SELECT * FROM thinkthen_'+question['function']+' WHERE '+' AND '.join(constraints),values, interruptible=interruptible)
         if raw:
             return result
         if expected_error is not None:
@@ -99,6 +114,8 @@ class Host:
                 answer=None if row['found_text'] is None else dict(text=row['found_text'],start=row['found_start'],end=row['found_end'])
             elif question['function']=='rank': answer=row['rank']
             elif question['function'] in ('tag','recognize','relate','annotate') and answer is not None: answer=json.loads(answer)
+            if row['status'] != 'answered':
+                assert answer is None, row
             error=None if row['error_code'] is None else dict(code=row['error_code'],message=row['error_message'])
             if error is not None and row['error_http_status'] is not None: error['http_status']=row['error_http_status']
             rows.append((row['position'],row['status'],json.dumps(answer) if row['status']=='answered' else None,row['probability'],
@@ -121,7 +138,7 @@ class Host:
 
 
 sys.path.insert(0, str(ROOT / 'databases/duckdb/tests'))
-from migration_cases import command, fixture, forbidden_settings, run_cases
+from migration_cases import command, fixture, forbidden_settings, run_cases, options_cases, SqlError, strict_equal
 from admission_cases import cases as admission_cases, diagnostic
 
 
@@ -133,6 +150,21 @@ if STREAMING_ONLY:
 
 with Host() as host:
     host.configure({'backend': 'stub'})
+    source = "SELECT ?1 AS id,CASE WHEN ?2=42 AND ?3=1.5 AND ?4=1 AND ?5 IS NULL THEN ?6 END AS record"
+    rows = host.ok('SELECT id,status FROM thinkthen_decide(?,?) WHERE params=?',
+        [source, 'Ready?', json.dumps(['bound-id', 42, 1.5, True, None, 'evidence'])])
+    assert rows == [['bound-id', 'answered']], rows
+    for parameters, code in [('malformed', 20), ('{}', 20), ('[[]]', 20), ('[{}]', 20), ('[]', 25), ('[1,2]', 25)]:
+        result = host.sql('SELECT * FROM thinkthen_decide(?,?) WHERE params=?',
+            ['SELECT ? AS record', 'Ready?', parameters])
+        assert result['code'] == code and not result['rows'], (parameters, result)
+    result = host.sql('SELECT * FROM thinkthen_rank(?,?) WHERE levels=? AND top=?',
+        ["SELECT 'evidence' AS record", 'Order?', '["low","high"]', -1])
+    assert result['code'] == ERROR and 'usage.question' in result['message'] and not result['rows'], result
+    assert host.ok("SELECT status,error_code,kept FROM thinkthen_filter('SELECT NULL AS record','Ready?')") == [['failed', 'record.missing', 0]]
+    result = host.sql('SELECT thinkthen_set(?,?)', ['max_retries', 'secret-placeholder'])
+    assert result['code'] == ERROR and 'usage.settings' in result['message'], result
+    assert 'secret-placeholder' not in result['message'], result
     for case, request, expected in admission_cases(ROOT, 'sqlite'):
         result = host.call(request, raw=True)
         assert result['code'] == ERROR and not result['rows'], (case['name'], result)
@@ -200,7 +232,8 @@ with Host() as host:
         from migration_cases import decode, semantic
         actual=[decode(row,case['request']['question']['function'],'stub','stub') for row in actual]
         expected=[semantic(json.loads(json.dumps(row))) for row in case['expected']]
-        assert actual==expected,(case['request'],actual,expected)
+        assert strict_equal(actual,expected),(case['request'],actual,expected)
+options_cases(Host)
 run_cases(Host, LOOPBACK)
 for arguments,cause in [(['--unavailable'],'connection refused'),
                         (['--held','reset'],'connection reset'),
@@ -229,17 +262,26 @@ for status in (401,402,429,500):
             assert 'loopback-test-key' not in json.dumps(rows),rows
             assert 'sk-unknown-sentinel' not in json.dumps(rows),rows
             assert command(server,'count')=='1'
-for mode in ('headers','body','refusal-body'):
-    with fixture(LOOPBACK,'--held',mode) as (server,url),Host(url) as host:
-        host.send({'sql':'SELECT * FROM thinkthen_decide(?,?)','parameters':["SELECT 'x' AS record",'Ready?'],'interruptible':True})
-        assert command(server,'arrived')=='arrived'
-        host.process.stdin.write('i');host.process.stdin.flush()
-        result=host.receive()
-        assert result['code']==INTERRUPT,result
-        assert command(server,'closed')=='closed'
-        assert host.ok('SELECT 1')==[[1]]
-        host.configure({'backend':'stub'})
-        assert len(host.ok("SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?')"))==1
+for case in json.loads((ROOT / 'construction/stub.json').read_text()):
+    function = case['request']['question']['function']
+    for mode in ('headers', 'body', 'refusal-body'):
+        with fixture(LOOPBACK, '--held', mode) as (server, url), Host(url) as host:
+            host.configure({'retry': {'attempt_timeout_ms': 120000}})
+            with ThreadPoolExecutor(max_workers=1) as workers:
+                future = workers.submit(host.call, case['request'], raw=True, interruptible=True)
+                assert command(server, 'arrived') == 'arrived'
+                paid = int(command(server, 'count'))
+                assert paid > 0
+                started = time.monotonic()
+                host.process.stdin.write('i'); host.process.stdin.flush()
+                assert command(server, 'closed', timeout=2) == 'closed'
+                assert time.monotonic() - started < 2, (function, mode)
+                result = future.result(timeout=2)
+                assert result['code'] == INTERRUPT, result
+            assert host.ok('SELECT 1') == [[1]]
+            assert int(command(server, 'count')) == paid, (function, mode)
+            host.configure({'backend': 'stub'})
+            assert len(host.ok("SELECT * FROM thinkthen_decide('SELECT ''x'' AS record','Ready?')")) == 1
 print('SQLite typed arguments, native ids, both wires, settings and cancellation pass')
 
 # Feature: repeated filters in one join reuse the cursor's paid result.

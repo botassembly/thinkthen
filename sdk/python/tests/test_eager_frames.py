@@ -54,7 +54,7 @@ def test_pandas_dataframe_evidence_and_filter_do_not_hide_invalid_records(
         )
         assert len(result) == 2 and result.index.equals(source.index)
         assert bool(result["kept"].iloc[0])
-        assert pd.isna(result["kept"].iloc[1])
+        assert not bool(result["kept"].iloc[1])
         assert result["error_code"].iloc[1] == "record.invalid"
         assert result["item"].iloc[0] == {"id": "one", "body": "text"}
         assert server.count() == 1

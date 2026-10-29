@@ -35,13 +35,19 @@ internal class Fixture private constructor(arguments: List<String>) : AutoClosea
         .redirectError(ProcessBuilder.Redirect.INHERIT).start()
     private val input = process.outputStream.bufferedWriter(Charsets.UTF_8)
     private val output = process.inputStream.bufferedReader(Charsets.UTF_8)
-    val url = "http://127.0.0.1:${requireNotNull(output.readLine()).toInt()}/v1"
+    val url = "http://127.0.0.1:${requireNotNull(readLine(10)).toInt()}/v1"
 
+    private fun readLine(seconds: Long): String? {
+        val pending = java.util.concurrent.FutureTask<String?> { output.readLine() }
+        Thread.ofVirtual().start(pending)
+        return try { pending.get(seconds, java.util.concurrent.TimeUnit.SECONDS) }
+        catch (error: Exception) { process.destroyForcibly(); throw error }
+    }
     private fun exchange(command: String): String {
         input.write(command)
         input.newLine()
         input.flush()
-        return requireNotNull(output.readLine()) { "Loopback exited during $command" }
+        return requireNotNull(readLine(if (command == "closed") 2 else 10)) { "Loopback exited during $command" }
     }
     suspend fun command(command: String): String = withContext(Dispatchers.IO) { exchange(command) }
     override fun close() {
@@ -50,7 +56,7 @@ internal class Fixture private constructor(arguments: List<String>) : AutoClosea
             input.newLine()
             input.flush()
             input.close()
-            check(process.waitFor() == 0) { "Loopback exited unsuccessfully" }
+            check(process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() == 0) { "Loopback exited unsuccessfully" }
         } finally {
             output.close()
             process.destroy()
@@ -81,9 +87,9 @@ internal fun <A, D> assertRow(
     actual.source?.let { source ->
         check(source.backend == expectedBackend)
         expected["source"]?.jsonObject?.let { wanted ->
-            check(source.model == wanted.required("model").jsonPrimitive.content)
-            check(source.questionIdentity == wanted.required("question_identity").jsonPrimitive.content)
-            check(source.name == wanted["name"]?.jsonPrimitive?.contentOrNull)
+            wanted["model"]?.let { check(source.model == it.jsonPrimitive.content) }
+            wanted["question_identity"]?.let { check(source.questionIdentity == it.jsonPrimitive.content) }
+            if ("name" in wanted) check(source.name == wanted["name"]?.jsonPrimitive?.contentOrNull)
         }
     }
     when (actual) {

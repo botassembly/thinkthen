@@ -10,6 +10,12 @@ for thinkthen_native_asset in linux-x64/libthinkthen_ffi.so osx-arm64/libthinkth
         return 1
     fi
 done
+THINKTHEN_NATIVE_LIBRARY=$(python3 -c 'import sys; sys.path.insert(0, "scripts"); from native_platform import current; host = current(); print(sys.argv[1] + "/" + host["rid"] + "/libthinkthen_ffi." + host["suffix"])' "$thinkthen_native_cache") || return
+if [ ! -f "$THINKTHEN_NATIVE_LIBRARY" ]; then
+    echo 'Prepare the current host native library before running SDK gates' >&2
+    return 1
+fi
+export THINKTHEN_NATIVE_LIBRARY
 thinkthen_test_environment=$(scripts/native-test-assets env) || return
 # The producer emits shell-quoted paths only after verifying this source key and
 # every copied asset hash. It never builds while a consumer sources the gate.

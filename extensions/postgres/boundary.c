@@ -21,9 +21,36 @@ static thinkthen_client *connection_client;
 
 int tt_sqlstate(int code)
 {
-    const char digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    unsigned number = code;
-    return MAKE_SQLSTATE('T', 'T', digits[(number / 1296) % 36], digits[(number / 36) % 36], digits[number % 36]);
+    const char *family = thinkthen_code_family(code);
+    if (family == NULL || strcmp(family, "usage") == 0)
+        return ERRCODE_INVALID_PARAMETER_VALUE;
+    return ERRCODE_SYSTEM_ERROR;
+}
+
+static bool tt_check_batch(int *value, void **extra, GucSource source)
+{
+    thinkthen_settings *settings = NULL;
+    thinkthen_error error = {.struct_size = sizeof(error)};
+    int code;
+    const char *name;
+    (void)extra;
+    /* The private boot/reset sentinel leaves automatic batching unset. */
+    if (source == PGC_S_DEFAULT)
+        return true;
+    TT_BRIDGE({
+        code = thinkthen_settings_new(&settings, &error);
+        if (code == THINKTHEN_OK)
+            code = thinkthen_settings_set_batch(settings, (uint64_t)*value, &error);
+        thinkthen_settings_free(settings);
+    });
+    if (code == THINKTHEN_OK)
+        return true;
+    name = thinkthen_code_name(error.code);
+    GUC_check_errcode(tt_sqlstate(error.code));
+    GUC_check_errmsg("%.*s", (int)error.message.len, (const char *)error.message.data);
+    GUC_check_errdetail("%s", name == NULL ? THINKTHEN_ABI_ERROR_CODE : name);
+    TT_BRIDGE(thinkthen_error_free(&error));
+    return false;
 }
 
 PG_MODULE_MAGIC;
@@ -101,11 +128,6 @@ void tt_check(TtOwner *owner, int result)
         ereport(ERROR, (errcode(tt_sqlstate(THINKTHEN_CODE_USAGE_ABI)), errmsg("%s", THINKTHEN_ABI_ERROR_MESSAGE), errdetail_internal("%s", code)));
     }
     state = tt_sqlstate(owner->error.code);
-    if (owner->error.code == THINKTHEN_CODE_USAGE_THRESHOLD || owner->error.code == THINKTHEN_CODE_USAGE_QUESTION
-        || owner->error.code == THINKTHEN_CODE_USAGE_NAME || owner->error.code == THINKTHEN_CODE_USAGE_POINTER
-        || owner->error.code == THINKTHEN_CODE_USAGE_SETTINGS || owner->error.code == THINKTHEN_CODE_USAGE_BATCH
-        || owner->error.code == THINKTHEN_CODE_USAGE_BACKEND || owner->error.code == THINKTHEN_CODE_USAGE_SQL_POLICY)
-        state = ERRCODE_INVALID_PARAMETER_VALUE;
     if (owner->error.code == THINKTHEN_CODE_USAGE_SQL_SELECTION) state = ERRCODE_INSUFFICIENT_PRIVILEGE;
     if (owner->error.code == THINKTHEN_CODE_LOCAL_CANCELLED) state = ERRCODE_QUERY_CANCELED;
     converted = tt_server_text((const char *)owner->error.message.data, owner->error.message.len);

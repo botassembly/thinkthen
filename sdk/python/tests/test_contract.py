@@ -86,3 +86,65 @@ def test_contract_check_rejects_drift(tmp_path: Path, source: str) -> None:
             checker.check(tmp_path)
     finally:
         sys.path.pop(0)
+
+
+@pytest.mark.parametrize(
+    "actual,expected",
+    [
+        (True, 1),
+        (1, True),
+        (1, 1.0),
+        ({"status": "unsure", "answer": None}, {"status": "unsure"}),
+        (
+            {"error": {"code": "backend.reply", "unexpected": 1}},
+            {"error": {"code": "backend.reply"}},
+        ),
+    ],
+)
+def test_shared_row_comparison_refuses_seeded_type_and_shape_faults(
+    actual: Any, expected: Any
+) -> None:
+    from conformance import assert_expected, normalized_row
+
+    with pytest.raises(AssertionError):
+        assert_expected(normalized_row(actual), expected)
+
+
+def test_shared_row_comparison_preserves_error_named_labels() -> None:
+    from conformance import assert_expected, normalized_row
+
+    labels = {"code": 0.9, "message": 0.1}
+    assert_expected(normalized_row(labels), labels)
+    with pytest.raises(AssertionError):
+        assert_expected(normalized_row(labels), {"code": 0.9})
+
+
+@pytest.mark.parametrize(
+    "entry",
+    json.loads(
+        (Path(__file__).resolve().parents[3] / "schemas/contract.json").read_text()
+    )["codes"],
+    ids=lambda entry: entry["name"],
+)
+def test_native_error_family_selects_the_public_exception(
+    entry: dict[str, Any],
+) -> None:
+    from thinkthen import _native, _runtime
+
+    def native_failure() -> None:
+        raise _native.Error(entry["family"], entry["name"], "fixture error")
+
+    expected: type[tt.ThinkThenError] = (
+        tt.UsageError if entry["family"] == "usage" else tt.SetupError
+    )
+    if entry["name"] == "usage.abi":
+        expected = tt.SetupError
+    elif entry["name"] == "local.cancelled":
+        expected = tt.Cancelled
+    elif entry["family"] == "internal":
+        expected = tt.InternalError
+    with pytest.raises(tt.ThinkThenError) as caught:
+        _runtime.binding(native_failure)
+    assert type(caught.value) is expected
+    assert caught.value.code.value == entry["name"]
+    assert str(caught.value) == "fixture error"

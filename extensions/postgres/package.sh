@@ -26,6 +26,11 @@ if nm -D thinkthen_postgres.so | awk '{print $NF}' | grep '^json_'; then
 fi
 cp thinkthen_postgres.so /work/package/lib/
 if [ -n "${THINKTHEN_SQL_TEST_BUILD:-}" ]; then
+    cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror -Wno-unused-parameter -fPIC -shared \
+        -I "$(pg_config --includedir-server)" -I "$(pg_config --includedir)" \
+        -I/src/crates/thinkthen-ffi/include -I/work/build \
+        /src/extensions/postgres/tests/family-probe.c $route_object /native/libthinkthen_ffi.a \
+        -Wl,--exclude-libs,ALL -ldl -lpthread -lm -lrt -lutil -o family-probe.so
     cc -std=c11 -Wall -Wextra -Werror -fPIC -c /src/extensions/postgres/tests/abi-mismatch.c -o abi-mismatch.o
     rm thinkthen_postgres.so
     make THINKTHEN_TEST_ROUTE_OBJECT="routes.o abi-mismatch.o" PG_CPPFLAGS='-I/src/crates/thinkthen-ffi/include' \

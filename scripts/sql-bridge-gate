@@ -3,15 +3,16 @@
 set -eu
 cd "$(dirname "$0")/.."
 scripts/header-contract-check
+python3 databases/comparison-check.py
 . scripts/native-build-env
-cargo build --offline --locked -p thinkthen-ffi -p loopback --bin loopback --lib
-build_target=${CARGO_TARGET_DIR:-target}
-case "$build_target" in /*) ;; *) build_target="$PWD/$build_target" ;; esac
+: "${THINKTHEN_NATIVE_LIBRARY:?Provide the shared current-host native library}"
+: "${THINKTHEN_LOOPBACK:?Provide its matching loopback}"
+library_directory=$(dirname "$THINKTHEN_NATIVE_LIBRARY")
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 mkdir "$scratch/include"
 cp crates/thinkthen-ffi/include/thinkthen.h crates/thinkthen-ffi/include/thinkthen_sql.h "$scratch/include/"
 cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread -I "$scratch/include" \
-  crates/thinkthen-ffi/tests/sql-consumer.c -L "$build_target/debug" -lthinkthen_ffi \
-  -Wl,-rpath,"$build_target/debug" -o "$scratch/consumer"
-python3 databases/duckdb/tests/bridge.py "$scratch/consumer" "$build_target/debug/loopback"
+  crates/thinkthen-ffi/tests/sql-consumer.c "$THINKTHEN_NATIVE_LIBRARY" \
+  -Wl,-rpath,"$library_directory" -o "$scratch/consumer"
+python3 databases/duckdb/tests/bridge.py "$scratch/consumer" "$THINKTHEN_LOOPBACK"

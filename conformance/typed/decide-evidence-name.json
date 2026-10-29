@@ -1,0 +1,35 @@
+{
+  "name": "decide-evidence-name",
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?",
+      "evidence": "/selected"
+    },
+    "records": [
+      {
+        "selected": [],
+        "ignored": "different evidence"
+      }
+    ],
+    "name": "named-decide"
+  },
+  "replies": [
+    {
+      "probability": 0.8123456789012345
+    }
+  ],
+  "expected": [
+    {
+      "function": "decide",
+      "position": 1,
+      "status": "answered",
+      "answer": true,
+      "probability": 0.8123456789012345,
+      "source": {
+        "name": "named-decide"
+      }
+    }
+  ],
+  "requests": 1
+}

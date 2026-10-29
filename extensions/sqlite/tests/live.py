@@ -9,16 +9,22 @@ from pathlib import Path
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'databases'))
+from testing import child_environment, read_line
+
 consumer, extension, sql_file, *flags = sys.argv[1:]
 assert flags in ([], ["--stub"])
-names = ("PATH", "HOME", "TMPDIR", "TEMP", "TMP", "THINKTHEN_API_KEY", "OPENAI_API_KEY")
-env = {name: os.environ[name] for name in names if name in os.environ}
+env = child_environment()
+if not flags:
+    for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY'):
+        if name in os.environ:
+            env[name] = os.environ[name]
 with subprocess.Popen([consumer, extension], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                       text=True, env=env) as host:
     def sql(statement, parameters=()):
         host.stdin.write(json.dumps(dict(sql=statement, parameters=parameters)) + "\n")
         host.stdin.flush()
-        response = json.loads(host.stdout.readline())
+        response = json.loads(read_line(host.stdout))
         assert response["code"] == 101, response
         return [dict(zip(response['columns'],row)) for row in response['rows']]
 

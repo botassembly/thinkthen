@@ -59,13 +59,28 @@ static void short_output(void) {
 
 /* Feature: installed C codes preserve the shared contract's names and values. */
 static void registry_values(void) {
+    assert(thinkthen_code_family(0) == NULL);
+    assert(thinkthen_code_family(INT32_MAX) == NULL);
     const size_t count = test_registry_count();
     assert(count != 0);
     for (size_t i = 0; i < count; ++i) {
         const char *name = thinkthen_code_name(test_registry_code(i));
         assert(name != NULL);
         assert(strcmp(name, test_registry_name(i)) == 0);
+        const char *family = thinkthen_code_family(test_registry_code(i));
+        assert(family && strcmp(family, test_registry_family(i)) == 0);
     }
+}
+
+static void retry_admission(void) {
+    thinkthen_settings *settings = NULL;
+    thinkthen_error error = {.struct_size = sizeof error};
+    assert(thinkthen_settings_new(&settings, &error) == THINKTHEN_OK);
+    assert(thinkthen_settings_set_retry(settings, 11, 1, 120000, &error) == THINKTHEN_ERROR);
+    assert(error.code == THINKTHEN_CODE_USAGE_SETTINGS);
+    assert(strcmp(thinkthen_code_family(error.code), "usage") == 0);
+    thinkthen_error_free(&error);
+    thinkthen_settings_free(settings);
 }
 
 int main(void) {
@@ -74,5 +89,6 @@ int main(void) {
     owned_missing_row();
     short_output();
     registry_values();
+    retry_admission();
     return 0;
 }

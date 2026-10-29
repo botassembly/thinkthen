@@ -120,7 +120,10 @@ pub fn Call(comptime function: t.Function) type {
                     },
                     c.THINKTHEN_OK => {
                         defer native.function("thinkthen_row_free")(&row);
-                        const decoded = try r.take(function, arena, row);
+                        const decoded = r.take(function, arena, row) catch |failure| {
+                            if (failure == error.OutOfMemory) return error.OutOfMemory;
+                            return d.incompatible(diag);
+                        };
                         if (function == .filter) {
                             const original = self.originals.fetchRemove(row.position) orelse return error.Internal;
                             defer original.value.free(self.allocator);

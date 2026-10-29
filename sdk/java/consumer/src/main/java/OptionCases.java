@@ -17,8 +17,18 @@ public final class OptionCases {
         var cases = ConsumerCases.JSON.readTree(Path.of(args[0]).toFile());
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             for (var sample : cases) {
-                // Rank cannot enter AnnotationQuestions; JavaApiCases proves the compile refusal.
-                if (sample.get("name").asText().equals("annotation-rejects-rank")) continue;
+                String reason = sample.path("not_applicable").path("java").asText();
+                if (!reason.isBlank()) {
+                    System.out.println("Java options " + sample.get("name").asText() + ": not applicable: " + reason);
+                    continue;
+                }
+                if (sample.has("expected_error")) {
+                    var saved = ConsumerCases.JSON.createObjectNode();
+                    saved.putObject("entries").putObject("case").set("question",sample.get("request").get("question"));
+                    try { Toolbox.fromJson(saved.toString()); throw new AssertionError("Accepted invalid shared option"); }
+                    catch (ThinkThenException error) { ConsumerCases.equal(error.code().wireName(),sample.get("expected_error").asText(),sample.get("name").asText()); }
+                    continue;
+                }
                 var actual = execute(client, sample.get("request"));
                 var expected = sample.has("expected_error") ? ConformanceCases.error(sample.get("expected_error").asText())
                     : execute(client, sample.get("equivalent_request"));

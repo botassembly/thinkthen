@@ -98,6 +98,32 @@ public final class DriverClient implements AutoCloseable {
         for (var call : Set.copyOf(calls)) call.close();
         releaseClient();
     }
+    /** Admit a host question through the engine without opening a call. */
+    public static void validateQuestion(byte[] json) {
+        try (var arena = Arena.ofConfined()) {
+            var out = arena.allocate(ValueLayout.ADDRESS);
+            var error = Native.error(arena);
+            try {
+                Native.check((int) Native.call("question_from_json",Native.bytes(arena,json),(long) json.length,out,error),error);
+            } finally {
+                var question = out.get(ValueLayout.ADDRESS,0);
+                if (!question.equals(MemorySegment.NULL)) Native.call("question_free",question);
+            }
+        } catch (RuntimeException error) { throw translate(error); }
+    }
+    /** Translate malformed native data at either JVM decoding boundary. */
+    public static DriverException invalidRow(Throwable cause) {
+        var error = new ThinkThenException(Contract.ABI_CODE,Contract.ABI_MESSAGE);
+        error.initCause(cause);
+        return new DriverException(error);
+    }
+    /** Return the engine-owned family of a stable native code. */
+    @SuppressWarnings("restricted")
+    public static String codeFamily(int value) {
+        var pointer = (MemorySegment) Native.call("code_family",value);
+        if (pointer.equals(MemorySegment.NULL)) throw invalidRow(new IllegalArgumentException("Missing native error family"));
+        return pointer.reinterpret(Long.MAX_VALUE).getString(0);
+    }
     // The ABI returns static NUL-terminated code names that remain valid for the process.
     @SuppressWarnings("restricted")
     public static java.util.List<DriverCode> codes() {
@@ -107,7 +133,7 @@ public final class DriverClient implements AutoCloseable {
             int value = (int) Native.call("code_at", index);
             var pointer = (MemorySegment) Native.call("code_name", value);
             String name = pointer.reinterpret(Long.MAX_VALUE).getString(0);
-            result.add(new DriverCode(value, name, name.substring(0, name.indexOf('.'))));
+            result.add(new DriverCode(value, name, codeFamily(value)));
         }
         return java.util.List.copyOf(result);
     }

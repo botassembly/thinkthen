@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'databases/duckdb/tests'))
 api = runpy.run_path(str(Path(__file__).with_name('typed_api.py')))
 sys.path.insert(0, str(ROOT / 'databases'))
+from testing import read_line
 from stress import check_round, environment, report, settings, workload
 
 
@@ -37,7 +38,7 @@ def main():
             with ThreadPoolExecutor(max_workers=1) as workers:
                 future = workers.submit(scan, database, case['records'])
                 try:
-                    assert sys.stdin.readline().strip() == 'cancel'
+                    assert read_line(sys.stdin).strip() == 'cancel'
                     database.cancel()
                     try:
                         future.result(timeout=30)

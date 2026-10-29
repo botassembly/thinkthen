@@ -61,7 +61,7 @@ def environment(scratch):
             'PROGRAMFILES(X86)', 'PROGRAMDATA', 'INCLUDE', 'LIB', 'LIBPATH',
             'VCINSTALLDIR', 'VCTOOLSINSTALLDIR', 'WINDOWSSDKDIR', 'WINDOWSSDKVERSION',
             'UCRTVERSION', 'UCRTCONTENTROOT', 'SDKROOT', 'SWIFT_DEVELOPER_DIR', 'CC', 'CXX',
-            'DOTNET_ROOT', 'DOTNET_ROOT_X64'}
+            'DOTNET_ROOT', 'DOTNET_ROOT_X64', 'THINKTHEN_LOOPBACK'}
     env = {key: value for key, value in os.environ.items() if key.upper() in keep}
     for name, folder in [('HOME', 'home'), ('USERPROFILE', 'home'), ('APPDATA', 'roaming'),
                          ('LOCALAPPDATA', 'local'), ('TEMP', 'tmp'), ('TMP', 'tmp')]:
@@ -126,7 +126,7 @@ def full(folder, build, *, caller_owned=False):
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors='backslashreplace')
     from release_windows_cache import check_cache
-    languages = ('Python', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
+    languages = ('Python', 'Python frames', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
                  'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
     failures = {}
 
@@ -159,11 +159,19 @@ def full(folder, build, *, caller_owned=False):
             return run(*args, cwd=cwd, env=runtime | (extra or {}), resolve_path=env['PATH'],
                        stream_output=stream_output)
         python = Path(sys.executable)
+        installed_python = scratch / 'python/Scripts/python.exe'
         with check('Python'):
             execute(python, '-I', '-m', 'venv', scratch / 'python')
-            installed_python = scratch / 'python/Scripts/python.exe'
             execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index', '--no-deps', packages['python'])
             execute(installed_python, '-I', checks / 'python.py', fixture)
+        with check('Python frames'):
+            optional = folder / 'prerequisites/python-frames-windows'
+            loopback = Path(os.environ['THINKTHEN_LOOPBACK']).resolve(strict=True)
+            execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index',
+                    '--require-hashes', '--find-links', optional / 'wheels',
+                    '-r', optional / 'requirements.txt')
+            execute(installed_python, checks / 'python-frames.py', '--cases',
+                    checks / 'conformance', extra={'THINKTHEN_LOOPBACK': str(loopback)})
         with check('TypeScript'):
             node = scratch / 'node'
             node.mkdir()
@@ -256,6 +264,7 @@ def r_cases(execute, folder, scratch, package, cases):
     expression = 'a <- commandArgs(TRUE); stopifnot(as.character(getRversion()) == a[[2]]); .libPaths(c(a[[1]], .Library)); install.packages(a[-c(1,2)], lib=a[[1]], repos=NULL, type="win.binary")'
     r_env = {'R_LIBS_USER': str(library), 'R_LIBS_SITE': ''}
     execute('Rscript', '--vanilla', '-e', expression, library, inventory['r'], *dependencies, package, extra=r_env)
+    # This installed-package probe covers every function for list and frame input.
     execute('Rscript', '--vanilla', folder / 'checks/r-cases.R',
             folder / 'checks/stub.json', extra=r_env)
 

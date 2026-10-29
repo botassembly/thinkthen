@@ -1,11 +1,9 @@
-# Call contract
+# Generated contracts
 
-`client.schema.json` describes the settings admitted once by `Client::from_json`. `request.schema.json` describes the JSON accepted by `SdkRequest::from_json`. `row.schema.json` describes each serialized `Row`. Both are JSON Schema draft 2020-12 data derived from the actual Rust types. Regenerate the data from the repository root with `cargo run -p thinkthen --example schema`, through the normal build job. The gate compares published data with the types and validates shared requests and actual rows offline. No schema resolver accesses HTTP or files.
+The public Rust types generate `client.schema.json`, `request.schema.json` and `row.schema.json`. `Settings::from_json` admits client settings; `Request::from_json` admits calls. The engine's `Code` registry generates every error name, ABI integer, family and record flag in `contract.json`.
 
-A call carries only function, tagged question, function-specific options and initial records. Client settings carry mode, adapter, address, key source, model and batch. Records may be omitted when the caller will stream them after opening a call.
+The settings schema includes backend, model, address, secret, batch and bounded retry settings. A request holds its tagged question, optional name and records. The row schema describes each function's typed answer and optional metadata. The [0.2 rulings](../sdlc/planning/api-0-2-0/rulings.md) describe the surface conventions.
 
-An inline question is `{"type":"inline","value":"Ready?"}`. Recognize uses a kind array as its value, relate uses a rule array, and annotate uses a toolbox object. A named toolbox question uses `{"type":"toolbox","value":{"questions":{"ready":{"decide":"Ready?"}}},"name":"ready"}`. A reference uses `{"type":"reference","name":"ready"}`. A library never interprets inline text as a filename. Each function has one schema alternative with its own inline value and options. Semantic admission supplies stable errors for invalid thresholds, duplicate labels and invalid toolbox definitions.
+`abi.json` and the generated headers describe native exports and ownership. `thinkthen_code_family` exposes the registry's family as a process-lifetime NUL-terminated UTF-8 string. It returns NULL for unknown values, including zero; callers never free it. Existing code names and integer values remain unchanged.
 
-Client settings select embedded mode by default. `adapter: "stub"` needs no credentials or network. `key_source` optionally names the selected backend's credential environment variable. Proxy mode and reference execution return `usage.question` until the proxy transport exists.
-
-Answered and unsure rows carry `detail.source` with the caller-visible question identity, backend and served model. Optional `detail.probabilities` holds the function's backend detail. Failed rows have no answering source.
+Run the schema and header examples through a build job to regenerate these files. `scripts/contract-schema-check` compares generated output and checks documented code names. No contract fixture resolves outside network resources.

@@ -2,6 +2,7 @@
 
 require "open3"
 require "tmpdir"
+require "timeout"
 
 module Checks
   def assert(value, message = "assertion failed")
@@ -46,19 +47,19 @@ class Backend
     environment = ENV.to_h.select { |name, _| %w[PATH HOME TMPDIR SystemRoot LLVM_PROFILE_FILE].include?(name) }
     @input, @output, @wait = Open3.popen2(environment, ENV.fetch("THINKTHEN_LOOPBACK"),
                                        *arguments, unsetenv_others: true)
-    @url = "http://127.0.0.1:#{@output.readline.strip}/v1"
+    @url = "http://127.0.0.1:#{Timeout.timeout(30) { @output.readline.strip }}/v1"
   end
 
   def command(value)
     @input.puts(value)
     @input.flush
-    @output.readline.strip
+    Timeout.timeout(30) { @output.readline.strip }
   end
 
   def close
     @input.puts("shutdown")
     @input.close
-    raise "loopback failed" unless @wait.value.success?
+    raise "loopback failed" unless Timeout.timeout(30) { @wait.value }.success?
     @output.close
   end
 
@@ -96,11 +97,13 @@ def typed_question(question)
   klass.new(question.fetch("question"), **options)
 end
 
-def invoke_rows(client, request)
+def invoke_rows(client, request, cancel: nil)
   question = request.fetch("question")
   function = question.fetch("function")
-  records = request.fetch("records")
+  records = request.fetch("records", [])
   options = ruby_options(question)
+  options[:name] = request["name"] if request.key?("name")
+  options[:cancel] = cancel unless cancel.nil?
   if function == "annotate"
     questions = question.fetch("questions").transform_values { |entry| typed_question(entry) }
     client.annotate_each(ThinkThen::AnnotationQuestions.new(questions: questions), records, **options)
@@ -166,11 +169,13 @@ def execute_case(test, settings)
   config = settings.transform_keys(&:to_sym).merge(backend: settings.fetch("backend").to_sym)
   config[:retry] = ThinkThen::Retry.new(**config[:retry].transform_keys(&:to_sym)) if config[:retry]
   ThinkThen::Client.open(**config) do |client|
-    stream = invoke_rows(client, test.fetch("request"))
+    cancel = ThinkThen::CancelToken.new
+    cancel.cancel if test["cancelled"]
+    stream = invoke_rows(client, test.fetch("request"), cancel: cancel)
     begin
-      stream.cancel if test["cancelled"]
       stream.each do |value|
         row = value.is_a?(ThinkThen::FilterRow) ? value.row : value
+        equal(row.answered? && row.answer == true, value.kept?, "filter kept") if value.is_a?(ThinkThen::FilterRow)
         expected = test.fetch("expected", test.fetch("expected_rows", []))[output.length]
         assert_typed_row(row, expected) if expected
         output << row.to_h
@@ -185,14 +190,40 @@ rescue ThinkThen::Error => error
   {"error" => error.code.to_s}
 end
 
-def expected_fields(expected, actual)
-  if expected.is_a?(Hash)
-    expected.to_h { |key, value| [key, expected_fields(value, actual.fetch(key))] }
-  elsif expected.is_a?(Array)
-    equal(expected.length, actual.length, "exact contract array count")
-    expected.zip(actual).map { |want, got| expected_fields(want, got) }
-  else
-    actual
+def normalized_contract(value)
+  case value
+  when Array then value.map { |item| normalized_contract(item) }
+  when Hash
+    value.each_with_object({}) do |(key, item), result|
+      next if key == "message" && value["code"].is_a?(String)
+      if key == "source" && item.is_a?(Hash) && item.key?("question_identity")
+        item = item.reject { |name, _| %w[backend model question_identity].include?(name) }
+        next if item.empty?
+      end
+      result[key] = normalized_contract(item)
+    end
+  else value
+  end
+end
+
+def strict_row_contract(expected, actual, backend, model)
+  source = actual.fetch("source")
+  equal(backend, source.fetch("backend"), "source backend")
+  equal(model, source.fetch("model"), "source model")
+  assert(source.fetch("question_identity").is_a?(String), "source question identity")
+  strict_contract(expected, normalized_contract(actual))
+end
+
+def strict_contract(expected, actual)
+  equal(expected.class, actual.class, "exact JSON type")
+  case expected
+  when Hash
+    equal(expected.keys.sort, actual.keys.sort, "exact JSON fields")
+    expected.each { |key, value| strict_contract(value, actual.fetch(key)) }
+  when Array
+    equal(expected.length, actual.length, "exact JSON array length")
+    expected.zip(actual).each { |want, got| strict_contract(want, got) }
+  else equal(expected, actual, "exact JSON value")
   end
 end
 
@@ -203,6 +234,37 @@ def shared_cases
   registry = JSON.parse(File.read(File.expand_path(manifest.fetch("registry"), folder), encoding: Encoding::UTF_8))
   equal(registry.fetch("codes").to_h { |code| [code.fetch("value"), code.fetch("name")] },
         ThinkThen::NativeContract::CODE_NAMES, "generated code mapping")
+  registry.fetch("codes").each do |code|
+    equal(code.fetch("family"), ThinkThen.send(:native).thinkthen_code_family(code.fetch("value")), "ABI error family")
+    expected_class = {"usage" => ThinkThen::UsageError, "backend" => ThinkThen::BackendError,
+                      "internal" => ThinkThen::InternalError, "record" => ThinkThen::LocalError,
+                      "local" => ThinkThen::LocalError}.fetch(code.fetch("family"))
+    expected_class = ThinkThen::Cancelled if code.fetch("name") == "local.cancelled"
+    equal(expected_class, ThinkThen.send(:native).send(:error_class, code.fetch("value"), code.fetch("name")), "public error family class")
+  end
+  equal(nil, ThinkThen.send(:native).thinkthen_code_family(2147483647), "unknown ABI code has no family")
+  # The shortcut client owns process-wide configuration. Keep its lifetime in a child.
+  pid = fork do
+    path = File.join(folder, "decide-precision.json")
+    test = JSON.parse(File.read(path))
+    Backend.open(path) do |backend|
+      ThinkThen.configure do |config|
+        config.backend = :systemone
+        config.url = backend.url
+        config.api_key = "synthetic-loopback-key"
+        config.model = manifest.fetch("client").fetch("model")
+      end
+      request = test.fetch("request")
+      question = typed_question(request.fetch("question"))
+      rows = [ThinkThen.decide(question, request.fetch("records").first)]
+      rows.concat(ThinkThen.decide_each(question, request.fetch("records")).to_a)
+      rows.each { |row| strict_row_contract(test.fetch("expected").first, row.to_h, "systemone", manifest.fetch("client").fetch("model")) }
+      equal(test.fetch("requests") * 2, backend.command("count").to_i, "shortcut request count")
+      ThinkThen.close
+    end
+  end
+  Process.wait(pid)
+  assert($?.success?, "shared case through module shortcuts")
   stub = JSON.parse(File.read(ENV.fetch("THINKTHEN_STUB_CASES"), encoding: Encoding::UTF_8), max_nesting: false)
   stub.each { |test| equal(test.fetch("expected"), execute_case(test, test.fetch("client")), "stub contract") }
   manifest.fetch("backends").each do |backend_name|
@@ -213,7 +275,14 @@ def shared_cases
         settings = manifest.fetch("client").merge(test.fetch("client", {})).merge("backend" => backend_name, "url" => backend.url,
                                                    "api_key" => "synthetic-loopback-key")
         rows = execute_case(test, settings)
-        equal(test.fetch("expected"), expected_fields(test.fetch("expected"), rows), "#{backend_name}: #{filename}")
+        if rows.is_a?(Array)
+          equal(test.fetch("expected").length, rows.length, "exact row count")
+          test.fetch("expected").zip(rows).each do |expected, actual|
+            strict_row_contract(expected, actual, backend_name, settings.fetch("model"))
+          end
+        else
+          strict_contract(test.fetch("expected"), rows)
+        end
         equal(test.fetch("requests"), backend.command("count").to_i, "#{backend_name}: #{filename} request count")
       end
     end
@@ -253,5 +322,21 @@ def admission_cases
     equal(expected, error.message, "#{test.fetch('name')} message")
     assert(!error.message.include?("secret-placeholder"), "admission redacts string contents")
     puts "public admission: #{test.fetch('name')} (#{route})"
+  end
+end
+
+# Feature: settings and named options use the same admitted contract as other hosts.
+def shared_options
+  path = File.expand_path("../construction/options.json", ENV.fetch("THINKTHEN_CASES"))
+  JSON.parse(File.read(path, encoding: Encoding::UTF_8)).each do |test|
+    if test.key?("expected_error")
+      error = raises(ThinkThen::Error) do
+        ThinkThen::Toolbox.from_json(JSON.generate("entries" => {"fixture" => {"question" => test.fetch("request").fetch("question")}}))
+      end
+      equal(test.fetch("expected_error"), error.code.to_s, "shared saved-question admission")
+    else
+      strict_contract(test.fetch("expected"), execute_case(test, test.fetch("client")))
+    end
+    puts "Settings options: #{test.fetch('name')}"
   end
 end

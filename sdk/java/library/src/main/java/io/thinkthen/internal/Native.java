@@ -54,7 +54,7 @@ final class Native {
             } catch (RuntimeException | Error error) { throw error; }
             catch (Throwable error) { throw new AssertionError("Native ABI handshake failed", error); }
             if (compatible == 0) throw new ThinkThenException(Contract.ABI_CODE, Contract.ABI_MESSAGE);
-            for (String name : new String[]{"code_name", "code_count", "code_at", "client_open_json", "settings_conversion_error", "question_conversion_error",
+            for (String name : new String[]{"code_name", "code_family", "code_count", "code_at", "client_open_json", "settings_conversion_error", "question_conversion_error", "question_from_json", "question_free",
                     "toolbox_from_json", "toolbox_from_definitions_json", "toolbox_to_json", "toolbox_definitions_json", "toolbox_free",
                     "cancelled_error", "client_free", "call_open_json", "call_open_records_json", "call_send_utf16", "call_send_json", "call_send_missing", "call_send_invalid",
                     "call_end_input", "call_next", "call_events", "events_version", "events_wait", "events_wake", "events_free", "call_cancel", "call_free", "buffer_free", "row_free", "error_free"}) {

@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'databases'))
+from testing import read_line
 from stress import check_round, environment, report, settings, workload
 
 
@@ -28,7 +29,7 @@ class Host:
         raise RuntimeError(f'SQLite consumer exited during a statement: returncode={code}{name}') from None
 
     def receive(self):
-        line = self.process.stdout.readline()
+        line = read_line(self.process.stdout)
         if not line:
             self.exited()
         result = json.loads(line)
@@ -98,9 +99,9 @@ def main():
         sql, parameters = statement(case['records'])
         if case['cancel']:
             host.send(dict(sql=sql, parameters=parameters, interruptible=True))
-            assert sys.stdin.readline().strip() == 'cancel'
+            assert read_line(sys.stdin).strip() == 'cancel'
             host.process.stdin.write('i'); host.process.stdin.flush()
-            result = json.loads(host.process.stdout.readline())
+            result = json.loads(read_line(host.process.stdout))
             assert result['code'] == 9, result
             assert host.sql('SELECT 1') == [[1]]
             host.sql("SELECT thinkthen_set('backend','stub')")

@@ -6,7 +6,7 @@ extension Client {
   ) -> FilterRows where S.Element == Record {
     rows(question, source: source(records), name: name, retainItems: true) { wire, item in
       guard let item else {
-        throw ThinkThenError.contract(message: "Filter row has no original item")
+        throw rowABIFailure("Filter row has no original item")
       }
       return FilterResult(item: item, row: try wire.decode(FilterQuestion.self))
     }
@@ -16,7 +16,7 @@ extension Client {
   ) -> FilterRows where S.Element == Record {
     rows(question, source: source(records), name: name, retainItems: true) { wire, item in
       guard let item else {
-        throw ThinkThenError.contract(message: "Filter row has no original item")
+        throw rowABIFailure("Filter row has no original item")
       }
       return FilterResult(item: item, row: try wire.decode(FilterQuestion.self))
     }

@@ -18,9 +18,6 @@ internal static partial class Program
         Cut cut = Cut.From(0.6);
         Pointer pointer = Pointer.From("/body");
         Check(HandleCounts.Questions() == admitted, "value factories created native questions for validation");
-        foreach (Threshold invalid in new[] { Threshold.Band(0.8, 0.2), Threshold.Band(double.NaN, 0.8), Threshold.Cut(double.PositiveInfinity), Threshold.Cut(0) })
-            await Code(ErrorCode.UsageThreshold, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Threshold = invalid }));
-        await Code(ErrorCode.UsagePointer, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Evidence = Pointer.From("bad") }));
         for (int i = 0; i < 64; i++)
         {
             Successful(await client.DecideAsync("Ready?", "alpha"));
@@ -47,6 +44,15 @@ internal static partial class Program
         using var other = new ThinkThenClient(new() { Backend = Backend.Stub });
         Successful(await other.DecideAsync(question, "another client"));
         Console.WriteLine("C# disposal, ownership, handle counts, encoder causes and enum contracts passed.");
+    }
+    // Feature: ordinary installed consumers reject invalid typed options.
+    private static async Task SdkUsageErrors()
+    {
+        using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
+        foreach (Threshold invalid in new[] { Threshold.Band(0.8, 0.2), Threshold.Band(double.NaN, 0.8), Threshold.Cut(double.PositiveInfinity), Threshold.Cut(0) })
+            await Code(ErrorCode.UsageThreshold, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Threshold = invalid }));
+        await Code(ErrorCode.UsagePointer, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Evidence = Pointer.From("bad") }));
+        await Code(ErrorCode.UsageName, () => client.DecideAsync("Ready?", "alpha", name: ""));
     }
     private static async Task EncoderCauses()
     {

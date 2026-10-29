@@ -1,0 +1,17 @@
+{
+  "name": "score-zero-records",
+  "request": {
+    "question": {
+      "function": "score",
+      "question": "How much?",
+      "levels": [
+        "low",
+        "high"
+      ]
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

@@ -95,11 +95,14 @@ class Client:
                 name, value = field.name, getattr(retry, field.name)
                 if value is None:
                     continue
-                if isinstance(value, bool) or not isinstance(value, (int, float)):
-                    binding(_native.reject_settings_conversion)
                 if name == "max_retries":
+                    # Retry counts are JSON values with one native admission
+                    # rule. Preserve invalid representable values for its exact
+                    # redacted diagnostic instead of replacing that contract.
                     policy[name] = value
                 else:
+                    if isinstance(value, bool) or not isinstance(value, (int, float)):
+                        binding(_native.reject_settings_conversion)
                     policy[name + "_ms"] = _milliseconds(value)
             values["retry"] = policy
         settings = encode(values, _native.reject_settings_conversion)

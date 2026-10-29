@@ -1,0 +1,76 @@
+{
+  "name": "recognize-numeric-threshold",
+  "request": {
+    "question": {
+      "function": "recognize",
+      "kinds": [
+        "person"
+      ],
+      "threshold": 0.5
+    },
+    "records": [
+      "Ada"
+    ]
+  },
+  "replies": [
+    {
+      "criterion": "BEGIN",
+      "distribution": {
+        "BEGIN": 0.0,
+        "END": 0.0,
+        "INSIDE": 0.0,
+        "OUT": 0.0,
+        "SINGLE": 1.0
+      }
+    },
+    {
+      "distribution": {
+        "person": 1.0,
+        "none of these": 0.0
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "recognize",
+      "position": 1,
+      "status": "answered",
+      "answer": [
+        {
+          "text": "Ada",
+          "start": 0,
+          "end": 3,
+          "kind": "person",
+          "probability": 1.0
+        }
+      ],
+      "detail": {
+        "pieces": [
+          {
+            "text": "Ada",
+            "start": 0,
+            "end": 3,
+            "tags": {
+              "BEGIN": 0.0,
+              "END": 0.0,
+              "INSIDE": 0.0,
+              "OUT": 0.0,
+              "SINGLE": 1.0
+            }
+          }
+        ],
+        "names": [
+          {
+            "start": 0,
+            "end": 3,
+            "kinds": {
+              "person": 1.0,
+              "none of these": 0.0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "requests": 2
+}

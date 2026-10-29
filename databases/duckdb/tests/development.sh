@@ -27,4 +27,8 @@ c++ -std=c++17 -pthread -Wall -Wextra -Werror -Wno-unused-parameter \
     -I "$source/src/include" -I "$source/third_party/yyjson/include" \
     databases/duckdb/tests/runner.cpp "$THINKTHEN_DUCKDB_DEPS/static/libduckdb_yyjson.a" \
     "$library" -Wl,-rpath,"$rpath" -o "$scratch/installed/sql"
-python3 databases/duckdb/tests/run.py "$scratch/installed" "$THINKTHEN_LOOPBACK" "$@"
+if [ "${1:-}" = --unknown-only ]; then
+    python3 databases/unknown-code-check.py duckdb "$scratch/installed/sql" "$scratch/installed/thinkthen.duckdb_extension"
+else
+    python3 databases/duckdb/tests/run.py "$scratch/installed" "$THINKTHEN_LOOPBACK" "$@"
+fi

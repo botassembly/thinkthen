@@ -1,0 +1,43 @@
+{
+  "name": "find-evidence-name",
+  "request": {
+    "question": {
+      "function": "find",
+      "question": "Which line?",
+      "evidence": "/selected"
+    },
+    "records": [
+      {
+        "selected": "é🦀\r\n \n 答🙂 \r\n",
+        "ignored": "different evidence"
+      }
+    ],
+    "name": "named-find"
+  },
+  "replies": [
+    {
+      "distribution": {
+        "none": 0,
+        "u1": 0.1,
+        "u2": 0.9
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "find",
+      "position": 1,
+      "answer": {
+        "end": 10,
+        "start": 6,
+        "text": " 答🙂 "
+      },
+      "probability": 0.9,
+      "status": "answered",
+      "source": {
+        "name": "named-find"
+      }
+    }
+  ],
+  "requests": 1
+}

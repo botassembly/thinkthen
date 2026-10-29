@@ -933,6 +933,12 @@ THINKTHEN_API const char *thinkthen_version(void);
 THINKTHEN_API const char *thinkthen_code_name(int32_t value);
 
 /**
+ * Process-lifetime NUL-terminated family, or NULL for an unknown code, including zero.
+ * The family comes from the engine registry. Never free the returned pointer.
+ */
+THINKTHEN_API const char *thinkthen_code_family(int32_t value);
+
+/**
  * Open a client from a copied typed settings snapshot.
  * # Safety
  * Handles are live; out/error are distinct, empty writable slots.

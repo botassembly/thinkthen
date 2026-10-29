@@ -61,9 +61,7 @@ def frame(
     if function == "filter":
         values.update(
             item=[row.item for row in rows],
-            kept=[
-                row.kept if row.status is not Status.FAILED else None for row in rows
-            ],
+            kept=[row.kept for row in rows],
         )
         dtypes.update(item="object", kept="boolean")
     return pd.DataFrame(

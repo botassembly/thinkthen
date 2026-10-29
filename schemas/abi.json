@@ -100,6 +100,10 @@
       "name": "thinkthen_code_count"
     },
     {
+      "declaration": "const char *thinkthen_code_family(int32_t value);",
+      "name": "thinkthen_code_family"
+    },
+    {
       "declaration": "const char *thinkthen_code_name(int32_t value);",
       "name": "thinkthen_code_name"
     },

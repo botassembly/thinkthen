@@ -1,0 +1,15 @@
+{
+  "name": "recognize-zero-records",
+  "request": {
+    "question": {
+      "function": "recognize",
+      "kinds": [
+        "person"
+      ]
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

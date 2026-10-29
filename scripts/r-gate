@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
+python3 sdk/r/tests/comparison.py
 export CARGO_NET_OFFLINE=true
 export R_HOME="$(R RHOME)"
 case "${CARGO_TARGET_DIR:-target}" in

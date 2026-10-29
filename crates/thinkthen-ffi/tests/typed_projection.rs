@@ -27,7 +27,13 @@ fn normalize(value: &mut Value, registry: &Value, backend: &Value, model: &Value
         let identity = source["question_identity"].as_str().unwrap();
         assert_eq!(identity.len(), 64);
         assert!(identity.chars().all(|c| c.is_ascii_hexdigit()));
-        value.as_object_mut().unwrap().remove("source");
+        let source = source.as_object_mut().unwrap();
+        for field in ["backend", "model", "question_identity"] {
+            source.remove(field);
+        }
+        if source.is_empty() {
+            value.as_object_mut().unwrap().remove("source");
+        }
     }
     if value["function"] == "annotate"
         && let Some(entries) = value.get_mut("answer").and_then(Value::as_object_mut)
@@ -43,60 +49,68 @@ fn typed_c_projections_preserve_every_answer_detail_error_and_id_through_both_wi
     let directory = root.join("conformance/typed");
     let manifest = read(&directory.join("manifest.json"));
     let registry = read(&root.join("schemas/contract.json"));
+    let mut failures = Vec::new();
     for entry in manifest["cases"].as_array().unwrap() {
         let case = read(&directory.join(entry.as_str().unwrap()));
         for backend in manifest["backends"].as_array().unwrap() {
-            let server = Loopback::case(&case).unwrap();
-            let mut client = manifest["client"].clone();
-            if let Some(extra) = case["client"].as_object() {
-                for (key, value) in extra {
-                    client[key] = value.clone();
-                }
-            }
-            client["backend"] = backend.clone();
-            client["url"] = json!(server.base());
-            let key = if backend == "systemone" {
-                "THINKTHEN_API_KEY"
-            } else {
-                "OPENAI_API_KEY"
-            };
-            let output = support::command("thinkthen-typed-projections")
-                .args([client.to_string(), case["request"].to_string()])
-                .env(key, KEY)
-                .output()
-                .unwrap();
-            assert!(
-                output.status.success(),
-                "{} / {}: {}",
-                case["name"],
-                backend,
-                String::from_utf8_lossy(&output.stderr)
-            );
-            let actual: Vec<Value> = String::from_utf8(output.stdout)
-                .unwrap()
-                .lines()
-                .map(|line| {
-                    let mut value: Value = serde_json::from_str(line).unwrap();
-                    if value.get("function").is_some() {
-                        normalize(&mut value, &registry, backend, &manifest["client"]["model"]);
+            let checked = std::panic::catch_unwind(|| {
+                let server = Loopback::case(&case).unwrap();
+                let mut client = manifest["client"].clone();
+                if let Some(extra) = case["client"].as_object() {
+                    for (key, value) in extra {
+                        client[key] = value.clone();
                     }
-                    value
-                })
-                .collect();
-            assert_eq!(
-                json!(actual),
-                if case["expected"].is_object() {
-                    json!([case["expected"]])
+                }
+                client["backend"] = backend.clone();
+                client["url"] = json!(server.base());
+                let key = if backend == "systemone" {
+                    "THINKTHEN_API_KEY"
                 } else {
-                    case["expected"].clone()
-                },
-                "{} / {}",
-                case["name"],
-                backend
-            );
-            assert_eq!(server.count() as u64, case["requests"].as_u64().unwrap());
+                    "OPENAI_API_KEY"
+                };
+                let mut command = support::command("thinkthen-typed-projections");
+                command.args([client.to_string(), case["request"].to_string()]);
+                if case["cancelled"] == true {
+                    command.arg("cancelled");
+                }
+                let output = command.env(key, KEY).output().unwrap();
+                assert!(
+                    output.status.success(),
+                    "{} / {}: {}",
+                    case["name"],
+                    backend,
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                assert_eq!(server.count() as u64, case["requests"].as_u64().unwrap());
+                let actual: Vec<Value> = String::from_utf8(output.stdout)
+                    .unwrap()
+                    .lines()
+                    .map(|line| {
+                        let mut value: Value = serde_json::from_str(line).unwrap();
+                        if value.get("function").is_some() {
+                            normalize(&mut value, &registry, backend, &manifest["client"]["model"]);
+                        }
+                        value
+                    })
+                    .collect();
+                assert_eq!(
+                    json!(actual),
+                    if case["expected"].is_object() {
+                        json!([case["expected"]])
+                    } else {
+                        case["expected"].clone()
+                    },
+                    "{} / {}",
+                    case["name"],
+                    backend
+                );
+            });
+            if checked.is_err() {
+                failures.push(format!("{} / {}", case["name"], backend));
+            }
         }
     }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 #[test]
 fn typed_c_builders_and_sized_outputs_keep_their_ownership_contract() {

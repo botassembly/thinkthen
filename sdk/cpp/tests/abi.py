@@ -1,5 +1,6 @@
 """Exercise the installed C++ constructor against the shared native ABI cases."""
 import json
+import os
 import platform
 from pathlib import Path
 import shutil
@@ -34,7 +35,10 @@ target_link_libraries(consumer PRIVATE ThinkThen::Cpp)
                     str(engines[0]), "--attempted", str(engines[0]) if platform.system() == "Darwin" else engines[0].name,
                     "--", str(build / "consumer"), "client"], check=True)
     for case in manifest["cases"]:
-        shutil.copyfile(case["library"], engines[0])
+        with tempfile.TemporaryDirectory(dir=engines[0].parent) as staging:
+            replacement = Path(staging) / engines[0].name
+            shutil.copy2(case["library"], replacement)
+            os.replace(replacement, engines[0])
         if "missing" in case:
             # Direct C++ consumers require these exports at their link boundary.
             (build / "consumer").unlink(missing_ok=True)

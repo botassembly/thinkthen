@@ -6,6 +6,8 @@ Download the command archive for your platform from the [0.2.0 release](https://
 
 Rust applications use `cargo add thinkthen --no-default-features`. Install the command from source with `cargo install thinkthen`.
 
+The `native` crate feature exposes unstable integration helpers for bindings, proxies and database hosts. These helpers may change or disappear without the public Rust API compatibility guarantees. Applications should use the typed Rust API.
+
 The example uses the stub backend and needs no key or service. On Linux x86-64:
 
 ```sh

@@ -36,6 +36,7 @@ dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuG
 engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$mac")" -print)
 case $(uname -s) in Linux) engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$linux")" -print) ;; esac
 python3 scripts/loader-failure-check "$engine" -- dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
+python3 "$root/sdk/csharp/tests/malformed.py" "$stage/bin" "${THINKTHEN_MALFORMED_ROW_FIXTURES:?prepare shared malformed row fixtures}"
 cd "$stage"
 export THINKTHEN_API_KEY=construction-only
 dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"

@@ -1,0 +1,17 @@
+{
+  "name": "choose-zero-records",
+  "request": {
+    "question": {
+      "function": "choose",
+      "question": "Which?",
+      "choices": [
+        "z",
+        "a"
+      ]
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

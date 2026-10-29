@@ -20,7 +20,9 @@ def check(consumer, root, surface, env):
             reason = ("JSONDecoder rejects the string before library admission"
                       if surface == "swift" else
                       "typed settings cannot represent a string max_retries")
-            print(f"{surface} admission: {case['name']}: unsupported: {reason}")
+            declared = case.get("not_applicable", {}).get(surface)
+            assert declared, (case["name"], surface, "unmarked admission omission")
+            print(f"{surface} admission: {case['name']}: not applicable: {declared}")
             continue
         elif boundary == "toolbox":
             mode = "toolbox-invalid"

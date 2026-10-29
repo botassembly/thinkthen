@@ -3,7 +3,7 @@ import json
 
 
 def quote(value):
-    return "'" + value.replace("'", "''") + "'"
+    return ' || chr(0) || '.join("'" + part.replace("'", "''") + "'" for part in value.split('\0'))
 
 
 def scalar(value):
@@ -55,7 +55,11 @@ def invocation(request):
     values = ','.join(f'({index}, {quote(json.dumps(record))})' for index, record in enumerate(records))
     source = ('SELECT value::JSON AS record FROM (VALUES ' + values + ') src(n,value) ORDER BY n'
               if records else 'SELECT NULL::JSON AS record WHERE false')
-    return 'thinkthen_' + request['question']['function'] + '((' + source + ')' + ''.join(', ' + value for value in arguments(request['question'])) + ')'
+    if 'name' in request:
+        question_arguments = [*arguments(request['question']), 'name := ' + scalar(request['name'])]
+    else:
+        question_arguments = arguments(request['question'])
+    return 'thinkthen_' + request['question']['function'] + '((' + source + ')' + ''.join(', ' + value for value in question_arguments) + ')'
 
 
 def canonical(row, function):

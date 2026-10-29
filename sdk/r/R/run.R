@@ -26,6 +26,8 @@
     count <- 0L
     repeat {
       event <- .tt_native("r_poll", call)
+      # Service pending interrupts after Rust has returned, before the next poll.
+      Sys.sleep(0)
       if (event$event == "row") {
         row <- jsonlite::fromJSON(event$json, simplifyVector = FALSE, bigint_as_char = TRUE)
         row["id"] <- list(switch(event$id$kind, absent = NULL, string = event$id$text,
@@ -33,7 +35,7 @@
                          unsigned = .tt_id_value(event$id$decimal, "unsigned")))
         count <- count + 1L
         rows[[count]] <- row
-        if (function_name == "filter") kept[[count]] <- if (row$status == "failed") NA else event$kept
+        if (function_name == "filter") kept[[count]] <- event$kept
         if (isTRUE(getOption("thinkthen.verbose")) && row$status == "failed") {
           message("ThinkThen failed at position ", row$position)
         }

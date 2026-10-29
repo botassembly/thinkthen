@@ -1,0 +1,26 @@
+{
+  "name": "settings-retry-bound",
+  "client": {
+    "retry": {
+      "max_retries": 11
+    }
+  },
+  "request": {
+    "question": {
+      "function": "decide",
+      "question": "Ready?"
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "usage.settings"
+  },
+  "requests": 0,
+  "not_applicable": {
+    "postgres": "The public PostgreSQL integer GUC has maximum 3 and rejects 11 with native SQLSTATE 22023 before engine JSON settings admission; the native boundary still proves refusal and zero requests.",
+    "bash": "The command grammar and environment expose no retry settings; library admission checks the retry bound."
+  }
+}

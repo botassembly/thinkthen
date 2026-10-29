@@ -1,0 +1,34 @@
+{
+  "name": "tag-cancel-before-call",
+  "request": {
+    "question": {
+      "function": "tag",
+      "question": "What applies?",
+      "labels": [
+        "billing",
+        "refund",
+        "shipping"
+      ],
+      "threshold": 0.7
+    },
+    "records": [
+      "evidence"
+    ]
+  },
+  "replies": [],
+  "expected": {
+    "error": "local.cancelled"
+  },
+  "requests": 0,
+  "client": {
+    "batch": 2
+  },
+  "cancelled": true,
+  "not_applicable": {
+    "r": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "sqlite": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "duckdb": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "postgres": "The public surface has no persistent cancellation token before a call; held-query interruption covers every function instead.",
+    "bash": "The command has no persistent cancellation token before a process starts; its interrupt tests cover cancellation during held calls."
+  }
+}

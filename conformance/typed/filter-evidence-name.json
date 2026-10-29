@@ -1,0 +1,86 @@
+{
+  "name": "filter-evidence-name",
+  "request": {
+    "question": {
+      "function": "filter",
+      "question": "Ready?",
+      "threshold": {
+        "low": 0.2,
+        "high": 0.8
+      },
+      "evidence": "/selected"
+    },
+    "records": [
+      {
+        "selected": "refund",
+        "ignored": "different evidence"
+      },
+      {
+        "selected": "parcel",
+        "ignored": "different evidence"
+      },
+      {
+        "selected": "uncertain",
+        "ignored": "different evidence"
+      },
+      null
+    ],
+    "name": "named-filter"
+  },
+  "replies": [
+    {
+      "contains": "\"refund\"",
+      "probability": 0.9
+    },
+    {
+      "contains": "\"uncertain\"",
+      "probability": 0.6
+    },
+    {
+      "probability": 0.1
+    }
+  ],
+  "expected": [
+    {
+      "function": "filter",
+      "position": 1,
+      "answer": true,
+      "probability": 0.9,
+      "status": "answered",
+      "source": {
+        "name": "named-filter"
+      }
+    },
+    {
+      "function": "filter",
+      "position": 2,
+      "answer": false,
+      "probability": 0.1,
+      "status": "answered",
+      "source": {
+        "name": "named-filter"
+      }
+    },
+    {
+      "function": "filter",
+      "position": 3,
+      "status": "unsure",
+      "probability": 0.6,
+      "source": {
+        "name": "named-filter"
+      }
+    },
+    {
+      "function": "filter",
+      "position": 4,
+      "status": "failed",
+      "error": {
+        "code": "record.missing"
+      },
+      "source": {
+        "name": "named-filter"
+      }
+    }
+  ],
+  "requests": 1
+}

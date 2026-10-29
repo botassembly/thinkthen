@@ -13,6 +13,7 @@ from native_platform import current
 
 ROOT = Path(__file__).resolve().parent.parent
 STORE = Path.home() / '.local/share/thinkthen-build-tools/native-abi'
+CONTENT_CASES = ('invalid-json', 'unanswered-answer', 'unknown-function')
 
 
 def digest(path):
@@ -84,17 +85,67 @@ def prepare(folder, inputs, definition):
             stage.rename(folder)
 
 
+def content_identity(inputs):
+    # Content corruption is independent of the loader's ABI-version cases.
+    names = ('native_key', 'engine', 'engine_sha256', 'header', 'compiler')
+    content = {name: inputs[name] for name in names}
+    content['producer'] = digest(ROOT / 'scripts/abi-minor-check')
+    content['forwarder'] = inputs['producer']
+    content['registry'] = inputs['registry']
+    # abi-minor-check invokes cc directly, independent of the version fixture CC.
+    content['compiler'] = subprocess.check_output(['cc', '--version'], text=True)
+    key = hashlib.sha256(json.dumps(content, sort_keys=True).encode()).hexdigest()
+    return STORE / 'content' / current()['rust'] / key, content
+
+
+def verify_content(folder, inputs):
+    identity = json.loads((folder / 'identity.json').read_text())
+    if set(identity) != {'inputs', 'files'} or identity['inputs'] != inputs:
+        raise ValueError('Content fixture inputs differ from this checkout')
+    library = Path(inputs['engine']).name
+    expected = {case + '/' + name for case in CONTENT_CASES for name in ('malformed.c', library)}
+    if set(identity['files']) != expected:
+        raise ValueError('Content fixture file inventory differs')
+    for name, checksum in identity['files'].items():
+        path = folder / name
+        if path.is_symlink() or digest(path) != checksum:
+            raise ValueError('Content fixture checksum differs: ' + name)
+
+
+def prepare_content(folder, inputs):
+    folder.parent.mkdir(parents=True, exist_ok=True)
+    with folder.with_suffix('.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if folder.exists():
+            verify_content(folder, inputs)
+            return
+        with tempfile.TemporaryDirectory(prefix='publish-', dir=folder.parent) as temporary:
+            stage = Path(temporary) / 'assets'
+            for case in CONTENT_CASES:
+                subprocess.run([str(ROOT / 'scripts/abi-minor-check'), '--native', inputs['engine'],
+                                '--malformed-row', case, '--output', str(stage / case)], cwd=ROOT, check=True)
+            files = {str(path.relative_to(stage)): digest(path) for path in stage.rglob('*') if path.is_file()}
+            (stage / 'identity.json').write_text(json.dumps({'inputs': inputs, 'files': files},
+                                                          sort_keys=True, indent=2) + '\n')
+            verify_content(stage, inputs)
+            stage.rename(folder)
+
+
 def main():
     if sys.argv[1:] not in (['prepare'], ['env']):
         raise SystemExit('usage: scripts/native-abi-assets prepare|env')
     folder, inputs, definition = identity()
+    content_folder, content_inputs = content_identity(inputs)
     if sys.argv[1] == 'prepare':
         prepare(folder, inputs, definition)
+        prepare_content(content_folder, content_inputs)
         print(folder)
     else:
         verify(folder, inputs, definition)
+        verify_content(content_folder, content_inputs)
         print('THINKTHEN_NATIVE_FIXTURES=' + shlex.quote(str(folder)))
-        print('export THINKTHEN_NATIVE_FIXTURES')
+        print('THINKTHEN_MALFORMED_ROW_FIXTURES=' + shlex.quote(str(content_folder)))
+        print('export THINKTHEN_NATIVE_FIXTURES THINKTHEN_MALFORMED_ROW_FIXTURES')
 
 
 if __name__ == '__main__':

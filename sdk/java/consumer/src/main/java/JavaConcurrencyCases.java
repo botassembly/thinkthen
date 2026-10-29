@@ -15,6 +15,7 @@ public final class JavaConcurrencyCases {
                  .apiKey("loopback-only").retry(RetryPolicy.builder().maxRetries(0)
                      .attemptTimeout(Duration.ofSeconds(60)).build()).build()) {
             var calls = new ArrayList<CompletableFuture<Row<Boolean,NoDetail>>>();
+            long[] cancelledAt = {0};
             try {
                 for (int i = 0; i < 8; i++) calls.add(client.async().decide("Ready?", "record " + i));
                 var reader = java.util.concurrent.Executors.newSingleThreadExecutor(Thread.ofPlatform().daemon().factory());
@@ -26,8 +27,10 @@ public final class JavaConcurrencyCases {
                     // A hang guard only; arrival events, rather than elapsed time, prove concurrency.
                     JavaApiCases.check(arrivals.get(15,TimeUnit.SECONDS),"all calls arrived");
                 } finally { reader.shutdownNow(); }
-            } finally { for (var call : calls) call.cancel(true); }
+            } finally { cancelledAt[0] = System.nanoTime(); for (var call : calls) call.cancel(true); }
             for (int i = 0; i < calls.size(); i++) JavaApiCases.equal(fixture.command("closed"),"closed","every held call cancels");
+            JavaApiCases.check(System.nanoTime()-cancelledAt[0] < TimeUnit.SECONDS.toNanos(2),"cancellation exceeded the socket deadline");
+            JavaApiCases.equal(fixture.command("count"),"8","cancel sent another paid request");
         }
     }
 }

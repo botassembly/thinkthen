@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Run the system certificate-store proof only in a disposable root container."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+from build_targets import container_labels
+from release_images import image
+
+ROOT = Path(__file__).resolve().parent.parent
+NAME = 'container_system_store_is_used_and_extra_roots_preserve_it'
+
+if sys.platform != 'linux':
+    sys.exit('system-store qualification requires native Linux')
+command = ['scripts/runtime-floor-build', 'cargo', 'test', '--offline', '--locked', '-p',
+           'thinkthen', '--no-default-features', '--features', 'native', '--test',
+           'transport_trust', '--no-run', '--message-format=json']
+result = subprocess.run(command, cwd=ROOT, text=True, encoding='utf-8',
+                        stdout=subprocess.PIPE, check=True)
+executables = [Path(row['executable']) for line in result.stdout.splitlines()
+               if line.startswith('{') and (row := json.loads(line)).get('reason') == 'compiler-artifact'
+               and row.get('target', {}).get('name') == 'transport_trust' and row.get('executable')]
+if len(executables) != 1:
+    sys.exit('expected one compiled native Linux transport-trust test executable')
+executable = executables[0].resolve()
+print('System-store trust: isolated root container; executable ' + str(executable), flush=True)
+subprocess.run(['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
+    '--user', '0:0', '-v', str(executable) + ':/qualification/transport-trust:ro',
+    '-e', 'HOME=/tmp/home', '-e', 'THINKTHEN_TEST_CONTAINER_STORE=1',
+    '-e', 'THINKTHEN_EXPECT_CONTAINER_STORE=1', image('floor'), 'sh', '-eu', '-c',
+    'mkdir -p "$HOME"; exec /qualification/transport-trust --exact "$1" --nocapture',
+    'system-store', NAME], check=True)

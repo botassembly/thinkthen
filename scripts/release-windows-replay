@@ -114,11 +114,22 @@ def execute(source, revision, workspace, temporary, candidate, receipts, output,
                 current = dict(environment)
                 current.update({key: resolve(value, revision, temporary, outcomes)
                                 for key, value in step.get('env', {}).items()})
-                command = output / f'{index:02d}-{identifier}.sh'
-                command.write_text(step['run'], encoding='utf-8', newline='\n')
+                shell = step.get('shell', job.get('defaults', {}).get('run', {}).get('shell', 'bash'))
+                if shell not in ('bash', 'pwsh'):
+                    raise ValueError('unsupported windows-check shell: ' + str(shell))
+                command = output / f'{index:02d}-{identifier}'
+                if shell == 'bash':
+                    command = Path(str(command) + '.sh')
+                    script = step['run']
+                    arguments = ['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail', command.as_posix()]
+                else:
+                    command = Path(str(command) + '.ps1')
+                    script = ("$ErrorActionPreference = 'stop'\n" + step['run']
+                              + "\nif ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }\n")
+                    arguments = ['pwsh', '-command', ". '" + str(command).replace("'", "''") + "'"]
+                command.write_text(script, encoding='utf-8', newline='\n')
                 with log.open('wb') as stream:
-                    status = subprocess.run(['bash', '--noprofile', '--norc', '-e', '-o', 'pipefail',
-                                             command.as_posix()], cwd=workspace, env=current,
+                    status = subprocess.run(arguments, cwd=workspace, env=current,
                                             stdout=stream, stderr=subprocess.STDOUT).returncode
                 updates = Path(environment['GITHUB_ENV'])
                 if updates.exists():

@@ -72,19 +72,23 @@ private suspend fun exceptionCleanup() = coroutineScope {
 
 // Feature: a collector cancels a native pull without waiting for a held reply.
 // The existing arrived/closed events prove backend cancellation without sleeps.
-private suspend fun nativeCancellation(mode: String, stream: Boolean) = coroutineScope {
+private suspend fun nativeCancellation(mode: String, stream: Boolean, backend: Backend) = coroutineScope {
     Fixture.held(mode).use { fixture ->
-        ThinkThen { backend = Backend.SystemOne; url = fixture.url; apiKey = ApiKey("loopback-only"); batch = 1 }.use { client ->
+        ThinkThen { this.backend = backend; url = fixture.url; apiKey = ApiKey("loopback-only"); batch = 1; retry = RetryPolicy(0, 0.milliseconds, 60000.milliseconds) }.use { client ->
             val operation = async {
                 if (stream) client.decideStream("Ready?", flowOf("alpha")).collect()
                 else client.decide("Ready?", "alpha")
             }
             check(capturedCommand(fixture, "arrived") == "arrived")
-            FlowCapture.event("cancel native operation"); operation.cancel()
-            try { capturedOperation(operation); error("Expected coroutine cancellation") }
-            catch (_: CancellationException) { }
-            check(operation.isCancelled)
-            check(capturedCommand(fixture, "closed") == "closed")
+            val paid = fixture.command("count")
+            withTimeout(2000) {
+                FlowCapture.event("cancel native operation"); operation.cancel()
+                try { capturedOperation(operation); error("Expected coroutine cancellation") }
+                catch (_: CancellationException) { }
+                check(operation.isCancelled)
+                check(capturedCommand(fixture, "closed") == "closed")
+            }
+            check(fixture.command("count") == paid) { "Cancellation sent another request" }
             capturedClose(client)
         }
     }
@@ -182,8 +186,10 @@ fun main(args: Array<String>) = FlowCapture.run(args) { runBlocking {
     FlowCapture.case("earlyStop") { earlyStop() }
     FlowCapture.case("blockedInput") { blockedInput() }
     FlowCapture.case("exceptionCleanup") { exceptionCleanup() }
-    FlowCapture.case("nativeCancellation headers finite") { nativeCancellation("headers", stream = false) }
-    FlowCapture.case("nativeCancellation body stream") { nativeCancellation("body", stream = true) }
+    for (backend in listOf(Backend.SystemOne,Backend.OpenAI)) {
+        FlowCapture.case("nativeCancellation $backend headers finite") { nativeCancellation("headers", stream = false, backend = backend) }
+        FlowCapture.case("nativeCancellation $backend body stream") { nativeCancellation("body", stream = true, backend = backend) }
+    }
     FlowCapture.case("clientClose") { clientClose() }
     FlowCapture.case("independentCollections") { independentCollections() }
     FlowCapture.case("remoteRows") { remoteRows(Path.of(args.single())) }

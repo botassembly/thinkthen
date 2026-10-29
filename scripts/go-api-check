@@ -40,12 +40,17 @@ from release_source import stage_go_libraries
 stage_go_libraries({current()['platform']: Path(sys.argv[2])}, Path(sys.argv[1]))
 PYTHON
 if [ "${1:-}" != --readme-only ]; then
-    scripts/native-fixtures --engine "$THINKTHEN_GO_ENGINE" --output "$scratch/native"
+    if [ -n "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
+        test -d "$THINKTHEN_NATIVE_FIXTURES"
+    else
+        scripts/native-fixtures --engine "$THINKTHEN_GO_ENGINE" --output "$scratch/native"
+        THINKTHEN_NATIVE_FIXTURES="$scratch/native"
+    fi
 fi
 mkdir -p "$scratch/consumer" "$scratch/home" "$scratch/tmp"
 cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
 export THINKTHEN_CONTRACT="$root/schemas/contract.json" THINKTHEN_BOUNDARY_SOURCE="$root/crates/thinkthen/src/core/function/recognize.rs"
-export THINKTHEN_LOOPBACK THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES="$scratch/native" THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
+export THINKTHEN_LOOPBACK THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
 cd "$scratch/consumer"

@@ -33,6 +33,7 @@ export THINKTHEN_LOOPBACK="$build_target/debug/loopback" THINKTHEN_CASES="$root/
 gem install --local --no-document "$dependency" "$scratch/packages"/*"-$platform.gem"
 engine=$(find "$GEM_HOME"/gems/thinkthen-*/lib/thinkthen -name '*thinkthen_ffi.*' -print)
 python3 scripts/loader-failure-check "$engine" -- ruby -e 'require "thinkthen"; ThinkThen::Client.open(backend: :stub) {}'
+: "${THINKTHEN_NATIVE_FIXTURES:?prepare native ABI fixtures before running ruby-gate}"
 python3 sdk/ruby/tests/abi_fixtures.py --engine "$engine" --fixtures "$THINKTHEN_NATIVE_FIXTURES/manifest.json" --output "$scratch/fixtures"
 export THINKTHEN_NATIVE_FIXTURES="$scratch/fixtures"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then

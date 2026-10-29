@@ -173,7 +173,7 @@ public class ThinkThen(build: SettingsBuilder.() -> Unit = {}) : AutoCloseable {
     }
 
     private fun <A,D> decode(decoder: Decoder<A,D>, packet: DriverCall.DriverRow): Row<A,D> = try { decoder.row(packet) }
-    catch (error: Exception) { throw ThinkThenException(ErrorCode.fromWire("internal.bug"),"Invalid native row envelope",cause = error) }
+    catch (error: Exception) { throw ThinkThenException(ErrorCode.fromWire("usage.abi"),"Invalid native row envelope",cause = error) }
 }
 
 internal inline fun <T> translate(operation: () -> T): T = try { operation() }

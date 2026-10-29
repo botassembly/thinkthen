@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Compare generated construction semantics and validate surface applicability."""
+import copy
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+SURFACES = {"bash", "c", "cpp", "csharp", "duckdb", "go", "java", "kotlin",
+            "postgres", "python", "r", "ruby", "sqlite", "swift", "typescript", "zig"}
+
+
+def applicability(case):
+    if "not_applicable" not in case:
+        return
+    reasons = case["not_applicable"]
+    if not isinstance(reasons, dict) or not reasons:
+        raise ValueError("not_applicable must be a nonempty object")
+    for surface, reason in reasons.items():
+        if surface not in SURFACES or not isinstance(reason, str) or not reason.strip():
+            raise ValueError("not_applicable needs a known surface and a nonempty reason")
+
+
+def comparable(cases):
+    cases = copy.deepcopy(cases)
+    for case in cases:
+        applicability(case)
+        case.pop("not_applicable", None)
+    return json.dumps(cases, sort_keys=True)
+
+
+def compare(actual, generated):
+    if comparable(actual) != comparable(generated):
+        raise ValueError("regenerate canonical construction fixtures with the construction example")
+
+
+def main():
+    with tempfile.TemporaryDirectory(prefix="thinkthen-construction-") as temporary:
+        folder = Path(temporary)
+        (folder / "conformance").symlink_to(ROOT / "conformance", target_is_directory=True)
+        (folder / "construction").mkdir()
+        subprocess.run(["cargo", "run", "--quiet", "--manifest-path", str(ROOT / "Cargo.toml"),
+                        "-p", "thinkthen", "--example", "construction", "--locked"],
+                       cwd=folder, check=True)
+        for name in ("stub.json", "options.json"):
+            actual = json.loads((ROOT / "construction" / name).read_text())
+            generated = json.loads((folder / "construction" / name).read_text())
+            compare(actual, generated)
+            if "--self-test" in sys.argv:
+                valid = copy.deepcopy(actual)
+                valid[0]["not_applicable"] = {"go": "Fixture metadata validation control"}
+                compare(valid, generated)
+                mutations = []
+                changed_row = copy.deepcopy(actual)
+                changed_row[0]["expected"][0]["probability"] = 0.123456789
+                mutations.append(changed_row)
+                stale = copy.deepcopy(actual)
+                stale[0]["requests"] += 1
+                mutations.append(stale)
+                unknown = copy.deepcopy(actual)
+                unknown[0]["unexpected_fixture_field"] = True
+                mutations.append(unknown)
+                for reasons in ({"unknown-surface": "reason"}, {"go": " "}, {"go": 1}, []):
+                    malformed = copy.deepcopy(actual)
+                    malformed[0]["not_applicable"] = reasons
+                    mutations.append(malformed)
+                for mutation in mutations:
+                    try:
+                        compare(mutation, generated)
+                    except ValueError:
+                        continue
+                    raise AssertionError("construction mutation was admitted")
+        print("Construction semantics match generated fixtures; applicability metadata is valid")
+        if "--self-test" in sys.argv:
+            print("Construction check refuses stale semantics, unknown fields and malformed applicability")
+
+
+if __name__ == "__main__":
+    main()

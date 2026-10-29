@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+"""Exercise Windows process, spreadsheet, text and interrupt behavior on a shipped CLI."""
+import argparse
+import ctypes
+from ctypes import wintypes
+import hashlib
+import csv
+import io
+import json
+import os
+from pathlib import Path
+import signal
+import socketserver
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import xml.etree.ElementTree as ET
+import zipfile
+
+
+def stopped(pid):
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = kernel.OpenProcess(0x00100000, False, pid)
+    if not handle:
+        if ctypes.get_last_error() == 87:
+            return
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        assert kernel.WaitForSingleObject(handle, 2000) == 0, 'saved run left child process ' + str(pid)
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def workbook(path):
+    ns = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+    files = {
+        '[Content_Types].xml': '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+        '_rels/.rels': '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        'xl/workbook.xml': '<workbook xmlns="' + ns + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Intake" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        'xl/_rels/workbook.xml.rels': '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        'xl/worksheets/sheet1.xml': '<worksheet xmlns="' + ns + '"><dimension ref="A1:A2"/><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Body</t></is></c></row><row r="2"><c r="A2" t="inlineStr"><is><t>漢字 evidence 5</t></is></c></row></sheetData></worksheet>',
+    }
+    with zipfile.ZipFile(path, 'w') as archive:
+        for name, body in files.items():
+            archive.writestr(name, body.encode('utf-8'))
+
+
+def run_case(binary, folder, environment, *arguments, payload=None, code=0):
+    result = subprocess.run([str(binary), *map(str, arguments)], input=payload, cwd=folder,
+        env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+    assert result.returncode == code, (arguments, result.returncode, result.stdout, result.stderr)
+    return result
+
+
+def pipeline(binary, folder, environment):
+    pids = folder / 'children.json'
+    first = 'import json,os,subprocess,sys,threading; child=subprocess.Popen([sys.executable,"-c","import threading;threading.Event().wait()"]);open(sys.argv[1],"w").write(json.dumps([os.getpid(),child.pid]));print(json.dumps("record"),flush=True);threading.Event().wait()'
+    second = 'import sys;sys.stdin.readline();sys.exit(27)'
+    entry = folder / 'run.json'
+    entry.write_text(json.dumps({'run': [{'shell': [sys.executable, '-c', first, str(pids)]},
+                                        {'shell': [sys.executable, '-c', second]}]}), encoding='utf-8')
+    try:
+        run_case(binary, folder, environment, 'run', '--allow-shell', entry, '--backend', 'stub', code=27)
+        for pid in json.loads(pids.read_text(encoding='utf-8')):
+            stopped(pid)
+        assert {p.name for p in folder.iterdir()} == {'run.json', 'children.json'}
+    finally:
+        # Reap only this fixture's recorded children after a failed cleanup assertion.
+        if pids.exists():
+            for pid in json.loads(pids.read_text(encoding='utf-8')):
+                try:
+                    stopped(pid)
+                except AssertionError:
+                    subprocess.run(['taskkill.exe', '/PID', str(pid), '/T', '/F'],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+
+
+def spreadsheet(binary, folder, environment):
+    source = folder / 'book.xlsx'
+    workbook(source)
+    run_case(binary, folder, environment, 'decide', 'Ready?', '--backend', 'stub', '--from',
+             'xlsx', source, '--sheet', 'Intake', '--column', 'Body', '--into', 'ready')
+    destination = folder / 'book.thinkthen.xlsx'
+    with zipfile.ZipFile(destination) as archive:
+        sheet = ET.fromstring(archive.read('xl/worksheets/sheet1.xml'))
+        cells = {cell.attrib['r']: cell for cell in sheet.iter() if cell.tag.endswith('}c')}
+        assert ''.join(cells['A2'].itertext()) == '漢字 evidence 5'
+        assert cells['B2'].attrib.get('t') == 'b' and ''.join(cells['B2'].itertext()) == '1'
+    assert {p.name for p in folder.iterdir()} == {'book.xlsx', 'book.thinkthen.xlsx'}
+
+
+def powershell(binary, folder, environment):
+    script = folder / 'unicode.ps1'
+    script.write_text('$ErrorActionPreference="Stop"\n$OutputEncoding=[Text.UTF8Encoding]::new($false)\n'
+        + '[Console]::OutputEncoding=$OutputEncoding\n'
+        + "'Body', '漢字 café evidence 5' | & '" + str(binary).replace("'", "''")
+        + "' decide 'Ready?' --backend stub --from csv - --column Body --into ready\nexit $LASTEXITCODE\n",
+        encoding='utf-8-sig')
+    result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-File', str(script)],
+        cwd=folder, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+    assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+    rows = list(csv.DictReader(io.StringIO(result.stdout.decode('utf-8-sig'))))
+    assert len(rows) == 1 and rows[0]['Body'] == '漢字 café evidence 5'
+    assert rows[0]['ready'] == 'TRUE', rows
+    assert {p.name for p in folder.iterdir()} == {'unicode.ps1'}
+
+
+def interrupt(binary, folder, environment):
+    arrived, closed = threading.Event(), threading.Event()
+    requests = []
+    class Held(socketserver.BaseRequestHandler):
+        def handle(self):
+            try:
+                stream = self.request.makefile('rb')
+                first = stream.readline()
+                if not first:
+                    return
+                length = 0
+                while line := stream.readline():
+                    if line in (b'\r\n', b'\n'):
+                        break
+                    if line.lower().startswith(b'content-length:'):
+                        length = int(line.split(b':', 1)[1])
+                stream.read(length)
+                requests.append(first)
+                arrived.set()
+                assert self.request.recv(1) == b'', 'cancelled request received another byte'
+                closed.set()
+            except ConnectionResetError:
+                closed.set()
+    class Server(socketserver.ThreadingTCPServer):
+        daemon_threads = True
+    with Server(('127.0.0.1', 0), Held) as server:
+        worker = threading.Thread(target=server.serve_forever)
+        worker.start()
+        child = subprocess.Popen([str(binary), 'decide', 'Ready?', '--from', 'lines', '--json',
+            '--batch', '1', '--url', f'http://127.0.0.1:{server.server_address[1]}/v1'], cwd=folder,
+            env=dict(environment, THINKTHEN_API_KEY='synthetic-loopback-key'), stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        try:
+            child.stdin.write(b'one\n')
+            child.stdin.close()
+            child.stdin = None
+            assert arrived.wait(30), 'CLI did not send its request'
+            started = time.monotonic()
+            child.send_signal(signal.CTRL_BREAK_EVENT)
+            assert closed.wait(2), 'CTRL_BREAK did not close the held socket within two seconds'
+            stdout, stderr = child.communicate(timeout=30)
+            assert child.returncode == 130, (child.returncode, stdout, stderr)
+            assert time.monotonic() - started < 30 and not stdout
+            assert len(requests) == 1, 'request count grew after cancel'
+            assert not list(folder.iterdir()), 'cancel left temporary files'
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.wait()
+            server.shutdown()
+            worker.join()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--binary', type=Path, required=True)
+    args = parser.parse_args()
+    if os.name != 'nt':
+        parser.error('Windows CLI checks require native Windows')
+    binary = args.binary.resolve(strict=True)
+    print('Windows CLI binary: ' + str(binary) + ' sha256=' + hashlib.sha256(binary.read_bytes()).hexdigest(), flush=True)
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    allocated = not kernel.GetConsoleCP()
+    if allocated and not kernel.AllocConsole():
+        raise ctypes.WinError(ctypes.get_last_error())
+    failures = []
+    try:
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-') as temporary:
+            for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('ctrl-break', interrupt)]:
+                folder = Path(temporary) / name
+                folder.mkdir()
+                environment = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
+                environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
+                try:
+                    case(binary, folder, environment)
+                    print('Windows CLI: ' + name + ': PASS', flush=True)
+                except Exception as error:
+                    failures.append(name)
+                    print('Windows CLI: ' + name + ': FAIL: ' + str(error), flush=True)
+        if failures:
+            sys.exit('Windows CLI failures: ' + ', '.join(failures))
+    finally:
+        if allocated:
+            kernel.FreeConsole()
+
+
+if __name__ == '__main__':
+    main()

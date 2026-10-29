@@ -4,18 +4,21 @@
 pub mod loopback;
 use loopback::{KEY, Loopback, Reply, Request};
 use serde_json::{Value, json};
-use std::sync::{Arc, Barrier, Mutex, mpsc};
+use std::sync::{Arc, Condvar, Mutex, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 use thinkthen::{Decide, Engine, Key, Record, Retry, Settings};
 
 const WAIT: Duration = Duration::from_secs(30);
 fn engine(server: &Loopback) -> Engine {
+    engine_batch(server, 1)
+}
+fn engine_batch(server: &Loopback, batch: usize) -> Engine {
     Settings::default()
         .url(server.base())
         .api_key(Key::new(KEY).unwrap())
         .model("test")
-        .batch("1".parse().unwrap())
+        .batch(batch.to_string().parse().unwrap())
         .retry(Retry::new(1, Duration::from_millis(100), Duration::from_secs(120)).unwrap())
         .engine(|_| None)
         .unwrap()
@@ -48,7 +51,7 @@ fn a_held_first_request_allows_other_workers_to_finish_more_requests_in_order() 
     let server = Loopback::start(move |request| {
         let first = request.json().unwrap().to_string().contains("record 0");
         if first {
-            held.lock().unwrap().recv().unwrap();
+            held.lock().unwrap().recv_timeout(WAIT).unwrap();
         }
         arrived.send(first).unwrap();
         answer(request)
@@ -139,4 +142,93 @@ fn retry_after_accepts_an_http_date() {
     let (retried, deadline) = arrived.recv_timeout(WAIT).unwrap();
     assert!(retried >= deadline);
     assert_eq!(server.count(), 2);
+}
+
+struct Barrier {
+    parties: usize,
+    state: Mutex<(usize, usize)>,
+    changed: Condvar,
+}
+impl Barrier {
+    fn new(parties: usize) -> Self {
+        Self {
+            parties,
+            state: Mutex::new((0, 0)),
+            changed: Condvar::new(),
+        }
+    }
+    fn wait(&self) {
+        let mut state = self.state.lock().unwrap();
+        let generation = state.1;
+        state.0 += 1;
+        if state.0 == self.parties {
+            state.0 = 0;
+            state.1 += 1;
+            self.changed.notify_all();
+            return;
+        }
+        let (_state, timeout) = self
+            .changed
+            .wait_timeout_while(state, WAIT, |state| state.1 == generation)
+            .unwrap();
+        assert!(
+            !timeout.timed_out(),
+            "peer requests did not reach the test barrier"
+        );
+    }
+}
+
+#[test]
+fn a_held_first_request_bounds_rust_input_read_ahead() {
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    let batch = 2_usize;
+    let window = loopback::limits()["read_ahead_window"].as_u64().unwrap() as usize;
+    let bound = batch * window + 1;
+    let first_held = Arc::new(AtomicBool::new(true));
+    let consumed = Arc::new(AtomicUsize::new(0));
+    let (observed, events) = mpsc::channel();
+    let input_observed = observed.clone();
+    let (release, held) = mpsc::channel();
+    let held = Mutex::new(held);
+    let server = Loopback::start(move |request| {
+        if request.json().unwrap().to_string().contains("record 0") {
+            held.lock().unwrap().recv_timeout(WAIT).unwrap();
+        } else {
+            observed.send(false).unwrap();
+        }
+        answer(request)
+    })
+    .unwrap();
+    let runner = engine_batch(&server, batch);
+    let held_flag = first_held.clone();
+    let count = consumed.clone();
+    let worker = thread::spawn(move || {
+        let records = (0..bound * 4).map(move |index| {
+            let next = count.fetch_add(1, Ordering::SeqCst) + 1;
+            if held_flag.load(Ordering::SeqCst) && next > bound {
+                input_observed.send(true).unwrap();
+            }
+            Record::text(format!("record {index}"))
+        });
+        runner
+            .rows(&Decide::new("Ready?").unwrap(), records)
+            .unwrap()
+            .collect::<Vec<_>>()
+    });
+    let mut exceeded = false;
+    for _ in 0..window - 1 {
+        if events.recv_timeout(WAIT).unwrap() {
+            exceeded = true;
+            break;
+        }
+    }
+    exceeded |= consumed.load(Ordering::SeqCst) > bound;
+    first_held.store(false, Ordering::SeqCst);
+    release.send(()).unwrap();
+    let rows = worker.join().unwrap();
+    assert!(
+        !exceeded,
+        "input advanced beyond batch * window + 1 while first request was held"
+    );
+    assert_eq!(rows.len(), bound * 4);
 }

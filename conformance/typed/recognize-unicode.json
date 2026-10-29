@@ -1,0 +1,110 @@
+{
+  "name": "recognize-unicode",
+  "request": {
+    "question": {
+      "function": "recognize",
+      "kinds": [
+        "person"
+      ]
+    },
+    "records": [
+      "é🦀 Ada"
+    ]
+  },
+  "replies": [
+    {
+      "contains": "[[Ada]]",
+      "criterion": "BEGIN",
+      "distribution": {
+        "BEGIN": 0.0,
+        "END": 0.0,
+        "INSIDE": 0.0,
+        "OUT": 0.0,
+        "SINGLE": 1.0
+      }
+    },
+    {
+      "criterion": "BEGIN",
+      "distribution": {
+        "BEGIN": 0.0,
+        "END": 0.0,
+        "INSIDE": 0.0,
+        "OUT": 1.0,
+        "SINGLE": 0.0
+      }
+    },
+    {
+      "distribution": {
+        "person": 1.0,
+        "none of these": 0.0
+      }
+    }
+  ],
+  "expected": [
+    {
+      "function": "recognize",
+      "position": 1,
+      "status": "answered",
+      "answer": [
+        {
+          "text": "Ada",
+          "start": 3,
+          "end": 6,
+          "kind": "person",
+          "probability": 1.0
+        }
+      ],
+      "detail": {
+        "pieces": [
+          {
+            "text": "é",
+            "start": 0,
+            "end": 1,
+            "tags": {
+              "BEGIN": 0.0,
+              "END": 0.0,
+              "INSIDE": 0.0,
+              "OUT": 1.0,
+              "SINGLE": 0.0
+            }
+          },
+          {
+            "text": "🦀",
+            "start": 1,
+            "end": 2,
+            "tags": {
+              "BEGIN": 0.0,
+              "END": 0.0,
+              "INSIDE": 0.0,
+              "OUT": 1.0,
+              "SINGLE": 0.0
+            }
+          },
+          {
+            "text": "Ada",
+            "start": 3,
+            "end": 6,
+            "tags": {
+              "BEGIN": 0.0,
+              "END": 0.0,
+              "INSIDE": 0.0,
+              "OUT": 0.0,
+              "SINGLE": 1.0
+            }
+          }
+        ],
+        "names": [
+          {
+            "start": 3,
+            "end": 6,
+            "kinds": {
+              "person": 1.0,
+              "none of these": 0.0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "requests": 2
+}

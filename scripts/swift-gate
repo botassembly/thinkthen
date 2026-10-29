@@ -34,8 +34,9 @@ python3 sdk/swift/tests/options.py "$scratch/consumer" construction/options.json
 rm -rf "$scratch/ThinkThen" "$scratch/consumer"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
-python3 sdk/swift/tests/run.py "$scratch/installed/Consumer" "$root" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"
 if [ -n "${THINKTHEN_SWIFT_OUTPUT:-}" ]; then
     mkdir -p "$THINKTHEN_SWIFT_OUTPUT"
     cp -R "$scratch/installed/." "$THINKTHEN_SWIFT_OUTPUT/"
 fi
+
+python3 sdk/swift/tests/run.py "$scratch/installed/Consumer" "$root" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}"

@@ -62,12 +62,12 @@ question <- function(q) {
   do.call(get(paste0("tt_", verb, "_question")), q)
 }
 
-invoke <- function(records, q, client, name = NULL) {
+invoke <- function(records, q, client, name = NULL, vector = FALSE) {
   arg <- switch(q[["function"]], recognize = "kinds", relate = "rules",
                 annotate = "toolbox", "question")
   options <- list(client = client, .progress = FALSE, name = name)
   if (q[["function"]] == "annotate") options$evidence <- q$evidence
-  do.call(get(paste0("tt_", q[["function"]])),
+  do.call(get(paste0("tt_", q[["function"]], if (vector) "_vec" else "")),
           c(list(x = records), setNames(list(question(q)), arg), options))
 }
 

@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory(prefix='stress-dispatch-') as temporary:
     root = Path(temporary)
     (root / 'scripts').mkdir()
     (root / 'conformance/typed').mkdir(parents=True)
-    for name in ('stress-adapters.py', 'stress_resources.py', 'stress_monitor.py', 'stress-checkpoint', 'stress-resource-test'):
+    for name in ('stress-adapters.py', 'stress_resources.py', 'stress_monitor.py', 'stress-checkpoint', 'stress-resource-test', 'test_control.py'):
         shutil.copy2(ROOT / 'scripts' / name, root / 'scripts' / name)
     table = json.loads((ROOT / 'conformance/stress.json').read_text())
     table['records'] = dict(table['records'], smoke=1, full=2, soak_rounds=4)
@@ -28,7 +28,13 @@ with tempfile.TemporaryDirectory(prefix='stress-dispatch-') as temporary:
     shutil.copy2(ROOT / 'conformance/typed/manifest.json', root / 'conformance/typed/manifest.json')
     fixture = root / 'fixture'
     fixture.write_text('''#!/usr/bin/env python3
-import socket,sys
+import socket,sys,json
+if sys.argv[1:]==["--limits"]:
+    print(json.dumps(dict(workers=4,read_ahead_window=16)))
+    sys.exit(0)
+from pathlib import Path
+paid=Path(__file__).with_name("paid")
+paid.unlink(missing_ok=True)
 with socket.socket() as listener:
     listener.bind(('127.0.0.1',0))
     listener.listen()
@@ -36,19 +42,48 @@ with socket.socket() as listener:
     for line in sys.stdin:
         event=line.strip()
         if event=='shutdown': break
-        print(event,flush=True)
+        if event.split()[0]=='arrived':
+            for _ in range(int(event.split()[1]) if len(event.split())>1 else 1):
+                connection,_=listener.accept()
+                connection.close()
+            event='arrived'
+        print(paid.read_text() if event=='count' else event,flush=True)
 ''')
     fixture.chmod(0o755)
     adapter = root / 'adapter.py'
-    adapter.write_text('''import json,os,sys
+    adapter.write_text('''import json,os,sys,socket
 from pathlib import Path
 case=json.loads(Path(os.environ['THINKTHEN_STRESS_CASE']).read_text())
-if case['cancel']: assert sys.stdin.readline().strip()=='cancel'
+calls=case['concurrency']*case['rounds']
+requests=(0 if case['scenario']['name']=='refused' else ((case['records']+case['client']['batch']-1)//case['client']['batch'])*calls+sum(f.get('repeat',1) for f in case['scenario'].get('faults',[]) if f['kind']=='status'))
+if case['cancel']: requests=min(4,(case['records']+case['client']['batch']-1)//case['client']['batch'])
+Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') and not case['cancel'] else 0)))
+if case['cancel']:
+    for _ in range(requests):
+        with socket.create_connection(('127.0.0.1',int(case['client']['url'].split(':')[2].split('/')[0]))): pass
+    assert sys.stdin.readline().strip()=='cancel'
 calls=case['concurrency']*case['rounds']
 rows=0 if case['cancel'] else calls*case['records']
-print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
+print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['status']=='failed' else 0,cancelled=case['cancel'],read_ahead_records=(case.get('read_ahead_limit') or 0)+(1 if os.environ.get('BAD_READ_AHEAD') else 0),identifier_width_mask=0 if case['cancel'] else (1 << 15) | (1 << 16 if os.environ.get('BAD_IDENTIFIER_WIDTH') else 0))))
 ''')
     env = dict(os.environ, THINKTHEN_LOOPBACK=str(fixture))
+    sys.path.insert(0, str(root / 'scripts'))
+    try:
+        runner = runpy.run_path(str(root / 'scripts/stress-adapters.py'))
+        with patch.dict(os.environ, env):
+            bounded = runner['run']([sys.executable, str(adapter)], table, 'systemone',
+                table['scenarios'][0], 1, cancel=True, surface='python')
+        assert bounded['read_ahead_records'] == bounded['read_ahead_limit'], bounded
+        with patch.dict(os.environ, dict(env, BAD_READ_AHEAD='1')):
+            try:
+                runner['run']([sys.executable, str(adapter)], table, 'systemone',
+                    table['scenarios'][0], 1, cancel=True, surface='python')
+            except RuntimeError as error:
+                assert 'input adapter did not prove its pull bound' in str(error), error
+            else:
+                raise AssertionError('adapter overpull was accepted')
+    finally:
+        sys.path.pop(0)
     command = [sys.executable, str(root / 'scripts/stress-adapters.py'), '--surface', 'fixture', '--full']
     for mode in ('address', 'thread'):
         result = subprocess.run([*command, '--sanitizer', mode, '--', sys.executable, str(adapter)],
@@ -64,6 +99,9 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
         assert any(case['failed'] > 0 for case in report['cases'])
         assert all(case['identifiers']['observed_widths'] == ([] if case['cancelled'] else [15]) for case in report['cases'])
         assert all(not case['identifiers']['width_changed'] for case in report['cases'])
+    wrong_count = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=dict(env, BAD_REQUEST_COUNT='1'), capture_output=True, text=True)
+    assert wrong_count.returncode != 0 and 'exact backend requests' in wrong_count.stderr, wrong_count.stderr
     changing = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
         env=dict(env, BAD_IDENTIFIER_WIDTH='1'), capture_output=True, text=True)
     assert changing.returncode != 0 and 'actual stress identifiers changed width: [15, 16]' in changing.stderr, changing.stderr

@@ -1,0 +1,13 @@
+{
+  "name": "find-zero-records",
+  "request": {
+    "question": {
+      "function": "find",
+      "question": "Which line?"
+    },
+    "records": []
+  },
+  "replies": [],
+  "expected": [],
+  "requests": 0
+}

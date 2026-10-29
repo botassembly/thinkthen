@@ -2,8 +2,9 @@
 # Compare every canonical schema, native discriminator and generated shape case.
 set -eu
 cd "$(dirname "$0")/.."
+python3 scripts/contract-doc-check --self-test
 python3 sdk/python/check_contract.py
 cargo run --quiet -p thinkthen --example schema --locked -- --check
 scripts/conformance-shapes --check
-cargo run --quiet -p thinkthen --example construction --locked -- --check
+scripts/construction-check --self-test
 cargo run --quiet -p thinkthen-ffi --example headers --locked -- --check

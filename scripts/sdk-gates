@@ -7,8 +7,15 @@ for gate in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate
     if [ ! -f "scripts/$gate" ]; then
         printf 'Missing SDK gate: scripts/%s\n' "$gate" >&2
         failed="$failed $gate"
-    elif ! ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate"; then
-        failed="$failed $gate"
+    else
+        status=0
+        ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate" || status=$?
+        case "$status" in
+            0) printf 'Passed SDK gate: %s\n' "$gate" ;;
+            77) printf 'Skipped SDK gate: %s\n' "$gate" ;;
+            *) printf 'Failed SDK gate: %s (exit %s)\n' "$gate" "$status" >&2
+               failed="$failed $gate" ;;
+        esac
     fi
 done
 if [ -n "$failed" ]; then

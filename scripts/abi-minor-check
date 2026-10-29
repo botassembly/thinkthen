@@ -24,6 +24,18 @@ def run(*args, cwd=ROOT, **kwargs):
     subprocess.run([str(arg) for arg in args], cwd=cwd, check=True, **kwargs)
 
 
+def replace_library(source, destination):
+    # macOS validates executable pages by inode. Never overwrite bytes of a
+    # library an earlier proof process has mapped.
+    with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temporary:
+        staged = Path(temporary.name)
+    try:
+        shutil.copy2(source, staged)
+        os.replace(staged, destination)
+    finally:
+        staged.unlink(missing_ok=True)
+
+
 def fixture(engine, output, rows=False, children=False):
     tools = runpy.run_path(str(ROOT / 'scripts/native-fixtures'))
     registry = json.loads((ROOT / 'schemas/abi.json').read_text())
@@ -69,6 +81,75 @@ def fixture(engine, output, rows=False, children=False):
     return path
 
 
+def malformed_fixture(engine, output, kind):
+    """Forward the current ABI and corrupt only a delivered row's JSON payload."""
+    tools = runpy.run_path(str(ROOT / 'scripts/native-fixtures'))
+    registry = json.loads((ROOT / 'schemas/abi.json').read_text())
+    source = tools['source']({'version': registry['abi_version'], 'forward': True}, registry, engine)
+    if kind == 'unknown-family':
+        source, changed = re.subn(r'(THINKTHEN_FIXTURE_API const char \*thinkthen_code_family\(int32_t value\)) \{[^\n]*\}',
+            r'\1 { (void)value; return "future-family"; }', source)
+        assert changed == 1, 'missing canonical family export wrapper'
+    elif kind in ('unknown-function', 'wrong-function', 'failed-probability'):
+        needle = 'return fixture_function(call, out, error);'
+        assert source.count(needle) == 1, 'missing canonical call_next wrapper'
+        source = source.replace(needle, 'int32_t result = fixture_function(call, out, error); '
+            'if (result == THINKTHEN_OK) ' + (
+                'out->probability = 0.5' if kind == 'failed-probability' else
+                'out->function = THINKTHEN_FUNCTION_FILTER' if kind == 'wrong-function' else
+                'out->function = UINT32_MAX') + '; return result;')
+    else:
+        field, payload, predicate = {
+            'invalid-json': ('answer', '{', '1'),
+            'unanswered-answer': ('answer', 'true', 'out->status != THINKTHEN_STATUS_ANSWERED'),
+            'source-extra': ('source', '{"question_identity":"fixture","backend":"stub","model":"stub","extra":true}', '1'),
+            'source-type': ('source', '{"question_identity":"fixture","backend":"stub","model":1}', '1'),
+            'answered-error': ('error', '{"code":"record.missing","message":"inactive error"}', 'out->status == THINKTHEN_STATUS_ANSWERED'),
+            'failed-detail': ('detail', '{}', 'out->status == THINKTHEN_STATUS_FAILED'),
+        }[kind]
+        replacement = ('int32_t result = fixture_function(call, out, error); '
+            'if (result == THINKTHEN_OK && (' + predicate + ')) { '
+            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->' + field + '); '
+            'out->' + field + '.len = ' + str(len(payload)) + '; out->' + field + '.data = malloc(out->' + field + '.len); '
+            'if (!out->' + field + '.data) abort(); memcpy(out->' + field + '.data, ' + json.dumps(payload) + ', out->' + field + '.len); } return result;')
+        needle = 'return fixture_function(call, out, error);'
+        assert source.count(needle) == 1, 'missing canonical call_next wrapper'
+        source = source.replace(needle, replacement)
+        # Only injected C buffers use malloc. Every other buffer belongs to the engine.
+        marker = ('row->' + field + '.len == ' + str(len(payload)) + ' && row->' + field + '.data && '
+                  'memcmp(row->' + field + '.data, ' + json.dumps(payload) + ', row->' + field + '.len) == 0')
+        if predicate != '1': marker += ' && ' + predicate.replace('out->', 'row->')
+        marker = 'row && row->struct_size >= sizeof(*row) && ' + marker
+        source = source.replace('fixture_function(row);',
+            'if (' + marker + ') { free(row->' + field + '.data); row->' + field + '.data = NULL; row->' + field + '.len = 0; } fixture_function(row);')
+    output.mkdir(parents=True, exist_ok=True)
+    code, library = output / 'malformed.c', output / engine.name
+    code.write_text('#include <string.h>\n' + source)
+    flags = (['-dynamiclib', '-pthread', '-Wl,-install_name,@rpath/' + engine.name]
+             if sys.platform == 'darwin' else ['-shared', '-fPIC', '-pthread', '-ldl'])
+    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include', code, '-o', library, *flags)
+    return library
+
+
+def decoder_fixtures(engine, output, selected=None):
+    """Build small row-shape witnesses without changing canonical provider assets."""
+    original = output / 'original' / engine.name
+    original.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(engine, original)
+    kinds = ('source-extra', 'source-type', 'answered-error', 'failed-probability', 'failed-detail', 'wrong-function', 'unknown-family')
+    if selected is not None:
+        assert selected in kinds, 'unknown optional decoder case'
+        kinds = (selected,)
+    fixtures = {kind: malformed_fixture(original, output / kind, kind) for kind in kinds}
+    cleanup = output / 'row-cleanup'
+    flags = [] if sys.platform == 'darwin' else ['-ldl']
+    run('cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', ROOT / 'crates/thinkthen-ffi/include',
+        ROOT / 'scripts/native-row-cleanup.c', '-o', cleanup, *flags)
+    for library in fixtures.values():
+        run(cleanup, library, timeout=10)
+    return fixtures
+
+
 def bindings(engine, scratch, selected):
     future = fixture(engine, scratch)
     row_folder = scratch / 'rows'
@@ -85,10 +166,6 @@ def bindings(engine, scratch, selected):
                 '-I', ROOT / 'sdk/cpp/include', ROOT / 'sdk/cpp/tests/minor_error.cpp', future,
                 '-Wl,-rpath,' + str(scratch), '-o', scratch / 'cpp')
             run(scratch / 'cpp', MESSAGE)
-            run('c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I', include,
-                '-I', ROOT / 'sdk/cpp/include', ROOT / 'sdk/cpp/tests/unknown_code_consumer.cpp', engine,
-                '-Wl,-rpath,' + str(engine.parent), '-o', scratch / 'cpp-row')
-            run(scratch / 'cpp-row')
         except subprocess.CalledProcessError:
             failures.append("cpp")
     if 'ruby' in selected:
@@ -97,9 +174,9 @@ def bindings(engine, scratch, selected):
             shutil.copytree(ROOT / 'sdk/ruby/lib', ruby)
             shutil.copy2(future, ruby / 'thinkthen' / future.name)
             run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', MESSAGE)
-            shutil.copy2(row_future, ruby / 'thinkthen' / future.name)
+            replace_library(row_future, ruby / 'thinkthen' / future.name)
             run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'the record is missing', 'row')
-            shutil.copy2(child_future, ruby / 'thinkthen' / future.name)
+            replace_library(child_future, ruby / 'thinkthen' / future.name)
             run('ruby', '-I', ruby, ROOT / 'sdk/ruby/tests/minor_error.rb', 'future child message', 'child')
         except subprocess.CalledProcessError:
             failures.append("ruby")
@@ -126,10 +203,10 @@ def bindings(engine, scratch, selected):
             run('swift', 'build', '--jobs', '2', '--package-path', consumer, '--disable-sandbox', '-Xswiftc', '-warnings-as-errors')
             run(consumer / '.build/debug/MinorError', MESSAGE)
             for resource in {path.resolve() for path in consumer.rglob(future.name)}:
-                shutil.copy2(row_future, resource)
+                replace_library(row_future, resource)
             run(consumer / '.build/debug/MinorError', 'the record is missing', 'row')
             for resource in {path.resolve() for path in consumer.rglob(future.name)}:
-                shutil.copy2(child_future, resource)
+                replace_library(child_future, resource)
             run(consumer / '.build/debug/MinorError', 'future child message', 'child')
         except subprocess.CalledProcessError:
             failures.append("swift")
@@ -155,9 +232,9 @@ def bindings(engine, scratch, selected):
             run(executable, 'fmt', '--check', ROOT / 'sdk/zig/src', ROOT / 'sdk/zig/tests/minor_error.zig')
             run(executable, 'build', '-j2', cwd=consumer)
             run(consumer / 'zig-out/bin/consumer', MESSAGE)
-            shutil.copy2(row_future, consumer / 'zig-out/bin' / future.name)
+            replace_library(row_future, consumer / 'zig-out/bin' / future.name)
             run(consumer / 'zig-out/bin/consumer', 'the record is missing', 'row')
-            shutil.copy2(child_future, consumer / 'zig-out/bin' / future.name)
+            replace_library(child_future, consumer / 'zig-out/bin' / future.name)
             run(consumer / 'zig-out/bin/consumer', 'future child message', 'child')
         except subprocess.CalledProcessError:
             failures.append("zig")
@@ -170,7 +247,13 @@ def main():
     parser.add_argument('--native', required=True, type=Path)
     parser.add_argument('--bindings-only', action='store_true')
     parser.add_argument('--bindings', nargs='+', choices=['cpp', 'ruby', 'swift', 'zig'], default=['cpp', 'ruby', 'swift', 'zig'])
+    parser.add_argument('--malformed-row', choices=['invalid-json', 'unanswered-answer', 'unknown-function', 'source-extra', 'source-type', 'answered-error', 'failed-probability', 'failed-detail', 'wrong-function', 'unknown-family'])
+    parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.malformed_row:
+        if args.output is None: parser.error('--malformed-row requires --output')
+        print(malformed_fixture(args.native.resolve(strict=True), args.output.resolve(), args.malformed_row))
+        return
     if not args.bindings_only:
         run('cargo', 'fmt', '--all', '--check')
         run('cargo', 'test', '--offline', '--locked', '-p', 'thinkthen-ffi', '--lib', 'memory_prefix_tests')

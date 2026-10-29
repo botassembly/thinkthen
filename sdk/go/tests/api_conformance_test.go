@@ -28,6 +28,7 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 		Client          struct {
 			Model string
 			Batch *int
+			Retry *apiRetry
 		}
 	}
 	if err = json.Unmarshal(raw, &manifest); err != nil {
@@ -50,6 +51,10 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 		var sample apiCase
 		if err = json.Unmarshal(raw, &sample); err != nil {
 			t.Fatal(err)
+		}
+		if reason := sample.NotApplicable["go"]; reason != "" {
+			t.Run(filepath.Base(path), func(t *testing.T) { t.Skip("not applicable: " + reason) })
+			continue
 		}
 		if len(sample.ExpectedData) == 0 {
 			t.Fatal("fixture has no expected outcome")
@@ -82,6 +87,9 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+			if sample.Client.Retry == nil {
+				sample.Client.Retry = manifest.Client.Retry
+			}
 			utf8Expected(t, &sample)
 
 			if sample.Request.Question.Function == "" {
@@ -90,19 +98,46 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 			if sample.Client.Backend != "systemone" && sample.Client.Backend != "openai" {
 				t.Fatalf("fixture lacks explicit wire backend: %s", filepath.Base(path))
 			}
-			t.Run(filepath.Base(path)+"/"+wire, func(t *testing.T) {
-				b := startBackend(t, path)
-				backend := tt.SystemOne
-				if sample.Client.Backend == "openai" {
-					backend = tt.OpenAI
+			forms := []string{"collection"}
+			switch filepath.Base(path) {
+			case "filter-evidence-name.json":
+				forms = append(forms, "single", "sequence")
+			case "find-unicode.json":
+				forms = append(forms, "single")
+			}
+			for _, form := range forms {
+				current := sample
+				if form == "single" && sample.Request.Question.Function == "filter" {
+					current.Request.Records = current.Request.Records[:1]
+					current.Expected = current.Expected[:1]
 				}
-				cfg := tt.Config{Backend: backend, Model: sample.Client.Model, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: sample.Client.Batch}
-				c := apiClientFor(t, cfg)
-				runTypedCase(t, c, sample)
-				if got := b.command(t, "count"); got != fmt.Sprint(sample.Requests) {
-					t.Fatalf("request count %s; want %d", got, sample.Requests)
-				}
-			})
+				t.Run(filepath.Base(path)+"/"+form+"/"+wire, func(t *testing.T) {
+					b := startBackend(t, path)
+					backend := tt.SystemOne
+					if sample.Client.Backend == "openai" {
+						backend = tt.OpenAI
+					}
+					cfg := tt.Config{Backend: backend, Model: sample.Client.Model, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: sample.Client.Batch}
+					cfg.Retry = retryFor(sample.Client.Retry)
+					c, admission := tt.New(cfg)
+					if admission != nil {
+						var failure *tt.Error
+						if !errors.As(admission, &failure) || sample.ExpectedError == "" || failure.Code().String() != sample.ExpectedError {
+							t.Fatalf("unexpected client admission: %v", admission)
+						}
+					} else {
+						t.Cleanup(func() {
+							if err := c.Close(); err != nil {
+								t.Error(err)
+							}
+						})
+						runTypedCaseForm(t, c, current, form)
+					}
+					if got := b.command(t, "count"); got != fmt.Sprint(sample.Requests) {
+						t.Fatalf("request count %s; want %d", got, sample.Requests)
+					}
+				})
+			}
 			fn := sample.Request.Question.Function
 			if coverage[fn] == nil {
 				coverage[fn] = map[string]bool{}
@@ -120,6 +155,10 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 }
 
 func runTypedCase(t *testing.T, c *tt.Client, s apiCase) {
+	runTypedCaseForm(t, c, s, "collection")
+}
+
+func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -136,6 +175,21 @@ func runTypedCase(t *testing.T, c *tt.Client, s apiCase) {
 		}
 	}
 	input := tt.Records(records...)
+	if form == "sequence" {
+		input = tt.FromSeq(func(yield func(tt.Record, error) bool) {
+			for _, record := range records {
+				if !yield(record, nil) {
+					return
+				}
+			}
+		})
+	}
+	for i := range s.Expected {
+		if s.Request.Name != "" {
+			value := s.Request.Name
+			s.Expected[i].Source.Name = &value
+		}
+	}
 	q := s.Request.Question
 	if q.Function == "annotate" {
 		questions := map[string]tt.AnnotationQuestion{}
@@ -200,7 +254,17 @@ func runTypedCase(t *testing.T, c *tt.Client, s apiCase) {
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
 		}
-		assertRows(t, collectCase(t, s, c.FindAll(ctx, request, input)), s.Expected)
+		var rows []tt.FindRow
+		if form == "single" {
+			row, err := c.Find(ctx, request, records[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows = []tt.FindRow{row}
+		} else {
+			rows = collectCase(t, s, c.FindAll(ctx, request, input))
+		}
+		assertRows(t, rows, s.Expected)
 	case tt.Recognize:
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
@@ -215,7 +279,16 @@ func runTypedCase(t *testing.T, c *tt.Client, s apiCase) {
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
 		}
-		rows := collectCase(t, s, c.FilterAll(ctx, request, input))
+		var rows []tt.FilterRow
+		if form == "single" {
+			row, err := c.Filter(ctx, request, records[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			rows = []tt.FilterRow{row}
+		} else {
+			rows = collectCase(t, s, c.FilterAll(ctx, request, input))
+		}
 		if len(rows) != len(s.Expected) {
 			t.Fatal("filter row count")
 		}
@@ -249,6 +322,15 @@ type apiMetadata interface {
 
 func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
 	t.Helper()
+	encoded, err := json.Marshal(row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]json.RawMessage
+	if err = json.Unmarshal(encoded, &raw); err != nil {
+		t.Fatal(err)
+	}
+	assertSourceShape(t, raw["source"])
 	if row.Status().String() != want.Status || row.Position() != want.Position {
 		t.Fatal("typed status or position differs")
 	}
@@ -287,7 +369,7 @@ func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
 	if model == "" {
 		model = "fixture-model"
 	}
-	if len(source.QuestionIdentity) != 64 || (want.Source.QuestionIdentity != "" && source.QuestionIdentity != want.Source.QuestionIdentity) || map[tt.Backend]string{tt.SystemOne: "systemone", tt.OpenAI: "openai", tt.Stub: "stub"}[source.Backend] != backend || source.Model != model {
+	if len(source.QuestionIdentity) != 64 || (want.Source.QuestionIdentity != "" && source.QuestionIdentity != want.Source.QuestionIdentity) || !reflect.DeepEqual(source.Name, want.Source.Name) || map[tt.Backend]string{tt.SystemOne: "systemone", tt.OpenAI: "openai", tt.Stub: "stub"}[source.Backend] != backend || source.Model != model {
 		t.Fatal("typed source differs")
 	}
 	failure := row.Error()
@@ -378,6 +460,7 @@ func TestPublicAdmissionDiagnostics(t *testing.T) {
 	var cases []struct {
 		Name, Kind, Boundary, Code, Message string
 		Input                               json.RawMessage
+		NotApplicable                       map[string]string `json:"not_applicable"`
 	}
 	if err := json.Unmarshal(raw, &cases); err != nil {
 		t.Fatal(err)
@@ -388,7 +471,10 @@ func TestPublicAdmissionDiagnostics(t *testing.T) {
 		}
 		t.Run(sample.Name, func(t *testing.T) {
 			if sample.Boundary == "settings" {
-				t.Log("unsupported: typed Config retry counts cannot carry a JSON string")
+				if sample.NotApplicable["go"] == "" {
+					t.Fatal("settings case lacks an explicit Go applicability reason")
+				}
+				t.Log("not applicable: " + sample.NotApplicable["go"])
 				return
 			}
 			payload, message := sample.Input, sample.Message

@@ -30,12 +30,12 @@ async function adapter(sample) {
   const client = new sdk.ThinkThen({ backend: c.backend, url: c.url, apiKey: c.api_key, model: c.model,
     batch: c.batch, retry: { maxRetries: c.retry.max_retries,
       initialBackoffMs: c.retry.initial_backoff_ms, attemptTimeoutMs: c.retry.attempt_timeout_ms } });
-  let calls = 0, rows = 0, failed = 0;
+  let calls = 0, rows = 0, failed = 0, pulled = 0;
   const widths = new Set();
   try {
     if (sample.cancel) {
       const controller = new AbortController();
-      function* records() { for (let i = 0; i < sample.records; i++) yield "body"; }
+      function* records() { for (let i = 0; i < sample.records; i++) { pulled++; if (sample.read_ahead_limit !== null) assert.ok(pulled <= sample.read_ahead_limit, "input read ahead exceeded the engine bound"); yield "body"; } }
       const iterator = client.decideStream("Ready?", records(), { signal: controller.signal })[Symbol.asyncIterator]();
       const pending = assert.rejects(iterator.next(), e => e instanceof sdk.CancelledError && e.code === "local.cancelled");
       const lines = createInterface({ input: process.stdin });
@@ -50,7 +50,7 @@ async function adapter(sample) {
         if (process.env.THINKTHEN_STRESS_CHECKPOINT_COMMAND) assert.equal(spawnSync(process.env.THINKTHEN_STRESS_CHECKPOINT_COMMAND, { shell: true, stdio: "inherit" }).status, 0);
       }
     }
-    console.log(JSON.stringify({ calls, rows, failed, cancelled: sample.cancel, identifier_width_mask: [...widths].reduce((mask, width) => mask + 2 ** width, 0) }));
+    console.log(JSON.stringify({ calls, rows, failed, read_ahead_records: pulled, cancelled: sample.cancel, identifier_width_mask: [...widths].reduce((mask, width) => mask + 2 ** width, 0) }));
   } finally { await client.close(); }
 }
 

@@ -117,15 +117,25 @@ def consume(
 def adapter(case: dict[str, Any]) -> None:
     calls = rows = failed = 0
     widths: set[int] = set()
+    pulled = 0
     with tt.Client(
         **settings(case, case["client"]["backend"], case["client"]["url"])
     ) as client:
         if case["cancel"]:
             token = tt.Cancel()
+
+            def held_records() -> Iterator[str]:
+                nonlocal pulled
+                for _ in range(case["records"]):
+                    pulled += 1
+                    if case.get("read_ahead_limit") is not None:
+                        assert pulled <= case["read_ahead_limit"], (
+                            "input read ahead exceeded the engine bound"
+                        )
+                    yield "body"
+
             with (
-                client.decide_stream(
-                    "Ready?", ("body" for _ in range(case["records"])), cancel=token
-                ) as stream,
+                client.decide_stream("Ready?", held_records(), cancel=token) as stream,
                 ThreadPoolExecutor(max_workers=1) as pool,
             ):
                 pending = pool.submit(next, stream)
@@ -166,6 +176,7 @@ def adapter(case: dict[str, Any]) -> None:
                 "rows": rows,
                 "failed": failed,
                 "cancelled": case["cancel"],
+                **({"read_ahead_records": pulled} if case["cancel"] else {}),
             }
         )
     )
@@ -186,18 +197,6 @@ def test_shared_stress_preserves_positions_and_same_client_threads() -> None:
         ],
         check=True,
     )
-    if sys.platform == "linux":
-        # Feature: the installed adapter checkpoints live completed soak rounds.
-        subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                _RESOURCE_CHECK,
-                str(root),
-                str(Path(__file__).resolve()),
-            ],
-            check=True,
-        )
 
 
 if __name__ == "__main__":

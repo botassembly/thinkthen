@@ -145,7 +145,7 @@ private suspend fun originals() {
 
 // Feature: A valid no-match is distinct from unsure, and spans slice Kotlin UTF-16 strings.
 private suspend fun findAnswers(cases: Path) {
-    for (file in listOf("find-none.json", "find-unicode.json")) {
+    for (file in listOf("find-no-answer.json", "find-unicode.json")) {
         val sample = Json.parseToJsonElement(java.nio.file.Files.readString(cases.resolve(file))).jsonObject
         val request = sample.required("request").jsonObject
         val question = request.required("question").jsonObject
@@ -191,7 +191,7 @@ fun main(args: Array<String>) = runBlocking {
     toolboxes()
     savedToolboxes(Path.of(args.single()).resolve("toolbox"))
     originals()
-    findAnswers(Path.of(args.single()))
+    findAnswers(Path.of(args.single()).resolve("typed"))
     redaction()
     serializerFailure()
 }

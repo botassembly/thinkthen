@@ -42,6 +42,50 @@ class ReleaseReplay(unittest.TestCase):
             self.assertIn('雪', (output / '01-second.log').read_text(encoding='utf-8'))
             self.assertIn('third: success', (output / '03-summary.log').read_text(encoding='utf-8'))
 
+    def test_declared_shells_preserve_environment_failure_and_refusal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "folder's path"
+            root.mkdir()
+            binary, temporary, output = root / 'bin', root / 'tmp', root / 'logs'
+            for path in (binary, temporary, output):
+                path.mkdir()
+            shell = binary / 'pwsh'
+            shell.write_text('#!' + sys.executable + '\n' + r"""import os
+from pathlib import Path
+import sys
+assert sys.argv[1] == '-command'
+assert sys.argv[2].startswith(". '") and sys.argv[2].endswith("'")
+script = Path(sys.argv[2][3:-1].replace("''", "'"))
+assert script.suffix == '.ps1' and script.is_file()
+if 'EXPORT_REPLAY' in os.environ:
+    Path(os.environ['GITHUB_ENV']).write_text('REPLAY_VALUE=' + os.environ['EXPORT_REPLAY'] + '\n', encoding='utf-8-sig')
+print('pwsh observed ' + os.environ.get('REPLAY_VALUE', 'unset'))
+sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
+""")
+            shell.chmod(0o755)
+            steps = [
+                {'id': 'default', 'if': 'always()', 'env': {'EXPORT_REPLAY': 'from-pwsh', 'REPLAY_EXIT': '7'},
+                 'run': 'Write-Output default'},
+                {'id': 'bash', 'if': 'always()', 'shell': 'bash',
+                 'run': 'test "$REPLAY_VALUE" = from-pwsh; echo bash'},
+                {'id': 'explicit', 'if': 'always()', 'shell': 'pwsh', 'run': 'Write-Output explicit'},
+                {'id': 'unknown', 'if': 'always()', 'shell': 'python', 'run': 'raise Exception()'},
+            ]
+            source = {'jobs': {'windows-check': {'defaults': {'run': {'shell': 'pwsh'}}, 'steps': steps}}}
+            with patch.dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH']):
+                results, failures = replay['execute'](source, 'abc', root, temporary, root / 'unused', {}, output, root)
+            self.assertEqual(failures, ['default', 'unknown'])
+            self.assertEqual(results[0]['exit'], 7)
+            self.assertIn('pwsh observed from-pwsh', (output / '02-explicit.log').read_text())
+            self.assertEqual((output / '01-bash.sh').read_text(), steps[1]['run'])
+            for name in ('00-default.ps1', '02-explicit.ps1'):
+                script = (output / name).read_text()
+                self.assertTrue(script.startswith("$ErrorActionPreference = 'stop'\n"))
+                self.assertTrue(script.endswith("if ((Test-Path -LiteralPath variable:\\LASTEXITCODE)) { exit $LASTEXITCODE }\n"))
+            self.assertIn('unsupported windows-check shell: python', (output / '03-unknown.log').read_text())
+            self.assertFalse((output / '03-unknown.sh').exists())
+            self.assertFalse((temporary / 'github-env').exists())
+
     def test_unknown_setup_cannot_silently_pass(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

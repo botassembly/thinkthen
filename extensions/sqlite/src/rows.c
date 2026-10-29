@@ -5,8 +5,10 @@
 
 int engine_error(thinkthen_error *error, char **diagnostic) {
     int result = error->code == THINKTHEN_CODE_LOCAL_CANCELLED ? SQLITE_INTERRUPT : SQLITE_ERROR;
-    *diagnostic = sqlite3_mprintf("%s: %.*s", thinkthen_code_name(error->code),
-        (int)error->message.len, (const char *)error->message.data);
+    const char *code = thinkthen_code_name(error->code);
+    *diagnostic = code == NULL
+        ? sqlite3_mprintf("%s: %s", THINKTHEN_ABI_ERROR_CODE, THINKTHEN_ABI_ERROR_MESSAGE)
+        : sqlite3_mprintf("%s: %.*s", code, (int)error->message.len, (const char *)error->message.data);
     thinkthen_error_free(error);
     return *diagnostic == NULL ? SQLITE_NOMEM : result;
 }
@@ -130,6 +132,8 @@ int cursor_advance(Cursor *cursor) {
         int saved=replay_save(cursor);if(saved!=SQLITE_OK)return saved;
         ++cursor->rowid;
         decoded:
+        if (cursor->row.error_code && thinkthen_code_name(cursor->row.error_code) == NULL)
+            return cursor_error(cursor, SQLITE_ERROR, THINKTHEN_ABI_ERROR_CODE ": " THINKTHEN_ABI_ERROR_MESSAGE);
         if(cursor->row.answer.data)cursor->answer=json_loadb((const char*)cursor->row.answer.data,cursor->row.answer.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
         if(cursor->row.error.data)cursor->error=json_loadb((const char*)cursor->row.error.data,cursor->row.error.len,JSON_DECODE_ANY|JSON_ALLOW_NUL,NULL);
         cursor->eof = 0;

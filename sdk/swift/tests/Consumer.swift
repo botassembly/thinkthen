@@ -27,7 +27,8 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
 }
 
 // Feature: installed Swift argument mapping and typed rows for shared cases.
-@MainActor func run(_ test: [String: Any], url: String?) async throws -> Data {
+@MainActor func run(_ test: [String: Any], url: String?, single: Bool = false) async throws -> Data
+{
   var settings = test["client"] as? [String: Any] ?? [:]
   if let url { settings["url"] = url }
   // The public Retry initializer requires a complete policy. Give partial
@@ -42,10 +43,16 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
   let question = request["question"] as! [String: Any]
   let name = request["name"] as? String
   let cancelled = test["cancelled"] as? Bool ?? false
-  let records = try (request["records"] as! [Any]).map { value -> Record in
+  let records = try (request["records"] as? [Any] ?? []).map { value -> Record in
     if value is NSNull { return .missing }
     if let text = value as? String { return .text(text) }
     return .json(try decoded(JSONValue.self, value))
+  }
+  if single {
+    precondition(records.count == 1 && !cancelled && question["function"] as? String == "decide")
+    let row = try await client.decide(
+      decoded(DecideQuestion.self, question), record: records[0], name: name)
+    return try encoded([row])
   }
   switch question["function"] as! String {
   case "decide":
@@ -65,14 +72,16 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       client.score(decoded(ScoreQuestion.self, question), records: records, name: name),
       cancelled: cancelled)
   case "filter":
-    var rows: [FilterRow] = []
+    var rows: [[String: Any]] = []
     let filter = try decoded(FilterQuestion.self, question)
     let filtered = client.filter(filter, records: records, name: name)
     if cancelled { filtered.cancel() }
     for try await result in filtered {
-      rows.append(result.row)
+      var row = try JSONSerialization.jsonObject(with: encoded(result.row)) as! [String: Any]
+      row["kept"] = result.kept
+      rows.append(row)
     }
-    return try encoded(rows)
+    return try JSONSerialization.data(withJSONObject: rows)
   case "rank":
     return try await collect(
       client.rank(decoded(RankQuestion.self, question), records: records, name: name),
@@ -99,7 +108,9 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
 
 @main struct Consumer {
   static func main() async throws {
-    let args = CommandLine.arguments
+    var args = CommandLine.arguments
+    let single = args[1] == "single"
+    if single { args.remove(at: 1) }
     if args[1] == "admission-surface" {
       print("swift")
       return
@@ -157,7 +168,11 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       return
     }
     if args[1] == "cancel" {
-      let client = try Client(.init(url: URL(string: args[2])!))
+      let client = try Client(
+        .init(
+          url: URL(string: args[2])!,
+          retry: .init(
+            maxRetries: 0, initialBackoff: .milliseconds(1), attemptTimeout: .seconds(120))))
       let task = Task { try await client.decide("Ready?", record: .text("evidence")) }
       await withCheckedContinuation { continuation in
         DispatchQueue.global().async {
@@ -187,7 +202,8 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
     let cases = (value as? [[String: Any]]) ?? [value as! [String: Any]]
     for test in cases {
       do {
-        FileHandle.standardOutput.write(try await run(test, url: args.count > 2 ? args[2] : nil))
+        FileHandle.standardOutput.write(
+          try await run(test, url: args.count > 2 ? args[2] : nil, single: single))
       } catch {
         guard let typed = error as? ThinkThenError else { throw error }
         switch typed {

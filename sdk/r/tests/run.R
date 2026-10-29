@@ -80,13 +80,38 @@ result <- tryCatch({
     }
     if (verb == "filter") {
       stopifnot(identical(output$item[[i]], records[[output$position[[i]]]]),
-                identical(output$kept[[i]], if (row$status == "failed") NA else isTRUE(row$answer)))
+                identical(output$kept[[i]], isTRUE(row$answer)))
     }
     if (verb == "find" && !is.null(row$answer)) {
-      stopifnot(identical(substr(records[[output$position[[i]]]], row$answer$start, row$answer$end), row$answer$text))
+      text <- records[[output$position[[i]]]]
+      pointer <- request$question$evidence
+      if (!is.null(pointer)) {
+        for (part in strsplit(substring(pointer, 2L), "/", fixed = TRUE)[[1]]) {
+          key <- gsub("~0", "~", gsub("~1", "/", part, fixed = TRUE), fixed = TRUE)
+          text <- if (is.null(names(text))) text[[as.integer(key) + 1L]] else text[[key]]
+        }
+      }
+      stopifnot(identical(substr(text, row$answer$start, row$answer$end), row$answer$text))
     }
     row
   })
   list(rows = rows)
 }, thinkthen_error = function(error) list(error = error$code, family = class(error)[[1]]))
+# JSON has one number type. Preserve R's numeric storage before serialization
+# so the external comparator can reject integer probability/score projections.
+numeric_types <- function(value, path = list()) {
+  output <- list()
+  if (is.list(value)) {
+    keys <- if (is.null(names(value))) as.list(seq_along(value) - 1L) else as.list(names(value))
+    for (i in seq_along(value)) output <- c(output, numeric_types(value[[i]], c(path, list(keys[[i]]))))
+    return(unname(output))
+  }
+  if (!is.numeric(value)) return(output)
+  if (length(value) != 1L) {
+    for (i in seq_along(value)) output <- c(output, numeric_types(value[[i]], c(path, list(i - 1L))))
+    return(unname(output))
+  }
+  list(list(path = path, type = typeof(value)))
+}
+result$numeric_types <- numeric_types(result)
 writeLines(jsonlite::toJSON(result, auto_unbox = TRUE, null = "null", na = "null", digits = I(17)), useBytes = TRUE)

@@ -19,25 +19,48 @@ fn emit(a: A, value: anytype) !void {
 fn fail(a: A, diagnostic: tt.Diagnostic) !void {
     try emit(a, .{ .@"error" = diagnostic.code.? });
 }
-fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, value: std.json.Value, records: []const tt.Record) !void {
+const Mode = enum { many, cancelled, single };
+fn emitItem(comptime function: tt.Function, a: A, item: anytype) !void {
+    if (function == .filter) {
+        const bytes = try std.json.Stringify.valueAlloc(a, item.row, .{ .emit_null_optional_fields = false });
+        var row = try std.json.parseFromSliceLeaky(std.json.Value, a, bytes, .{ .parse_numbers = false });
+        try row.object.put(a, "kept", .{ .bool = item.kept() });
+        try emit(a, row);
+    } else try emit(a, item);
+}
+fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, value: std.json.Value, records: []const tt.Record, mode: Mode) !void {
     var diagnostic: tt.Diagnostic = .{};
     var q = try fixture.question(function, a, value);
+    if (mode == .single) {
+        std.debug.assert(records.len == 1);
+        if (function == .decide) {
+            const item = try client.decideOne(a, q.question, records[0], q.options, &diagnostic);
+            write("[");
+            try emitItem(function, a, item);
+            write("]");
+            return;
+        } else return error.SingleModeRequiresDecide;
+    }
     var call = client.open(function, a, q, .{ .records = records }, &diagnostic) catch {
         return fail(a, diagnostic);
     };
     defer call.deinit();
     q = undefined;
+    if (mode == .cancelled) {
+        call.cancel();
+        _ = call.next(a, &diagnostic) catch return fail(a, diagnostic);
+        return error.CancellationWasIgnored;
+    }
     write("[");
     var count: usize = 0;
     while (try call.next(a, &diagnostic)) |item| {
         if (count > 0) write(",");
-        const row = if (function == .filter) item.row else item;
-        try emit(a, row);
+        try emitItem(function, a, item);
         count += 1;
     }
     write("]");
 }
-fn run(a: A, settings_json: []const u8, request_json: []const u8) !void {
+fn run(a: A, settings_json: []const u8, request_json: []const u8, mode: Mode) !void {
     const settings = try fixture.settings(a, settings_json);
     var diag: tt.Diagnostic = .{};
     var client = tt.Client.init(settings, &diag) catch {
@@ -56,7 +79,7 @@ fn run(a: A, settings_json: []const u8, request_json: []const u8) !void {
     if (request.object.get("name")) |name| try question.object.put(a, "name", name);
     const name = question.object.get("function").?.string;
     inline for (@typeInfo(tt.Function).@"enum".field_names) |tag| {
-        if (std.mem.eql(u8, name, tag)) return runNamed(@field(tt.Function, tag), &client, a, question, records);
+        if (std.mem.eql(u8, name, tag)) return runNamed(@field(tt.Function, tag), &client, a, question, records, mode);
     }
     return error.UnknownFixture;
 }
@@ -111,9 +134,10 @@ pub fn main(init: std.process.Init) !void {
         write("\n");
         return;
     }
-    if (std.mem.eql(u8, args[1], "run")) return run(a, args[2], args[3]);
-    if (std.mem.eql(u8, args[1], "ownership")) return;
-    if (std.mem.eql(u8, args[1], "finite-array")) return run(a, args[2], "{\"question\":{\"function\":\"tag\",\"question\":\"What applies?\",\"labels\":[\"billing\",\"refund\",\"shipping\"],\"threshold\":0.7},\"records\":[\"a\",\"b\",\"c\"]}");
+    if (std.mem.eql(u8, args[1], "run")) return run(a, args[2], args[3], .many);
+    if (std.mem.eql(u8, args[1], "single")) return run(a, args[2], args[3], .single);
+    if (std.mem.eql(u8, args[1], "cancelled")) return run(a, args[2], args[3], .cancelled);
+    if (std.mem.eql(u8, args[1], "finite-array")) return run(a, args[2], "{\"question\":{\"function\":\"tag\",\"question\":\"What applies?\",\"labels\":[\"billing\",\"refund\",\"shipping\"],\"threshold\":0.7},\"records\":[\"a\",\"b\",\"c\"]}", .many);
     if (std.mem.eql(u8, args[1], "held")) return held(a, args[2]);
     return error.UnknownTestMode;
 }

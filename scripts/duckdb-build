@@ -10,12 +10,18 @@ if [ "$(uname -s)" != Linux ]; then exec sh databases/duckdb/build.sh; fi
 mkdir -p "$THINKTHEN_DUCKDB_OUTPUT"
 output=$(cd "$THINKTHEN_DUCKDB_OUTPUT" && pwd)
 job=${PM_JOB:-${PM_TICKET:-local}}
-docker run --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
+set --
+if [ -n "${THINKTHEN_DUCKDB_ABI_HEADER:-}" ]; then
+    [ "${THINKTHEN_SQL_TEST_BUILD:-OFF}" = ON ] || { echo 'ABI override requires a fixture build' >&2; exit 2; }
+    [ -f "$THINKTHEN_DUCKDB_ABI_HEADER" ] || { echo 'Missing job-owned ABI header' >&2; exit 2; }
+    set -- --mount "type=bind,source=$THINKTHEN_DUCKDB_ABI_HEADER,target=/native/required-abi.h,readonly"
+fi
+docker run "$@" --rm --network none --label "$(python3 scripts/build_targets.py)" --label "pm.ticket=${job%% *}" \
     -v "$PWD:/src:ro" -v "$THINKTHEN_DUCKDB_DEPS:/deps:ro" \
     -v "$THINKTHEN_SQL_ARCHIVE:/native/libthinkthen_ffi.a:ro" -v "$output:/out" \
     "$(python3 scripts/release_images.py floor)" sh -eu -c '
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/tmp \
             PATH=/opt/rh/gcc-toolset-14/root/usr/bin:/usr/local/bin:/opt/python/cp313-cp313/bin:/usr/bin:/bin \
             THINKTHEN_DUCKDB_DEPS=/deps THINKTHEN_SQL_ARCHIVE=/native/libthinkthen_ffi.a \
-            THINKTHEN_DUCKDB_OUTPUT=/out THINKTHEN_SQL_TEST_BUILD="$3" sh /src/databases/duckdb/build.sh
-    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_SQL_TEST_BUILD:-OFF}"
+            THINKTHEN_DUCKDB_OUTPUT=/out THINKTHEN_SQL_TEST_BUILD="$3" THINKTHEN_DUCKDB_ABI_HEADER="$4" sh /src/databases/duckdb/build.sh
+    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_SQL_TEST_BUILD:-OFF}" "${THINKTHEN_DUCKDB_ABI_HEADER:+/native/required-abi.h}"

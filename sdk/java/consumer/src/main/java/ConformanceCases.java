@@ -120,6 +120,7 @@ public final class ConformanceCases {
         };
         var result = outcome(row.function().name().toLowerCase(java.util.Locale.ROOT),outcome);
         result.put("position",row.position()); row.id().ifPresent(id -> { try { result.set("id",ConsumerCases.JSON.readTree(id.toString())); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } });
+        row.source().flatMap(Source::name).ifPresent(name -> result.putObject("source").put("name",name));
         return result;
     }
     private static JsonNode expected(JsonNode sample) {
@@ -127,9 +128,20 @@ public final class ConformanceCases {
         if (!result.isArray()) return result;
         for (var row : result) {
             var record = sample.get("request").get("records").get(row.get("position").intValue()-1);
-            if (record.isTextual()) { offsets(row.path("answer"),record.asText()); offsets(row.path("detail"),record.asText()); }
+            var question = sample.get("request").get("question");
+            if (question.path("function").asText().equals("annotate") && row.path("answer").isObject())
+                row.get("answer").properties().forEach(entry -> offsets(entry.getValue(),evidence(record,question.get("questions").get(entry.getKey()),question)));
+            else {
+                String text = evidence(record,question,question);
+                offsets(row.path("answer"),text); offsets(row.path("detail"),text);
+            }
         }
         return result;
+    }
+    private static String evidence(JsonNode record,JsonNode definition,JsonNode question) {
+        var pointer = definition.hasNonNull("evidence") ? definition.get("evidence") : question.get("evidence");
+        var selected = pointer == null ? record : record.at(pointer.asText());
+        return selected.isTextual() ? selected.asText() : selected.toString();
     }
     private static void offsets(JsonNode value,String text) {
         if (value.isObject() && value.has("start") && value.has("end")) {
@@ -170,7 +182,9 @@ public final class ConformanceCases {
             String route;
             switch (boundary) {
                 case "settings" -> {
-                    System.out.println("Java admission: " + name + ": unsupported: typed client settings have no raw JSON loader");
+                    String reason = sample.path("not_applicable").path("java").asText();
+                    ConsumerCases.check(!reason.isBlank(), "Unmarked Java admission skip: " + name);
+                    System.out.println("Java admission: " + name + ": not applicable: " + reason);
                     count++;
                     continue;
                 }
@@ -197,6 +211,31 @@ public final class ConformanceCases {
         ConsumerCases.check(count > 0, "No Java admission cases classified");
     }
     private static boolean ValuesEqual(String left, String right) throws Exception { return ConsumerCases.JSON.readTree(left).equals(ConsumerCases.JSON.readTree(right)); }
+    // Feature: the asynchronous public facade preserves the shared named evidence case.
+    private static void asyncCase(Path directory, JsonNode manifest) throws Exception {
+        var file = directory.resolve("decide-evidence-name.json");
+        var sample = ConsumerCases.JSON.readTree(file.toFile());
+        var request = sample.get("request");
+        var definitions = ConsumerCases.JSON.createObjectNode();
+        definitions.set("entry",request.get("question"));
+        var question = Toolbox.parse(definitions.toString()).decide("entry").orElseThrow().named(request.get("name").asText());
+        for (var backend : manifest.get("backends")) {
+            try (var fixture = new BackendFixture(file.toString());
+                 var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT)))
+                     .url(URI.create(fixture.base())).apiKey("synthetic-key").model(manifest.get("client").get("model").asText())
+                     .retry(RetryPolicy.builder().maxRetries(0).build()).build()) {
+                var result = client.async().decide(question,ConsumerCases.records(request).getFirst()).get(30,java.util.concurrent.TimeUnit.SECONDS);
+                var source = result.source().orElseThrow();
+                ConsumerCases.equal(source.backend().name().toLowerCase(java.util.Locale.ROOT),backend.asText(),"async backend");
+                ConsumerCases.equal(source.model(),manifest.get("client").get("model").asText(),"async model");
+                ConsumerCases.check(!source.questionIdentity().isEmpty(),"async question identity");
+                var actual = ConsumerCases.JSON.createArrayNode().add(row(result));
+                ConsumerCases.equal(ConsumerCases.JSON.readTree(ConsumerCases.JSON.writeValueAsBytes(actual)),expected(sample),"shared async named evidence rows");
+                ConsumerCases.equal(fixture.command("count"),sample.get("requests").asText(),"async request count");
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         if (args[0].equals("abi")) {
             boolean accept = Boolean.parseBoolean(args[1]);
@@ -205,32 +244,58 @@ public final class ConformanceCases {
             } catch (ThinkThenException error) { ConsumerCases.check(!accept && error.code() == ErrorCode.USAGE_ABI,"ABI refusal"); }
             return;
         }
+        if (args.length == 2 && args[1].equals("--entry-forms")) {
+            var directory = Path.of(args[0]);
+            var rankCase = ConsumerCases.JSON.readTree(directory.resolve("usage-annotation-rank.json").toFile());
+            String reason = rankCase.path("not_applicable").path("java").asText();
+            ConsumerCases.check(!reason.isBlank(),"Unmarked Java rank-inside-annotate case");
+            JavaApiCases.requiredSignatures();
+            System.out.println("Java rank inside annotate: public compiler refusal: " + reason);
+            OptionCases.main(new String[]{directory.getParent().getParent().resolve("construction/options.json").toString()});
+            asyncCase(directory,ConsumerCases.JSON.readTree(directory.resolve("manifest.json").toFile()));
+            return;
+        }
         admissionCases(Path.of(args[0]).getParent());
         StressCases.check(Path.of(args[0]).getParent());
-        Path directory = Path.of(args[0]); savedToolbox(directory.getParent().resolve("toolbox")); var manifest = ConsumerCases.JSON.readTree(directory.resolve("manifest.json").toFile()); int count=0;
+        Path directory = Path.of(args[0]); savedToolbox(directory.getParent().resolve("toolbox")); var manifest = ConsumerCases.JSON.readTree(directory.resolve("manifest.json").toFile()); int count=0; int notApplicable=0;
         for (var backend : manifest.get("backends")) for (var name : manifest.get("cases")) {
             var file = directory.resolve(name.asText()); var sample = ConsumerCases.JSON.readTree(file.toFile());
-            try (var fixture = new BackendFixture(file.toString());
-                 var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT))).url(URI.create(fixture.base())).apiKey("synthetic-key").model(manifest.get("client").get("model").asText())
-                     .batch(sample.path("client").has("batch") ? sample.get("client").get("batch").intValue() : manifest.get("client").get("batch").intValue()).retry(RetryPolicy.builder().maxRetries(0).build()).recordCodec(value -> { try { return ConsumerCases.JSON.writeValueAsString(value); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } }).build()) {
+            String reason = sample.path("not_applicable").path("java").asText();
+            if (!reason.isBlank()) {
+                System.out.println("Java canonical " + name.asText() + ": not applicable: " + reason);
+                notApplicable++;
+                continue;
+            }
+            try (var fixture = new BackendFixture(file.toString())) {
                 JsonNode actual;
                 var values = ConsumerCases.JSON.createArrayNode();
-                try (var rows = execute(client,sample.get("request"),sample.get("expected"))) {
-                    for (var row : rows.toList()) {
-                        ConsumerCases.equal(row.source().orElseThrow().backend().name().toLowerCase(java.util.Locale.ROOT),backend.asText(),"typed backend");
-                        ConsumerCases.equal(row.source().orElseThrow().model(),"fixture-model","typed model");
-                        ConsumerCases.check(!row.source().orElseThrow().questionIdentity().isEmpty(),"question identity"); values.add(row(row));
+                boolean cancelled = sample.path("cancelled").asBoolean(false);
+                try (var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT))).url(URI.create(fixture.base())).apiKey("synthetic-key").model(manifest.get("client").get("model").asText())
+                     .batch(sample.path("client").has("batch") ? sample.get("client").get("batch").intValue() : manifest.get("client").get("batch").intValue()).retry(RetryPolicy.builder().maxRetries(sample.path("client").path("retry").path("max_retries").asInt(manifest.path("client").path("retry").path("max_retries").asInt(0))).build()).recordCodec(value -> { try { return ConsumerCases.JSON.writeValueAsString(value); } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); } }).build()) {
+                    if (cancelled) Thread.currentThread().interrupt();
+                    try (var rows = execute(client,sample.get("request"),sample.get("expected"))) {
+                        for (var row : rows.toList()) {
+                            ConsumerCases.equal(row.source().orElseThrow().backend().name().toLowerCase(java.util.Locale.ROOT),backend.asText(),"typed backend");
+                            ConsumerCases.equal(row.source().orElseThrow().model(),"fixture-model","typed model");
+                            ConsumerCases.check(!row.source().orElseThrow().questionIdentity().isEmpty(),"question identity");
+                            ConsumerCases.equal(row.source().orElseThrow().name().orElse(null),sample.get("request").path("name").isTextual() ? sample.get("request").get("name").asText() : null,"execution name"); values.add(row(row));
+                        }
                     }
                     actual = values;
                 } catch (ThinkThenException error) {
                     ConsumerCases.check(values.isEmpty(), "Admission returned rows");
                     actual = error(error.code().wireName());
-                }
+                } catch (java.util.concurrent.CancellationException error) {
+                    ConsumerCases.check(cancelled && values.isEmpty(), "Unexpected cancellation or cancelled rows");
+                    ConsumerCases.check(error.getCause() instanceof ThinkThenException cause && cause.code() == ErrorCode.LOCAL_CANCELLED, "Cancellation lost its engine code");
+                    actual = error("local.cancelled");
+                } finally { Thread.interrupted(); }
                 ConsumerCases.equal(ConsumerCases.JSON.readTree(ConsumerCases.JSON.writeValueAsBytes(actual)),expected(sample),"canonical "+backend.asText()+"/"+name.asText());
                 ConsumerCases.equal(fixture.command("count"),sample.get("requests").asText(),"canonical request count"); count++;
             }
         }
+        asyncCase(directory,manifest);
         ConsumerCases.check(count>0,"No Java canonical cases");
-        System.out.println("Java public typed API: "+count+" canonical backend cases passed");
+        System.out.println("Java public typed API: "+count+" canonical backend cases passed; "+notApplicable+" not applicable");
     }
 }

@@ -1,4 +1,5 @@
 #include "pg_internal.h"
+#include "source_limits.h"
 #include "catalog/pg_type_d.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
@@ -89,7 +90,7 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
     uint64 count;
     int result;
     MemoryContext previous;
-    SPI_cursor_fetch(owner->source, true, 128);
+    SPI_cursor_fetch(owner->source, true, TT_SOURCE_CHUNK_RECORDS);
     count = SPI_processed;
     if (count == 0) {
         SPI_freetuptable(SPI_tuptable);

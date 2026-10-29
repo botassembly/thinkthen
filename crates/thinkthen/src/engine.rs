@@ -16,12 +16,9 @@ use crate::batch::Batch;
 use crate::transport;
 use crate::{Cancel, Error, RetryPolicy};
 mod contract;
+mod limits;
 pub(crate) use contract::RecordEvent;
-
-/// How many requests may be open at once.
-const WORKERS: usize = 4;
-/// Bound queued and completed chunks independently of worker occupancy.
-const REORDER_WINDOW: usize = WORKERS * 4;
+use limits::{REORDER_WINDOW, WORKERS};
 
 enum Split {
     Allowed,

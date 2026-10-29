@@ -94,21 +94,31 @@ pub extern "C" fn thinkthen_version() -> *const c_char {
 /// Process-lifetime dotted code name, or NULL for an unknown integer.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_code_name(value: i32) -> *const c_char {
-    static NAMES: OnceLock<Vec<(i32, std::ffi::CString)>> = OnceLock::new();
-    NAMES
+    code_metadata(value).map_or(ptr::null(), |(_, name, _)| name.as_ptr())
+}
+/// Process-lifetime NUL-terminated family, or NULL for an unknown code, including zero.
+/// The family comes from the engine registry. Never free the returned pointer.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_code_family(value: i32) -> *const c_char {
+    code_metadata(value).map_or(ptr::null(), |(_, _, family)| family.as_ptr())
+}
+fn code_metadata(value: i32) -> Option<&'static (i32, std::ffi::CString, std::ffi::CString)> {
+    static CODES: OnceLock<Vec<(i32, std::ffi::CString, std::ffi::CString)>> = OnceLock::new();
+    CODES
         .get_or_init(|| {
             Code::ALL
                 .iter()
                 .filter_map(|code| {
-                    std::ffi::CString::new(code.as_str())
-                        .ok()
-                        .map(|name| (code.abi(), name))
+                    Some((
+                        code.abi(),
+                        std::ffi::CString::new(code.as_str()).ok()?,
+                        std::ffi::CString::new(code.family().as_str()).ok()?,
+                    ))
                 })
                 .collect()
         })
         .iter()
-        .find(|(code, _)| *code == value)
-        .map_or(ptr::null(), |(_, name)| name.as_ptr())
+        .find(|(code, _, _)| *code == value)
 }
 /// Open a client from a copied typed settings snapshot.
 /// # Safety
