@@ -215,7 +215,11 @@ class RetryAdmission(unittest.TestCase):
                 artifact['workflow_run']['head_sha'] = prior_sha
                 blob = root / ('artifact-' + str(artifact['id']) + '.zip')
                 with zipfile.ZipFile(blob, 'w') as output:
-                    output.writestr('manifest.json' if artifact['name'] == 'native-windows-r' else 'platform.tar.gz', b'original payload')
+                    if artifact['name'] == 'gate-linux-x86_64':
+                        output.writestr('pair.json', json.dumps({'revision': prior_sha, 'floor_image': 'sha256:' + 'b' * 64,
+                                                               'native_key': 'c' * 64, 'assets': {}}))
+                    else:
+                        output.writestr('manifest.json' if artifact['name'] == 'native-windows-r' else 'platform.tar.gz', b'original payload')
                 artifact['digest'] = 'sha256:' + hashlib.sha256(blob.read_bytes()).hexdigest()
                 routes['repos/' + REPOSITORY + f'/actions/artifacts/{artifact["id"]}/zip'] = str(blob)
             def response(route, body):
@@ -273,6 +277,41 @@ class RetryAdmission(unittest.TestCase):
             git('add', 'product')
             git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '-qm', 'Change product')
             invoke('product-change', 'product source differs')
+
+    def test_paired_compiler_uses_original_metadata_without_a_local_image(self):
+        import release_retry
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            folder = root / 'gate-linux-x86_64'
+            folder.mkdir()
+            path = folder / 'pair.json'
+            pair = {'revision': SHA, 'floor_image': 'sha256:' + 'b' * 64, 'native_key': 'c' * 64, 'assets': {}}
+            path.write_text(json.dumps(pair))
+            receipt = {'prior': {'revision': SHA}, 'artifacts': {'gate-linux-x86_64': {'files': {
+                'pair.json': hashlib.sha256(path.read_bytes()).hexdigest()}}}}
+            def command(arguments, **options):
+                if arguments[0] == 'git':
+                    return b'current-source\n'
+                self.assertEqual(arguments, ['scripts/native-prepare', '--path'])
+                self.assertEqual(options['env']['THINKTHEN_FLOOR_IMAGE'], pair['floor_image'])
+                return '/unchanged-native/' + pair['native_key'] + '\n'
+            with patch.dict(os.environ, THINKTHEN_RELEASE_REUSE=str(root / 'reuse.json')), \
+                 patch('release_retry.selected', return_value=receipt), \
+                 patch('release_retry.subprocess.check_output', side_effect=command):
+                self.assertEqual(release_retry.compiler_image(), pair['floor_image'])
+                def wrong_key(arguments, **options):
+                    return b'current-source\n' if arguments[0] == 'git' else '/foreign-native/' + 'd' * 64 + '\n'
+                with patch('release_retry.subprocess.check_output', side_effect=wrong_key), self.assertRaisesRegex(ValueError, 'native settings differ'):
+                    release_retry.compiler_image()
+                for field, wrong in (('revision', 'd' * 40), ('floor_image', 'unversioned-image')):
+                    altered = dict(pair, **{field: wrong})
+                    path.write_text(json.dumps(altered))
+                    receipt['artifacts']['gate-linux-x86_64']['files']['pair.json'] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'identity differs'):
+                        release_retry.compiler_image()
+                path.write_text('{}')
+                with self.assertRaisesRegex(ValueError, 'checksum differs'):
+                    release_retry.compiler_image()
 
     def test_artifact_paths_cannot_escape_the_download(self):
         for name in ('../escape', '/absolute', 'nested/../../escape', 'nested\\escape'):

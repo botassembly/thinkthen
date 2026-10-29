@@ -42,7 +42,8 @@ TARGETS = {'linux-x86_64': 'ubuntu-24.04', 'linux-arm64': 'ubuntu-24.04-arm',
            'macos-arm64': 'macos-15'}
 ARTIFACTS = {**{'platform-' + target: 'qualification / build (' + target + ', ' + runner + ')'
                 for target, runner in TARGETS.items()},
-             'native-windows-r': 'qualification / windows-r'}
+             'native-windows-r': 'qualification / windows-r',
+             'gate-linux-x86_64': 'qualification / native-gate-inputs'}
 REQUIRED = {'source', 'qualification / native-gate-inputs', 'qualification / gate',
             *ARTIFACTS.values()}
 
@@ -174,6 +175,7 @@ def prepare(run_id, destination):
             target = name.removeprefix('platform-')
             receipt['packages'][target] = {'revision': prior_sha, 'archive': archives[0].name,
                                           'sha256': hashlib.sha256(archives[0].read_bytes()).hexdigest()}
+    compiler_pair(destination, receipt)
     (destination / 'reuse.json').write_text(json.dumps(receipt, sort_keys=True, indent=2) + '\n')
     print('release retry: verified prior qualification and reused three platforms plus Windows R')
 
@@ -190,6 +192,35 @@ def selected(sha):
         raise ValueError('release reuse receipt differs from current source')
     compare(receipt['prior'], current)
     return receipt
+
+
+def compiler_pair(folder, receipt):
+    """Read the authenticated producer's metadata without importing its assets."""
+    path = folder / 'gate-linux-x86_64/pair.json'
+    expected = receipt['artifacts']['gate-linux-x86_64']['files']['pair.json']
+    if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+        raise ValueError('paired compiler manifest checksum differs')
+    pair = json.loads(path.read_text())
+    if (set(pair) != {'revision', 'floor_image', 'native_key', 'assets'} or
+            pair['revision'] != receipt['prior']['revision'] or
+            not re.fullmatch('sha256:[0-9a-f]{64}', pair['floor_image']) or
+            not re.fullmatch('[0-9a-f]{64}', pair['native_key'])):
+        raise ValueError('paired compiler identity differs from the qualified source')
+    return pair
+
+
+def compiler_image():
+    """Select the prior compiler identity and verify this host's real settings."""
+    receipt = selected(git('rev-parse', 'HEAD').decode().strip())
+    if receipt is None:
+        raise ValueError('paired compiler selection needs a verified release reuse receipt')
+    pair = compiler_pair(Path(os.environ['THINKTHEN_RELEASE_REUSE']).parent, receipt)
+    environment = dict(os.environ, THINKTHEN_FLOOR_IMAGE=pair['floor_image'])
+    actual = subprocess.check_output(['scripts/native-prepare', '--path'], cwd=ROOT,
+                                     env=environment, text=True).strip()
+    if Path(actual).name != pair['native_key']:
+        raise ValueError('paired compiler native settings differ from this host')
+    return pair['floor_image']
 
 
 def archive_revision(target, archive, sha):

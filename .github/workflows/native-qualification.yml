@@ -301,6 +301,13 @@ jobs:
         env:
           RELEASE_TARGET: ${{ matrix.target }}
         run: scripts/release-workflow prepare "$RELEASE_TARGET"
+      - name: Restore the verified paired compiler identity for the reduced Windows build
+        id: restore-paired-compiler-identity
+        if: always() && inputs.windows_retry
+        run: |
+          . scripts/native-tools-env
+          image=$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_retry import compiler_image; print(compiler_image())')
+          echo "THINKTHEN_FLOOR_IMAGE=$image" >> "$GITHUB_ENV"
       - name: Prepare runtime-only Linux qualification images
         id: prepare-runtime-only-linux-qualification-images
         if: always() && startsWith(matrix.target, 'linux-')
