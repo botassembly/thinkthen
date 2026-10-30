@@ -11,16 +11,112 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
 import zipfile
 
 from release_workflow import ROOT, version
 import release_windows_check
+import release_windows
+import release_windows_sdks
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_windows_consumer_preserves_os_architecture_while_isolating_user_state(self):
+        import release_windows_sdks as sdks
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-environment-') as temporary:
+            scratch = Path(temporary)
+            inherited = dict(os.environ, PROCESSOR_ARCHITECTURE='AMD64',
+                             HOME='host-home', USERPROFILE='host-profile',
+                             THINKTHEN_API_KEY='host-secret')
+            with patch.dict(os.environ, inherited, clear=True), patch('release_windows_cache.prepare_cache'):
+                environment = sdks.environment(scratch)
+            child = subprocess.run([sys.executable, '-c',
+                'import json,os; print(json.dumps({key: os.getenv(key) for key in '
+                '["PROCESSOR_ARCHITECTURE", "HOME", "USERPROFILE", "THINKTHEN_API_KEY"]}))'],
+                env=environment, capture_output=True, text=True, check=True)
+            values = json.loads(child.stdout)
+            self.assertEqual(values['PROCESSOR_ARCHITECTURE'], inherited['PROCESSOR_ARCHITECTURE'])
+            self.assertEqual(values['HOME'], str(scratch / 'home'))
+            self.assertEqual(values['USERPROFILE'], str(scratch / 'home'))
+            self.assertIsNone(values['THINKTHEN_API_KEY'])
+
+    def test_installed_r_rejects_child_failure_after_valid_rows(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-r-child-exit-') as temporary:
+            scratch = Path(temporary)
+            shutil.copy2(ROOT / 'sdk/r/tests/release-cases.R', scratch / 'r-cases.R')
+            case = json.loads((ROOT / 'construction/stub.json').read_text())[0]
+            fixtures = scratch / 'cases.json'
+            fixtures.write_text(json.dumps([case]))
+            # A child can print valid rows and still fail during process cleanup.
+            (scratch / 'run.R').write_text(
+                'a <- commandArgs(TRUE)\n'
+                'case <- jsonlite::fromJSON(a[[1]], simplifyVector=FALSE)\n'
+                'cat(jsonlite::toJSON(list(rows=case$expected), auto_unbox=TRUE, null="null"))\n'
+                'quit(status=7L)\n')
+            result = subprocess.run(['Rscript', '--vanilla', scratch / 'r-cases.R', fixtures],
+                                    cwd=scratch, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('R child consumer failed with status 7', result.stderr)
+            self.assertNotIn('preserves every shared stub row', result.stdout)
+
+    def test_generated_go_smoke_command_exposes_delivered_fixtures(self):
+        from release_install import install_note
+        with tempfile.TemporaryDirectory(prefix='thinkthen-install-go-') as temporary:
+            out = Path(temporary)
+            (out / 'build.json').write_text(json.dumps(dict(version=version(), platform='linux-x86_64',
+                revision='fixture', node='node', java='java', r='R')))
+            (out / 'requirements.json').write_text(json.dumps({'go': {'runtime': 'Go', 'supported_glibc': '2.28'}}))
+            release_windows.check_tools(out)
+            consumer = out / 'checks/go-consumer'
+            consumer.write_text('#!/bin/sh\ntest -f "$THINKTHEN_STUB_CASES"\ntest -f "$THINKTHEN_CASES/../schemas/row.schema.json"\n')
+            consumer.chmod(0o755)
+            install_note(out)
+            command = (out / 'INSTALL.md').read_text().split('```sh\n', 1)[1].split('```', 1)[0]
+            environment = {key: value for key, value in os.environ.items() if key not in {'THINKTHEN_CASES', 'THINKTHEN_STUB_CASES'}}
+            subprocess.run(['sh', '-eu', '-c', command], cwd=out, env=environment, check=True)
+
+    def test_windows_go_consumer_uses_delivered_canonical_schema(self):
+        class GoFinished(BaseException):
+            pass
+        with tempfile.TemporaryDirectory(prefix='thinkthen-windows-go-schema-') as temporary:
+            scratch = Path(temporary)
+            delivered = scratch / 'candidate'
+            release_windows.check_tools(delivered)
+            checks = delivered / 'checks'
+            (checks / 'go').mkdir()
+            archive = delivered / 'go.zip'
+            with zipfile.ZipFile(archive, 'w') as package:
+                package.writestr('go.mod', 'module fixture\n')
+            environments = []
+
+            def consumer(*args, **options):
+                if args[0] == 'java':
+                    raise GoFinished()
+                if Path(args[0]).name == 'consumer.exe':
+                    fixture = Path(options['env'].get('THINKTHEN_CASES', ''))
+                    schema = fixture / '../schemas/row.schema.json'
+                    self.assertEqual(schema.read_bytes(), (ROOT / 'schemas/row.schema.json').read_bytes())
+                    self.assertEqual(Path(options['env']['THINKTHEN_STUB_CASES']), checks / 'stub.json')
+                    self.assertEqual(options['cwd'], scratch)
+                    environments.append(options['env'])
+                return ''
+
+            def cache(command, root, env, filename):
+                self.assertEqual(filename, 'library.dll')
+                consumer(*command, env=env, cwd=scratch)
+
+            # Run the delivered Windows entry point through its Go boundary.
+            with patch.object(release_windows_sdks, 'os', SimpleNamespace(name='nt', environ={}, pathsep=';')), patch.object(
+                    release_windows_sdks, 'environment', return_value={'PATH': ''}), patch.object(
+                    release_windows_sdks, 'runtime_environment', return_value={'PATH': ''}), patch.object(
+                    release_windows_sdks.tempfile, 'TemporaryDirectory', return_value=nullcontext(str(scratch))), patch.object(
+                    release_windows_sdks, 'run', side_effect=consumer), patch('release_windows_cache.check_cache', side_effect=cache):
+                with self.assertRaises(GoFinished):
+                    release_windows_sdks.full(delivered, {'packages': {'go': 'go.zip'}}, caller_owned=True)
+            self.assertEqual(len(environments), 2, 'normal and cache consumers must both run')
+
     def test_installed_zig_filter_kept_preserves_strict_rows(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-zig-kept-') as temporary:
             scratch = Path(temporary)

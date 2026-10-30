@@ -35,7 +35,7 @@ def install_note(out):
         'command': f'tar -xzf thinkthen-{version}-{host}.tar.gz && printf "evidence 5" | ./thinkthen decide --backend stub "Ready?" --json',
         'python': 'python3 -m venv .smoke-python && .smoke-python/bin/python -m pip install --no-index python/*.whl && .smoke-python/bin/python checks/python.py checks/stub.json',
         'typescript': 'npm install --offline --ignore-scripts --no-audit --no-fund ./typescript/*.tgz && cp checks/node.mjs .smoke-node.mjs && node .smoke-node.mjs checks/stub.json',
-        'go': 'THINKTHEN_STUB_CASES="$PWD/checks/stub.json" ./checks/go-consumer -test.run=^TestSharedStub$ -test.v',
+        'go': 'THINKTHEN_STUB_CASES="$PWD/checks/stub.json" THINKTHEN_CASES="$PWD/checks" ./checks/go-consumer -test.run=^TestSharedStub$ -test.v',
         'c': 'tar -xzf c/*.tar.gz -C c && python3 checks/native_cases.py checks/c-consumer checks/stub.json checks/contract.json',
         'cpp': 'tar -xzf c/*.tar.gz -C c && tar -xzf cpp/*.tar.gz -C cpp && python3 checks/native_cases.py checks/cpp-consumer checks/stub.json checks/contract.json utf8',
         'java': 'java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:java/*:java/dependencies/*" ConsumerCases checks/stub.json --stub-only && java --enable-native-access=ALL-UNNAMED -cp "checks/jvm/consumer.jar:java/*:java/dependencies/*" JavaApiCases --stub-only',

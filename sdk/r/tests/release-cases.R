@@ -18,6 +18,10 @@ for (case in cases) {
   jsonlite::write_json(case, path, auto_unbox = TRUE, null = "null", digits = NA)
   output <- system2(file.path(R.home("bin"), "Rscript"), c("--vanilla", shQuote(file.path(folder, "run.R")), shQuote(path)), stdout = TRUE)
   unlink(path)
+  status <- attr(output, "status", exact = TRUE)
+  if (!is.null(status) && status != 0L) {
+    stop(paste("R child consumer failed with status", status, "for", case$request$question[["function"]]))
+  }
   result <- jsonlite::fromJSON(paste(output, collapse = "\n"), simplifyVector = FALSE)
   stopifnot(length(result$rows) == length(case$expected))
   comparison <- all.equal(canonical(result$rows), canonical(expected_r(case$expected)),

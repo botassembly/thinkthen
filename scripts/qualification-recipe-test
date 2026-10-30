@@ -7,7 +7,9 @@ import runpy
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
+import textwrap
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -72,12 +74,61 @@ class QualificationRecipes(unittest.TestCase):
         module = runpy.run_path(str(ROOT / 'scripts/windows-native-proof'))
         action = module['go']
         captured = []
-        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=lambda command, *args: captured.append(command)):
+        def cache(command, root, environment, filename):
+            self.assertEqual(Path(environment['THINKTHEN_CASES']) / '../schemas/row.schema.json', ROOT / 'conformance/../schemas/row.schema.json')
+            captured.append(command)
+        with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=lambda *args, **options: None, check_cache=cache):
             scratch = Path(directory)
             native = scratch / 'engine.dll'
             native.write_bytes(b'native fixture')
             action(scratch, native, {}, {})
         self.assertIn('-test.timeout=30m', captured[0])
+
+    def test_source_and_registry_go_launchers_expose_canonical_fixtures(self):
+        source = (ROOT / 'scripts/source-install-check').read_text()
+        source = textwrap.dedent(source[source.index('        go_env ='):source.index('        if args.readmes:')])
+        registry = (ROOT / 'scripts/registry-site-check').read_text()
+        registry = textwrap.dedent(registry[registry.index('    environment ='):registry.index("    consumer = scratch / 'swift-consumer'")])
+        with tempfile.TemporaryDirectory() as directory:
+            for platform, recipe in [('linux', source), ('darwin', source), ('linux', registry)]:
+                with self.subTest(platform=platform, recipe='source' if recipe == source else 'registry'):
+                    calls = []
+                    scope = dict(ROOT=ROOT, scratch=Path(directory), go=Path(directory), consumer=Path(directory),
+                                 env={'HOME': directory, 'GOSUMDB': 'off', 'GOTOOLCHAIN': 'local',
+                                      'GOWORK': 'off', 'CGO_ENABLED': '1'}, os=os,
+                                 sys=SimpleNamespace(platform=platform, executable=sys.executable),
+                                 go_command=('go',), run=lambda *args, **options: calls.append((args, options)))
+                    exec(compile(recipe, 'installed-go-recipe', 'exec'), scope)
+                    arguments, options = calls[0]
+                    environment = dict(value.split('=', 1) for value in arguments[2:] if isinstance(value, str) and '=' in value) if 'runtime-floor-build' in str(arguments[0]) else options['env']
+                    self.assertEqual(Path(environment['THINKTHEN_CASES']).parent / 'schemas/row.schema.json', ROOT / 'schemas/row.schema.json')
+                    self.assertEqual(Path(environment['THINKTHEN_STUB_CASES']), ROOT / 'construction/stub.json')
+
+    def test_noexec_go_consumer_receives_staged_schema(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scratch = Path(directory)
+            candidate = scratch / 'candidate'
+            (candidate / 'go').mkdir(parents=True)
+            with tarfile.open(candidate / 'go/module.tar.gz', 'w:gz'):
+                pass
+            (candidate / 'java').mkdir()
+            (candidate / 'checks/jvm').mkdir(parents=True)
+            (candidate / 'checks/jvm/consumer.jar').touch()
+
+            def run(arguments, **options):
+                if arguments[0] != 'docker':
+                    (Path(arguments[2]) / 'library/target/generated-sources/contracts').mkdir(parents=True)
+                    return
+                work = Path(next(value[:-6] for value in arguments if str(value).endswith(':/work')))
+                self.assertEqual((work / 'schemas/row.schema.json').read_bytes(), (ROOT / 'schemas/row.schema.json').read_bytes())
+                consumer = work / 'go-consumer'
+                consumer.write_text('#!/bin/sh\ntest -f "$THINKTHEN_STUB_CASES"\ntest -f "$THINKTHEN_CASES/../schemas/row.schema.json"\n')
+                consumer.chmod(0o755)
+                command = next(line for line in arguments[-1].splitlines() if line.startswith('go_case()'))
+                subprocess.check_call(['sh', '-eu', '-c', command.replace('/work', str(work)) + '\ngo_case'])
+
+            with patch.object(sys, 'argv', ['loader-noexec-check', str(candidate), str(scratch)]), patch('subprocess.run', side_effect=run):
+                runpy.run_path(str(ROOT / 'scripts/loader-noexec-check'), run_name='__main__')
 
     def test_installed_go_consumers_share_timeout_and_stream_output(self):
         import release_windows_sdks as sdks

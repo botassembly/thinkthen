@@ -57,7 +57,9 @@ def unpack(path, destination):
 
 
 def environment(scratch):
+    # cli's Windows exit finalizer reads the OS architecture before cancelling its thread.
     keep = {'PATH', 'SYSTEMROOT', 'SYSTEMDRIVE', 'WINDIR', 'COMSPEC', 'PROGRAMFILES',
+            'PROCESSOR_ARCHITECTURE',
             'PROGRAMFILES(X86)', 'PROGRAMDATA', 'INCLUDE', 'LIB', 'LIBPATH',
             'VCINSTALLDIR', 'VCTOOLSINSTALLDIR', 'WINDOWSSDKDIR', 'WINDOWSSDKVERSION',
             'UCRTVERSION', 'UCRTCONTENTROOT', 'SDKROOT', 'SWIFT_DEVELOPER_DIR', 'CC', 'CXX',
@@ -187,10 +189,11 @@ def full(folder, build, *, caller_owned=False):
             go_binary = go / 'consumer.exe'
             build_consumer('go', 'test', '-mod=mod', '-c', '-o', go_binary, cwd=go / 'consumer')
             go_arguments = ['-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=10m']
+            go_env = {'THINKTHEN_STUB_CASES': str(fixture), 'THINKTHEN_CASES': str(checks)}
             execute(go_binary, *go_arguments, stream_output=True,
-                    extra={'THINKTHEN_STUB_CASES': str(fixture)})
+                    extra=go_env)
             check_cache([go_binary, *go_arguments],
-                        scratch / 'go-cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(fixture)}, 'library.dll')
+                        scratch / 'go-cache-proof', runtime | go_env, 'library.dll')
         for name, main in [('java', 'ConsumerCases'), ('kotlin', 'KotlinCasesKt')]:
             with check(name):
                 classpath = os.pathsep.join(map(str, [checks / 'jvm/consumer.jar', folder / name / '*',

@@ -335,6 +335,7 @@ def check_tools(out):
     """Ship the checker with its source-free import dependencies."""
     copy(ROOT / 'construction/stub.json', out / 'checks/stub.json')
     copy(ROOT / 'schemas/contract.json', out / 'checks/contract.json')
+    copy(ROOT / 'schemas/row.schema.json', out / 'schemas/row.schema.json')
     copy(ROOT / 'scripts/release-check', out / 'check')
     copy(ROOT / 'scripts/release_records.py', out / 'release_records.py')
     copy(ROOT / 'scripts/release_notice_check.py', out / 'release_notice_check.py')

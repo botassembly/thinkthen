@@ -28,6 +28,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-loader-') as temporary:
     shutil.copytree(candidate / 'java', work / 'java')
     shutil.copy2(candidate / 'checks/jvm/consumer.jar', work / 'consumer.jar')
     shutil.copy2(root / 'construction/stub.json', work / 'stub.json')
+    (work / 'schemas').mkdir()
+    shutil.copy2(root / 'schemas/row.schema.json', work / 'schemas/row.schema.json')
     shutil.copytree(root / 'sdk/java/library/src/main/java', work / 'java-source')
     generated = work / 'generated-java'
     subprocess.run([sys.executable, str(root / 'scripts/jvm-generated'), str(generated)], check=True)
@@ -42,7 +44,7 @@ go test -c -o /work/go-consumer
 /jdk/bin/javac --release 22 --module-path /work/java/dependencies -d /work/classes $(find /work/java-source -name '*.java')
 /jdk/bin/jar --update --file /work/java/thinkthen-java-0.2.0.jar -C /work/classes .
 # Independent processes publish into one cold cache, then reuse it read-only.
-go_case() { THINKTHEN_STUB_CASES=/work/stub.json /work/go-consumer -test.run='^TestSharedStub$'; }
+go_case() { THINKTHEN_STUB_CASES=/work/stub.json THINKTHEN_CASES=/work/consumer /work/go-consumer -test.run='^TestSharedStub$'; }
 java_case() { /jdk/bin/java -Duser.home=/work/home --enable-native-access=ALL-UNNAMED -cp '/work/consumer.jar:/work/java/*:/work/java/dependencies/*' ConsumerCases /work/stub.json --stub-only; }
 status=0
 go_case & first=$!

@@ -58,7 +58,8 @@ def go(scratch, native, env, runtime):
     binary = scratch / 'Consumer.exe'
     build('go', 'test', '-mod=mod', '-c', '-o', binary, cwd=consumer, env=env)
     check_cache([binary, '-test.run=^TestSharedStub$', '-test.count=1', '-test.v', '-test.timeout=30m'],
-                scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json')}, 'library.dll')
+                scratch / 'cache-proof', runtime | {'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
+                                                 'THINKTHEN_CASES': str(ROOT / 'conformance')}, 'library.dll')
 
 
 def jvm(scratch, native, env, runtime):

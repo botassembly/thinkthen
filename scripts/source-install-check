@@ -96,12 +96,13 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
         shutil.copytree(ROOT / 'sdk/go/tests', go)
         (go / 'go.mod').write_text('module releaseconsumer\n\ngo 1.23\n\nrequire ' + module + ' ' + label + '\n', encoding='utf-8')
         go_env = env | {'GOPROXY': (scratch / 'proxy').as_uri(), 'GOMODCACHE': str(scratch / 'go-modules'),
-                        'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json')}
+                        'THINKTHEN_STUB_CASES': str(ROOT / 'construction/stub.json'),
+                        'THINKTHEN_CASES': str(ROOT / 'conformance')}
         def go_run(*arguments, cwd):
             if sys.platform == 'linux':
                 floor_env = dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch))
                 values = go_env | {'GOCACHE': str(scratch / 'go-build')}
-                selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_STUB_CASES']
+                selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
                 return run(ROOT / 'scripts/runtime-floor-build', 'env',
                            *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
             if sys.platform == 'darwin':
