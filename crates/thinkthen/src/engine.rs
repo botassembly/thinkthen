@@ -16,6 +16,7 @@ use crate::batch::Batch;
 use crate::transport;
 use crate::{Cancel, Error, RetryPolicy};
 mod contract;
+mod input_report;
 mod limits;
 pub(crate) use contract::RecordEvent;
 use limits::{REORDER_WINDOW, WORKERS};

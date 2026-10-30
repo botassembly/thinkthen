@@ -1,0 +1,51 @@
+#!/bin/sh
+# Focused source-resolution and compile checks; no SDK package or soak build.
+set -eu
+output=$1
+mkdir -p "$output"
+export CARGO_HOME="$HOME/.local/share/thinkthen-build-tools/release-candidates/0085-d5a96359-private/cargo-home"
+export CARGO_TARGET_DIR="$output/target"
+export THINKTHEN_FLOOR_IMAGE=sha256:73ca40ea8c4d0fd2068ca3a6985781f04f47e682442b9c72df1a6a3927b9ef71
+export R_INCLUDE_DIR=/opt/R/lib64/R/include
+scripts/runtime-floor-build sh -eu -c '
+    export PATH="/opt/R/bin:$PATH"
+    export R_HOME=$(R RHOME)
+    test "$R_HOME" = /opt/R/lib64/R
+    Rscript --vanilla -e '\''stopifnot(as.character(getRversion()) == "4.3.3")'\''
+    python3 - "$1" <<'\''PY'\''
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+sys.path.insert(0, "scripts")
+from release_patched import patched
+root = Path.cwd()
+records = patched(root)
+assert set(records) == {"extendr-api", "extendr-ffi"}
+with tempfile.TemporaryDirectory() as tmp:
+    trial = Path(tmp)
+    shutil.copyfile(root / "Cargo.toml", trial / "Cargo.toml")
+    for entry in records.values():
+        shutil.copytree(entry["folder"], trial / entry["folder"].relative_to(root))
+    owner = trial / "sdk/r/native/vendor/extendr-api/src/ownership.rs"
+    owner.write_text(owner.read_text().replace("live_count * 2", "live_count * 3"))
+    try:
+        patched(trial)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unrecorded ownership modification was accepted")
+data = json.loads(subprocess.check_output(["cargo", "metadata", "--offline", "--locked", "--format-version=1"], text=True))
+api = [package for package in data["packages"] if package["name"] == "extendr-api"]
+assert len(api) == 1 and api[0]["source"] is None
+assert Path(api[0]["manifest_path"]).resolve() == root / "sdk/r/native/vendor/extendr-api/Cargo.toml"
+(Path(os.environ["CARGO_TARGET_DIR"]) / "resolved-extendr-api.json").write_text(json.dumps(api[0], indent=2))
+PY
+    scripts/notices --check
+    cargo check --offline --locked -p thinkthen-r --lib
+' r-ownership-check "$output" > "$output/check.log" 2>&1
+cp "$output/target/runtime-floor/resolved-extendr-api.json" "$output/resolved-extendr-api.json"
+cat "$output/check.log"

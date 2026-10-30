@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Check real Java input pauses and their engine-reported request costs.
+
+Usage: java-idle-flush-test JAVA [JVM_ARGS...] JavaIdleFlushCases
+The final argument can also name JavaIdleFlushCases.java for source-file mode.
+"""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import uuid
+
+if len(sys.argv) < 3:
+    sys.exit(__doc__)
+with tempfile.TemporaryDirectory(prefix='thinkthen-idle-flush-') as temporary:
+    report = Path(temporary) / 'packing.jsonl'
+    report.touch()
+    run = uuid.uuid4().hex
+    env = dict(os.environ, THINKTHEN_INPUT_REPORT=str(report), THINKTHEN_INPUT_REPORT_RUN=run)
+    subprocess.run([argument.replace('{home}', temporary) for argument in sys.argv[1:]], env=env, check=True)
+    summaries = [json.loads(line) for line in report.read_text().splitlines()]
+    assert len(summaries) == 3, f'engine omitted packing reports: {summaries}'
+    assert all(item['run'] == run and item['complete'] is True and item['batch'] == 32
+               for item in summaries), summaries
+    assert len({(item['pid'], item['call']) for item in summaries}) == 3, summaries
+    observed = [(item['records'], item['packed_requests'], item['idle_flushes'],
+                 item['idle_added_requests']) for item in summaries]
+    assert observed == [(32, 1, 0, 0), (32, 2, 1, 1), (64, 3, 2, 1)], observed
+    print('Java producer pauses preserve rows and report only their added requests')

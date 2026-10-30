@@ -24,3 +24,17 @@ condition = "AND"
 paths = ['''^sdk/r/native/vendor/extendr\-ffi/UPSTREAM\.json$''']
 regexTarget = "line"
 regexes = ['''^\s*"src/non_api\.rs"\s*:\s*"8ce0a5116095e91da81aadceb3ea0ef5c93176d964506911bbf433eb93c251dd"\s*,?\s*$''']
+
+[[rules.allowlists]]
+description = "Exact SHA256 of tracked upstream extendr-api test source"
+condition = "AND"
+paths = ['''^licenses/inputs\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"sdk/r/native/vendor/extendr\-api/tests/non_api_tests\.rs"\s*:\s*"2d133d54798a32d15c9635fd128345753505603dc1bdac9fece07816e8518179"\s*,?\s*$''']
+
+[[rules.allowlists]]
+description = "Exact SHA256 of checksum-verified upstream extendr-api test source"
+condition = "AND"
+paths = ['''^sdk/r/native/vendor/extendr\-api/UPSTREAM\.json$''']
+regexTarget = "line"
+regexes = ['''^\s*"tests/non_api_tests\.rs"\s*:\s*"2d133d54798a32d15c9635fd128345753505603dc1bdac9fece07816e8518179"\s*,?\s*$''']

@@ -58,6 +58,18 @@ calls=case['concurrency']*case['rounds']
 requests=(0 if case['scenario']['name']=='refused' else ((case['records']+case['client']['batch']-1)//case['client']['batch'])*calls+sum(f.get('repeat',1) for f in case['scenario'].get('faults',[]) if f['kind']=='status'))
 if case['cancel']: requests=min(4,(case['records']+case['client']['batch']-1)//case['client']['batch'])
 Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') and not case['cancel'] else 0)))
+if os.environ.get('REPORTED_IDLE_SPLIT') and not case['cancel'] and case['scenario']['name']=='healthy':
+    requests += calls
+    Path(__file__).with_name('paid').write_text(str(requests+(1 if os.environ.get('BAD_REQUEST_COUNT') else 0)))
+    summaries=[dict(run=os.environ['THINKTHEN_INPUT_REPORT_RUN'],pid=os.getpid(),call=call,
+        complete=True,batch=case['client']['batch'],records=case['records'],
+        packed_requests=(case['records']+case['client']['batch']-1)//case['client']['batch']+1,
+        idle_flushes=1,idle_added_requests=1) for call in range(calls)]
+    if os.environ.get('STALE_INPUT_REPORT'): summaries[0]['run']='stale'
+    if os.environ.get('INCOMPLETE_INPUT_REPORT'): summaries[0]['complete']=False
+    if os.environ.get('MISSING_INPUT_REPORT') and len(summaries)>1: summaries.pop()
+    if os.environ.get('DUPLICATE_INPUT_REPORT') and len(summaries)>1: summaries[-1]=summaries[0]
+    Path(os.environ['THINKTHEN_INPUT_REPORT']).write_text(''.join(json.dumps(item)+'\\n' for item in summaries))
 if case['cancel']:
     for _ in range(requests):
         with socket.create_connection(('127.0.0.1',int(case['client']['url'].split(':')[2].split('/')[0]))): pass
@@ -102,6 +114,27 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
     wrong_count = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
         env=dict(env, BAD_REQUEST_COUNT='1'), capture_output=True, text=True)
     assert wrong_count.returncode != 0 and 'exact backend requests' in wrong_count.stderr, wrong_count.stderr
+    for surface in ('java', 'kotlin'):
+        missing_reports = subprocess.run([sys.executable, str(root / 'scripts/stress-adapters.py'),
+            '--surface', surface, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+            env=env, capture_output=True, text=True)
+        assert missing_reports.returncode != 0 and 'omitted required input packing reports' in missing_reports.stderr, missing_reports.stderr
+    explained = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=dict(env, REPORTED_IDLE_SPLIT='1'), capture_output=True, text=True)
+    assert explained.returncode == 0, explained.stderr
+    explained_cases = json.loads(explained.stdout)['cases']
+    assert any(case.get('idle_added_requests', 0) > 0 for case in explained_cases), explained_cases
+    unexplained = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+        env=dict(env, REPORTED_IDLE_SPLIT='1', BAD_REQUEST_COUNT='1'), capture_output=True, text=True)
+    assert unexplained.returncode != 0 and 'exact backend requests' in unexplained.stderr, unexplained.stderr
+    for invalid_report, expected_error in (
+            ('STALE_INPUT_REPORT', 'stale or incomplete'),
+            ('INCOMPLETE_INPUT_REPORT', 'stale or incomplete'),
+            ('MISSING_INPUT_REPORT', 'lost calls'),
+            ('DUPLICATE_INPUT_REPORT', 'repeated a call')):
+        invalid = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
+            env=dict(env, REPORTED_IDLE_SPLIT='1', **{invalid_report: '1'}), capture_output=True, text=True)
+        assert invalid.returncode != 0 and expected_error in invalid.stderr, invalid.stderr
     changing = subprocess.run([*command, '--sanitizer', 'address', '--', sys.executable, str(adapter)],
         env=dict(env, BAD_IDENTIFIER_WIDTH='1'), capture_output=True, text=True)
     assert changing.returncode != 0 and 'actual stress identifiers changed width: [15, 16]' in changing.stderr, changing.stderr

@@ -81,6 +81,7 @@ java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaConcurrencyCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SdkConventionCasesKt
 "$jvm_python" "$root/sdk/java/check-packaging"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaApiCases
+"$jvm_python" "$root/scripts/java-idle-flush-test" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaIdleFlushCases
 java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaSettingsCases "$root/schemas/contract.json"
 java --enable-native-access=ALL-UNNAMED -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1 -cp "$classpath" JavaOwnershipCases "$root/conformance"

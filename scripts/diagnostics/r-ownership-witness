@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Run the bounded tracker ownership witness; never build an SDK payload."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+IMAGE = 'sha256:73ca40ea8c4d0fd2068ca3a6985781f04f47e682442b9c72df1a6a3927b9ef71'
+OWNER_HASH = '98bfeb8b0f7cd679379ef7482bff63237211496da24acf92b055bc9ce76886d4'
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from build_targets import container_labels
+TOOLS = Path.home() / '.local/share/thinkthen-build-tools'
+CACHE = TOOLS / 'release-candidates/0085-d5a96359-private/cargo-home'
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main():
+    output = Path(sys.argv[1]).resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    registry = CACHE / 'registry/src/index.crates.io-1949cf8c6b5b557f'
+    source = registry / 'extendr-api-0.8.2/src/ownership.rs'
+    assert digest(source) == OWNER_HASH
+    shutil.copyfile(source, output / 'ownership-original.rs')
+    original = source.read_text()
+    before = 'let new_size = self.cur_index * 2 + EXTRA_PRESERVATION_SIZE;'
+    after = ('let live_count = self.objects.values().filter(|object| object.refcount != 0).count();\n'
+             '        let new_size = live_count * 2 + EXTRA_PRESERVATION_SIZE;')
+    assert original.count(before) == 1
+    delivered = ROOT / 'sdk/r/native/vendor/extendr-api/src/ownership.rs'
+    assert delivered.read_text() == original.replace(before, after)
+    shutil.copyfile(delivered, output / 'ownership-patched.rs')
+    harness = ROOT / 'scripts/diagnostics/r-ownership-harness.rs'
+    shutil.copyfile(harness, output / harness.name)
+    shutil.copytree(ROOT / 'sdk/r/native/vendor/extendr-ffi', output / 'extendr-ffi')
+    shutil.copytree(registry / 'once_cell-1.21.4', output / 'once_cell')
+    (output / 'cargo-home').mkdir()
+    (output / 'cargo-home/registry').symlink_to(CACHE / 'registry')
+    identities = {}
+    for variant in ('original', 'patched'):
+        crate = output / variant
+        (crate / 'src').mkdir(parents=True)
+        module = (output / f'ownership-{variant}.rs').read_text() + '\n' + harness.read_text()
+        identity = hashlib.sha256(module.encode()).hexdigest()
+        (crate / 'src/lib.rs').write_text(module + f'\nconst WITNESS_SOURCE_ID: &str = "{identity}";\n')
+        identities[variant] = dict(identity=identity, source_sha256=digest(crate / 'src/lib.rs'))
+        (crate / 'Cargo.toml').write_text('''[package]
+name = "ownership-witness"
+version = "0.0.0"
+edition = "2021"
+[workspace]
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+extendr-ffi = { path = "../extendr-ffi" }
+once_cell = { path = "../once_cell" }
+''')
+    (output / 'source-identities.json').write_text(json.dumps(identities, indent=2))
+    (output / 'check.R').write_text('''args <- commandArgs(TRUE)
+stopifnot(as.character(getRversion()) == "4.3.3")
+dyn.load(args[[1]])
+stopifnot(identical(.Call("ownership_source_identity", as.integer(charToRaw(args[[3]]))), 1L))
+stopifnot(identical(.Call("ownership_witness", as.integer(args[[2]])), as.integer(args[[4]])))
+''')
+    (output / 'inside.py').write_text('''import hashlib, json, os, pathlib, subprocess
+out = pathlib.Path(__file__).parent
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+probe = subprocess.check_output(["/opt/R/bin/Rscript", "--vanilla", "-e", 'stopifnot(as.character(getRversion()) == "4.3.3"); cat(R.home(), R.home("include"), as.character(getRversion()), sep="\\n")'], text=True).splitlines()
+assert len(probe) == 3 and probe[2] == "4.3.3", probe
+assert pathlib.Path(probe[0]).is_dir() and (pathlib.Path(probe[1]) / "Rversion.h").is_file(), probe
+env = dict(os.environ, CARGO_HOME=str(out / "cargo-home"), R_HOME=probe[0], R_INCLUDE_DIR=probe[1])
+preflight = dict(r_home=probe[0], r_include=probe[1], r_version=probe[2], rustc=subprocess.check_output(["rustc", "-vV"], text=True))
+assert "release: 1.95.0\\n" in preflight["rustc"], preflight
+header = (pathlib.Path(probe[1]) / "Rversion.h").read_text()
+defines = {parts[1]: parts[2] for line in header.splitlines() if len(parts := line.split()) >= 3 and parts[0] == '#define'}
+assert defines.get('R_MAJOR') == '"4"' and defines.get('R_MINOR') == '"3.3"', defines
+(out / "preflight.json").write_text(json.dumps(preflight, indent=2))
+identities = json.loads((out / "source-identities.json").read_text())
+libraries = {}
+for variant in ("original", "patched"):
+    source = out / variant / "src/lib.rs"
+    assert digest(source) == identities[variant]["source_sha256"]
+    target = out / "target" / variant
+    assert not target.exists(), target
+    variant_env = dict(env, CARGO_TARGET_DIR=str(target))
+    with (out / (variant + ".build.log")).open("w") as log:
+        subprocess.run(["cargo", "build", "--offline", "--manifest-path", str(out / variant / "Cargo.toml")], env=variant_env, stdout=log, stderr=subprocess.STDOUT, check=True)
+    assert digest(source) == identities[variant]["source_sha256"]
+    library = out / (variant + ".so")
+    library.write_bytes((target / "debug/libownership_witness.so").read_bytes())
+    libraries[variant] = dict(path=str(library), sha256=digest(library), target=str(target), **identities[variant])
+(out / "library-identities.json").write_text(json.dumps(libraries, indent=2))
+assert libraries["original"]["sha256"] != libraries["patched"]["sha256"], libraries
+results = []
+for variant in ("original", "patched"):
+    library = pathlib.Path(libraries[variant]["path"])
+    for case in (0, 1):
+        expected = int(variant != "original" or case == 1)
+        assert digest(library) == libraries[variant]["sha256"]
+        run = subprocess.run(["/opt/R/bin/Rscript", "--vanilla", str(out / "check.R"), str(library), str(case), identities[variant]["identity"], str(expected)], env=env, text=True, capture_output=True)
+        name = variant + (".live" if case else ".inactive")
+        (out / (name + ".stdout")).write_text(run.stdout)
+        (out / (name + ".stderr")).write_text(run.stderr)
+        measurements = [json.loads(line) for line in run.stdout.splitlines() if line.startswith("{")]
+        results.append(dict(variant=variant, case=case, exit=run.returncode, expected_passed=bool(expected), measurements=measurements))
+(out / "results.json").write_text(json.dumps(results, indent=2))
+for item in results:
+    assert item["exit"] == 0 and len(item["measurements"]) == 1, item
+    measured = item["measurements"][0]
+    live = item["case"] == 1
+    assert measured["case"] == ("live" if live else "inactive"), item
+    assert measured["objects"] == (100001 if live else 200001), item
+    assert measured["peak_live"] == (100001 if live else 1), item
+    assert measured["live_at_boundary_end"] == (100001 if live else 0), item
+    assert measured["slot_refcounts_consistent"] is True, item
+    assert measured["passed"] is item["expected_passed"], item
+    assert measured["slots"] == measured["vector_length"], item
+    assert measured["slots"] == (300000 if live or item["variant"] == "original" else 100002), item
+    assert (measured["map_capacity"] > measured["initial_map_capacity"]) == (live or item["variant"] == "original"), item
+''')
+    rust = Path.home() / '.rustup/toolchains/1.95.0-x86_64-unknown-linux-gnu/bin'
+    assert subprocess.check_output(['docker', 'image', 'inspect', IMAGE, '--format', '{{.Id}}'], text=True).strip() == IMAGE
+    command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
+               '--user', f'{os.getuid()}:{os.getgid()}',
+               '--memory', '2g', '--cpus', '1', '-v', f'{output}:{output}',
+               '-v', f'{CACHE}:{CACHE}:ro',
+               '-v', f'{rust.parent}:{rust.parent}:ro', '-e', f'PATH={rust}:/opt/R/bin:/usr/local/bin:/usr/bin:/bin',
+               '-e', 'CARGO_BUILD_JOBS=1', IMAGE, 'python3', str(output / 'inside.py')]
+    receipt = dict(pm_job=os.environ['PM_JOB'], control_revision=subprocess.check_output(
+        ['git', '-C', ROOT, 'rev-parse', 'HEAD'], text=True).strip(), image=IMAGE,
+        upstream_commit='94520a95a1d82c17b361eaf1c2ef04e6cf84a88d',
+        ownership_sha256=OWNER_HASH, command=command, load=Path('/proc/loadavg').read_text())
+    (output / 'launch.json').write_text(json.dumps(receipt, indent=2))
+    with (output / 'job.log').open('w') as log:
+        result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
+    (output / 'exit-code.txt').write_text(str(result.returncode) + '\n')
+    files = {str(path.relative_to(output)): digest(path) for path in output.rglob('*')
+             if path.is_file() and 'target' not in path.relative_to(output).parts
+             and 'cargo-home' not in path.relative_to(output).parts}
+    (output / 'sha256.json').write_text(json.dumps(files, indent=2, sort_keys=True))
+    print((output / 'job.log').read_text())
+    if (output / 'results.json').exists():
+        print((output / 'results.json').read_text())
+    raise SystemExit(result.returncode)
+
+
+if __name__ == '__main__':
+    main()

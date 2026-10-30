@@ -461,8 +461,6 @@ dependencies = [
 [[package]]
 name = "extendr-api"
 version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e002a15028421248374d3beb66d1802ce70d738b666a043a1f4dfffad14bc595"
 dependencies = [
  "extendr-ffi",
  "extendr-macros",

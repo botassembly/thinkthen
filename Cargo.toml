@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/thinkthen-proxy", "crates/thinkthen-sql", "crates/thinkthen", "crates/thinkthen-ffi", "crates/loopback", "sdk/python/native", "sdk/typescript/native", "sdk/r/native"]
-exclude = ["sdk/r/native/vendor/extendr-ffi"]
+exclude = ["sdk/r/native/vendor/extendr-ffi", "sdk/r/native/vendor/extendr-api"]
 resolver = "3"
 
 [workspace.package]
@@ -54,3 +54,4 @@ overflow-checks = true
 
 [patch.crates-io]
 extendr-ffi = { path = "sdk/r/native/vendor/extendr-ffi" }
+extendr-api = { path = "sdk/r/native/vendor/extendr-api" }

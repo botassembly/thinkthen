@@ -26,6 +26,7 @@ import tempfile
 import threading
 import time
 import math
+import uuid
 
 from stress_monitor import Monitor
 from test_control import read_line
@@ -143,6 +144,35 @@ def identifier_bounds(table, count, concurrency, rounds):
     return basis
 
 
+def input_reports(path, run, calls, records, batch, *, required=False):
+    """Only complete engine reports from this invocation explain idle splits."""
+    if path.stat().st_size > calls * 1024:
+        raise RuntimeError('input packing reports exceeded their call bound')
+    reports = [json.loads(line) for line in path.read_text().splitlines()]
+    if not reports:
+        if required:
+            raise RuntimeError('engine omitted required input packing reports')
+        return [], 0
+    if len(reports) != calls:
+        raise RuntimeError('input packing reports lost calls')
+    identities = set()
+    for report in reports:
+        if report.get('run') != run or report.get('complete') is not True:
+            raise RuntimeError('input packing report is stale or incomplete')
+        for key in ('pid', 'call', 'batch', 'records', 'packed_requests', 'idle_flushes', 'idle_added_requests'):
+            if type(report.get(key)) is not int or report[key] < 0:
+                raise RuntimeError(f'invalid input packing report field: {key}')
+        identity = report['pid'], report['call']
+        if identity in identities:
+            raise RuntimeError('input packing report repeated a call')
+        identities.add(identity)
+        if (report['batch'] != batch or report['records'] != records
+                or report['idle_added_requests'] > report['idle_flushes']
+                or report['packed_requests'] != math.ceil(records / batch) + report['idle_added_requests']):
+            raise RuntimeError('input packing report does not explain its request count')
+    return reports, sum(report['idle_added_requests'] for report in reports)
+
+
 def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False):
     report = result if result is not None else {}
     report.update(surface=surface, command=shlex.join(command), backend=wire, scenario=scenario['name'],
@@ -170,6 +200,10 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                 rounds=rounds, cancel=cancel, identifier_base=basis, read_ahead_limit=read_ahead_limit)))
             env = dict(os.environ, THINKTHEN_STRESS_CASE=str(path),
                 THINKTHEN_STRESS_CONTEXT=json.dumps({key: report[key] for key in ('surface', 'backend', 'case')}))
+            packing_path = Path(directory) / 'input-packing.jsonl'
+            packing_path.touch()
+            packing_run = uuid.uuid4().hex
+            env.update(THINKTHEN_INPUT_REPORT=str(packing_path), THINKTHEN_INPUT_REPORT_RUN=packing_run)
             if resources:
                 adopt_daemons()
                 monitor = Monitor(lambda: [os.getpid()], int(fixture.url.split(':')[2].split('/')[0]))
@@ -213,10 +247,17 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                         raise RuntimeError(f'requests continued after cancel: {before_cancel} -> {requests}')
                 else:
                     requests = int(fixture.command('count'))
+                    packing, idle_added = input_reports(packing_path, packing_run,
+                        expected_calls, count, client['batch'], required=surface in {'java', 'kotlin'})
+                    if packing:
+                        report['input_packing'] = packing
+                        report['idle_added_requests'] = idle_added
+                    if idle_added and scenario['name'] != 'healthy':
+                        raise RuntimeError('idle request allowance requires a healthy workload')
                     retries = sum(fault.get('repeat', 1) for fault in scenario.get('faults', [])
                                   if fault['kind'] == 'status' and fault.get('status') in (429, 503))
                     expected_requests = (0 if scenario['name'] == 'refused' else
-                                         math.ceil(count / client['batch']) * expected_calls + retries)
+                                         math.ceil(count / client['batch']) * expected_calls + retries + idle_added)
                     if requests != expected_requests:
                         raise RuntimeError(f'exact backend requests: expected {expected_requests}, got {requests}')
                 report['requests'] = requests

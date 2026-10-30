@@ -166,6 +166,9 @@ impl<'a, F: Function> Packer<'a, F> {
     pub(crate) fn flush(&mut self) -> Option<Chunk<'a, F>> {
         (!self.open.entries.is_empty()).then(|| self.take())
     }
+    pub(crate) fn pending_records(&self) -> usize {
+        self.open.entries.len()
+    }
     pub(crate) fn flush_full(&mut self) -> Option<Chunk<'a, F>> {
         (self.open.entries.len() == self.batch.get()).then(|| self.take())
     }

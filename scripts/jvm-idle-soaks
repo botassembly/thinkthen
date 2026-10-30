@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+"""Run the Java/Kotlin idle-input witnesses with a separately identified engine.
+
+Usage: jvm-idle-soaks ORIGINAL_MANIFEST SHA256 NATIVE_PROVENANCE OUTPUT
+Copy the installed JVM inputs, replace only their Linux native library, prove
+the Java pause cases, then run each of the two canonical witness soaks once.
+The original installed manifest and payloads remain unchanged.
+"""
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import shutil
+import subprocess
+import sys
+import time
+import zipfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def digest(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def main():
+    if len(sys.argv) != 5:
+        sys.exit(__doc__)
+    manifest_path, expected_hash, native_provenance, output = sys.argv[1:]
+    assert digest(manifest_path) == expected_hash, 'original installed manifest changed'
+    manifest = json.loads(Path(manifest_path).read_text())
+    expected_inputs = {item['path']: item['sha256'] for item in manifest['files']}
+    assert digest(manifest['loopback']) == expected_inputs[manifest['loopback']], 'original fixture changed'
+    producer = json.loads(Path(native_provenance).read_text())
+    native = Path(producer['asset'])
+    assert digest(native) == producer['sha256'], 'new engine differs from its producer'
+    out = Path(output)
+    out.mkdir(parents=True, exist_ok=False)
+    jars = out / 'installed'
+    jars.mkdir()
+    inputs = {}
+    commands = {}
+    for surface in ('java', 'kotlin'):
+        command = list(manifest['invocations'][surface]['argv'])
+        classpath = command.index('-cp') + 1
+        original_directory = Path(manifest['invocations'][surface]['cwd'])
+        selected = []
+        for original in command[classpath].split(':'):
+            source = Path(original)
+            assert digest(source) == expected_inputs[str(source)], f'original installed input changed: {source}'
+            destination = jars / source.relative_to(original_directory)
+            if str(source) in inputs:
+                assert inputs[str(source)]['original_sha256'] == digest(source)
+            else:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                if source.name == 'thinkthen-java-0.2.0.jar':
+                    with zipfile.ZipFile(source) as before, zipfile.ZipFile(destination, 'w') as after:
+                        replaced = 0
+                        for entry in before.infolist():
+                            if entry.filename == 'io/thinkthen/native/linux-amd64/libthinkthen_ffi.so':
+                                data = native.read_bytes()
+                                replaced += 1
+                            else:
+                                data = before.read(entry)
+                            after.writestr(entry, data)
+                        assert replaced == 1, 'installed Java JAR lacks its Linux native asset'
+                else:
+                    shutil.copy2(source, destination)
+                inputs[str(source)] = dict(original=str(source), original_sha256=digest(source),
+                    installed=str(destination), installed_sha256=digest(destination))
+            selected.append(str(destination))
+        command[classpath] = ':'.join(selected)
+        home = out / (surface + '-home')
+        home.mkdir()
+        commands[surface] = [part.replace('{home}', str(home)) for part in command]
+    provenance = dict(original_manifest=str(manifest_path), original_manifest_sha256=expected_hash,
+        original_public_revision=manifest['public_revision'], native_producer=producer,
+        controller_revision=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+        pm_job=os.environ.get('PM_JOB'), inputs=inputs, commands=commands, results=[])
+    (out / 'provenance.json').write_text(json.dumps(provenance, indent=2))
+    for name in list(os.environ):
+        if name.startswith(('THINKTHEN_', 'OPENAI_')) or name in ('CLASSPATH', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS'):
+            del os.environ[name]
+    os.environ.update(THINKTHEN_LOOPBACK=manifest['loopback'], PYTHONDONTWRITEBYTECODE='1')
+    proof = [*commands['java'][:-1], str(ROOT / 'sdk/java/consumer/src/main/java/JavaIdleFlushCases.java')]
+    subprocess.run([sys.executable, str(ROOT / 'scripts/java-idle-flush-test'), *proof], check=True)
+    runner = runpy.run_path(str(ROOT / 'scripts/stress-adapters.py'))
+    table = json.loads((ROOT / 'conformance/stress.json').read_text())
+    healthy = next(case for case in table['scenarios'] if case['name'] == 'healthy')
+    failed = False
+    for surface, wire in (('java', 'systemone'), ('kotlin', 'openai')):
+        result = {}
+        started = time.monotonic()
+        try:
+            runner['run'](commands[surface], table, wire, healthy, table['records']['full'],
+                concurrency=1, rounds=table['records']['soak_rounds'], cancel=False,
+                resources=True, result=result, surface=surface, short_gate=False)
+        except Exception as error:
+            result['error'] = str(error)
+            failed = True
+        result['elapsed_seconds'] = time.monotonic() - started
+        path = out / f'{surface}-{wire}.result.json'
+        path.write_text(json.dumps(result, indent=2))
+        provenance['results'].append(dict(file=str(path), sha256=digest(path)))
+        (out / 'provenance.json').write_text(json.dumps(provenance, indent=2))
+        print(json.dumps(dict(surface=surface, wire=wire, rows=result.get('rows'),
+            requests=result.get('requests'), idle_added_requests=result.get('idle_added_requests'),
+            passed=result.get('resources', {}).get('growth', {}).get('passed'), error=result.get('error'))), flush=True)
+        if failed:
+            break
+    assert digest(manifest_path) == expected_hash, 'original installed manifest changed during checks'
+    raise SystemExit(int(failed))
+
+
+if __name__ == '__main__':
+    main()

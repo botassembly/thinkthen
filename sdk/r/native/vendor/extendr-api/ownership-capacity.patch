@@ -1,0 +1,6 @@
+--- a/src/ownership.rs
++++ b/src/ownership.rs
+@@ -109 +109,2 @@
+-        let new_size = self.cur_index * 2 + EXTRA_PRESERVATION_SIZE;
++        let live_count = self.objects.values().filter(|object| object.refcount != 0).count();
++        let new_size = live_count * 2 + EXTRA_PRESERVATION_SIZE;

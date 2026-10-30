@@ -63,6 +63,7 @@ impl Engine {
             let producer = events.clone();
             let url = &url;
             scope.spawn(move || {
+                let mut report = super::input_report::InputReport::new(self.batch.get().get());
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     let mut packer = Packer::new(
                         question,
@@ -76,10 +77,13 @@ impl Engine {
                     // Reserve space before asking the input owner for another batch.
                     permits.recv().map_err(|_| fault())?;
                     let mut place = 0;
-                    let mut send = |chunk| -> Result<(), Error> {
+                    let mut send = |chunk,
+                                    report: &mut super::input_report::InputReport|
+                     -> Result<(), Error> {
                         self.cancel.complete(Ok(()))?;
                         producer.send(Event::Queued).map_err(|_| fault())?;
                         jobs.send((place, chunk)).map_err(|_| fault())?;
+                        report.packed();
                         place += 1;
                         permits.recv().map_err(|_| fault())?;
                         Ok(())
@@ -87,22 +91,29 @@ impl Engine {
                     for record in records {
                         self.cancel.complete(Ok(()))?;
                         let chunk = match record {
-                            RecordEvent::Record(record) => packer.push(record),
-                            RecordEvent::Flush => packer.flush(),
+                            RecordEvent::Record(record) => {
+                                report.record();
+                                packer.push(record)
+                            }
+                            RecordEvent::Flush => {
+                                report.idle(packer.pending_records());
+                                packer.flush()
+                            }
                         };
                         if let Some(chunk) = chunk {
-                            send(chunk)?;
+                            send(chunk, &mut report)?;
                         }
                         if let Some(chunk) = packer.flush_full() {
-                            send(chunk)?;
+                            send(chunk, &mut report)?;
                         }
                     }
                     if let Some(chunk) = packer.finish() {
-                        send(chunk)?;
+                        send(chunk, &mut report)?;
                     }
                     Ok(())
                 }))
                 .unwrap_or_else(|_| Err(fault()));
+                report.finish(result.is_ok());
                 let _ = producer.send(Event::Producer(result));
             });
             drop(events);
