@@ -63,6 +63,40 @@ def memory_floors():
     assert growth(samples, short_gate=True)['verdict'] == 'unverifiable'
 
 
+def extended_window():
+    """Feature: an explicit memory window uses its endpoints and record floor.
+
+    Numeric boundary tables avoid allocator noise; these are not real soak rounds.
+    """
+    from stress_resources import METRICS, growth
+    counts = [100000] * 60
+    for delta, passed in ((1899999, True), (1900000, False)):
+        samples = [dict.fromkeys(METRICS, 0) for _ in counts]
+        # One final step deliberately lacks four strictly rising window maxima.
+        samples[-1]['memory_bytes'] = delta
+        report = growth(samples, counts, memory_window=(41, 60))
+        memory = report['metrics']['memory_bytes']
+        assert report['passed'] is passed, report
+        assert memory['measurement_start_round'] == 41 and memory['measurement_end_round'] == 60
+        assert memory['verified_records_between_checkpoints'] == 1900000, memory
+        assert memory['late_half_growth_bytes'] == delta, memory
+        assert memory['bytes_per_verified_record'] == delta / 1900000, memory
+        assert growth(samples, counts)['passed'], 'default four-window criterion changed'
+    for index, row in enumerate(samples):
+        row['memory_bytes'] = min(index, 40) * 1000000
+    assert growth(samples, counts, memory_window=(41, 60))['passed']
+    for row in samples[30:]:
+        row['descriptors'] = 1
+    assert not growth(samples, counts, memory_window=(41, 60))['metrics']['descriptors']['passed']
+    for window in ((0, 60), (60, 60), (41, 61), (True, 60)):
+        try:
+            growth(samples, counts, memory_window=window)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'invalid explicit window accepted: {window}')
+
+
 def fixture(mode):
     os.environ['THINKTHEN_STRESS_CONTEXT'] = json.dumps({} if mode == 'missing-counts' else dict(verified_records=32768 if mode == 'below-floor' else 8192))
     if mode == 'invalid-counts':
@@ -229,6 +263,7 @@ if __name__ == '__main__':
         fixture(sys.argv[2])
     else:
         memory_floors()
+        extended_window()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)
         zombie_report = json.loads(zombie_run.stdout.splitlines()[-1])
@@ -304,7 +339,11 @@ if __name__ == '__main__':
         dead = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'fixture', 'healthy'],
             env=dict(os.environ, THINKTHEN_STRESS_REQUIRED_PID='1'), capture_output=True, text=True)
-        assert dead.returncode != 0 and 'required live workload PID 1 was not sampled' in dead.stderr, dead.stderr
+        assert dead.returncode != 0, dead.stderr
+        dead_report = json.loads(dead.stdout.splitlines()[-1])
+        assert 'required live workload PID 1 was not sampled' in dead_report['monitor_error'], dead_report
+        assert dead_report['growth']['verdict'] == 'unverifiable', dead_report
+        assert dead_report['groups'] == {}, dead_report
         inadequate = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '7', '--', sys.executable, '-c', 'raise SystemExit(88)'],
             capture_output=True, text=True)

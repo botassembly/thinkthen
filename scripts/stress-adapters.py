@@ -30,7 +30,7 @@ import uuid
 
 from stress_monitor import Monitor
 from test_control import read_line
-from stress_resources import adopt_daemons
+from stress_resources import adopt_daemons, memory_bounds
 
 
 class Fixture:
@@ -173,11 +173,16 @@ def input_reports(path, run, calls, records, batch, *, required=False):
     return reports, sum(report['idle_added_requests'] for report in reports)
 
 
-def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False):
+def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=False, resources=False, result=None, *, surface, short_gate=False, memory_window=None, evidence_path=None):
+    if memory_window is not None and (not resources or short_gate or evidence_path is None):
+        raise ValueError('explicit memory windows require full resource accounting and durable evidence')
     report = result if result is not None else {}
     report.update(surface=surface, command=shlex.join(command), backend=wire, scenario=scenario['name'],
         case=f"{scenario['name']}/concurrency={concurrency}/rounds={rounds}/cancel={cancel}",
         concurrency=concurrency, rounds=rounds, cancelled=cancel, records=count)
+    if memory_window is not None:
+        start, end = memory_bounds(rounds, memory_window, short_gate=short_gate)
+        report['memory_window'] = dict(start_round=start, end_round=end)
     read_ahead_limit = None
     limits = json.loads(subprocess.check_output([os.environ['THINKTHEN_LOOPBACK'], '--limits'], text=True, timeout=30)) if cancel else None
     if cancel and surface in {'python', 'typescript', 'ruby'}:
@@ -189,7 +194,11 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
     fixture = Fixture(['--held', 'body'] if cancel else ['--stress', scenario['name']])
     process = None
     monitor = None
+    evidence = None
     try:
+        if evidence_path is not None:
+            evidence = Path(evidence_path).open('x')
+            report['evidence_file'] = str(evidence_path)
         with tempfile.TemporaryDirectory(prefix='thinkthen-stress-') as directory:
             path = Path(directory) / 'case.json'
             client = dict(table['client'], backend=wire, url=fixture.url, api_key='loopback-only')
@@ -200,13 +209,16 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                 rounds=rounds, cancel=cancel, identifier_base=basis, read_ahead_limit=read_ahead_limit)))
             env = dict(os.environ, THINKTHEN_STRESS_CASE=str(path),
                 THINKTHEN_STRESS_CONTEXT=json.dumps({key: report[key] for key in ('surface', 'backend', 'case')}))
-            packing_path = Path(directory) / 'input-packing.jsonl'
-            packing_path.touch()
+            packing_path = (Path(str(evidence_path) + '.input-packing.jsonl') if evidence_path is not None
+                            else Path(directory) / 'input-packing.jsonl')
+            packing_path.touch(exist_ok=False)
+            if evidence_path is not None:
+                report['input_packing_file'] = str(packing_path)
             packing_run = uuid.uuid4().hex
             env.update(THINKTHEN_INPUT_REPORT=str(packing_path), THINKTHEN_INPUT_REPORT_RUN=packing_run)
             if resources:
                 adopt_daemons()
-                monitor = Monitor(lambda: [os.getpid()], int(fixture.url.split(':')[2].split('/')[0]))
+                monitor = Monitor(lambda: [os.getpid()], int(fixture.url.split(':')[2].split('/')[0]), evidence)
                 env.update(THINKTHEN_STRESS_CHECKPOINT=monitor.path, THINKTHEN_STRESS_CONCURRENCY=str(concurrency),
                     THINKTHEN_STRESS_CHECKPOINT_COMMAND='exec ' + shlex.join([sys.executable, str(Path(__file__).with_name('stress-checkpoint'))]))
             process = subprocess.Popen(command, env=env, stdin=subprocess.PIPE,
@@ -276,7 +288,7 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                     report['resources'] = monitor.finish(rounds,
                         verified_records={'workload': [report['rows'] // rounds] * rounds},
                         expected_context={key: report[key] for key in ('surface', 'backend', 'case')},
-                        short_gate=short_gate)
+                        short_gate=short_gate, memory_window=memory_window)
                     monitor = None
                     if not report['resources']['growth']['passed']:
                         raise RuntimeError('resource use is unverifiable' if
@@ -291,9 +303,13 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
     finally:
         if process is not None:
             stop_adapter(process)
-        if monitor is not None:
-            report['resources'] = monitor.finish()
-        fixture.close()
+        try:
+            if monitor is not None:
+                report['resources'] = monitor.finish()
+        finally:
+            if evidence is not None:
+                evidence.close()
+            fixture.close()
 
 
 def surface_label(value):

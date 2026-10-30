@@ -185,6 +185,41 @@ print(json.dumps(dict(calls=calls,rows=rows,failed=rows if case['scenario']['sta
         assert 'floor_bytes_per_verified_record' not in memory, memory
     finally:
         sys.path.pop(0)
+    # Feature: request and partial-child failures retain acknowledged round evidence.
+    sys.path.insert(0, str(root / 'scripts'))
+    try:
+        runner = runpy.run_path(str(root / 'scripts/stress-adapters.py'))
+        for partial in (False, True):
+            evidence = root / ('partial.jsonl' if partial else 'requests.jsonl')
+            live_adapter = adapter.read_text()
+            adapter.write_text(live_adapter.replace('for _ in range(case[\'rounds\']):',
+                "for round_index in range(case['rounds']):\n        if round_index == 3 and os.environ.get('PARTIAL_EXIT'): sys.exit(23)").replace(
+                "shell=True,check=True)",
+                "shell=True,check=True)\n        logged=[json.loads(line) for line in Path(os.environ['EVIDENCE_PATH']).read_text().splitlines()]\n        assert len([row for row in logged if row.get('completed_round')]) == round_index+1"))
+            result = {}
+            try:
+                with patch.dict(os.environ, dict(env, REPORTED_IDLE_SPLIT='1',
+                        BAD_REQUEST_COUNT='1', PARTIAL_EXIT='1' if partial else '', EVIDENCE_PATH=str(evidence))):
+                    runner['run'](long_command, table, 'systemone', table['scenarios'][0],
+                        2, rounds=8, resources=True, result=result, surface='java',
+                        memory_window=(5, 8), evidence_path=evidence)
+            except RuntimeError as error:
+                assert ('adapter failed (23)' if partial else 'exact backend requests') in str(error), error
+            else:
+                raise AssertionError('failing adapter was accepted')
+            expected = 3 if partial else 8
+            group = result['resources']['groups']['workload']
+            assert len(group['round_samples']) == expected, result
+            assert len(group['process_samples']) == len(group['context']) == expected, result
+            logs = [json.loads(line) for line in evidence.read_text().splitlines()]
+            rounds = [row for row in logs if row.get('completed_round')]
+            assert [row['completed_round'] for row in rounds] == list(range(1, expected + 1)), rounds
+            assert all(row['process_samples'] and row['required_live_pid'] and row['context'] for row in rounds)
+            packing = [json.loads(line) for line in Path(result['input_packing_file']).read_text().splitlines()]
+            assert len(packing) == 8 and all(row['idle_added_requests'] == 1 for row in packing), packing
+            adapter.write_text(live_adapter)
+    finally:
+        sys.path.pop(0)
     # Feature: checkpoints from a different case cannot borrow verified totals.
     matching_adapter = adapter.read_text()
     adapter.write_text(matching_adapter.replace('        subprocess.run(',

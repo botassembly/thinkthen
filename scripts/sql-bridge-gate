@@ -15,4 +15,8 @@ cp crates/thinkthen-ffi/include/thinkthen.h crates/thinkthen-ffi/include/thinkth
 cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread -I "$scratch/include" \
   crates/thinkthen-ffi/tests/sql-consumer.c "$THINKTHEN_NATIVE_LIBRARY" \
   -Wl,-rpath,"$library_directory" -o "$scratch/consumer"
+if [ "$(uname -s)" = Darwin ]; then
+    engine_id=$(otool -D "$THINKTHEN_NATIVE_LIBRARY" | tail -n 1)
+    install_name_tool -change "$engine_id" "$THINKTHEN_NATIVE_LIBRARY" "$scratch/consumer"
+fi
 python3 databases/duckdb/tests/bridge.py "$scratch/consumer" "$THINKTHEN_LOOPBACK"

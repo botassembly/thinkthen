@@ -6,6 +6,7 @@ from pathlib import Path
 METRICS = ('memory_bytes', 'descriptors', 'backend_connections', 'threads', 'processes')
 CRITERION = 'retained-round-growth-per-record-floor'
 SHORT_GATE_CRITERION = 'retained-round-growth-short-gate-report'
+EXTENDED_CRITERION = 'retained-round-explicit-memory-window-per-record-floor'
 MEMORY_BYTES_PER_RECORD_FLOOR = 1
 MEMORY_WINDOWS = 4
 MIN_ROUNDS = 2 * MEMORY_WINDOWS
@@ -150,7 +151,15 @@ def sample(roots, backend_port=None, exclude=(), required_pid=None, details=None
     return result
 
 
-def growth(samples, verified_records=None, *, short_gate=False):
+def memory_bounds(rounds, memory_window=None, *, short_gate=False):
+    start, end = (rounds // 2 + 1, rounds) if memory_window is None else memory_window
+    if (type(start) is not int or type(end) is not int or not 1 <= start < end <= rounds
+            or (memory_window is not None and (short_gate or end - start + 1 < MEMORY_WINDOWS))):
+        raise ValueError('memory window requires valid completed-round endpoints and full accounting')
+    return start, end
+
+
+def growth(samples, verified_records=None, *, short_gate=False, memory_window=None):
     """Compare retained resources after equal completed workload rounds.
 
     The first half is warmup. RSS fails only when the maxima of four ordered,
@@ -161,6 +170,10 @@ def growth(samples, verified_records=None, *, short_gate=False):
     step can pass. Other resources still fail when their later-half minimum
     exceeds their warmup maximum, including a one-time retained resource leak.
 
+    An explicit inclusive memory_window instead compares its endpoints against
+    the record floor without requiring four rising maxima. Other resource
+    checks retain their original half-run split.
+
     No process-exit sample participates. Finite RSS windows can miss growth
     hidden by allocator/page noise, growth outside the measured window, and
     reachable leaks. Passing does not prove the absence of leaks.
@@ -170,7 +183,8 @@ def growth(samples, verified_records=None, *, short_gate=False):
     if any(value[key] is None for value in samples for key in METRICS):
         raise ValueError('growth verdict requires complete resource samples and a backend port')
     split = len(samples) // 2
-    later = samples[split:]
+    start, end = memory_bounds(len(samples), memory_window, short_gate=short_gate)
+    later = samples[start - 1:end]
     checks = {}
     for key in METRICS:
         warm_max = max(value[key] for value in samples[:split])
@@ -181,6 +195,10 @@ def growth(samples, verified_records=None, *, short_gate=False):
                   later[len(later) * index // MEMORY_WINDOWS:len(later) * (index + 1) // MEMORY_WINDOWS])
               for index in range(MEMORY_WINDOWS)]
     memory = checks['memory_bytes']
+    if memory_window is not None:
+        memory.update(measurement_start_round=start, measurement_end_round=end,
+                      warmup_max=max(row['memory_bytes'] for row in samples[:start - 1]) if start > 1 else None,
+                      retained_min=min(row['memory_bytes'] for row in later))
     memory.update(**(dict(report_only=True) if short_gate else
                      dict(floor_bytes_per_verified_record=MEMORY_BYTES_PER_RECORD_FLOOR)))
     memory.update(late_window_maxima=maxima,
@@ -190,15 +208,16 @@ def growth(samples, verified_records=None, *, short_gate=False):
     if counts_valid:
         # The first late checkpoint is the baseline, so its completed records
         # precede the measured interval and must not dilute its growth.
-        records = sum(verified_records[split + 1:])
+        records = sum(verified_records[start:end])
         floor = records * MEMORY_BYTES_PER_RECORD_FLOOR
         memory.update(verified_records_between_checkpoints=records,
                       bytes_per_verified_record=memory['late_half_growth_bytes'] / records,
-                      passed=short_gate or not (all(before < after for before, after in zip(maxima, maxima[1:]))
-                                  and memory['late_half_growth_bytes'] >= floor))
+                      passed=short_gate or not ((memory_window is not None or
+                          all(before < after for before, after in zip(maxima, maxima[1:])))
+                          and memory['late_half_growth_bytes'] >= floor))
     else:
         memory.update(passed=False, verdict='unverifiable', reason='missing or invalid verified record counts')
-    return dict(criterion=SHORT_GATE_CRITERION if short_gate else CRITERION,
+    return dict(criterion=EXTENDED_CRITERION if memory_window is not None else SHORT_GATE_CRITERION if short_gate else CRITERION,
                 passed=all(c['passed'] for c in checks.values()),
                 warmup_rounds=split, measured_rounds=len(samples) - split, metrics=checks,
                 **({} if counts_valid else dict(verdict='unverifiable')))

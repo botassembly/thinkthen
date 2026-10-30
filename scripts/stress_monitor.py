@@ -7,7 +7,7 @@ import tempfile
 import threading
 import time
 
-from stress_resources import AccessLost, CRITERION, SHORT_GATE_CRITERION, growth, sample
+from stress_resources import AccessLost, CRITERION, SHORT_GATE_CRITERION, EXTENDED_CRITERION, growth, sample
 
 
 class Monitor:
@@ -90,7 +90,9 @@ class Monitor:
         if self.output:
             self.output.write(json.dumps(dict(elapsed_seconds=time.monotonic() - self.started,
                 completed_round=len(self.groups[group]) if checkpoint else None,
-                group=group if checkpoint else None, **values)) + '\n')
+                group=group if checkpoint else None,
+                **(dict(process_samples=details, required_live_pid=required_pid, context=context) if checkpoint else {}),
+                **values)) + '\n')
             self.output.flush()
 
     def collect(self):
@@ -128,20 +130,26 @@ class Monitor:
         finally:
             self.server.close()
 
-    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None, *, short_gate=False):
-        criterion = SHORT_GATE_CRITERION if short_gate else CRITERION
+    def finish(self, expected_rounds=None, expected_groups=None, verified_records=None, expected_context=None, *, short_gate=False, memory_window=None):
+        criterion = EXTENDED_CRITERION if memory_window is not None else SHORT_GATE_CRITERION if short_gate else CRITERION
         self.stop.set()
         self.thread.join()
         self.server.close()
         self.scratch.cleanup()
-        if self.error:
-            raise self.error
         if self.pending_failures:
             failures = self.observation_failures.setdefault(self.group, [])
             failures.extend(value for value in self.pending_failures if value not in failures)
         report = dict(samples=self.count, first=self.first, last=self.last, peak=self.peak,
                       memory_measure='sum of owned process RSS bytes', backend_port=self.backend_port,
-                      process_events=self.process_events)
+                      process_events=self.process_events,
+                      groups={group: dict(round_samples=rounds,
+                          process_samples=self.process_samples[group], context=self.contexts[group],
+                          required_live_pids=self.required_pids[group], concurrency=self.concurrencies.get(group))
+                          for group, rounds in self.groups.items()})
+        if self.error:
+            report.update(monitor_error=str(self.error),
+                          growth=dict(criterion=criterion, passed=False, verdict='unverifiable'))
+            return report
         if expected_rounds is not None:
             if not self.groups and not self.observation_failures:
                 raise ValueError('no completed-round samples were received')
@@ -187,7 +195,7 @@ class Monitor:
                     peak={key: max(row[key] for row in rounds) for key in rounds[0]},
                     peak_scope='completed-round samples', backend_port=self.ports.get(group, self.backend_port),
                     process_samples=self.process_samples[group], context=self.contexts[group],
-                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts, short_gate=short_gate))
+                    concurrency=self.concurrencies.get(group), required_live_pids=self.required_pids[group], round_samples=rounds, growth=growth(rounds, counts, short_gate=short_gate, memory_window=memory_window))
             report.update(groups=reports)
             if self.rounds:
                 report.update(first=self.rounds[0], last=self.rounds[-1])
