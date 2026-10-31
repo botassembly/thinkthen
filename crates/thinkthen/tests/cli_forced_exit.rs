@@ -68,6 +68,15 @@ fn forced_cleanup(signal: &str) {
     });
     drop(output);
     let live: Vec<_> = children.iter().filter(|pid| alive(pid)).collect();
+    let evidence = if live.is_empty() {
+        String::new()
+    } else {
+        let evidence = Command::new("ps")
+            .args(["-o", "pid,ppid,pgid,stat,comm", "-p", &children.join(",")])
+            .output()
+            .unwrap();
+        String::from_utf8(evidence.stdout).unwrap()
+    };
     // Clean up the red case before reporting its failure.
     for pid in &live {
         let _ = Command::new("kill").args(["-KILL", pid]).status();
@@ -126,7 +135,7 @@ fn forced_cleanup(signal: &str) {
     assert_eq!(
         (live, lock.exists(), fs::read_dir(&scratch).unwrap().count()),
         (Vec::<&String>::new(), false, 0),
-        "owned processes, source lock, or spooled input survived forced exit"
+        "owned processes, source lock, or spooled input survived forced exit; process states:\n{evidence}"
     );
     assert_eq!(fs::read_to_string(unrelated).unwrap(), "evidence\nkeep\n");
     assert_eq!(
@@ -157,10 +166,17 @@ fn interrupt(pid: u32, signal: &str) {
 }
 
 fn alive(pid: &str) -> bool {
-    Command::new("kill")
-        .args(["-0", pid])
-        .stderr(Stdio::null())
-        .status()
-        .unwrap()
-        .success()
+    // A container without an init can retain terminated grandchildren as
+    // zombies. kill -0 also succeeds for those, although they cannot run.
+    let state = Command::new("ps")
+        .args(["-o", "stat=", "-p", pid])
+        .output()
+        .unwrap();
+    assert!(state.status.success() || state.status.code() == Some(1));
+    let state = String::from_utf8(state.stdout).unwrap();
+    state
+        .trim()
+        .chars()
+        .next()
+        .is_some_and(|state| !matches!(state, 'Z' | 'X'))
 }

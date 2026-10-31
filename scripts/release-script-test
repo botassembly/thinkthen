@@ -81,7 +81,7 @@ class ReleaseScripts(unittest.TestCase):
         class GoFinished(BaseException):
             pass
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-go-schema-') as temporary:
-            scratch = Path(temporary)
+            scratch = Path(temporary).resolve()
             delivered = scratch / 'candidate'
             release_windows.check_tools(delivered)
             checks = delivered / 'checks'

@@ -48,7 +48,7 @@ class DownloadCache(unittest.TestCase):
         self.directory.cleanup()
 
     def test_windows_r_prepare_refreshes_same_name_and_reuses_verified_bytes(self):
-        names = [name for name in release_windows_r.pins() if name.endswith('.zip')]
+        names = list(release_windows_r.pins())
         selected = {}
         for name in names:
             body = ('dated snapshot ' + name).encode()

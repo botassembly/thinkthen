@@ -30,7 +30,7 @@ WINDOWS = TOOLS / 'windows'
 REVIEWED_SDK = '10.0.26100'
 REVIEWED_CRT = '14.44.17.14'
 INPUTS = {
-    'R-4.6.1-win.exe': ('https://cloud.r-project.org/bin/windows/base/R-4.6.1-win.exe', 'c5424c40cd70ef85765a55d2ff96bb602b5f30ed536938ff004f14db5db3c2df'),
+    'R-4.6.1-win.exe': ('https://cloud.r-project.org/bin/windows/base/old/4.6.1/R-4.6.1-win.exe', 'c5424c40cd70ef85765a55d2ff96bb602b5f30ed536938ff004f14db5db3c2df'),
     # Freeze Windows binaries to one dated Posit CRAN snapshot.
     # https://docs.posit.co/rspm/admin/serving-binaries.html
     'jsonlite_2.0.0.zip': ('https://packagemanager.posit.co/cran/2026-10-28/bin/windows/contrib/4.6/jsonlite_2.0.0.zip', 'f951bdef28176d3b8602c60533e4dcf837dc7498d9ca327108c29dca361e539d'),
