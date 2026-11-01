@@ -1,8 +1,39 @@
 #!/usr/bin/env python3
 """Check the limits and upgrade notes delivered in the release note."""
-from release_install import release_note
+import os
+from pathlib import Path
+import tempfile
+from unittest.mock import patch
 
-note = release_note('0.2.0', {})
+from release_workflow import collect
+
+ROOT = Path(__file__).resolve().parent.parent
+with tempfile.TemporaryDirectory(prefix='thinkthen-release-documentation-') as temporary:
+    source = Path(temporary)
+    destination = source / 'release'
+    # The release-body generator needs no native artifacts for these text contracts.
+    with patch.dict(os.environ, THINKTHEN_RELEASE_REUSE=''):
+        collect(source, destination, '0' * 40, [])
+    note = (destination / 'INSTALL.md').read_text()
+install = note.split('## Install', 1)[1].split('## For 0.1 users', 1)[0]
+readme = (ROOT / 'README.md').read_text()
+for command, source in (
+        ('curl -fsSL https://thinkthen.dev/install.sh | sh', 'install.sh'),
+        ('irm https://thinkthen.dev/install.ps1 | iex', 'install.ps1')):
+    assert command in (ROOT / source).read_text(), source
+    assert command in install, command
+    assert command in readme, command
+for text in (install, readme):
+    assert 'brew install botassembly/thinkthen/thinkthen' in text
+    assert 'botassembly/homebrew-thinkthen' not in text
+for name in ('PyPI', 'npm', 'RubyGems', 'NuGet', 'Maven Central', 'r-universe',
+             'github.com/botassembly/thinkthen/sdk/go/thinkthen', 'Swift Package Manager'):
+    assert name in install, name
+    assert name in readme, name
+postgres = 'Linux x86-64 and arm64 servers running PostgreSQL 18 with glibc 2.28 or later'
+for text in (install, (ROOT / 'docs/surfaces/postgresql.md').read_text(),
+             (ROOT / 'extensions/postgres/README.md').read_text()):
+    assert postgres in text, postgres
 for surface in ('Ruby memory', 'C# memory', 'SQLite memory', 'PostgreSQL memory',
                 'SQLite joins', 'DuckDB loading', 'Unsigned macOS', 'Unsigned Windows',
                 'Database cancellation'):
@@ -15,13 +46,23 @@ for surface, rates in (
         ('SQLite memory', ('0.0366484211', '0.1358147368')),
         ('PostgreSQL memory and descriptors',
          ('0.012934736842105263', '0.023713684210526315'))):
-    row = next(line for line in limits.splitlines() if line.startswith('| ' + surface + ' |'))
+    row = next(line for line in limits.splitlines()
+               if line.startswith(f'| {surface} (System One and OpenAI client paths, local stub) |'))
     for fact in (*rates, 'System One', 'OpenAI', 'Linux x86_64',
                  '41 to 60', 'bytes per verified record', 'PASS'):
         assert fact in row, (surface, fact)
     assert 'remain FAIL' not in row, surface
 assert '1,900,000 subsequent verified records' in limits
-assert 'Earlier short-run memory failures and the PostgreSQL System One descriptor failure remain historical failures.' in limits
+for surface, backend, rate in (('TypeScript', 'OpenAI', '0.3578610526'),
+                               ('Java', 'OpenAI', '0.4764294737'),
+                               ('R', 'System One', '0.5346357895')):
+    row = next(line for line in limits.splitlines()
+               if line.startswith(f'| {surface} memory ({backend} client path, local stub) |'))
+    assert rate in row, surface
+assert 'Earlier short-run memory failures' not in limits
+assert 'attributed' not in limits
+assert 'Eight PASS observations cover Ruby, C#, SQLite and PostgreSQL on both the System One and OpenAI client paths.' in limits
+assert 'Three separate retention observations cover TypeScript and Java on the OpenAI client path and R on the System One client path.' in limits
 assert 'Seven new installed-package observations' in limits
 assert 'one saved historical PostgreSQL/OpenAI observation' in limits
 assert 'not a qualification of the new release' in limits

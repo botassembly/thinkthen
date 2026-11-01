@@ -14,7 +14,7 @@ jobs:
   native-gate-inputs:
     runs-on: ubuntu-24.04
     outputs:
-      floor_image: ${{ steps.native.outputs.floor_image }}
+      floor_image: ${{ steps.floor.outputs.floor_image }}
     timeout-minutes: 180
     permissions: {contents: read}
     env:
@@ -42,19 +42,24 @@ jobs:
             ~/.local/share/thinkthen-build-tools
           key: release-tools-linux-x86_64-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'crates/**', 'rust-toolchain.toml', 'scripts/native*', 'scripts/*prepare*', 'scripts/floors/**', 'scripts/release-tools.json', 'scripts/runtime-floors.json', 'sdk/**/pom.xml', 'sdk/**/package-lock.json', 'sdk/**/pyproject.toml', 'sdk/r/DESCRIPTION') }}
           restore-keys: release-tools-linux-x86_64-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-
-      - name: Prepare Linux gate native inputs
+      - name: Publish the verified Linux floor image
         if: always()
-        id: native
+        id: floor
         env:
           RELEASE_TARGET: linux-x86_64
         run: |
           scripts/release-workflow prepare "$RELEASE_TARGET"
           . scripts/native-tools-env
-          THINKTHEN_FLOOR_IMAGE=$(docker image inspect thinkthen-floor-build:glibc2.28 --format '{{.Id}}')
+          THINKTHEN_FLOOR_IMAGE=$(python3 scripts/release_images.py floor)
           export THINKTHEN_FLOOR_IMAGE
-          native=$(scripts/native-prepare)
           echo "floor_image=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_OUTPUT"
           echo "THINKTHEN_FLOOR_IMAGE=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_ENV"
+      - name: Prepare Linux gate native inputs
+        if: always() && steps.floor.outcome == 'success'
+        id: native
+        run: |
+          . scripts/native-tools-env
+          native=$(scripts/native-prepare)
           test ! -L gate-assets
           mkdir -p gate-assets
           test -O gate-assets

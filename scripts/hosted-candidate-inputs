@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Compare canonical native metadata with an existing producer without building."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import sys
+
+if len(sys.argv) != 5:
+    sys.exit('usage: hosted-candidate-inputs CARGO_HOME TARGET FLOOR_IMAGE RECEIPT')
+cargo, target, floor, recorded = sys.argv[1:]
+os.environ.update(CARGO_HOME=cargo, CARGO_TARGET_DIR=target, THINKTHEN_FLOOR_IMAGE=floor)
+receipt = json.loads(Path(recorded).read_text())
+config = hashlib.sha256((Path(cargo) / 'config.toml').read_bytes()).hexdigest()
+if config != receipt['config_sha256'] or floor != receipt['floor_image']:
+    sys.exit('native compiler configuration differs from the producer')
+root = Path(__file__).resolve().parents[1]
+key = runpy.run_path(str(root / 'scripts/native-prepare'))['cache_path']().name
+if key != receipt['native_key']:
+    sys.exit('canonical native inputs differ from the producer: ' + key)
+print(json.dumps(dict(native_key=key, config_sha256=config, floor_image=floor,
+    producer_revision=receipt['source_revision'], native_inputs_equal=True), sort_keys=True))

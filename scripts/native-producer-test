@@ -4,7 +4,6 @@
 Compiler and metadata boundaries are controlled. No native library is compiled.
 """
 import hashlib
-import io
 import json
 import os
 from pathlib import Path
@@ -124,18 +123,15 @@ class Producer(unittest.TestCase):
 
     def test_floor_prevents_python_bytecode_before_the_child_imports_source(self):
         commands = []
-        class Docker:
-            def __init__(self, command, **options):
-                commands.append(command)
-                self.stdout = io.BytesIO()
-            def __enter__(self): return self
-            def __exit__(self, *args): pass
-            def wait(self): return 0
+        popen = subprocess.Popen
+        def docker(command, **options):
+            commands.append(command)
+            return popen([sys.executable, '-c', 'pass'], **options)
         with tempfile.TemporaryDirectory(prefix='floor-python-policy-') as temporary:
             home = Path(temporary)
             env = dict(THINKTHEN_FLOOR_IMAGE=IMAGE, CARGO_HOME=str(home / 'cargo'),
                        CARGO_TARGET_DIR=str(home / 'target'), PYTHONDONTWRITEBYTECODE='1')
-            with patch.dict(os.environ, env, clear=True), patch.object(Path, 'home', return_value=home), patch.object(sys, 'platform', 'linux'), patch.object(sys, 'argv', ['runtime-floor-build', 'git', 'status', '--porcelain']), patch('subprocess.check_output', return_value=str(ROOT / '.git')), patch('subprocess.Popen', Docker):
+            with patch.dict(os.environ, env, clear=True), patch.object(Path, 'home', return_value=home), patch.object(sys, 'platform', 'linux'), patch.object(sys, 'argv', ['runtime-floor-build', 'git', 'status', '--porcelain']), patch('subprocess.check_output', return_value=str(ROOT / '.git')), patch('subprocess.Popen', docker):
                 runpy.run_path(str(ROOT / 'scripts/runtime-floor-build'))
             self.assertEqual(len(commands), 1)
             settings = [commands[0][index + 1] for index, value in enumerate(commands[0][:-1]) if value == '-e']

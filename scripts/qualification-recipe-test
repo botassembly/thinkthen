@@ -137,6 +137,48 @@ class QualificationRecipes(unittest.TestCase):
                     self.assertEqual(Path(environment['THINKTHEN_CASES']).parent / 'schemas/row.schema.json', ROOT / 'schemas/row.schema.json')
                     self.assertEqual(Path(environment['THINKTHEN_STUB_CASES']), ROOT / 'construction/stub.json')
 
+    def test_loader_failures_keep_canonical_identity_through_a_temporary_alias(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            physical = (root / 'installed').resolve()
+            physical.mkdir()
+            alias = root / 'temporary'
+            alias.symlink_to(physical, target_is_directory=True)
+            engine = physical / 'engine.so'
+            original = b'controlled installed engine'
+            engine.write_bytes(original)
+            witness = root / 'failures'
+            probe = root / 'probe.py'
+            probe.write_text('import ctypes,pathlib,sys\n'
+                'engine=pathlib.Path(sys.argv[1])\n'
+                'failure="broken" if engine.exists() else "missing"\n'
+                'if engine.exists(): assert engine.read_bytes()==b"not a shared library\\n"\n'
+                'with pathlib.Path(sys.argv[2]).open("a") as stream: stream.write(failure+"\\n")\n'
+                'try: ctypes.CDLL(sys.argv[3])\n'
+                'except OSError as error: print("cannot load native engine:", error); sys.exit(23)\n'
+                'sys.exit(0)\n')
+            for attempted, reported, accepted in (
+                    (None, str(engine), True),
+                    (None, str(root / 'unrelated/engine.so'), False),
+                    (str(engine), str(engine), True),
+                    ('@loader_path/engine.so', str(engine), False)):
+                with self.subTest(attempted=attempted, reported=reported):
+                    witness.unlink(missing_ok=True)
+                    command = [sys.executable, str(ROOT / 'scripts/loader-failure-check'),
+                               str(alias / engine.name)]
+                    if attempted is not None:
+                        command += ['--attempted', attempted]
+                    result = subprocess.run([*command, '--', sys.executable, str(probe),
+                        str(engine), str(witness), reported], capture_output=True, text=True,
+                        env=dict(os.environ, TMPDIR=str(alias)))
+                    self.assertEqual(result.returncode == 0, accepted, result.stderr)
+                    self.assertEqual(witness.read_text().splitlines(),
+                                     ['missing', 'broken'] if accepted else ['missing'])
+                    self.assertEqual(engine.read_bytes(), original)
+                    self.assertFalse(engine.with_name(engine.name + '.load-check-original').exists())
+                    if not accepted:
+                        self.assertIn('attempted path absent', result.stderr)
+
     def test_noexec_go_consumer_receives_staged_schema(self):
         with tempfile.TemporaryDirectory() as directory:
             scratch = Path(directory)

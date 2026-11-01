@@ -152,9 +152,19 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
             (package / 'INSTALL.md').unlink()
             next(root.glob('*.tar.gz')).unlink()
             with patch.object(release_workflow, 'output', return_value=sha), patch.object(release_workflow, 'prepared', side_effect=failed):
-                with self.assertRaises((ValueError, FileNotFoundError)):
+                with self.assertRaises(subprocess.CalledProcessError) as caught:
                     release_workflow.build('windows-x86_64', root, sha)
+            self.assertIs(caught.exception, failed)
             self.assertFalse(list(root.glob('*.tar.gz')))
+            for metadata in ('{}', '[]', '{broken', '{"platform":"windows-x86_64"}'):
+                with self.subTest(metadata=metadata):
+                    (package / 'build.json').write_text(metadata)
+                    with patch.object(release_workflow, 'output', return_value=sha), patch.object(release_workflow, 'prepared', side_effect=failed):
+                        with self.assertRaises(subprocess.CalledProcessError) as caught:
+                            release_workflow.build('windows-x86_64', root, sha)
+                    self.assertIs(caught.exception, failed)
+                    self.assertFalse(list(root.glob('*.tar.gz')))
+
 
 
 if __name__ == '__main__':

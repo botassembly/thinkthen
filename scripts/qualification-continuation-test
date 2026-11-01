@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -103,6 +102,48 @@ class QualificationContinuation(unittest.TestCase):
                 self.assertEqual((outside / 'sentinel').read_bytes(), b'outside data')
                 if state == 'file':
                     self.assertEqual(gate.read_bytes(), b'caller file')
+
+    def test_floor_image_survives_failed_native_preparation(self):
+        steps = workflow('native-qualification.yml')['jobs']['native-gate-inputs']['steps']
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scripts, binary = root / 'scripts', root / 'bin'
+            scripts.mkdir()
+            binary.mkdir()
+            (scripts / 'native-tools-env').touch()
+            shutil.copy2(ROOT / 'scripts/release_images.py', scripts / 'release_images.py')
+            for name, body in {
+                'release-workflow': 'exit 0',
+                'native-prepare': 'echo "original native failure" >&2; exit 37',
+            }.items():
+                path = scripts / name
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            docker = binary / 'docker'
+            docker.write_text('#!/bin/sh\nprintf "%s\\n" "sha256:' + 'b' * 64 + '"\n')
+            docker.chmod(0o755)
+            environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'],
+                RELEASE_TARGET='linux-x86_64', GITHUB_OUTPUT=str(root / 'output'),
+                GITHUB_ENV=str(root / 'environment'))
+            environment.pop('THINKTHEN_FLOOR_IMAGE', None)
+            outcomes = {}
+            for step in steps:
+                if step.get('id') not in ('floor', 'native'):
+                    continue
+                result = subprocess.run(['/bin/bash', '-eo', 'pipefail', '-c', step['run']],
+                    cwd=root, env=environment, capture_output=True, text=True)
+                outcomes[step['id']] = {'outcome': 'failure' if result.returncode else 'success'}
+                if result.returncode:
+                    break
+                if (root / 'environment').exists():
+                    environment.update(line.split('=', 1) for line in (root / 'environment').read_text().splitlines())
+            self.assertEqual(result.returncode, 37, result.stderr)
+            self.assertIn('original native failure', result.stderr)
+            self.assertEqual((root / 'output').read_text(), 'floor_image=sha256:' + 'b' * 64 + '\n')
+            summary = subprocess.run([sys.executable, ROOT / 'scripts/qualification-summary'],
+                env=dict(os.environ, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
+            self.assertNotEqual(summary.returncode, 0, summary.stdout)
+            self.assertIn('native', summary.stderr)
 
     def test_pair_image_validation_failure_fails_workflow_import_step(self):
         steps = workflow('native-qualification.yml')['jobs']['gate']['steps']

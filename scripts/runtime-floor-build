@@ -3,6 +3,7 @@
 from release_images import image
 import os
 import shlex
+import selectors
 from pathlib import Path
 import subprocess
 import sys
@@ -62,12 +63,20 @@ command += ['-e', 'PYTHONDONTWRITEBYTECODE=1',
             image('floor'), 'sh', '-eu', '-c',
             'export PATH="$THINKTHEN_RUST_BIN:$HOME/.local/bin:$PATH"; exec "$@"', 'floor-build', *sys.argv[1:]]
 tail = bytearray()
-with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as process:
-    while block := process.stdout.read1(4096):
-        sys.stdout.buffer.write(block)
-        sys.stdout.buffer.flush()
-        tail.extend(block)
-        del tail[:-16384]
+with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+    with selectors.DefaultSelector() as streams:
+        streams.register(process.stdout, selectors.EVENT_READ, sys.stdout.buffer)
+        streams.register(process.stderr, selectors.EVENT_READ, sys.stderr.buffer)
+        while streams.get_map():
+            for key, _ in streams.select():
+                block = key.fileobj.read1(4096)
+                if not block:
+                    streams.unregister(key.fileobj)
+                    continue
+                key.data.write(block)
+                key.data.flush()
+                tail.extend(block)
+                del tail[:-16384]
     status = process.wait()
 if status:
     print(f'runtime-floor-build: {shlex.join(sys.argv[1:])} failed (exit {status}); last output lines:', file=sys.stderr)

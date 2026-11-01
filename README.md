@@ -2,9 +2,13 @@
 
 ThinkThen gives programs ten functions that judge evidence by meaning.
 
+Install the command on Linux or macOS with `curl -fsSL https://thinkthen.dev/install.sh | sh`, or in Windows PowerShell with `irm https://thinkthen.dev/install.ps1 | iex`. Homebrew users run `brew install botassembly/thinkthen/thinkthen`.
+
 Download the command archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0). Extract it and put its command directory on `PATH`. Each archive includes the command and its licenses. Read the release runtime requirements before installing.
 
 Rust applications use `cargo add thinkthen --no-default-features`. Install the command from source with `cargo install thinkthen`.
+
+Package-site installs follow publication of 0.2.0: [PyPI](sdk/python/README.md), [npm](sdk/typescript/README.md), [RubyGems](sdk/ruby/README.md), [NuGet](sdk/csharp/README.md), [Maven Central for Java](sdk/java/README.md) and [Kotlin](sdk/kotlin/README.md), and [r-universe for R](sdk/r/README.md). Use the Go module `github.com/botassembly/thinkthen/sdk/go/thinkthen` at `v0.2.0` or [Swift Package Manager](sdk/swift/README.md) at version `0.2.0`.
 
 The `native` crate feature exposes unstable integration helpers for bindings, proxies and database hosts. These helpers may change or disappear without the public Rust API compatibility guarantees. Applications should use the typed Rust API.
 

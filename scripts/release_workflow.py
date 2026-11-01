@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import sys
 import subprocess
 import tarfile
 import tempfile
@@ -53,7 +54,7 @@ def resolve(tag):
 
 def validate(package, target, sha):
     info = json.loads((package / 'build.json').read_text())
-    if (info['platform'], info['version'], info['revision']) != (target, version(), sha):
+    if not isinstance(info, dict) or tuple(info.get(key) for key in ('platform', 'version', 'revision')) != (target, version(), sha):
         raise ValueError(f'{package}: package target, version or revision differs')
     checksums(package)
     if not (package / 'INSTALL.md').is_file():
@@ -86,10 +87,12 @@ def build(target, destination, sha):
     try:
         prepared(*candidate, destination / 'candidate', env=dict(os.environ, CARGO_NET_OFFLINE='true'))
     except subprocess.CalledProcessError:
-        # Retain a complete Windows candidate after its Linux smoke fails so
-        # the native runtime can report independent failures in this run.
+        # Transport only a complete candidate for independent native diagnostics.
         if target == 'windows-x86_64':
-            pack(target, destination / 'candidate' / version() / target, destination, sha)
+            try:
+                pack(target, destination / 'candidate' / version() / target, destination, sha)
+            except (OSError, ValueError) as error:
+                print('Windows candidate transport skipped: ' + str(error), file=sys.stderr)
         raise
     package = destination / 'candidate' / version() / target
     pack(target, package, destination, sha)

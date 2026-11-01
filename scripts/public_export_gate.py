@@ -130,7 +130,9 @@ def main():
         shutil.copy2(registration, scratch / 'registration.json')
         shutil.copytree(assets, scratch / 'assets')
         shutil.copy2(patterns, scratch / 'patterns')
-        environment.update(TMPDIR=str(scratch), THINKTHEN_PRIVATE_PATTERNS=str(scratch / 'patterns'))
+        temporary_alias = scratch / 'temporary'
+        temporary_alias.symlink_to(scratch, target_is_directory=True)
+        environment.update(TMPDIR=str(temporary_alias), THINKTHEN_PRIVATE_PATTERNS=str(scratch / 'patterns'))
         arguments = [str(inside_evidence), str(scratch / 'registration.json'), str(scratch / 'assets'),
                      str(cargo_home), swift, postgres, str(scratch / 'patterns')]
         run('scripts/runtime-floor-build', 'scripts/public-export-gate', '--inside', *arguments, env=environment)

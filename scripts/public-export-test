@@ -2,17 +2,78 @@
 """Feature: public exports retain exact product trees and approved ancestry."""
 import json
 import os
+import runpy
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 class Export(unittest.TestCase):
+    def test_candidate_gate_uses_a_symlinked_temporary_root(self):
+        entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
+        with tempfile.TemporaryDirectory(prefix='candidate-temp-alias-') as temporary:
+            root = Path(temporary)
+            binary = root / 'bin'
+            binary.mkdir()
+            docker = binary / 'docker'
+            docker.write_text('#!' + sys.executable + '\nimport json,os,sys\nfrom pathlib import Path\n'
+                'alias=Path(os.environ["TMPDIR"])\n'
+                'assert alias.is_symlink(), str(alias)\n'
+                'physical=alias.resolve(strict=True)\nassert physical.is_dir() and alias != physical\n'
+                'Path(sys.argv[-7]).joinpath("temporary.json").write_text(json.dumps(dict(alias=str(alias), physical=str(physical))))\n')
+            docker.chmod(0o755)
+            registration = root / 'registration.json'
+            image = 'sha256:' + 'a' * 64
+            registration.write_text(json.dumps({'production_receipts': {'linux': {'floor_image': image}}}))
+            patterns = root / 'patterns'
+            patterns.write_text('controlled private pattern')
+            assets = root / 'assets'
+            assets.mkdir()
+            evidence = root / 'evidence'
+
+            def output(*args):
+                if args[:2] == ('git', 'status'):
+                    return ''
+                self.assertEqual(args[:3], ('docker', 'image', 'inspect'))
+                return args[3]
+
+            def run(*args, env):
+                self.assertEqual(args[:3], ('scripts/runtime-floor-build', 'scripts/public-export-gate', '--inside'))
+                # The controlled child does not launch nested Docker. The real
+                # wrapper still owns mounts, stream handling and TMPDIR forwarding.
+                environment = dict(env)
+                environment.pop('THINKTHEN_DOCKER_IN_FLOOR')
+                launcher = ('import runpy,sys; sys.platform="linux"; '
+                    + 'sys.path.insert(0,' + repr(str(ROOT / 'scripts')) + '); '
+                    + 'sys.argv=' + repr(list(args)) + '; '
+                    + 'runpy.run_path(' + repr(str(ROOT / 'scripts/runtime-floor-build')) + ',run_name="__main__")')
+                result = subprocess.run([sys.executable, '-c', launcher], cwd=ROOT, env=environment,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                return result
+
+            arguments = ['public-export-gate', 'host', str(evidence), str(registration),
+                str(assets), str(root / 'cargo'), image, image, str(patterns)]
+            with patch.dict(entry['main'].__globals__, output=output, run=run, go_home=lambda: root / 'go'), \
+                    patch.object(sys, 'argv', arguments), patch.object(sys, 'platform', 'linux'), \
+                    patch.object(Path, 'home', return_value=root / 'home'), \
+                    patch.dict(os.environ, HOME=str(root / 'home'), PATH=str(binary) + os.pathsep + os.environ['PATH']):
+                try:
+                    entry['main']()
+                finally:
+                    retained = evidence / 'failed-scratch.txt'
+                    if retained.exists():
+                        shutil.rmtree(Path(retained.read_text().strip()))
+            observed = json.loads((evidence / 'temporary.json').read_text())
+            self.assertNotEqual(observed['alias'], observed['physical'])
+            self.assertFalse(Path(observed['physical']).exists(), 'successful candidate scratch survived')
+
     def test_private_publication_changes_only_records(self):
         with tempfile.TemporaryDirectory(prefix='landing-equivalence-') as temporary:
             root = Path(temporary)

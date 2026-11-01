@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 if [ "${1:-}" != --readme-only ]; then . scripts/zig-env; fi
 root=$PWD
 if [ -n "${THINKTHEN_GO_ENGINE:-}" ] && [ "${1:-}" != --readme-only ]; then
-    : "${THINKTHEN_LOOPBACK:?Provide the prepared engine's matching loopback}"
+    : "${THINKTHEN_LOOPBACK:?Provide the matching loopback for the prepared engine}"
 fi
 go() { "$root/scripts/go-build" "$@"; }
 # The prepared floor compiler keeps this check compatible with the declared module floor.

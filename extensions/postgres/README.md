@@ -1,6 +1,6 @@
 # ThinkThen for PostgreSQL
 
-Download the PostgreSQL 18 archive for your server architecture from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it. Copy `lib/thinkthen_postgres.so` into `pg_config --pkglibdir` and `share/extension/*` into the `extension` directory under `pg_config --sharedir`. Run the example as an administrator. Grant application roles schema USAGE and EXECUTE on the functions they need.
+The supplied archives support Linux x86-64 and arm64 servers running PostgreSQL 18 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server architecture from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it. Copy `lib/thinkthen_postgres.so` into `pg_config --pkglibdir` and `share/extension/*` into the `extension` directory under `pg_config --sharedir`. Run the example as an administrator. Grant application roles schema USAGE and EXECUTE on the functions they need.
 
 The example uses the stub backend and needs no key or service.
 

@@ -150,6 +150,17 @@ pub fn build(b: *std.Build) void {
     print('Extracted Windows Zig archive compiles a real consumer against its generated ErrorCode; no engine link', flush=True)
 
 
+# Check the tracked shell scripts with both the host shell and Bash. The macOS
+# system shell uses Bash's grammar, which differs from Linux dash here.
+for name in subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).split(b'\0'):
+    if not name:
+        continue
+    path = ROOT / os.fsdecode(name)
+    if path.is_file() and path.read_bytes().startswith(b'#!/bin/sh\n'):
+        for shell in ('/bin/bash', '/bin/sh'):
+            subprocess.run([shell, '-n', path], check=True)
+print('Every tracked POSIX shell script parses with the host shell and Bash', flush=True)
+
 with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as temporary:
     scratch = Path(temporary)
     with patch.dict(os.environ, THINKTHEN_SDK_GATE_RUNNER='scripts/absent-runner'):

@@ -97,7 +97,7 @@ with tempfile.TemporaryDirectory(prefix='floor-diagnostics-') as temporary:
     (root / 'rust-toolchain.toml').write_text('[toolchain]\nchannel = "stable"\n')
     subprocess.run(['git', 'init', '-q', root], check=True)
     docker = scripts / 'docker'
-    docker.write_text('#!' + sys.executable + "\nimport sys\nassert sys.argv[-2:] == ['inner-build', '--example']\nassert 'THINKTHEN_STRESS_FULL=1' in sys.argv\nassert 'THINKTHEN_GATE_STRICT=1' in sys.argv\nassert 'THINKTHEN_PRIVATE_PATTERNS=/patterns-fixture' in sys.argv\nassert not any('synthetic-secret' in argument for argument in sys.argv)\nprint('inner command started', flush=True)\nassert sys.stdin.readline().strip() == 'continue'\nfor i in range(150): print(f'inner-output-{i:03d}')\nsys.stdout.flush()\nprint('inner compiler cause: unsupported symbol', file=sys.stderr, flush=True)\nsys.exit(37)\n")
+    docker.write_text('#!' + sys.executable + "\nimport sys\nassert sys.argv[-2:] == ['inner-build', '--example']\nassert 'THINKTHEN_STRESS_FULL=1' in sys.argv\nassert 'THINKTHEN_GATE_STRICT=1' in sys.argv\nassert 'THINKTHEN_PRIVATE_PATTERNS=/patterns-fixture' in sys.argv\nassert not any('synthetic-secret' in argument for argument in sys.argv)\nprint('inner command started', flush=True)\nassert sys.stdin.readline().strip() == 'continue'\nfor i in range(1500): print(f'inner-output-{i:03d}')\nsys.stdout.flush()\nprint('inner compiler cause: unsupported symbol', file=sys.stderr, flush=True)\nsys.exit(37)\n")
     docker.chmod(0o755)
     launcher = ("import runpy,sys; sys.platform='linux'; "
                 + f"sys.path.insert(0,{str(scripts)!r}); "
@@ -112,6 +112,16 @@ with tempfile.TemporaryDirectory(prefix='floor-diagnostics-') as temporary:
         PATH=str(scripts) + os.pathsep + os.environ['PATH'])
     environment.pop('THINKTHEN_FLOOR_BUILD', None)
     environment.pop('THINKTHEN_DOCKER_IN_FLOOR', None)
+    failure_child = docker.read_text()
+    docker.write_text('#!' + sys.executable + '\nimport sys\n'
+        'print("   Compiling controlled v0.1.0", file=sys.stderr, flush=True)\n'
+        'print(\'{"reason":"build-finished","success":true}\', flush=True)\n')
+    successful = subprocess.run([sys.executable, '-c', launcher], env=environment,
+                                cwd=root, capture_output=True, text=True)
+    assert successful.returncode == 0, successful.stderr
+    assert json.loads(successful.stdout) == {'reason': 'build-finished', 'success': True}, successful.stdout
+    assert '   Compiling controlled v0.1.0' in successful.stderr, successful.stderr
+    docker.write_text(failure_child)
     with subprocess.Popen([sys.executable, '-c', launcher], env=environment,
             cwd=root, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.PIPE, text=True) as process:
@@ -125,6 +135,7 @@ with tempfile.TemporaryDirectory(prefix='floor-diagnostics-') as temporary:
     assert process.returncode == 37, (process.returncode, output, errors)
     assert 'runtime-floor-build:' in errors and 'inner-build --example' in errors, errors
     assert 'inner compiler cause: unsupported symbol' in errors, errors
-    assert 'inner-output-149' in errors and 'inner-output-000' not in errors, errors
+    assert 'inner-output-1499' in errors and 'inner-output-000' not in errors, errors
     assert 'CalledProcessError' not in errors, errors
+    assert len(errors.split('last output lines:\n', 1)[1].encode()) <= 16385, errors
 print('floor diagnostics: live output, inner cause, bounded tail and child exit37 retained')

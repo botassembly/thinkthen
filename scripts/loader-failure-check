@@ -16,6 +16,7 @@ split = sys.argv.index("--")
 args = parser.parse_args(sys.argv[1:split])
 command = sys.argv[split + 1:]
 engine = args.engine.absolute()
+attempted = args.attempted or str(engine.resolve())
 backup = engine.with_name(engine.name + ".load-check-original")
 engine.rename(backup)
 try:
@@ -25,7 +26,7 @@ try:
         result = subprocess.run(command, text=True, capture_output=True)
         output = result.stdout + result.stderr
         assert result.returncode != 0, (failure, "unloadable engine accepted", output)
-        assert (args.attempted or str(engine)) in output, (failure, "attempted path absent", output)
+        assert attempted in output, (failure, "attempted path absent", output)
         lowered = output.lower()
         assert any(word in lowered for word in ("load", "shared librar", "dll")), (failure, output)
         assert "usage.abi" not in output and "incompatible" not in lowered and "EngineVersion" not in output, (failure, output)
