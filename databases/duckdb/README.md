@@ -1,6 +1,6 @@
 # ThinkThen for DuckDB
 
-Download the matching DuckDB archive from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it. Use exactly DuckDB 1.4.3. Start the shell with `duckdb -unsigned`, then load the extension by its absolute path.
+Download the matching DuckDB archive from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and its `SHA256SUMS` file. [Verify the archive checksum and provenance](../../README.md#verify-a-download) before extracting it. Use exactly DuckDB 1.4.3. Start the shell with `duckdb -unsigned`, then load the extension by its absolute path. This option disables DuckDB’s extension signature verification for the session. Load only extensions whose source and downloaded bytes you trust.
 
 The example uses the stub backend and needs no key or service.
 

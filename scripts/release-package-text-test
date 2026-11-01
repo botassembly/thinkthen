@@ -215,6 +215,10 @@ class PackageText(unittest.TestCase):
         listing = run('cargo', 'package', '-p', 'thinkthen', '--list', '--offline', '--allow-dirty', cwd=ROOT).splitlines()
         manifest = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())
         assert 'LICENSE' in listing
+        assert (ROOT / 'crates/thinkthen/LICENSE').read_bytes() == (ROOT / 'LICENSE').read_bytes()
+        assert manifest['package']['license'] == {'workspace': True}
+        assert 'license-file' not in manifest['package']
+        assert tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['license'] == 'MIT'
         for target in manifest.get('test', []):
             assert target['path'] in listing, target
         print('Cargo package includes its license and every explicit test target', flush=True)

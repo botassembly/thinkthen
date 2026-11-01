@@ -96,6 +96,7 @@ def swift():
         names = ('THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES')
         environment = {name: os.environ[name] for name in names}
         environment.update(THINKTHEN_LOOPBACK=os.environ['THINKTHEN_SWIFT_LOOPBACK'], THINKTHEN_SWIFT_PACKAGE=stage)
+        environment['THINKTHEN_GATE_STRICT'] = os.environ.get('THINKTHEN_GATE_STRICT', '0')
         swift_command(['scripts/swift-gate'], (Path(temporary), Path(os.environ['THINKTHEN_SWIFT_LOOPBACK']).parent), environment)
 
 
@@ -132,7 +133,8 @@ def offline():
 . scripts/native-tools-env
 scripts/native-prepare
 pair=$(mktemp)
-trap 'rm -f "$pair"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -f "$pair"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 scripts/native-pair export "$pair"
 scripts/native-pair import "$pair" "$(scripts/native-prepare --path)"
 scripts/native-test-assets prepare

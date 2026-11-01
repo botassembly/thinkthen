@@ -35,6 +35,12 @@ pub(super) fn run(
     engine: &Engine,
     cancel: &Cancel,
 ) -> Result<u8, Error> {
+    let into = value(args, "into");
+    if !matches!(request.question(), crate::Question::Annotate(_))
+        && into.as_deref().is_none_or(str::is_empty)
+    {
+        return Err(usage("into", "an answer column name", "absent name"));
+    }
     let (path, format) = input
         .sources
         .first()
@@ -128,7 +134,7 @@ pub(super) fn run(
         format,
         value(args, "sheet"),
         columns,
-        value(args, "into"),
+        into,
         destination,
     )
     .and_then(|job| job.execute_for_command(request, engine, cancel));

@@ -1,5 +1,7 @@
 # ThinkThen in Swift
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 The `record:` overloads return one awaited row; `records:` overloads return Rows streams. A JSON array inside one Record remains one record. Iterator release ends early traversal; client resources follow Swift ownership.
 
 Check `README.md` at the archive root for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture. Swift packages require macOS 15 or later; Linux packages require glibc 2.35 or later and GLIBCXX_3.4.30 support.
@@ -74,7 +76,7 @@ A rank row's answer is its rank; `position` is its input order. FilterResult ret
 
 ## Rows, streams and saved questions
 
-Rows retain `position`, exact `id`, `source` and `outcome`. Source identifies the question, backend and served model. Outcome is `.answered(answer, probability, detail)`, `.unsure(probability, detail)` or `.failed(RowFailure)`. Switch on outcome to distinguish false, unsure, failed and answered no-match. Typed detail holds label or level probabilities, recognition pieces or relation pairs. Find can answer nil; `row.answer` adds an outer optional for unanswered status. Find selects a whole nonblank line; preserve line breaks. Span offsets count UTF-8 bytes from zero with an exclusive end.
+Rows retain `position`, exact `id`, `source` and `outcome`. Source identifies the question, backend and served model. Outcome is `.answered(answer, probability, detail)`, `.unsure(probability, detail)` or `.failed(RowFailure)`. Switch on outcome to distinguish false, unsure, failed and answered no-match. Typed detail holds label or level probabilities, recognition pieces or relation pairs. Find can answer nil; `row.answer` adds an outer optional for unanswered status. Find selects a whole nonblank line; preserve line breaks. Span offsets count Unicode code points from zero with an exclusive end. Index `text.unicodeScalars` to select the corresponding range.
 
 Single calls use `record:` and are awaited. Collection overloads use `records:` with a Sequence or AsyncSequence and return Rows. Filter and rank take collections. Iterate once with `for try await`; `.collect()` stores all rows in memory. Arrays supply finite input. Passing one collection lets the engine batch; avoid a loop of single-record calls. Settings.batch controls packing, with byte and backend limits also applied. One record can need several backend questions.
 

@@ -1,5 +1,7 @@
 # ThinkThen in Java
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Record methods return one row; their `Stream` counterparts and filter/rank return streams. A List passed to a record method is one JSON array record. Close streams and clients with try-with-resources.
 
 Check `META-INF/README.md` inside the JAR for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.

@@ -7,7 +7,8 @@ cargo fmt --all -- --check
 cargo build --locked --offline -p thinkthen-ffi -p loopback
 cargo run --locked --offline -p thinkthen-ffi --example headers -- --check
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 root=$PWD
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac

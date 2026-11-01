@@ -19,10 +19,43 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class QualificationRecipes(unittest.TestCase):
+    def test_native_clean_guard_ignores_only_prepared_artifacts_without_global_policy(self):
+        entry = runpy.run_path(str(ROOT / 'scripts/native-prepare'))
+        def compiler_boundary(_):
+            raise RuntimeError('clean source reached compiler boundary')
+        with tempfile.TemporaryDirectory(prefix='native-source-policy-') as temporary:
+            source = Path(temporary)
+            (source / '.gitignore').write_bytes((ROOT / '.gitignore').read_bytes())
+            (source / 'tracked.py').write_text('original\n')
+            env = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, PM_JOB='fixture receipt',
+                       GIT_AUTHOR_NAME='Example', GIT_AUTHOR_EMAIL='example@example.com',
+                       GIT_COMMITTER_NAME='Example', GIT_COMMITTER_EMAIL='example@example.com')
+            for command in (['init', '--quiet'], ['add', '.'], ['commit', '--quiet', '-m', 'Source']):
+                subprocess.run(['git', *command], cwd=source, env=env, check=True)
+            for path in ('scripts/__pycache__/old.cpython-312.pyc', 'sdk/python/__pycache__/old.cpython-313.pyc',
+                         'sdk/typescript/node_modules/prepared-package/index.js',
+                         'sdk/typescript/node_modules/.package-lock.json'):
+                cached = source / path
+                cached.parent.mkdir(parents=True, exist_ok=True)
+                cached.write_bytes(b'historical bytecode')
+            with patch.dict(os.environ, env, clear=True), patch.dict(entry['main'].__globals__, ROOT=source), patch.dict(sys.modules, header_contract=SimpleNamespace(check=compiler_boundary)), patch.object(sys, 'argv', ['native-prepare', '--receipt', str(source / 'receipt.json')]):
+                with self.assertRaisesRegex(RuntimeError, 'clean source reached compiler boundary'):
+                    entry['main']()
+                for path in ('tracked.py', 'scripts/__pycache__/unrecorded.py', 'package/unrecorded.py',
+                             'sdk/typescript/unrecorded.js', 'sdk/other/node_modules/unrecorded.js'):
+                    dirty = source / path
+                    dirty.parent.mkdir(parents=True, exist_ok=True)
+                    dirty.write_text('unrecorded source\n')
+                    with self.assertRaisesRegex(SystemExit, 'clean committed checkout'):
+                        entry['main']()
+                    if path == 'tracked.py': dirty.write_text('original\n')
+                    else: dirty.unlink()
+
     def test_go_and_zig_select_prepared_manifest_compiler_before_home_isolation(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'scripts').mkdir()
+            (root / 'prepared-fixtures').mkdir()
             (root / 'sdk/zig').mkdir(parents=True)
             shutil.copy2(ROOT / 'sdk/zig/build.zig.zon', root / 'sdk/zig/build.zig.zon')
             (root / 'scripts/native-tools-env').touch()
@@ -38,7 +71,7 @@ class QualificationRecipes(unittest.TestCase):
             for name, end in [('go-api-check', 'root=$PWD'), ('zig-sdk-gate', 'scratch=')]:
                 text = (ROOT / 'scripts' / name).read_text()
                 prefix = text[:text.index(end)].split('cd "$(dirname "$0")/.."', 1)[1]
-                result = subprocess.check_output(['sh', '-eu', '-c', prefix + '\nHOME="$1"; export HOME; command -v zig; zig version', 'check', str(root / 'isolated')], cwd=root, env=dict(os.environ, HOME=str(home)), text=True)
+                result = subprocess.check_output(['sh', '-eu', '-c', prefix + '\nHOME="$1"; export HOME; command -v zig; zig version', 'check', str(root / 'isolated')], cwd=root, env=dict(os.environ, HOME=str(home), THINKTHEN_NATIVE_FIXTURES=str(root / 'prepared-fixtures')), text=True)
                 self.assertEqual(result.splitlines(), [str(compiler), version])
 
     def test_windows_jvm_stages_generated_contracts_before_maven(self):
@@ -219,16 +252,42 @@ class QualificationRecipes(unittest.TestCase):
                     return ''
                 environment = dict(os.environ, CARGO_HOME=str(Path(directory) / 'unrelated-cargo'))
                 environment.pop('THINKTHEN_ADVISORY_DB_ROOT', None)
+                environment.pop('THINKTHEN_FLOOR_BUILD', None)
                 if override: environment['THINKTHEN_ADVISORY_DB_ROOT'] = str(root)
-                with patch.dict(os.environ, environment, clear=True), patch.object(Path, 'home', return_value=home), patch.dict(action.__globals__, output=output), patch('subprocess.run', run):
+                selected = lambda name: '/prepared/' + name if 'version' in state else None
+                with patch.dict(os.environ, environment, clear=True), patch.object(Path, 'home', return_value=home), patch.dict(action.__globals__, output=output), patch('subprocess.run', run), patch('shutil.which', selected):
                     with patch.object(sys, 'argv', ['rust-advisories', '--prepare']):
                         action()
+                        action()  # A copied, pinned executable needs no install metadata.
                     with patch.object(sys, 'argv', ['rust-advisories']):
                         action()
                 self.assertEqual(state, {'version': pins['cargo-deny'], 'revision': pins['advisory-revision']})
                 self.assertIn(['cargo', 'deny', 'fetch'], commands)
+                self.assertEqual(sum(command[:2] == ['cargo', 'install'] for command in commands), 1)
                 self.assertIn('--offline', commands[-1])
         self.assertIn('scripts/rust-advisories --prepare', (ROOT / 'scripts/qualification-gate-prepare').read_text())
+
+    @patch.dict(os.environ, {'THINKTHEN_FLOOR_BUILD': '0'})
+    def test_pinned_scanner_preparation_reuses_existing_binary_and_refuses_wrong_versions(self):
+        import tomllib
+        pins = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']
+        action = runpy.run_path(str(ROOT / 'scripts/rust-dependencies'))['main']
+        state, installs = {}, []
+        def install(command, **options):
+            installs.append(command)
+            state['version'] = command[command.index('--version') + 1]
+        selected = lambda name: '/prepared/' + name if state else None
+        with patch('subprocess.run', install), patch('subprocess.check_output', side_effect=lambda *a, **kw: state['version']), patch('shutil.which', selected), patch.object(sys, 'argv', ['rust-dependencies', '--prepare']):
+            action()
+            action()
+        self.assertEqual(state['version'], pins['cargo-machete'])
+        self.assertEqual(len(installs), 1)
+        for name in ('rust-advisories', 'rust-dependencies'):
+            with self.subTest(tool=name):
+                action = runpy.run_path(str(ROOT / 'scripts' / name))['main']
+                with patch('shutil.which', return_value='/prepared/wrong-version'), patch('subprocess.check_output', return_value='wrong version'), patch('subprocess.run', side_effect=AssertionError('must not overwrite or fetch with a wrong tool')), patch.object(sys, 'argv', [name, '--prepare']):
+                    with self.assertRaisesRegex(SystemExit, 'found wrong version'):
+                        action()
 
     def test_windows_preparation_modules_import_without_unix_locking(self):
         subprocess.run([sys.executable, '-c', 'import sys; sys.path.insert(0,"scripts"); sys.modules["fcntl"]=None; import release_workflow_prepare, header_contract'], cwd=ROOT, check=True)
@@ -287,7 +346,8 @@ class QualificationRecipes(unittest.TestCase):
             version = __import__('re').search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
             compiler = tools / 'zig' / version / 'zig'
             compiler.parent.mkdir(parents=True)
-            compiler.touch()
+            compiler.write_text('#!/bin/sh\nprintf "%s\\n" "' + version + '"\n')
+            compiler.chmod(0o755)
             with patch.dict(action.__globals__, TOOLS=tools, current=lambda: {'ruby': 'x86_64-linux'}), patch.dict(action.__globals__, fetch=lambda url, path: path) as state:
                 fetched = []
                 state['fetch'] = lambda url, path: fetched.append((url, path))

@@ -4,9 +4,10 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
 . scripts/native-build-env
-scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
+scratch=$(mktemp -d)
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 THINKTHEN_SQL_TEST_ARCHIVE= scripts/sqlite-package "$scratch/production"
 case "$(uname -s)" in Darwin) suffix=dylib ;; Linux) suffix=so ;; esac
 python3 databases/duckdb/tests/package-safety.py "$scratch/production/package/thinkthen_sqlite.$suffix"

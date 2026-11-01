@@ -3,24 +3,46 @@
 set -eu
 cd "$(dirname "$0")/.."
 failed=
+gate_scratch=$(mktemp -d)
+trap 'status=$?; trap - EXIT; rm -rf "$gate_scratch" || :; exit "$status"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+mkfifo "$gate_scratch/output"
 stage() {
     name=$1
     shift
     printf 'Gate stage: %s\n' "$name"
-    if "$@"; then
-        printf 'Passed gate stage: %s\n' "$name"
+    started=$(date +%s)
+    tee "$gate_scratch/stage.log" < "$gate_scratch/output" &
+    output_pid=$!
+    if "$@" > "$gate_scratch/output" 2>&1; then
+        status=0
     else
         status=$?
-        printf 'Failed gate stage: %s (exit %s)\n' "$name" "$status" >&2
+    fi
+    wait "$output_pid"
+    elapsed=$(( $(date +%s) - started ))
+    if [ "$status" -eq 0 ]; then
+        printf 'Passed gate stage: %s (elapsed %s seconds)\n' "$name" "$elapsed"
+    else
+        printf 'Failed gate stage: %s (exit %s; elapsed %s seconds)\n' "$name" "$status" "$elapsed" >&2
+        tail -n 50 "$gate_scratch/stage.log" > "$gate_scratch/$name.tail"
         failed="$failed $name"
     fi
 }
 # Missing tools are failures. Later stages still expose independent defects.
+if [ "${THINKTHEN_GATE_STRICT:-0}" = 1 ] && [ "$(uname -s)" != Linux ]; then
+    printf 'strict candidate gate requires Linux; required platform stages would be omitted\n' >&2
+    exit 1
+fi
 for tool in python3 git cargo rustc cc c++ make cmake pkg-config uv node npm ruby R Rscript staticcheck; do
     stage "tool-$tool" command -v "$tool"
 done
 if [ "$(uname -s)" = Linux ]; then stage tool-docker command -v docker; fi
 stage python-version python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "gate: python3 requires Python 3.11 or newer")'
+stage gate-report-test scripts/gate-report-test
+stage stress-dispatch-test scripts/stress-dispatch-test
 stage release-metadata python3 scripts/release_metadata.py
 for check in release-script-test release-retry-test release-preparation-test release-staging-test release-publish-test release-floor-inputs-test; do
     stage "$check" "scripts/$check"
@@ -35,6 +57,7 @@ for check in secrets bindings-schema contract-schema-check; do stage "$check" "s
 stage notices scripts/notices --check
 stage supply-chain-check scripts/supply-chain-check
 stage rust-advisories scripts/rust-advisories
+stage rust-dependencies scripts/rust-dependencies
 stage rust-format cargo fmt --all --check
 stage core-check scripts/core-check
 stage fixture-routing-check scripts/fixture-routing-check
@@ -45,7 +68,10 @@ stage crate-package-test scripts/crate-package-test
 stage bash-guide sh -eu -c '
     guide_root=$PWD
     guide_scratch=$(mktemp -d)
-    trap '\''rm -rf "$guide_scratch"'\'' EXIT HUP INT TERM
+    trap '\''status=$?; trap - EXIT; rm -rf "$guide_scratch" || :; exit "$status"'\'' EXIT
+    trap '\''exit 129'\'' HUP
+    trap '\''exit 130'\'' INT
+    trap '\''exit 143'\'' TERM
     python3 scripts/surface-example prepare bash "$guide_scratch"
     command_target=${CARGO_TARGET_DIR:-$PWD/target}
     case "$command_target" in /*) ;; *) command_target="$PWD/$command_target" ;; esac
@@ -58,5 +84,9 @@ stage abi-minor-check sh -eu -c 'scripts/abi-minor-check --native "${THINKTHEN_N
 stage sdk-gates scripts/sdk-gates
 if [ -n "$failed" ]; then
     printf 'Failed gate stages:%s\n' "$failed" >&2
+    for name in $failed; do
+        printf '\nLast 50 lines of failed gate stage: %s\n' "$name" >&2
+        cat "$gate_scratch/$name.tail" >&2
+    done
     exit 1
 fi

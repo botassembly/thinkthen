@@ -1,5 +1,7 @@
 # ThinkThen in PostgreSQL
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
 
 The supplied PostgreSQL 0.2.0 archive requires a Linux x86-64 server running PostgreSQL 18 with glibc 2.28 or later. Run `pg_config` and the file-copy commands on that server. A macOS psql client can connect to the remote server; it cannot load this Linux extension locally. An administrator copies `lib/thinkthen_postgres.so` into `pg_config --pkglibdir` and the supplied `share/extension/*` files into the extension directory under `pg_config --sharedir`, then runs:

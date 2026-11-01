@@ -1,0 +1,20 @@
+#!/bin/sh
+# Select prepared tools before both sides of the immutable floor boundary.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+case "${1:-}" in
+    --inside)
+        shift
+        python3 scripts/public_export_gate.py verify "$@"
+        . scripts/native-env
+        THINKTHEN_POSTGRES_TEST_IMAGE=$6
+        THINKTHEN_PRIVATE_PATTERNS=$7
+        export THINKTHEN_POSTGRES_TEST_IMAGE THINKTHEN_PRIVATE_PATTERNS THINKTHEN_GATE_STRICT=1
+        PATH="$HOME/.local/share/thinkthen-build-tools/cargo-deny/0.20.2-glibc2.28-rust1.95.0/installed/bin:$CARGO_HOME/bin:$PATH"
+        export PATH
+        export THINKTHEN_SWIFT_LOOPBACK="$THINKTHEN_LOOPBACK"
+        exec scripts/gate
+        ;;
+    *) exec python3 scripts/public_export_gate.py host "$@" ;;
+esac

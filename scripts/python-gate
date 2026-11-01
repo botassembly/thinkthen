@@ -8,7 +8,8 @@ exec uv run --offline --no-project --python 3.10 \
   --with 'pandas>=2.2' --with pandas-stubs --with 'polars>=1.0' -- sh -eu <<'CHECKS'
 root=$PWD
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 python sdk/python/relation_type.py
 ruff check sdk/python --exclude _codes.py --exclude _contract.py
 ruff format --check sdk/python --exclude _codes.py --exclude _contract.py

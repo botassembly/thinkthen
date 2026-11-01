@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check owned floor producer scheduling against isolated cold and warm caches."""
 import os
+import hashlib
+import io
 import multiprocessing
 import subprocess
 from pathlib import Path
@@ -9,6 +11,8 @@ import runpy
 import shutil
 import sys
 import tempfile
+import tarfile
+import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -193,6 +197,91 @@ def exercise(scratch, system, runtime=None):
         platform.system, release_images.image = previous_system, previous_image
 
 
+def linux_scratch(scratch):
+    source = scratch / 'linux-entrypoint'
+    scripts = source / 'scripts'
+    (scripts / 'floors').mkdir(parents=True)
+    for name in ('floors/prepare-linux', 'native-build-env', 'runtime-floor-build',
+                 'release_images.py', 'native_platform.py', 'build_targets.py'):
+        shutil.copy2(ROOT / 'scripts' / name, scripts / name)
+    shutil.copy2(ROOT / 'rust-toolchain.toml', source)
+    subprocess.run(['git', 'init', '-q', source], check=True)
+    assets = scripts / 'archives'
+    assets.mkdir()
+    with tarfile.open(assets / 'jansson.tar.gz', 'w:gz') as archive:
+        member = tarfile.TarInfo('jansson-2.14/CMakeLists.txt')
+        member.size = 5
+        archive.addfile(member, io.BytesIO(b'local'))
+    (assets / 'jsonlite_2.0.0.tar.gz').write_bytes(b'pinned local jsonlite')
+    with zipfile.ZipFile(assets / 'sqlite.zip', 'w') as archive:
+        for name in ('shell.c', 'sqlite3.c'):
+            archive.writestr('sqlite-amalgamation-3410000/' + name, 'local')
+    (scripts / 'release_downloads.py').write_text('''import pathlib, shutil, sys
+shutil.copy2(pathlib.Path(__file__).parent / 'archives' / pathlib.Path(sys.argv[2]).name, sys.argv[2])
+''')
+    boundary = scripts / 'docker'
+    boundary.write_text('''#!/usr/bin/env python3
+import os, pathlib, sys
+command = sys.argv[1:]
+assert command[0] == 'run'
+mounts = [pathlib.Path(command[i + 1].split(':')[0]) for i, arg in enumerate(command) if arg == '-v']
+forwarded = dict(command[i + 1].split('=', 1) for i, arg in enumerate(command) if arg == '-e')
+args = command[command.index('floor-build') + 1:]
+prefix = pathlib.Path(os.environ['THINKTHEN_RUNTIME_PREFIX'])
+work = pathlib.Path(args[2]).parent if args[:2] == ['cmake', '-S'] else pathlib.Path(forwarded['TMPDIR'])
+assert forwarded['TMPDIR'] == str(work), 'owned scratch was not forwarded to Docker'
+assert work in mounts, 'owned scratch lacks its exact Docker mount'
+assert any(prefix.is_relative_to(path) for path in mounts), 'download/output prefix is invisible to Docker'
+for arg in args[1:]:
+    if arg.startswith('/'):
+        assert any(pathlib.Path(arg).is_relative_to(path) for path in mounts), 'build input is invisible to Docker: ' + arg
+if args[:2] == ['cmake', '-S']:
+    assert (work / 'jansson-2.14/CMakeLists.txt').is_file()
+    assert (work / 'sqlite-amalgamation-3410000/sqlite3.c').is_file()
+    with pathlib.Path(os.environ['SCRATCH_LOG']).open('a') as log:
+        log.write(str(work) + '\\n')
+elif args[:2] == ['cmake', '--build'] and os.environ['FAIL_BUILD'] == '1':
+    sys.exit(37)
+elif args[0] == 'cc':
+    pathlib.Path(args[-1]).write_text('built sqlite')
+''')
+    boundary.chmod(0o755)
+    caller = source / '.floor-dependencies'
+    caller.mkdir()
+    sentinel = caller / 'sentinel'
+    sentinel.write_bytes(b'caller owns this directory')
+    log = source / 'scratch.log'
+    prefix = source / 'runtime'
+    env = dict(os.environ, PM_JOB='floor-inputs-test', THINKTHEN_RUNTIME_PREFIX=str(prefix),
+               MACOSX_DEPLOYMENT_TARGET='13.0', SCRATCH_LOG=str(log),
+               HOME=str(source / 'home'), CARGO_HOME=str(source / 'home/.cargo'),
+               GOCACHE=str(source / 'go-cache'), CARGO_TARGET_DIR=str(source / 'target'),
+               THINKTHEN_FLOOR_IMAGE='sha256:' + 'a' * 64,
+               PATH=str(scripts) + os.pathsep + os.environ['PATH'])
+    env.pop('THINKTHEN_FLOOR_BUILD', None)
+    allocations = []
+    for mode, fail in (('job', '0'), ('job', '1'), ('hosted', '0'), ('hosted', '1')):
+        invocation = dict(env, FAIL_BUILD=fail)
+        if mode == 'hosted':
+            invocation.pop('TMPDIR', None)
+        result = subprocess.run(['sh', scripts / 'floors/prepare-linux'], cwd=source,
+                                env=invocation, capture_output=True, text=True)
+        assert result.returncode == (0 if fail == '0' else 37), result.stderr
+        assert fail == '0' or '37' in result.stderr, result.stderr
+        work = Path(log.read_text().splitlines()[-1])
+        allocations.append(work)
+        assert not work.exists(), 'preparation left its scratch behind'
+        assert work.parent == Path(invocation.get('TMPDIR', '/tmp')).resolve()
+        assert sentinel.read_bytes() == b'caller owns this directory'
+        assert list(caller.iterdir()) == [sentinel]
+    assert len(set(allocations)) == 4, 'preparation reused a scratch allocation'
+    assert (prefix / 'bin/sqlite3').read_text() == 'built sqlite'
+    checksums = (prefix / 'sources/SHA256SUMS').read_text().splitlines()
+    assert {line.split()[0] for line in checksums} == {
+        hashlib.sha256(path.read_bytes()).hexdigest() for path in assets.iterdir()}
+    print('Linux preparation preserves caller scratch and removes only its own allocation on success and failure')
+
+
 with tempfile.TemporaryDirectory(prefix='thinkthen-floor-inputs-') as temporary:
     if sys.argv[1:] == ['--macos-runtime']:
         assert platform.system() == 'Darwin'
@@ -200,5 +289,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-floor-inputs-') as temporary:
         exercise(Path(temporary), 'Darwin', Path.home() / ('.local/share/thinkthen-build-tools/floors/macos' + FLOORS['macos']))
     else:
         assert not sys.argv[1:]
+        if platform.system() == 'Linux':
+            linux_scratch(Path(temporary))
         for system in ('Darwin', 'Linux'):
             exercise(Path(temporary), system)

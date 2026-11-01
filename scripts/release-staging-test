@@ -2,6 +2,8 @@
 """Check extracted Windows source consumers, delivered checker imports and draft archives."""
 import json
 import os
+import re
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -53,7 +55,7 @@ def missing_gate(scratch):
     source = scratch / 'missing-gate/scripts'
     source.mkdir(parents=True)
     shutil.copy2(ROOT / 'scripts/sdk-gates', source / 'sdk-gates')
-    environment = dict(os.environ)
+    environment = dict(os.environ, THINKTHEN_GATE_STRICT='0')
     environment.pop('THINKTHEN_SDK_GATE_RUNNER', None)
     result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
     assert result.returncode != 0, 'SDK dispatcher accepted missing gate scripts'
@@ -77,6 +79,49 @@ def missing_gate(scratch):
     assert 'Passed SDK gate: sqlite-gate' in result.stdout, result.stdout
     assert 'Skipped SDK gate: postgres-gate' in result.stdout, result.stdout
     print('SDK dispatcher retains failures, runs later gates, and distinguishes host skips', flush=True)
+    # Run the actual gate through its dispatcher with its required archive absent.
+    (source / 'sqlite-gate').write_text('#!/bin/sh\nexec ' + shlex.quote(str(ROOT / 'scripts/sqlite-gate')) + '\n')
+    environment.pop('THINKTHEN_SQL_TEST_ARCHIVE', None)
+    result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
+    assert 'Provide the shared explicit fixture-routing archive' in result.stderr, result
+    assert 'Failed SDK gate: sqlite-gate' in result.stderr, result
+    assert 'Passed SDK gate: sqlite-gate' not in result.stdout, result
+    assert result.returncode != 0, result
+    print('Actual SQLite gate rejects an absent required archive through the dispatcher', flush=True)
+
+
+def cleanup_status(scratch):
+    # Exercise installed trap bodies, including named cleanup functions. This
+    # contract accepts any implementation that preserves the caller's outcome.
+    for path in sorted((ROOT / 'scripts').glob('*-gate')) + [ROOT / 'scripts/sqlite-prepare', ROOT / 'scripts/go-api-check']:
+        text = path.read_text()
+        first_trap = text.find('\ntrap ')
+        required = set(re.findall(r'\$\{([A-Za-z_][A-Za-z_0-9]*):?\?', text))
+        for variable in required:
+            assert re.search(r'\$\{' + variable + r':?\?', text[:first_trap]), (path.name, variable, 'check required input before trapping cleanup')
+        functions = '\n'.join(re.findall(r'^cleanup\(\) \{\n.*?^\}', text, re.M | re.S))
+        signals = '\n'.join(line.strip() for line in text.splitlines()
+                            if line.strip().startswith('trap ') and 'HUP' in shlex.split(line)[2:])
+        for line in text.splitlines():
+            line = line.strip()
+            if not line.startswith('trap '):
+                continue
+            arguments = shlex.split(line)
+            if 'EXIT' not in arguments[2:] and '0' not in arguments[2:]:
+                continue
+            for cleanup_fails in (False, True):
+                for command, expected in ((':', 0), ('exit 19', 19), ("sh -c 'exit 23'", 23), ('kill -TERM "$$"', 1)):
+                    owned = scratch / 'cleanup-owned'
+                    owned.mkdir()
+                    environment = dict(os.environ, scratch=str(owned), stage=str(owned),
+                                       pair=str(owned / 'pair'), publishing='')
+                    cleanup = 'rm() { return 7; }\n' if cleanup_fails else ''
+                    result = subprocess.run(['sh', '-eu', '-c', functions + '\n' + cleanup + line + '\n' + signals + '\n' + command],
+                                            cwd=scratch, env=environment, capture_output=True, text=True)
+                    assert result.returncode == expected, (path.name, command, cleanup_fails, result)
+                    shutil.rmtree(owned, ignore_errors=True)
+    print('Every gate cleanup trap preserves command outcomes despite cleanup failure, and signals fail', flush=True)
+
 
 
 def zig(scratch, native):
@@ -107,10 +152,11 @@ pub fn build(b: *std.Build) void {
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as temporary:
     scratch = Path(temporary)
-    checker(scratch)
-    attachments(scratch)
     with patch.dict(os.environ, THINKTHEN_SDK_GATE_RUNNER='scripts/absent-runner'):
         missing_gate(scratch)
+    cleanup_status(scratch)
+    checker(scratch)
+    attachments(scratch)
     subprocess.run([sys.executable, ROOT / 'scripts/release-windows-contents-test'], check=True)
     if len(sys.argv) == 2:
         zig(scratch, Path(sys.argv[1]).resolve())

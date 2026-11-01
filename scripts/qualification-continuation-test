@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise gate continuation and workflow publication refusal with fake stages."""
+import hashlib
 import json
 import os
 import re
@@ -19,111 +20,90 @@ def workflow(name):
         ROOT / '.github/workflows' / name], text=True))
 
 
-def reduced_steps(job):
-    """Resolve only the conditions used by this workflow's reduced Windows leg."""
-    def active(condition):
-        condition = condition.strip().removeprefix('${{').removesuffix('}}').strip()
-        atoms = {'always()': True, 'inputs.windows_retry': True, '!inputs.windows_retry': False,
-                 "matrix.target == 'windows-x86_64'": True, "matrix.target != 'windows-x86_64'": False,
-                 "startsWith(matrix.target, 'linux-')": False,
-                 "needs.source.outputs.retry == 'true'": True, "needs.source.outputs.retry != 'true'": False,
-                 "needs.bundle.outputs.artifact-ready == 'true'": True,
-                 "steps.attach-registries.outcome == 'success'": True,
-                 "steps.admit-release.outcome == 'success'": True,
-                 "steps.admit-release.outcome != 'success'": False,
-                 "steps.retry.outputs.enabled == 'true'": True, "vars.RELEASE_ARMED == 'true'": True}
-        return all(atoms[part.strip()] for part in condition.split('&&'))
-    if not active(job.get('if', 'always()')):
-        return []
-    return [step for step in job['steps'] if active(step.get('if', 'always()'))]
-
-
-def reduced_prerequisites(prepare, native, report=False):
-    """Check the existing path's providers; caches supply no required inputs."""
-    jobs = {'source': prepare['source'], 'build': native['build-windows'],
-            'windows-check': native['windows-check'], 'bundle': prepare['bundle'],
-            'registry-installed': prepare['registry-installed'], 'draft': prepare['draft']}
-    active = {name: reduced_steps(job) for name, job in jobs.items()}
-    uploads = {step['with']['name'].replace('${{ matrix.target }}', 'windows-x86_64'): name
-               for name, steps in active.items() for step in steps if 'actions/upload-artifact@' in step.get('uses', '')}
-    for name, steps in active.items():
-        assert steps, 'missing active reduced job: ' + name
-        for step in steps:
-            if 'actions/download-artifact@' in step.get('uses', ''):
-                options = step['with']
-                artifact = options.get('name')
-                if artifact:
-                    assert artifact in uploads, 'missing artifact provider: ' + artifact
-                else:
-                    assert options['pattern'] == 'platform-*' and 'platform-windows-x86_64' in uploads
-            for producer, output in re.findall(r'needs\.([\w-]+)\.outputs\.([\w-]+)', json.dumps(step)):
-                assert producer in jobs and reduced_steps(jobs[producer]), 'skipped output provider: ' + producer
-                assert output in jobs[producer].get('outputs', {}), 'missing output: ' + output
-        tools = [step.get('name', step.get('uses', step.get('id', ''))) for step in steps
-                 if 'setup-' in step.get('uses', '') or step.get('name', '').startswith('Prepare')]
-        caches = [step['with']['path'] for step in steps if 'actions/cache@' in step.get('uses', '')]
-        if report:
-            print(name + ' prerequisites: artifacts=' + ','.join(step['with'].get('name', step['with'].get('pattern', ''))
-              for step in steps if 'actions/download-artifact@' in step.get('uses', ''))
-              + '; own tools=' + ','.join(tools) + '; optional cache paths=' + ','.join(caches), flush=True)
-    for job, artifact in (('build', 'qualified-reuse'), ('windows-check', 'platform-windows-x86_64'), ('bundle', 'qualified-reuse'), ('draft', 'release')):
-        assert any('actions/download-artifact@' in step.get('uses', '') and step['with'].get('name') == artifact for step in active[job]), 'missing active artifact input in ' + job + ': ' + artifact
-    def command(job, text):
-        return next((index for index, step in enumerate(active[job]) if text in step.get('run', '')), None)
-    for job, artifact, selection, consumer in (
-            ('build', 'qualified-reuse', 'THINKTHEN_WINDOWS_R_PACKAGE=', 'scripts/release-workflow build'),
-            ('windows-check', 'platform-windows-x86_64', None, 'glob.glob("windows-candidate/*.tar.gz")'),
-            ('bundle', 'platform-*', None, 'scripts/release-workflow bundle'),
-            ('bundle', 'qualified-reuse', 'THINKTHEN_RELEASE_REUSE=', 'scripts/release-workflow bundle'),
-            ('draft', 'release', 'THINKTHEN_RELEASE_REUSE=', 'scripts/release-workflow draft')):
-        download = next((index for index, step in enumerate(active[job]) if 'actions/download-artifact@' in step.get('uses', '') and artifact in step['with'].values()), None)
-        use = command(job, consumer)
-        assert download is not None and use is not None and download < use, 'missing or late artifact download in ' + job + ': ' + artifact
-        if selection is not None:
-            select = command(job, selection)
-            assert select is not None and download < select < use, 'missing or late provenance selection in ' + job
-    build = command('build', 'scripts/release-workflow build')
-    assert build is not None
-    for text in ('scripts/release-workflow prepare', 'compiler_image()', 'THINKTHEN_WINDOWS_R_PACKAGE=', 'THINKTHEN_RELEASE_REUSE='):
-        index = command('build', text)
-        assert index is not None and index < build, 'missing Windows cross input provider: ' + text
-    assert command('build', 'scripts/release-workflow prepare') < command('build', 'compiler_image()'), 'compiler verification precedes tool bootstrap'
-    if report:
-        print('build prerequisite: paired compiler identity and native settings <- authenticated prior gate-linux-x86_64/pair.json; no local floor image or Linux engine is consumed', flush=True)
-    floor = command('build', 'THINKTHEN_FLOOR_IMAGE=')
-    assert floor is not None and floor < build, 'missing paired compiler identity provider'
-    from release_retry import ARTIFACTS
-    for artifact in ('gate-linux-x86_64', 'native-windows-r', 'platform-linux-x86_64', 'platform-linux-arm64', 'platform-macos-arm64'):
-        assert artifact in ARTIFACTS, 'missing prior artifact provider: ' + artifact
-    for job, texts in {
-        'source': ('scripts/release_retry.py',),
-        'windows-check': ('from release_rust import prepare', 'cargo fetch --locked --target',
-                          'scripts/qualification-windows-prepare', 'scripts/release-workflow prepare', 'dependency:go-offline'),
-        'bundle': ('scripts/jvm-prepare', 'scripts/csharp-prepare', 'prepare-registry',
-                   'scripts/release-workflow bundle', 'scripts/release-workflow registry', 'scripts/release-workflow attach'),
-        'draft': ('scripts/release-workflow draft', '--dry-run'),
-    }.items():
-        for text in texts:
-            index = command(job, text)
-            assert index is not None, 'missing active provider in ' + job + ': ' + text
-            consumer = command(job, 'scripts/qualification-candidate windows-x86_64') if job == 'windows-check' else command(job, 'scripts/release-workflow bundle') if job == 'bundle' else None
-            if consumer is not None and text not in ('scripts/release-workflow bundle', 'scripts/release-workflow registry', 'scripts/release-workflow attach'):
-                assert index < consumer, 'provider follows consumer in ' + job + ': ' + text
-    admission = next(step for step in active['source'] if 'scripts/release_retry.py' in step.get('run', ''))
-    assert admission['env']['GH_TOKEN'] == '${{ secrets.GITHUB_TOKEN }}', 'missing authenticated prior API access'
-    assert jobs['source']['runs-on'] == 'ubuntu-24.04', 'source needs the declared hosted Git/gh tools'
-    if report:
-        print('source prerequisite: Git/gh <- hosted ubuntu-24.04; GH_TOKEN <- scoped workflow token; pinned source/artifacts/jobs <- authenticated prior run API', flush=True)
-    for job in jobs:
-        assert any('actions/checkout@' in step.get('uses', '') for step in active[job]), 'missing source checkout: ' + job
-        assert any('actions/setup-python@' in step.get('uses', '') for step in active[job]), 'missing Python: ' + job
-    for runtime in ('go', 'java', 'dotnet', 'node', 'ruby'):
-        assert any(step.get('id') == 'setup-' + runtime for step in active['windows-check']), 'missing Windows runtime: ' + runtime
-    assert any('actions/setup-node@' in step.get('uses', '') for step in active['bundle']), 'missing registry Node'
-    assert any('actions/attest@' in step.get('uses', '') for step in active['draft']), 'missing real assembly attestation'
-
 
 class QualificationContinuation(unittest.TestCase):
+    def test_gate_asset_setup_repeats_without_changing_or_uploading_caller_data(self):
+        steps = workflow('native-qualification.yml')['jobs']['native-gate-inputs']['steps']
+        setup = next(step for step in steps if step.get('id') == 'native')
+        upload = next(step for step in steps if step.get('id') == 'upload-artifact-gate-linux-x86-64')
+        for state in ('absent', 'empty', 'prepared', 'file', 'link', 'dangling-link',
+                      'manifest-link', 'assets-link', 'asset-link', 'conflicting-asset'):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                scripts, binary, source = root / 'scripts', root / 'bin', root / 'source'
+                scripts.mkdir()
+                binary.mkdir()
+                source.mkdir()
+                assets = {'linux-x64/libthinkthen_ffi.so': b'shared engine',
+                          'linux-x64/libthinkthen_ffi.a': b'static engine', 'thinkthen.h': b'header'}
+                manifest = {'revision': 'a' * 40, 'floor_image': 'sha256:' + 'b' * 64,
+                            'native_key': 'c' * 64,
+                            'assets': {name: hashlib.sha256(data).hexdigest() for name, data in assets.items()}}
+                for name, data in assets.items():
+                    path = source / name
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(data)
+                (root / 'manifest').write_text(json.dumps(manifest, sort_keys=True) + '\n')
+                fakes = {'release-workflow': '#!/bin/sh\nexit 0\n',
+                         'native-prepare': '#!/bin/sh\nprintf "%s\\n" "$SOURCE"\n',
+                         'native-pair': '#!/bin/sh\ncp "$MANIFEST" "$2"\n'}
+                (scripts / 'native-tools-env').touch()
+                for name, body in fakes.items():
+                    (scripts / name).write_text(body)
+                    (scripts / name).chmod(0o755)
+                (binary / 'docker').write_text('#!/bin/sh\nprintf "%s\\n" "sha256:' + 'b' * 64 + '"\n')
+                (binary / 'docker').chmod(0o755)
+                gate, outside = root / 'gate-assets', root / 'outside'
+                outside.mkdir()
+                (outside / 'sentinel').write_bytes(b'outside data')
+                valid = state in ('absent', 'empty', 'prepared')
+                if state == 'file':
+                    gate.write_bytes(b'caller file')
+                elif state in ('link', 'dangling-link'):
+                    gate.symlink_to(outside if state == 'link' else root / 'missing', target_is_directory=True)
+                elif state != 'absent':
+                    gate.mkdir()
+                    (gate / 'sentinel').write_bytes(b'caller data')
+                    if state == 'manifest-link':
+                        (gate / 'pair.json').symlink_to(outside / 'sentinel')
+                    elif state == 'assets-link':
+                        (gate / 'assets').symlink_to(outside, target_is_directory=True)
+                    elif state in ('prepared', 'asset-link', 'conflicting-asset'):
+                        shutil.copytree(source, gate / 'assets')
+                        shutil.copy2(root / 'manifest', gate / 'pair.json')
+                        (gate / 'assets' / 'unrelated').write_bytes(b'private caller data')
+                        if state == 'asset-link':
+                            target = gate / 'assets' / 'thinkthen.h'
+                            target.unlink()
+                            target.symlink_to(outside / 'sentinel')
+                        elif state == 'conflicting-asset':
+                            (gate / 'assets' / 'thinkthen.h').write_bytes(b'other header')
+                environment = {'PATH': str(binary) + os.pathsep + os.environ['PATH'], 'HOME': directory,
+                               'SOURCE': str(source), 'MANIFEST': str(root / 'manifest'),
+                               'GITHUB_OUTPUT': str(root / 'output'), 'GITHUB_ENV': str(root / 'environment'),
+                               'RELEASE_TARGET': 'linux-x86_64', 'TMPDIR': directory}
+                for attempt in range(2 if valid else 1):
+                    result = subprocess.run(['bash', '-eo', 'pipefail', '-c', setup['run']], cwd=root,
+                                            env=environment, capture_output=True, text=True)
+                    if not valid:
+                        self.assertNotEqual(result.returncode, 0, result.stdout)
+                        break
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads((gate / 'pair.json').read_text()), manifest)
+                    for name, data in assets.items():
+                        self.assertEqual((gate / 'assets' / name).read_bytes(), data)
+                    if state != 'absent':
+                        self.assertEqual((gate / 'sentinel').read_bytes(), b'caller data')
+                    if state == 'prepared':
+                        self.assertEqual((gate / 'assets' / 'unrelated').read_bytes(), b'private caller data')
+                    self.assertEqual(upload['with']['path'], '${{ steps.native.outputs.asset_paths }}')
+                    output = (root / 'output').read_text().split('asset_paths<<ASSET_PATHS\n')[-1].split('\nASSET_PATHS')[0]
+                    self.assertEqual(set(output.splitlines()), {'gate-assets/pair.json',
+                        *(str(Path('gate-assets/assets') / name) for name in assets)})
+                self.assertEqual((outside / 'sentinel').read_bytes(), b'outside data')
+                if state == 'file':
+                    self.assertEqual(gate.read_bytes(), b'caller file')
+
     def test_pair_image_validation_failure_fails_workflow_import_step(self):
         steps = workflow('native-qualification.yml')['jobs']['gate']['steps']
         step = next(step for step in steps if step.get('id') == 'import-the-linux-native-pair')
@@ -157,7 +137,7 @@ class QualificationContinuation(unittest.TestCase):
                     target.chmod(0o755)
             for name in ('gate', 'sdk-gates'):
                 shutil.copy2(ROOT / 'scripts' / name, scripts / name)
-            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm'):
+            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm', 'mkfifo', 'date', 'tee', 'tail', 'cat'):
                 (binary / name).symlink_to(shutil.which(name))
             for name in ('python3', 'git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake', 'pkg-config', 'uv', 'node', 'npm', 'ruby', 'R', 'Rscript', 'docker'):
                 (binary / name).write_text(fake)
@@ -169,8 +149,8 @@ class QualificationContinuation(unittest.TestCase):
                      'PYTHONDONTWRITEBYTECODE': '1', 'PM_JOB_CORES': '1', 'CARGO_BUILD_JOBS': '1', 'RUST_TEST_THREADS': '1'})
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('Failed gate stages: tool-staticcheck release-staging-test rust-advisories', result.stderr)
-            self.assertIn('release-staging-test (exit 7)', result.stderr)
-            self.assertIn('rust-advisories (exit 9)', result.stderr)
+            self.assertRegex(result.stderr, r'release-staging-test \(exit 7; elapsed [0-9]+ seconds\)')
+            self.assertRegex(result.stderr, r'rust-advisories \(exit 9; elapsed [0-9]+ seconds\)')
             calls = log.read_text().splitlines()
             self.assertGreater(next(i for i, line in enumerate(calls) if line.startswith('postgres-gate ')),
                                next(i for i, line in enumerate(calls) if line.startswith('rust-advisories ')))
@@ -180,7 +160,7 @@ class QualificationContinuation(unittest.TestCase):
             for job_name, job in workflow(name)['jobs'].items():
                 with self.subTest(workflow=name, job=job_name):
                     if job.get('needs'):
-                        self.assertIn(job.get('if'), ('always()', 'always() && !inputs.windows_retry'))
+                        self.assertIn(job.get('if'), ('always()',))
                     steps = job['steps']
                     summary = steps[-1]
                     self.assertEqual(summary['if'], 'always()')
@@ -208,66 +188,22 @@ class QualificationContinuation(unittest.TestCase):
                         self.assertIn(failed, result.stderr)
                     self.assertIn(diagnostics[-1]['id'] + ': success', result.stdout)
 
-    def test_reduced_retry_keeps_windows_and_signed_dry_run_assembly(self):
-        prepare = workflow('release-prepare.yml')['jobs']
-        source = prepare['source']
-        admission = next(step for step in source['steps'] if step.get('id') == 'retry')
-        self.assertEqual(admission['env']['PRIOR_RUN_ID'], '${{ inputs.prior_run_id }}')
-        self.assertIn('test "$DRY_RUN" = true', admission['run'])
-        self.assertIn('python3 scripts/release_retry.py "$PRIOR_RUN_ID" reuse', admission['run'])
-        self.assertEqual(source['outputs']['retry'], '${{ steps.retry.outputs.enabled }}')
-        self.assertEqual(prepare['qualification']['with']['windows_retry'], "${{ needs.source.outputs.retry == 'true' }}")
-        native = workflow('native-qualification.yml')['jobs']
-        self.assertEqual(native['native-gate-inputs']['if'], '${{ !inputs.windows_retry }}')
-        for name in ('gate', 'windows-r'):
-            self.assertEqual(native[name]['if'], 'always() && !inputs.windows_retry')
-        matrix = native['build-windows']['strategy']['matrix']
-        self.assertEqual(matrix, {'include': [{'target': 'windows-x86_64', 'runner': 'ubuntu-24.04'}]})
-        self.assertNotIn('needs', native['build'])
-        self.assertNotIn('needs', native['windows-r'])
-        self.assertEqual(native['build-windows']['needs'], ['native-gate-inputs', 'windows-r'])
-        for name in ('build-windows', 'windows-check'):
-            self.assertEqual(native[name]['if'], 'always()')
-            self.assertFalse(native[name].get('continue-on-error', False))
-        self.assertTrue(any('scripts/release-workflow build' in step.get('run', '') for step in native['build']['steps']))
-        self.assertTrue(any('scripts/qualification-candidate windows-x86_64' in step.get('run', '') for step in native['windows-check']['steps']))
-        attest = [step for step in prepare['draft']['steps'] if 'actions/attest@' in step.get('uses', '')]
-        self.assertEqual({step['if'] for step in attest}, {
-            "needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'"})
-        for step in attest:
-            self.assertEqual(step['with']['subject-path'], 'release/*')
-            self.assertFalse(step.get('continue-on-error', False))
-        reused = next(step for step in attest if step['if'].endswith("== 'true'"))
-        self.assertEqual(reused['with']['predicate-path'], 'release/reuse.json')
-        self.assertIn('release-assembly', reused['with']['predicate-type'])
-        self.assertEqual(prepare['draft']['needs'], ['source', 'bundle', 'registry-installed'])
-        draft = next(step for step in prepare['draft']['steps'] if step.get('name') == 'Create a draft for review')
+    def test_qualification_uses_only_current_run_products(self):
+        prepare = workflow('release-prepare.yml')
+        native = workflow('native-qualification.yml')
+        text = json.dumps([prepare, native])
+        for obsolete in ('prior_run_id', 'windows_retry', 'qualified-reuse', 'THINKTHEN_RELEASE_REUSE'):
+            self.assertNotIn(obsolete, text)
+        self.assertNotIn('retry', prepare['jobs']['source']['outputs'])
+        self.assertEqual(native['jobs']['build-windows']['needs'], ['native-gate-inputs', 'windows-r'])
+        attest = [step for step in prepare['jobs']['draft']['steps'] if 'actions/attest@' in step.get('uses', '')]
+        self.assertEqual(len(attest), 1)
+        self.assertNotIn('if', attest[0])
+        self.assertEqual(attest[0]['with']['subject-path'], 'release/*')
+        self.assertEqual(prepare['jobs']['draft']['needs'], ['source', 'bundle', 'registry-installed'])
+        draft = next(step for step in prepare['jobs']['draft']['steps'] if step.get('name') == 'Create a draft for review')
         self.assertEqual(draft['env']['DRY_RUN'], '${{ inputs.dry_run }}')
         self.assertIn('--dry-run', draft['run'])
-
-    def test_reduced_prerequisites_have_active_providers_without_cache_hits(self):
-        import copy
-        prepare = workflow('release-prepare.yml')['jobs']
-        native = workflow('native-qualification.yml')['jobs']
-        reduced_prerequisites(prepare, native, report=True)
-        for job, missing in [('build-windows', 'restore-paired-compiler-identity'), ('build-windows', 'download-qualified-reuse'),
-                             ('windows-check', 'prepare-rust'), ('windows-check', 'setup-go')]:
-            changed = copy.deepcopy(native)
-            step = next(step for step in changed[job]['steps'] if step.get('id') == missing)
-            step['if'] = 'always() && !inputs.windows_retry'
-            with self.subTest(provider=missing), self.assertRaises(AssertionError):
-                reduced_prerequisites(prepare, changed)
-        for job, kind in (('bundle', 'platform-*'), ('bundle', 'THINKTHEN_RELEASE_REUSE='), ('draft', 'THINKTHEN_RELEASE_REUSE=')):
-            changed = copy.deepcopy(prepare)
-            step = next(step for step in changed[job]['steps'] if kind in step.get('with', {}).values() or kind in step.get('run', ''))
-            step['if'] = "needs.source.outputs.retry != 'true'"
-            with self.subTest(job=job, provider=kind), self.assertRaises(AssertionError):
-                reduced_prerequisites(changed, native)
-        changed = copy.deepcopy(prepare)
-        step = next(step for step in changed['bundle']['steps'] if step.get('name') == 'Prepare registry package tools')
-        step['if'] = "needs.source.outputs.retry != 'true'"
-        with self.assertRaises(AssertionError):
-            reduced_prerequisites(changed, native)
 
     def test_windows_checker_selects_the_same_pinned_host_runtimes(self):
         reference = workflow('windows.yml')['jobs']['windows']['steps']

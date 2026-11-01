@@ -1,8 +1,10 @@
 # ThinkThen in DuckDB
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
 
-Use exactly DuckDB 1.4.3. Extract the supplied matching DuckDB 0.2.0 archive. Start `duckdb -unsigned`, then load its extension by absolute path:
+Use exactly DuckDB 1.4.3. Download the supplied matching DuckDB 0.2.0 archive. Before extraction, [verify the release checksum and provenance](../../README.md#verify-a-download). Start `duckdb -unsigned`, then load its extension by absolute path. This disables DuckDB’s extension signature verification for the session, so load only trusted extensions.
 
 Check `README.md` at the archive root for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
 

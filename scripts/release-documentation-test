@@ -8,7 +8,45 @@ for surface in ('Ruby memory', 'C# memory', 'SQLite memory', 'PostgreSQL memory'
                 'Database cancellation'):
     assert '| ' + surface in note, surface
 assert note.index('## Known limits') < note.index('## Install')
-assert '## For 0.1 users' in note
+limits = note.split('## Known limits', 1)[1].split('## Install', 1)[0]
+for surface, rates in (
+        ('Ruby memory', ('-0.5712842105', '-0.1832421053')),
+        ('C# memory', ('0.2392926316', '0.0883873684')),
+        ('SQLite memory', ('0.0366484211', '0.1358147368')),
+        ('PostgreSQL memory and descriptors',
+         ('0.012934736842105263', '0.023713684210526315'))):
+    row = next(line for line in limits.splitlines() if line.startswith('| ' + surface + ' |'))
+    for fact in (*rates, 'System One', 'OpenAI', 'Linux x86_64',
+                 '41 to 60', 'bytes per verified record', 'PASS'):
+        assert fact in row, (surface, fact)
+    assert 'remain FAIL' not in row, surface
+assert '1,900,000 subsequent verified records' in limits
+assert 'Earlier short-run memory failures and the PostgreSQL System One descriptor failure remain historical failures.' in limits
+assert 'Seven new installed-package observations' in limits
+assert 'one saved historical PostgreSQL/OpenAI observation' in limits
+assert 'not a qualification of the new release' in limits
+assert '8 known failures' not in limits
+assert 'future growth and absence of leaks remain unproven' in limits
+upgrade = note.split('## For 0.1 users', 1)[1].split('## Platforms and requirements', 1)[0]
+# These are the removed public spellings in the published 0.1.2 command/crate.
+for command in ('status', 'check', 'cache', 'transform', 'audit', 'diff', 'prune', 'unused', 'convert'):
+    assert f'`{command}`' in upgrade, command
+for option in ('details', 'json', 'jsonl', 'on-error', 'plan', 'dry-run', 'timeout',
+               'seed', 'profile', 'max-requests-total', 'max-estimated-input-tokens-total',
+               'facts', 'input', 'lines', 'csv', 'tsv', 'field', 'context', 'jobs',
+               'max-retries', 'max-request-bytes', 'max-text-bytes', 'raw', 'true', 'false',
+               'option', 'options', 'label', 'kind', 'relation', 'relation-threshold',
+               'kind-field', 'none', 'record', 'replay', 'cache', 'no-cache', 'refresh-cache'):
+    assert f'`--{option}`' in upgrade, option
+for feature in ('polars', 'bundled-sqlite', 'host-sqlite'):
+    assert f'`{feature}`' in upgrade, feature
+for fact in ('Intel macOS', 'static musl Linux', 'glibc 2.28',
+             '`--details` becomes `--json`', 'no compatibility shims'):
+    assert fact in upgrade, fact
+assert 'cargo add thinkthen --no-default-features' in note
+assert 'R source packages require R >=4.2.0' in note
+assert '`--threshold LOW:HIGH` becomes `--low LOW --high HIGH`' in upgrade
+assert '`--batch max`' in upgrade and '`--batch` now takes a record count' in upgrade
 assert 'Botassembly.ThinkThen' in note
 assert 'github.com/botassembly/thinkthen/sdk/go/thinkthen' in note
 assert '0.1.2' in note

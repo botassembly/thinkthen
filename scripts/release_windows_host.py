@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import zipfile
 
+from release_downloads import prepare_tool
 from release_prepare_common import ROOT, TOOLS, PINS, fetch, run, prepared
 
 
@@ -130,12 +131,12 @@ def native():
         archive.extractall(binary)
     release = zig_version()
     zig = TOOLS / 'zig' / release
-    if not (zig / 'zig.exe').exists():
+    def archive():
         url = f'https://ziglang.org/download/{release}/zig-x86_64-windows-{release}.zip'
-        with zipfile.ZipFile(fetch(url, folder / 'zig.zip')) as archive:
-            archive.extractall(folder / 'zig')
-        zig.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(next((folder / 'zig').iterdir()), zig)
+        return fetch(url, folder / 'zig.zip')
+    compiler = prepare_tool(zig, 'zig.exe', archive)
+    if run(compiler, 'version', capture_output=True, text=True).stdout.strip() != release:
+        raise ValueError('prepare the pinned Zig compiler')
     prepare_msys2()
     env = environment()
     env = prepare_swift(env, folder)

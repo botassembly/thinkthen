@@ -1,6 +1,6 @@
 //! The OpenAI decisions wire format.
 //!
-//! Contract: https://developers.openai.com/api/reference/resources/decisions/methods/create
+//! Contract: <https://developers.openai.com/api/reference/resources/decisions/methods/create>
 //! Questions and answers are ordered arrays. Each ask quotes its own evidence,
 //! and `input` carries the request's shared state. Choice values retain their types.
 

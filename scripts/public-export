@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+"""Export unchanged product blobs with an explicit public parent; never push."""
+import argparse
+import json
+import os
+import re
+from pathlib import Path
+import subprocess
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def git(*args, cwd=ROOT, data=None):
+    return subprocess.check_output(['git', *args], cwd=cwd, input=data)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', required=True)
+    parser.add_argument('--parent', required=True, help='exact approved public parent commit')
+    parser.add_argument('--parent-repository', default='https://github.com/botassembly/thinkthen.git',
+                        help='approved public history source, or its local mirror')
+    parser.add_argument('--private-patterns', required=True, type=Path)
+    parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--project-only', action='store_true', help='create the tree without claiming a gate pass')
+    parser.add_argument('--evidence', type=Path)
+    parser.add_argument('--native-registration', type=Path)
+    parser.add_argument('--native-assets', type=Path)
+    parser.add_argument('--cargo-home', type=Path)
+    parser.add_argument('--swift-image')
+    parser.add_argument('--postgres-image')
+    args = parser.parse_args()
+    gate_inputs = (args.evidence, args.native_registration, args.native_assets,
+                   args.cargo_home, args.swift_image, args.postgres_image)
+    if not args.project_only and not all(gate_inputs):
+        parser.error('the candidate gate requires evidence, native registration/assets, Cargo home and runtime images')
+    patterns = args.private_patterns.resolve(strict=True)
+    if not patterns.read_text().strip():
+        parser.error('private pattern file must not be empty')
+    source = git('rev-parse', args.source + '^{commit}').decode().strip()
+    if not args.project_only and source != git('rev-parse', 'HEAD').decode().strip():
+        parser.error('candidate preparation must run from the exact source revision')
+    if not re.fullmatch('[0-9a-f]{40}', args.parent):
+        parser.error('public parent must be an exact full commit SHA')
+    parent = args.parent
+    output = args.output.resolve()
+    output.mkdir()  # An export owns only a newly created destination.
+    git('init', '--quiet', cwd=output)
+    # Fetch only the approved public ancestry, never the source revision.
+    git('fetch', '--quiet', '--no-tags', args.parent_repository, parent, cwd=output)
+    if git('rev-parse', 'FETCH_HEAD^{commit}', cwd=output).decode().strip() != parent:
+        raise RuntimeError('fetched public parent differs from approved identity')
+    entries = []
+    retained = []
+    excluded = 0
+    for entry in git('ls-tree', '-rz', source).split(b'\0'):
+        if not entry:
+            continue
+        metadata, name = entry.split(b'\t', 1)
+        mode, kind, oid = metadata.split()
+        if name == b'AGENTS.md' or name.startswith(b'sdlc/'):
+            excluded += 1
+            continue
+        if kind == b'blob':
+            actual = git('hash-object', '-w', '--stdin', cwd=output,
+                         data=git('cat-file', 'blob', oid.decode())).strip()
+            if actual != oid:
+                raise RuntimeError('export changed a retained blob')
+        elif kind != b'commit':
+            raise RuntimeError('unsupported product tree entry')
+        entries.append(mode + b' ' + oid + b'\t' + name + b'\0')
+        retained.append(entry + b'\0')
+    git('update-index', '-z', '--index-info', cwd=output, data=b''.join(entries))
+    tree = git('write-tree', cwd=output).decode().strip()
+    revision = git('commit-tree', tree, '-p', parent, cwd=output,
+                   data=b'Prepare release candidate\n').decode().strip()
+    git('update-ref', 'refs/heads/main', revision, cwd=output)
+    git('symbolic-ref', 'HEAD', 'refs/heads/main', cwd=output)
+    git('checkout-index', '--all', cwd=output)
+    exported = git('ls-tree', '-rz', revision, cwd=output)
+    # Compare complete mode/type/blob/path mappings, including gitlinks.
+    if exported != b''.join(retained):
+        raise RuntimeError('export differs from the retained source tree')
+    subprocess.run(['python3', str(output / 'scripts/words'), str(patterns)],
+                   cwd=output, env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'), check=True)
+    receipt = dict(source=source, parent=parent, revision=revision, tree=tree,
+                   retained=len(entries), excluded=excluded, rewrites=0, gate='not run')
+    if not args.project_only:
+        evidence = args.evidence.resolve()
+        evidence.mkdir()  # Reusing an old target can hide source relocation defects.
+        (evidence / 'export.json').write_text(json.dumps(receipt, indent=2) + '\n')
+        command = [str(output / 'scripts/public-export-gate'), str(evidence),
+                   str(args.native_registration.resolve(strict=True)), str(args.native_assets.resolve(strict=True)),
+                   str(args.cargo_home.resolve(strict=True)), args.swift_image, args.postgres_image, str(patterns)]
+        with (evidence / 'gate.log').open('w') as log:
+            status = subprocess.run(command, cwd=output, stdout=log, stderr=subprocess.STDOUT).returncode
+        receipt['gate'] = 'PASS' if status == 0 else 'FAIL'
+        receipt['gate_exit'] = status
+        (evidence / 'export.json').write_text(json.dumps(receipt, indent=2) + '\n')
+        print(json.dumps(receipt), flush=True)
+        if status:
+            raise SystemExit(status)
+    else:
+        print(json.dumps(receipt))
+
+
+if __name__ == '__main__':
+    main()

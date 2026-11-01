@@ -12,7 +12,12 @@ for gate in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate
         ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate" || status=$?
         case "$status" in
             0) printf 'Passed SDK gate: %s\n' "$gate" ;;
-            77) printf 'Skipped SDK gate: %s\n' "$gate" ;;
+            77) if [ "${THINKTHEN_GATE_STRICT:-0}" = 1 ]; then
+                    printf 'Failed required SDK gate: %s (exit 77)\n' "$gate" >&2
+                    failed="$failed $gate"
+                else
+                    printf 'Skipped SDK gate: %s\n' "$gate"
+                fi ;;
             *) printf 'Failed SDK gate: %s (exit %s)\n' "$gate" "$status" >&2
                failed="$failed $gate" ;;
         esac

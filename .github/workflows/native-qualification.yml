@@ -5,7 +5,6 @@ on:
     inputs:
       revision: {required: true, type: string}
       matrix: {required: true, type: string}
-      windows_retry: {required: false, type: boolean, default: false}
 
 permissions: {contents: read}
 env:
@@ -13,7 +12,6 @@ env:
 
 jobs:
   native-gate-inputs:
-    if: ${{ !inputs.windows_retry }}
     runs-on: ubuntu-24.04
     outputs:
       floor_image: ${{ steps.native.outputs.floor_image }}
@@ -57,18 +55,49 @@ jobs:
           native=$(scripts/native-prepare)
           echo "floor_image=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_OUTPUT"
           echo "THINKTHEN_FLOOR_IMAGE=$THINKTHEN_FLOOR_IMAGE" >> "$GITHUB_ENV"
-          mkdir gate-assets
-          scripts/native-pair export gate-assets/pair.json
-          python3 - "$native" <<'PYTHON'
+          test ! -L gate-assets
+          mkdir -p gate-assets
+          test -O gate-assets
+          pair=$(mktemp)
+          trap 'rm -f "$pair"' EXIT
+          scripts/native-pair export "$pair"
+          python3 - "$native" "$pair" <<'PYTHON'
+          import hashlib
           import json
+          import os
           from pathlib import Path
           import shutil
           import sys
-          source = Path(sys.argv[1])
-          for name in json.loads(Path('gate-assets/pair.json').read_text())['assets']:
-              destination = Path('gate-assets/assets') / name
+          source, pair = map(Path, sys.argv[1:])
+          manifest = json.loads(pair.read_text())
+          root = Path('gate-assets')
+          files = {root / 'pair.json': pair,
+                   **{root / 'assets' / name: source / name for name in manifest['assets']}}
+          # Check every reserved path before touching caller-owned contents.
+          for destination, origin in files.items():
+              for parent in destination.parents:
+                  if parent == Path('.'):
+                      break
+                  if parent.is_symlink() or (parent.exists() and
+                          (not parent.is_dir() or parent.stat().st_uid != os.geteuid())):
+                      sys.exit('unsafe native gate asset directory: ' + str(parent))
+              if destination.is_symlink() or (destination.exists() and
+                      (not destination.is_file() or destination.stat().st_uid != os.geteuid())):
+                  sys.exit('unsafe native gate asset file: ' + str(destination))
+              if destination.exists():
+                  matches = (json.loads(destination.read_text()) == manifest if destination.name == 'pair.json'
+                             else destination.read_bytes() == origin.read_bytes())
+                  if not matches:
+                      sys.exit('native gate asset conflicts with prepared pair: ' + str(destination))
+          for name, checksum in manifest['assets'].items():
+              if hashlib.sha256((source / name).read_bytes()).hexdigest() != checksum:
+                  sys.exit('native gate asset hash differs: ' + name)
+          for destination, origin in files.items():
               destination.parent.mkdir(parents=True, exist_ok=True)
-              shutil.copy2(source / name, destination)
+              if not destination.exists():
+                  shutil.copy2(origin, destination)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('asset_paths<<ASSET_PATHS\n' + '\n'.join(map(str, files)) + '\nASSET_PATHS\n')
           PYTHON
       - name: Prepare PostgreSQL inputs
         id: prepare-postgresql-inputs
@@ -109,7 +138,7 @@ jobs:
         id: upload-artifact-gate-linux-x86-64
         with:
           name: gate-linux-x86_64
-          path: gate-assets/
+          path: ${{ steps.native.outputs.asset_paths }}
           if-no-files-found: error
           retention-days: 7
 
@@ -121,7 +150,7 @@ jobs:
 
   gate:
     needs: native-gate-inputs
-    if: always() && !inputs.windows_retry
+    if: always()
     runs-on: macos-15
     timeout-minutes: 180
     permissions: {contents: read}
@@ -207,7 +236,7 @@ jobs:
         run: python3 scripts/qualification-summary
 
   windows-r:
-    if: always() && !inputs.windows_retry
+    if: always()
     runs-on: windows-2022
     timeout-minutes: 90
     permissions: {contents: read}
@@ -253,7 +282,7 @@ jobs:
         run: python3 scripts/qualification-summary
 
   build:
-    if: always() && !inputs.windows_retry
+    if: always()
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(inputs.matrix) }}
@@ -368,27 +397,17 @@ jobs:
           restore-keys: release-tools-${{ matrix.target }}-pins-${{ hashFiles('scripts/release-downloads.json', 'scripts/release-tools.json', 'scripts/release-windows-prepare') }}-
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         id: download-artifact-native-windows-r
-        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
+        if: always() && matrix.target == 'windows-x86_64'
         with:
           name: native-windows-r
           path: ${{ runner.temp }}/native-windows-r
-      - if: always() && inputs.windows_retry
-        id: download-qualified-reuse
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: {name: qualified-reuse, path: '${{ runner.temp }}/qualified-reuse'}
-      - if: always() && inputs.windows_retry
-        id: select-qualified-reuse
-        name: Select unchanged qualified Windows R input
-        run: |
-          echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/qualified-reuse/native-windows-r" >> "$GITHUB_ENV"
-          echo "THINKTHEN_RELEASE_REUSE=$RUNNER_TEMP/qualified-reuse/reuse.json" >> "$GITHUB_ENV"
       - name: Select the exact-source native Windows R package
         id: select-the-exact-source-native-windows-r-package
-        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
+        if: always() && matrix.target == 'windows-x86_64'
         run: echo "THINKTHEN_WINDOWS_R_PACKAGE=$RUNNER_TEMP/native-windows-r" >> "$GITHUB_ENV"
       - name: Select the paired Linux compiler identity for Windows cross builds
         id: select-the-paired-linux-compiler-identity-for-windows-cross-builds
-        if: always() && matrix.target == 'windows-x86_64' && !inputs.windows_retry
+        if: always() && matrix.target == 'windows-x86_64'
         env:
           FLOOR_IMAGE: ${{ needs.native-gate-inputs.outputs.floor_image }}
         run: echo "THINKTHEN_FLOOR_IMAGE=$FLOOR_IMAGE" >> "$GITHUB_ENV"
@@ -398,13 +417,6 @@ jobs:
         env:
           RELEASE_TARGET: ${{ matrix.target }}
         run: scripts/release-workflow prepare "$RELEASE_TARGET"
-      - name: Restore the verified paired compiler identity for the reduced Windows build
-        id: restore-paired-compiler-identity
-        if: always() && inputs.windows_retry
-        run: |
-          . scripts/native-tools-env
-          image=$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_retry import compiler_image; print(compiler_image())')
-          echo "THINKTHEN_FLOOR_IMAGE=$image" >> "$GITHUB_ENV"
       - name: Prepare runtime-only Linux qualification images
         id: prepare-runtime-only-linux-qualification-images
         if: always() && startsWith(matrix.target, 'linux-')

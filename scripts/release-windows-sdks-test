@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Feature: Windows installed checks report every language before failing."""
 import json
+import hashlib
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +16,47 @@ import release_windows_sdks as sdks
 
 LANGUAGES = ('Python', 'Python frames', 'TypeScript', 'Go', 'java', 'kotlin', 'C#', 'Ruby', 'R',
              'C', 'C++', 'Swift', 'Zig', 'sqlite', 'duckdb')
+
+
+def candidate_imports():
+    """Feature: installed Windows consumers preserve the candidate inventory."""
+    from release_workflow import ROOT, checksums
+    with tempfile.TemporaryDirectory(prefix='thinkthen-candidate-imports-') as temporary:
+        scratch = Path(temporary)
+        candidate = scratch / 'candidate'
+        checks = candidate / 'checks'
+        checks.mkdir(parents=True)
+        for source in (ROOT / 'sdk/python/tests/conformance.py', ROOT / 'scripts/test_control.py'):
+            shutil.copy2(source, checks / source.name)
+
+        def inventory():
+            return {path.relative_to(candidate).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                    for path in candidate.rglob('*') if path.is_file()}
+
+        (candidate / 'SHA256SUMS').write_text(''.join(
+            digest + '  ' + name + '\n' for name, digest in sorted(inventory().items())))
+        before = inventory()
+        checksums(candidate)
+        # ACL setup needs Windows; Python's real import and runtime environment do not.
+        with patch('release_windows_cache.prepare_cache'):
+            prepared = sdks.environment(scratch)
+        prepared['SYSTEMROOT'] = str(scratch / 'system')
+        runtime = sdks.runtime_environment(scratch, prepared)
+        # Native engine loading is unrelated to the delivered helper imports.
+        output = sdks.run(sys.executable, '-c',
+            'import io,sys,types; sys.modules["thinkthen"] = types.ModuleType("thinkthen"); '
+            'sys.path.insert(0,sys.argv[1]); import conformance,test_control; '
+            'assert conformance.read_line is test_control.read_line; '
+            'assert conformance.read_line(io.StringIO("import executed\\n")) == "import executed\\n"; '
+            'print(conformance.plain(["delivered imports executed"]))', checks,
+            cwd=scratch, env=runtime, resolve_path=prepared['PATH'])
+        assert 'delivered imports executed' in output, output
+        after = inventory()
+        extra = sorted(after.keys() - before.keys())
+        changed = sorted(name for name in before if before[name] != after.get(name))
+        print('Windows delivered Python imports: ' + json.dumps({'extra': extra, 'changed': changed}), flush=True)
+        checksums(candidate)
+        assert after == before, (extra, changed)
 
 
 def fixture(failure):
@@ -86,6 +129,7 @@ def fixture(failure):
 if len(sys.argv) == 2:
     fixture(sys.argv[1])
 else:
+    candidate_imports()
     for failure in ('Swift', 'C', 'Python', 'setup', 'none'):
         result = subprocess.run([sys.executable, __file__, failure], capture_output=True, text=True)
         print('\n'.join(line for line in result.stdout.splitlines()

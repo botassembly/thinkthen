@@ -9,8 +9,12 @@ pub mod loopback;
 mod admission;
 #[path = "spreadsheets/cancellation.rs"]
 mod cancellation;
+#[path = "spreadsheets/dates.rs"]
+mod dates;
 #[path = "spreadsheets/hardening.rs"]
 mod hardening;
+#[path = "spreadsheets/limits.rs"]
+mod limits;
 mod support;
 use serde_json::{Value, json};
 use std::fs;
@@ -696,7 +700,7 @@ fn excel_value_decoding_retains_numeric_text_and_shared_string_indexes() {
             )
         });
         if name == "shared" {
-            replace_member(&input, "xl/sharedStrings.xml", br#"<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si/><si><t>alpha</t><rPh sb="0" eb="5"><t>pronunciation</t></rPh></si></sst>"#);
+            replace_member(&input, "xl/sharedStrings.xml", br#"<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si/><si><t>a<![CDATA[l]]>&#112;ha</t><rPh sb="0" eb="5"><t>pronunciation</t></rPh></si></sst>"#);
         }
         let reference = directory.path().join(format!("{name}.csv"));
         fs::write(&reference, format!("Body\n{evidence}\n")).unwrap();
@@ -915,18 +919,18 @@ fn completion_failed_table_records_exit_six() {
 }
 
 #[test]
-fn workbook_shared_text_uses_the_record_byte_limit() {
+fn workbook_individual_shared_string_uses_the_record_byte_limit() {
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("shared-limit.xlsx");
     workbook(&input);
     let mut strings =
         String::from("<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
     let text = "x".repeat(1024 * 1024);
+    strings.push_str("<si><t>");
     for _ in 0..65 {
-        strings.push_str("<si><t>");
         strings.push_str(&text);
-        strings.push_str("</t></si>");
     }
+    strings.push_str("</t></si>");
     // A malformed suffix proves admission stops when the text limit is reached.
     strings.push_str("<broken");
     replace_member(&input, "xl/sharedStrings.xml", strings.as_bytes());

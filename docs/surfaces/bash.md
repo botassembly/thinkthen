@@ -1,5 +1,7 @@
 # ThinkThen in Bash
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
 
 ThinkThen judges evidence with ten functions. This guide covers the 0.2.0 command. You need Bash and the command archive for your operating system and CPU. Extract the supplied archive and put its command directory on `PATH`. With the Linux x86-64 archive, run `mkdir thinkthen-0.2.0`, `tar -xzf thinkthen-0.2.0-linux-x86_64.tar.gz -C thinkthen-0.2.0` and `export PATH="$PWD/thinkthen-0.2.0:$PATH"`.
@@ -25,7 +27,7 @@ Every function can read one record or a record stream. `--from text` reads one w
 
 Write `thinkthen FUNCTION QUESTION FILE`. Quote the question. Omit `FILE` to read standard input, or use `-` among file arguments to select standard input. Question arguments are literal text. `recognize` and `relate` have no question argument; `annotate` takes a toolbox filename.
 
-Use `--from text` for one whole text per file, `--from lines` for one record per line, or `--from jsonl` for one JSON value per nonblank line. A `.jsonl`, `.csv`, `.tsv` or `.xlsx` filename selects its own format. Otherwise filter, rank and annotate default to lines; other functions default to text. `run` defaults to JSON Lines. State `--from` when a pipeline's format matters.
+Use `--from text` for one whole text per file, `--from lines` for one record per nonblank line, or `--from jsonl` for one JSON value per nonblank line. A `.jsonl`, `.csv`, `.tsv` or `.xlsx` filename selects its own format. Otherwise filter, rank and annotate default to lines; other functions default to text. `run` defaults to JSON Lines. State `--from` when a pipeline's format matters.
 
 JSON records can carry a string or integer `id`. A JSON array on one JSON Lines line is one record. Use `--evidence /text` to judge only the `text` field. The selector is a JSON Pointer: `/` separates keys, `~1` means a literal slash, and `~0` means a literal tilde. Without a selector, ThinkThen uses the whole record.
 
@@ -144,6 +146,8 @@ Pass a whole record stream to one command so the engine can batch its questions.
 
 When a task gives you a call or request-body budget, plan before making calls. Count records and named questions, select the evidence columns each question needs, and consider how much text each question repeats. Use one annotate command for several questions on the same records or spreadsheet. Keep the complete evidence needed by find, recognize and relate. Save completed output for later analysis instead of calling again to format a report. Batching reduces request overhead; it does not remove the questions or evidence bytes the backend must receive. Task budgets belong to the task and do not change product limits.
 
+XLSX date and time formats become ISO 8601 evidence text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values.
+
 CSV, TSV and XLSX inputs require at least one `--column`. A single column supplies text for ordinary functions. Multiple columns supply an object with the column names as keys. Annotate always receives that named object, even for one column. This spreadsheet has a `text` header, so the same toolbox works:
 
 ```bash
@@ -179,7 +183,7 @@ thinkthen run toolbox.json --entry review messages.xlsx --sheet Messages \
   --column text --output messages-reviewed.xlsx
 ```
 
-A direct file can contain just the entry. `thinkthen run review` finds the entry in `./thinkthen.json` or `./thinkthen/`; select an explicit path if both exist. A run can instead hold a `run` array of function entries and `{"shell":["executable","argument"]}` steps. The next step receives the preceding step's JSON rows. Shell arguments are literal; add an interpreter explicitly for shell syntax. Only single-function entries accept spreadsheet framing.
+A direct file can contain just the entry. `thinkthen run review` finds the entry in `./thinkthen.json` or `./thinkthen/`; select an explicit path if both exist. A run can instead hold a `run` array of function entries and `{"shell":["executable","argument"]}` steps. The next step receives the preceding step's JSON rows. Shell steps require explicit permission: run `thinkthen run toolbox.json --entry review records.jsonl --allow-shell --json` only after inspecting the saved commands. Shell arguments are literal; add an interpreter explicitly for shell syntax. Only single-function entries accept spreadsheet framing.
 
 Call relate alone when you need names and relations from the same evidence. Its JSON row's `detail.names` contains all admitted names, including names with no returned relation, and `detail.pairs` contains scored relation pairs. The `answer` contains accepted relations. Do not run recognize first for that task.
 

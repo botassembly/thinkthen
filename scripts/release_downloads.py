@@ -6,7 +6,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 
 PINS = Path(__file__).with_name('release-downloads.json')
 
@@ -46,6 +48,42 @@ def fetch(url, path, digest=None):
         temporary.unlink(missing_ok=True)
 
     return path
+
+
+def prepare_tool(destination, executable, archive):
+    """Publish one archive root into an absent or empty compiler directory."""
+    compiler = destination / executable
+    for parent in Path(executable).parents:
+        path = destination / parent
+        if path.is_symlink() or (path.exists() and not path.is_dir()):
+            raise ValueError('compiler directory must be a real directory: ' + str(path))
+    if compiler.is_symlink() or (compiler.exists() and not compiler.is_file()):
+        raise ValueError('compiler must be a regular file: ' + str(compiler))
+    if compiler.is_file():
+        return compiler
+    if destination.exists() and any(destination.iterdir()):
+        raise ValueError('compiler directory contains conflicting files: ' + str(destination))
+    source = archive()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='.compiler-', dir=destination.parent) as temporary:
+        if zipfile.is_zipfile(source):
+            with zipfile.ZipFile(source) as package:
+                package.extractall(temporary)
+        else:
+            with tarfile.open(source) as package:
+                package.extractall(temporary, filter='data')
+        roots = list(Path(temporary).iterdir())
+        if len(roots) != 1 or not roots[0].is_dir():
+            raise ValueError('compiler archive must contain one directory')
+        staged = roots[0] / executable
+        relative = staged.relative_to(temporary)
+        if not staged.is_file() or any((Path(temporary) / part).is_symlink()
+                                       for part in (relative, *relative.parents)):
+            raise ValueError('compiler archive must contain a regular compiler: ' + str(staged))
+        if destination.exists():
+            destination.rmdir()  # Never remove unknown contents, including concurrent writes.
+        roots[0].rename(destination)
+    return compiler
 
 
 if __name__ == '__main__':

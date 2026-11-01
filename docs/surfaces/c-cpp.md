@@ -1,5 +1,7 @@
 # ThinkThen in C and C++
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 C uses run_one for one row and call_open/call_next for streams. C++ named methods return one row and `_each` methods return streams. A JSON array inside one record remains one record. C frees calls explicitly; C++ stream owners close calls, and `close()` ends early traversal.
 
 Check `share/thinkthen-c/README.md` and `share/thinkthen-cpp/README.md` inside their archives for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.

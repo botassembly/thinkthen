@@ -278,6 +278,9 @@ class ReleaseScripts(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'undeclared or missing files'):
                 verify(source, jars, resources, 'fixture', native)
 
+    def test_candidate_export_and_strict_gate_boundaries(self):
+        subprocess.run([ROOT / "scripts/public-export-check", "--contracts-only"], check=True)
+
     def test_release_package_text(self):
         subprocess.run([sys.executable, ROOT / "scripts/release-package-text-test"], check=True)
 
@@ -288,6 +291,7 @@ class ReleaseScripts(unittest.TestCase):
         subprocess.run([sys.executable, ROOT / "scripts/release-replay-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-report-all-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-download-cache-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/release-tool-installation-test"], check=True)
 
     def test_go_selection_preserves_explicit_home_under_isolated_home(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-go-home-') as temporary:
@@ -492,9 +496,9 @@ for platform, fallback in (
         attest = re.search(r'uses: actions/attest@[0-9a-f]{40}\b', draft)
         self.assertIsNotNone(attest, 'release provenance action must be pinned')
         self.assertIn("subject-path: 'release/*'", draft)
-        self.assertIn("if: needs.source.outputs.retry != 'true'", draft)
-        self.assertIn("if: needs.source.outputs.retry == 'true'", draft)
-        self.assertIn('predicate-path: release/reuse.json', draft)
+        self.assertNotIn("needs.source.outputs.retry", draft)
+        self.assertNotIn("predicate-path: release/reuse.json", draft)
+        self.assertNotIn("prior_run_id", workflow)
         self.assertLess(draft.index('uses: actions/download-artifact'), attest.start())
         self.assertLess(attest.start(), draft.index('name: Create a draft for review'))
 

@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Exercise pinned compiler preparation with local archives and real executables."""
+from contextlib import ExitStack
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tarfile
+import tempfile
+import unittest
+from unittest.mock import patch
+import zipfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import release_go as go
+import release_workflow_prepare as unix
+import release_windows_host as windows
+import release_windows_r
+
+
+class PreparedWindows(Exception):
+    pass
+
+
+class ToolInstallation(unittest.TestCase):
+    def fixture(self, stack, root, surface):
+        tools = root / 'tools'
+        version = go.version() if surface == 'go' else windows.zig_version()
+        relative = 'bin/go' if surface == 'go' else 'zig.exe' if surface == 'windows' else 'zig'
+        output = 'go' + version if surface == 'go' else version
+        source = root / 'archive-root'
+        compiler = source / relative
+        compiler.parent.mkdir(parents=True)
+        compiler.write_text('#!/bin/sh\nprintf "%s\\n" "' + output + '"\n')
+        compiler.chmod(0o755)
+        archive = root / ('tool.zip' if surface == 'windows' else 'tool.tar.xz')
+        if surface == 'windows':
+            with zipfile.ZipFile(archive, 'w') as zipped:
+                zipped.write(compiler, 'archive-root/' + relative)
+            duck = root / 'duck.zip'
+            with zipfile.ZipFile(duck, 'w'):
+                pass
+        else:
+            with tarfile.open(archive, 'w:xz') as tar:
+                tar.add(source, arcname='go' if surface == 'go' else 'archive-root')
+        module = {'go': go, 'unix': unix, 'windows': windows}[surface]
+        stack.enter_context(patch.object(module, 'TOOLS', tools))
+        fetched = []
+
+        def fetch(url, destination, *digest):
+            fetched.append(url)
+            return duck if surface == 'windows' and 'duck' in url else archive
+
+        stack.enter_context(patch.object(module, 'fetch', fetch))
+        if surface == 'go':
+            destination = go.home()
+            action = go.prepare
+            stack.enter_context(patch.dict(os.environ))
+        else:
+            destination = tools / 'zig' / version
+            if surface == 'unix':
+                stack.enter_context(patch.object(unix, 'current', lambda: {'ruby': 'x86_64-linux'}))
+                action = unix.sdk_tools
+            else:
+                stack.enter_context(patch.object(release_windows_r, 'runtime', lambda: None))
+                original_run = windows.run
+                stack.enter_context(patch.object(windows, 'run', lambda command, *args, **options: original_run(*(['sh', command] if str(command).endswith('.exe') else [command]), *args, **options)))
+                stack.enter_context(patch.object(windows, 'selections', lambda: {'INPUTS': {'duckdb-cli.zip': ('duck', 'digest')}}))
+                stack.enter_context(patch.object(windows, 'prepare_msys2', side_effect=PreparedWindows))
+
+                def action():
+                    try:
+                        windows.native()
+                    except PreparedWindows:
+                        pass
+
+        return destination, relative, output, action, fetched
+
+    def test_prepare_installs_at_expected_level_and_reuses_the_pinned_compiler(self):
+        for surface in ('go', 'unix', 'windows'):
+            for state in ('absent', 'empty', 'installed'):
+                with self.subTest(surface=surface, state=state), tempfile.TemporaryDirectory() as temporary, ExitStack() as stack:
+                    root = Path(temporary)
+                    destination, relative, output, action, fetched = self.fixture(stack, root, surface)
+                    if state != 'absent':
+                        destination.mkdir(parents=True)
+                    if state == 'installed':
+                        installed = destination / relative
+                        installed.parent.mkdir(parents=True, exist_ok=True)
+                        installed.write_text('#!/bin/sh\nprintf "%s\\n" "' + output + '"\n')
+                        installed.chmod(0o755)
+                    for _ in range(2):
+                        action()
+                        self.assertEqual(subprocess.check_output((*(['sh'] if surface == 'windows' else []), destination / relative, 'version'), text=True).strip(), output)
+                    self.assertEqual(sum('ziglang' in url or 'go.dev' in url for url in fetched), 0 if state == 'installed' else 1)
+
+    def test_prepare_rejects_unsafe_or_incorrect_installations_without_removing_contents(self):
+        for surface in ('go', 'unix', 'windows'):
+            for state in ('file', 'directory-link', 'dangling-directory-link', 'compiler-link', 'compiler-directory', 'conflict', 'wrong-version'):
+                with self.subTest(surface=surface, state=state), tempfile.TemporaryDirectory() as temporary, ExitStack() as stack:
+                    root = Path(temporary)
+                    destination, relative, _, action, _ = self.fixture(stack, root, surface)
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    sentinel = root / 'sentinel'
+                    sentinel.write_text('keep')
+                    if state == 'file':
+                        destination.write_text('keep')
+                    elif state in ('directory-link', 'dangling-directory-link'):
+                        destination.symlink_to(root / ('archive-root' if state == 'directory-link' else 'missing'), target_is_directory=True)
+                    else:
+                        destination.mkdir()
+                        compiler = destination / relative
+                        if state == 'conflict':
+                            (destination / 'unknown').write_text('keep')
+                        else:
+                            compiler.parent.mkdir(parents=True, exist_ok=True)
+                            if state == 'compiler-directory':
+                                compiler.mkdir()
+                            elif state == 'compiler-link':
+                                compiler.symlink_to(sentinel)
+                            else:
+                                compiler.write_text('#!/bin/sh\nprintf "0.0.0\\n"\n')
+                                compiler.chmod(0o755)
+                    before = sorted((str(path.relative_to(root)), path.lstat().st_mode, path.read_bytes() if path.is_file() else None)
+                                    for path in (destination, *destination.rglob('*')))
+                    with self.assertRaises((ValueError, OSError)):
+                        action()
+                    after = sorted((str(path.relative_to(root)), path.lstat().st_mode, path.read_bytes() if path.is_file() else None)
+                                   for path in (destination, *destination.rglob('*')))
+                    self.assertEqual(after, [row for row in before if not row[0].endswith('.lock')])
+                    self.assertEqual(sentinel.read_text(), 'keep')
+
+
+if __name__ == '__main__':
+    unittest.main()

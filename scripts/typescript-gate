@@ -12,7 +12,8 @@ case "$build_target" in
   *) build_target="$(pwd)/$build_target" ;;
 esac
 stage=$(mktemp -d)
-trap 'rm -rf "$stage"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 case "$(uname -s)" in
   Darwin) addon="$build_target"/debug/libthinkthen_node.dylib ;;
   Linux) addon="$build_target"/debug/libthinkthen_node.so ;;
@@ -20,7 +21,8 @@ case "$(uname -s)" in
 esac
 cp "$addon" sdk/typescript/thinkthen.node
 cp LICENSE sdk/typescript/LICENSE
-trap 'rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; rm -f sdk/typescript/thinkthen.node sdk/typescript/LICENSE; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 npm --prefix sdk/typescript ci --offline --ignore-scripts --no-audit --no-fund
 (cd sdk/typescript && npx tsc --project tsconfig.json && npx eslint runtime.js bridge.js stream.js --max-warnings 0)
 (cd sdk/typescript && npm pack --pack-destination "$stage" --ignore-scripts --quiet)

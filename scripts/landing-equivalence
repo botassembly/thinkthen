@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Compare gated and published Git trees outside private records."""
+import argparse
+import json
+from pathlib import Path
+import re
+import subprocess
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('gated')
+parser.add_argument('pushed')
+parser.add_argument('--gate-job', required=True, help='the recorded passing pm gate job')
+parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parent.parent)
+args = parser.parse_args()
+if not re.fullmatch(r'j[0-9]+', args.gate_job):
+    parser.error('provide the recorded pm gate job ID')
+args.repo = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'],
+                                        cwd=args.repo, text=True).strip())
+for revision in (args.gated, args.pushed):
+    if not re.fullmatch('[0-9a-f]{40}', revision):
+        parser.error('provide both full commit identities')
+    subprocess.run(['git', 'cat-file', '-e', revision + '^{commit}'], cwd=args.repo, check=True)
+subprocess.run(['git', 'diff', '--quiet', args.gated, args.pushed, '--', '.', ':!sdlc'],
+               cwd=args.repo, check=True)
+print(json.dumps(dict(gated_revision=args.gated, pushed_revision=args.pushed,
+                     gate_job=args.gate_job, outside_sdlc_equal=True)))

@@ -5,6 +5,7 @@ jvm_python=$(python3 -c 'import sys; print(sys.executable)')
 version=$("$jvm_python" "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
 root=$PWD
+: "${THINKTHEN_NATIVE_FIXTURES:?prepare native ABI fixtures before running jvm-gate}"
 . scripts/jvm-env
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH CLASSPATH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
 "$JAVA_HOME/bin/java" -version
@@ -32,7 +33,8 @@ if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
   cp "$native_target/debug/$jvm_library" "$resource/"
 fi
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 "$jvm_python" scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
 mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" install -DskipTests
 "$jvm_python" scripts/jvm_repository.py consumer "$root" "$scratch"

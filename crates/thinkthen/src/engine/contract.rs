@@ -132,7 +132,8 @@ impl Engine {
                         Err(error) => Err(error),
                     };
                     match row {
-                        Ok(row) => sink(Ok(row)),
+                        Ok(row) if !emitted => sink(Ok(row)),
+                        Ok(_) => {}
                         Err(error) => {
                             if !emitted {
                                 emitted = true;

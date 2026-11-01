@@ -15,12 +15,18 @@ class Monitor:
         self.roots = roots
         self.backend_port = backend_port
         self.output = output
-        self.scratch = tempfile.TemporaryDirectory(prefix='stress-samples-')
+        # AF_UNIX paths must fit even when the job's TMPDIR is deeply nested.
+        self.scratch = tempfile.TemporaryDirectory(prefix='stress-', dir='/tmp')
         self.path = str(Path(self.scratch.name) / 'checkpoint')
         self.server = socket.socket(socket.AF_UNIX)
-        self.server.bind(self.path)
-        self.server.listen()
-        self.server.settimeout(0.1)
+        try:
+            self.server.bind(self.path)
+            self.server.listen()
+            self.server.settimeout(0.1)
+        except BaseException:
+            self.server.close()
+            self.scratch.cleanup()
+            raise
         self.stop = threading.Event()
         self.rounds = []
         self.groups = {}

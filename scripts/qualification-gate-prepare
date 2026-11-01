@@ -3,9 +3,17 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+case "${1:-}" in
+    '') native_only=0 ;;
+    --native-only) native_only=1 ;;
+    *) echo 'usage: scripts/qualification-gate-prepare [--native-only]' >&2; exit 2 ;;
+esac
 scripts/sqlite-prepare --refresh
 cargo fetch --locked
+cargo fetch --locked --manifest-path fuzz/Cargo.toml
+if [ "$native_only" = 1 ]; then exit 0; fi
 scripts/rust-advisories --prepare
+scripts/rust-dependencies --prepare
 rustup component add rustfmt clippy
 scripts/ruby-dev-prepare
 scripts/csharp-prepare

@@ -221,5 +221,5 @@ fn version() -> String {
 }
 
 fn environment_help() -> &'static str {
-    "Credentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_BASE_URL; certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 transport setup; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe."
+    "Credentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_BASE_URL (System One only); certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 backend failure; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe."
 }

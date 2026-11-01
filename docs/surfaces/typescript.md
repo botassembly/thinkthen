@@ -1,5 +1,7 @@
 # ThinkThen in JavaScript and TypeScript
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 ThinkThen judges evidence with ten functions. Use Node.js 22.12 or later and an ESM project. Install the supplied 0.2.0 package archive; replace its path with the supplied filename:
 
 Run `npm init -y`, then `npm pkg set type=module`, then `npm install /path/to/thinkthen-0.2.0.tgz`.

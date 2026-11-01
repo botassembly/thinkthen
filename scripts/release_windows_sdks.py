@@ -70,7 +70,7 @@ def environment(scratch):
         path = scratch / folder
         path.mkdir(exist_ok=True)
         env[name] = str(path)
-    env.update(PYTHONUTF8='1', PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1',
+    env.update(PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1', PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1',
                npm_config_offline='true', npm_config_audit='false', npm_config_fund='false',
                GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOWORK='off', CGO_ENABLED='1',
                DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',

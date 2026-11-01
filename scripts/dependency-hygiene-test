@@ -1,0 +1,17 @@
+#!/bin/sh
+# Check the dependency policy and affected release contracts without native builds.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+scripts/rust-dependencies --self-test
+scripts/rust-dependencies
+scripts/rust-advisories
+scripts/rust-advisories --self-test
+scripts/notices --check
+scripts/supply-chain-check
+scripts/qualification-continuation-test
+scripts/qualification-recipe-test
+scripts/gate-report-test
+cargo fmt --all --check
+actionlint .github/workflows/*.yml
+git diff --check

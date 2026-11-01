@@ -2,6 +2,8 @@
 """Run installed public API adapters against the shared loopback stress table.
 
 Usage: stress-adapters.py --surface LABEL [--full] [--sequential] -- ADAPTER [ARG ...]
+For one extended healthy soak, add --rounds 60 --backend NAME --evidence-path FILE.
+This selects the full record count and evaluates memory over rounds 41 to 60.
 THINKTHEN_LOOPBACK names the prepared loopback executable. Each adapter reads the
 JSON file at THINKTHEN_STRESS_CASE. Fields: client (wire settings including URL and
 synthetic key), scenario (shared expected status/code), records, probability,
@@ -81,7 +83,7 @@ class Fixture:
 
 
 class Capture:
-    """Drain one child pipe while retaining a bounded diagnostic prefix."""
+    """Drain one child pipe while retaining the bounded end of its diagnostics."""
     def __init__(self, pipe):
         self.data = bytearray()
         self.size = 0
@@ -93,7 +95,8 @@ class Capture:
         with self.pipe:
             while block := self.pipe.read(4096):
                 self.size += len(block)
-                self.data.extend(block[:max(0, 4096 - len(self.data))])
+                self.data.extend(block)
+                del self.data[:-4096]
 
     def finish(self):
         self.thread.join(timeout=30)
@@ -323,17 +326,28 @@ def main():
     parser.add_argument('--surface', type=surface_label, required=True)
     parser.add_argument('--full', action='store_true', default=bool(os.environ.get('THINKTHEN_STRESS_FULL')))
     parser.add_argument('--sequential', action='store_true')
+    parser.add_argument('--rounds', type=int, choices=(60,), help='run only one extended healthy soak')
+    parser.add_argument('--backend', choices=('systemone', 'openai'), help='backend wire for --rounds 60')
+    parser.add_argument('--evidence-path', type=Path, help='new durable checkpoint JSONL file for --rounds 60')
     parser.add_argument('--sanitizer', choices=('address', 'thread'))
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     if not command:
         parser.error('an installed adapter command is required')
+    if args.rounds is not None:
+        if args.backend is None or args.evidence_path is None or args.sanitizer:
+            parser.error('--rounds 60 requires --backend and --evidence-path without a sanitizer')
+        args.full = True
+    elif args.backend is not None or args.evidence_path is not None:
+        parser.error('--backend and --evidence-path require --rounds 60')
     if args.full and not Path('/proc/self/status').exists():
         parser.error('full resource accounting requires Linux /proc; run inside the Linux container')
     root = Path(__file__).resolve().parent.parent
     table = json.loads((root / 'conformance/stress.json').read_text())
     backends = json.loads((root / 'conformance/typed/manifest.json').read_text())['backends']
+    if args.backend is not None:
+        backends = [args.backend]
     count = table['records']['full' if args.full else 'smoke']
     healthy = next(s for s in table['scenarios'] if s['name'] == 'healthy')
     calls = rows = failed = 0
@@ -344,18 +358,24 @@ def main():
         cases += [pair, (healthy, 1, 1, True)]
         if args.full or not args.sanitizer:
             cases += [(healthy, 1, table['records']['soak_rounds'], False)]
+        if args.rounds is not None:
+            cases = [(healthy, 1, args.rounds, False)]
         for scenario, concurrency, rounds, cancel in cases:
             result = {}
             try:
                 run(command, table, wire, scenario,
                     min(count, table["client"]["batch"]) if scenario["status"] == "failed" else count,
                     concurrency, rounds, cancel,
-                    resources=not args.sanitizer and rounds == table['records']['soak_rounds'] and Path('/proc/self/status').exists(),
+                    resources=not args.sanitizer and rounds == (args.rounds or table['records']['soak_rounds']) and Path('/proc/self/status').exists(),
                     short_gate=not args.full,
+                    memory_window=(41, 60) if args.rounds is not None else None,
+                    evidence_path=args.evidence_path,
                     result=result, surface=args.surface)
                 totals = calls + result['calls'], rows + result['rows'], failed + result['failed']
             except Exception as error:
-                result['error'] = str(error)
+                result['error'] = f'{type(error).__name__}: {error}'
+                if error.__cause__ is not None:
+                    result['cause'] = f'{type(error.__cause__).__name__}: {error.__cause__}'
             reports.append(result)
             print(json.dumps(result), file=sys.stderr, flush=True)
             if 'error' in result:
@@ -363,12 +383,18 @@ def main():
             calls, rows, failed = totals
         if 'error' in reports[-1]:
             break
-    print(json.dumps(dict(adapter=command[0], full=args.full, execution="sequential" if args.sequential else "concurrent", calls=calls, rows=rows, failed=failed, cases=reports, sanitizer=args.sanitizer,
-        resource_growth='not measured under sanitizer instrumentation' if args.sanitizer else
-            ('completed-round verdicts' if any('resources' in case for case in reports) else
-             'not measured: Linux /proc unavailable' if not Path('/proc/self/status').exists() else
-             'not measured: suite stopped before its resource workload'))), flush=True)
-    return int('error' in reports[-1])
+    measured = sum('resources' in case for case in reports)
+    resource_growth = ('not measured under sanitizer instrumentation' if args.sanitizer else
+        'completed-round verdicts' if measured == len(backends) else
+        'not measured: Linux /proc unavailable' if not Path('/proc/self/status').exists() else
+        'not measured: suite stopped before every required resource workload')
+    print(json.dumps(dict(adapter=command[0], full=args.full,
+        execution="sequential" if args.sequential else "concurrent", calls=calls, rows=rows,
+        failed=failed, cases=reports, sanitizer=args.sanitizer, resource_growth=resource_growth)), flush=True)
+    unmeasured = os.environ.get('THINKTHEN_GATE_STRICT') == '1' and resource_growth.startswith('not measured')
+    if unmeasured:
+        print('strict candidate resource check failed: ' + resource_growth, file=sys.stderr, flush=True)
+    return int('error' in reports[-1] or unmeasured)
 
 
 if __name__ == '__main__':

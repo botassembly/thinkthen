@@ -3,8 +3,11 @@
 *.profraw
 *.profdata
 /coverage/
+**/__pycache__/*.pyc
 
 /sdk/python/thinkthen/_relation.py
 
 /sdk/typescript/errors.js
 /sdk/typescript/errors.d.ts
+
+/sdk/typescript/node_modules/

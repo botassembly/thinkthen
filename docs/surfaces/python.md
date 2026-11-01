@@ -1,5 +1,7 @@
 # ThinkThen in Python
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 ThinkThen judges evidence with ten functions. Use Python 3.10 or later. Install the supplied 0.2.0 wheel in a virtual environment; replace the wheel path with the supplied filename:
 
 Run `python3 -m venv .venv`, then `. .venv/bin/activate`, then `python -m pip install /path/to/thinkthen-0.2.0-platform.whl`.

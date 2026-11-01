@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Check owned PostgreSQL preparation through its command, without building SDKs."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def soak(prepared, source, loopback, scratch, env):
+    """The real container leaf forwards exactly one canonical case in a clean env."""
+    runner = scratch / 'runner'
+    (runner / 'scripts').mkdir(parents=True)
+    (runner / 'scripts/stress-adapters.py').write_text('# controlled stress boundary\n')
+    subprocess.run(['git', 'init', '--quiet', runner], check=True)
+    subprocess.run(['git', '-C', runner, 'add', '.'], check=True)
+    subprocess.run(['git', '-C', runner, '-c', 'user.name=Launch test', '-c',
+                    'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'Create runner'], check=True)
+    tools = scratch / 'launch-bin'
+    tools.mkdir()
+    passwd = scratch / 'passwd'
+    passwd.write_text('')
+    lookups = scratch / 'passwd-lookups'
+    getent = tools / 'getent'
+    getent.write_text('#!' + sys.executable + '\nimport os,sys\nfrom pathlib import Path\n'
+        'assert sys.argv[1:]==["passwd",str(os.getuid())]\n'
+        + 'rows=[row for row in Path('+repr(str(passwd))+').read_text().splitlines() '
+        'if row.split(":")[2]==sys.argv[2]]\n'
+        + 'with Path('+repr(str(lookups))+').open("a") as log: log.write("present\\n" if rows else "absent\\n")\n'
+        'if rows: print("\\n".join(rows))\n'
+        'sys.exit(0 if rows else 2)\n')
+    getent.chmod(0o755)
+    python = tools / 'python3'
+    python.write_text('#!' + sys.executable + '\nimport json,os,sys\nfrom pathlib import Path\n'
+        'out=Path(os.environ["HOME"]).parent\n'
+        'print("controlled output: "+str(out/"observed.json"),file=sys.stderr)\n'
+        '(out/"observed.json").write_text(json.dumps({"argv":sys.argv[1:],"env":dict(os.environ)}))\n'
+        'print("controlled result")\nprint("controlled child failure",file=sys.stderr)\n'
+        'sys.exit(int(Path(os.environ["HOME"]).parent.parent.joinpath("child-exit").read_text()))\n')
+    python.chmod(0o755)
+    privilege = tools / 'setpriv'
+    privilege.write_text('#!' + sys.executable + '\nimport os,sys\n'
+        'assert sys.argv[1:6]==["--reuid",str(os.getuid()),"--regid",str(os.getgid()),"--clear-groups"]\n'
+        'os.execvp(sys.argv[6],sys.argv[6:])\n')
+    privilege.chmod(0o755)
+    docker = Path(env['PATH'].split(os.pathsep)[0]) / 'docker'
+    docker.write_text('#!' + sys.executable + '\nimport os,sys,subprocess,shlex,shutil\nfrom pathlib import Path\n'
+        'assert "--rm" in sys.argv and "--pull=never" in sys.argv\n'
+        'assert sys.argv[sys.argv.index("--network")+1]=="none"\n'
+        'mounts={}\n'
+        'for i,arg in enumerate(sys.argv):\n'
+        ' if arg=="-v":\n'
+        '  source,target,*mode=sys.argv[i+1].split(":"); mounts[target]=(source,mode)\n'
+        'assert all(mounts[p][1]==["ro"] for p in ["/src","/runner","/loopback","/opt/thinkthen-pg18","/launch"])\n'
+        'assert mounts["/evidence"][1]==[]\n'
+        'text=Path(mounts["/launch"][0]).read_text()\n'
+        + 'text=text.replace("/etc/passwd",shlex.quote('+repr(str(passwd))+'))\n'
+        'assert "/etc/passwd" not in text\n'
+        + 'text=text.replace("PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin",'+repr('PATH='+str(tools)+':/usr/bin:/bin')+')\n'
+        'for target,(source,_) in sorted(mounts.items(),key=lambda row:-len(row[0])):\n'
+        ' if target != "/launch": text=text.replace(target,source)\n'
+        'tokens=shlex.split(text)\n'
+        'path=next(arg.partition("=")[2] for arg in tokens if arg.startswith("PATH="))\n'
+        'selected=subprocess.check_output(["env","-i","PATH="+path,"sh","-c","command -v python3"],text=True).strip()\n'
+        + 'assert selected == '+repr(str(tools / 'python3'))+'\n'
+        'print("controlled Python: "+selected,file=sys.stderr)\n'
+        + 'privilege=shutil.which("setpriv",path='+repr(str(tools)+':/usr/bin:/bin')+')\n'
+        + 'assert privilege == '+repr(str(tools / 'setpriv'))+'\n'
+        'print("controlled privilege: "+privilege,file=sys.stderr)\n'
+        + 'assert shutil.which("getent",path='+repr(str(tools)+':/usr/bin:/bin')+') == '+repr(str(getent))+'\n'
+        + 'sys.exit(subprocess.run(["sh","-c",text,"container",*sys.argv[-2:]], env=dict(os.environ,PATH='+repr(str(tools)+':/usr/bin:/bin')+')).returncode)\n')
+    docker.chmod(0o755)
+    command = [ROOT / 'scripts/postgres-installed-soak', prepared / 'preparation.json',
+               source, runner, loopback]
+    for parent in (prepared, source, runner):
+        nested = parent / 'unexpected-evidence'
+        result = subprocess.run([*command, nested], env=env, capture_output=True, text=True)
+        assert result.returncode != 0 and 'overlaps' in result.stderr, result.stderr
+        assert not nested.exists(), 'launcher wrote into a verified input'
+    alias = scratch / 'source-alias'
+    alias.symlink_to(source, target_is_directory=True)
+    result = subprocess.run([*command, alias / 'unexpected-evidence'], env=env,
+                            capture_output=True, text=True)
+    assert result.returncode != 0 and 'overlaps' in result.stderr, result.stderr
+    assert not (source / 'unexpected-evidence').exists()
+    (scratch / 'child-exit').write_text('0')
+    evidence = scratch / 'case'
+    inherited = dict(env, THINKTHEN_API_KEY='must-not-reach-child', OPENAI_API_KEY='must-not-reach-child')
+    result = subprocess.run([*command, evidence], env=inherited, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    expected_passwd = f'thinkthen-{os.getuid()}:x:{os.getuid()}:{os.getgid()}::{evidence}/home:/bin/sh\n'
+    assert passwd.read_text() == expected_passwd
+    assert lookups.read_text() == 'absent\n'
+    assert (evidence / 'observed.json').is_file(), (evidence / 'stderr.log').read_text()
+    observed = json.loads((evidence / 'observed.json').read_text())
+    assert observed['argv'] == [str(runner / 'scripts/stress-adapters.py'), '--surface', 'postgres',
+        '--rounds', '60', '--backend', 'systemone', '--evidence-path', str(evidence / 'rounds.jsonl'),
+        '--', 'python3', str(source / 'extensions/postgres/tests/stress.py')], observed
+    assert observed['env']['HOME'] == str(evidence / 'home')
+    assert observed['env']['TMPDIR'] == '/tmp'
+    assert observed['env']['THINKTHEN_LOOPBACK'] == str(loopback)
+    assert 'THINKTHEN_API_KEY' not in observed['env'] and 'OPENAI_API_KEY' not in observed['env']
+    execution = json.loads((evidence / 'execution.json').read_text())
+    assert execution['native_producer'] == 'a' * 40 and execution['fixture_producer'] == 'f' * 40
+    before = (evidence / 'stdout.log').read_bytes()
+    result = subprocess.run([*command, evidence], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and 'exists' in result.stderr
+    assert (evidence / 'stdout.log').read_bytes() == before
+    (scratch / 'child-exit').write_text('37')
+    failed = scratch / 'failure'
+    result = subprocess.run([*command, failed], env=env, capture_output=True, text=True)
+    assert result.returncode == 37 and 'controlled child failure' in result.stderr, result.stderr
+    assert json.loads((failed / 'execution.json').read_text())['exit_code'] == 37
+    assert passwd.read_text() == expected_passwd
+    assert lookups.read_text() == 'absent\npresent\n'
+    installed = prepared / 'installed/lib/thinkthen_postgres.so'
+    installed.write_text('changed after preparation')
+    result = subprocess.run([*command, scratch / 'changed'], env=env, capture_output=True, text=True)
+    assert result.returncode != 0 and 'checksum' in result.stderr, result.stderr
+    assert not (scratch / 'changed').exists()
+    print('PostgreSQL launch preserves canonical case, clean environment, origins and failure evidence')
+
+
+def main():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-pg-preparation-') as temporary:
+        scratch = Path(temporary)
+        output = scratch / 'output'
+        sentinel = scratch / 'caller-file'
+        sentinel.write_text('keep')
+        command = [ROOT / 'scripts/postgres-installed-prepare']
+        result = subprocess.run(command + [str(scratch / 'missing'), str(output), str(sentinel)],
+                                capture_output=True, text=True)
+        assert result.returncode != 0 and 'source' in result.stderr.lower(), result.stderr
+        assert not output.exists()
+        output.mkdir()
+        (output / 'sentinel').write_text('keep')
+        result = subprocess.run(command + [str(ROOT), str(output), str(sentinel)], capture_output=True, text=True)
+        assert result.returncode != 0 and 'exists' in result.stderr.lower(), result.stderr
+        assert (output / 'sentinel').read_text() == 'keep'
+        assert sentinel.read_text() == 'keep'
+        shutil.rmtree(output)
+        source = scratch / 'source'
+        scripts = source / 'scripts'
+        scripts.mkdir(parents=True)
+        native = {'revision': 'a' * 40, 'native_key': 'b' * 64,
+                  'floor_image': 'sha256:' + 'c' * 64, 'assets': {}}
+        cache = source / 'native' / native['native_key']
+        for name in ('linux-x64/libthinkthen_ffi.so', 'linux-x64/libthinkthen_ffi.a', 'thinkthen.h'):
+            path = cache / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(name)
+            native['assets'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        header = source / 'crates/thinkthen-ffi/include/thinkthen.h'
+        header.parent.mkdir(parents=True)
+        header.write_text('thinkthen.h')
+        producer = scratch / 'native.json'
+        producer.write_text(json.dumps(native))
+        examples = source / 'extensions/postgres/examples'
+        examples.mkdir(parents=True)
+        for name in ('run-live', 'all-ten.sql'):
+            (examples / name).write_text(name)
+        shutil.copy2(ROOT / 'scripts/native-pair', scripts / 'native-pair')
+        shutil.copy2(ROOT / 'scripts/native-test-assets', scripts / 'native-test-assets')
+        # Invoking a historical frontend is forbidden: only its pure metadata
+        # function may run. The package frontend/header generator must never run.
+        (scripts / 'native-prepare').write_text(
+            'import os\nfrom pathlib import Path\nROOT=Path(__file__).resolve().parents[1]\n'
+            'def cache_path():\n'
+            ' assert os.environ["CARGO_HOME"] == str(ROOT.parent/"cargo-home")\n'
+            ' return ROOT/"native"/("b"*64)\n'
+            'if __name__ == "__main__": raise SystemExit("FORBIDDEN compiler/header boundary")\n')
+        for name in ('header-contract-check', 'postgres-package'):
+            path = scripts / name
+            path.write_text('#!/bin/sh\necho "FORBIDDEN compiler/header boundary" >&2\nexit 91\n')
+            path.chmod(0o755)
+        fixture_source = scripts / 'native-test-assets'
+        producer_hash = hashlib.sha256(fixture_source.read_bytes()).hexdigest()
+        fixture_key = hashlib.sha256(json.dumps({'producer': producer_hash, 'loopback': {}}, sort_keys=True).encode()).hexdigest()
+        fixture = cache / 'test-fixtures/x86_64-unknown-linux-gnu' / fixture_key
+        fixture.mkdir(parents=True)
+        for name in ('libthinkthen_ffi.a', 'loopback'):
+            (fixture / name).write_text('thinkthen_fixture_routes_install')
+        fixture_identity = {'built_revision': 'f' * 40, 'inputs': {
+            'native_key': cache.name, 'producer': producer_hash, 'loopback': {},
+            'target': 'x86_64-unknown-linux-gnu', 'profile': 'debug', 'features': ['fixture-routing']},
+            'files': {name: hashlib.sha256((fixture/name).read_bytes()).hexdigest() for name in ('libthinkthen_ffi.a', 'loopback')}}
+        (fixture / 'identity.json').write_text(json.dumps(fixture_identity))
+        tools = scratch / 'bin'
+        tools.mkdir()
+        compiler = tools / 'rustc'
+        compiler.write_text('#!/bin/sh\ntest "$1" = -vV || exit 91\nprintf "host: x86_64-unknown-linux-gnu\\n"\n')
+        compiler.chmod(0o755)
+        cargo = tools / 'cargo'
+        cargo.write_text('#!/bin/sh\necho "FORBIDDEN compiler/header boundary" >&2\nexit 91\n')
+        cargo.chmod(0o755)
+        docker = tools / 'docker'
+        runtime = scratch / 'runtime'
+        for directory in ('bin', 'lib', 'share/extension'):
+            (runtime / directory).mkdir(parents=True)
+        for name in ('pg_config', 'initdb', 'pg_ctl'):
+            (runtime / 'bin' / name).write_text(name)
+        pg_config = tools / 'pg_config'
+        pg_config.write_text('#!' + sys.executable + '\nimport sys\n'
+            + 'print(' + repr(str(runtime)) + '+{"--sharedir":"/share", "--pkglibdir":"/lib",'
+            ' "--bindir":"/bin"}[sys.argv[1]])\n')
+        pg_config.chmod(0o755)
+        docker.write_text('#!' + sys.executable + '\nimport sys,os,subprocess\nfrom pathlib import Path\n'
+            'if sys.argv[1]=="image": print("sha256:"+"1"*64); sys.exit()\n'
+            'work=next(Path(a[:-6]) for a in sys.argv if a.endswith(":/work"))\n'
+            'source=next(Path(a[:-8]) for a in sys.argv if a.endswith(":/src:ro"))\n'
+            'if any(a.endswith(":/native/libthinkthen_ffi.a:ro") for a in sys.argv):\n'
+            ' import tarfile,io\n'
+            ' with tarfile.open(work/"thinkthen-postgres-18-linux-x86_64.tar.gz","w:gz") as archive:\n'
+            '  for name in ("lib/thinkthen_postgres.so","share/extension/thinkthen.control"):\n'
+            '   item=tarfile.TarInfo(name); item.size=len(name); archive.addfile(item,io.BytesIO(name.encode()))\n'
+            ' print("package child diagnostic",file=sys.stderr)\n'
+            ' sys.exit(int(os.environ.get("PREP_PACKAGE_EXIT","0")))\n'
+            'leaf=next(Path(a[:-12]) for a in sys.argv if a.endswith(":/prepare:ro"))\n'
+            'subprocess.run(["sh",str(leaf),str(source),str(work),str(os.getuid()),str(os.getgid())],check=True)\n'
+            'print("installation child diagnostic", file=sys.stderr)\n'
+            'sys.exit(int(os.environ.get("PREP_INSTALL_EXIT", "0")))\n')
+        docker.chmod(0o755)
+        subprocess.run(['git', 'init', '--quiet', source], check=True)
+        subprocess.run(['git', '-C', source, 'add', '.'], check=True)
+        subprocess.run(['git', '-C', source, '-c', 'user.name=Preparation test', '-c',
+                        'user.email=test@example.invalid', 'commit', '--quiet', '-m', 'Create source'], check=True)
+        env = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
+        env.update(PATH=str(tools) + os.pathsep + env['PATH'], PYTHONDONTWRITEBYTECODE='1',
+                   THINKTHEN_RUNTIME_PREFIX=str(scratch))
+        call = command + [str(source), str(output), str(producer), '--cargo-home',
+                          str(scratch / 'cargo-home'), '--floor-image', native['floor_image']]
+        producer.write_text(json.dumps(dict(native, native_key='9' * 64)))
+        result = subprocess.run(call, env=env, capture_output=True, text=True)
+        assert result.returncode != 0 and 'differs' in result.stderr, result.stderr
+        assert not output.exists(), 'conflicting inputs reached package construction'
+        producer.write_text(json.dumps(native))
+        extra = source / 'extensions/postgres/unrecorded.sql'
+        for ignored in (False, True):
+            extra.write_text('SELECT 1;')
+            if ignored:
+                (source / '.git/info/exclude').write_text('unrecorded.sql\n')
+            result = subprocess.run(call, env=env, capture_output=True, text=True)
+            assert result.returncode != 0 and 'clean' in result.stderr, result.stderr
+            assert not output.exists(), 'unrecorded source reached package construction'
+            extra.unlink()
+        (source / 'target').mkdir()
+        (source / 'target/cached-build').write_text('keep')
+        with (source / '.git/info/exclude').open('a') as exclusions:
+            exclusions.write('target/\n')
+        for variable in ('PREP_PACKAGE_EXIT', 'PREP_INSTALL_EXIT'):
+            result = subprocess.run(call, env=dict(env, **{variable: '37'}), capture_output=True, text=True)
+            assert result.returncode == 37, result.stderr
+            diagnostic = 'package' if variable == 'PREP_PACKAGE_EXIT' else 'installation'
+            assert diagnostic + ' child diagnostic' in result.stderr
+            assert not output.exists(), 'failed owned staging survived'
+            assert sentinel.read_text() == 'keep'
+        result = subprocess.run(call, env=env, capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        receipt = json.loads((output / 'preparation.json').read_text())
+        assert receipt['native'] == native
+        assert receipt['fixtures']['built_revision'] == 'f' * 40
+        assert receipt['package_revision'] != receipt['runner_revision']
+        name = 'installed/lib/thinkthen_postgres.so'
+        assert receipt['files'][name] == hashlib.sha256(b'lib/thinkthen_postgres.so').hexdigest()
+        assert (output / 'bundle/runtime/lib/thinkthen_postgres.so').read_bytes() == b'lib/thinkthen_postgres.so'
+        assert (output / 'bundle/runtime/share/extension/thinkthen.control').is_file()
+        assert (output / 'native-producer.json').read_bytes() == producer.read_bytes()
+        assert (source / 'target/cached-build').read_text() == 'keep'
+        soak(output, source, fixture / 'loopback', scratch, env)
+    print('PostgreSQL preparation preserves caller files, child failures, hashes and source identities')
+
+
+if __name__ == '__main__':
+    main()

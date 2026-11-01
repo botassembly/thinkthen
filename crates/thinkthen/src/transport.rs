@@ -186,6 +186,7 @@ fn transport_cause(error: &ureq::Error) -> String {
                 kind => format!("I/O failure ({kind})"),
             }
         }
+        ureq::Error::BodyExceedsLimit(limit) => format!("reply body exceeds {limit} bytes"),
         ureq::Error::Protocol(_) => "invalid HTTP response".to_owned(),
         ureq::Error::ConnectProxyFailed(_) => "proxy connection failed".to_owned(),
         _ => "HTTP transport failure".to_owned(),

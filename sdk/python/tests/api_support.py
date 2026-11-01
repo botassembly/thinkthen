@@ -27,6 +27,7 @@ def isolated_environment(
             "THINKTHEN_CASES",
             "THINKTHEN_LOOPBACK",
             "THINKTHEN_STRESS_FULL",
+            "THINKTHEN_GATE_STRICT",
         }:
             monkeypatch.delenv(name)
     for name in ("HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"):

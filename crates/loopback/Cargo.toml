@@ -13,3 +13,7 @@ socket2.workspace = true
 
 [lints]
 workspace = true
+
+# socket2 is used by the server module included through #[path] outside this crate.
+[package.metadata.cargo-machete]
+ignored = ["socket2"]

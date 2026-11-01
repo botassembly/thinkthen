@@ -62,7 +62,7 @@ def check(name):
 with tempfile.TemporaryDirectory(prefix='thinkthen-readme-install-') as temporary:
     scratch = Path(temporary)
     env = environment(scratch)
-    (scratch / 'home').mkdir()
+    (scratch / 'home').mkdir(exist_ok=True)
 
     def run(*args, cwd=scratch, extra=None, **options):
         if WINDOWS:

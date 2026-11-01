@@ -12,7 +12,8 @@ case "${CARGO_TARGET_DIR:-target}" in
 esac
 export CARGO_TARGET_DIR
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 mkdir "$scratch/library" "$scratch/home"
 # Copy the prepared dependency artifact before isolating the consumer library.
 jsonlite=$(Rscript --vanilla -e 'cat(find.package("jsonlite"))')

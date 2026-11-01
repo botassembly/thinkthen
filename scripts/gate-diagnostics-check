@@ -1,0 +1,9 @@
+#!/bin/sh
+# Check gate diagnostic boundaries without running any SDK workload.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+python3 -W error scripts/stress-dispatch-test
+scripts/words
+scripts/secrets
+git diff --check

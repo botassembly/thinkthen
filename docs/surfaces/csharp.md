@@ -1,5 +1,7 @@
 # ThinkThen in C#
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Single Async methods return Task rows; StreamAsync methods and filter/rank return asynchronous streams. Arrays remain valid single records in single methods. `await foreach` closes traversal; `await using` closes clients.
 
 Check `README.md` inside the NuGet package for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.

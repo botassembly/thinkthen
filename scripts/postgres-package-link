@@ -1,0 +1,21 @@
+#!/bin/sh
+# Link the PostgreSQL package from an already selected archive; build no engine.
+set -eu
+driver=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+root=$1
+output=$2
+archive=$3
+test_build=$4
+job=${PM_JOB:-local}
+mkdir -p "$output"
+docker run --pull=never --rm --network none --label "$(python3 "$driver/scripts/build_targets.py")" --label "pm.ticket=${job%% *}" \
+    -v "$root:/src:ro" -v "$output:/work" -v "$archive:/native/libthinkthen_ffi.a:ro" \
+    "$(python3 "$driver/scripts/release_images.py" floor)" sh -c '
+        sharedir=$(pg_config --sharedir)
+        pkglibdir=$(pg_config --pkglibdir)
+        mkdir -p "$sharedir/extension"
+        chmod -R a+rwX "$pkglibdir" "$sharedir/extension"
+        exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/home \
+            PATH="$PATH" LANG=C.UTF-8 THINKTHEN_PG_CFLAGS="$3" LLVM_PROFILE_FILE="$4" THINKTHEN_SQL_TEST_BUILD="$5" \
+            sh /src/extensions/postgres/package.sh
+    ' sh "$(id -u)" "$(id -g)" "${THINKTHEN_PG_CFLAGS:-}" "${LLVM_PROFILE_FILE:-}" "$test_build"

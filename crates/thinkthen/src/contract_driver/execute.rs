@@ -280,7 +280,11 @@ fn rank(
             }
             Ok(None)
         },
-        &mut |_| {},
+        &mut |row| {
+            if let Err(error) = row {
+                sink(Err(error));
+            }
+        },
     )?;
     for (index, mut row) in successful.into_values().enumerate() {
         if let core::Outcome::Answered { answer, .. } = &mut row.outcome {

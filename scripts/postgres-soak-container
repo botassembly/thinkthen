@@ -1,0 +1,13 @@
+#!/bin/sh
+# Retain the canonical installed consumer and stress runner inside its PG image.
+set -eu
+owner=$1
+group=$2
+if ! getent passwd "$owner" >/dev/null; then
+    printf 'thinkthen-%s:x:%s:%s::/evidence/home:/bin/sh\n' "$owner" "$owner" "$group" >> /etc/passwd
+fi
+exec setpriv --reuid "$owner" --regid "$group" --clear-groups env -i \
+    HOME=/evidence/home PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin TMPDIR=/tmp LANG=C.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1 THINKTHEN_LOOPBACK=/loopback THINKTHEN_GATE_STRICT=1 \
+    python3 /runner/scripts/stress-adapters.py --surface postgres --rounds 60 --backend systemone \
+    --evidence-path /evidence/rounds.jsonl -- python3 /src/extensions/postgres/tests/stress.py

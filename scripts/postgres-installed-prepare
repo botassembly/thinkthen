@@ -1,0 +1,6 @@
+#!/bin/sh
+# Prepare an installed SQL SDK closure, without starting a server or workload.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+exec python3 scripts/postgres_installed_prepare.py "$@"

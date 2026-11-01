@@ -23,3 +23,36 @@ allow = ["Apache-2.0 WITH LLVM-exception"]
 [[licenses.exceptions]]
 crate = "cbindgen@=0.29.4"
 allow = ["MPL-2.0"]
+
+# The retained fuzz runner embeds LLVM's test-only fuzzing engine.
+[[licenses.exceptions]]
+crate = "libfuzzer-sys@=0.4.13"
+allow = ["MIT", "Apache-2.0", "NCSA"]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[bans]
+multiple-versions = "deny"
+# Each exception is an upstream incompatible requirement, not a direct duplicate.
+skip = [
+  # ureq uses base64 0.23; HTTP test and PEM helpers still require 0.22.
+  { name = "base64", version = "=0.22.1" },
+  # ring uses 0.2; tempfile and schema tools use 0.3; zip uses 0.4.
+  { name = "getrandom", version = "=0.2.17" },
+  { name = "getrandom", version = "=0.3.4" },
+  # referencing and rsqlite-vfs require 0.16; indexmap and hashlink require 0.17.
+  { name = "hashbrown", version = "=0.16.1" },
+  # command-group and ctrlc use different nix APIs.
+  { name = "nix", version = "=0.27.1" },
+  # The two current getrandom generations target different EFI API versions.
+  { name = "r-efi", version = "=5.3.0" },
+  # extendr's retained macros and current derive macros use incompatible syn APIs.
+  { name = "syn", version = "=2.0.119" },
+  # ring requires windows-sys 0.52; current Windows consumers require 0.61.
+  { name = "windows-sys", version = "=0.52.0" },
+  # cbindgen uses toml with winnow 0.7, while toml_parser requires 1.0.
+  { name = "winnow", version = "=0.7.15" },
+]

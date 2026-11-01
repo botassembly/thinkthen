@@ -6,9 +6,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-license-file = "../../LICENSE"
 repository.workspace = true
-include = ["src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
+include = ["LICENSE", "src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
 keywords = ["evidence", "classification", "language-model", "decision"]
 categories = ["text-processing", "science"]
 
@@ -42,20 +41,20 @@ clap_complete = { version = "4.5", optional = true }
 clap_mangen = { version = "0.2", optional = true }
 command-group = { version = "5.0.1", default-features = false, optional = true }
 quick-xml = { version = "0.41.0", optional = true }
-zip = { version = "9.1.2", default-features = false, features = ["deflate"], optional = true }
+zip = { version = "9.1.2", default-features = false, features = ["deflate-flate2-zlib-rs"], optional = true }
 tempfile = { version = "3.23.0", optional = true }
 schemars.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 ureq.workspace = true
 rustls = { version = "0.23", default-features = false, features = ["std", "ring"] }
-rustls-platform-verifier = { version = "=0.7.1", default-features = false }
+rustls-platform-verifier = { version = "0.7.1", default-features = false }
 
 [dev-dependencies]
 rcgen = "=0.13.2"
 csv = "1.4.0"
 tempfile = "3.23.0"
-zip = { version = "9.1.2", default-features = false, features = ["deflate"] }
+zip = { version = "9.1.2", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 jsonschema = { version = "0.46", default-features = false }
 socket2.workspace = true
 serde_json.workspace = true

@@ -47,13 +47,6 @@ def memory_floors():
             assert report['criterion'] == 'retained-round-growth-short-gate-report', report
             assert memory['report_only'] is True, memory
             assert 'short_gate_floor_bytes' not in memory, memory
-            # Reporting memory cannot hide a retained non-memory resource.
-            for key in METRICS[1:]:
-                changed = [dict(row) for row in samples]
-                for row in changed[10:]:
-                    row[key] = 1
-                retained = growth(changed, [records] * 20, short_gate=True)
-                assert not retained['passed'] and not retained['metrics'][key]['passed'], retained
         else:
             assert memory['floor_bytes_per_verified_record'] == 1, memory
     # A short report still needs verified counts.
@@ -61,6 +54,29 @@ def memory_floors():
         row['memory_bytes'] = 8 * 1024 * 1024
     assert growth(samples, [65] * 20, short_gate=True)['passed']
     assert growth(samples, short_gate=True)['verdict'] == 'unverifiable'
+
+
+def count_growth():
+    """Feature: short count checks reject sustained growth, not one-time steps."""
+    from stress_resources import METRICS, growth
+    for key in METRICS[1:]:
+        for late, peaks, passed, soak_passed in (
+            ([13] * 10, [13, 13, 13, 13], True, False),
+            ([10] * 9 + [13], [10, 10, 10, 13], True, True),
+            (list(range(11, 21)), [12, 15, 17, 20], False, False),
+            ([11, 12, 13, 14, 15, 15, 15, 15, 16, 17], [12, 15, 15, 17], True, False),
+        ):
+            samples = [dict.fromkeys(METRICS, 0) for _ in range(20)]
+            for row, value in zip(samples, [10] * 10 + late):
+                row[key] = value
+            short = growth(samples, [65] * 20, short_gate=True)
+            assert short['passed'] is passed, (key, late, short)
+            assert short['metrics'][key]['late_window_maxima'] == peaks, short
+            assert 'report_only' not in short['metrics'][key], short
+            for options in ({}, dict(memory_window=(11, 20))):
+                soak = growth(samples, [65] * 20, **options)
+                assert soak['passed'] is soak_passed, (key, late, soak)
+    print('short counts: steps and plateaus pass; four strictly rising peaks fail; soaks unchanged')
 
 
 def extended_window():
@@ -262,7 +278,9 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1:
         fixture(sys.argv[2])
     else:
+        subprocess.run([sys.executable, ROOT / 'harness-path-test'], check=True)
         memory_floors()
+        count_growth()
         extended_window()
         zombie_run = subprocess.run([sys.executable, str(ROOT / 'stress-sample.py'),
             '--rounds', '8', '--', sys.executable, __file__, 'zombies'], capture_output=True, text=True)

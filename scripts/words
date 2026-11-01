@@ -2,6 +2,7 @@
 """Reject private infrastructure and implementation history in tracked text."""
 
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -15,6 +16,9 @@ forbidden = re.compile(
 )
 if len(sys.argv) > 2:
     sys.exit('usage: scripts/words [PRIVATE_PATTERN_FILE]')
+strict = os.environ.get('THINKTHEN_GATE_STRICT') == '1'
+if strict and len(sys.argv) != 2:
+    sys.exit('strict candidate gate requires a private pattern file')
 private = None
 if len(sys.argv) == 2:
     pattern = pathlib.Path(sys.argv[1]).read_text().strip()
@@ -29,6 +33,8 @@ for entry in paths:
     if metadata.split()[0] == b"160000":
         continue
     path = pathlib.Path(name.decode())
+    if strict and (path.as_posix() == 'AGENTS.md' or path.parts[0] == 'sdlc'):
+        continue
     if path.as_posix() in {"scripts/words"}:
         continue
     data = (root / path).read_bytes()

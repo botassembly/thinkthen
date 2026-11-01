@@ -358,3 +358,5 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-preparation-') as temporary:
     node(scratch)
 
 subprocess.run([sys.executable, ROOT / "scripts/release-documentation-test"], check=True)
+
+subprocess.run([sys.executable, ROOT / "scripts/postgres-installed-prepare-test"], check=True)

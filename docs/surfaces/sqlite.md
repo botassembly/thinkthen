@@ -1,5 +1,7 @@
 # ThinkThen in SQLite
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
 
 Extract the supplied SQLite 0.2.0 archive. Use SQLite 3.41.0 or later with extension loading enabled. Load its extension in your database connection. The first example uses Python’s standard `sqlite3` module; replace the extension path with the extracted file:

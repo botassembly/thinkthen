@@ -2,6 +2,10 @@
 //! Helpers the command's tests share.
 
 #[cfg(unix)]
+#[allow(dead_code, reason = "Only child cleanup tests observe process IDs.")]
+pub(crate) mod process;
+
+#[cfg(unix)]
 use std::net::Shutdown;
 #[cfg(unix)]
 use std::os::fd::OwnedFd;

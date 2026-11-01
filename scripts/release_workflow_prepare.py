@@ -9,12 +9,12 @@ import re
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import zipfile
 
 from native_platform import current
 
+from release_downloads import prepare_tool
 from release_prepare_common import ROOT, TOOLS, PINS, fetch, run, prepared
 from release_host_tools import host_tools
 
@@ -84,16 +84,14 @@ def sdk_tools():
     """Prepare the same Zig compiler and Ruby runtime gem for either gate."""
     version = re.search(r'minimum_zig_version = "([^"]+)"', (ROOT / 'sdk/zig/build.zig.zon').read_text())[1]
     zig = TOOLS / 'zig' / version
-    if not (zig / 'zig').is_file():
+    def archive():
         system = 'macos' if platform.system() == 'Darwin' else 'linux'
         arch = 'aarch64' if platform.machine() in ('arm64', 'aarch64') else 'x86_64'
         url = f'https://ziglang.org/download/{version}/zig-{arch}-{system}-{version}.tar.xz'
-        archive = fetch(url, TOOLS / 'sources' / Path(url).name)
-        with tempfile.TemporaryDirectory(prefix='thinkthen-zig-prepare-') as temporary:
-            with tarfile.open(archive) as source:
-                source.extractall(temporary, filter='data')
-            zig.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(next(Path(temporary).iterdir()), zig)
+        return fetch(url, TOOLS / 'sources' / Path(url).name)
+    compiler = prepare_tool(zig, 'zig', archive)
+    if run(compiler, 'version', capture_output=True, text=True).stdout.strip() != version:
+        raise ValueError('prepare the pinned Zig compiler')
     ruby_platform = current()['ruby']
     gems = TOOLS / 'ruby/packages'
     gems.mkdir(parents=True, exist_ok=True)

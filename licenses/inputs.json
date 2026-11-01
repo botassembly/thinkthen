@@ -1,13 +1,13 @@
 {
-  "Cargo.lock": "79c2cfbb4159d25d822abded4412d044ed21de07217f0764d069d9a9eac7042b",
-  "Cargo.toml": "66f1f7919408c7a2b213ec4c89df0699a0fa9cfb356174739280b2b6d76fee57",
-  "crates/loopback/Cargo.toml": "f6814f3c05fe4d7230fb586dc0b490a21a0a085133d1f6aa7df2f79c11369dca",
-  "crates/thinkthen-ffi/Cargo.toml": "4b90637c031e4f5d6f9adb0c510d4c6fd6b56beb2e8d201c81ac2db43b2b39f3",
+  "Cargo.lock": "5c744a01ebb8d7e99d7f9973955bf8a97f95917c3797fab4aac2b3c01a63ba16",
+  "Cargo.toml": "067af2d0e4f977fb58905a82518097ac179049b5e84373ab4fda5663e4db47c3",
+  "crates/loopback/Cargo.toml": "a0232d8190b63e7aea4f24e4350c2717daa611d6c4067c3e83abbc07dac14a23",
+  "crates/thinkthen-ffi/Cargo.toml": "9595b7d9dd86967e0dff8666492dd2e9ae185895a57b63042dd8ecf126eb22d2",
   "crates/thinkthen-proxy/Cargo.toml": "c17ea6a9d2a672ca9848fecc7a3c2bb5c90f092cc4601afe7bded0bd9cc21140",
-  "crates/thinkthen-sql/Cargo.toml": "b9792abe81cdfb466bf7fdc627ca79c59dbbdea383ffaf1f96fb22e9be6f2f14",
-  "crates/thinkthen/Cargo.toml": "5cd4746a23f91d94a308c127ee355b2dacd61c50cf0c3b02a47a609cfdffc8de",
-  "sdk/python/native/Cargo.toml": "2f5294c0eb21e6874a32586778ff255838e2fd0aa07be62a7533ac5f9bd5dae2",
-  "sdk/r/native/Cargo.toml": "fea9556afc8ae27ff0aebb54d47a2b02515571c26110c94cc1f0304ce78edb46",
+  "crates/thinkthen-sql/Cargo.toml": "c49e9c90fee971568bc17b0a1eafd8bc23e5ecb12a16a67be5573ae93f28644b",
+  "crates/thinkthen/Cargo.toml": "a4e2ef87435f1aea7129bab632d86ca12abdcbffa7fafcdb27e544f42d687586",
+  "sdk/python/native/Cargo.toml": "f63a022be0992b8f3e7cd4a8c0e14f15e4b12e22643a4acfc486e33e8668cebb",
+  "sdk/r/native/Cargo.toml": "b208fe2e3dfefc56774decd3486f3242c2525978128d34dcc2b96e7a21af2be1",
   "sdk/r/native/vendor/extendr-api/.cargo_vcs_info.json": "777fd60da6030a55e03798d95d9de416f0a1b400d9ad0c4c1c1120ab104022f5",
   "sdk/r/native/vendor/extendr-api/Cargo.lock": "b6d4104d3fe8e7bafcc30d5332829d7183cad68e997b28978c6b3dfd5a0e4bbf",
   "sdk/r/native/vendor/extendr-api/Cargo.toml": "8d544f413aec0d8129212644f660f8cf88597d779ef435c97a9d7213c48fbd7b",
@@ -126,5 +126,5 @@
   "sdk/r/native/vendor/extendr-ffi/src/lib.rs": "8c260df86ab360f629fb549399377d494b902cbcb207eb7f497e889bcfce854c",
   "sdk/r/native/vendor/extendr-ffi/src/non_api.rs": "db38e3d3814ed2b075656626055a47fb73d390c23960f4fd1ec18d5ca8239471",
   "sdk/r/native/vendor/extendr-ffi/src/symbols.rs": "225327372c8738c5b99c658ef4188b2d900df9041fa8be7d67bd2b3faf5423db",
-  "sdk/typescript/native/Cargo.toml": "28eb5c2f58af9a3eb0dc5cb5f5d7ab5163a2d8dae685a3b65c2f56704b9d9419"
+  "sdk/typescript/native/Cargo.toml": "a2f8e29bd651e415405f92390486cabc8652bf68c66e2a3a6d0b39eea0ad57e5"
 }

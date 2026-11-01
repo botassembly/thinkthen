@@ -1,0 +1,430 @@
+#!/usr/bin/env python3
+"""Feature: producer receipts retain source identity through cache reuse and assembly.
+
+Compiler and metadata boundaries are controlled. No native library is compiled.
+"""
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import runpy
+import shutil
+import subprocess
+import sys
+import tempfile
+import types
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / 'scripts'))
+from native_producer import HOST_ASSETS
+from test_control import read_line
+
+KEY = 'a' * 64
+IMAGE = 'sha256:' + 'b' * 64
+
+
+def worker():
+    root, source, receipt, hold = sys.argv[2:]
+    root = Path(root)
+    entry = runpy.run_path(str(ROOT / 'scripts/native-prepare'))
+    cache = root / KEY
+    def output(*args):
+        if args[:2] == ('git', 'status'):
+            return ''
+        if args[0] == 'git':
+            return source
+        return 'host: x86_64-unknown-linux-gnu\n'
+    def compile_boundary(command, **options):
+        if 'build' in command:
+            with (root / 'compiles').open('a') as stream:
+                stream.write(source + '\n')
+            print('compile-entered', flush=True)
+            if hold == 'hold':
+                assert sys.stdin.readline().strip() == 'continue'
+            target = root / 'target/runtime-floor/x86_64-unknown-linux-gnu/release'
+            target.mkdir(parents=True, exist_ok=True)
+            for name in ('libthinkthen_ffi.so', 'libthinkthen_ffi.a'):
+                (target / name).write_bytes(b'controlled production bytes')
+        return subprocess.CompletedProcess(command, 0)
+    original_lock = entry['fcntl'].flock
+    def lock(*args):
+        print('lock-request', flush=True)
+        return original_lock(*args)
+    entry['fcntl'].flock = lock
+    entry['subprocess'].run = compile_boundary
+    entry['main'].__globals__.update(ROOT=root, cache_path=lambda: cache, output=output)
+    sys.modules['header_contract'] = types.SimpleNamespace(check=lambda _: None)
+    # The worker models a Linux compiler and floor on every test host.
+    simulated = types.SimpleNamespace(**vars(sys))
+    simulated.platform = 'linux'
+    simulated.argv = ['native-prepare', '--receipt', receipt]
+    entry['main'].__globals__['sys'] = simulated
+    entry['main']()
+
+
+class Producer(unittest.TestCase):
+    def test_build_collects_by_receipt_when_child_prints_diagnostics(self):
+        with tempfile.TemporaryDirectory(prefix='native-build-output-') as temporary:
+            root = Path(temporary)
+            source, cache, cargo = root / 'source', root / KEY, root / 'cargo'
+            scripts = source / 'scripts'
+            scripts.mkdir(parents=True)
+            cargo.mkdir()
+            config = cargo / 'config.toml'
+            config.write_text('[build]\n')
+            for name in ('native-producer', 'native_producer.py', 'native_platform.py'):
+                shutil.copy2(ROOT / 'scripts' / name, scripts / name)
+            launcher = scripts / 'native-producer'
+            launcher.write_text(launcher.read_text().replace(
+                'exec python3 scripts/native_producer.py "$@"',
+                "exec python3 -c 'import runpy, sys; sys.path.insert(0, \"scripts\"); sys.platform = \"linux\"; runpy.run_path(\"scripts/native_producer.py\", run_name=\"__main__\")' \"$@\""))
+            (scripts / 'native-tools-env').write_text('export PYTHONDONTWRITEBYTECODE=1\n')
+            (scripts / 'native-prepare').write_text(
+                'import os\nfrom pathlib import Path\ndef cache_path(): return Path(' + repr(str(root)) + ') / os.environ.get("FIXTURE_CACHE_KEY", ' + repr(KEY) + ')\n'
+                "if __name__ == '__main__': raise AssertionError('metadata lookup compiled source')\n")
+            hashes = {}
+            for name in HOST_ASSETS['linux']:
+                asset = cache / name
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_bytes(b'controlled production bytes')
+                hashes[name] = hashlib.sha256(asset.read_bytes()).hexdigest()
+            receipt = dict(source_revision='1' * 40, native_key=KEY, assets=hashes,
+                           config_sha256=hashlib.sha256(config.read_bytes()).hexdigest())
+            wrapper = scripts / 'runtime-floor-build'
+            wrapper.write_text('#!' + sys.executable + '\nimport json, pathlib, sys\n'
+                "assert sys.argv[1:3] == ['scripts/native-prepare', '--receipt']\n"
+                'pathlib.Path(sys.argv[3]).write_text(' + repr(json.dumps(receipt)) + ')\n'
+                "print('native cache miss: controlled host', file=sys.stderr, flush=True)\n"
+                "print('header check diagnostic', flush=True)\n"
+                'print(' + repr(str(cache)) + ', flush=True)\n')
+            wrapper.chmod(0o755)
+            env = dict(os.environ, GIT_AUTHOR_NAME='Example', GIT_AUTHOR_EMAIL='example@example.com',
+                       GIT_COMMITTER_NAME='Example', GIT_COMMITTER_EMAIL='example@example.com')
+            for command in (['init', '--quiet'], ['add', '.'], ['commit', '--quiet', '-m', 'Source']):
+                subprocess.run(['git', *command], cwd=source, env=env, check=True)
+            output = root / 'output'
+            result = subprocess.run([scripts / 'native-producer', 'build', '--floor-image', IMAGE,
+                '--cargo-home', cargo, '--target', root / 'target', '--output', output],
+                cwd=source, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('native cache miss: controlled host', result.stderr)
+            self.assertIn('header check diagnostic', result.stdout)
+            self.assertEqual(json.loads((output / 'receipt.json').read_text()), receipt)
+            for name in HOST_ASSETS['linux']:
+                self.assertEqual((output / 'assets' / name).read_bytes(), (cache / name).read_bytes())
+            rejected = subprocess.run([scripts / 'native-producer', 'build', '--floor-image', IMAGE,
+                '--cargo-home', cargo, '--target', root / 'target', '--output', root / 'rejected'],
+                cwd=source, env=dict(env, FIXTURE_CACHE_KEY='c' * 64), capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('current native inputs differ', rejected.stderr)
+            self.assertFalse((root / 'rejected/assets').exists())
+
+    def test_floor_prevents_python_bytecode_before_the_child_imports_source(self):
+        commands = []
+        class Docker:
+            def __init__(self, command, **options):
+                commands.append(command)
+                self.stdout = io.BytesIO()
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def wait(self): return 0
+        with tempfile.TemporaryDirectory(prefix='floor-python-policy-') as temporary:
+            home = Path(temporary)
+            env = dict(THINKTHEN_FLOOR_IMAGE=IMAGE, CARGO_HOME=str(home / 'cargo'),
+                       CARGO_TARGET_DIR=str(home / 'target'), PYTHONDONTWRITEBYTECODE='1')
+            with patch.dict(os.environ, env, clear=True), patch.object(Path, 'home', return_value=home), patch.object(sys, 'platform', 'linux'), patch.object(sys, 'argv', ['runtime-floor-build', 'git', 'status', '--porcelain']), patch('subprocess.check_output', return_value=str(ROOT / '.git')), patch('subprocess.Popen', Docker):
+                runpy.run_path(str(ROOT / 'scripts/runtime-floor-build'))
+            self.assertEqual(len(commands), 1)
+            settings = [commands[0][index + 1] for index, value in enumerate(commands[0][:-1]) if value == '-e']
+            self.assertIn('PYTHONDONTWRITEBYTECODE=1', settings)
+
+    def test_linux_production_wraps_header_validation_and_collects_actual_floor_receipt(self):
+        action = runpy.run_path(str(ROOT / 'scripts/native_producer.py'))['main']
+        with tempfile.TemporaryDirectory(prefix='native-build-boundary-') as temporary:
+            root = Path(temporary)
+            cargo, cache, output = root / 'cargo', root / 'cache', root / 'output'
+            cargo.mkdir()
+            config = cargo / 'config.toml'
+            config.write_text('[build]\n')
+            hashes = {}
+            for name in HOST_ASSETS['linux']:
+                asset = cache / name
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_bytes(b'controlled floor output')
+                hashes[name] = hashlib.sha256(asset.read_bytes()).hexdigest()
+            calls = []
+            def boundary(*command):
+                if command[:2] == ('git', 'status'):
+                    return ''
+                calls.append(command)
+                self.assertEqual(command[:3], ('scripts/runtime-floor-build', 'scripts/native-prepare', '--receipt'))
+                self.assertEqual(os.environ['THINKTHEN_FLOOR_IMAGE'], IMAGE)
+                self.assertEqual(os.environ['CARGO_HOME'], str(cargo))
+                self.assertEqual(os.environ['CARGO_TARGET_DIR'], str(root / 'target'))
+                (output / 'receipt.json').write_text(json.dumps(dict(source_revision='1' * 40, native_key=cache.name,
+                    target_directory=str(root / 'target/runtime-floor'), assets=hashes,
+                    config_sha256=hashlib.sha256(config.read_bytes()).hexdigest())))
+                return str(cache)
+            args = ['native-producer', 'build', '--floor-image', IMAGE, '--cargo-home', str(cargo),
+                    '--target', str(root / 'target'), '--output', str(output)]
+            metadata = types.SimpleNamespace(run_path=lambda _: {'cache_path': lambda: cache})
+            with patch.dict(os.environ), patch.object(sys, 'argv', args), patch.object(sys, 'platform', 'linux'), patch.dict(action.__globals__, run=boundary, runpy=metadata), patch('subprocess.run', side_effect=lambda command, **options: boundary(*command)):
+                action()
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(json.loads((output / 'receipt.json').read_text())['source_revision'], '1' * 40)
+            self.assertEqual((output / 'cargo-config.toml').read_bytes(), config.read_bytes())
+            for name in HOST_ASSETS['linux']:
+                self.assertEqual((output / 'assets' / name).read_bytes(), (cache / name).read_bytes())
+
+    def test_floor_advisories_ignore_cargo_home_scanner(self):
+        import tomllib
+        from runtime_floors import FLOORS
+        pins = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']
+        channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+        with tempfile.TemporaryDirectory(prefix='floor-cargo-dispatch-') as temporary:
+            home = Path(temporary)
+            prefix = home / '.local/share/thinkthen-build-tools/cargo-deny' / f'{pins["cargo-deny"]}-glibc{FLOORS["linux"]["glibc"]}-rust{channel}' / 'installed/bin'
+            prefix.mkdir(parents=True)
+            scanner = prefix / 'cargo-deny'
+            scanner.write_text('#!/bin/sh\nif [ "$1" = --version ]; then echo "cargo-deny ' + pins['cargo-deny'] + '"; else echo "$*" >> "$SCANNER_LOG"; fi\n')
+            scanner.chmod(0o755)
+            cargo_home = home / 'cargo-home'
+            (cargo_home / 'bin').mkdir(parents=True)
+            host_scanner = cargo_home / 'bin/cargo-deny'
+            host_scanner.write_text('#!/bin/sh\necho "host scanner must stay unused" >&2\nexit 66\n')
+            host_scanner.chmod(0o755)
+            bin_path = home / 'bin'
+            bin_path.mkdir()
+            git = bin_path / 'git'
+            git.write_text('#!/bin/sh\ncase "$1" in remote) echo https://github.com/RustSec/advisory-db;; rev-parse) echo ' + pins['advisory-revision'] + ';; esac\n')
+            git.chmod(0o755)
+            database = home / 'database'
+            (database / 'advisory-db-fixture/.git').mkdir(parents=True)
+            log = home / 'scanner-log'
+            env = dict(os.environ, HOME=str(home), CARGO_HOME=str(cargo_home),
+                       RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
+                       PATH=str(bin_path) + os.pathsep + os.environ['PATH'],
+                       THINKTHEN_FLOOR_BUILD='1', THINKTHEN_ADVISORY_DB_ROOT=str(database), SCANNER_LOG=str(log))
+            result = subprocess.run([sys.executable, ROOT / 'scripts/rust-advisories'], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(len(log.read_text().splitlines()), 2)
+            self.assertTrue(all('--offline --locked --all-features check' in line for line in log.read_text().splitlines()))
+
+    def test_floor_scanner_prepares_once_and_checks_the_same_isolated_tool(self):
+        import tomllib
+        from runtime_floors import FLOORS
+        action = runpy.run_path(str(ROOT / 'scripts/rust-dependencies'))['main']
+        version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']['cargo-machete']
+        channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+        with tempfile.TemporaryDirectory(prefix='floor-scanner-') as temporary:
+            home = Path(temporary)
+            prefix = home / '.local/share/thinkthen-build-tools/cargo-machete' / f'{version}-glibc{FLOORS["linux"]["glibc"]}-rust{channel}' / 'installed'
+            tool = prefix / 'bin/cargo-machete'
+            calls = []
+            def run(command, **options):
+                calls.append(command)
+                if command[:2] == ['cargo', 'install']:
+                    self.assertEqual(command[command.index('--root') + 1], str(prefix))
+                    tool.parent.mkdir(parents=True)
+                    tool.write_text('controlled floor executable')
+                return subprocess.CompletedProcess(command, 0)
+            with patch.dict(os.environ, THINKTHEN_FLOOR_BUILD='1'), patch.object(Path, 'home', return_value=home), patch('shutil.which', return_value='/host/cargo-machete'), patch('subprocess.run', run), patch('subprocess.check_output', return_value=version) as selected:
+                with patch.object(sys, 'argv', ['rust-dependencies', '--prepare']):
+                    action()
+                    action()
+                with patch.object(sys, 'argv', ['rust-dependencies']), self.assertRaises(SystemExit) as exit:
+                    action()
+                self.assertEqual(exit.exception.code, 0)
+                self.assertTrue(all(call.args[0] == [str(tool), '--version'] for call in selected.call_args_list))
+                with patch.object(sys, 'argv', ['rust-dependencies', '--prepare']), patch('subprocess.check_output', return_value='wrong'):
+                    with self.assertRaisesRegex(SystemExit, 'found wrong'):
+                        action()
+            self.assertEqual(sum(command[:2] == ['cargo', 'install'] for command in calls), 1)
+            self.assertEqual(calls[-1], [str(tool), str(ROOT)])
+
+    def test_full_gate_preparation_retains_its_linux_floor_boundary(self):
+        action = runpy.run_path(str(ROOT / 'scripts/native_producer.py'))['main']
+        args = ['native-producer', 'prepare-gate', '--floor-image', IMAGE,
+                '--cargo-home', '/prepared/cargo', '--target', '/prepared/target']
+        with patch.dict(os.environ), patch.object(sys, 'argv', args), patch.object(sys, 'platform', 'linux'), patch('subprocess.run') as run:
+            action()
+        self.assertEqual(run.call_args.args[0], ['scripts/runtime-floor-build', '--prepare', 'scripts/qualification-gate-prepare'])
+
+    def test_floor_advisories_select_existing_compatible_tool_without_installing(self):
+        import tomllib
+        from runtime_floors import FLOORS
+        action = runpy.run_path(str(ROOT / 'scripts/rust-advisories'))['main']
+        pins = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['metadata']['supply-chain']
+        channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+        with tempfile.TemporaryDirectory(prefix='floor-advisories-') as temporary:
+            home = Path(temporary)
+            prefix = home / '.local/share/thinkthen-build-tools/cargo-deny' / f'{pins["cargo-deny"]}-glibc{FLOORS["linux"]["glibc"]}-rust{channel}' / 'installed/bin'
+            database = home / 'database'
+            def output(*command, **options):
+                if command == (str(prefix / 'cargo-deny'), '--version'):
+                    return 'cargo-deny ' + pins['cargo-deny']
+                return pins['advisory-revision'] if 'rev-parse' in command else ''
+            with patch.dict(os.environ, THINKTHEN_FLOOR_BUILD='1', PATH='/host/tools'), patch.object(Path, 'home', return_value=home), patch.object(sys, 'argv', ['rust-advisories']), patch.dict(action.__globals__, output=output, database=lambda _: database), patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout='')) as run:
+                with self.assertRaisesRegex(SystemExit, 'prepare the pinned floor tool'):
+                    action()
+                run.assert_not_called()
+                prefix.mkdir(parents=True)
+                (prefix / 'cargo-deny').write_text('controlled compatible executable')
+                action()
+                self.assertEqual(run.call_count, 2)
+                self.assertTrue(all(call.args[0][0] == str(prefix / 'cargo-deny') for call in run.call_args_list))
+
+    def test_native_preparation_leaves_compiler_boundaries_with_their_owner(self):
+        with tempfile.TemporaryDirectory(prefix='native-prepare-boundary-') as temporary:
+            root = Path(temporary)
+            scripts = root / 'scripts'
+            scripts.mkdir()
+            for name in ('native-producer', 'native_producer.py', 'native_platform.py', 'qualification-gate-prepare'):
+                shutil.copy2(ROOT / 'scripts' / name, scripts / name)
+            (scripts / 'native-tools-env').write_text('export PYTHONDONTWRITEBYTECODE=1\n')
+            sqlite = scripts / 'sqlite-prepare'
+            sqlite.write_text('#!/bin/sh\nprintf "sqlite %s\\n" "$*" >> "$PREP_LOG"\n')
+            sqlite.chmod(0o755)
+            cargo = root / 'bin/cargo'
+            cargo.parent.mkdir()
+            cargo.write_text('#!/bin/sh\nprintf "cargo %s\\n" "$*" >> "$PREP_LOG"\n')
+            cargo.chmod(0o755)
+            # No whole-script floor runner or qualification tool is supplied.
+            # Calling either boundary would fail this actual command fixture.
+            log = root / 'commands'
+            env = dict(os.environ, PATH=str(cargo.parent) + os.pathsep + os.environ['PATH'],
+                       PREP_LOG=str(log))
+            result = subprocess.run([scripts / 'native-producer', 'prepare', '--floor-image', IMAGE,
+                                     '--cargo-home', root / 'cargo-home', '--target', root / 'target'],
+                                    env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text().splitlines(), ['sqlite --refresh', 'cargo fetch --locked',
+                'cargo fetch --locked --manifest-path fuzz/Cargo.toml'])
+
+    def test_cache_provenance_and_concurrent_reuse(self):
+        with tempfile.TemporaryDirectory(prefix='native-receipt-') as temporary:
+            root = Path(temporary)
+            (root / 'crates/thinkthen-ffi/include').mkdir(parents=True)
+            (root / 'crates/thinkthen-ffi/include/thinkthen.h').write_text('controlled header')
+            cargo = root / 'cargo'
+            cargo.mkdir()
+            (cargo / 'config.toml').write_text('[build]\n')
+            env = dict(os.environ, CARGO_HOME=str(cargo), CARGO_TARGET_DIR=str(root / 'target'),
+                       THINKTHEN_FLOOR_IMAGE=IMAGE, PM_JOB='0384 first-job')
+            env.pop('THINKTHEN_FLOOR_BUILD', None)
+            a, b = root / 'a.json', root / 'b.json'
+            command = [sys.executable, __file__, '--worker', str(root)]
+            first = subprocess.Popen([*command, '1' * 40, str(a), 'hold'], env=env,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            second = None
+            try:
+                self.assertEqual(read_line(first.stdout).strip(), 'lock-request')
+                self.assertEqual(read_line(first.stdout).strip(), 'compile-entered')
+                second = subprocess.Popen([*command, '2' * 40, str(b), 'go'],
+                    env=dict(env, PM_JOB='0384 second-job'), stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE, text=True)
+                self.assertEqual(read_line(second.stdout).strip(), 'lock-request')
+                _, error = first.communicate('continue\n')
+                self.assertEqual(first.returncode, 0, error)
+                _, error = second.communicate()
+                self.assertEqual(second.returncode, 0, error)
+            finally:
+                for process in (first, second):
+                    if process is not None and process.poll() is None:
+                        process.kill()
+                        process.communicate()
+            self.assertEqual(a.read_bytes(), b.read_bytes())
+            data = json.loads(a.read_text())
+            self.assertEqual(data['source_revision'], '1' * 40)
+            self.assertEqual(data['producer_job'], '0384 first-job')
+            self.assertEqual((root / 'compiles').read_text().splitlines(), ['1' * 40])
+            # A sequential cache hit must retain exactly the same original receipt.
+            c = root / 'c.json'
+            hit = subprocess.run([*command, '3' * 40, str(c), 'go'], env=env, capture_output=True, text=True)
+            self.assertEqual(hit.returncode, 0, hit.stderr)
+            self.assertEqual(c.read_bytes(), a.read_bytes())
+            # Unrecorded cached bytes cannot be assigned a new producer identity.
+            (root / KEY / 'x86_64-unknown-linux-gnu.producer.json').unlink()
+            unknown = subprocess.run([*command, '4' * 40, str(root / 'unknown.json'), 'go'],
+                                     env=env, capture_output=True, text=True)
+            self.assertNotEqual(unknown.returncode, 0)
+            self.assertIn('no recorded producer', unknown.stderr)
+            self.assertFalse((root / 'unknown.json').exists())
+            self.assertEqual((root / 'compiles').read_text().splitlines(), ['1' * 40])
+
+    def test_receipt_only_registration_preserves_both_producers_and_rejects_invalid_fields(self):
+        with tempfile.TemporaryDirectory(prefix='native-register-') as temporary:
+            root = Path(temporary)
+            source = root / 'source'
+            (source / 'scripts').mkdir(parents=True)
+            for name in ('native-producer', 'native_producer.py', 'native_platform.py'):
+                shutil.copy2(ROOT / 'scripts' / name, source / 'scripts' / name)
+            (source / 'scripts/native-tools-env').write_text('export PYTHONDONTWRITEBYTECODE=1\n')
+            (source / 'scripts/native-prepare').write_text(
+                "from pathlib import Path\ndef cache_path(): return Path('" + KEY + "')\n"
+                "if __name__ == '__main__': raise AssertionError('receipt registration invoked production')\n")
+            env = dict(os.environ, THINKTHEN_FLOOR_IMAGE=IMAGE, CARGO_HOME=str(root / 'cargo'),
+                       GIT_AUTHOR_NAME='Example', GIT_AUTHOR_EMAIL='example@example.com',
+                       GIT_COMMITTER_NAME='Example', GIT_COMMITTER_EMAIL='example@example.com')
+            for args in (['init', '--quiet'], ['add', '.'], ['commit', '--quiet', '-m', 'Consumer source']):
+                subprocess.run(['git', *args], cwd=source, env=env, check=True)
+            receipts = {}
+            for name, host, revision in (('mac', 'aarch64-apple-darwin', '1' * 40),
+                                         ('linux', 'x86_64-unknown-linux-gnu', '2' * 40)):
+                folder = root / name
+                folder.mkdir()
+                (folder / 'cargo-config.toml').write_text('[build]\n')
+                hashes = {}
+                for path in HOST_ASSETS[name]:
+                    asset = folder / 'assets' / path
+                    asset.parent.mkdir(parents=True, exist_ok=True)
+                    asset.write_text('controlled ' + path)
+                    hashes[path] = hashlib.sha256(asset.read_bytes()).hexdigest()
+                receipts[name] = dict(source_revision=revision, host=host, native_key=KEY,
+                    producer_job=name + '-job', target_directory=str(root / (name + '-target')),
+                    native_production_executed=True, floor_image=IMAGE, assets=hashes,
+                    config_sha256=hashlib.sha256((folder / 'cargo-config.toml').read_bytes()).hexdigest())
+                (folder / 'receipt.json').write_text(json.dumps(receipts[name]))
+            for key in ('THINKTHEN_FLOOR_IMAGE', 'CARGO_HOME', 'CARGO_TARGET_DIR'):
+                env.pop(key, None)
+            settings = ['--floor-image', IMAGE, '--cargo-home', root / 'cargo']
+            command = [source / 'scripts/native-producer', 'register', *settings, '--mac', root / 'mac', '--linux', root / 'linux']
+            result = subprocess.run([*command, '--output', root / 'combined'], cwd=source, env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            combined = json.loads((root / 'combined/registration.json').read_text())
+            self.assertEqual(combined['production_receipts'], receipts)
+            self.assertEqual(set(combined['five_assets']), set.union(*HOST_ASSETS.values()))
+            self.assertNotIn('producer_revision', combined)
+            for index, (field, value) in enumerate((('source_revision', None), ('producer_job', ''),
+                    ('host', 'x86_64-unknown-linux-gnu'), ('target_directory', 'relative'),
+                    ('native_key', 'c' * 64), ('floor_image', 'sha256:' + 'c' * 64),
+                    ('config_sha256', 'c' * 64),
+                    ('assets', {path: 'c' * 64 for path in HOST_ASSETS['mac']}))):
+                changed = dict(receipts['mac'])
+                changed[field] = value
+                (root / 'mac/receipt.json').write_text(json.dumps(changed))
+                rejected = subprocess.run([*command, '--output', root / ('rejected-' + str(index))],
+                    cwd=source, env=env, capture_output=True, text=True)
+                self.assertNotEqual(rejected.returncode, 0, field)
+                self.assertFalse((root / ('rejected-' + str(index)) / 'registration.json').exists())
+            build = subprocess.run([source / 'scripts/native-producer', 'build', *settings, '--target', 'relative', '--output', root / 'build'],
+                cwd=source, env=env, capture_output=True, text=True)
+            self.assertNotEqual(build.returncode, 0)
+            self.assertIn('absolute --target', build.stderr)
+            wrapper = source / 'scripts/native-producer'
+            wrapper.write_text(wrapper.read_text() + '\n# dirty production input\n')
+            dirty = subprocess.run([source / 'scripts/native-producer', 'build', *settings, '--target', root / 'fixed-target', '--output', root / 'dirty-input'],
+                cwd=source, env=env, capture_output=True, text=True)
+            self.assertNotEqual(dirty.returncode, 0)
+            self.assertIn('clean committed checkout', dirty.stderr)
+
+
+if __name__ == '__main__':
+    if sys.argv[1:2] == ['--worker']:
+        worker()
+    else:
+        unittest.main()

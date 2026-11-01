@@ -146,6 +146,7 @@ impl Drop for SenderOwner {
 pub struct RecordSender(Arc<SenderOwner>);
 impl RecordSender {
     /// Transfer one record to the call, waiting for bounded input capacity.
+    /// Rows must be drained concurrently as described in [`Engine::open`].
     /// # Errors
     /// Returns cancellation when the call closes or is cancelled.
     pub fn send(&self, record: Record) -> Result<(), Error> {
@@ -176,6 +177,7 @@ impl AnyCall {
     }
 }
 /// A typed call with bounded push input.
+/// Follow [`Engine::open`] for concurrent input and output ownership.
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct Call<F: Function> {
@@ -226,6 +228,13 @@ impl Engine {
         })
     }
     /// Open a typed question for push input.
+    ///
+    /// Retain a sender with [`Call::sender`] and consume [`Call::rows`] on another
+    /// thread or independently scheduled task while sending. `send` blocks the
+    /// calling thread when input is full; the draining task must still run. Sending
+    /// everything before draining can deadlock because both queues are bounded.
+    /// Close or drop the last sender after the final record. For an existing
+    /// iterator, prefer [`Engine::rows`], which owns input production.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
     pub fn open<F: Function>(&self, question: &F) -> Result<Call<F>, Error> {

@@ -251,7 +251,7 @@ with socket.socket() as reservation:
 from interrupts import check as check_interrupts
 check_interrupts(args.root, args.scratch, environment)
 print("R unreachable code and held-request interrupt passed", flush=True)
-subprocess.run([sys.executable, str(args.root / "scripts/stress-adapters.py"), "--surface", "r", "--sequential", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], env=environment, cwd=args.scratch, check=True)
+subprocess.run([sys.executable, str(args.root / "scripts/stress-adapters.py"), "--surface", "r", "--sequential", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], env=environment | {"THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, cwd=args.scratch, check=True)
 guide()
 module_abi()
 assert not count_failures, ("shared push-input request counts", count_failures)

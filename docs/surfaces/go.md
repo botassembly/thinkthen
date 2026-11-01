@@ -1,5 +1,7 @@
 # ThinkThen in Go
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Named methods return one row; `All` methods return a row/error sequence. A JSON array inside a Record remains one record. Range-loop exit closes the operation; defer `client.Close()` to release the client.
 
 Check `README.md` at the archive root for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.

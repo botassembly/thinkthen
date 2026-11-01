@@ -17,7 +17,8 @@ if [ -z "${THINKTHEN_SQL_ARCHIVE:-}" ]; then
 fi
 export THINKTHEN_SQL_ARCHIVE
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 THINKTHEN_SQL_TEST_BUILD=OFF THINKTHEN_DUCKDB_OUTPUT="$scratch/package" scripts/duckdb-build
 python3 databases/duckdb/tests/package-safety.py "$scratch/package/thinkthen.duckdb_extension"
 # Round-trip the delivered package before testing the official hosts.

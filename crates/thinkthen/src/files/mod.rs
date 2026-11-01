@@ -7,6 +7,8 @@ mod lock;
 mod operation;
 mod spool;
 mod xlsx;
+mod xlsx_dates;
+mod xlsx_formats;
 
 pub(crate) use cleanup::TemporaryPaths;
 pub use cleanup::force_cleanup;

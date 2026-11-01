@@ -10,9 +10,9 @@ repository.workspace = true
 
 [dependencies]
 thinkthen = { workspace = true, features = ["native"] }
-serde_json.workspace = true
 
 [dev-dependencies]
+serde_json.workspace = true
 loopback.workspace = true
 
 [lints]

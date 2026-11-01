@@ -157,7 +157,7 @@ for stage in ("headers", "body", "refusal-body"):
             if child.poll() is None:
                 child.kill()
                 child.wait(timeout=2)
-subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "swift", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "swift", consumer], env=network_env | {"THINKTHEN_LOOPBACK": loopback}, check=True)
+subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "swift", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "swift", consumer], env=network_env | {"THINKTHEN_LOOPBACK": loopback, "THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, check=True)
 # Hold the backend reply until the caller's second input is suspended. This
 # forces output readiness to wake the driver independently of caller input.
 with fixture(str(manifest_path.parent / "decide-precision.json")) as (_, upstream):

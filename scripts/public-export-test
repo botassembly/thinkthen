@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""Feature: public exports retain exact product trees and approved ancestry."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+class Export(unittest.TestCase):
+    def test_private_publication_changes_only_records(self):
+        with tempfile.TemporaryDirectory(prefix='landing-equivalence-') as temporary:
+            root = Path(temporary)
+            env = dict(os.environ, GIT_AUTHOR_NAME='Example', GIT_AUTHOR_EMAIL='example@example.com',
+                       GIT_COMMITTER_NAME='Example', GIT_COMMITTER_EMAIL='example@example.com')
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=root, env=env).decode().strip()
+            def commit():
+                git('add', '.')
+                git('commit', '--quiet', '-m', 'Fixture')
+                return git('rev-parse', 'HEAD')
+            git('init', '--quiet')
+            (root / 'sdlc').mkdir()
+            (root / 'sdlc/ticket.md').write_text('OPEN\n')
+            (root / 'product').write_text('original\n')
+            (root / 'unchanged').mkdir()
+            (root / 'unchanged/kept').write_text('kept\n')
+            gated = commit()
+            (root / 'sdlc/ticket.md').write_text('COMPLETE\n')
+            pushed = commit()
+            command = [sys.executable, ROOT / 'scripts/landing-equivalence', gated,
+                       '--repo', root, '--gate-job', 'j123']
+            result = subprocess.run([*command, pushed], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            receipt = json.loads(result.stdout)
+            self.assertEqual((receipt['gated_revision'], receipt['pushed_revision'], receipt['gate_job']),
+                             (gated, pushed, 'j123'))
+            for mutation in ('bytes', 'mode', 'instructions'):
+                git('reset', '--hard', pushed)
+                if mutation == 'bytes': (root / 'product').write_text('changed\n')
+                elif mutation == 'mode': (root / 'product').chmod(0o755)
+                else: (root / 'AGENTS.md').write_text('Changed instructions\n')
+                changed = commit()
+                result = subprocess.run([*command, changed], env=env, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0, mutation)
+                nested = subprocess.run([*command, changed, '--repo', root / 'unchanged'],
+                                        env=env, capture_output=True, text=True)
+                self.assertNotEqual(nested.returncode, 0, mutation + ' from nested directory')
+
+    def test_exact_product_tree_parent_and_private_pattern_boundary(self):
+        with tempfile.TemporaryDirectory(prefix='public-export-') as temporary:
+            root = Path(temporary)
+            source = root / 'source'
+            source.mkdir()
+            env = dict(os.environ, GIT_AUTHOR_NAME='Example', GIT_AUTHOR_EMAIL='example@example.com',
+                       GIT_COMMITTER_NAME='Example', GIT_COMMITTER_EMAIL='example@example.com')
+
+            def git(*args, cwd=source):
+                return subprocess.check_output(['git', *args], cwd=cwd, env=env).strip()
+
+            public_history = root / 'public-history'
+            public_history.mkdir()
+            git('init', '--quiet', cwd=public_history)
+            (public_history / 'README.md').write_text('Product\n')
+            git('add', '.', cwd=public_history)
+            git('commit', '--quiet', '-m', 'Public parent', cwd=public_history)
+            parent = git('rev-parse', 'HEAD', cwd=public_history).decode()
+            git('init', '--quiet')
+            (source / 'README.md').write_text('Product\n')
+            (source / 'scripts').mkdir()
+            for name in ('public-export', 'words'):
+                shutil.copy2(ROOT / 'scripts' / name, source / 'scripts' / name)
+            gate = source / 'scripts/public-export-gate'
+            gate.write_text('#!/bin/sh\nprintf "controlled candidate gate failed\\n"\nexit 23\n')
+            gate.chmod(0o755)
+            executable = source / 'command'
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+            (source / 'command-link').symlink_to('command')
+            (source / 'AGENTS.md').write_text('ExampleConfidential\n')
+            (source / 'sdlc').mkdir()
+            (source / 'sdlc/private').write_text('ExampleConfidential\n')
+            git('add', '.')
+            git('update-index', '--add', '--cacheinfo', '160000,' + parent + ',dependency')
+            git('commit', '--quiet', '-m', 'Private source')
+            revision = git('rev-parse', 'HEAD').decode()
+            absent = subprocess.run(['git', 'cat-file', '-e', parent], cwd=source, capture_output=True)
+            self.assertNotEqual(absent.returncode, 0, 'fixture must model a cold private object store')
+            patterns = root / 'patterns'
+            patterns.write_text('ExampleConfidential')
+            command = [sys.executable, str(source / 'scripts/public-export'), '--source', revision,
+                       '--project-only', '--parent', parent, '--parent-repository', str(public_history),
+                       '--private-patterns', str(patterns)]
+            output = root / 'public'
+            result = subprocess.run([*command, '--output', str(output)], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            receipt = json.loads(result.stdout.splitlines()[-1])
+            self.assertEqual(receipt['rewrites'], 0)
+            self.assertEqual(receipt['source'], revision)
+            self.assertFalse((output / 'AGENTS.md').exists())
+            self.assertFalse((output / 'sdlc').exists())
+            self.assertTrue((output / 'command-link').is_symlink())
+            expected = git('ls-tree', '-rz', revision, '--', 'README.md', 'command', 'command-link', 'dependency', 'scripts')
+            actual = subprocess.check_output(['git', 'ls-tree', '-rz', 'HEAD'], cwd=output).strip()
+            self.assertEqual(actual, expected)
+            ancestors = subprocess.check_output(['git', 'rev-list', 'HEAD'], cwd=output).decode().splitlines()
+            self.assertEqual(ancestors, [receipt['revision'], parent])
+            objects = subprocess.run(['git', 'cat-file', '-e', revision], cwd=output, capture_output=True)
+            self.assertNotEqual(objects.returncode, 0, 'private source commit copied')
+            # The real export entry point must preserve a gate boundary's failure.
+            registration = root / 'registration.json'
+            registration.write_text('{}')
+            gated = [argument for argument in command if argument != '--project-only']
+            evidence = root / 'evidence'
+            failed_gate = subprocess.run([*gated, '--output', str(root / 'candidate'),
+                '--evidence', str(evidence), '--native-registration', str(registration),
+                '--native-assets', str(root), '--cargo-home', str(root),
+                '--swift-image', 'fixture-swift', '--postgres-image', 'fixture-postgres'],
+                env=env, capture_output=True, text=True)
+            self.assertEqual(failed_gate.returncode, 23, failed_gate.stderr)
+            gate_receipt = json.loads((evidence / 'export.json').read_text())
+            self.assertEqual((gate_receipt['gate'], gate_receipt['gate_exit']), ('FAIL', 23))
+            self.assertIn('controlled candidate gate failed', (evidence / 'gate.log').read_text())
+            (source / 'README.md').write_text('ExampleConfidential\n')
+            git('add', 'README.md')
+            git('commit', '--quiet', '-m', 'Expose forbidden fixture')
+            bad = command.copy()
+            bad[bad.index('--source') + 1] = git('rev-parse', 'HEAD').decode()
+            rejected = subprocess.run([*bad, '--output', str(root / 'rejected')], env=env, capture_output=True, text=True)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('forbidden private', rejected.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

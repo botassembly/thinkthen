@@ -9,19 +9,21 @@ if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --locked -p loopback; fi
 build_target=${CARGO_TARGET_DIR:-$root/target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 if [ -n "${THINKTHEN_SWIFT_PACKAGE:-}" ]; then
     cp -R "$THINKTHEN_SWIFT_PACKAGE" "$scratch/ThinkThen"
 else
     scripts/swift-package "$scratch/ThinkThen"
 fi
-mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp"
+mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp" "$scratch/module-cache"
+export CLANG_MODULE_CACHE_PATH="$scratch/module-cache"
 cp sdk/swift/tests/*.swift "$scratch/consumer/"
 python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
 python3 scripts/surface-example prepare swift "$scratch/consumer/Guide"
 # SwiftPM has no remote dependencies to resolve. The separate consumer checks
 # normal dependency eligibility rather than only building the library itself.
-swift build --package-path "$scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors
+swift build --package-path "$scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors -Xswiftc -module-cache-path -Xswiftc "$CLANG_MODULE_CACHE_PATH" -Xcc "-fmodules-cache-path=$CLANG_MODULE_CACHE_PATH"
 (cd "$scratch/consumer/Guide" && python3 "$root/scripts/surface-example" check swift "$scratch/consumer/.build/debug/Guide")
 mkdir "$scratch/installed"
 cp "$scratch/consumer/.build/debug/Consumer" "$scratch/consumer/.build/debug/Readme" "$scratch/installed/"

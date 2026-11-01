@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import tomllib
+from runtime_floors import FLOORS
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -15,10 +16,10 @@ def output(*command, cwd=ROOT):
     return subprocess.check_output(command, cwd=cwd, text=True).strip()
 
 
-def check(database_root):
+def check(command, database_root, manifest=ROOT / "Cargo.toml"):
     return subprocess.run([
-        "cargo", "deny", "--offline", "--locked", "--all-features",
-        "check", "advisories", "licenses",
+        *command, "--manifest-path", str(manifest), "--offline", "--locked", "--all-features",
+        "check", "advisories", "licenses", "sources", "bans",
     ], cwd=ROOT, env=dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(database_root)),
        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -38,16 +39,24 @@ def main():
     parser.add_argument("--prepare", action="store_true", help="prepare pinned tools and data with network access")
     args = parser.parse_args()
     pins = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["metadata"]["supply-chain"]
+    command = ['cargo', 'deny']
+    if os.environ.get('THINKTHEN_FLOOR_BUILD') == '1':
+        channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+        prefix = Path.home() / '.local/share/thinkthen-build-tools/cargo-deny' / f'{pins["cargo-deny"]}-glibc{FLOORS["linux"]["glibc"]}-rust{channel}' / 'installed/bin'
+        if not (prefix / 'cargo-deny').is_file():
+            raise SystemExit('rust advisories: prepare the pinned floor tool at ' + str(prefix))
+        command = [str(prefix / 'cargo-deny')]
     database_root = Path(os.environ.get("THINKTHEN_ADVISORY_DB_ROOT", Path.home() / ".local/share/thinkthen-build-tools/advisory-dbs" / pins["advisory-revision"]))
-    if args.prepare:
+    if args.prepare and os.environ.get('THINKTHEN_FLOOR_BUILD') != '1' and shutil.which('cargo-deny') is None:
         subprocess.run(["cargo", "install", "--locked", "--version", pins["cargo-deny"], "cargo-deny"], check=True)
-        subprocess.run(["cargo", "deny", "fetch"], check=True,
+    actual = output(*command, "--version")
+    if actual != "cargo-deny " + pins["cargo-deny"]:
+        raise SystemExit("rust advisories: prepare cargo-deny " + pins["cargo-deny"] + "; found " + actual)
+    if args.prepare:
+        subprocess.run([*command, "fetch"], check=True,
                        env=dict(os.environ, THINKTHEN_ADVISORY_DB_ROOT=str(database_root)))
         subprocess.run(["git", "fetch", "origin", pins["advisory-revision"]], cwd=database(database_root), check=True)
         subprocess.run(["git", "checkout", "--detach", pins["advisory-revision"]], cwd=database(database_root), check=True)
-    actual = output("cargo", "deny", "--version")
-    if actual != "cargo-deny " + pins["cargo-deny"]:
-        raise SystemExit("rust advisories: prepare cargo-deny " + pins["cargo-deny"] + "; found " + actual)
     selected = database(database_root)
     if output("git", "rev-parse", "HEAD", cwd=selected) != pins["advisory-revision"] or output("git", "status", "--porcelain", cwd=selected):
         raise SystemExit("rust advisories: require a clean advisory database at " + pins["advisory-revision"])
@@ -75,15 +84,18 @@ patched = []
 
 Every serde version is affected in this test database only.
 ''')
-            result = check(Path(temporary))
+            result = check(command, Path(temporary))
             if result.returncode == 0 or "RUSTSEC-2026-9999" not in result.stdout or "error[vulnerability]" not in result.stdout:
                 raise SystemExit("rust advisories: planted advisory was not refused\n" + result.stdout)
             print("rust advisories: planted advisory refused offline")
     else:
-        result = check(database_root)
-        print(result.stdout, end="")
-        if result.returncode:
-            raise SystemExit(result.returncode)
+        failed = False
+        for manifest in (ROOT / "Cargo.toml", ROOT / "fuzz/Cargo.toml"):
+            result = check(command, database_root, manifest)
+            print(result.stdout, end="")
+            failed |= result.returncode != 0
+        if failed:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

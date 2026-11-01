@@ -1,5 +1,7 @@
 # ThinkThen in Kotlin
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Record methods suspend and return one row; `Stream` methods and filter/rank return Flows. A List passed as a single record remains one JSON array record. Flow completion or cancellation closes its operation; close clients with `use`.
 
 Check `META-INF/README.md` inside the JAR for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
@@ -60,7 +62,7 @@ Strings remain raw text. Serializable Kotlin values or JsonElement values supply
 | `find(question, record)` | FindAnswer.Match or FindAnswer.NoMatch |
 | `recognize(record, kinds = listOf("person", "organization"))` | List of Entity |
 | `relate(record, rules = rules)` | List of Relation |
-| `annotate(questions, record)` | Annotations |
+| `ask(Annotate(questions), record)` | Annotations |
 
 Use literal wording such as `"Does the customer request a refund?"`. Recognize and relate take domains without prompts. Construct rules with `RelationRule(name = "works_for", source = "person", target = "organization")`; optional `reads` supplies wording and `either` makes the relation undirected.
 

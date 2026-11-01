@@ -4,8 +4,11 @@ set -eu
 version=$(python3 "$(dirname "$0")/release_metadata.py" --version)
 cd "$(dirname "$0")/.."
 root=$PWD
+assets=${THINKTHEN_CSHARP_NATIVE_ASSETS:?provide the prepared matching release asset directory}
+: "${THINKTHEN_MALFORMED_ROW_FIXTURES:?prepare shared malformed row fixtures}"
 stage=$(mktemp -d)
-trap 'rm -rf "$stage"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 export PATH="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}:$PATH"
 export DOTNET_CLI_HOME="$stage/home" NUGET_PACKAGES="$stage/packages"
 export DOTNET_ROOT="${THINKTHEN_DOTNET_HOME:-$HOME/.local/share/thinkthen-build-tools/dotnet10}"
@@ -15,7 +18,6 @@ export CARGO_NET_OFFLINE=true
 cargo build -p loopback --bin loopback --locked
 native=${CARGO_TARGET_DIR:-$root/target}/debug
 case "$native" in /*) ;; *) native="$root/$native" ;; esac
-assets=${THINKTHEN_CSHARP_NATIVE_ASSETS:?provide the prepared matching release asset directory}
 linux="$assets/linux-x64/libthinkthen_ffi.so"
 mac="$assets/osx-arm64/libthinkthen_ffi.dylib"
 # Coverage uses the instrumented current-host library from this tree. The other
@@ -36,7 +38,7 @@ dotnet build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuG
 engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$mac")" -print)
 case $(uname -s) in Linux) engine=$(find "$stage/bin/runtimes" -type f -name "$(basename "$linux")" -print) ;; esac
 python3 scripts/loader-failure-check "$engine" -- dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" --stub-only
-python3 "$root/sdk/csharp/tests/malformed.py" "$stage/bin" "${THINKTHEN_MALFORMED_ROW_FIXTURES:?prepare shared malformed row fixtures}"
+python3 "$root/sdk/csharp/tests/malformed.py" "$stage/bin" "$THINKTHEN_MALFORMED_ROW_FIXTURES"
 cd "$stage"
 export THINKTHEN_API_KEY=construction-only
 dotnet "$stage/bin/Consumer.dll" "$root/construction/stub.json" "$root/conformance" "$native/loopback"

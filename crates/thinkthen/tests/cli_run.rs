@@ -147,7 +147,12 @@ fn signals_terminate_the_interpreter_and_its_child() {
         BufReader::new(child.stderr.as_mut().unwrap())
             .read_line(&mut ready)
             .unwrap();
-        let descendant: u32 = ready.trim().parse().unwrap();
+        let descendant = ready.trim().parse::<u32>().unwrap().to_string();
+        let descendant = descendant.as_str();
+        assert!(
+            support::process::alive(descendant),
+            "child exited before cancellation"
+        );
         assert!(
             Command::new("kill")
                 .args([signal, &child.id().to_string()])
@@ -158,14 +163,15 @@ fn signals_terminate_the_interpreter_and_its_child() {
         let output = child.wait_with_output().unwrap();
         assert_eq!(output.status.code(), Some(130));
         assert!(output.stdout.is_empty());
-        assert!(
-            !Command::new("kill")
-                .args(["-0", &descendant.to_string()])
-                .stderr(Stdio::null())
-                .status()
-                .unwrap()
-                .success()
-        );
+        let live = support::process::alive(descendant);
+        let evidence = if live {
+            let evidence = support::process::evidence(&[descendant]);
+            let _ = Command::new("kill").args(["-KILL", descendant]).status();
+            evidence
+        } else {
+            String::new()
+        };
+        assert!(!live, "owned process survived command exit:\n{evidence}");
     }
 }
 
@@ -245,13 +251,12 @@ fn downstream_success_closes_and_reaps_a_still_running_upstream() {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(output.stdout.is_empty());
+    // This is the direct upstream shell: it must also have been reaped.
+    let upstream = upstream.to_string();
     assert!(
-        !Command::new("kill")
-            .args(["-0", &upstream.to_string()])
-            .stderr(Stdio::null())
-            .status()
-            .unwrap()
-            .success()
+        support::process::state(&upstream).is_none(),
+        "upstream was not reaped:\n{}",
+        support::process::evidence(&[&upstream])
     );
 }
 

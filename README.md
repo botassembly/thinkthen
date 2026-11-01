@@ -28,6 +28,14 @@ Get-Content -Raw message.txt | .\thinkthen-0.2.0\thinkthen.exe decide --backend 
 
 [Command API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen/src/cli/grammar.rs). [Rust API reference](https://docs.rs/thinkthen/0.2.0/thinkthen/).
 
+[Where record text goes](docs/surfaces/service.md) describes the default service and connection settings.
+
 Language packages: [Python](sdk/python/README.md), [TypeScript](sdk/typescript/README.md), [Go](sdk/go/README.md), [Java](sdk/java/README.md), [Kotlin](sdk/kotlin/README.md), [C#](sdk/csharp/README.md), [R](sdk/r/README.md), [C](sdk/c/README.md), [C++](sdk/cpp/README.md), [Ruby](sdk/ruby/README.md), [Swift](sdk/swift/README.md) and [Zig](sdk/zig/README.md).
 
 Database packages: [SQLite](extensions/sqlite/README.md), [PostgreSQL](extensions/postgres/README.md) and [DuckDB](databases/duckdb/README.md).
+
+## Verify a download
+
+Download `SHA256SUMS` with the release archive and verify the archive against its matching entry before extracting or executing it. On Linux, run `sha256sum --check --ignore-missing SHA256SUMS` in the download directory and require the archive’s `OK` result.
+
+With a current [GitHub CLI](https://cli.github.com/manual/gh_attestation_verify), verify the downloaded archive’s provenance with `gh attestation verify /path/to/archive --repo botassembly/thinkthen --signer-workflow botassembly/thinkthen/.github/workflows/release-prepare.yml`. Require a successful result for the expected release before using the archive. Assets with release-assembly provenance require `--predicate-type https://github.com/botassembly/thinkthen/attestations/release-assembly/v1`; inspect its recorded original product sources as well as the assembly source. A matching checksum establishes file integrity; the attestation also verifies the signing workflow’s identity.

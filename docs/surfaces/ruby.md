@@ -1,5 +1,7 @@
 # ThinkThen in Ruby
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Named methods return one row; `_each` methods return or yield a row stream. Array values remain valid single records in named methods. Block traversal closes streams; close external iterators in `ensure` and use `Client.open` for client ownership.
 
 Check `README.md` inside the gem for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.

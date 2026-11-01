@@ -16,12 +16,12 @@ crate-type = ["cdylib", "rlib", "staticlib"]
 fixture-routing = []
 
 [dependencies]
-log.workspace = true
 thinkthen = { workspace=true, features=["native"] }
 thinkthen-sql = { path = "../thinkthen-sql" }
 serde_json.workspace = true
 
 [dev-dependencies]
+log.workspace = true
 socket2.workspace = true
 serde.workspace = true
 cbindgen = { version="0.29", default-features=false }
@@ -49,3 +49,7 @@ unwrap_used = "deny"
 [[test]]
 name = "transport_logging"
 path = "../thinkthen/tests/cli_transport_logging.rs"
+
+# log is used by the transport_logging target shared from cli_transport_logging.rs.
+[package.metadata.cargo-machete]
+ignored = ["log"]

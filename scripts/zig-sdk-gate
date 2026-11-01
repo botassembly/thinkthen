@@ -4,8 +4,12 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
 . scripts/zig-env
+if [ "${1:-}" != --readme-only ]; then
+    : "${THINKTHEN_NATIVE_FIXTURES:?source the prepared ABI fixture environment before the Zig gate}"
+fi
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 if [ -n "${THINKTHEN_ZIG_DEBUG_CHECKPOINT:-}" ]; then
     python3 - "$THINKTHEN_ZIG_DEBUG_CHECKPOINT" <<'PYTHON'
 import hashlib, json, subprocess, sys
@@ -88,7 +92,7 @@ build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
 zig_native=$(find "$scratch/package/native" -type f -name 'libthinkthen_ffi.*' -print)
 python3 scripts/loader-failure-check "$scratch/consumer/zig-out/bin/$(basename "$zig_native")" --attempted "$([ "$(uname -s)" = Darwin ] && echo '@loader_path/libthinkthen_ffi.dylib' || echo 'libthinkthen_ffi.so')" -- "$scratch/consumer/zig-out/bin/consumer" load
-THINKTHEN_ZIG_ABI_FIXTURES="${THINKTHEN_NATIVE_FIXTURES:?source the prepared ABI fixture environment before the Zig gate}"
+THINKTHEN_ZIG_ABI_FIXTURES=$THINKTHEN_NATIVE_FIXTURES
 export THINKTHEN_ZIG_ABI_FIXTURES
 if [ -n "${THINKTHEN_ZIG_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_ZIG_ARTIFACT_DIR"

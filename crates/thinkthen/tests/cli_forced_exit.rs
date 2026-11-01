@@ -7,6 +7,7 @@ mod support;
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, Command, Stdio};
+use support::process::alive;
 
 #[test]
 fn second_signal_removes_owned_children_locks_and_spooled_input() {
@@ -71,11 +72,7 @@ fn forced_cleanup(signal: &str) {
     let evidence = if live.is_empty() {
         String::new()
     } else {
-        let evidence = Command::new("ps")
-            .args(["-o", "pid,ppid,pgid,stat,comm", "-p", &children.join(",")])
-            .output()
-            .unwrap();
-        String::from_utf8(evidence.stdout).unwrap()
+        support::process::evidence(&children.iter().map(String::as_str).collect::<Vec<_>>())
     };
     // Clean up the red case before reporting its failure.
     for pid in &live {
@@ -163,20 +160,4 @@ fn interrupt(pid: u32, signal: &str) {
             .unwrap()
             .success()
     );
-}
-
-fn alive(pid: &str) -> bool {
-    // A container without an init can retain terminated grandchildren as
-    // zombies. kill -0 also succeeds for those, although they cannot run.
-    let state = Command::new("ps")
-        .args(["-o", "stat=", "-p", pid])
-        .output()
-        .unwrap();
-    assert!(state.status.success() || state.status.code() == Some(1));
-    let state = String::from_utf8(state.stdout).unwrap();
-    state
-        .trim()
-        .chars()
-        .next()
-        .is_some_and(|state| !matches!(state, 'Z' | 'X'))
 }

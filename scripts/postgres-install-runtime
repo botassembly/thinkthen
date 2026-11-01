@@ -1,0 +1,21 @@
+#!/bin/sh
+# Install a package and retain the isolated PostgreSQL runtime in an owned workdir.
+set -eu
+source_root=$1
+work=$2
+owner=$3
+group=$4
+trap 'status=$?; trap - EXIT; chown -R "$owner:$group" "$work/installed" "$work/bundle" 2>/dev/null || :; exit "$status"' EXIT
+sharedir=$(pg_config --sharedir)
+pkglibdir=$(pg_config --pkglibdir)
+runtime=$(dirname "$(pg_config --bindir)")
+mkdir -p "$sharedir/extension"
+mkdir "$work/installed"
+tar -xzf "$work/built/thinkthen-postgres-18-linux-x86_64.tar.gz" -C "$work/installed"
+cp "$work/installed/lib/"* "$pkglibdir/"
+cp "$work/installed/share/extension/"* "$sharedir/extension/"
+chown -R "$owner:$group" "$work/installed"
+mkdir "$work/bundle"
+cp -R "$runtime" "$work/bundle/runtime"
+cp "$source_root/extensions/postgres/examples/run-live" "$source_root/extensions/postgres/examples/all-ten.sql" "$work/bundle/"
+chown -R "$owner:$group" "$work/bundle"

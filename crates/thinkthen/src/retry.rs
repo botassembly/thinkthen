@@ -34,7 +34,10 @@ pub(crate) fn retry_delay(backoff: Duration, retry_after: Option<&str>) -> Durat
     let random = std::collections::hash_map::RandomState::new().hash_one(());
     let range = backoff.max(Duration::from_millis(1)).min(JITTER_CAP);
     let jitter = Duration::from_nanos(random % (range.as_nanos() as u64 + 1));
-    backoff.max(hinted).saturating_add(jitter)
+    backoff
+        .max(hinted)
+        .saturating_add(jitter)
+        .min(RETRY_AFTER_CAP)
 }
 
 /// Limits for one request. Each split half gets its own retry budget.

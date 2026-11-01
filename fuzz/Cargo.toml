@@ -2,6 +2,7 @@
 name = "admission-fuzz"
 version = "0.0.0"
 publish = false
+license = "MIT"
 edition = "2024"
 
 [package.metadata]
@@ -20,3 +21,7 @@ doc = false
 bench = false
 
 [workspace]
+
+# Both dependencies are used by admission modules included through #[path].
+[package.metadata.cargo-machete]
+ignored = ["serde_json", "thinkthen"]

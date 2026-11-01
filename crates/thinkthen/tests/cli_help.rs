@@ -34,10 +34,10 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
             "--json",
             "THINKTHEN_API_KEY",
             "OPENAI_API_KEY",
-            "THINKTHEN_BASE_URL",
+            "THINKTHEN_BASE_URL (System One only)",
             "THINKTHEN_CA_FILE",
             "Exits:",
-            "4 transport",
+            "4 backend failure",
         ] {
             assert!(help.contains(current), "{name:?}: missing {current}");
         }

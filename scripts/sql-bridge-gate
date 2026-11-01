@@ -9,7 +9,8 @@ python3 databases/comparison-check.py
 : "${THINKTHEN_LOOPBACK:?Provide its matching loopback}"
 library_directory=$(dirname "$THINKTHEN_NATIVE_LIBRARY")
 scratch=$(mktemp -d)
-trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
 mkdir "$scratch/include"
 cp crates/thinkthen-ffi/include/thinkthen.h crates/thinkthen-ffi/include/thinkthen_sql.h "$scratch/include/"
 cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread -I "$scratch/include" \

@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Regression: deep job scratch cannot break sockets or share Swift's module cache."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def monitor_case():
+    from stress_monitor import Monitor
+    with subprocess.Popen([sys.executable, '-c', 'import sys; sys.stdin.read()'],
+                          stdin=subprocess.PIPE) as child:
+        try:
+            for fail in (False, True):
+                monitor = Monitor(lambda: [child.pid])
+                owned = Path(monitor.scratch.name)
+                try:
+                    assert len(os.fsencode(monitor.path)) < 104, monitor.path
+                    env = dict(os.environ, THINKTHEN_STRESS_CHECKPOINT=monitor.path,
+                               THINKTHEN_STRESS_REQUIRED_PID=str(child.pid))
+                    if fail:
+                        import socket
+                        with socket.socket(socket.AF_UNIX) as connection:
+                            connection.connect(monitor.path)
+                            connection.sendall(b'not-json\n')
+                            assert connection.recv(1) == b''
+                    else:
+                        subprocess.run([sys.executable, ROOT / 'scripts/stress-checkpoint'], env=env, check=True)
+                finally:
+                    report = monitor.finish()
+                assert not owned.exists(), owned
+                assert bool(report.get('monitor_error')) == fail, report
+                if not fail:
+                    assert len(report['groups']['workload']['round_samples']) == 1, report
+        finally:
+            child.stdin.close()
+
+
+def swift_case(folder):
+    source = folder / 'source'
+    (source / 'scripts').mkdir(parents=True)
+    (source / 'sdk/swift/tests').mkdir(parents=True)
+    (source / 'sdk/swift/tests/Consumer.swift').touch()
+    shutil.copy2(ROOT / 'scripts/swift-gate', source / 'scripts/swift-gate')
+    package = folder / 'package'
+    package.mkdir()
+    tools = folder / 'bin'
+    tools.mkdir()
+    swift = tools / 'swift'
+    swift.write_text('#!' + sys.executable + '''
+import json, os, pathlib, sys
+if sys.argv[1] == 'build':
+    args = sys.argv[1:]
+    cache = pathlib.Path(args[args.index('-module-cache-path') + 2])
+    assert cache.is_relative_to(pathlib.Path(os.environ['JOB_TEMP']))
+    assert os.environ['CLANG_MODULE_CACHE_PATH'] == str(cache)
+    assert '-fmodules-cache-path=' + str(cache) in args
+    assert cache.is_dir()
+    (cache / 'writable').touch()
+    pathlib.Path(os.environ['CACHE_RECORD']).write_text(str(cache))
+    sys.exit(37)
+''')
+    swift.chmod(0o755)
+    python = tools / 'python3'
+    python.write_text('#!/bin/sh\nexit 0\n')
+    python.chmod(0o755)
+    record = folder / 'cache-record'
+    result = subprocess.run([source / 'scripts/swift-gate'], capture_output=True, text=True,
+        env=dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH'],
+                 TMPDIR=str(folder), JOB_TEMP=str(folder), CACHE_RECORD=str(record),
+                 THINKTHEN_LOOPBACK='/unused', THINKTHEN_SWIFT_PACKAGE=str(package)))
+    assert result.returncode == 37, result.stderr
+    assert record.exists(), result.stderr
+    assert not Path(record.read_text()).exists(), 'failed Swift build retained its cache'
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] == ['monitor']:
+        monitor_case()
+    else:
+        with tempfile.TemporaryDirectory(prefix='harness-path-') as temporary:
+            folder = Path(temporary)
+            deep = folder / ('deep-job-' * 18)
+            deep.mkdir()
+            assert len(os.fsencode(deep)) > 108
+            subprocess.run([sys.executable, __file__, 'monitor'],
+                           env=dict(os.environ, TMPDIR=str(deep)), check=True)
+            swift_case(folder)
+        print('Deep scratch checkpoint success/error cleanup and owned Swift module cache passed')

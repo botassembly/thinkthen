@@ -1,0 +1,18 @@
+#!/bin/sh
+# Exercise candidate export and strict gate boundaries without native production.
+set -eu
+case "${1:-}" in ""|--contracts-only) ;; *) echo "usage: scripts/public-export-check [--contracts-only]" >&2; exit 2 ;; esac
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+export THINKTHEN_GATE_STRICT=1
+python3 scripts/public-export-test
+python3 scripts/native-producer-test
+python3 scripts/qualification-recipe-test
+python3 scripts/gate-strict-test
+if [ "${1:-}" != --contracts-only ]; then
+    python3 -W error scripts/gate-report-test
+    python3 -W error scripts/stress-dispatch-test
+    python3 -W error scripts/stress-runner-test
+    python3 scripts/release-staging-test
+fi
+git diff --check

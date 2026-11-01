@@ -109,14 +109,22 @@ def cache_path():
 
 
 def main():
-    if sys.argv[1:] not in ([], ["--path"]):
-        sys.exit("usage: scripts/native-prepare [--path]")
-    if not sys.argv[1:] and os.environ.get("LLVM_PROFILE_FILE"):
+    arguments = sys.argv[1:]
+    receipt = Path(arguments[1]) if len(arguments) == 2 and arguments[0] == '--receipt' else None
+    if arguments not in ([], ["--path"]) and receipt is None:
+        sys.exit("usage: scripts/native-prepare [--path | --receipt FILE]")
+    path_only = arguments == ['--path']
+    if not path_only and os.environ.get("LLVM_PROFILE_FILE"):
         sys.exit("native-prepare keeps release assets; coverage builds stay in the job target")
+    if receipt is not None:
+        if not os.environ.get('PM_JOB', '').strip():
+            sys.exit('native producer receipt requires the actual PM_JOB')
+        if output('git', 'status', '--porcelain').strip():
+            sys.exit('native producer receipt requires a clean committed checkout')
     from header_contract import check
     check(ROOT)
     cache = cache_path()
-    if sys.argv[1:]:
+    if path_only:
         print(cache)
         return
     host = output("rustc", "-vV").split("host: ")[1].splitlines()[0]
@@ -127,7 +135,9 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX)
         destination = cache / rid / library
         archive = cache / rid / "libthinkthen_ffi.a"
-        if destination.exists() and archive.exists():
+        cached = destination.exists() and archive.exists()
+        producer_record = cache / (host + ".producer.json")
+        if cached:
             print(f"native cache hit: {host}", file=sys.stderr)
         else:
             print(f"native cache miss: {host}", file=sys.stderr)
@@ -156,6 +166,39 @@ def main():
             if not alias.is_symlink() and not alias.exists():
                 alias.symlink_to(Path("..") / asset_rid, target_is_directory=True)
         shutil.copy2(ROOT / "crates/thinkthen-ffi/include/thinkthen.h", cache / "thinkthen.h")
+        if receipt is not None:
+            from native_producer import validate_receipt
+            name = 'mac' if rid == 'osx-arm64' else 'linux'
+            config = Path(os.environ.get('CARGO_HOME', Path.home() / '.cargo')) / 'config.toml'
+            config_sha = hashlib.sha256(config.read_bytes()).hexdigest()
+            names = [str(destination.relative_to(cache)), str(archive.relative_to(cache))]
+            if rid == 'linux-x64':
+                names.append('thinkthen.h')
+            hashes = {name: hashlib.sha256((cache / name).read_bytes()).hexdigest() for name in names}
+            if cached:
+                if not producer_record.exists():
+                    raise ValueError('cached native assets have no recorded producer; do not relabel them')
+                recorded = json.loads(producer_record.read_text())
+                validate_receipt(recorded, name)
+                if (recorded['native_key'] != cache.name or recorded['host'] != host
+                        or recorded['config_sha256'] != config_sha or recorded['assets'] != hashes
+                        or recorded['floor_image'] != image('floor')
+                        or recorded['native_production_executed'] is not True):
+                    raise ValueError('cached native producer receipt differs from its assets or configuration')
+            else:
+                from production_native import check
+                for asset in (destination, archive):
+                    check(asset.read_bytes(), str(asset))
+                recorded = dict(source_revision=output('git', 'rev-parse', 'HEAD').strip(),
+                    native_key=cache.name, host=host, floor_image=image('floor'),
+                    config_sha256=config_sha, assets=hashes, native_production_executed=True,
+                    producer_job=os.environ.get('PM_JOB'),
+                    target_directory=str(floor_target(ROOT) if sys.platform == "linux" else Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))))
+                validate_receipt(recorded, name)
+                temporary_record = producer_record.with_suffix('.partial')
+                temporary_record.write_text(json.dumps(recorded, sort_keys=True) + '\n')
+                temporary_record.replace(producer_record)
+            receipt.write_bytes(producer_record.read_bytes())
     from production_native import check
     for asset in (destination, archive):
         check(asset.read_bytes(), str(asset))

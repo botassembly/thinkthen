@@ -12,31 +12,29 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = {
-    'command': ('README.md', '## Backends'),
-    'python': ('sdk/python/README.md', '### Packaging and proof after approval'),
-    'typescript': ('sdk/typescript/README.md', None),
-    'go': ('sdk/go/README.md', '## Local staged packages'),
-    'java': ('sdk/java/README.md', None),
-    'kotlin': ('sdk/kotlin/README.md', None),
-    'csharp': ('sdk/csharp/README.md', None),
-    'r': ('sdk/r/README.md', '## Package'),
-    'c': ('sdk/c/README.md', None),
-    'cpp': ('sdk/cpp/README.md', '## Package proof'),
-    'ruby': ('sdk/ruby/README.md', '## Native dependency and packaging choice'),
-    'zig': ('sdk/zig/README.md', None),
-    'swift': ('sdk/swift/README.md', '## Package and supported hosts'),
-    'sqlite': ('extensions/sqlite/README.md', '## Native implementation boundary and proof'),
-    'duckdb': ('databases/duckdb/README.md', '## Native execution and build boundary'),
-    'postgres': ('extensions/postgres/README.md', '## Native implementation boundary'),
+    'command': 'README.md',
+    'python': 'sdk/python/README.md',
+    'typescript': 'sdk/typescript/README.md',
+    'go': 'sdk/go/README.md',
+    'java': 'sdk/java/README.md',
+    'kotlin': 'sdk/kotlin/README.md',
+    'csharp': 'sdk/csharp/README.md',
+    'r': 'sdk/r/README.md',
+    'c': 'sdk/c/README.md',
+    'cpp': 'sdk/cpp/README.md',
+    'ruby': 'sdk/ruby/README.md',
+    'zig': 'sdk/zig/README.md',
+    'swift': 'sdk/swift/README.md',
+    'sqlite': 'extensions/sqlite/README.md',
+    'duckdb': 'databases/duckdb/README.md',
+    'postgres': 'extensions/postgres/README.md',
 }
 
 
 def released_readme(name, *, root=ROOT):
     """Render the shared package guide without platform-specific offline steps."""
-    source, boundary = SOURCES[name]
+    source = SOURCES[name]
     body = (root / source).read_text(encoding='utf-8')
-    if boundary:
-        body = body.split('\n' + boundary, 1)[0]
     # Process prose only: C++ lambda captures also contain Markdown-like brackets.
     parts = re.split(r'(^```[^\n]*\n.*?^```[ \t]*$)', body, flags=re.M | re.S)
     for index in range(0, len(parts), 2):

@@ -71,14 +71,6 @@
     },
     "license": "MIT"
   },
-  "bumpalo-3.20.3": {
-    "checksum": "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649",
-    "files": {
-      "LICENSE-APACHE": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
-      "LICENSE-MIT": "65f94e99ddaf4f5d1782a6dae23f35d4293a9a01444a13135a6887017d353cee"
-    },
-    "license": "MIT OR Apache-2.0"
-  },
   "bytes-1.12.1": {
     "checksum": "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04",
     "files": {
@@ -644,13 +636,6 @@
     },
     "license": "MIT OR Apache-2.0"
   },
-  "simd-adler32-0.3.10": {
-    "checksum": "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea",
-    "files": {
-      "LICENSE.md": "42a35170233e83e18856792e748de4c1ce4a63b2afce9a370c89ef3fe23f9f2d"
-    },
-    "license": "MIT"
-  },
   "strsim-0.11.1": {
     "checksum": "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f",
     "files": {
@@ -815,12 +800,5 @@
       "LICENSE-MIT": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
     },
     "license": "MIT"
-  },
-  "zopfli-0.8.4": {
-    "checksum": "aaf7fc5d30c28483d93805c4a5e12b05bbb52407fa67c5f8bd552374cd01fb11",
-    "files": {
-      "COPYING": "018b1cb87efdf7a04c2fcc13d57ed63f62149113fb207b27ea13430d64f13513"
-    },
-    "license": "Apache-2.0"
   }
 }

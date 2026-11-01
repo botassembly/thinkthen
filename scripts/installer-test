@@ -112,6 +112,22 @@ def main():
                 assert re.fullmatch(r'thinkthen ' + re.escape(expected) + r'(?: \([^\r\n]*\))?\r?\n?', result.stdout), result.stdout
                 assert json.loads(receipt.read_text(encoding='utf-8-sig'))['state'] == 'installed'
 
+            if not windows:
+                script = (ROOT / 'install.sh').read_text()
+                boundary = 'echo "Downloading $ASSET"\n'
+                prefix, found, _ = script.partition(boundary)
+                assert found, 'installer download boundary missing'
+                truncated = subprocess.run(
+                    [command[0], '-s', '--', '--version', '0.2.0'],
+                    input=prefix + found, env=env, capture_output=True, text=True, timeout=120)
+                assert truncated.returncode != 0, 'truncated installer executed a partial program'
+                assert not truncated.stdout, truncated.stdout
+                assert not install.exists(), 'truncated installer created an install directory'
+                piped = subprocess.run(
+                    [command[0], '-s', '--', '--version', '0.2.0'],
+                    input=script, env=env, capture_output=True, text=True, timeout=120)
+                assert piped.returncode == 0, (piped.stdout, piped.stderr)
+                version()
             if windows:
                 shutil.copy2(ROOT / 'install.ps1', mirror / 'install.ps1')
                 piped = ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',

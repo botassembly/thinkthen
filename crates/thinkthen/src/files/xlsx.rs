@@ -18,6 +18,9 @@ use zip::{ZipArchive, ZipWriter, write::SimpleFileOptions};
 
 const MAX_EXPANDED_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_SHARED_BYTES: u64 = 512 * 1024 * 1024;
+// Account for the String and spare vector capacity even when its text is empty.
+const SHARED_ENTRY_BYTES: u64 = 64;
+const MAX_METADATA_BYTES: u64 = 16 * 1024 * 1024;
 
 pub(crate) const MAX_COLUMN: usize = 16_384;
 pub(crate) const MAX_ROW: usize = 1_048_576;
@@ -33,6 +36,7 @@ pub(crate) struct Sheet {
 #[derive(Default)]
 struct Cell {
     column: usize,
+    style: Option<usize>,
     kind: String,
     value: String,
     formula: bool,
@@ -111,7 +115,18 @@ pub(crate) fn admit(
     }
     let workbook = xml_bytes(&mut zip, "xl/workbook.xml", cancel)?;
     let mut sheets = Vec::new();
+    let mut date1904 = false;
     scan(workbook.as_slice(), cancel, |event, main, _| {
+        if let Event::Empty(e) | Event::Start(e) = &event
+            && main
+            && e.local_name().as_ref() == b"workbookPr"
+        {
+            date1904 = match attr(e, b"date1904")?.as_deref() {
+                None | Some("0" | "false") => false,
+                Some("1" | "true") => true,
+                _ => return Err(invalid("workbook date1904 flag is invalid")),
+            };
+        }
         if let Event::Empty(e) | Event::Start(e) = event
             && main
             && e.local_name().as_ref() == b"sheet"
@@ -164,6 +179,12 @@ pub(crate) fn admit(
     })?;
     let part =
         part.ok_or_else(|| invalid("worksheet relationship is missing; save a clean .xlsx copy"))?;
+    let styles = super::xlsx_dates::Styles::read(
+        &mut zip,
+        names.contains("xl/styles.xml"),
+        date1904,
+        cancel,
+    )?;
     let shared = if names.contains("xl/sharedStrings.xml") {
         shared_strings(zip.by_name("xl/sharedStrings.xml").map_err(local)?, cancel)?
     } else {
@@ -310,7 +331,8 @@ pub(crate) fn admit(
                 b"row" if row_number == 1 => {
                     let mut positions = BTreeMap::new();
                     for (column, cell) in &row {
-                        let header = value(Some(cell), &shared, false, row_number, &chosen.0)?;
+                        let header =
+                            value(Some(cell), &shared, &styles, false, row_number, &chosen.0)?;
                         if !header.is_empty() {
                             positions.insert(header.clone(), *column);
                             sheet.headers.push(header);
@@ -335,7 +357,7 @@ pub(crate) fn admit(
                     }
                     let values = selected_positions
                         .iter()
-                        .map(|c| value(row.get(c), &shared, true, row_number, &chosen.0))
+                        .map(|c| value(row.get(c), &shared, &styles, true, row_number, &chosen.0))
                         .collect::<Result<Vec<_>, _>>()?;
                     row_sink(row_number, values)?;
                 }
@@ -363,6 +385,7 @@ fn start_cell(e: &BytesStart<'_>, row: usize) -> Result<Cell, FileError> {
     }
     Ok(Cell {
         column,
+        style: attr(e, b"s")?.map(|s| integer(&s)).transpose()?,
         kind: attr(e, b"t")?.unwrap_or_default(),
         ..Cell::default()
     })
@@ -371,6 +394,7 @@ fn start_cell(e: &BytesStart<'_>, row: usize) -> Result<Cell, FileError> {
 fn value(
     cell: Option<&Cell>,
     shared: &[String],
+    styles: &super::xlsx_dates::Styles,
     selected: bool,
     row: usize,
     sheet: &str,
@@ -426,7 +450,10 @@ fn value(
                     "a non-finite number",
                 )));
             }
-            Ok(cell.value.clone())
+            Ok(styles
+                .render(cell.style, number)
+                .map_err(|error| context_error(error, &field))?
+                .unwrap_or_else(|| cell.value.clone()))
         }
         _ => decode_string(&cell.value).map_err(|error| context_error(error, &field)),
     }
@@ -450,37 +477,55 @@ fn check_merge(e: &BytesStart<'_>, selected: &[usize], sheet: &mut Sheet) -> Res
 
 fn shared_strings(reader: impl Read, cancel: &Cancel) -> Result<Vec<String>, FileError> {
     let mut strings = Vec::new();
-    let mut total = 0usize;
+    let mut total = 0u64;
     let mut item = String::new();
     let mut in_text = false;
     let mut phonetic = false;
     scan(BufReader::new(reader), cancel, |event, main, _| {
+        let mut completed = None;
         match event {
             Event::Start(e) if main && e.local_name().as_ref() == b"si" => item.clear(),
             Event::Start(e) if main && e.local_name().as_ref() == b"t" => in_text = !phonetic,
             Event::Start(e) if main && e.local_name().as_ref() == b"rPh" => phonetic = true,
             Event::End(e) if main && e.local_name().as_ref() == b"rPh" => phonetic = false,
             Event::Empty(e) if main && e.local_name().as_ref() == b"si" => {
-                strings.push(String::new())
+                completed = Some(String::new());
             }
-            Event::Text(t) if in_text => item.push_str(&text(&t)?),
-            Event::GeneralRef(r) if in_text => item.push_str(&reference(&r)?),
-            Event::CData(t) if in_text => item.push_str(&t.decode().map_err(local)?),
+            // The reader emits entity references separately, so text is borrowed UTF-8.
+            Event::Text(t) if in_text => {
+                append_shared_text(&mut item, &t.decode().map_err(local)?)?
+            }
+            Event::GeneralRef(r) if in_text => append_shared_text(&mut item, &reference(&r)?)?,
+            Event::CData(t) if in_text => {
+                append_shared_text(&mut item, &t.decode().map_err(local)?)?
+            }
             Event::End(e) if main && e.local_name().as_ref() == b"t" => in_text = false,
             Event::End(e) if main && e.local_name().as_ref() == b"si" => {
-                total += item.len();
-                strings.push(decode_string(&item)?);
+                completed = Some(decode_string(&item)?);
                 item.clear();
             }
             _ => {}
         }
-        let text = item.len();
-        if total.saturating_add(text) > super::MAX_RECORD_BYTES {
-            return Err(super::record_limit());
+        if let Some(decoded) = completed {
+            total = total.saturating_add(SHARED_ENTRY_BYTES + decoded.len() as u64);
+            if total > MAX_SHARED_BYTES {
+                return Err(invalid(
+                    "workbook shared-string table exceeds the 512 MiB limit",
+                ));
+            }
+            strings.push(decoded);
         }
         Ok(())
     })?;
     Ok(strings)
+}
+
+fn append_shared_text(item: &mut String, text: &str) -> Result<(), FileError> {
+    if item.len().saturating_add(text.len()) > super::MAX_RECORD_BYTES {
+        return Err(super::record_limit());
+    }
+    item.push_str(text);
+    Ok(())
 }
 
 pub(crate) fn write(
@@ -673,7 +718,7 @@ fn append<W: Write>(
     Ok(())
 }
 
-fn scan<R: BufRead>(
+pub(super) fn scan<R: BufRead>(
     read: R,
     cancel: &Cancel,
     mut visit: impl FnMut(Event<'_>, bool, usize) -> Result<(), FileError>,
@@ -745,7 +790,7 @@ fn scan<R: BufRead>(
     Ok(())
 }
 
-fn attr(e: &BytesStart<'_>, key: &[u8]) -> Result<Option<String>, FileError> {
+pub(super) fn attr(e: &BytesStart<'_>, key: &[u8]) -> Result<Option<String>, FileError> {
     for attribute in e.attributes() {
         let a = attribute.map_err(local)?;
         if a.key.as_ref().rsplit(|b| *b == b':').next() == Some(key) {
@@ -762,18 +807,24 @@ fn text(t: &BytesText<'_>) -> Result<String, FileError> {
         .map(|s| s.into_owned())
         .map_err(local)
 }
-fn integer(value: &str) -> Result<usize, FileError> {
+pub(super) fn integer(value: &str) -> Result<usize, FileError> {
     value
         .parse()
         .map_err(|_| invalid("workbook address or index is invalid; save a clean .xlsx copy"))
 }
-fn xml_bytes(
+pub(super) fn xml_bytes(
     zip: &mut ZipArchive<File>,
     name: &str,
     cancel: &Cancel,
 ) -> Result<Vec<u8>, FileError> {
+    let member = zip.by_name(name).map_err(local)?;
+    if member.size() > MAX_METADATA_BYTES {
+        return Err(invalid("workbook metadata part exceeds the 16 MiB limit"));
+    }
     let mut bytes = Vec::new();
-    copy(&mut zip.by_name(name).map_err(local)?, &mut bytes, cancel)?;
+    if copy(&mut member.take(MAX_METADATA_BYTES + 1), &mut bytes, cancel)? > MAX_METADATA_BYTES {
+        return Err(invalid("workbook metadata part exceeds the 16 MiB limit"));
+    }
     Ok(bytes)
 }
 fn context_error(error: FileError, field: &str) -> FileError {
@@ -782,7 +833,7 @@ fn context_error(error: FileError, field: &str) -> FileError {
         error => error,
     }
 }
-fn invalid(message: &str) -> FileError {
+pub(super) fn invalid(message: &str) -> FileError {
     FileError::Invalid(crate::core::diagnostic::requirement(
         "workbook",
         "a valid unsigned .xlsx workbook",

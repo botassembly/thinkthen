@@ -23,6 +23,11 @@ with open(sys.argv[4], 'w') as lock:
     sys.exit(subprocess.call(['sh', sys.argv[1], *args]))
 LOCK
 fi
+# The normal SQLite path derives its image below; an in-floor Jansson-only
+# invocation consumes the caller's image, so check it before cleanup is trapped.
+if [ "$(uname -s)" = Linux ] && [ "$jansson_only" = 1 ] && [ "${THINKTHEN_FLOOR_BUILD:-}" = 1 ]; then
+    : "${THINKTHEN_FLOOR_IMAGE:?Use the declared floor runner}"
+fi
 tools="$HOME/.local/share/thinkthen-build-tools"
 mkdir -p "$THINKTHEN_SQLITE_ROOT"
 scratch=$(mktemp -d "$THINKTHEN_SQLITE_ROOT/.sqlite-prepare.XXXXXX")
@@ -34,7 +39,7 @@ cleanup() {
     fi
     rm -rf "$scratch"
 }
-trap cleanup EXIT
+trap 'gate_status=$?; trap - EXIT; set +e; cleanup; exit "$gate_status"' EXIT
 trap 'exit 1' HUP INT TERM
 TMPDIR=$scratch
 export TMPDIR

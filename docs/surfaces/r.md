@@ -1,5 +1,7 @@
 # ThinkThen in R
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 All calls return a tibble, including one-record calls. Pass vectors or tables for collections and close the owned client with `tt_close()`. An R list is the collection; place a JSON array record inside that list when it is one record.
 
 Check `thinkthen/README.md` inside the R archive for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
@@ -69,7 +71,7 @@ A rank row's answer is its rank; `position` is its input order. Rank puts highes
 
 Rows have `position`, `id`, `status`, `answer`, `probability`, `source`, `detail` and error columns. Status is `answered`, `unsure` or `failed`. Scalar missing answers use typed NA; list missing answers use NULL. An answered find can have no match. Source identifies the question, backend and served model. Detail holds typed label or level probabilities, recognition pieces or relation pairs. Span offsets count Unicode code points from 1 and include the end: use `substr(text, span$start, span$end)`.
 
-String IDs retain their type. Integer IDs return `tt_id_integer` values; `format()` gives exact decimal text. Use `tt_id_integer("9007199254740993")` when a double cannot represent the ID exactly. Preserve IDs when saving results. `tt_bind(records, rows, prefix = "tt_")` joins by input position and requires a complete result for every input, so a truncated rank cannot bind.
+String IDs retain their type. Integer IDs return `tt_id_integer` values; `format()` gives exact decimal text. Use `tt_id_integer("9007199254740993")` when a double cannot represent the ID exactly. Preserve IDs when saving results. `tt_bind(records, rows, prefix = "tt")` joins by input position and requires a complete result for every input, so a truncated rank cannot bind.
 
 ## Questions, tables and batching
 

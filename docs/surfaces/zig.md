@@ -1,5 +1,7 @@
 # ThinkThen in Zig
 
+[Where record text goes](service.md) describes the default service and connection settings.
+
 Methods ending in `One` return one row; named methods return pull Calls. A JSON array inside one Record remains one record. Deinit calls and clients explicitly; returned row allocations belong to the allocator you supply.
 
 Check `thinkthen/README.md` inside the archive for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
@@ -59,7 +61,7 @@ Run `zig init` in a new application directory. Add `.thinkthen = .{ .path = "../
 ```zig
 const std = @import("std");
 const thinkthen = @import("thinkthen");
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const dependency = b.dependency("thinkthen", .{ .target = target, .optimize = optimize });
@@ -74,7 +76,7 @@ pub fn build(b: *std.Build) void {
     });
     executable.root_module.addImport("thinkthen", dependency.module("thinkthen"));
     const installed = b.addInstallArtifact(executable, .{});
-    thinkthen.installNative(b, dependency, installed);
+    try thinkthen.installNative(b, dependency, installed);
     b.getInstallStep().dependOn(&installed.step);
 }
 ```

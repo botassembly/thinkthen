@@ -13,7 +13,6 @@ test = false
 doctest = false
 
 [dependencies]
-log.workspace = true
 thinkthen = { workspace = true, features = ["native"] }
 serde_json.workspace = true
 pyo3 = { version = "=0.29.3", features = ["extension-module", "abi3-py310"] }
@@ -28,9 +27,14 @@ pyo3 = { version = "=0.29.3", features = ["generate-import-lib"] }
 workspace = true
 
 [dev-dependencies]
+log.workspace = true
 socket2.workspace = true
 loopback.workspace = true
 
 [[test]]
 name = "transport_logging"
 path = "../../../crates/thinkthen/tests/cli_transport_logging.rs"
+
+# log is used by the transport_logging target shared from cli_transport_logging.rs.
+[package.metadata.cargo-machete]
+ignored = ["log"]

@@ -165,7 +165,8 @@ def growth(samples, verified_records=None, *, short_gate=False, memory_window=No
     The first half is warmup. RSS fails only when the maxima of four ordered,
     nonempty windows in the later half all strictly rise and endpoint growth
     reaches MEMORY_BYTES_PER_RECORD_FLOOR per verified record between those
-    endpoints. Explicit short gate checks report memory growth without failing it.
+    endpoints. Explicit short gate checks report memory without failing it; counts fail only
+    when their four late-window peaks rise strictly.
     Counts belong to synchronous completed rounds. A single retained RSS
     step can pass. Other resources still fail when their later-half minimum
     exceeds their warmup maximum, including a one-time retained resource leak.
@@ -185,15 +186,20 @@ def growth(samples, verified_records=None, *, short_gate=False, memory_window=No
     split = len(samples) // 2
     start, end = memory_bounds(len(samples), memory_window, short_gate=short_gate)
     later = samples[start - 1:end]
+    windows = [later[len(later) * index // MEMORY_WINDOWS:len(later) * (index + 1) // MEMORY_WINDOWS]
+               for index in range(MEMORY_WINDOWS)]
     checks = {}
     for key in METRICS:
         warm_max = max(value[key] for value in samples[:split])
         retained_min = min(value[key] for value in samples[split:])
         checks[key] = dict(warmup_max=warm_max, retained_min=retained_min,
                            passed=retained_min <= warm_max)
-    maxima = [max(row['memory_bytes'] for row in
-                  later[len(later) * index // MEMORY_WINDOWS:len(later) * (index + 1) // MEMORY_WINDOWS])
-              for index in range(MEMORY_WINDOWS)]
+    if short_gate:
+        for key in METRICS[1:]:
+            peaks = [max(row[key] for row in window) for window in windows]
+            checks[key].update(late_window_maxima=peaks,
+                               passed=not all(before < after for before, after in zip(peaks, peaks[1:])))
+    maxima = [max(row['memory_bytes'] for row in window) for window in windows]
     memory = checks['memory_bytes']
     if memory_window is not None:
         memory.update(measurement_start_round=start, measurement_end_round=end,

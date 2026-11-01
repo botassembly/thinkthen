@@ -1,6 +1,7 @@
 """Run the installed mechanical Zig bridge against canonical typed fixtures."""
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -70,7 +71,7 @@ def byte_offsets(value, text):
         for child in value:
             byte_offsets(child, text)
 
-subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "zig", *(["--full"] if __import__("os").environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "zig", consumer], env=env | {"THINKTHEN_LOOPBACK": loopback}, check=True)
+subprocess.run([sys.executable, str(root / "scripts/stress-adapters.py"), "--surface", "zig", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(root / "sdk/c/tests/stress.py"), "zig", consumer], env=env | {"THINKTHEN_LOOPBACK": loopback, "THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, check=True)
 directory = root / "conformance/typed"
 manifest = json.loads((directory / "manifest.json").read_text())
 seen = set()
