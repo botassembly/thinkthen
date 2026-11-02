@@ -96,20 +96,78 @@ def spreadsheet(binary, folder, environment):
     assert {p.name for p in folder.iterdir()} == {'book.xlsx', 'book.thinkthen.xlsx'}
 
 
-def powershell(binary, folder, environment):
+def powershell(binary, folder, environment, *, shell='powershell.exe', diagnostics=None, console=None):
+    diagnostics = diagnostics or Path(__file__).resolve().parent.parent / 'target/windows-cli-diagnostics'
+    diagnostics.mkdir(parents=True, exist_ok=True)
+    saved = Path(tempfile.mkdtemp(prefix='powershell-unicode-', dir=diagnostics))
+    (saved / 'console.json').write_text(json.dumps(console), encoding='utf-8')
+    from release_windows_cache import cache_environment
+    profile = saved / 'profile'
+    for name in ('home', 'roaming'):
+        (profile / name).mkdir(parents=True)
+    environment = cache_environment(profile / 'local', dict(environment,
+        HOME=str(profile / 'home'), USERPROFILE=str(profile / 'home'), APPDATA=str(profile / 'roaming')))
+    metadata = str(saved / 'environment.json').replace("'", "''")
     script = folder / 'unicode.ps1'
-    script.write_text('$ErrorActionPreference="Stop"\n$OutputEncoding=[Text.UTF8Encoding]::new($false)\n'
+    script.write_text('$ErrorActionPreference="Stop"\n'
+        + '$observed=[ordered]@{shell_version=$PSVersionTable.PSVersion.ToString(); '
+        + 'initial_input_code_page=[Console]::InputEncoding.CodePage; '
+        + 'initial_output_code_page=[Console]::OutputEncoding.CodePage; '
+        + 'initial_pipeline_code_page=$OutputEncoding.CodePage}\n'
+        + '$OutputEncoding=[Text.UTF8Encoding]::new($false)\n'
         + '[Console]::OutputEncoding=$OutputEncoding\n'
+        + '$observed.input_code_page=[Console]::InputEncoding.CodePage\n'
+        + '$observed.output_code_page=[Console]::OutputEncoding.CodePage\n'
+        + '$observed.pipeline_code_page=$OutputEncoding.CodePage\n'
+        + "[IO.File]::WriteAllText('" + metadata + "', ($observed | ConvertTo-Json), [Text.UTF8Encoding]::new($false))\n"
         + "'Body', '漢字 café evidence 5' | & '" + str(binary).replace("'", "''")
         + "' decide 'Ready?' --backend stub --from csv - --column Body --into ready\nexit $LASTEXITCODE\n",
         encoding='utf-8-sig')
-    result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-File', str(script)],
-        cwd=folder, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
-    assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
-    rows = list(csv.DictReader(io.StringIO(result.stdout.decode('utf-8-sig'))))
-    assert len(rows) == 1 and rows[0]['Body'] == '漢字 café evidence 5'
-    assert rows[0]['ready'] == 'TRUE', rows
-    assert {p.name for p in folder.iterdir()} == {'unicode.ps1'}
+    stdout, stderr, rows = b'', b'', None
+    try:
+        result = subprocess.run([shell, '-NoProfile', '-NonInteractive', '-File', str(script)],
+            cwd=folder, env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+        stdout, stderr = result.stdout, result.stderr
+        assert result.returncode == 0, f'PowerShell exit: expected 0, actual {result.returncode!r}'
+        try:
+            rows = list(csv.DictReader(io.StringIO(stdout.decode('utf-8-sig'))))
+        except UnicodeDecodeError as error:
+            raise AssertionError(f'PowerShell stdout encoding: expected UTF-8, actual {stdout!r}') from error
+        assert len(rows) == 1, f'PowerShell row count: expected 1, actual {len(rows)!r}'
+        actual = rows[0].get('Body')
+        assert actual == '漢字 café evidence 5', f'PowerShell Body: expected {"漢字 café evidence 5"!r}, actual {actual!r}'
+        actual = rows[0].get('ready')
+        assert actual == 'TRUE', f'PowerShell ready: expected {"TRUE"!r}, actual {actual!r}'
+        files = sorted(p.name for p in folder.iterdir())
+        assert files == ['unicode.ps1'], f'PowerShell files: expected {["unicode.ps1"]!r}, actual {files!r}'
+    except Exception as error:
+        if isinstance(error, subprocess.TimeoutExpired):
+            stdout, stderr = error.stdout or b'', error.stderr or b''
+        if rows is None:
+            try:
+                rows = list(csv.DictReader(io.StringIO(stdout.decode('utf-8-sig'))))
+            except UnicodeDecodeError:
+                rows = None  # The raw bytes and original failure are retained below.
+        files = sorted(p.name for p in folder.iterdir())
+        detail = dict(error=str(error), shell=str(shell), stdout_hex=stdout.hex(),
+                      stderr_hex=stderr.hex(), rows=rows, files=files, evidence=str(saved),
+                      tree=sorted(p.relative_to(folder).as_posix() for p in folder.rglob('*')))
+        (saved / 'failure.json').write_text(json.dumps(detail, ensure_ascii=True), encoding='utf-8')
+        raise AssertionError(json.dumps(detail, ensure_ascii=True)) from error
+    finally:
+        (saved / 'stdout.bin').write_bytes(stdout)
+        (saved / 'stderr.bin').write_bytes(stderr)
+        (saved / 'rows.json').write_text(json.dumps(rows, ensure_ascii=True), encoding='utf-8')
+        (saved / 'files.json').write_text(json.dumps(sorted(p.name for p in folder.iterdir())), encoding='utf-8')
+        (saved / 'tree.json').write_text(json.dumps(sorted(p.relative_to(folder).as_posix()
+            for p in folder.rglob('*'))), encoding='utf-8')
+        print('PowerShell evidence: ' + str(saved), flush=True)
+        if (saved / 'environment.json').exists():
+            try:
+                observed = (saved / 'environment.json').read_text(encoding='utf-8')
+            except (OSError, UnicodeError) as error:
+                observed = 'retained metadata could not be decoded: ' + str(error)
+            print('PowerShell environment: ' + observed, flush=True)
 
 
 def interrupt(binary, folder, environment):
@@ -168,6 +226,9 @@ def interrupt(binary, folder, environment):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, required=True)
+    parser.add_argument('--case', choices=('saved-run', 'xlsx', 'powershell-unicode', 'ctrl-break'))
+    parser.add_argument('--powershell', default='powershell.exe', help='PowerShell executable for the Unicode case')
+    parser.add_argument('--code-page', type=int, help='Select a console code page for an explicitly labelled probe')
     args = parser.parse_args()
     if os.name != 'nt':
         parser.error('Windows CLI checks require native Windows')
@@ -177,16 +238,27 @@ def main():
     allocated = not kernel.GetConsoleCP()
     if allocated and not kernel.AllocConsole():
         raise ctypes.WinError(ctypes.get_last_error())
+    console = dict(initial_input_code_page=kernel.GetConsoleCP(),
+                   initial_output_code_page=kernel.GetConsoleOutputCP(), selected_code_page=args.code_page)
     failures = []
     try:
+        if args.code_page is not None:
+            if not kernel.SetConsoleCP(args.code_page) or not kernel.SetConsoleOutputCP(args.code_page):
+                raise ctypes.WinError(ctypes.get_last_error())
+        print('Windows CLI console: ' + json.dumps(console), flush=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-cli-') as temporary:
             for name, case in [('saved-run', pipeline), ('xlsx', spreadsheet), ('powershell-unicode', powershell), ('ctrl-break', interrupt)]:
+                if args.case and name != args.case:
+                    continue
                 folder = Path(temporary) / name
                 folder.mkdir()
                 environment = {key: value for key, value in os.environ.items() if not key.startswith('THINKTHEN_')}
                 environment.update(HOME=str(folder), USERPROFILE=str(folder), TMP=str(folder), TEMP=str(folder), PYTHONUTF8='1')
                 try:
-                    case(binary, folder, environment)
+                    if name == 'powershell-unicode':
+                        powershell(binary, folder, environment, shell=args.powershell, console=console)
+                    else:
+                        case(binary, folder, environment)
                     print('Windows CLI: ' + name + ': PASS', flush=True)
                 except Exception as error:
                     failures.append(name)
@@ -194,6 +266,8 @@ def main():
         if failures:
             sys.exit('Windows CLI failures: ' + ', '.join(failures))
     finally:
+        kernel.SetConsoleCP(console['initial_input_code_page'])
+        kernel.SetConsoleOutputCP(console['initial_output_code_page'])
         if allocated:
             kernel.FreeConsole()
 

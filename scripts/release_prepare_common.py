@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 
-from release_downloads import fetch
+from release_downloads import fetch as fetch
 from release_home import checked_home
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -14,7 +14,15 @@ PINS = json.loads((ROOT / 'scripts/release-tools.json').read_text())
 def run(*args, **options):
     options.setdefault('cwd', ROOT)
     if options.get('capture_output'):
-        return subprocess.run(list(map(str, args)), check=True, **options)
+        result = subprocess.run(list(map(str, args)), **options)
+        if result.returncode:
+            print(f'release prepare command failed (exit {result.returncode})', file=sys.stderr)
+            if result.stderr:
+                tail = result.stderr[-16384:]
+                if isinstance(tail, bytes): tail = tail.decode(errors='replace')
+                print('\n'.join(tail.splitlines()[-30:]), file=sys.stderr)
+            result.check_returncode()
+        return result
     with tempfile.TemporaryFile(mode='w+') as log:
         result = subprocess.run(list(map(str, args)), stdout=log, stderr=subprocess.STDOUT, **options)
         if result.returncode:

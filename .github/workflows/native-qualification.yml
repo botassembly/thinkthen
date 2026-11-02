@@ -592,6 +592,14 @@ jobs:
         env:
           RELEASE_SHA: ${{ inputs.revision }}
         run: python3 scripts/release-installer-check windows-x86_64 windows-installed "$RELEASE_SHA" --cli
+      - name: Preserve Windows CLI failure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-cli-diagnostics
+          path: target/windows-cli-diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
       - name: Report every qualification failure
         if: always()
         env:

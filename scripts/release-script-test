@@ -22,6 +22,107 @@ import release_windows_sdks
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_windows_unicode_probe_restores_shared_console_pages(self):
+        main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']
+        with tempfile.TemporaryDirectory(prefix='thinkthen-unicode-console-') as temporary:
+            binary = Path(temporary) / 'thinkthen.exe'
+            binary.write_bytes(b'console fixture')
+            for selected, fails in ((None, False), (65001, False), (None, True)):
+                with self.subTest(selected=selected, fails=fails):
+                    pages = dict(input=437, output=437)
+                    def set_page(name, value):
+                        pages[name] = value
+                        return 1
+                    kernel = SimpleNamespace(GetConsoleCP=lambda: pages['input'],
+                        GetConsoleOutputCP=lambda: pages['output'],
+                        SetConsoleCP=lambda value: set_page('input', value),
+                        SetConsoleOutputCP=lambda value: set_page('output', value))
+                    def probe(*args, **options):
+                        pages.update(input=65001, output=65001)
+                        if fails: raise AssertionError('injected case failure')
+                    arguments = ['windows-cli-check', '--binary', str(binary), '--case', 'powershell-unicode']
+                    if selected is not None: arguments += ['--code-page', str(selected)]
+                    with patch.dict(main.__globals__, os=SimpleNamespace(name='nt', environ=os.environ),
+                            ctypes=SimpleNamespace(WinDLL=lambda *args, **options: kernel), powershell=probe), \
+                            patch.object(sys, 'argv', arguments):
+                        if fails:
+                            with self.assertRaisesRegex(SystemExit, 'powershell-unicode'): main()
+                        else:
+                            main()
+                    self.assertEqual(pages, dict(input=437, output=437))
+
+    def test_windows_powershell_profile_state_stays_outside_the_checked_folder(self):
+        case = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['powershell']
+        with tempfile.TemporaryDirectory(prefix='thinkthen-unicode-profile-') as temporary:
+            root = Path(temporary)
+            if os.name != 'nt':
+                alias = root / 'temporary'
+                alias.symlink_to(root, target_is_directory=True)
+                root = alias
+            folder, diagnostics = root / 'case', root / 'evidence'
+            folder.mkdir()
+            environment = dict(os.environ, **{key: str(folder) for key in (
+                'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PSModuleAnalysisCachePath')})
+            def invoke(command, **options):
+                child = options['env']
+                for key in ('HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PSModuleAnalysisCachePath'):
+                    path = Path(child[key])
+                    self.assertTrue(path.is_absolute(), key)
+                    self.assertTrue(path.resolve().is_relative_to(diagnostics.resolve()), key)
+                    self.assertFalse(path.resolve().is_relative_to(folder.resolve()), key)
+                self.assertEqual(child.get('SYSTEMROOT'), environment.get('SYSTEMROOT'))
+                (Path(child['USERPROFILE']) / 'AppData').mkdir()
+                return subprocess.CompletedProcess(command, 0,
+                    stdout='Body,ready\r\n漢字 café evidence 5,TRUE\r\n'.encode('utf-8'), stderr=b'')
+            with patch('subprocess.run', side_effect=invoke):
+                case(Path('thinkthen.exe'), folder, environment, diagnostics=diagnostics)
+            self.assertEqual(sorted(p.name for p in folder.iterdir()), ['unicode.ps1'])
+
+    def test_windows_powershell_failures_name_difference_and_retain_raw_evidence(self):
+        case = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['powershell']
+        valid = 'Body,ready\r\n漢字 café evidence 5,TRUE\r\n'.encode('utf-8')
+        cases = [
+            ('exit', valid, 7, False, 'expected 0, actual 7'),
+            ('row count', b'Body,ready\r\n', 0, False, 'expected 1, actual 0'),
+            ('Body', b'Body,ready\r\nchanged,TRUE\r\n', 0, False,
+             "expected '漢字 café evidence 5', actual 'changed'"),
+            ('ready', valid.replace(b'TRUE', b'FALSE'), 0, False, "expected 'TRUE', actual 'FALSE'"),
+            ('files', valid, 0, True, "expected ['unicode.ps1'], actual ['stray', 'unicode.ps1']"),
+            ('stdout encoding', b'Body,ready\r\n\xff,TRUE\r\n', 0, False, 'expected UTF-8, actual'),
+            ('timeout', valid, None, False, 'timed out'),
+        ]
+        with tempfile.TemporaryDirectory(prefix='thinkthen-powershell-diagnostics-') as temporary:
+            diagnostics = Path(temporary)
+            for name, stdout, code, stray, message in cases:
+                with self.subTest(failure=name):
+                    stderr = b'raw stderr\xff'
+                    previous = set(diagnostics.iterdir())
+                    def invoke(command, **options):
+                        if stray: (Path(options['cwd']) / 'stray').touch()
+                        if code is None:
+                            saved, = set(diagnostics.iterdir()) - previous
+                            (saved / 'environment.json').write_bytes(b'\xff')
+                            raise subprocess.TimeoutExpired(command, 60, output=stdout, stderr=stderr)
+                        return subprocess.CompletedProcess(command, code, stdout=stdout, stderr=stderr)
+                    with tempfile.TemporaryDirectory(prefix='thinkthen-unicode-case-') as fixture:
+                        folder = Path(fixture)
+                        with patch('subprocess.run', side_effect=invoke), self.assertRaises(AssertionError) as failure:
+                            case(Path('thinkthen.exe'), folder, os.environ, diagnostics=diagnostics)
+                        detail = json.loads(str(failure.exception))
+                        self.assertIn(message, detail['error'])
+                        if name != 'timeout': self.assertIn('PowerShell ' + name, detail['error'])
+                        saved = Path(detail['evidence'])
+                    self.assertFalse(folder.exists())
+                    self.assertEqual((saved / 'stdout.bin').read_bytes(), stdout)
+                    self.assertEqual((saved / 'stderr.bin').read_bytes(), stderr)
+                    expected_files = ['stray', 'unicode.ps1'] if stray else ['unicode.ps1']
+                    self.assertEqual(json.loads((saved / 'files.json').read_text()), expected_files)
+                    rows = json.loads((saved / 'rows.json').read_text())
+                    if name in ('exit', 'timeout'):
+                        self.assertEqual(rows, [{'Body': '漢字 café evidence 5', 'ready': 'TRUE'}])
+                    if name == 'timeout': self.assertEqual((saved / 'environment.json').read_bytes(), b'\xff')
+                    self.assertEqual(json.loads((saved / 'failure.json').read_text()), detail)
+
     def test_checksum_inventory_names_changes_and_rejects_unsafe_files(self):
         from release_install import checksums as record
         from release_workflow import checksums

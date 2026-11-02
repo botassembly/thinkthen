@@ -19,6 +19,121 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class QualificationRecipes(unittest.TestCase):
+    def test_rust_preparation_repairs_only_the_unhealthy_pin_and_keeps_query_errors(self):
+        import json
+        import tomllib
+        config = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']
+        channel, host, target = config['channel'], 'aarch64-unknown-linux-gnu', 'wasm32-unknown-unknown'
+        components = [name + '-' + host for name in ('cargo', 'rustc', 'rust-std', 'clippy', 'rustfmt', 'llvm-tools')]
+        components.append('rust-std-' + target)
+        for scenario in ('healthy', 'absent', 'missing-clippy', 'query-error', 'stale-proxy',
+                         'persistent-query-error', 'incomplete-install', 'install-error'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory(prefix='rust-preparation-') as directory:
+                scratch = Path(directory)
+                source, bin_dir = scratch / 'source', scratch / 'bin'
+                (source / 'scripts').mkdir(parents=True)
+                shutil.copy2(ROOT / 'rust-toolchain.toml', source / 'rust-toolchain.toml')
+                (source / 'scripts/native-tools-env').write_text('# isolated prepared tools\n')
+                bin_dir.mkdir()
+                selected = scratch / 'toolchains' / (channel + '-' + host)
+                other = scratch / 'toolchains/other/bin/cargo-clippy'
+                other.parent.mkdir(parents=True)
+                other.write_text('unrelated toolchain')
+                if scenario != 'absent':
+                    (selected / 'bin').mkdir(parents=True)
+                    installed = components if scenario == 'healthy' else [name for name in components if not name.startswith('clippy-')]
+                    (selected / 'components').write_text('\n'.join(installed))
+                    if scenario == 'stale-proxy':
+                        (selected / 'bin/cargo-clippy').write_text('conflicting partial file')
+                rustup = bin_dir / 'rustup'
+                rustup.write_text('#!' + sys.executable + '\n' + textwrap.dedent('''
+                    import json, os, shutil, sys
+                    from pathlib import Path
+                    root = Path(os.environ['RUST_FIXTURE'])
+                    args = sys.argv[1:]
+                    channel, host, target = json.loads(os.environ['RUST_SELECTION'])
+                    selected = root / 'toolchains' / (channel + '-' + host)
+                    scenario = os.environ['RUST_SCENARIO']
+                    with (root / 'calls').open('a') as log: log.write(json.dumps(args) + '\\n')
+                    if args == ['toolchain', 'list']:
+                        print(selected.name + '-other')
+                        if selected.exists(): print(selected.name)
+                    elif args == ['component', 'list', '--installed', '--toolchain', channel]:
+                        if scenario == 'persistent-query-error' or (scenario == 'query-error' and not (root / 'installed').exists()):
+                            print('x' * 20000, file=sys.stderr)
+                            print('rustup: component metadata unreadable', file=sys.stderr)
+                            sys.exit(17)
+                        print((selected / 'components').read_text())
+                    elif args == ['toolchain', 'uninstall', channel]:
+                        shutil.rmtree(selected)
+                    elif args[:3] == ['toolchain', 'install', channel]:
+                        assert args[3:6] == ['--profile', 'minimal', '--no-self-update']
+                        assert args[-2:] == ['--target', target]
+                        assert args[6:-2] == ['--component', 'clippy', '--component', 'rustfmt', '--component', 'llvm-tools-preview']
+                        mirror = Path(os.environ['RUSTUP_DIST_SERVER'].removeprefix('file://'))
+                        assert (mirror / ('dist/channel-rust-' + channel + '.toml.sha256')).is_file()
+                        assert len(list((mirror / 'dist').glob('*.xz'))) == 7
+                        if scenario == 'install-error':
+                            print('rustup: pinned archive installation failed', file=sys.stderr)
+                            sys.exit(29)
+                        if (selected / 'bin/cargo-clippy').exists():
+                            print('rustup: conflicting bin/cargo-clippy', file=sys.stderr)
+                            sys.exit(23)
+                        selected.mkdir(parents=True, exist_ok=True)
+                        components = json.loads(os.environ['RUST_COMPONENTS'])
+                        if scenario == 'incomplete-install': components.remove('clippy-' + host)
+                        (selected / 'components').write_text('\\n'.join(components))
+                        (root / 'installed').touch()
+                    else:
+                        raise AssertionError(args)
+                '''))
+                rustup.chmod(0o755)
+                entry = '''
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import release_rust as rust
+import release_prepare_common as common
+root = Path(sys.argv[2])
+rust.ROOT = common.ROOT = root / 'source'
+rust.TOOLS = root / 'tools'
+rust.current = lambda: {'rust': 'aarch64-unknown-linux-gnu'}
+def fetch(url, path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if url.endswith('.toml'):
+        packages = ('cargo', 'rustc', 'rust-std', 'clippy-preview', 'rustfmt-preview', 'llvm-tools-preview')
+        path.write_text(''.join('[pkg.' + name + '.target.' + target + ']\\nxz_url="https://static.rust-lang.org/dist/' + name + '-' + target + '.xz"\\n'
+                               for name in packages for target in (['aarch64-unknown-linux-gnu', 'wasm32-unknown-unknown'] if name == 'rust-std' else ['aarch64-unknown-linux-gnu'])))
+    else: path.write_bytes(b'controlled pinned archive boundary')
+    return path
+rust.fetch = fetch
+rust.prepare('wasm32-unknown-unknown')
+'''
+                env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ['PATH'],
+                           RUST_FIXTURE=str(scratch), RUST_SELECTION=json.dumps([channel, host, target]),
+                           RUST_COMPONENTS=json.dumps(components), RUST_SCENARIO=scenario)
+                result = subprocess.run([sys.executable, '-c', entry, str(ROOT / 'scripts'), str(scratch)],
+                                        env=env, capture_output=True, text=True)
+                calls = [json.loads(line) for line in (scratch / 'calls').read_text().splitlines()]
+                self.assertEqual(other.read_text(), 'unrelated toolchain')
+                if scenario in ('query-error', 'persistent-query-error'):
+                    self.assertIn('rustup: component metadata unreadable', result.stderr)
+                    self.assertIn('17', result.stderr)
+                    self.assertNotIn('x' * 17000, result.stderr)
+                if scenario in ('persistent-query-error', 'incomplete-install', 'install-error'):
+                    self.assertNotEqual(result.returncode, 0)
+                    if scenario == 'incomplete-install': self.assertIn('clippy-' + host, result.stderr)
+                    if scenario == 'install-error': self.assertIn('rustup: pinned archive installation failed', result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual((selected / 'components').read_text().splitlines(), components)
+                installs = [call for call in calls if call[:2] == ['toolchain', 'install']]
+                removals = [call for call in calls if call[:2] == ['toolchain', 'uninstall']]
+                self.assertEqual(len(installs), 0 if scenario == 'healthy' else 1)
+                self.assertEqual(removals, [] if scenario in ('healthy', 'absent') else [['toolchain', 'uninstall', channel]])
+                self.assertEqual(sum(call[:2] == ['component', 'list'] for call in calls),
+                                 1 if scenario in ('healthy', 'absent', 'install-error') else 2)
+
     def test_native_clean_guard_ignores_only_prepared_artifacts_without_global_policy(self):
         entry = runpy.run_path(str(ROOT / 'scripts/native-prepare'))
         def compiler_boundary(_):

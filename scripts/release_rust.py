@@ -2,7 +2,7 @@
 import hashlib
 import os
 import platform
-from pathlib import Path
+import subprocess
 import tomllib
 from urllib.parse import urlparse
 
@@ -16,13 +16,21 @@ def prepare(target=None):
     host = 'x86_64-pc-windows-msvc' if platform.system() == 'Windows' else current()['rust']
     execute = run if platform.system() == 'Windows' else prepared
     installed = execute('rustup', 'toolchain', 'list', capture_output=True, text=True).stdout
-    if channel + '-' + host in installed:
+    installed = channel + '-' + host in installed.split()
+    needed = ['cargo-' + host, 'rustc-' + host, 'rust-std-' + host]
+    needed += [name.removesuffix('-preview') + '-' + host for name in config['components']]
+    if target: needed.append('rust-std-' + target)
+
+    def missing_components():
         components = execute('rustup', 'component', 'list', '--installed', '--toolchain', channel,
                               capture_output=True, text=True).stdout.splitlines()
-        needed = ['cargo-' + host, 'rustc-' + host, 'rust-std-' + host]
-        needed += [name.removesuffix('-preview') + '-' + host for name in config['components']]
-        if target: needed.append('rust-std-' + target)
-        if all(name in components for name in needed): return
+        return [name for name in needed if name not in components]
+
+    if installed:
+        try:
+            if not missing_components(): return
+        except subprocess.CalledProcessError:
+            pass  # The failed query is logged; repair only this selected pin below.
     mirror = TOOLS / 'rust-dist'
     url = f'https://static.rust-lang.org/dist/channel-rust-{channel}.toml'
     manifest = fetch(url, mirror / urlparse(url).path.lstrip('/'))
@@ -37,4 +45,9 @@ def prepare(target=None):
     args = ['rustup', 'toolchain', 'install', channel, '--profile', 'minimal', '--no-self-update']
     for component in config['components']: args += ['--component', component]
     if target: args += ['--target', target]
+    if installed:
+        execute('rustup', 'toolchain', 'uninstall', channel)
     execute(*args, env=env)
+    missing = missing_components()
+    if missing:
+        raise ValueError('pinned Rust toolchain is missing required components: ' + ', '.join(missing))

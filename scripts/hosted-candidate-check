@@ -8,7 +8,7 @@ if [ "${1:-}" = --native-inputs ]; then
     exec python3 scripts/hosted-candidate-inputs "$@"
 fi
 if [ "${1:-}" = --scan ]; then
-    exec ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/runtime-floor-build scripts/release_workflow.py scripts/postgres-installed-prepare-test scripts/hosted-candidate-inputs scripts/release-replay-test scripts/release-staging-test scripts/qualification-continuation-test scripts/public-export-test scripts/public_export_gate.py scripts/native-producer-test scripts/stress-dispatch-test scripts/loader-failure-check scripts/release-floor-inputs-test scripts/qualification-recipe-test scripts/release_workflow_prepare.py databases/duckdb/community-prepare.py scripts/duckdb-community-prepare-test
+    exec ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/runtime-floor-build scripts/release_workflow.py scripts/postgres-installed-prepare-test scripts/hosted-candidate-inputs scripts/release-replay-test scripts/release-staging-test scripts/qualification-continuation-test scripts/public-export-test scripts/public_export_gate.py scripts/native-producer-test scripts/stress-dispatch-test scripts/loader-failure-check scripts/release-floor-inputs-test scripts/qualification-recipe-test scripts/release_workflow_prepare.py scripts/release_rust.py scripts/release_prepare_common.py databases/duckdb/community-prepare.py scripts/duckdb-community-prepare-test
 fi
 if [ "${1:-}" = --loader-checks ]; then
     [ "$#" -eq 5 ] || { echo 'usage: hosted-candidate-check --loader-checks CARGO_HOME TARGET FLOOR_IMAGE SWIFT_IMAGE' >&2; exit 2; }
@@ -43,7 +43,7 @@ if [ "${1:-}" = --baseline ]; then
     git archive "$2" | tar -x -C "$scratch"
     git -C "$scratch" init --quiet
     git -C "$scratch" add -f .
-    for test in stress-dispatch-test release-staging-test qualification-continuation-test public-export-test duckdb-community-prepare-test; do
+    for test in stress-dispatch-test release-staging-test qualification-continuation-test qualification-recipe-test public-export-test duckdb-community-prepare-test; do
         cp "$current/scripts/$test" "$scratch/scripts/$test"
     done
     cd "$scratch"
