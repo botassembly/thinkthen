@@ -18,7 +18,6 @@ import zipfile
 
 from release_workflow import ROOT, version
 import release_windows_check
-import release_windows
 import release_windows_sdks
 
 
@@ -57,22 +56,68 @@ class ReleaseScripts(unittest.TestCase):
 
     def test_windows_consumer_preserves_os_architecture_while_isolating_user_state(self):
         import release_windows_sdks as sdks
+        import release_registry_check as registry
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-environment-') as temporary:
-            scratch = Path(temporary)
+            temporary = Path(temporary)
+            if os.name != 'nt':
+                alias = temporary / 'temporary'
+                alias.symlink_to(temporary, target_is_directory=True)
+                temporary = alias
+            package = temporary / 'candidate'
+            package.mkdir()
             inherited = dict(os.environ, PROCESSOR_ARCHITECTURE='AMD64',
-                             HOME='host-home', USERPROFILE='host-profile',
+                             **{key: str(package) for key in ('HOME', 'USERPROFILE', 'APPDATA',
+                                                             'LOCALAPPDATA', 'PSModuleAnalysisCachePath',
+                                                             'PSMODULEANALYSISCACHEPATH')},
                              THINKTHEN_API_KEY='host-secret')
-            with patch.dict(os.environ, inherited, clear=True), patch('release_windows_cache.prepare_cache'):
-                environment = sdks.environment(scratch)
-            child = subprocess.run([sys.executable, '-c',
-                'import json,os; print(json.dumps({key: os.getenv(key) for key in '
-                '["PROCESSOR_ARCHITECTURE", "HOME", "USERPROFILE", "THINKTHEN_API_KEY"]}))'],
-                env=environment, capture_output=True, text=True, check=True)
-            values = json.loads(child.stdout)
-            self.assertEqual(values['PROCESSOR_ARCHITECTURE'], inherited['PROCESSOR_ARCHITECTURE'])
-            self.assertEqual(values['HOME'], str(scratch / 'home'))
-            self.assertEqual(values['USERPROFILE'], str(scratch / 'home'))
-            self.assertIsNone(values['THINKTHEN_API_KEY'])
+            for setup in (sdks.environment, registry.environment):
+                with self.subTest(setup=setup.__module__):
+                    scratch = Path(temporary) / setup.__module__
+                    scratch.mkdir()
+                    with patch.dict(os.environ, inherited, clear=True), patch('release_windows_cache.prepare_cache'), \
+                            patch.object(registry, 'os', SimpleNamespace(environ=os.environ, name='nt')):
+                        environment = setup(scratch)
+                    for key in ('LOCALAPPDATA', 'PSMODULEANALYSISCACHEPATH'):
+                        self.assertEqual(sum(name.upper() == key for name in environment), 1, key)
+                    child = subprocess.run([sys.executable, '-c',
+                        'import json,os; print(json.dumps({key: value for key,value in os.environ.items() '
+                        'if key.upper() in {"PROCESSOR_ARCHITECTURE", "HOME", "USERPROFILE", "APPDATA", '
+                        '"LOCALAPPDATA", "PSMODULEANALYSISCACHEPATH", "THINKTHEN_API_KEY"}}))'],
+                        env=environment, capture_output=True, text=True, check=True)
+                    values = json.loads(child.stdout)
+                    self.assertEqual(values['PROCESSOR_ARCHITECTURE'], inherited['PROCESSOR_ARCHITECTURE'])
+                    for key in ('HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'PSModuleAnalysisCachePath'):
+                        path = Path(values[key.upper()] if os.name == 'nt' else values[key])
+                        self.assertTrue(path.is_absolute(), key)
+                        self.assertTrue(path.resolve().is_relative_to(scratch.resolve()), key)
+                        self.assertFalse(path.resolve().is_relative_to(package.resolve()), key)
+                    self.assertNotIn('THINKTHEN_API_KEY', values)
+
+    @unittest.skipUnless(os.name == 'nt', 'Requires Windows PowerShell')
+    def test_windows_powershell_cache_leaves_candidate_unchanged(self):
+        from release_install import checksums as record
+        from release_workflow import checksums
+        from release_windows_cache import _control
+        with tempfile.TemporaryDirectory(prefix='thinkthen-powershell-cache-') as temporary:
+            root = Path(temporary)
+            package, scratch = root / 'candidate', root / 'scratch'
+            package.mkdir()
+            scratch.mkdir()
+            (package / 'delivered').write_bytes(b'delivered payload')
+            record(package)
+            checksums(package)
+            # ACL preparation is independent of where PowerShell writes its cache.
+            with patch('release_windows_cache.prepare_cache'):
+                environment = release_windows_sdks.environment(scratch)
+            cache = Path(environment['PSModuleAnalysisCachePath'])
+            script = '''Set-Location -LiteralPath $env:TT_CACHE_PATH;
+Get-Command Get-Acl | Out-Null;
+while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
+  [Threading.Thread]::Sleep(100);
+}'''
+            _control(environment, script, package)
+            self.assertTrue(cache.read_bytes().startswith(b'PSMODULECACHE'))
+            checksums(package)
 
     def test_installed_r_rejects_child_failure_after_valid_rows(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-r-child-exit-') as temporary:
@@ -94,6 +139,7 @@ class ReleaseScripts(unittest.TestCase):
             self.assertNotIn('preserves every shared stub row', result.stdout)
 
     def test_generated_go_smoke_command_exposes_delivered_fixtures(self):
+        import release_windows
         from release_install import install_note
         with tempfile.TemporaryDirectory(prefix='thinkthen-install-go-') as temporary:
             out = Path(temporary)
@@ -110,6 +156,7 @@ class ReleaseScripts(unittest.TestCase):
             subprocess.run(['sh', '-eu', '-c', command], cwd=out, env=environment, check=True)
 
     def test_windows_go_consumer_uses_delivered_canonical_schema(self):
+        import release_windows
         class GoFinished(BaseException):
             pass
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-go-schema-') as temporary:

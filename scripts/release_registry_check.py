@@ -84,9 +84,9 @@ def environment(scratch):
                  'DOTNET_ADDITIONAL_DEPS', 'DOTNET_SHARED_STORE'):
         environment.pop(name, None)
     if os.name == 'nt':
-        from release_windows_cache import prepare_cache
+        from release_windows_cache import cache_environment, prepare_cache
         cache = scratch / 'cache'
-        environment.update(LOCALAPPDATA=str(cache), LocalAppData=str(cache))
+        environment = cache_environment(cache, environment)
         prepare_cache(cache, environment)
     return environment
 

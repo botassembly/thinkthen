@@ -7,6 +7,17 @@ import subprocess
 import sys
 
 
+def cache_environment(root, environment):
+    """Keep PowerShell's known-folder fallback out of the checked package."""
+    root = Path(root).resolve()
+    powershell = root / 'Microsoft/Windows/PowerShell'
+    powershell.mkdir(parents=True, exist_ok=True)
+    environment = {key: value for key, value in environment.items()
+                   if key.upper() not in {'LOCALAPPDATA', 'PSMODULEANALYSISCACHEPATH'}}
+    return dict(environment, LOCALAPPDATA=str(root),
+                PSModuleAnalysisCachePath=str(powershell / 'ModuleAnalysisCache'))
+
+
 def run_consumer(command, environment, *, cwd=None):
     """Forward installed consumer output and retain diagnostics for cache assertions."""
     chunks = []
@@ -89,7 +100,7 @@ $valid''', root)
 
 def check_cache(command, root, environment, filename):
     root.mkdir()
-    env = dict(environment, LOCALAPPDATA=str(root), LocalAppData=str(root))
+    env = cache_environment(root, environment)
     system = Path(env['SYSTEMROOT']) / 'System32'
 
     control = partial(_control, env)

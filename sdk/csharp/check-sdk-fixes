@@ -23,7 +23,7 @@ cp "$root/sdk/csharp/tests/Consumer.csproj" "$root"/sdk/csharp/tests/*.cs "$stag
 printf '<configuration><packageSources><clear/><add key="local" value="%s/feed"/><add key="prepared" value="%s/singlefile-packages"/></packageSources></configuration>\n' "$stage" "$DOTNET_ROOT" > "$stage/consumer/NuGet.Config"
 "$DOTNET_ROOT/dotnet" build "$stage/consumer/Consumer.csproj" --configfile "$stage/consumer/NuGet.Config" -o "$stage/bin"
 # Re-export the engine, wrapping only owner creation and release. No engine source builds.
-cc -std=c11 -Wall -Wextra -Werror -dynamiclib "$root/sdk/csharp/tests/handle-counts.c" -I "$root/crates/thinkthen-ffi/include" -Wl,-reexport_library,"$native" -o "$stage/counts.dylib"
+cc -Wl,-headerpad_max_install_names -std=c11 -Wall -Wextra -Werror -dynamiclib "$root/sdk/csharp/tests/handle-counts.c" -I "$root/crates/thinkthen-ffi/include" -Wl,-reexport_library,"$native" -o "$stage/counts.dylib"
 engine_id=$(otool -D "$native" | tail -n 1)
 install_name_tool -change "$engine_id" "$native" "$stage/counts.dylib"
 export THINKTHEN_TEST_ENGINE="$native"

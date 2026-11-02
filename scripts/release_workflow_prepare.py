@@ -72,6 +72,7 @@ def r_sources():
 def language_inputs():
     for command in ('cpp-prepare', 'jvm-prepare', 'csharp-prepare', 'sqlite-prepare', 'duckdb-prepare'):
         prepared('scripts/' + command, *(['--refresh'] if command == 'sqlite-prepare' else []))
+    prepared('scripts/duckdb-prepare', '--community', '1.4.3')
     wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
     abi = wheel.split('-')[2][2:]
     prepared('uv', 'python', 'install', f'{abi[0]}.{abi[1:]}')

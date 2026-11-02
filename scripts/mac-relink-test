@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Relink actual Mac gate consumers to a long prepared-engine path."""
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from release_metadata import version
+
+ROOT = Path(__file__).resolve().parent.parent
+if sys.platform != 'darwin':
+    sys.exit('mac-relink-test requires macOS')
+cargo, floor, native, loopback = sys.argv[1:]
+os.environ.update(CARGO_HOME=cargo, THINKTHEN_FLOOR_IMAGE=floor, THINKTHEN_LOOPBACK=loopback)
+# The first two binaries are linked here; the remaining sites set short @rpath
+# install names on a copy of the prepared engine.
+mutators = {
+    'scripts/sql-bridge-gate': 'SQL ABI consumer',
+    'sdk/csharp/check-sdk-fixes': 'C# handle-counting library',
+    'scripts/zig-package': 'prepared engine copy',
+    'sdk/csharp/check-readme': 'prepared engine copy',
+    'sdk/c/CMakeLists.txt': 'prepared engine copy',
+    'sdk/c/cmake/install-engine.cmake.in': 'prepared engine copy',
+}
+tracked = subprocess.check_output(['git', 'ls-files', 'scripts', 'sdk'], cwd=ROOT, text=True).splitlines()
+actual = {name for name in tracked if name != 'scripts/mac-relink-test'
+          and re.search(r'install.name.tool', (ROOT / name).read_text(errors='replace'), re.I)}
+assert actual == set(mutators), (actual, mutators)
+with tempfile.TemporaryDirectory(prefix='mac-relink-') as temporary:
+    stage = Path(temporary)
+    folder = stage
+    for index in range(4):
+        folder /= str(index) + 'x' * 150
+    folder.mkdir(parents=True)
+    engine = folder / Path(native).name
+    shutil.copy2(native, engine)
+    env = dict(os.environ, THINKTHEN_NATIVE_LIBRARY=str(engine))
+    subprocess.run(['scripts/sql-bridge-gate'], cwd=ROOT, env=env, check=True)
+    # Exercise the C# script's actual link command without building its .NET SDK.
+    text = (ROOT / 'sdk/csharp/check-sdk-fixes').read_text().replace('\\\n', ' ')
+    command = next(line for line in text.splitlines() if line.startswith('cc '))
+    subprocess.run(['sh', '-eu', '-c', command], cwd=ROOT,
+                   env=dict(env, root=str(ROOT), native=str(engine), stage=str(stage)), check=True)
+    original = subprocess.check_output(['otool', '-D', engine], text=True).splitlines()[-1]
+    counts = stage / 'counts.dylib'
+    subprocess.run(['install_name_tool', '-change', original, engine, counts], check=True)
+    assert str(engine) in subprocess.check_output(['otool', '-L', counts], text=True)
+    # Packaging rewrites the engine's ID to these names, never the long path
+    # required by the two consumers' dependency load commands above.
+    major, minor, *_ = version().split('.')
+    for install_name in ('@rpath/' + engine.name, f'@rpath/libthinkthen.{major}.{minor}.dylib'):
+        subprocess.run(['install_name_tool', '-id', install_name, engine], check=True)
+        assert subprocess.check_output(['otool', '-D', engine], text=True).splitlines()[-1] == install_name
+for name, binary in mutators.items():
+    print(f'Mac relocation: {name}: {binary}')

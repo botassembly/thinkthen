@@ -5,6 +5,9 @@ import subprocess
 import sys
 
 versions = json.loads(Path(__file__).with_name("community-versions.json").read_text())
+check = sys.argv[1:2] == ['--check']
+if check:
+    del sys.argv[1]
 if len(sys.argv) != 2 or sys.argv[1] not in versions:
     sys.exit("usage: scripts/duckdb-prepare --community " + "|".join(versions))
 version = sys.argv[1]
@@ -12,6 +15,13 @@ cache = Path.home() / ".local/share/thinkthen-build-tools/duckdb-community" / ve
 for project, revision in versions[version].items():
     destination = cache / project
     command = ["git", "--git-dir=" + str(destination / ".git"), "--work-tree=" + str(destination)]
+    if check:
+        head = subprocess.run([*command, 'rev-parse', '--verify', 'HEAD'],
+                              capture_output=True, text=True)
+        if head.returncode or head.stdout.strip() != revision:
+            sys.exit(f'missing or wrong pinned community checkout: {destination}; '
+                     f'run scripts/duckdb-prepare --community {version}')
+        continue
     if not (destination / ".git").exists():
         destination.mkdir(parents=True, exist_ok=True)
         subprocess.run([*command, "init", "-q", str(destination)], check=True)

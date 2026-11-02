@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 if [ "${1:-}" = --development ]; then exec sh databases/duckdb/tests/development.sh; fi
+python3 databases/duckdb/community-prepare.py --check 1.4.3
 . scripts/native-build-env
 root=$PWD
 # The central gate owns the shared SQL ABI consumer.

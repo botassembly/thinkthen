@@ -76,7 +76,8 @@ def environment(scratch):
                DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                DOTNET_GENERATE_ASPNET_CERTIFICATE='false', R_LIBS_SITE='', R_ENVIRON_USER='NUL',
                R_PROFILE_USER='NUL', LC_ALL='C', LANG='C')
-    from release_windows_cache import prepare_cache
+    from release_windows_cache import cache_environment, prepare_cache
+    env = cache_environment(scratch / 'local', env)
     prepare_cache(scratch / 'local', env)
     return env
 

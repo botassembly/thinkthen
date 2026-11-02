@@ -13,7 +13,10 @@ trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status
 trap 'exit 1' HUP INT TERM
 mkdir "$scratch/include"
 cp crates/thinkthen-ffi/include/thinkthen.h crates/thinkthen-ffi/include/thinkthen_sql.h "$scratch/include/"
-cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread -I "$scratch/include" \
+# Rewriting Mach-O dependencies can lengthen their load commands.
+set --
+if [ "$(uname -s)" = Darwin ]; then set -- -Wl,-headerpad_max_install_names; fi
+cc "$@" -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread -I "$scratch/include" \
   crates/thinkthen-ffi/tests/sql-consumer.c "$THINKTHEN_NATIVE_LIBRARY" \
   -Wl,-rpath,"$library_directory" -o "$scratch/consumer"
 if [ "$(uname -s)" = Darwin ]; then
