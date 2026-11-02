@@ -3,6 +3,14 @@
 set -eu
 cd "$(dirname "$0")/.."
 failed=
+stage_timeout=${THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS:-}
+if [ -z "$stage_timeout" ]; then
+    # M5: whole gate 1014s, SDK stage 615s, Rust tests 217s. Allow 45m per Mac stage.
+    case "$(uname -s)" in Darwin) stage_timeout=2700 ;; *) stage_timeout=0 ;; esac
+fi
+case "$stage_timeout" in *[!0-9]*|'') echo 'gate stage timeout must be whole seconds' >&2; exit 2 ;; esac
+diagnostics=${THINKTHEN_GATE_DIAGNOSTICS:-$PWD/target/gate-diagnostics}
+mkdir -p "$diagnostics"
 gate_scratch=$(mktemp -d)
 trap 'status=$?; trap - EXIT; rm -rf "$gate_scratch" || :; exit "$status"' EXIT
 trap 'exit 129' HUP
@@ -12,22 +20,27 @@ mkfifo "$gate_scratch/output"
 stage() {
     name=$1
     shift
-    printf 'Gate stage: %s\n' "$name"
     started=$(date +%s)
-    tee "$gate_scratch/stage.log" < "$gate_scratch/output" &
+    printf 'Gate stage: %s (start %s)\n' "$name" "$started" | tee -a "$diagnostics/stages.log"
+    tee "$diagnostics/running-stage.log" < "$gate_scratch/output" &
     output_pid=$!
+    if [ "$stage_timeout" -ne 0 ]; then
+        set -- python3 scripts/gate-stage "$stage_timeout" "$name" "$@"
+    fi
     if "$@" > "$gate_scratch/output" 2>&1; then
         status=0
     else
         status=$?
     fi
     wait "$output_pid"
-    elapsed=$(( $(date +%s) - started ))
+    ended=$(date +%s)
+    elapsed=$(( ended - started ))
+    printf 'Gate stage ended: %s (end %s; exit %s; elapsed %s seconds)\n' "$name" "$ended" "$status" "$elapsed" >> "$diagnostics/stages.log"
     if [ "$status" -eq 0 ]; then
         printf 'Passed gate stage: %s (elapsed %s seconds)\n' "$name" "$elapsed"
     else
         printf 'Failed gate stage: %s (exit %s; elapsed %s seconds)\n' "$name" "$status" "$elapsed" >&2
-        tail -n 50 "$gate_scratch/stage.log" > "$gate_scratch/$name.tail"
+        tail -n 50 "$diagnostics/running-stage.log" > "$diagnostics/$name.tail"
         failed="$failed $name"
     fi
 }
@@ -86,7 +99,7 @@ if [ -n "$failed" ]; then
     printf 'Failed gate stages:%s\n' "$failed" >&2
     for name in $failed; do
         printf '\nLast 50 lines of failed gate stage: %s\n' "$name" >&2
-        cat "$gate_scratch/$name.tail" >&2
+        cat "$diagnostics/$name.tail" >&2
     done
     exit 1
 fi

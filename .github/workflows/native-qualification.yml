@@ -226,12 +226,21 @@ jobs:
       - name: Run the full declared gate
         id: run-the-full-declared-gate
         if: always()
-        run: |
-          . scripts/native-tools-env
-          status=0
-          . scripts/native-env || status=$?
-          scripts/gate || status=$?
-          exit "$status"
+        # The previous preparation took 22m22 of this job's 180m budget.
+        # This leaves about seven minutes for diagnostics at that preparation time.
+        # The gate has a 45m per-stage watchdog: M5 gate 1014s, SDKs 615s, Rust tests 217s.
+        timeout-minutes: 150
+        env:
+          THINKTHEN_GATE_DIAGNOSTICS: ${{ runner.temp }}/gate-diagnostics
+        run: scripts/hosted-gate
+      - name: Preserve gate stage times and running output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gate-diagnostics-macos-arm64
+          path: ${{ runner.temp }}/gate-diagnostics/
+          if-no-files-found: warn
+          retention-days: 7
 
 
       - name: Report every qualification failure

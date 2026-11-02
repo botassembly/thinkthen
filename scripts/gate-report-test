@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Feature: gate stages report duration and preserve failed output at log end."""
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent
@@ -19,6 +23,8 @@ with tempfile.TemporaryDirectory(prefix='gate-report-') as temporary:
             target = scripts / source.name
             target.write_text('#!/bin/sh\nexit 0\n')
             target.chmod(0o755)
+    if (ROOT / 'gate-stage').exists():
+        shutil.copy2(ROOT / 'gate-stage', scripts / 'gate-stage')
     tools = root / 'tools'
     tools.mkdir()
     for tool in ('git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake', 'pkg-config',
@@ -27,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix='gate-report-') as temporary:
         target.write_text('''#!/bin/sh
 case "${0##*/} $*" in
   "rm "*) exit 7 ;;
+  *gate-stage*) exec "$GATE_REPORT_PYTHON" "$@" ;;
   *surface-example*prepare*)
     if [ "${GATE_REPORT_MODE:-fail}" = guide ]; then exit 19; fi ;;
   *uname*) echo Darwin ;;
@@ -45,7 +52,7 @@ esac
 ''')
         target.chmod(0o755)
     run = subprocess.run(['sh', str(scripts / 'gate')], cwd=root,
-        env=dict(os.environ, PATH=f'{tools}:/usr/bin:/bin', TMPDIR=str(root), THINKTHEN_NATIVE_LIBRARY='fixture', THINKTHEN_GATE_STRICT='0'),
+        env=dict(os.environ, PATH=f'{tools}:/usr/bin:/bin', TMPDIR=str(root), THINKTHEN_NATIVE_LIBRARY='fixture', THINKTHEN_GATE_STRICT='0', THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='0', THINKTHEN_GATE_DIAGNOSTICS=str(root / 'fixture-diagnostics')),
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False)
     assert run.returncode == 1, run.stdout
     # Simulate a runner keeping only the end of a noisy log.
@@ -65,10 +72,130 @@ esac
     for mode, expected in (('success', 0), ('guide', 1)):
         followup = subprocess.run(['sh', str(scripts / 'gate')], cwd=root,
             env=dict(os.environ, PATH=f'{tools}:/usr/bin:/bin', TMPDIR=str(root), THINKTHEN_NATIVE_LIBRARY='fixture', THINKTHEN_GATE_STRICT='0',
-                     GATE_REPORT_MODE=mode), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                     GATE_REPORT_MODE=mode, THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='0', THINKTHEN_GATE_DIAGNOSTICS=str(root / 'fixture-diagnostics')), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, check=False)
         assert followup.returncode == expected, followup.stdout
         if mode == 'guide':
             assert 'Failed gate stage: bash-guide (exit 19;' in followup.stdout, followup.stdout
+    # A runner may kill the whole process group without allowing EXIT traps.
+    # Wait for a stage's output event, then kill it while it blocks on a FIFO.
+    block = root / 'block'
+    os.mkfifo(block)
+    metadata = tools / 'python3'
+    metadata.write_text(metadata.read_text().replace(
+        '  *release_metadata.py*)',
+        '\n'.join(('  *release_metadata.py*)',
+                   '    if [ "${GATE_REPORT_MODE:-fail}" = cutoff ]; then',
+                   '      echo running-stage-before-cutoff',
+                   '      read blocked < "$GATE_REPORT_BLOCK"',
+                   '    fi'))))
+    shutil.copy2(ROOT / 'hosted-gate', scripts / 'hosted-gate')
+    for name in ('native-tools-env', 'native-env'):
+        (scripts / name).write_text(':\n')
+    diagnostics = root / 'cutoff-diagnostics'
+    process = subprocess.Popen(['sh', str(scripts / 'hosted-gate')], cwd=root,
+        env=dict(os.environ, PATH=f'{tools}:/usr/bin:/bin', TMPDIR=str(root),
+                 THINKTHEN_NATIVE_LIBRARY='fixture', THINKTHEN_GATE_STRICT='0',
+                 THINKTHEN_GATE_DIAGNOSTICS=str(diagnostics),
+                 GATE_REPORT_MODE='cutoff', GATE_REPORT_BLOCK=str(block), THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='0'),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+        start_new_session=True)
+    try:
+        for line in process.stdout:
+            if line.strip() == 'running-stage-before-cutoff':
+                break
+        else:
+            raise AssertionError('gate exited before the cutoff event')
+    finally:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.communicate(timeout=10)
+    # These are the same persistent files transported by the workflow upload.
+    uploaded = root / 'uploaded'
+    shutil.copytree(diagnostics, uploaded)
+    records = (uploaded / 'stages.log').read_text()
+    assert 'Gate environment: native-tools-env (start ' in records, records
+    assert 'Gate environment ended: native-env ' in records, records
+    assert 'Gate stage ended: stress-dispatch-test ' in records, records
+    assert 'Gate stage: release-metadata (start ' in records, records
+    assert 'Gate stage ended: release-metadata ' not in records, records
+    assert (uploaded / 'running-stage.log').read_text() == 'running-stage-before-cutoff\n'
+    # An expired stage must close descendant writers so tee can finish and the
+    # gate can reach later stages. The child blocks on an event, never a sleep.
+    metadata.write_text(metadata.read_text().replace(
+        '  *release_metadata.py*)',
+        '\n'.join(('  *release_metadata.py*)',
+                   '    if [ "${GATE_REPORT_MODE:-fail}" = timeout ]; then',
+                   '      "$GATE_REPORT_PYTHON" -c \'import os; print("watchdog-child-running", flush=True); os.open(os.environ["GATE_REPORT_BLOCK"], os.O_RDONLY)\'',
+                   '      exit 0',
+                   '    fi'))))
+    watchdog = subprocess.Popen(['sh', str(scripts / 'gate')], cwd=root,
+        env=dict(os.environ, PATH=f'{tools}:/usr/bin:/bin', TMPDIR=str(root),
+                 THINKTHEN_NATIVE_LIBRARY='fixture', THINKTHEN_GATE_STRICT='0',
+                 THINKTHEN_GATE_DIAGNOSTICS=str(root / 'watchdog-diagnostics'),
+                 THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS='1', GATE_REPORT_MODE='timeout',
+                 GATE_REPORT_BLOCK=str(block), GATE_REPORT_PYTHON=sys.executable),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    output, _ = watchdog.communicate()
+    assert watchdog.returncode == 1, output
+    assert 'Timed out gate stage: release-metadata' in output, output
+    assert 'Failed gate stage: release-metadata (exit 124;' in output, output
+    assert 'Passed gate stage: sdk-gates' in output, output
+    summary = output.split('Last 50 lines of failed gate stage: release-metadata', 1)[1]
+    assert 'watchdog-child-running' in summary, summary
+    assert 'watchdog-child-running' in (root / 'watchdog-diagnostics/release-metadata.tail').read_text()
+    records = (root / 'watchdog-diagnostics/stages.log').read_text()
+    assert re.search(r'Gate stage ended: release-metadata .*exit 124;', records), records
     print(truncated)
-    print('gate reporting: durations, independent failures and truncated-log tails pass')
+    print('gate reporting: durations, failure tails and live cutoff diagnostics pass')
+
+# Prepared rehearsal must preserve shared binaries and reject cache conflicts.
+with tempfile.TemporaryDirectory(prefix='gate-prepared-') as temporary:
+    root = Path(temporary)
+    scripts = root / 'scripts'
+    scripts.mkdir()
+    for name in ('hosted-gate', 'native-pair', 'release_images.py'):
+        shutil.copy2(ROOT / name, scripts / name)
+    for name in ('native-tools-env', 'native-env', 'native-producer',
+                 'native-test-assets', 'native-abi-assets', 'gate'):
+        (scripts / name).write_text('#!/bin/sh\nexit 0\n' if name not in ('native-tools-env', 'native-env') else ':\n')
+        (scripts / name).chmod(0o755)
+    cache = root / '.local/share/thinkthen-build-tools/native' / ('a' * 64)
+    (scripts / 'native-prepare').write_text(
+        '#!' + sys.executable + '\nfrom pathlib import Path\n'
+        + 'def cache_path(): return Path(' + repr(str(cache)) + ')\n'
+        + 'if __name__ == "__main__": print(cache_path())\n')
+    (scripts / 'native-prepare').chmod(0o755)
+    tools = root / 'tools'
+    tools.mkdir()
+    (tools / 'git').write_text('#!/bin/sh\necho ' + '1' * 40 + '\n')
+    (tools / 'git').chmod(0o755)
+    names = ('linux-x64/libthinkthen_ffi.so', 'linux-x64/libthinkthen_ffi.a',
+             'osx-arm64/libthinkthen_ffi.dylib', 'osx-arm64/libthinkthen_ffi.a', 'thinkthen.h')
+    hashes = {}
+    for name in names:
+        target = cache / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(name.encode())
+        hashes[name] = hashlib.sha256(target.read_bytes()).hexdigest()
+    env = dict(os.environ, HOME=str(root), PATH=str(tools) + os.pathsep + os.environ['PATH'])
+    for mode in ('matching', 'conflicting'):
+        evidence = root / mode
+        registration = evidence / 'registration'
+        for name in names:
+            asset = registration / 'assets' / name
+            asset.parent.mkdir(parents=True, exist_ok=True)
+            asset.write_bytes(name.encode())
+        (registration / 'registration.json').write_text(json.dumps({'five_assets': hashes}))
+        tracked = cache / names[0]
+        if mode == 'conflicting': tracked.write_bytes(b'other producer')
+        before = tracked.stat().st_mtime_ns
+        result = subprocess.run([scripts / 'hosted-gate', '--prepared', str(root),
+            'sha256:' + 'b' * 64, str(root), str(root), str(evidence)],
+            cwd=root, env=env, capture_output=True, text=True)
+        if mode == 'matching':
+            assert result.returncode == 0, result.stdout + result.stderr
+        else:
+            assert result.returncode != 0, result.stdout + result.stderr
+            assert 'conflicts with a cached asset' in result.stderr, result.stderr
+            assert tracked.read_bytes() == b'other producer'
+        assert tracked.stat().st_mtime_ns == before, 'prepared gate rewrote a shared native binary'

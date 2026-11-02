@@ -145,6 +145,16 @@ class QualificationContinuation(unittest.TestCase):
             self.assertNotEqual(summary.returncode, 0, summary.stdout)
             self.assertIn('native', summary.stderr)
 
+    def test_hosted_gate_uploads_persistent_output_with_time_to_finish(self):
+        job = workflow('native-qualification.yml')['jobs']['gate']
+        gate = next(step for step in job['steps'] if step.get('id') == 'run-the-full-declared-gate')
+        upload = next(step for step in job['steps']
+                      if step.get('name') == 'Preserve gate stage times and running output')
+        self.assertEqual(gate['run'], 'scripts/hosted-gate')
+        self.assertLess(gate['timeout-minutes'], job['timeout-minutes'] - 23)
+        self.assertEqual(upload['if'], 'always()')
+        self.assertEqual(upload['with']['path'].rstrip('/'), gate['env']['THINKTHEN_GATE_DIAGNOSTICS'])
+
     def test_pair_image_validation_failure_fails_workflow_import_step(self):
         steps = workflow('native-qualification.yml')['jobs']['gate']['steps']
         step = next(step for step in steps if step.get('id') == 'import-the-linux-native-pair')
@@ -178,7 +188,7 @@ class QualificationContinuation(unittest.TestCase):
                     target.chmod(0o755)
             for name in ('gate', 'sdk-gates'):
                 shutil.copy2(ROOT / 'scripts' / name, scripts / name)
-            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm', 'mkfifo', 'date', 'tee', 'tail', 'cat'):
+            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm', 'mkfifo', 'date', 'tee', 'tail', 'cat', 'mkdir'):
                 (binary / name).symlink_to(shutil.which(name))
             for name in ('python3', 'git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake', 'pkg-config', 'uv', 'node', 'npm', 'ruby', 'R', 'Rscript', 'docker'):
                 (binary / name).write_text(fake)

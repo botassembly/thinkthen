@@ -3,6 +3,10 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+scripts/gate-report-test
+scripts/qualification-continuation-test
+scripts/gate-strict-test
+actionlint .github/workflows/*.yml
 python3 -W error scripts/stress-dispatch-test
 scripts/words
 scripts/secrets

@@ -66,7 +66,8 @@ class StrictGate(unittest.TestCase):
             patterns = root / 'patterns'
             patterns.write_text('ExampleConfidential')
             env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH'],
-                       THINKTHEN_PRIVATE_PATTERNS=str(patterns), THINKTHEN_NATIVE_LIBRARY='fixture')
+                       THINKTHEN_PRIVATE_PATTERNS=str(patterns), THINKTHEN_NATIVE_LIBRARY='fixture',
+                       THINKTHEN_GATE_DIAGNOSTICS=str(root / 'diagnostics'))
             ordinary = subprocess.run([scripts / 'gate'], env=dict(env, THINKTHEN_GATE_STRICT='0'),
                                       capture_output=True, text=True)
             self.assertEqual(ordinary.returncode, 0, ordinary.stderr)

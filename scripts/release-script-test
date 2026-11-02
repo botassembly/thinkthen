@@ -23,6 +23,38 @@ import release_windows_sdks
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_checksum_inventory_names_changes_and_rejects_unsafe_files(self):
+        from release_install import checksums as record
+        from release_workflow import checksums
+        with tempfile.TemporaryDirectory(prefix='thinkthen-checksum-inventory-') as temporary:
+            package = Path(temporary) / 'package'
+            package.mkdir()
+            item = package / 'delivered'
+            item.write_bytes(b'delivered payload')
+            record(package)
+            checksums(package)
+            item.unlink()
+            (package / 'stray').write_bytes(b'unlisted payload')
+            with self.assertRaisesRegex(ValueError, "extra=\\['stray'\\]; missing=\\['delivered'\\]"):
+                checksums(package)
+            (package / 'stray').unlink()
+            item.write_bytes(b'changed payload')
+            with self.assertRaisesRegex(ValueError, 'checksum differs: delivered'):
+                checksums(package)
+            outside = package.parent / 'outside'
+            outside.write_bytes(b'delivered payload')
+            item.unlink()
+            item.symlink_to(outside)
+            with self.assertRaisesRegex(ValueError, 'checksum differs: delivered'):
+                checksums(package)
+            item.unlink()
+            digest = hashlib.sha256(outside.read_bytes()).hexdigest()
+            for name in ('../outside', str(outside)):
+                with self.subTest(path=name):
+                    (package / 'SHA256SUMS').write_text(digest + '  ' + name + '\n')
+                    with self.assertRaisesRegex(ValueError, 'invalid checksum path'):
+                        checksums(package)
+
     def test_windows_consumer_preserves_os_architecture_while_isolating_user_state(self):
         import release_windows_sdks as sdks
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-environment-') as temporary:

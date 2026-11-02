@@ -62,19 +62,23 @@ def validate(package, target, sha):
 
 
 def checksums(package):
-    listed = set()
+    listed = {}
     for line in (package / 'SHA256SUMS').read_text().splitlines():
         digest, name = line.split('  ', 1)
-        path = package / name
         if Path(name).is_absolute() or '..' in Path(name).parts or name in listed:
             raise ValueError(f'invalid checksum path: {name}')
-        if path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
-            raise ValueError(f'checksum differs: {name}')
-        listed.add(name)
+        listed[name] = digest
     actual = {p.relative_to(package).as_posix() for p in package.rglob('*')
-              if p.is_file() and p != package / 'SHA256SUMS'}
-    if listed != actual:
-        raise ValueError(f'{package}: incomplete checksum inventory')
+              if (p.is_file() or p.is_symlink()) and p != package / 'SHA256SUMS'}
+    if set(listed) != actual:
+        raise ValueError(f'{package}: incomplete checksum inventory; '
+                         f'extra={sorted(actual - listed.keys())!r}; '
+                         f'missing={sorted(listed.keys() - actual)!r}')
+    for name, digest in listed.items():
+        path = package / name
+        if (path.is_symlink() or not path.resolve().is_relative_to(package.resolve())
+                or hashlib.sha256(path.read_bytes()).hexdigest() != digest):
+            raise ValueError(f'checksum differs: {name}')
 
 
 def build(target, destination, sha):

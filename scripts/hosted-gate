@@ -1,0 +1,64 @@
+#!/bin/sh
+# Keep the hosted gate's environment verification and stage output after cutoff.
+set -eu
+cd "$(dirname "$0")/.."
+# Local rehearsal uses the genuine prepared pair; hosted runs already imported it.
+case "${1:-}" in
+    '') ;;
+    --prepared)
+        [ "$#" -eq 6 ] || { echo 'usage: hosted-gate --prepared CARGO_HOME FLOOR_IMAGE MAC_PRODUCER LINUX_PRODUCER EVIDENCE' >&2; exit 2; }
+        CARGO_HOME=$2
+        THINKTHEN_FLOOR_IMAGE=$3
+        THINKTHEN_GATE_DIAGNOSTICS=$6/gate-diagnostics
+        CARGO_TARGET_DIR=$6/target
+        export CARGO_HOME THINKTHEN_FLOOR_IMAGE THINKTHEN_GATE_DIAGNOSTICS CARGO_TARGET_DIR
+        mkdir -p "$6"
+        . scripts/native-tools-env
+        scripts/native-producer register --cargo-home "$CARGO_HOME" --floor-image "$THINKTHEN_FLOOR_IMAGE" --mac "$4" --linux "$5" --output "$6/registration"
+        python3 - "$6/registration" <<'PREPARE'
+import fcntl
+import json
+from pathlib import Path
+import runpy
+import sys
+sys.path.insert(0, 'scripts')
+registration = Path(sys.argv[1])
+data = json.loads((registration / 'registration.json').read_text())
+cache = runpy.run_path('scripts/native-prepare')['cache_path']()
+pair = runpy.run_path('scripts/native-pair')
+cache.mkdir(parents=True, exist_ok=True)
+with (cache / 'import.lock').open('w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    for name, expected in data['five_assets'].items():
+        target = cache / name
+        if target.exists() and pair['digest'](target) != expected:
+            raise ValueError('native pair conflicts with a cached asset: ' + name)
+    for name in data['five_assets']:
+        target = cache / name
+        if not target.exists():
+            pair['atomic_copy'](registration / 'assets' / name, target)
+PREPARE
+        scripts/native-pair export "$6/pair.json"
+        scripts/native-pair import "$6/pair.json" "$6/registration/assets"
+        scripts/native-test-assets prepare
+        scripts/native-abi-assets prepare
+        ;;
+    *) echo 'usage: hosted-gate [--prepared CARGO_HOME FLOOR_IMAGE MAC_PRODUCER LINUX_PRODUCER EVIDENCE]' >&2; exit 2 ;;
+esac
+THINKTHEN_GATE_DIAGNOSTICS=${THINKTHEN_GATE_DIAGNOSTICS:-$PWD/target/gate-diagnostics}
+export THINKTHEN_GATE_DIAGNOSTICS
+mkdir -p "$THINKTHEN_GATE_DIAGNOSTICS"
+: > "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
+status=0
+for environment in native-tools-env native-env; do
+    started=$(date +%s)
+    printf 'Gate environment: %s (start %s)\n' "$environment" "$started" | tee -a "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
+    environment_status=0
+    . "scripts/$environment" > "$THINKTHEN_GATE_DIAGNOSTICS/$environment.log" 2>&1 || environment_status=$?
+    ended=$(date +%s)
+    printf 'Gate environment ended: %s (end %s; exit %s; elapsed %s seconds)\n' "$environment" "$ended" "$environment_status" "$((ended - started))" | tee -a "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
+    cat "$THINKTHEN_GATE_DIAGNOSTICS/$environment.log"
+    if [ "$environment_status" -ne 0 ]; then status=$environment_status; fi
+done
+scripts/gate || status=$?
+exit "$status"
