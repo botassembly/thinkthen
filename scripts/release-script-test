@@ -2,6 +2,7 @@
 """Check release versions, CLI record framing and build attestation contracts."""
 import json
 import hashlib
+import io
 import os
 from pathlib import Path
 import re
@@ -9,6 +10,7 @@ import runpy
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from contextlib import contextmanager, nullcontext
@@ -614,6 +616,89 @@ for platform, fallback in (
             checksums(out)
             with self.assertRaisesRegex(ValueError, 'incomplete checksum inventory'):
                 candidate['check_candidate'](out, os.environ)
+
+    def test_cpp_json_license_reaches_each_release_package(self):
+        import release_windows
+        from release_notice_check import contents
+        from release_notice_packages import native_notices
+        cpp_package = runpy.run_path(str(ROOT / 'scripts/release-candidate'))['cpp_package']
+        license_data = (ROOT / 'sdk/cpp/JSON-LICENSE').read_bytes()
+        provenance = json.loads((ROOT / 'sdk/cpp/JSON-LICENSE.source.json').read_text())
+        self.assertEqual(hashlib.sha256(license_data).hexdigest(), provenance['file_sha256'])
+        recipe = (ROOT / 'scripts/cpp-prepare').read_text()
+        self.assertIn(provenance['source'], recipe)
+        self.assertIn('expected=' + provenance['sha256'], recipe)
+        self.assertEqual(provenance['file'], 'json/LICENSE.MIT')
+        self.assertIn(b'Copyright (c) 2013-2022 Niels Lohmann', license_data)
+        with tempfile.TemporaryDirectory(prefix='thinkthen-cpp-terms-') as temporary:
+            scratch = Path(temporary)
+            tools = scratch / 'tools'
+            dependency = tools / 'nlohmann-json/3.11.3'
+            (dependency / 'include/nlohmann').mkdir(parents=True)
+            header = b'// prepared optional JSON adapter header\n'
+            (dependency / 'include/nlohmann/json.hpp').write_bytes(header)
+            pkgconfig = dependency / 'share/pkgconfig/nlohmann_json.pc'
+            pkgconfig.parent.mkdir(parents=True)
+            pkgconfig.write_text('Cflags: -I' + str(dependency / 'include') + '\n')
+            for supplied in (False, True):
+                with self.subTest(license_supplied=supplied):
+                    source = scratch / ('with-license' if supplied else 'without-license')
+                    shutil.copytree(ROOT / 'sdk/cpp', source / 'sdk/cpp')
+                    shutil.copy2(ROOT / 'LICENSE', source / 'LICENSE')
+                    if not supplied:
+                        (source / 'sdk/cpp/JSON-LICENSE').unlink()
+                    out = source / 'candidate'
+                    out.mkdir()
+                    commands = []
+
+                    def native_run(*args):
+                        commands.append(args)
+                        if args[0] == 'scripts/cpp-package':
+                            args[1].mkdir()
+                            with tarfile.open(args[1] / 'cpp.tar.gz', 'w:gz') as bundle:
+                                member = tarfile.TarInfo('include/thinkthen/thinkthen.hpp')
+                                member.size = 6
+                                bundle.addfile(member, io.BytesIO(b'header'))
+                        else:
+                            self.assertEqual(args[0], 'c++')
+
+                    with patch.dict(cpp_package.__globals__, ROOT=source, TOOLS=tools,
+                                    native_run=native_run):
+                        if supplied:
+                            cpp_package(out, version(), 'linux-x86_64')
+                        else:
+                            with self.assertRaises(FileNotFoundError):
+                                cpp_package(out, version(), 'linux-x86_64')
+                    delivered = out / 'cpp/dependencies/nlohmann-json'
+                    if supplied:
+                        self.assertEqual((delivered / 'LICENSE').read_bytes(), license_data)
+                        self.assertEqual((delivered / 'include/nlohmann/json.hpp').read_bytes(), header)
+                        self.assertIn('${pcfiledir}/../../include', (delivered / 'share/pkgconfig/nlohmann_json.pc').read_text())
+                        self.assertEqual(len(commands), 2)
+                    with patch.object(release_windows, 'TOOLS', tools), patch.object(
+                            release_windows, 'run') as cmake:
+                        args = (source / 'stage', out, 'cpp', version(), None, None)
+                        if supplied:
+                            archive = release_windows.source_package(*args, root=source)
+                            files = contents(archive)
+                            self.assertEqual(files['JSON-LICENSE'], license_data)
+                            self.assertEqual(files['include/nlohmann/json.hpp'], header)
+                            self.assertEqual(files['LICENSE'], (ROOT / 'LICENSE').read_bytes())
+                            self.assertEqual(cmake.call_count, 2)
+                        else:
+                            with self.assertRaises(FileNotFoundError):
+                                release_windows.source_package(*args, root=source)
+                    if supplied:
+                        notices = native_notices('cpp', 'linux-x86_64', root=source)
+                        prefix = 'THIRD-PARTY-NOTICES/native/'
+                        self.assertEqual(notices[prefix + 'nlohmann-json/LICENSE'], license_data)
+                        index = json.loads(notices[prefix + 'index.json'])
+                        self.assertEqual(index['components']['nlohmann-json']['files']['LICENSE'],
+                                         provenance['file_sha256'])
+                    else:
+                        with self.assertRaises(FileNotFoundError):
+                            native_notices('cpp', 'linux-x86_64', root=source)
+        print('Pinned C++ JSON terms reach dependency staging, Windows archive and native notices', flush=True)
 
     def test_sqlite_notices_identify_each_platforms_built_jansson(self):
         from release_notice_packages import native_notices

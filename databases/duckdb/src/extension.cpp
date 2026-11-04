@@ -254,7 +254,7 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
                 auto value = input.GetValue(bind.record, i);
                 if (value.IsNull()) { records.push_back({THINKTHEN_RECORD_MISSING, nullptr, 0}); continue; }
                 values.push_back(value.GetValue<string>());
-                records.push_back({bind.json ? THINKTHEN_RECORD_JSON : THINKTHEN_RECORD_TEXT,
+                records.push_back({static_cast<uint32_t>(bind.json ? THINKTHEN_RECORD_JSON : THINKTHEN_RECORD_TEXT),
                                    Bytes(values.back()), values.back().size()});
             }
             ErrorOwner error;

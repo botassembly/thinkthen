@@ -151,6 +151,7 @@ def prepare_swift(env, folder):
 def native():
     from release_windows_r import runtime
     runtime()
+    pins = selections()['INPUTS']
     folder = TOOLS / 'windows-check'
     folder.mkdir(parents=True, exist_ok=True)
     binary = folder / 'bin'

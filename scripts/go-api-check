@@ -154,7 +154,7 @@ func main() {
     fmt.Println(err)
 }
 GO
-    GOARCH=amd64 go build -o "$scratch/unsupported-consumer" ./unsupported
+    (GOARCH=amd64 go build -o "$scratch/unsupported-consumer" ./unsupported)
     "$scratch/unsupported-consumer"
 fi
 # Cross-compile the public system mode and require its explicit Windows refusal.

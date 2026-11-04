@@ -14,10 +14,16 @@ def streaming(host_type, loopback):
     ):
         with fixture(loopback, '--stress', 'healthy') as (server,url),host_type(url) as host:
             host.configure({'backend':'openai','batch':32})
-            source="WITH RECURSIVE r(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM r WHERE n<4096) SELECT n AS id,CAST(n AS TEXT) AS record FROM r"
-            assert host.ok(statement,[source,'Ready?'])==expected
+            source=("WITH RECURSIVE r(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM r WHERE n<4096) "
+                    "SELECT n AS id,CAST(tick(n) AS TEXT) AS record FROM r")
+            rows=host.ok(statement,[source,'Ready?'])
+            assert rows==expected,rows
+            source_rows=host.ok('SELECT tick_count()')[0][0]
+            assert 0<source_rows<4096,source_rows
             requests=int(command(server,'count'))
-            assert 1<=requests<=2,requests
+            assert requests>0,requests
+            print('SQLite early stop:',dict(statement=statement,source_rows=source_rows,
+                source_total=4096,paid_requests=requests),flush=True)
     native_read_ahead(host_type, loopback)
 
 

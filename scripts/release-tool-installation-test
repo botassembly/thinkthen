@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Exercise pinned compiler preparation with local archives and real executables."""
 from contextlib import ExitStack
+import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tarfile
@@ -23,6 +25,75 @@ class PreparedWindows(Exception):
 
 
 class ToolInstallation(unittest.TestCase):
+    def test_native_windows_preparation_uses_canonical_sqlite_and_r_pins(self):
+        selected = windows.selections()['INPUTS']
+        sqlite_url, sqlite_digest = selected['sqlite-amalgamation-3410000.zip']
+        r_version = next(name.removeprefix('R-').removesuffix('-win.exe')
+                         for name in selected if name.startswith('R-'))
+        requirements = json.loads((windows.ROOT / 'scripts/runtime-floors.json').read_text())['runtimes']
+        versions = {name: re.search(r'[0-9]+(?:\.[0-9]+)*', requirements[key])[0]
+                    for name, key in [('node', 'typescript'), ('ruby', 'ruby'), ('java', 'java'),
+                                      ('go', 'go'), ('swift', 'swift'), ('zig', 'zig')]}
+        versions['dotnet'] = 'Microsoft.NETCore.App ' + re.search(r'[0-9]+', requirements['csharp'])[0] + '.0'
+        for warm in (False, True):
+            with self.subTest(warm=warm), tempfile.TemporaryDirectory() as temporary, ExitStack() as stack:
+                root = Path(temporary)
+                sqlite = root / 'windows-check/bin/sqlite3.exe'
+                if warm:
+                    sqlite.parent.mkdir(parents=True)
+                    sqlite.write_text('already prepared')
+                duck = root / 'duck.tar.gz'
+                with tarfile.open(duck, 'w:gz'):
+                    pass
+                archive = root / 'sqlite.zip'
+                with zipfile.ZipFile(archive, 'w') as bundle:
+                    for name in ('shell.c', 'sqlite3.c'):
+                        bundle.writestr('sqlite-amalgamation-3410000/' + name, name)
+                fetched, compiled, checked_r = [], [], []
+                wrong_r = False
+
+                def fetch(url, destination, digest=None):
+                    if url == sqlite_url:
+                        self.assertEqual(digest, sqlite_digest)
+                        self.assertEqual(Path(destination), root / 'windows-check/sqlite.zip')
+                        fetched.append(url)
+                        return archive
+                    self.assertTrue(url.endswith('/duckdb-cli-windows-amd64.tar.gz'), url)
+                    return duck
+
+                def native_run(command, *arguments, **options):
+                    if command == 'clang-cl':
+                        compiled.append(arguments)
+                        self.assertEqual(Path(arguments[3]).read_text(), 'shell.c')
+                        self.assertEqual(Path(arguments[4]).read_text(), 'sqlite3.c')
+                        self.assertIn('/Fe:' + str(sqlite), arguments)
+                        self.assertEqual(arguments[-3:], ('/link', 'advapi32.lib', 'user32.lib'))
+                        sqlite.write_text('compiled from pinned sources')
+                        return subprocess.CompletedProcess(arguments, 0)
+                    if command == 'Rscript':
+                        checked_r.append(arguments)
+                        return subprocess.CompletedProcess(arguments, 0, 'R ' + ('0.0' if wrong_r else r_version), '')
+                    return subprocess.CompletedProcess(arguments, 0, versions[command], '')
+
+                stack.enter_context(patch.object(windows, 'TOOLS', root))
+                stack.enter_context(patch.object(release_windows_r, 'runtime'))
+                stack.enter_context(patch.object(windows, 'fetch', side_effect=fetch))
+                stack.enter_context(patch.object(windows, 'prepare_tool', return_value=root / 'zig.exe'))
+                stack.enter_context(patch.object(windows, 'run', return_value=subprocess.CompletedProcess([], 0, windows.zig_version(), '')))
+                stack.enter_context(patch.object(windows, 'prepare_msys2'))
+                stack.enter_context(patch.object(windows, 'environment', return_value={'PATH': 'controlled'}))
+                stack.enter_context(patch.object(windows, 'prepare_swift', side_effect=lambda env, _: env))
+                stack.enter_context(patch.object(windows.shutil, 'which', side_effect=lambda command, **_: command))
+                stack.enter_context(patch.object(windows, 'native_run', side_effect=native_run))
+                windows.native()
+                self.assertEqual(fetched, [] if warm else [sqlite_url])
+                self.assertEqual(len(compiled), 0 if warm else 1)
+                self.assertEqual(checked_r, [('--version',)])
+                wrong_r = True
+                with self.assertRaisesRegex(ValueError, 'R runtime does not match'):
+                    windows.native()
+                self.assertEqual(len(compiled), 0 if warm else 1)
+
     def fixture(self, stack, root, surface):
         tools = root / 'tools'
         version = go.version() if surface == 'go' else windows.zig_version()

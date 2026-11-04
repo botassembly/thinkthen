@@ -3,6 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
+unset THINKTHEN_NATIVE_LIBRARY
 swift format lint --strict --recursive sdk/swift
 scripts/swift-interface-check
 export CARGO_NET_OFFLINE=true

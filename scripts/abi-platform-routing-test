@@ -75,7 +75,18 @@ class AbiPlatformRouting(unittest.TestCase):
         self.assertTrue(any(args[0].endswith('/zig') for args in calls))
         self.assertFalse(any(args[0] in ('ruby', 'swift') or args[0].endswith('/MinorError') for args in calls))
 
-    def test_linux_runner_selects_prepared_gems_and_the_pinned_swift_container(self):
+    def test_ruby_runner_selects_prepared_gems(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            env = dict(os.environ, THINKTHEN_RUBY_DEV_GEMS=str(scratch / 'dev'))
+            command = [sys.executable, str(ROOT / 'scripts/linux-binding-gate'), '--abi-binding']
+            result = subprocess.run(command + ['ruby', '--scratch', str(scratch), '--', sys.executable, '-c',
+                                    'import json, os; print(json.dumps([os.environ["GEM_HOME"], os.environ["GEM_PATH"]]))'],
+                                    env=env, check=True, capture_output=True, text=True)
+            self.assertEqual(json.loads(result.stdout), [str(scratch / 'dev')] * 2)
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux loader preparation requires a Linux host')
+    def test_linux_runner_selects_the_pinned_swift_container(self):
         from native_platform import current
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -84,12 +95,8 @@ class AbiPlatformRouting(unittest.TestCase):
             docker.write_text('#!' + sys.executable + '\nimport json, sys\nprint(json.dumps(sys.argv[1:]))\n')
             docker.chmod(0o755)
             env = dict(os.environ, PATH=str(scratch) + os.pathsep + os.environ['PATH'],
-                       THINKTHEN_SWIFT_IMAGE='sha256:' + 'a' * 64, THINKTHEN_RUBY_DEV_GEMS=str(scratch / 'dev'))
+                       THINKTHEN_SWIFT_IMAGE='sha256:' + 'a' * 64)
             command = [sys.executable, str(ROOT / 'scripts/linux-binding-gate'), '--abi-binding']
-            result = subprocess.run(command + ['ruby', '--scratch', str(scratch), '--', sys.executable, '-c',
-                                    'import json, os; print(json.dumps([os.environ["GEM_HOME"], os.environ["GEM_PATH"]]))'],
-                                    env=env, check=True, capture_output=True, text=True)
-            self.assertEqual(json.loads(result.stdout), [str(scratch / 'dev')] * 2)
             result = subprocess.run(command + ['swift', '--scratch', str(scratch), '--', 'swift', 'build', '--jobs', '2'],
                                     env=env, check=True, capture_output=True, text=True)
             arguments = json.loads(result.stdout)

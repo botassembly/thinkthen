@@ -1,0 +1,6 @@
+{
+  "source": "https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz",
+  "sha256": "d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d",
+  "file": "json/LICENSE.MIT",
+  "file_sha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14"
+}
