@@ -90,7 +90,7 @@ func TestRowsMarshalContractJSON(t *testing.T) {
 				q = q.WithThreshold(tt.Band(0.01, 1))
 			}
 			if status == tt.Failed {
-				q = q.WithEvidence("/absent")
+				q = q.WithField("/absent")
 			}
 			row, err := c.Decide(context.Background(), q, record)
 			if err != nil {
@@ -150,7 +150,7 @@ func TestRowsMarshalContractJSON(t *testing.T) {
 					if err = json.Unmarshal(fields["answer"], &answer); err != nil {
 						t.Fatal(err)
 					}
-					want, _ := row.Value()
+					want, _ := valueOf(row)
 					if answer != want {
 						t.Fatal("answer lost in JSON")
 					}

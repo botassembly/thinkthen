@@ -125,11 +125,20 @@ def run_cases(factory, loopback):
                     assert int(command(server, 'count')) == case['requests'], file
                     continue
                 host.configure(settings)
+                expected_rows = case['expected']
+                if function == 'filter':
+                    expected_rows = [row for row in expected_rows if row['status'] == 'failed' or (row['status'] == 'answered' and row.get('answer') is True)]
+                backend_only = bool(case['expected']) and all(row['status'] == 'failed' and row['error']['code'].startswith('backend.') for row in case['expected'])
+                if backend_only:
+                    host.call_failure(case['request'], expected_rows[0]['error']['code'])
+                    assert int(command(server, 'count')) == case['requests'], file
+                    covered.add((function, backend))
+                    continue
                 native = host.call(case['request'])
-                assert len(native) == len(case['expected']), (file, backend, len(native), len(case['expected']))
+                assert len(native) == len(expected_rows), (file, backend, len(native), len(case['expected']))
                 actual = [decode(row, function, backend, settings['model'], case['request'].get('name'), expected)
-                          for row, expected in zip(native, case['expected'])]
-                expected = [expected_row(row) for row in case['expected']]
+                          for row, expected in zip(native, expected_rows)]
+                expected = [expected_row(row) for row in expected_rows]
                 assert strict_equal(actual, expected), (file, backend, actual, expected)
                 requests = int(command(server, 'count'))
                 assert requests == case['requests'], (file, backend, requests, case['requests'])
@@ -169,7 +178,7 @@ def options_cases(factory):
                 request = case.get('equivalent_request', case['request'])
                 function = request['question']['function']
                 actual = [decode(row, function, 'stub', 'stub', request.get('name')) for row in host.call(request)]
-                expected = [semantic(json.loads(json.dumps(row))) for row in case['expected']]
+                expected = [semantic(json.loads(json.dumps(row))) for row in case['expected'] if function != 'filter' or row['status'] == 'failed' or (row['status'] == 'answered' and row.get('answer') is True)]
                 assert strict_equal(actual, expected), (case['name'], actual, expected)
     with factory() as host:
         host.configure({'backend': 'stub'})

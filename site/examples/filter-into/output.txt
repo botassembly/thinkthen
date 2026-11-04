@@ -1,0 +1,3 @@
+id,text,is_refund
+a1,Please refund my order.,TRUE
+a3,I was charged twice for one invoice.,TRUE

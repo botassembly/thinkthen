@@ -2,15 +2,33 @@
 # Load the staged native extension and drive the shared cases through SQL.
 set -eu
 cd "$(dirname "$0")/.."
-if [ "${1:-}" = --development ]; then exec sh databases/duckdb/tests/development.sh; fi
-python3 databases/duckdb/community-prepare.py --check 1.4.3
+duckdb_version=$(python3 scripts/duckdb_release.py --version)
+if [ "${1:-}" = --development ]; then shift; exec sh databases/duckdb/tests/development.sh "$@"; fi
+official_only=0
+case "${1:-}" in
+    '') ;;
+    --official-hosts-only)
+        official_only=1
+        . scripts/native-tools-env
+        cargo build --offline --locked -p thinkthen-ffi --lib
+        native_target=${CARGO_TARGET_DIR:-$PWD/target}
+        case "$native_target" in /*) ;; *) native_target="$PWD/$native_target" ;; esac
+        THINKTHEN_SQL_ARCHIVE="$native_target/debug/libthinkthen_ffi.a"
+        export THINKTHEN_SQL_ARCHIVE
+        ;;
+    *) echo 'usage: scripts/duckdb-gate [--development|--official-hosts-only]' >&2; exit 2 ;;
+esac
+python3 databases/duckdb/community-prepare.py --check "$duckdb_version"
 . scripts/native-build-env
 root=$PWD
 # The central gate owns the shared SQL ABI consumer.
-fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:?Provide the shared explicit fixture-routing archive}
+fixture_archive=${THINKTHEN_SQL_TEST_ARCHIVE:-}
+if [ "$official_only" = 0 ]; then
+    : "${fixture_archive:?Provide the shared explicit fixture-routing archive}"
+fi
 build_target=${CARGO_TARGET_DIR:-target}
 case "$build_target" in /*) ;; *) build_target="$root/$build_target" ;; esac
-export THINKTHEN_DUCKDB_DEPS="$HOME/.local/share/thinkthen-build-tools/duckdb/1.4.3"
+export THINKTHEN_DUCKDB_DEPS="$HOME/.local/share/thinkthen-build-tools/duckdb/$duckdb_version"
 if [ -z "${THINKTHEN_SQL_ARCHIVE:-}" ]; then
     cache=$(scripts/native-prepare --path)
     case $(uname -s) in Darwin) platform=osx-arm64 ;; Linux) platform=linux-x64 ;; esac
@@ -26,9 +44,13 @@ python3 databases/duckdb/tests/package-safety.py "$scratch/package/thinkthen.duc
 mkdir "$scratch/installed"
 tar -czf "$scratch/duckdb.tar.gz" -C "$scratch/package" .
 tar -xzf "$scratch/duckdb.tar.gz" -C "$scratch/installed"
-python3 databases/duckdb/tests/official-hosts.py "$scratch/installed" "$THINKTHEN_DUCKDB_DEPS"
+case "$(uname -s)" in
+    Linux) env TMPDIR="$scratch" scripts/runtime-floor-build python3 databases/duckdb/tests/official-hosts.py "$scratch/installed" "$THINKTHEN_DUCKDB_DEPS" ;;
+    *) python3 databases/duckdb/tests/official-hosts.py "$scratch/installed" "$THINKTHEN_DUCKDB_DEPS" ;;
+esac
+if [ "$official_only" = 1 ]; then exit 0; fi
 # The native lifecycle runner and runtime are test fixtures, outside the package.
-source=$THINKTHEN_DUCKDB_DEPS/duckdb-1.4.3
+source=$THINKTHEN_DUCKDB_DEPS/duckdb-$duckdb_version
 case $(uname -s) in
     Darwin) library=$THINKTHEN_DUCKDB_DEPS/lib/libduckdb.dylib; rpath='@loader_path' ;;
     Linux) library=$THINKTHEN_DUCKDB_DEPS/lib/libduckdb.so; rpath='$ORIGIN' ;;
@@ -38,7 +60,7 @@ THINKTHEN_SQL_ARCHIVE=$fixture_archive THINKTHEN_SQL_TEST_BUILD=ON THINKTHEN_DUC
 cp "$scratch/fixture/thinkthen.duckdb_extension" "$library" "$scratch/consumer/"
 c++ -std=c++17 -pthread -Wall -Wextra -Werror -Wno-unused-parameter \
     -I "$source/src/include" -I "$source/third_party/yyjson/include" \
-    databases/duckdb/tests/runner.cpp "$THINKTHEN_DUCKDB_DEPS/static/libduckdb_yyjson.a" \
+    databases/duckdb/tests/runner.cpp \
     "$library" -Wl,-rpath,"$rpath" -o "$scratch/consumer/sql"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then
     # Keep per-consumer attribution inside the one merged instrumentation target.
@@ -48,7 +70,7 @@ python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:
 python3 databases/duckdb/tests/run.py "$scratch/consumer" "${THINKTHEN_LOOPBACK:-$build_target/debug/loopback}" --limit-only
 "$scratch/consumer/sql" "$scratch/consumer/thinkthen.duckdb_extension" --parallel \
     "SELECT count(*) AS total FROM thinkthen_decide((SELECT record_thread(i)::VARCHAR AS record FROM evidence ORDER BY record), 'Ready?')"
-community="$HOME/.local/share/thinkthen-build-tools/duckdb-community/1.4.3"
+community="$HOME/.local/share/thinkthen-build-tools/duckdb-community/$duckdb_version"
 THINKTHEN_DUCKDB_SOURCE="$community/duckdb" EXTENSION_CI_TOOLS="$community/extension-ci-tools" \
     python3 databases/duckdb/tests/community-recipe.py
 python3 databases/duckdb/tests/community_cases.py "$scratch/consumer"

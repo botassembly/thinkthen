@@ -50,10 +50,10 @@ fn questions(request: &Request) -> Vec<Value> {
         .collect()
 }
 
-fn instructions(evidence: &str) -> Value {
+fn instructions(field: &str) -> Value {
     json!(format!(
         "The text is {}. {QUESTION}",
-        serde_json::to_string(evidence).unwrap()
+        serde_json::to_string(field).unwrap()
     ))
 }
 
@@ -359,7 +359,7 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
         let server = Loopback::noul(0.9).unwrap();
         let question = Decide::new(QUESTION)
             .unwrap()
-            .evidence(pointer.parse().unwrap());
+            .field(pointer.parse().unwrap());
         let row = engine(&server, None)
             .run(&question, Record::from_json(line))
             .unwrap();
@@ -379,12 +379,12 @@ fn a_json_record_gives_its_id_and_the_evidence_its_pointer_names() {
             continue;
         }
         match expected {
-            Ok(evidence) => {
+            Ok(field) => {
                 assert_eq!(value["status"], "answered", "{line} at {pointer}");
                 assert_eq!(server.count(), 1);
                 assert_eq!(
                     questions(&server.requests()[0])[0]["instructions"],
-                    instructions(evidence),
+                    instructions(field),
                     "{line}"
                 );
             }

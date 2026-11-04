@@ -1,0 +1,158 @@
+---
+title: TypeScript SDK
+description: "TypeScript SDK: the ten functions as typed async calls in Node.js, with not sure thrown as UnsureError."
+goal: A Node.js developer installs the SDK, gets a first answer from decide, learns how not sure and failure arrive, and finds the TypeScript call for each function.
+reader: A TypeScript or JavaScript developer who wants answers about text inside a Node.js program
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+
+The TypeScript SDK gives your Node.js code the ten functions as methods on a client; awaiting a call gives the answer itself, such as `true` or `false` from decide.
+
+<Example id="functions/decide/typescript" />
+
+Install it (Node.js 22.12 or later, in a project with `"type": "module"`):
+
+<InstallLine k="languages.typescript.install" />
+
+The client uses the key you set in the [Quickstart](/quickstart/). Close it with `await tt.close()`, or open it with `await using`.
+
+## When decide is not sure
+
+Give decide a low and a high bar, and a text that falls between them is not sure. Awaiting a not-sure answer throws `UnsureError`, so it can't pass for `false`. This message lands between the bars:
+
+<Example id="sdk-typescript-unsure" />
+
+Send not sure to a person. To read the answer without the throw, call `.row()` on the call, as in `await tt.decide(...).row()`. The result's `status` is `"answered"`, `"unsure"` or `"failed"`, and TypeScript lets you read `answer` only once `status` is `"answered"`. The error's `probability` and `row` hold the details.
+
+## When a call fails
+
+Awaiting a call that failed throws `RecordError`. Blank text fails before anything is sent:
+
+<Example id="sdk-typescript-failure" />
+
+The error's `code` names the problem, and `row` holds the failed result. When the service fails for a message, such as when it is down, that message's result fails the same way. A problem that stops the whole call throws instead: `UsageError` for a wrong argument, `BackendError` for the service, and `CancelledError` when an `AbortSignal` passed as `signal` fires. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+
+## The ten functions
+
+Each example asks about the same support-inbox messages as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>decide: yes, no or not sure</summary>
+
+<Example id="functions/decide/typescript" />
+
+The message asks for a refund, so decide says `true`. `threshold: 0.8` moves the bar, and `threshold: { low: 0.2, high: 0.8 }` sets a low and a high bar, as above. `decideStream` judges many messages in one call. Read it with `for await`, and check each result's `status`. `field: "/text"` picks the field to judge in each message:
+
+<Example id="use-decide-typescript" />
+
+[decide](/functions/decide/) shows every answer.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>choose: one answer from your list</summary>
+
+<Example id="functions/choose/typescript" />
+
+A refund request is about billing. The answer's type is the union of your choices. With `threshold`, choose is not sure when no choice reaches the bar, and awaiting it throws `UnsureError`. [choose](/functions/choose/) shows every answer.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>filter: keep the messages that answer yes</summary>
+
+<Example id="sdk-typescript-filter" />
+
+filter yields your own messages that answer yes: the refund request and the double charge. Not-sure messages are left out. If a message fails, filter first yields every kept message, then throws one `RecordError` whose `rows` lists each failed result. `filterStream` yields every message instead, as `{ item, row, kept }`. [filter](/functions/filter/) shows every answer.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>tag: every label that fits</summary>
+
+<Example id="sdk-typescript-tag" />
+
+The message names a double charge and a late parcel, so both labels fit. The array is empty when none fits. [tag](/functions/tag/) shows every answer.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>score: a number from 0 to 1</summary>
+
+<Example id="functions/score/typescript" />
+
+A refund request is routine, so it scores near 0. Levels run lowest first. [score](/functions/score/) shows every answer.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>rank: put messages in order</summary>
+
+<Example id="sdk-typescript-rank" />
+
+The double charge is the most urgent, so it ranks 1. rank works only as a stream, `rankStream`. `answer(ranked)` gives the rank and throws `RecordError` for a failed message. `ranked.position` is the message's place in your list, counted from 1. `top: 2` ranks only the first two. [rank](/functions/rank/) shows every answer.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>find: the line that answers</summary>
+
+<Example id="sdk-typescript-find" />
+
+The second line holds the request. The answer is `null` when no line answers. `start` and `end` count UTF-16 code units, so `message.slice(action.start, action.end)` gives the same text. [find](/functions/find/) shows every answer.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>recognize: names and their kinds</summary>
+
+<Example id="functions/recognize/typescript" />
+
+Morgan is a person and Example Group an organization. The kinds come first, then the text. Each name also has `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every answer.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>relate: how names connect</summary>
+
+<Example id="sdk-typescript-relate" />
+
+Morgan works for Example Group, so relate links the two by the rule. relate finds the names itself, so it needs no recognize call first. Each relation also has `probability`. [relate](/functions/relate/) shows every answer.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>annotate: several questions at once</summary>
+
+<Example id="sdk-typescript-annotate" />
+
+Each message gets all three answers: refund or not, the topic, and its urgency. `answer()` on each entry follows the rules of its function, so a not-sure refund throws `UnsureError`. `tt.annotate(questions, message)` answers one message. [annotate](/functions/annotate/) shows every answer.
+
+</details>
+
+## The full API
+
+Each call is also exported on its own, such as `decide(...)`. It opens and closes a client for that call, or uses one you set with `setDefaultClient`. The [TypeScript declarations](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/typescript/index.d.ts) list every name.

@@ -1,0 +1,5 @@
+.ie \n(.g .ds Aq \(aq
+.el .ds Aq '
+.TH thinkthen 1  "thinkthen 0.2.0"
+.SH NAME
+thinkthen \- Ask typed questions about records. Text answers or streaming JSON Lines.

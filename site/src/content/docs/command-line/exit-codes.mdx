@@ -1,0 +1,62 @@
+---
+title: Exit codes
+description: Turn an answer into an exit code with --check, look up every exit code, find errors on standard error, and branch on the code in a script.
+goal: The reader makes a script act on an answer through its exit code and knows what every code means.
+reader: A script author, CI job or agent that branches on how a ThinkThen command ended
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+
+Every command ends with an exit code. A plain call exits 0 whenever it answers, whether the answer is yes, no or not sure; `--check` makes the answer itself the exit code.
+
+<Example id="codes-check-no" />
+
+No: the message asks about a delivery, so `--check` exits 1. The answer still prints, so a person can read it.
+
+## Every exit code
+
+| Code | When |
+| --- | --- |
+| 0 | The command answered. With `--check`, the answer was yes. |
+| 1 | With `--check`, the answer was no. |
+| 2 | An argument, option or setting is wrong or missing, such as an unset key or an empty text. Nothing was asked. |
+| 3 | With `--check`, the answer was not sure. |
+| 4 | The model service failed, or it failed for every line, as with a wrong key. |
+| 5 | A file couldn't be read or written, or a toolbox couldn't be read. |
+| 6 | One or more lines failed. The others still hold their answers. |
+| 130 | You pressed Ctrl-C. A second Ctrl-C exits at once. |
+| 141 | The program reading the output, such as `head`, closed early. |
+
+A failed line wins over every `--check` answer, so 6 beats 0, 1 and 3.
+
+## Which functions take `--check`
+
+| Function | 0 | 1 | 3 |
+| --- | --- | --- | --- |
+| decide | yes | no | not sure |
+| choose | a choice | | not sure |
+| find | a line was found | no line answers | not sure |
+| filter | at least one line kept | none kept | none kept, and one was not sure |
+
+decide, choose and find take one text with `--check`, from a pipe, `--text` or one file. filter takes any number of lines. Each function's page shows `--check` at work, starting with [decide](/functions/decide/).
+
+## Where errors go
+
+Answers go to standard output and errors go to standard error, so a pipe carries only answers. Here the file doesn't exist, so nothing is printed, the error goes to standard error, and the command exits 5:
+
+<Example id="exit-local" />
+
+Each error is one line: `thinkthen:`, a code such as `local.io`, then what went wrong. When one line of many fails, the error also names its position, its `id` and its file. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+
+## Branch on the code in a script
+
+`case` sends each answer its own way. `> /dev/null` hides the printed answer, because the script reads the code instead.
+
+<Example id="codes-script" />
+
+The double charge falls between the bars of 0.2 and 0.8, so decide exits 3 and the message goes to a person. The last line catches every other code, such as 2 or 6, so a broken call never passes as a no.
+
+## Next
+
+[Toolboxes](/command-line/toolboxes/) saves your questions in a file.

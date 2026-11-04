@@ -62,7 +62,7 @@ fn c_header_retains_calls_rows_and_cross_thread_error_ownership() {
 fn single_c_driver_bounds_batches_and_streams_text_and_structured_records() {
     let server = Loopback::noul(0.9).unwrap();
     let client = json!({"url":server.base(),"batch":3});
-    let request = json!({"question":{"function":"decide","question":"Ready?","evidence":"/body"}});
+    let request = json!({"question":{"function":"decide","question":"Ready?","field":"/body"}});
     let mut process = command("run");
     process
         .env("THINKTHEN_API_KEY", KEY)
@@ -214,7 +214,7 @@ fn c_selector_values_map_to_shared_offset_units() {
     assert_eq!(server.count(), 6);
     let output = run_mode("invalid-offset", &client, &request, &[]);
     assert_eq!(output.len(), 1);
-    assert_eq!(output[0]["error"]["code"], "usage.abi");
+    assert_eq!(output[0]["error"]["code"], "usage.offsets");
     assert_eq!(server.count(), 6);
 }
 

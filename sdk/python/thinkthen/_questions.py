@@ -5,12 +5,34 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator, Mapping
 from dataclasses import asdict, dataclass
+from enum import Enum
+from pathlib import Path
 from types import MappingProxyType
-from typing import Any, TypeAlias, cast
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    TypeAlias,
+    cast,
+    get_args,
+    get_origin,
+    overload,
+)
+
+from typing_extensions import TypeForm
 
 from . import _native
 from ._runtime import binding, encode
-from ._types import ErrorCode, RelationRule, Strings, Threshold, UsageError
+from ._types import (
+    ChoiceInput,
+    Descriptions,
+    ErrorCode,
+    RelationRule,
+    Strings,
+    Threshold,
+    UsageError,
+    _Label,
+)
 
 _MISSING = object()
 
@@ -20,18 +42,84 @@ class _Question:
     _native: _native.NativeQuestion
 
 
+class _LabelQuestion(_Question, Generic[_Label]):
+    __slots__ = ("_members",)
+    _members: Mapping[str, Enum]
+
+
+def choice_values(value: object, name: str) -> tuple[object, ...]:
+    if isinstance(value, type) and issubclass(value, Enum):
+        return tuple(value)
+    if get_origin(value) is Literal:
+        return get_args(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(value)
+    raise TypeError(f"{name} must be a list, tuple, Enum or Literal choice set")
+
+
+def choice_members(value: object, name: str) -> Mapping[str, Enum]:
+    return MappingProxyType(
+        {
+            str(item.value): item
+            for item in choice_values(value, name)
+            if isinstance(item, Enum)
+        }
+    )
+
+
+def annotation_members(value: object) -> Mapping[str, Mapping[str, Enum]]:
+    if isinstance(value, Mapping):
+        return {
+            name: getattr(question, "_members", {}) for name, question in value.items()
+        }
+    return cast(Mapping[str, Mapping[str, Enum]], getattr(value, "_children", {}))
+
+
+# The shared question contract names a decide question's meanings by answer.
+_MEANINGS = {"yes_means": "true", "no_means": "false"}
+
+
+def _described(
+    values: tuple[object, ...], descriptions: object, name: str
+) -> tuple[tuple[object, ...], dict[object, object]]:
+    if not isinstance(descriptions, Mapping):
+        raise TypeError(f"descriptions must map each of the {name} to its meaning")
+    text = {
+        key.value if isinstance(key, Enum) else key: value
+        for key, value in descriptions.items()
+    }
+    return (
+        tuple(
+            {"name": value, "description": text[value]} if value in text else value
+            for value in values
+        ),
+        {key: value for key, value in text.items() if key not in values},
+    )
+
+
 def definition(
     function: str, question: object = None, **fields: object
 ) -> dict[str, Any]:
     result: dict[str, Any] = {"function": function}
     if question is not None:
         result["questions" if function == "annotate" else "question"] = question
+    descriptions = fields.pop("descriptions", None)
     for name, value in fields.items():
         if value is None or value is _MISSING:
             continue
-        if name in {"choices", "labels", "levels", "kinds", "rules"}:
+        if name in {"choices", "labels", "levels"}:
+            value = tuple(
+                item.value if isinstance(item, Enum) else item
+                for item in choice_values(value, name)
+            )
+            if descriptions is not None:
+                value, unmatched = _described(value, descriptions, name)
+                descriptions = unmatched or None
+        elif name in {"kinds", "rules"}:
             if not isinstance(value, (list, tuple)):
-                binding(_native.reject_question_conversion)
+                raise TypeError(
+                    f"{name} must be a list or tuple, not {type(value).__name__}"
+                )
             value = tuple(value)
             if name == "rules":
                 try:
@@ -57,7 +145,10 @@ def definition(
             )
         ):
             binding(_native.reject_question_conversion)
-        result[name] = value
+        result[_MEANINGS.get(name, name)] = value
+    if descriptions is not None:
+        # Preserve unconsumed keys for the engine's unknown-field diagnostic.
+        result["descriptions"] = descriptions
     return result
 
 
@@ -78,12 +169,22 @@ class DecideQuestion(_Question):
         question: str,
         *,
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
     ) -> None:
+        """Ask yes or no; yes_means and no_means say what each answer means."""
         object.__setattr__(
             self,
             "_native",
-            _admit("decide", question, threshold=threshold, evidence=evidence),
+            _admit(
+                "decide",
+                question,
+                threshold=threshold,
+                field=field,
+                yes_means=yes_means,
+                no_means=no_means,
+            ),
         )
 
 
@@ -95,26 +196,60 @@ class FilterQuestion(_Question):
         question: str,
         *,
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
     ) -> None:
+        """Keep records answered yes; yes_means and no_means say what each means."""
         object.__setattr__(
             self,
             "_native",
-            _admit("filter", question, threshold=threshold, evidence=evidence),
+            _admit(
+                "filter",
+                question,
+                threshold=threshold,
+                field=field,
+                yes_means=yes_means,
+                no_means=no_means,
+            ),
         )
 
 
-class ChooseQuestion(_Question):
+class ChooseQuestion(_LabelQuestion[_Label]):
     __slots__ = ()
+
+    @overload
+    def __init__(
+        self,
+        question: str,
+        *,
+        choices: TypeForm[_Label],
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        question: str,
+        *,
+        choices: list[_Label] | tuple[_Label, ...],
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+    ) -> None: ...
 
     def __init__(
         self,
         question: str,
         *,
-        choices: Strings,
+        choices: ChoiceInput[_Label],
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
     ) -> None:
+        object.__setattr__(self, "_members", choice_members(choices, "choices"))
         object.__setattr__(
             self,
             "_native",
@@ -123,27 +258,57 @@ class ChooseQuestion(_Question):
                 question,
                 choices=choices,
                 threshold=threshold,
-                evidence=evidence,
+                field=field,
+                descriptions=descriptions,
             ),
         )
 
 
-class TagQuestion(_Question):
+class TagQuestion(_LabelQuestion[_Label]):
     __slots__ = ()
+
+    @overload
+    def __init__(
+        self,
+        question: str,
+        *,
+        labels: TypeForm[_Label],
+        threshold: float | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        question: str,
+        *,
+        labels: list[_Label] | tuple[_Label, ...],
+        threshold: float | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+    ) -> None: ...
 
     def __init__(
         self,
         question: str,
         *,
-        labels: Strings,
+        labels: ChoiceInput[_Label],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
     ) -> None:
+        object.__setattr__(self, "_members", choice_members(labels, "labels"))
         object.__setattr__(
             self,
             "_native",
             _admit(
-                "tag", question, labels=labels, threshold=threshold, evidence=evidence
+                "tag",
+                question,
+                labels=labels,
+                threshold=threshold,
+                field=field,
+                descriptions=descriptions,
             ),
         )
 
@@ -152,10 +317,23 @@ class ScoreQuestion(_Question):
     __slots__ = ()
 
     def __init__(
-        self, question: str, *, levels: Strings, evidence: str | None = None
+        self,
+        question: str,
+        *,
+        levels: ChoiceInput[_Label],
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
     ) -> None:
         object.__setattr__(
-            self, "_native", _admit("score", question, levels=levels, evidence=evidence)
+            self,
+            "_native",
+            _admit(
+                "score",
+                question,
+                levels=levels,
+                field=field,
+                descriptions=descriptions,
+            ),
         )
 
 
@@ -166,14 +344,22 @@ class RankQuestion(_Question):
         self,
         question: str,
         *,
-        levels: Strings,
+        levels: ChoiceInput[_Label],
         top: int | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
     ) -> None:
         object.__setattr__(
             self,
             "_native",
-            _admit("rank", question, levels=levels, top=top, evidence=evidence),
+            _admit(
+                "rank",
+                question,
+                levels=levels,
+                top=top,
+                field=field,
+                descriptions=descriptions,
+            ),
         )
 
 
@@ -185,12 +371,12 @@ class FindQuestion(_Question):
         question: str,
         *,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
     ) -> None:
         object.__setattr__(
             self,
             "_native",
-            _admit("find", question, threshold=threshold, evidence=evidence),
+            _admit("find", question, threshold=threshold, field=field),
         )
 
 
@@ -202,14 +388,12 @@ class RecognizeQuestion(_Question):
         *,
         kinds: Strings,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
     ) -> None:
         object.__setattr__(
             self,
             "_native",
-            _admit(
-                "recognize", None, kinds=kinds, threshold=threshold, evidence=evidence
-            ),
+            _admit("recognize", None, kinds=kinds, threshold=threshold, field=field),
         )
 
 
@@ -221,33 +405,37 @@ class RelateQuestion(_Question):
         *,
         rules: list[RelationRule] | tuple[RelationRule, ...],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
     ) -> None:
         object.__setattr__(
             self,
             "_native",
-            _admit("relate", None, rules=rules, threshold=threshold, evidence=evidence),
+            _admit("relate", None, rules=rules, threshold=threshold, field=field),
         )
 
 
 class AnnotateQuestion(_Question):
-    __slots__ = ()
+    __slots__ = ("_children",)
+    _children: Mapping[str, Mapping[str, Enum]]
 
-    def __init__(
-        self, questions: AnnotationQuestions, *, evidence: str | None = None
-    ) -> None:
+    def __init__(self, questions: AnnotationInput, *, field: str | None = None) -> None:
+        if not isinstance(questions, AnnotationQuestions):
+            questions = AnnotationQuestions(
+                cast(Mapping[str, AnnotationQuestion], questions)
+            )
+        object.__setattr__(self, "_children", annotation_members(questions))
         object.__setattr__(
             self,
             "_native",
-            _admit("annotate", questions._definitions(), evidence=evidence),
+            _admit("annotate", questions._definitions(), field=field),
         )
 
 
 NonAnnotateQuestion: TypeAlias = (
     DecideQuestion
     | FilterQuestion
-    | ChooseQuestion
-    | TagQuestion
+    | ChooseQuestion[Any]
+    | TagQuestion[Any]
     | ScoreQuestion
     | RankQuestion
     | FindQuestion
@@ -257,8 +445,8 @@ NonAnnotateQuestion: TypeAlias = (
 AnnotationQuestion: TypeAlias = (
     DecideQuestion
     | FilterQuestion
-    | ChooseQuestion
-    | TagQuestion
+    | ChooseQuestion[Any]
+    | TagQuestion[Any]
     | ScoreQuestion
     | FindQuestion
     | RecognizeQuestion
@@ -267,7 +455,7 @@ AnnotationQuestion: TypeAlias = (
 
 
 class Toolbox(Mapping[str, NonAnnotateQuestion]):
-    __slots__ = ("_native",)
+    __slots__ = ("_native", "_questions")
 
     def __init__(self, questions: Mapping[str, NonAnnotateQuestion]) -> None:
         try:
@@ -279,12 +467,19 @@ class Toolbox(Mapping[str, NonAnnotateQuestion]):
             binding(_native.reject_question_conversion)
         text = encode(definitions, _native.reject_question_conversion)
         self._native = binding(lambda: _native.NativeToolbox(text))
+        self._questions = MappingProxyType(dict(questions))
 
     @classmethod
     def from_json(cls, text: str) -> Toolbox:
         value = object.__new__(cls)
         value._native = binding(lambda: _native.NativeToolbox.from_json(text))
+        value._questions = MappingProxyType({})
         return value
+
+    @classmethod
+    def load(cls, path: str | Path) -> Toolbox:
+        """Read a saved toolbox from a UTF-8 JSON file."""
+        return cls.from_json(Path(path).read_text(encoding="utf-8"))
 
     def to_json(self) -> str:
         return binding(self._native.to_json)
@@ -307,6 +502,8 @@ class Toolbox(Mapping[str, NonAnnotateQuestion]):
         return cast(dict[str, Any], json.loads(self._native.definition))
 
     def question(self, name: str) -> NonAnnotateQuestion:
+        if name in self._questions:
+            return self._questions[name]
         native = binding(lambda: self._native.question(name))
         cls = _CLASSES[native.function]
         value = object.__new__(cls)
@@ -325,13 +522,13 @@ class Toolbox(Mapping[str, NonAnnotateQuestion]):
             binding(_native.reject_question_conversion)
         return value
 
-    def choose(self, name: str) -> ChooseQuestion:
+    def choose(self, name: str) -> ChooseQuestion[Any]:
         value = self.question(name)
         if not isinstance(value, ChooseQuestion):
             binding(_native.reject_question_conversion)
         return value
 
-    def tag(self, name: str) -> TagQuestion:
+    def tag(self, name: str) -> TagQuestion[Any]:
         value = self.question(name)
         if not isinstance(value, TagQuestion):
             binding(_native.reject_question_conversion)
@@ -394,6 +591,11 @@ class AnnotationQuestions(Mapping[str, AnnotationQuestion]):
 
     def __len__(self) -> int:
         return len(self._questions)
+
+
+AnnotationInput: TypeAlias = (
+    AnnotationQuestions | Mapping[str, AnnotationQuestion] | Toolbox
+)
 
 
 _CLASSES: dict[str, type[_Question]] = {

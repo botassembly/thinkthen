@@ -1,0 +1,3 @@
+messages/a1.txt	true
+messages/a2.txt	false
+messages/a3.txt	true

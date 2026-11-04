@@ -23,14 +23,14 @@ def ruby_questions
 end
 
 # Feature: Ruby Range bands and evidence paths translate without changing meaning.
-def ruby_threshold_and_evidence
+def ruby_threshold_and_field
   ThinkThen::Client.open(backend: :stub) do |client|
     record = {"a/b~c" => [{"body" => "é😀evidence"}]}
-    equal(client.decide("Ready?", record, threshold: 0.2..0.8, evidence: "/a~1b~0c/0/body").to_h,
-          client.decide("Ready?", record, threshold: 0.2..0.8, evidence: ["a/b~c", 0, :body]).to_h,
+    equal(client.decide("Ready?", record, threshold: 0.2..0.8, field: "/a~1b~0c/0/body").to_h,
+          client.decide("Ready?", record, threshold: 0.2..0.8, field: ["a/b~c", 0, :body]).to_h,
           "path components escape to the same JSON pointer")
-    equal(client.decide("Ready?", record, evidence: "").to_h,
-          client.decide("Ready?", record, evidence: []).to_h, "empty path selects root")
+    equal(client.decide("Ready?", record, field: "").to_h,
+          client.decide("Ready?", record, field: []).to_h, "empty path selects root")
     [0.2...0.8, (..0.8), (0.2..), "0.2:0.8", {low: 0.2, high: 0.8}].each do |threshold|
       begin
         client.decide("Ready?", "record", threshold: threshold)
@@ -84,7 +84,7 @@ def ruby_filter_rows
     end
     assert(!items.first.frozen?, "binding does not freeze caller input")
     equal([:"record.missing", :"record.invalid"], rows.drop(1).map { |value| value.row.error.code }, "filter failures stay visible")
-    assert(client.filter("Ready?", items.first).is_a?(ThinkThen::FilterRow), "single filter has same shape")
+    raises(ThinkThen::UsageError) { client.filter("Ready?", items.first) }
   end
 end
 
@@ -171,7 +171,7 @@ def ruby_held_calls
           begin
             stream.to_a
             raise "cancelled traversal completed normally" unless [:close, :client_close].include?(action)
-          rescue ThinkThen::Cancelled => error
+          rescue ThinkThen::CancelledError => error
             equal(:"local.cancelled", error.code, "typed cancellation")
             assert(error.cause.is_a?(Interrupt), "Interrupt becomes cancellation cause") if action == :interrupt
           end
@@ -203,7 +203,7 @@ def ruby_held_calls
   ThinkThen::Client.open(backend: :stub) do |client|
     token = ThinkThen::CancelToken.new
     token.cancel
-    raises(ThinkThen::Cancelled) { client.decide("Ready?", "record", cancel: token) }
+    raises(ThinkThen::CancelledError) { client.decide("Ready?", "record", cancel: token) }
   end
 end
 
@@ -236,7 +236,7 @@ def ruby_completion_interruption
       end
     end
     begin
-      error = raises(ThinkThen::Cancelled) { trace.enable { stream.to_a } }
+      error = raises(ThinkThen::CancelledError) { trace.enable { stream.to_a } }
       assert(interrupted, "interruption follows completed native worker")
       equal(:"local.cancelled", error.code, "completed worker cancellation code")
       assert(error.cause.is_a?(Interrupt), "completion interruption remains the cause")
@@ -356,7 +356,7 @@ def ruby_configuration
   assert(!error.message.include?(secret) && !error.inspect.include?(secret), "setup errors redact keys")
   ThinkThen.close
   assert(shared.first.closed?, "module close closes shared client")
-  raises(IOError) { ThinkThen.decide("Ready?", "record") }
+  assert(ThinkThen.decide("Ready?", "record").answered?, "module calls reopen after close")
 ensure
   ThinkThen.close
 end
@@ -373,7 +373,7 @@ def ruby_scheduler_cancellation
           fiber = nil
           reader = task.async do
             fiber = Fiber.current
-            error = raises(ThinkThen::Cancelled) { stream.to_a }
+            error = raises(ThinkThen::CancelledError) { stream.to_a }
             equal(:"local.cancelled", error.code, "scheduler cancellation code")
             assert(error.cause.is_a?(Interrupt), "scheduler interrupt remains the cancellation cause") if action == :interrupt
           end

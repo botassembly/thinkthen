@@ -12,11 +12,13 @@ from testing import child_environment
 env = child_environment()
 
 root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root / 'scripts'))
+from duckdb_release import VERSION
 source = Path(os.environ.get('THINKTHEN_DUCKDB_SOURCE', root / 'duckdb')).resolve()
 tools = Path(os.environ.get('EXTENSION_CI_TOOLS', root / 'extension-ci-tools')).resolve()
 versions = json.loads((root / 'databases/duckdb/community-versions.json').read_text())
-version = os.environ.get('THINKTHEN_DUCKDB_VERSION', '1.4.3')
-for project, pin in versions['1.4.3'].items():
+version = os.environ.get('THINKTHEN_DUCKDB_VERSION', VERSION)
+for project, pin in versions[VERSION].items():
     entry = subprocess.check_output(['git', 'ls-files', '--stage', '--', project],
                                     cwd=root, env=env, text=True).split()
     assert entry[:2] == ['160000', pin], (project, entry)

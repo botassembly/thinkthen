@@ -2,12 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { cp, mkdtemp, readFile, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { Worker } from "node:worker_threads";
 import { once } from "node:events";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { osEnvironment } from "./support.js";
 
 const root = dirname(process.env.THINKTHEN_NODE_PACKAGE);
@@ -62,7 +62,8 @@ test("one package carries exactly the release metadata's native platform engines
   assert.deepEqual(files, targets);
   const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
   assert.equal(Object.keys(manifest.optionalDependencies ?? {}).length, 0);
-  for (const name of ["preinstall", "install", "postinstall"]) assert.equal(manifest.scripts?.[name], undefined);
+  assert.equal(manifest.scripts?.preinstall, "node platform.js");
+  for (const name of ["install", "postinstall"]) assert.equal(manifest.scripts?.[name], undefined);
 });
 
 // Feature: an addon can serve independent worker contexts through its public API.
@@ -71,7 +72,7 @@ test("worker_threads loads the installed package and returns a typed row", async
   const code = `import { parentPort } from 'node:worker_threads';
     import { ThinkThen } from ${JSON.stringify(entry)};
     const client = new ThinkThen({backend:'stub'});
-    try { parentPort.postMessage(await client.decide('Ready?', 'evidence')); }
+    try { parentPort.postMessage(await client.decide('Ready?', 'evidence').row()); }
     finally { await client.close(); }`;
   const worker = new Worker(new URL(`data:text/javascript,${encodeURIComponent(code)}`), { type: "module" });
   const exited = once(worker, "exit");
@@ -168,4 +169,33 @@ test("rank input completion delivers every row before idle exit", { timeout: 100
     assert.deepEqual(rows.map(row => row.answer), [1, 2, 3]);
     assert(rows.every(row => row.status === "answered"));
   } finally { child.kill(); }
+});
+
+// Feature: unsupported OS/CPU pairs fail during the package's installation hook.
+test("installation refuses engines absent from the release package", async () => {
+  const script = pathToFileURL(join(root, "platform.js")).href;
+  for (const [platform, arch] of [["darwin", "x64"], ["win32", "arm64"]]) {
+    const program = `Object.defineProperty(process, "platform", {value:${JSON.stringify(platform)}});
+      Object.defineProperty(process, "arch", {value:${JSON.stringify(arch)}});
+      await import(${JSON.stringify(script)});`;
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", program], {encoding:"utf8"});
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, new RegExp(`does not ship a native engine for ${platform}/${arch}`));
+  }
+});
+
+// Feature: top-N rank never retains all caller objects in the JavaScript adapter.
+test("top one ranks a large lazy input within a bounded JavaScript heap", async () => {
+  const script = fileURLToPath(new URL("./rank-memory.mjs", import.meta.url));
+  const child = spawn(process.execPath, ["--expose-gc", "--max-old-space-size=64", script, process.env.THINKTHEN_NODE_PACKAGE],
+    {env:osEnvironment(),stdio:["ignore","pipe","pipe"]});
+  const output = [], errors = [];
+  child.stdout.on("data", data => output.push(data));
+  child.stderr.on("data", data => errors.push(data));
+  try {
+    const [code, signal] = await once(child, "exit");
+    assert.equal(signal, null, Buffer.concat(errors).toString());
+    assert.equal(code, 0, Buffer.concat(errors).toString());
+    console.log(Buffer.concat(output).toString().trim());
+  } finally {child.kill();}
 });

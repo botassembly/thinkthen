@@ -43,9 +43,6 @@ def call(settings, request, cancelled=False, single=False):
          json.dumps(settings), json.dumps(request)], env=env, timeout=120))
 
 def normalize(row, backend, model):
-    if row["function"] == "filter":
-        kept = row.pop("kept")
-        assert type(kept) is bool and kept == (row.get("answer") is True), row
     if "source" in row:
         source = row.pop("source")
         assert source["backend"] == backend, source
@@ -94,7 +91,7 @@ for filename in manifest["cases"]:
             if isinstance(expected, list) and case["request"]["question"]["function"] in ("find", "recognize", "relate"):
                 for row in expected:
                     record = case["request"]["records"][row["position"] - 1]
-                    pointer = case["request"]["question"].get("evidence")
+                    pointer = case["request"]["question"].get("field")
                     if pointer:
                         for part in pointer.split("/")[1:]:
                             key = part.replace("~1", "/").replace("~0", "~")

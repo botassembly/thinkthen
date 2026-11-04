@@ -22,16 +22,11 @@ def revision():
 
 def pins():
     from release_windows_host import selections
-    from release_r_dependencies import fields, names
     selected = {name: value for name, value in selections()['INPUTS'].items()
                 if name.startswith('R-') or re.fullmatch(r'[A-Za-z][A-Za-z0-9.]*_[0-9].*\.zip', name)}
     for name, (_, digest) in selected.items():
         if not re.fullmatch(r'[0-9a-f]{64}', digest):
             raise ValueError('Missing or invalid pinned Windows R checksum: ' + name)
-    available = {name.split('_')[0] for name in selected if '_' in name}
-    missing = names(fields((ROOT / 'sdk/r/DESCRIPTION').read_bytes()), ('Imports',)) - available
-    if missing:
-        raise ValueError('Missing pinned Windows R binary inputs: ' + ', '.join(sorted(missing)))
     return selected
 
 

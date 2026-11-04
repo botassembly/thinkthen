@@ -170,7 +170,7 @@ fn interrupt_retains_terminal_error_and_drop_closes_held_reply() {
         let (server, arrived, closed) = Loopback::holding(HeldReply::Body).unwrap();
         let client = Settings::from_json(&json!({"url":server.base(),"batch":1}).to_string())
             .unwrap()
-            .engine(|_| Some(KEY.to_owned()))
+            .engine(|name| (name == "THINKTHEN_API_KEY").then(|| KEY.to_owned()))
             .unwrap();
         let request = thinkthen_sql::request("decide", "Ready?", None).unwrap();
         let mut call = SqlCall::open(&client, &request).unwrap();

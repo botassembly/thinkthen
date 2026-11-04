@@ -12,13 +12,14 @@ use thinkthen::{
     Cancel, Engine, Error, Settings,
     native::{self, QuestionBuilder, ToolboxBuilder},
 };
-/// An engine allocation, released only by its matching cleanup operation.
+/// Bytes the library allocated for the caller. Free them with thinkthen_buffer_free, or with
+/// the free function of the error or row that holds the buffer.
 #[repr(C)]
 #[derive(Debug)]
 pub struct Buffer {
-    /// Counted UTF-8 bytes without a terminating NUL.
+    /// UTF-8 bytes, not NUL-terminated; NULL when empty.
     pub data: *mut u8,
-    /// Byte length.
+    /// The byte length.
     pub len: usize,
 }
 impl Default for Buffer {
@@ -34,6 +35,8 @@ impl Buffer {
     // allocations attach an Original. Cleanup never probes foreign allocations.
     const PREFIX: usize = size_of::<*mut crate::original::Original>();
     pub(crate) fn new(text: String) -> Self {
+        #[cfg(test)]
+        LIVE.with(|live| live.set(live.get() + 1));
         let mut allocation = vec![0_u8; Self::PREFIX];
         allocation.extend_from_slice(text.as_bytes());
         let len = text.len();
@@ -69,6 +72,8 @@ impl Buffer {
     }
     pub(crate) unsafe fn release(&mut self) {
         if !self.data.is_null() {
+            #[cfg(test)]
+            LIVE.with(|live| live.set(live.get() - 1));
             /* SAFETY: cleanup accepts only unique allocations from new. The full
              * boxed slice length is the visible length plus the fixed prefix. */
             unsafe {
@@ -86,18 +91,24 @@ impl Buffer {
         }
     }
 }
-/// A sized owned error; code zero means no error and HTTP status zero means absent.
+#[cfg(test)]
+thread_local! {
+    /// Engine buffers this thread made and has not freed, so a test can see a leak.
+    pub(crate) static LIVE: std::cell::Cell<isize> = const { std::cell::Cell::new(0) };
+}
+/// Why a function failed. Initialize it with THINKTHEN_ERROR_INIT and free it with
+/// thinkthen_error_free; passing it again frees what it held.
 #[repr(C)]
 #[cfg_attr(test, repr(align(256)))]
 #[derive(Debug)]
 pub struct HostError {
     /// The caller's allocation size, preserved by cleanup.
     pub struct_size: u32,
-    /// A stable generated code, or zero.
+    /// The thinkthen_code, or 0 when there is no error.
     pub code: i32,
-    /// Optional HTTP status; zero means absent.
+    /// The backend's HTTP status, or 0 when there is none.
     pub http_status: u16,
-    /// Owned plain UTF-8 message, independent of the call.
+    /// The message, owned by the error; it never holds a key.
     pub message: Buffer,
 }
 impl HostError {
@@ -109,6 +120,14 @@ impl HostError {
             message: Buffer::default(),
         }
     }
+    /// Free the message an initialized error still holds, then empty it.
+    pub(crate) unsafe fn clear(out: *mut Self, size: u32) {
+        /* SAFETY: callers validated a supported prefix that owns its message. */
+        unsafe {
+            (*ptr::addr_of_mut!((*out).message)).release();
+            Self::empty(size).write(out);
+        }
+    }
     pub(crate) fn from_error(size: u32, error: &Error) -> Self {
         Self {
             struct_size: size,
@@ -118,38 +137,40 @@ impl HostError {
         }
     }
 }
-/// One independently owned typed row. Scalar fields are selected by function/status.
+/// One record's result. Initialize it with THINKTHEN_ROW_INIT and free it with
+/// thinkthen_row_free; passing it again frees what it held. Read the answer fields only when
+/// status is THINKTHEN_STATUS_ANSWERED, or use thinkthen_row_values for typed access.
 #[repr(C)]
 #[cfg_attr(test, repr(align(256)))]
 #[derive(Debug)]
 pub struct HostRow {
     /// The caller's allocation size, preserved by cleanup.
     pub struct_size: u32,
-    /// Generated function discriminator.
+    /// The question's function.
     pub function: u32,
-    /// Generated status discriminator.
+    /// Whether the record was answered, not sure, or failed.
     pub status: u32,
-    /// Original one-based input position.
+    /// The record's input position, 1 for the first.
     pub position: u64,
-    /// Full precision aggregate probability, or NaN when absent.
+    /// The answer's probability, or NaN when its function has none.
     pub probability: f64,
-    /// Failed-record code, or zero.
+    /// A failed record's thinkthen_code, or 0.
     pub error_code: i32,
-    /// Answered decide/filter value as zero or one.
+    /// A decide or filter answer: 1 for yes, 0 for no. 0 also when not answered.
     pub answer_bool: u8,
-    /// Answered rank, independent of position.
+    /// A rank answer, 1 for the first.
     pub rank: u64,
-    /// Answered score.
+    /// A score answer, from 0 to 1.
     pub number: f64,
-    /// Optional original id as exact contract JSON.
+    /// The record's id as JSON, or empty.
     pub id: Buffer,
-    /// Typed answer as contract JSON, absent for unsure/failed.
+    /// The answer as JSON; empty when not sure or failed.
     pub answer: Buffer,
-    /// Optional typed function detail as contract JSON.
+    /// The answer's detail as JSON, or empty.
     pub detail: Buffer,
-    /// Typed attempted-route source as contract JSON.
+    /// Which question, backend and model gave the row, as JSON.
     pub source: Buffer,
-    /// Failed record's typed contract error as JSON.
+    /// A failed record's error as JSON, or empty.
     pub error: Buffer,
 }
 impl HostRow {
@@ -183,6 +204,12 @@ impl HostRow {
             error: Buffer::default(),
         }
     }
+    /// Free what an output row still holds from an earlier result, then empty it,
+    /// so reusing one row variable never leaks.
+    pub(crate) unsafe fn clear(out: *mut Self) {
+        /* SAFETY: callers validated the size; an initialized row owns its buffers. */
+        unsafe { Self::release(out) }
+    }
     pub(crate) unsafe fn release(out: *mut Self) {
         /* SAFETY: the validated 0.2 prefix owns each distinct buffer independently. */
         unsafe {
@@ -195,10 +222,12 @@ impl HostRow {
         }
     }
 }
-/// An independently retained admitted engine.
+/// An open client. Any thread may use it, and calls opened from it outlive it. Free it with
+/// thinkthen_client_free.
 #[derive(Debug)]
 pub struct ClientHandle(pub(crate) Engine);
-/// One driving thread owns the cell; cancel accesses only its separate token.
+/// An open call. One thread drives it at a time; thinkthen_call_cancel may run on any thread.
+/// Free it with thinkthen_call_free.
 #[derive(Debug)]
 pub struct CallHandle {
     pub(crate) call: UnsafeCell<native::Call>,
@@ -222,19 +251,39 @@ impl CallHandle {
         }
     }
 }
-/// Mutable settings copied when a client is opened.
+/// Settings for a client, copied when it opens. Free them with thinkthen_settings_free.
 #[derive(Debug, Default)]
 pub struct SettingsHandle(pub(crate) Settings);
-/// Mutable typed question with no retained caller-owned pointers.
+/// A question. One thread at a time changes it; once complete, many threads may use it.
+/// Free it with thinkthen_question_free.
 #[derive(Debug)]
-pub struct QuestionHandle(pub(crate) QuestionBuilder);
-/// Named typed snapshots that survive their inserted children.
+pub struct QuestionHandle {
+    pub(crate) builder: QuestionBuilder,
+    pub(crate) meanings: crate::builders::meanings::Meanings,
+}
+impl QuestionHandle {
+    pub(crate) fn new(builder: QuestionBuilder) -> Self {
+        Self {
+            builder,
+            meanings: crate::builders::meanings::Meanings::default(),
+        }
+    }
+    /// Admit the complete question, with its answer meanings and descriptions.
+    pub(crate) fn build(&self) -> Result<thinkthen::Question, Error> {
+        self.meanings.apply(self.builder.build()?)
+    }
+}
+/// A set of named questions, each copied in. Free it with thinkthen_toolbox_free.
 #[derive(Debug, Default)]
 pub struct ToolboxHandle(pub(crate) ToolboxBuilder);
 /// Borrow counted input bytes only until the export returns.
+/// THINKTHEN_NUL_TERMINATED (SIZE_MAX) as the length reads up to the first NUL.
 pub(crate) unsafe fn bytes<'a>(data: *const u8, len: usize) -> &'a [u8] {
-    if len == 0 {
+    if len == 0 || data.is_null() {
         &[]
+    } else if len == usize::MAX {
+        /* SAFETY: the caller lends a NUL-terminated string for this length. */
+        unsafe { std::ffi::CStr::from_ptr(data.cast()).to_bytes() }
     } else {
         /* SAFETY: the caller lends len readable bytes. */
         unsafe { std::slice::from_raw_parts(data, len) }
@@ -245,21 +294,26 @@ pub(crate) unsafe fn text<'a>(data: *const u8, len: usize) -> Result<&'a str, Er
     std::str::from_utf8(unsafe { bytes(data, len) }).map_err(|_| native::abi_error())
 }
 pub(crate) unsafe fn row_size(out: *mut HostRow) -> Result<u32, Error> {
+    if out.is_null() {
+        return Err(native::abi_error());
+    }
     /* SAFETY: a non-NULL output permits reading its first size field. */
-    if out.is_null() || unsafe { (*out).struct_size } < HostRow::PREFIX_SIZE {
+    let size = unsafe { out.cast::<u32>().read_unaligned() };
+    if size == 0 {
+        Err(native::uninitialized_row_error())
+    } else if size < HostRow::PREFIX_SIZE {
         Err(native::abi_error())
     } else {
-        /* SAFETY: size was validated without reading past its prefix. */
-        Ok(unsafe { (*out).struct_size })
+        Ok(size)
     }
 }
 pub(crate) unsafe fn error_size(out: *mut HostError) -> Option<u32> {
     /* SAFETY: a non-NULL output permits reading its first size field. */
-    if out.is_null() || unsafe { (*out).struct_size } < HostError::PREFIX_SIZE {
+    if out.is_null() || unsafe { out.cast::<u32>().read_unaligned() } < HostError::PREFIX_SIZE {
         None
     } else {
         /* SAFETY: size is readable and covers the supported prefix. */
-        Some(unsafe { (*out).struct_size })
+        Some(unsafe { out.cast::<u32>().read_unaligned() })
     }
 }
 

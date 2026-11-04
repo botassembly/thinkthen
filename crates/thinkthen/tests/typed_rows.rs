@@ -41,7 +41,7 @@ fn record_failures_keep_positions_and_exact_ids_without_becoming_call_errors() {
         (5, Code::RecordJson),
     ] {
         assert_eq!(rows[index].status(), Status::Failed);
-        assert_eq!(rows[index].clone().into_result().unwrap_err().code(), code);
+        assert_eq!(rows[index].error().unwrap().code(), code);
         let value = serde_json::to_value(&rows[index]).unwrap();
         assert_eq!(value["error"]["code"], code.as_str());
         assert!(value.get("answer").is_none());
@@ -295,7 +295,7 @@ fn separately_admitted_ids_reach_evidence_before_record_admission() {
             .unwrap();
         let question = questions::Decide::new("Ready?")
             .unwrap()
-            .evidence("/id".parse().unwrap());
+            .field("/id".parse().unwrap());
         for id in [
             RecordId::integer_decimal("18446744073709551615").unwrap(),
             RecordId::from("18446744073709551615"),

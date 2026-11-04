@@ -11,10 +11,11 @@ import tempfile
 import zipfile
 
 from release_workflow import ROOT, TARGETS, run, unpack, version
-from release_notices import bundle, combine, NOTICE
+from release_notices import combine, NOTICE
 from release_notice_packages import apply
 from release_notice_check import package_notices
 from release_readme import released_readme, update_zip, update_gem
+from jvm_repository import seed
 
 NODE_TARGETS = {
     'linux-x86_64': 'linux-x64', 'linux-arm64': 'linux-arm64',
@@ -121,7 +122,7 @@ def nuget(libraries, destination, scratch, notices):
     config.write_text('<configuration><packageSources><clear /><add key="prepared" value="' + str(prepared_feed()) + '" /></packageSources></configuration>')
     environment = dict(os.environ, HOME=str(scratch / 'dotnet-home'),
                        DOTNET_CLI_HOME=str(scratch / 'dotnet-home'),
-                       NUGET_PACKAGES=str(scratch / 'nuget-cache'),
+                       NUGET_PACKAGES=str(scratch / 'nuget-build-cache'),
                        DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                        DOTNET_GENERATE_ASPNET_CERTIFICATE='false')
     run('dotnet', 'pack', ROOT / 'sdk/csharp/ThinkThen.csproj', '-c', 'Release',
@@ -142,8 +143,7 @@ def jvm(libraries, destination, scratch, notices):
         path = source / 'java/library/target/classes/io/thinkthen/native' / aliases[target]
         path.mkdir(parents=True)
         shutil.copy2(library, path / library.name)
-    repository = scratch / 'm2'
-    shutil.copytree(Path.home() / '.local/share/thinkthen-build-tools/jvm/m2', repository)
+    repository = seed(Path.home() / '.local/share/thinkthen-build-tools/jvm/m2', scratch / 'maven-build-cache')
     run('python3', 'scripts/jvm-generated', source / 'java')
     run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository),
         '-f', source / 'java/pom.xml', 'install', '-DskipTests')
@@ -159,9 +159,42 @@ def jvm(libraries, destination, scratch, notices):
         apply(jar, combine(notices), 'META-INF/')
         update_zip(jar, 'META-INF/README.md', released_readme(name))
         jvm_sources(folder, name, package / f'thinkthen-{name}-{version()}-sources.jar')
-        with zipfile.ZipFile(package / f'thinkthen-{name}-{version()}-javadoc.jar', 'w') as archive:
-            archive.writestr('index.html', '<!doctype html><meta charset="utf-8"><pre>' +
-                             html.escape(released_readme(name).decode()) + '</pre>')
+        if name == 'java':
+            jvm_javadoc(folder, repository, package / f'thinkthen-{name}-{version()}-javadoc.jar', scratch)
+        else:
+            with zipfile.ZipFile(package / f'thinkthen-{name}-{version()}-javadoc.jar', 'w') as archive:
+                archive.writestr('index.html', '<!doctype html><meta charset="utf-8"><pre>' +
+                                 html.escape(released_readme(name).decode()) + '</pre>')
+    relocation = destination / 'io/github/botassembly/thinkthen-jvm' / version()
+    relocation.mkdir(parents=True)
+    (relocation / f'thinkthen-jvm-{version()}.pom').write_text(
+        '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>'
+        '<parent><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId>'
+        f'<version>{version()}</version><relativePath/></parent>'
+        '<groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId>'
+        f'<version>{version()}</version><packaging>pom</packaging>'
+        '<distributionManagement><relocation><groupId>io.github.botassembly</groupId>'
+        f'<artifactId>thinkthen-java</artifactId><version>{version()}</version>'
+        '</relocation></distributionManagement></project>\n')
+
+
+def jvm_javadoc(folder, repository, destination, scratch):
+    """Build Java reference pages from the very sources compiled into the JAR."""
+    classpath = scratch / 'javadoc-classpath'
+    run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository),
+        '-f', folder / 'pom.xml', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath))
+    sources = sorted((folder / 'src/main/java').rglob('*.java'))
+    sources += sorted((folder / 'target/generated-sources/contracts').rglob('*.java'))
+    output = scratch / 'javadoc'
+    arguments = scratch / 'javadoc.args'
+    arguments.write_text('\n'.join(json.dumps(str(arg)) for arg in [
+        '-quiet', '-Xdoclint:all,-missing', '-Werror', '--release', '22',
+        '--module-path', classpath.read_text().strip(), '-d', output, *sources]) + '\n')
+    run('javadoc', '@' + str(arguments))
+    with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(output.rglob('*')):
+            if path.is_file():
+                archive.write(path, path.relative_to(output))
 
 
 def jvm_sources(folder, name, destination):
@@ -210,6 +243,9 @@ def package_sites(packages, staged, scratch):
     ruby(packages, staged / 'rubygems')
     github_packages(packages, staged / 'github')
     python(packages, staged / 'pypi', scratch)
+    from release_python_dependencies import stage_runtime
+    for package in packages.values():
+        stage_runtime(package, staged / 'prerequisites/python-runtime/wheels')
     node(packages, staged / 'npm', scratch)
     libraries = native_libraries(packages, scratch)
     notices = {target: package_notices(one(package / 'csharp', '*.nupkg')) for target, package in packages.items()}

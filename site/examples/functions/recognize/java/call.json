@@ -1,0 +1,5 @@
+{
+  "anchor": "            List<Entity> names = client.recognize(",
+  "before": 0,
+  "after": 2
+}

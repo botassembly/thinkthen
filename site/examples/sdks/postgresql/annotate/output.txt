@@ -1,0 +1,7 @@
+ msg_id | is_refund |  topic   | urgency 
+--------+-----------+----------+---------
+ 1      | t         | billing  |    0.05
+ 2      | f         | shipping |    0.14
+ 3      | t         | billing  |    0.45
+(3 rows)
+

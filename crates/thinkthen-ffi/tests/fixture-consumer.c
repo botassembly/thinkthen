@@ -9,20 +9,20 @@ int main(int argc, char **argv) {
     assert(argc == 3); thinkthen_error error = {0}; error.struct_size = sizeof(error);
     thinkthen_fixture_routes *owner = NULL;
     const char *remote = "https://remote.invalid/v1";
-    assert(thinkthen_fixture_routes_install((const uint8_t *)remote, strlen(remote), (const uint8_t *)argv[2], strlen(argv[2]), &owner, &error) == THINKTHEN_ERROR);
+    assert(thinkthen_fixture_routes_install((const char *)remote, strlen(remote), (const char *)argv[2], strlen(argv[2]), &owner, &error) < 0);
     assert(error.code == THINKTHEN_CODE_USAGE_URL && owner == NULL); thinkthen_error_free(&error);
-    ok(thinkthen_fixture_routes_install((const uint8_t *)argv[1], strlen(argv[1]), (const uint8_t *)argv[2], strlen(argv[2]), &owner, &error), &error);
+    ok(thinkthen_fixture_routes_install((const char *)argv[1], strlen(argv[1]), (const char *)argv[2], strlen(argv[2]), &owner, &error), &error);
     thinkthen_fixture_routes *duplicate = NULL;
-    assert(thinkthen_fixture_routes_install((const uint8_t *)argv[1], strlen(argv[1]), (const uint8_t *)argv[2], strlen(argv[2]), &duplicate, &error) == THINKTHEN_ERROR);
+    assert(thinkthen_fixture_routes_install((const char *)argv[1], strlen(argv[1]), (const char *)argv[2], strlen(argv[2]), &duplicate, &error) < 0);
     assert(error.code == THINKTHEN_CODE_USAGE_SETTINGS && duplicate == NULL); thinkthen_error_free(&error);
-    uint32_t backends[] = { THINKTHEN_BACKEND_SYSTEMONE, THINKTHEN_BACKEND_OPENAI };
+    thinkthen_backend backends[] = { THINKTHEN_BACKEND_SYSTEMONE, THINKTHEN_BACKEND_OPENAI };
     for (size_t i = 0; i < sizeof(backends) / sizeof(backends[0]); i++) {
         thinkthen_settings *settings = NULL; ok(thinkthen_settings_new(&settings, &error), &error);
         ok(thinkthen_settings_set_backend(settings, backends[i], &error), &error);
-        const char *model = "fixture-model"; ok(thinkthen_settings_set_model(settings, (const uint8_t *)model, strlen(model), &error), &error);
+        const char *model = "fixture-model"; ok(thinkthen_settings_set_model(settings, (const char *)model, strlen(model), &error), &error);
         thinkthen_client *client = NULL; ok(thinkthen_client_open(settings, &client, &error), &error); thinkthen_settings_free(settings);
-        thinkthen_question *question = NULL; ok(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const uint8_t *)"Ready?", 6, &question, &error), &error);
-        thinkthen_row row = {0}; row.struct_size = sizeof(row); ok(thinkthen_run_one(client, question, (const uint8_t *)"evidence", 8, THINKTHEN_RECORD_TEXT, &row, &error), &error);
+        thinkthen_question *question = NULL; ok(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6, &question, &error), &error);
+        thinkthen_row row = {0}; row.struct_size = sizeof(row); ok(thinkthen_run_one(client, question, (const char *)"evidence", 8, THINKTHEN_RECORD_TEXT, &row, &error), &error);
         assert(row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool);
         assert(row.probability == 0.8123456789012345);
         thinkthen_value *value = NULL; ok(thinkthen_row_values(&row, &value, &error), &error);
@@ -33,6 +33,6 @@ int main(int argc, char **argv) {
     thinkthen_fixture_routes_free(owner);
     const char *invalid = "{\"backend\":\"openai\",\"url\":\"http://remote.invalid/v1\"}";
     thinkthen_client *client = NULL;
-    assert(thinkthen_client_open_json((const uint8_t *)invalid, strlen(invalid), &client, &error) == THINKTHEN_ERROR);
+    assert(thinkthen_client_open_json((const char *)invalid, strlen(invalid), &client, &error) < 0);
     assert(error.code == THINKTHEN_CODE_USAGE_URL && client == NULL); thinkthen_error_free(&error); return 0;
 }

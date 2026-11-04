@@ -8,7 +8,7 @@ import zipfile
 
 def seed(prepared, destination):
     """Copy dependencies, never links or artifacts installed by another tree."""
-    artifacts = {'thinkthen-jvm-parent', 'thinkthen-java', 'thinkthen-kotlin', 'thinkthen-consumer'}
+    artifacts = {'thinkthen-jvm-parent', 'thinkthen-java', 'thinkthen-kotlin', 'thinkthen-consumer', 'thinkthen-jvm'}
     def ignore(directory, names):
         if Path(directory).relative_to(prepared).as_posix() == 'io/github/botassembly':
             return artifacts.intersection(names)

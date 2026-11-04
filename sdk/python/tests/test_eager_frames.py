@@ -31,7 +31,9 @@ def test_pandas_missing_rows_keep_duplicate_index_and_nullable_types(
     index = pd.Index(["same", "same", "third", "fourth", "fifth"])
     source = pd.Series([None, pd.NA, float("nan"), pd.NaT, "body"], index=index)
     with backend(tmp_path, yes()) as server, client(server) as selected:
-        result = ThinkThenAccessor(source).decide("Ready?", client=selected)
+        result = ThinkThenAccessor(source).decide(
+            "Ready?", client=selected, details=True, errors="coerce"
+        )
         assert result.index.equals(index) and len(result) == 5
         assert result["position"].tolist() == [1, 2, 3, 4, 5]
         assert result["status"].tolist() == ["failed"] * 4 + ["answered"]
@@ -50,7 +52,7 @@ def test_pandas_dataframe_evidence_and_filter_do_not_hide_invalid_records(
     source = pd.DataFrame({"id": ["one", True], "body": ["text", "text"]})
     with backend(tmp_path, yes()) as server, client(server) as selected:
         result = ThinkThenFrameAccessor(source).filter(
-            "Ready?", evidence="/body", client=selected
+            "Ready?", field="/body", client=selected, details=True, errors="coerce"
         )
         assert len(result) == 2 and result.index.equals(source.index)
         assert bool(result["kept"].iloc[0])
@@ -67,7 +69,7 @@ def test_polars_materialized_struct_results_never_call_back_during_lazy_queries(
     before = frame.clone()
     with backend(tmp_path, yes()) as server, client(server) as selected:
         results = ThinkThenNamespace(frame.get_column("body")).decide(
-            "Ready?", client=selected
+            "Ready?", client=selected, details=True, errors="coerce"
         )
         assert isinstance(results.dtype, pl.Struct)
         assert results.len() == 3 and server.count() == 2
@@ -102,7 +104,7 @@ def test_polars_dataframe_preserves_string_signed_and_unsigned_ids(
     )
     with backend(tmp_path, yes()) as server, client(server) as selected:
         result = ThinkThenFrameNamespace(source).decide(
-            "Ready?", evidence="/body", client=selected
+            "Ready?", field="/body", client=selected, details=True, errors="coerce"
         )
         assert result.columns == ["result"] and result.height == 1
         ids = result.get_column("result").struct.field("id")
@@ -124,11 +126,11 @@ def test_polars_empty_results_have_zero_rows_and_the_declared_struct_dtype(
     options: dict[str, Any] = {"levels": ["low", "high"]} if operation == "rank" else {}
     with backend(tmp_path, yes()) as server, client(server) as selected:
         result = getattr(ThinkThenNamespace(source), operation)(
-            "Ready?", client=selected, **options
+            "Ready?", client=selected, **options, details=True, errors="coerce"
         )
         assert result.len() == 0 and isinstance(result.dtype, pl.Struct)
         frame = getattr(ThinkThenFrameNamespace(source.to_frame()), operation)(
-            "Ready?", client=selected, **options
+            "Ready?", client=selected, **options, details=True, errors="coerce"
         )
         assert frame.height == 0 and frame.columns == ["result"]
         assert frame.get_column("result").dtype == result.dtype
@@ -139,7 +141,12 @@ def test_frame_rank_top_retains_failed_rows_and_original_positions() -> None:
     with tt.Client(backend="stub") as selected:
         series = pl.Series("body", ["first", None, "third"])
         result = ThinkThenNamespace(series).rank(
-            "How much?", levels=["low", "high"], top=1, client=selected
+            "How much?",
+            levels=["low", "high"],
+            top=1,
+            client=selected,
+            details=True,
+            errors="coerce",
         )
         assert result.len() == 2
         assert result.struct.field("answer").to_list() == [1, None]
@@ -152,7 +159,12 @@ def test_frame_rank_top_retains_failed_rows_and_original_positions() -> None:
         ]
         pandas_source = pd.Series(["first", None, "third"], index=["a", "b", "c"])
         pandas_result = ThinkThenAccessor(pandas_source).rank(
-            "How much?", levels=["low", "high"], top=1, client=selected
+            "How much?",
+            levels=["low", "high"],
+            top=1,
+            client=selected,
+            details=True,
+            errors="coerce",
         )
         assert len(pandas_result) == 2
         assert (
@@ -220,16 +232,24 @@ def test_dataframe_missing_values_and_dates_answer_as_json(library: str) -> None
             if library == "pandas"
             else ThinkThenFrameNamespace(source)
         )
-        result = accessor.decide("Ready?", evidence="/evidence", client=selected)
+        result = accessor.decide(
+            "Ready?",
+            field="/evidence",
+            client=selected,
+            details=True,
+            errors="coerce",
+        )
         canonical = selected.decide_stream(
-            "Ready?", expected, evidence="/evidence"
+            "Ready?", expected, field="/evidence"
         ).to_list()
         if library == "pandas":
             assert result.index.equals(source.index)
             assert result["status"].tolist() == ["answered", "answered"]
             assert result["answer"].tolist() == [row.answer for row in canonical]
             # Asking about all fields makes the stub witness the complete JSON record.
-            whole = accessor.decide("Ready?", client=selected)
+            whole = accessor.decide(
+                "Ready?", client=selected, details=True, errors="coerce"
+            )
             reference = selected.decide_stream("Ready?", expected).to_list()
             assert whole["probability"].tolist() == [
                 row.probability for row in reference
@@ -239,7 +259,9 @@ def test_dataframe_missing_values_and_dates_answer_as_json(library: str) -> None
             rows = result["result"].struct.unnest()
             assert rows["status"].to_list() == ["answered", "answered"]
             assert rows["answer"].to_list() == [row.answer for row in canonical]
-            whole = accessor.decide("Ready?", client=selected)["result"].struct.unnest()
+            whole = accessor.decide(
+                "Ready?", client=selected, details=True, errors="coerce"
+            )["result"].struct.unnest()
             reference = selected.decide_stream("Ready?", expected).to_list()
             assert whole["probability"].to_list() == [
                 row.probability for row in reference
@@ -250,7 +272,9 @@ def test_polars_series_nan_becomes_null_inside_json_records() -> None:
     source = pl.Series("values", [[float("nan"), 2.0], [3.0, None]])
     with tt.Client(backend="stub") as selected:
         result = (
-            ThinkThenNamespace(source).decide("Ready?", client=selected).struct.unnest()
+            ThinkThenNamespace(source)
+            .decide("Ready?", client=selected, details=True, errors="coerce")
+            .struct.unnest()
         )
         reference = selected.decide_stream(
             "Ready?", [[None, 2.0], [3.0, None]]
@@ -258,7 +282,7 @@ def test_polars_series_nan_becomes_null_inside_json_records() -> None:
         assert result["status"].to_list() == ["answered", "answered"]
         assert result["probability"].to_list() == [row.probability for row in reference]
         missing = ThinkThenNamespace(pl.Series("values", [float("nan"), 2.0])).decide(
-            "Ready?", client=selected
+            "Ready?", client=selected, details=True, errors="coerce"
         )
         assert missing.struct.field("error").struct.field("code").to_list() == [
             "record.missing",
@@ -269,7 +293,9 @@ def test_polars_series_nan_becomes_null_inside_json_records() -> None:
 def test_conversion_failure_keeps_its_cause_on_the_failed_row() -> None:
     with tt.Client(backend="stub") as selected:
         source = pd.DataFrame({"evidence": [object(), "valid"]})
-        result = ThinkThenFrameAccessor(source).decide("Ready?", client=selected)
+        result = ThinkThenFrameAccessor(source).decide(
+            "Ready?", client=selected, details=True, errors="coerce"
+        )
         assert result["status"].tolist() == ["failed", "answered"]
         assert result["error_code"].iloc[0] == "record.invalid"
         assert "TypeError" in result["error_message"].iloc[0]

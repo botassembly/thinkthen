@@ -15,6 +15,36 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class Export(unittest.TestCase):
+    def test_focused_sdks_require_strict_verification_and_never_run_full_gate(self):
+        with tempfile.TemporaryDirectory(prefix='focused-sdk-dispatch-') as temporary:
+            root = Path(temporary)
+            scripts, binary = root / 'scripts', root / 'bin'
+            scripts.mkdir()
+            binary.mkdir()
+            shutil.copy2(ROOT / 'scripts/public-export-gate', scripts / 'public-export-gate')
+            (scripts / 'native-tools-env').write_text(':\n')
+            (scripts / 'native-env').write_text('printf "native-env\\n" >> "$EVENTS"\n')
+            for path, body in (
+                    (binary / 'python3', '[ "$1" = scripts/public_export_gate.py ] && [ "$2" = verify ] || exit 97; printf "verify\\n" >> "$EVENTS"; exit "${VERIFY_STATUS:-0}"'),
+                    (scripts / 'hosted-candidate-check', 'printf "sdk %s\\n" "$1" >> "$EVENTS"'),
+                    (scripts / 'gate', 'printf "full-gate\\n" >> "$EVENTS"; exit 99')):
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            events = root / 'events'
+            env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'],
+                       EVENTS=str(events), CARGO_HOME=str(root), THINKTHEN_LOOPBACK='controlled-loopback')
+            command = ['sh', str(scripts / 'public-export-gate'), '--inside-day-one',
+                       'evidence', 'registration', 'assets', 'cargo', 'swift', 'postgres', 'patterns']
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(events.read_text().splitlines(),
+                             ['verify', 'native-env', 'sdk --day-one-sdk-checks-inside'])
+            events.unlink()
+            result = subprocess.run(command, env=env | {'VERIFY_STATUS': '23'},
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 23, result.stderr)
+            self.assertEqual(events.read_text().splitlines(), ['verify'])
+
     def test_candidate_gate_uses_a_symlinked_temporary_root(self):
         entry = runpy.run_path(str(ROOT / 'scripts/public_export_gate.py'))
         with tempfile.TemporaryDirectory(prefix='candidate-temp-alias-') as temporary:

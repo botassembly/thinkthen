@@ -75,10 +75,7 @@ pub(super) fn drive(
                         name.clone(),
                         core::ToolboxQuestion::admitted(
                             entry.execution(),
-                            entry
-                                .evidence_override()
-                                .unwrap_or(q.evidence_pointer())
-                                .clone(),
+                            entry.field_override().unwrap_or(q.field_pointer()).clone(),
                             stub_identity(&entry.as_question())?,
                         ),
                     ))
@@ -98,10 +95,10 @@ pub(super) fn drive(
         Question::Rank(q) => rank(engine, q, question, records, offsets, &source, &mut sink),
     }
 }
-// A stub answer depends on question content and already selected evidence.
+// A stub answer depends on question content and already selected field.
 // A selector or execution name cannot change the same question's answer.
 fn stub_identity(question: &Question) -> Result<String, Error> {
-    identity(&question.without_evidence(), None)
+    identity(&question.without_field(), None)
 }
 fn identity(question: &Question, name: Option<&str>) -> Result<String, Error> {
     use sha2::{Digest, Sha256};
@@ -113,6 +110,7 @@ struct Evaluated {
     position: NonZeroU64,
     id: Option<RecordId>,
     outcome: core::Outcome,
+    original: Option<Record>,
 }
 struct Context<'a> {
     question: &'a Question,
@@ -136,7 +134,7 @@ fn ordinary<F: core::Function>(
             let pointer = if matches!(question, Question::Annotate(_)) {
                 &core::record::ROOT_POINTER
             } else {
-                question.evidence_pointer()
+                question.field_pointer()
             };
             let prepared = record.prepare(pointer);
             metadata
@@ -146,6 +144,7 @@ fn ordinary<F: core::Function>(
                     NonZeroU64::new(ordinal).unwrap_or(NonZeroU64::MIN),
                     record.id().cloned(),
                     prepared.clone(),
+                    matches!(question, Question::Rank(_)).then_some(record),
                 ));
             prepared
         })
@@ -162,7 +161,7 @@ fn ordinary<F: core::Function>(
                     return;
                 }
             };
-            let Some((position, id, record)) = metadata
+            let Some((position, id, record, original)) = metadata
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
                 .pop_front()
@@ -179,21 +178,21 @@ fn ordinary<F: core::Function>(
                 {
                     for (name, outcome) in entries {
                         if let Some(entry) = q.questions().get(name)
-                            && let Ok(text) = record.evidence_at(
-                                entry.evidence_override().unwrap_or(q.evidence_pointer()),
-                            )
+                            && let Ok(text) =
+                                record.field_at(entry.field_override().unwrap_or(q.field_pointer()))
                         {
                             core::spans::outcome(outcome, &text, offsets);
                         }
                     }
                 }
-            } else if let Ok(text) = &record.evidence {
+            } else if let Ok(text) = &record.field {
                 core::spans::outcome(&mut outcome, text, offsets);
             }
             match convert(Evaluated {
                 position,
                 id,
                 outcome,
+                original,
             }) {
                 Ok(Some(row)) => sink(Ok(row)),
                 Ok(None) => {}
@@ -227,7 +226,7 @@ fn annotation(
                     .ok_or_else(results::mismatch)?;
                 Ok((name, member.entry(outcome)?))
             })
-            .collect::<Result<BTreeMap<_, _>, Error>>()?;
+            .collect::<Result<results::Annotations, Error>>()?;
         Ok(AnyRow::Annotate(Row::new(
             row.position,
             row.id,
@@ -292,13 +291,13 @@ fn rank(
         }
         sink(
             Row::<questions::Rank>::from_outcome(row.position, row.id, source.clone(), row.outcome)
-                .map(AnyRow::Rank),
+                .map(|value| AnyRow::Rank(value.with_original(row.original))),
         );
     }
     for row in failed {
         sink(
             Row::<questions::Rank>::from_outcome(row.position, row.id, source.clone(), row.outcome)
-                .map(AnyRow::Rank),
+                .map(|value| AnyRow::Rank(value.with_original(row.original))),
         );
     }
     Ok(())

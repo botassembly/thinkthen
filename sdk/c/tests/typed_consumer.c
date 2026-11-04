@@ -21,7 +21,7 @@ static void owned_missing_row(void) {
     memset(output.suffix, 0xa5, sizeof output.suffix);
     output.row.struct_size = sizeof output;
     error.struct_size = sizeof error;
-    assert(test_run_missing(&output.row, &error) == THINKTHEN_OK);
+    assert(test_run_missing(&output.row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
     assert(output.row.position == 1);
     assert(strcmp(thinkthen_code_name(output.row.error_code), "record.missing") == 0);
     assert(isnan(output.row.probability));
@@ -44,7 +44,7 @@ static void short_output(void) {
     error.struct_size = sizeof error;
     unsigned char expected[sizeof output];
     memcpy(expected, &output, sizeof output);
-    assert(test_run_missing(&output, &error) == THINKTHEN_ERROR);
+    assert(test_run_missing(&output, &error) < 0);
     assert(memcmp(expected, &output, sizeof output) == 0);
     assert(strcmp(thinkthen_code_name(error.code), "usage.abi") == 0);
     thinkthen_error_free(&error);
@@ -52,7 +52,7 @@ static void short_output(void) {
     error.struct_size = sizeof error.struct_size;
     unsigned char expected_error[sizeof error];
     memcpy(expected_error, &error, sizeof error);
-    assert(test_run_missing(&output, &error) == THINKTHEN_ERROR);
+    assert(test_run_missing(&output, &error) < 0);
     assert(memcmp(expected, &output, sizeof output) == 0);
     assert(memcmp(expected_error, &error, sizeof error) == 0);
 }
@@ -76,7 +76,7 @@ static void retry_admission(void) {
     thinkthen_settings *settings = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
     assert(thinkthen_settings_new(&settings, &error) == THINKTHEN_OK);
-    assert(thinkthen_settings_set_retry(settings, 11, 1, 120000, &error) == THINKTHEN_ERROR);
+    assert(thinkthen_settings_set_retry(settings, 11, 1, 120000, &error) < 0);
     assert(error.code == THINKTHEN_CODE_USAGE_SETTINGS);
     assert(strcmp(thinkthen_code_family(error.code), "usage") == 0);
     thinkthen_error_free(&error);

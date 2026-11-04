@@ -21,7 +21,7 @@ type Output = SyncSender<Result<String, Error>>;
 
 /// The completion of a saved entry, preserving an explicit command's exit status.
 #[derive(Debug)]
-pub enum RunCompletion {
+pub(crate) enum RunCompletion {
     /// Every stage completed successfully.
     Success,
     /// A library, input, output or launch operation failed.
@@ -59,9 +59,10 @@ impl State {
 /// Run an admitted entry with JSON-line records supplied through a bounded channel.
 ///
 /// The caller owns input production and must stop it when `cancel` is set or the
-/// receiver closes. The sink receives complete JSON values without line endings.
+/// receiver closes. The sink receives complete JSON values without line endings,
+/// or the final shell step's text with its original line endings.
 /// All stage workers and declared child groups finish before this returns.
-pub fn execute(
+pub(crate) fn execute(
     entry: &RunEntry,
     client: &Engine,
     cancel: Cancel,
@@ -107,9 +108,15 @@ pub fn execute(
                         index + 1 == entry.0.len(),
                         consume_filter,
                     ),
-                    Step::Shell { arguments, env } => {
-                        shell(arguments, env, index + 1, prior, send, state)
-                    }
+                    Step::Shell { arguments, env } => shell(
+                        arguments,
+                        env,
+                        index + 1,
+                        index + 1 == entry.0.len(),
+                        prior,
+                        send,
+                        state,
+                    ),
                 })
                 .is_err()
             {
@@ -179,10 +186,10 @@ fn function(
     final_step: bool,
     consume_filter: bool,
 ) {
+    // Rank streams its input like every other function; the engine keeps only
+    // its bounded top state, so a long input is never held here.
     let result = if matches!(request.question(), crate::Question::Rank(_)) {
-        finite_records(&input, state, consume_filter).and_then(|records| {
-            Driver::open_records(client, request, records, OffsetUnit::CodePoints)
-        })
+        Driver::open_finite(client, request, OffsetUnit::CodePoints)
     } else {
         Driver::open(client, request, OffsetUnit::CodePoints)
     };
@@ -248,7 +255,9 @@ fn function(
                         *first = Some(error.clone());
                     }
                 }
-                let original = originals.remove(&row.position());
+                let original = originals
+                    .remove(&row.position())
+                    .or_else(|| ranked_item(&row));
                 if !final_step
                     && matches!(&row, crate::results::AnyRow::Filter(filter) if !matches!(filter.outcome(), crate::results::Outcome::Answered { answer: true, .. }))
                 {
@@ -282,34 +291,27 @@ fn function(
     call.cancel();
 }
 
-fn finite_records(
-    input: &Input,
-    state: &State,
-    consume_filter: bool,
-) -> Result<Vec<Record>, Error> {
-    let mut records = Vec::new();
-    while !state.cancel.is_cancelled() {
-        match input.recv_timeout(POLL) {
-            Ok(Ok(line)) => {
-                let line = if consume_filter {
-                    filtered_item(&line).unwrap_or(line)
-                } else {
-                    line
-                };
-                records.push(Record::from_json(&line));
-            }
-            Ok(Err(error)) => return Err(error),
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => return Ok(records),
-        }
+/// The original item the engine keeps with a ranked row, as one JSON value.
+fn ranked_item(row: &crate::results::AnyRow) -> Option<String> {
+    let crate::results::AnyRow::Rank(rank) = row else {
+        return None;
+    };
+    let (kind, bytes) = rank.record()?.original();
+    let text = std::str::from_utf8(bytes).ok()?;
+    match kind {
+        crate::records::RecordKind::Json => Some(text.to_owned()),
+        crate::records::RecordKind::Text => serde_json::to_string(text).ok(),
+        _ => None,
     }
-    Err(crate::retry::cancelled())
 }
 
+/// A step that feeds another step must write one JSON value per line; the
+/// last step may write any text.
 fn shell(
     args: &[String],
     env: &[String],
     ordinal: usize,
+    final_step: bool,
     input: Input,
     output: Output,
     state: &State,
@@ -375,30 +377,34 @@ fn shell(
             return;
         }
         let reading = std::thread::Builder::new().spawn_scoped(scope, || {
-            for line in BufReader::new(stdout).lines() {
-                if state.cancel.is_cancelled() {
-                    break;
-                }
-                match line {
-                    Ok(line) if line.trim().is_empty() => {}
-                    Ok(line) => {
-                        if serde_json::from_str::<serde_json::Value>(&line).is_err() {
-                            state.fail(RunCompletion::Failure(local(
-                                "a declared command wrote an invalid JSON line",
-                            )));
-                            break;
-                        }
-                        if !send(&output, line, state) {
-                            finished.store(true, Ordering::Release);
-                            break;
-                        }
-                    }
+            let mut reader = BufReader::new(stdout);
+            while !state.cancel.is_cancelled() {
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break,
+                    Ok(_) => {}
                     Err(_) => {
                         state.fail(RunCompletion::Failure(local(
                             "the declared command output could not be read as UTF-8",
                         )));
                         break;
                     }
+                }
+                if !final_step {
+                    line.truncate(line.trim_end_matches(['\n', '\r']).len());
+                    if line.trim().is_empty() {
+                        continue;
+                    }
+                    if serde_json::from_str::<serde_json::Value>(&line).is_err() {
+                        state.fail(RunCompletion::Failure(local(
+                            "a declared command wrote an invalid JSON line",
+                        )));
+                        break;
+                    }
+                }
+                if !send(&output, line, state) {
+                    finished.store(true, Ordering::Release);
+                    break;
                 }
             }
         });

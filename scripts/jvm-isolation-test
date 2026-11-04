@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CACHE = Path(os.environ.get('THINKTHEN_JVM_CACHE', Path.home() / '.local/share/thinkthen-build-tools/jvm'))
 JAVA = CACHE / ('jdk-22.0.2+9/Contents/Home' if platform.system() == 'Darwin' else 'jdk-22.0.2+9')
 PLATFORM = 'macos-arm64' if platform.system() == 'Darwin' else 'linux-amd64'
-SOURCE = '''import io.thinkthen.*;
+SOURCE = '''import dev.thinkthen.*;
 import java.util.List;
 public class IsolationCase {
     public static void main(String[] args) {

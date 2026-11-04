@@ -27,14 +27,7 @@ fn rank_prints_originals_or_positions_and_applies_levels_and_top() {
             .unwrap();
             let mut command = support::command();
             command
-                .args([
-                    "rank",
-                    "Priority?",
-                    "--from",
-                    "jsonl",
-                    "--evidence",
-                    "/body",
-                ])
+                .args(["rank", "Priority?", "--from", "jsonl", "--field", "/body"])
                 .env("THINKTHEN_BASE_URL", server.base())
                 .env("THINKTHEN_API_KEY", KEY)
                 .stdin(Stdio::piped())
@@ -103,7 +96,7 @@ fn saved_rank_requests_retain_their_levels_and_evidence() {
         } else {
             ["low", "high"]
         };
-        let entry = json!({"question":{"function":"rank","question":"Priority?","levels":levels,"evidence":"/body"}});
+        let entry = json!({"question":{"function":"rank","question":"Priority?","levels":levels,"field":"/body"}});
         std::fs::write(&path, entry.to_string()).unwrap();
         let server = Loopback::answering(move |q| {
             let p = if q["instructions"].as_str().unwrap().contains("low") {
@@ -161,11 +154,11 @@ fn saved_rank_requests_retain_their_levels_and_evidence() {
 #[test]
 fn rank_preserves_text_framing() {
     for (args, input, expected, code) in [
-        (&[][..], &b"one\r\ntwo"[..], &b"one\r\ntwo"[..], 0),
+        (&[][..], &b"one\r\ntwo"[..], &b"one\r\ntwo\n"[..], 0),
         (
             &["--from", "lines"][..],
             &b"low\r\n\nhigh"[..],
-            &b"highlow\r\n"[..],
+            &b"high\nlow\r\n"[..],
             0,
         ),
     ] {

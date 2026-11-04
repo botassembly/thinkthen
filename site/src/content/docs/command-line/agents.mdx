@@ -1,0 +1,48 @@
+---
+title: Agents
+description: How an AI agent uses ThinkThen through its shell tool, with --json for the details or --check for a yes-or-no exit code, and reads these pages as Markdown.
+goal: The reader sets up an AI agent to call the thinkthen command from its shell and to read the docs as Markdown.
+reader: A developer whose AI agent can run shell commands, or the agent itself
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+
+An AI agent that can run shell commands uses ThinkThen the way a person does: it pipes in the text, asks a question, and reads the answer or the exit code. `--json` gives it the details, and `--check` gives it a yes or no it can branch on.
+
+<Example id="agent-json" />
+
+The agent gets one short line: the status, the answer and the chance of yes. `jq -c` keeps only those fields, so the agent reads a line rather than a page.
+
+## Branch on a yes or no
+
+With `--check`, the answer is also the exit code, which most shell tools hand back to the agent with the output:
+
+<Example id="codes-check-no" />
+
+No exits 1 here. A failed call has a code of its own, with the error on standard error. [Exit codes](/command-line/exit-codes/) lists every code.
+
+## Let the agent learn the command
+
+`thinkthen --help` lists the ten functions, and `thinkthen decide --help` shows a working example, every option, the settings it reads and the exit codes. Each function's help also names the address of its page here, so the agent can read more.
+
+When the text sits in a shell variable, `--text "$message"` passes it without a pipe. Many messages and files go through a pipe or file names, as [File types](/command-line/file-types/) shows.
+
+## Read these pages as Markdown
+
+Every page on this site is also served as Markdown: drop the last `/` of its address and add `.md`. This page is at `https://thinkthen.dev/command-line/agents.md`. `https://thinkthen.dev/llms.txt` lists every page with one line on each, and `https://thinkthen.dev/llms-full.txt` holds every page in one file.
+
+To set an agent up, add two lines to the instructions it reads at the start of each task:
+
+```text
+Use the thinkthen command for questions about text.
+Its docs are at https://thinkthen.dev/llms.txt.
+```
+
+## No MCP server
+
+ThinkThen has no MCP server. An agent with a shell tool needs none: the command is the whole interface, and its help and these pages tell the agent how to call it.
+
+## Next
+
+[decide](/functions/decide/) shows each answer a yes-or-no question can give.

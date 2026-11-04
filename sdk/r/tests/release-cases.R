@@ -37,15 +37,19 @@ cat("R installed release consumer preserves every shared stub row\n")
 # Feature: every named function accepts a data frame through the installed API.
 source(file.path(folder, "support.R"))
 client <- tt_client(backend = "stub")
-quiet_projection <- function(value) withCallingHandlers(value, warning = function(warning) {
-  stopifnot(inherits(warning, "thinkthen_failed_rows"))
-  invokeRestart("muffleWarning")
-})
 for (case in cases) {
   rows <- invoke(case$request$records, case$request$question, client, case$request$name)
-  vector <- quiet_projection(invoke(case$request$records, case$request$question,
-                                   client, case$request$name, vector = TRUE))
-  stopifnot(identical(vector, quiet_projection(tt_answer(rows))))
+  verb <- case$request$question[["function"]]
+  projected <- tt_answer(rows, errors = "na")
+  actual <- tryCatch(invoke(case$request$records, case$request$question,
+                           client, case$request$name, vector = TRUE), thinkthen_failed_rows = identity)
+  if (inherits(actual, "thinkthen_failed_rows")) {
+    stopifnot(identical(actual$rows, rows))
+    actual <- if (verb == "filter") actual$kept else tt_answer(actual$rows, errors = "na")
+  }
+  if (verb == "filter") {
+    stopifnot(identical(actual, case$request$records[rows$position[which(rows$answer)]]))
+  } else stopifnot(identical(actual, projected))
 }
 cat("R installed vector functions preserve every shared stub answer projection\n")
 frame <- data.frame(body = c("Ada works at Acme", "Bea works at Acme"), stringsAsFactors = FALSE)
@@ -53,7 +57,7 @@ records <- lapply(frame$body, function(body) list(body = body))
 functions <- character()
 for (case in cases) {
   q <- case$request$question
-  q$evidence <- "/body"
+  q$field <- "/body"
   verb <- q[["function"]]
   actual <- invoke(frame, q, client)
   expected <- invoke(records, q, client)

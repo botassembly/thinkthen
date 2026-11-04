@@ -1,0 +1,3 @@
+urgency_rank,msg_id,body,status
+1,3,I was charged twice for one invoice.,answered
+2,2,Where is my parcel?,answered

@@ -6,6 +6,7 @@ import socket
 import tempfile
 import threading
 import time
+import traceback
 
 from stress_resources import AccessLost, CRITERION, SHORT_GATE_CRITERION, EXTENDED_CRITERION, growth, sample
 
@@ -154,6 +155,11 @@ class Monitor:
                           for group, rounds in self.groups.items()})
         if self.error:
             report.update(monitor_error=str(self.error),
+                          monitor_error_detail=dict(type=type(self.error).__name__,
+                              errno=getattr(self.error, 'errno', None),
+                              filename=getattr(self.error, 'filename', None),
+                              traceback=''.join(traceback.format_exception(
+                                  type(self.error), self.error, self.error.__traceback__))),
                           growth=dict(criterion=criterion, passed=False, verdict='unverifiable'))
             return report
         if expected_rounds is not None:

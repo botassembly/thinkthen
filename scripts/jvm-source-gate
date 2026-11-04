@@ -1,0 +1,38 @@
+#!/bin/sh
+# Run the full JVM gate from source: prepare JVM tools, build this tree's engine,
+# make the ABI and malformed-row fixtures, then run scripts/jvm-gate.
+# The JVM slice of scripts/interface-source-gate --shared-abi, alone.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+unset CARGO_NET_OFFLINE
+cargo fetch --locked
+scripts/jvm-prepare
+export CARGO_NET_OFFLINE=true
+cargo build --offline --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+build_target=${CARGO_TARGET_DIR:-$PWD/target}
+case "$build_target" in /*) ;; *) build_target="$PWD/$build_target" ;; esac
+case "$(uname -s)" in
+    Linux) native="$build_target/debug/libthinkthen_ffi.so" ;;
+    Darwin) native="$build_target/debug/libthinkthen_ffi.dylib" ;;
+    *) echo 'jvm-source-gate requires Linux or macOS' >&2; exit 2 ;;
+esac
+scratch=$(mktemp -d)
+trap 'status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$status"' EXIT
+trap 'exit 1' HUP INT TERM
+# Every step runs even if another fails, so one report names every failure.
+failed=
+step() {
+    if "$@"; then :; else status=$?; printf 'Failed JVM source gate step (exit %s): %s\n' "$status" "$*" >&2; failed="$failed $1"; fi
+}
+step scripts/native-fixtures --engine "$native" --output "$scratch/abi"
+for kind in invalid-json unanswered-answer unknown-function; do
+    step scripts/abi-minor-check --native "$native" --malformed-row "$kind" --output "$scratch/malformed/$kind"
+done
+unset THINKTHEN_JVM_NATIVE_ASSETS
+step env THINKTHEN_NATIVE_FIXTURES="$scratch/abi" THINKTHEN_MALFORMED_ROW_FIXTURES="$scratch/malformed" scripts/jvm-gate
+if [ -n "$failed" ]; then
+    printf 'JVM source gate failed:%s\n' "$failed" >&2
+    exit 1
+fi
+echo 'JVM source gate passed'

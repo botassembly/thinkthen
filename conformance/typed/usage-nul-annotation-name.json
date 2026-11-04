@@ -3,7 +3,7 @@
   "request": {
     "question": {
       "function": "annotate",
-      "evidence": "/body",
+      "field": "/body",
       "questions": {
         "bad\u0000name": {
           "function": "decide",

@@ -13,15 +13,15 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
   do {
     for try await row in rows { values.append(row) }
   } catch {
-    switch error {
-    case .engine(let failure):
+    if let failure = (error as? ThinkThenError)?.failure {
       return Data("{\"error\":".utf8) + (try encoded(failure.code)) + Data(",\"rows\":".utf8)
         + (try encoded(values)) + Data("}".utf8)
-    case .cancelled:
+    }
+    if error is CancellationError {
       return Data(#"{"error":"local.cancelled","rows":"#.utf8) + (try encoded(values))
         + Data("}".utf8)
-    default: throw error
     }
+    throw error
   }
   return try encoded(values)
 }
@@ -74,7 +74,7 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
   case "filter":
     var rows: [[String: Any]] = []
     let filter = try decoded(FilterQuestion.self, question)
-    let filtered = client.filter(filter, records: records, name: name)
+    let filtered = client.filterResults(filter, records: records, name: name)
     if cancelled { filtered.cancel() }
     for try await result in filtered {
       var row = try JSONSerialization.jsonObject(with: encoded(result.row)) as! [String: Any]
@@ -83,9 +83,11 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
     }
     return try JSONSerialization.data(withJSONObject: rows)
   case "rank":
-    return try await collect(
-      client.rank(decoded(RankQuestion.self, question), records: records, name: name),
-      cancelled: cancelled)
+    let ranked = client.rank(try decoded(RankQuestion.self, question), records: records, name: name)
+    if cancelled { ranked.cancel() }
+    var rows: [RankRow] = []
+    for try await result in ranked { rows.append(result.row) }
+    return try encoded(rows)
   case "find":
     return try await collect(
       client.find(decoded(FindQuestion.self, question), records: records, name: name),
@@ -125,9 +127,10 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
     }
     if args[1] == "toolbox-invalid" {
       do {
-        _ = try Toolbox.fromJSON(args[2])
+        _ = try Toolbox(json: args[2])
         preconditionFailure("malformed saved toolbox was admitted")
-      } catch ThinkThenError.engine(let failure) {
+      } catch {
+        guard let failure = (error as? ThinkThenError)?.failure else { throw error }
         print(failure.code.rawValue)
         print(failure.message)
       }
@@ -138,9 +141,10 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
         _ = try Client(.init(backend: .stub))
         print("accepted")
       } catch {
-        switch error {
+        guard let typed = error as? ThinkThenError else { throw error }
+        switch typed.kind {
         case .engineVersion: print("version")
-        case .engineUnavailable(let message): print(message)
+        case .engineUnavailable: print(typed.message)
         default: throw error
         }
       }
@@ -184,7 +188,7 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
       do {
         _ = try await task.value
         preconditionFailure("held call did not cancel")
-      } catch { try requireError(error, equals: .cancelled) }
+      } catch { guard error is CancellationError else { throw error } }
       return
     }
     if args[1] == "backend" {
@@ -205,14 +209,13 @@ func collect<E: Sendable & Encodable>(_ rows: Rows<E>, cancelled: Bool = false) 
         FileHandle.standardOutput.write(
           try await run(test, url: args.count > 2 ? args[2] : nil, single: single))
       } catch {
-        guard let typed = error as? ThinkThenError else { throw error }
-        switch typed {
-        case .engine(let failure):
+        if let failure = (error as? ThinkThenError)?.failure {
           FileHandle.standardOutput.write(
             Data("{\"error\":".utf8) + (try encoded(failure.code)) + Data("}".utf8))
-        case .cancelled:
+        } else if error is CancellationError {
           FileHandle.standardOutput.write(Data(#"{"error":"local.cancelled"}"#.utf8))
-        default: throw error
+        } else {
+          throw error
         }
       }
       FileHandle.standardOutput.write(Data("\n".utf8))

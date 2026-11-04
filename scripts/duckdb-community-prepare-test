@@ -11,6 +11,7 @@ import tempfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
+from duckdb_release import VERSION
 sys.path.insert(0, str(ROOT / 'scripts'))
 sys.path.insert(0, str(ROOT / 'databases'))
 from testing import child_environment
@@ -32,22 +33,22 @@ def exercise(home):
             calls.append(args)
             return original(*args, **kwargs)
         if args == ('scripts/duckdb-prepare',):
-            marker = tools / 'duckdb/1.4.3/python-wheel'
+            marker = tools / f'duckdb/{VERSION}/python-wheel'
             marker.parent.mkdir(parents=True, exist_ok=True)
-            marker.write_text('duckdb-1.4.3-cp313-fixture.whl\n')
+            marker.write_text(f'duckdb-{VERSION}-cp313-fixture.whl\n')
 
     state['prepared'] = prepared
     for name in ('sdk_tools', 'python_frames', 'r_sources'):
         state[name] = lambda: None
-    pins = json.loads((ROOT / 'databases/duckdb/community-versions.json').read_text())['1.4.3']
-    community = tools / 'duckdb-community/1.4.3'
+    pins = json.loads((ROOT / 'databases/duckdb/community-versions.json').read_text())[VERSION]
+    community = tools / f'duckdb-community/{VERSION}'
     env = dict(child_environment(), HOME=str(home))
     # Preserve the selected prepared compiler/interpreter PATH while isolating
     # homes and credentials, just as other database subprocess tests do.
     with patch.dict(os.environ, env, clear=True):
         for temperature in ('cold', 'warm'):
             action()
-            assert calls[-1:] == [('scripts/duckdb-prepare', '--community', '1.4.3')], calls
+            assert calls[-1:] == [('scripts/duckdb-prepare', '--community', VERSION)], calls
             for project, pin in pins.items():
                 checkout = community / project
                 assert checkout.is_dir(), 'hosted preparation omitted ' + project
@@ -55,7 +56,7 @@ def exercise(home):
                 assert actual == pin, (project, actual, pin)
             print(temperature + ' hosted preparation creates both pinned community checkouts', flush=True)
         assert len(calls) == 2, calls
-        subprocess.run([sys.executable, ROOT / 'databases/duckdb/community-prepare.py', '--check', '1.4.3'],
+        subprocess.run([sys.executable, ROOT / 'databases/duckdb/community-prepare.py', '--check', VERSION],
                        cwd=ROOT, env=env, check=True)
         recipe_env = dict(env, THINKTHEN_DUCKDB_SOURCE=str(community / 'duckdb'),
                           EXTENSION_CI_TOOLS=str(community / 'extension-ci-tools'))
@@ -74,7 +75,7 @@ def exercise(home):
                                         cwd=ROOT, env=env, capture_output=True, text=True)
                 assert result.returncode != 0, (project, defect)
                 assert str(checkout) in result.stderr, result.stderr
-                assert 'run scripts/duckdb-prepare --community 1.4.3' in result.stderr, result.stderr
+                assert f'run scripts/duckdb-prepare --community {VERSION}' in result.stderr, result.stderr
                 assert 'fixture-routing archive' not in result.stderr, result.stderr
                 assert not result.stdout.strip(), result.stdout
             shutil.rmtree(checkout)

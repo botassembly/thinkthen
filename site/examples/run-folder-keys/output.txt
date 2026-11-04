@@ -1,0 +1,2 @@
+{"variable":"THINKTHEN_API_KEY","visible":false}
+{"variable":"OPENAI_API_KEY","visible":false}

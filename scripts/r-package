@@ -21,7 +21,8 @@ out.mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory() as temporary:
     stage = pathlib.Path(temporary) / "thinkthen"
     shutil.copytree(root / "sdk/r", stage, ignore=shutil.ignore_patterns("native", "tests"))
-    shutil.copy2(root / "scripts/native-frameworks", stage / "src/native-frameworks")
+    (stage / "tools").mkdir(exist_ok=True)
+    shutil.copy2(root / "scripts/native-frameworks", stage / "tools/native-frameworks")
     description = stage / "DESCRIPTION"
     package = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]
     description.write_text(re.sub(r"Rust \(>= [^)]*\)",
@@ -33,7 +34,8 @@ with tempfile.TemporaryDirectory() as temporary:
         shutil.copy2(root / name, engine / name)
     for name in ("thinkthen",):
         shutil.copytree(root / "crates" / name, engine / "crates" / name)
-    shutil.copytree(root / "sdk/r/native", engine / "sdk/r/native")
+    shutil.copytree(root / "sdk/r/native", engine / "sdk/r/native",
+                    ignore=shutil.ignore_patterns("tests", ".cargo_vcs_info.json"))
     manifest = engine / "Cargo.toml"
     lines = manifest.read_text().splitlines()
     lines = ['members = ["crates/thinkthen", "sdk/r/native"]' if line.startswith("members =") else line for line in lines]

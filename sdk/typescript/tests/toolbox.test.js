@@ -17,7 +17,7 @@ test("saved toolbox round trip preserves host question fields and shared errors"
   assert.deepEqual(JSON.parse(sdk.serializeToolbox(loaded)), original);
   const client = new sdk.ThinkThen({backend: "stub"});
   try {
-    const originalQuestion = {function: "choose", question: "Which topic?", choices: ["billing", "shipping"], threshold: 0.7, evidence: "/body"};
+    const originalQuestion = {function: "choose", question: "Which topic?", choices: ["billing", "shipping"], threshold: 0.7, field: "/body"};
     const actual = await client.chooseStream(loaded.topic, [{body: "Bill"}]).toArray();
     assert.equal(actual.length, 1);
     assert.deepEqual(actual, await client.chooseStream(originalQuestion, [{body: "Bill"}]).toArray());

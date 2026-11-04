@@ -1,0 +1,11 @@
+shape: (3, 2)
+┌─────────────────────────────────┬───────────┐
+│ message                         ┆ is_refund │
+│ ---                             ┆ ---       │
+│ str                             ┆ bool      │
+╞═════════════════════════════════╪═══════════╡
+│ Please refund my order.         ┆ true      │
+│ Where is my parcel?             ┆ false     │
+│ I was charged twice for one in… ┆ null      │
+└─────────────────────────────────┴───────────┘
+Ask a person: ['I was charged twice for one invoice.']

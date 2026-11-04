@@ -39,6 +39,8 @@ scripts/zig-package "$scratch/archive"
 mkdir "$scratch/unpacked" "$scratch/consumer"
 tar -xzf "$scratch/archive"/thinkthen-zig-*.tar.gz -C "$scratch/unpacked"
 mv "$scratch/unpacked/thinkthen" "$scratch/package"
+# Docs examples never name the stub; the gate selects it the way a reader would.
+readme_example() {
 mkdir -p "$scratch/readme/src"
 cp sdk/zig/tests/*.zig "$scratch/readme/"
 python3 - "$scratch/package/README.md" "$scratch/readme" <<'PYTHON'
@@ -54,12 +56,22 @@ main = blocks[0]
 (root / "build.zig.zon").write_text(Path("sdk/zig/tests/build.zig.zon").read_text())
 PYTHON
 (cd "$scratch/readme" && zig build -j"${CARGO_BUILD_JOBS:-2}" --cache-dir "$scratch/readme-cache")
-"$scratch/readme/zig-out/bin/consumer"
-if [ "${1:-}" = --readme-only ]; then exit 0; fi
+THINKTHEN_BACKEND=stub "$scratch/readme/zig-out/bin/consumer"
+}
+guide_example() {
 python3 scripts/surface-example prepare zig "$scratch/readme/src"
 cp "$scratch/readme/src/records.jsonl" "$scratch/readme/records.jsonl"
 (cd "$scratch/readme" && zig build -j"${CARGO_BUILD_JOBS:-2}" --cache-dir "$scratch/readme-cache")
-(cd "$scratch/readme" && python3 "$root/scripts/surface-example" check zig ./zig-out/bin/consumer)
+(cd "$scratch/readme" && THINKTHEN_BACKEND=stub python3 "$root/scripts/surface-example" check zig ./zig-out/bin/consumer)
+}
+if [ "${1:-}" = --readme-only ]; then
+    readme_example
+    exit 0
+fi
+readme_example
+guide_example
+mkdir "$scratch/examples"
+python3 scripts/zig-guide-examples "$scratch/package" "$scratch/examples"
 cp sdk/zig/tests/*.zig sdk/zig/tests/build.zig.zon "$scratch/consumer/"
 zig fmt --check sdk/zig/src sdk/zig/build.zig sdk/zig/build.zig.zon sdk/zig/tests
 zig_target=$(python3 - <<'PYTHON'

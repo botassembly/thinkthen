@@ -16,10 +16,10 @@ fn engine(base: &str) -> Engine {
         .unwrap()
 }
 
-fn decide(server: &Loopback, threshold: Option<&str>, text: &str) -> Row<Decide> {
+fn decide(server: &Loopback, threshold: Option<Threshold>, text: &str) -> Row<Decide> {
     let mut question = Decide::new("Is it a refund request?").unwrap();
     if let Some(threshold) = threshold {
-        question = question.threshold(threshold.parse().unwrap());
+        question = question.threshold(threshold);
     }
     one(&engine(server.base()), &question, text)
 }
@@ -35,20 +35,28 @@ fn failure_code(row: &Row<Decide>) -> &'static str {
     }
 }
 
+fn cut(value: f64) -> Threshold {
+    Threshold::cut(value).unwrap()
+}
+
+fn band(low: f64, high: f64) -> Threshold {
+    Threshold::band(low, high).unwrap()
+}
+
 #[test]
 fn the_threshold_turns_the_probability_into_yes_no_or_unsure() {
     let cases = [
         (0.5, None, Some(true)),
         (0.49, None, Some(false)),
-        (0.7, Some("0.7"), Some(true)),
-        (0.69, Some("0.7"), Some(false)),
-        (1.0, Some("1"), Some(true)),
-        (0.8, Some("0.2:0.8"), Some(true)),
-        (0.79, Some("0.2:0.8"), None),
-        (0.2, Some("0.2:0.8"), None),
-        (0.19, Some("0.2:0.8"), Some(false)),
-        (0.01, Some("0.01:0.5"), None),
-        (1.0, Some("0.5:1"), Some(true)),
+        (0.7, Some(cut(0.7)), Some(true)),
+        (0.69, Some(cut(0.7)), Some(false)),
+        (1.0, Some(cut(1.0)), Some(true)),
+        (0.8, Some(band(0.2, 0.8)), Some(true)),
+        (0.79, Some(band(0.2, 0.8)), None),
+        (0.2, Some(band(0.2, 0.8)), None),
+        (0.19, Some(band(0.2, 0.8)), Some(false)),
+        (0.01, Some(band(0.01, 0.5)), None),
+        (1.0, Some(band(0.5, 1.0)), Some(true)),
     ];
     for (p, threshold, expected) in cases {
         let server = Loopback::noul(p).unwrap();
@@ -64,12 +72,13 @@ fn the_threshold_turns_the_probability_into_yes_no_or_unsure() {
 
 #[test]
 fn a_threshold_outside_the_rule_is_refused() {
-    for text in [
-        "0", "1.5", "90", "-0.1", "0:0.5", "0:1", "0.5:1.5", "0.9:0.1", "0.5:0.5", ":0.5", "0.5:",
-        "nan", "inf", "x",
-    ] {
-        let error = text.parse::<Threshold>().unwrap_err();
-        assert_eq!(error.code().as_str(), "usage.threshold", "{text}");
+    let cuts = [0.0, 1.5, 90.0, -0.1, f64::NAN, f64::INFINITY]
+        .map(|value| (format!("{value}"), Threshold::cut(value)));
+    let bands = [(0.0, 0.5), (0.0, 1.0), (0.5, 1.5), (0.9, 0.1), (0.5, 0.5)]
+        .map(|(low, high)| (format!("{low}:{high}"), Threshold::band(low, high)));
+    for (case, result) in cuts.into_iter().chain(bands) {
+        let error = result.unwrap_err();
+        assert_eq!(error.code().as_str(), "usage.threshold", "{case}");
     }
 }
 

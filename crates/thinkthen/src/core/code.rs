@@ -23,10 +23,12 @@ macro_rules! codes {
             }
 
             /// The stable integer used by native callers.
+            #[doc(hidden)]
             #[must_use]
             pub const fn abi(self) -> i32 { self as i32 }
 
             /// Read a native code, rejecting unknown integers.
+            #[doc(hidden)]
             #[must_use]
             pub const fn from_abi(value: i32) -> Option<Self> {
                 match value { $($abi => Some(Self::$variant),)+ _ => None }
@@ -67,10 +69,17 @@ mod definition {
         UsageSqlPolicy = 1010, "usage.sql-policy", Usage, false;
         UsageSqlSelection = 1011, "usage.sql-selection", Usage, false;
         UsageAbi = 1012, "usage.abi", Usage, false;
+        UsageClosed = 1013, "usage.closed", Usage, false;
+        UsageFunction = 1014, "usage.function", Usage, false;
+        UsageRecordKind = 1015, "usage.record-kind", Usage, false;
+        UsageOffsets = 1016, "usage.offsets", Usage, false;
+        UsageArgument = 1017, "usage.argument", Usage, false;
+        UsageOption = 1018, "usage.option", Usage, false;
         RecordJson = 2001, "record.json", Record, true;
         RecordMissing = 2002, "record.missing", Record, true;
         RecordTooLarge = 2003, "record.too-large", Record, true;
         RecordInvalid = 2004, "record.invalid", Record, true;
+        RecordEmpty = 2005, "record.empty", Record, true;
         BackendTransport = 3001, "backend.transport", Backend, true;
         BackendStatus = 3002, "backend.status", Backend, true;
         BackendReply = 3003, "backend.reply", Backend, true;

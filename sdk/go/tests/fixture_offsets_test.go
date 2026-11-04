@@ -19,8 +19,8 @@ func utf8Expected(t *testing.T, s *apiCase) {
 		if json.Unmarshal(s.Request.Records[position], &text) != nil {
 			var record map[string]json.RawMessage
 			_ = json.Unmarshal(s.Request.Records[position], &record)
-			if evidence := s.Request.Question.Evidence; evidence != nil && strings.HasPrefix(*evidence, "/") {
-				_ = json.Unmarshal(record[strings.TrimPrefix(*evidence, "/")], &text)
+			if field := s.Request.Question.Field; field != nil && strings.HasPrefix(*field, "/") {
+				_ = json.Unmarshal(record[strings.TrimPrefix(*field, "/")], &text)
 			}
 		}
 		if text == "" {

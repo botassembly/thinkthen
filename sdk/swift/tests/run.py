@@ -11,12 +11,16 @@ import subprocess
 import sys
 import tempfile
 
+env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE", "SystemRoot", "THINKTHEN_SWIFT_AUDIT_LIBRARY") if key in os.environ}
+if sys.argv[1] == '--readme-only':
+    subprocess.run([sys.argv[2]], env=dict(env, THINKTHEN_BACKEND="stub"), check=True, capture_output=True, timeout=120)
+    sys.exit(0)
+
 consumer, root, loopback = sys.argv[1:]
 root = Path(root)
 not_applicable = 0
 sys.path.insert(0, str(root / "scripts"))
 from test_control import read_line, request as fixture_request
-env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LLVM_PROFILE_FILE", "SystemRoot", "THINKTHEN_SWIFT_AUDIT_LIBRARY") if key in os.environ}
 subprocess.run([sys.executable, str(root / "sdk/c/tests/toolbox.py"), consumer, str(root)], env=env, check=True)
 network_env = dict(env, THINKTHEN_API_KEY="loopback-test-key", OPENAI_API_KEY="loopback-test-key")
 
@@ -59,7 +63,6 @@ def normalize(row, backend, model):
     return row
 
 
-subprocess.run([str(Path(consumer).with_name("Readme"))], env=env, check=True, capture_output=True, timeout=120)
 subprocess.run([sys.executable, str(root / "scripts/release/swift.py"), consumer,
                 str(root / "construction/stub.json")], env=env, check=True)
 manifest_path = root / "conformance/typed/manifest.json"
@@ -200,7 +203,7 @@ with fixture(str(manifest_path.parent / "decide-precision.json")) as (_, upstrea
 subprocess.run([sys.executable, str(root / "sdk/swift/tests/thread-start-audit.py"), consumer, "lifetime"], env=env, check=True, timeout=120)
 result = subprocess.run([consumer, "surface"], env=env, capture_output=True, text=True, timeout=120)
 assert result.returncode == 0, (result.stdout, result.stderr)
-assert result.stdout == "", result.stdout
+assert result.stdout == "Swift public interface passed\n", result.stdout
 
 # The library has no path override. Replace the installed resource in each fresh
 # process, so refused fixtures abort if layout access precedes the handshake.

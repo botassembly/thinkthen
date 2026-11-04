@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory() as temporary:
         jvm_sources(folder, name, archive)
         with zipfile.ZipFile(archive) as jar:
             extension = 'java' if name == 'java' else 'kt'
-            package = 'io/thinkthen/' + ('' if name == 'java' else 'kotlin/')
+            package = 'dev/thinkthen/' + ('' if name == 'java' else 'kotlin/')
             generated = folder / 'target/generated-sources/contracts' / package / ('ErrorCode.' + extension)
             assert jar.read(package + 'ErrorCode.' + extension) == generated.read_bytes(), name
 print('JVM publishable metadata and generated ErrorCode sources passed')

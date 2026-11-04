@@ -1,0 +1,2 @@
+{"id":"a1","probability":0.99}
+{"id":"a3","probability":0.7}

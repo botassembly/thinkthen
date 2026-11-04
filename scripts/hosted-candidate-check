@@ -3,25 +3,43 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+if [ "${1:-}" = --homebrew ]; then
+    shift
+    homebrew_python=$(command -v python3)
+    PATH="/opt/homebrew/bin:$PATH"
+    export PATH
+    exec "$homebrew_python" scripts/release-platform-check --homebrew-only "$@"
+fi
 if [ "${1:-}" = --native-inputs ]; then
     shift
     exec python3 scripts/hosted-candidate-inputs "$@"
 fi
-if [ "${1:-}" = --scan ]; then
-    exec ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/runtime-floor-build scripts/release_workflow.py scripts/postgres-installed-prepare-test scripts/hosted-candidate-inputs scripts/release-replay-test scripts/release-staging-test scripts/qualification-continuation-test scripts/public-export-test scripts/public_export_gate.py scripts/native-producer-test scripts/stress-dispatch-test scripts/loader-failure-check scripts/release-floor-inputs-test scripts/qualification-recipe-test scripts/release_workflow_prepare.py scripts/release_rust.py scripts/release_prepare_common.py databases/duckdb/community-prepare.py scripts/duckdb-community-prepare-test
+if [ "${1:-}" = --day-one-sdk-checks-from-producers ]; then
+    shift
+    exec python3 scripts/public_export_gate.py day-one "$@"
 fi
-if [ "${1:-}" = --loader-checks ]; then
-    [ "$#" -eq 5 ] || { echo 'usage: hosted-candidate-check --loader-checks CARGO_HOME TARGET FLOOR_IMAGE SWIFT_IMAGE' >&2; exit 2; }
+if [ "${1:-}" = --day-one-docs-checks ]; then
+    python3 scripts/release-preparation-test
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/day-one-docs-test scripts/sdk-readme-examples scripts/release_install.py scripts/release-documentation-test scripts/native_platform.py scripts/native-pair scripts/native-prepare scripts/release-preparation-test
+    git diff --check
+    exit
+fi
+if [ "${1:-}" = --scan ]; then
+    exec ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/runtime-floor-build scripts/release_workflow.py scripts/postgres-installed-prepare-test scripts/hosted-candidate-inputs scripts/release-replay-test scripts/release-staging-test scripts/release-platform-check scripts/release-platform-test scripts/qualification-continuation-test scripts/public-export-test scripts/public_export_gate.py scripts/native-producer-test scripts/stress-dispatch-test scripts/loader-failure-check scripts/release-floor-inputs-test scripts/qualification-recipe-test scripts/release_workflow_prepare.py scripts/release_rust.py scripts/release_prepare_common.py databases/duckdb/community-prepare.py scripts/duckdb-community-prepare-test
+fi
+if [ "${1:-}" = --loader-checks ] || [ "${1:-}" = --day-one-sdk-checks ]; then
+    check_mode=$1
+    [ "$#" -eq 5 ] || { echo 'usage: hosted-candidate-check MODE CARGO_HOME TARGET FLOOR_IMAGE SWIFT_IMAGE' >&2; exit 2; }
     export CARGO_HOME="$2" CARGO_TARGET_DIR="$3" THINKTHEN_FLOOR_IMAGE="$4" THINKTHEN_SWIFT_IMAGE="$5"
     export THINKTHEN_DOCKER_IN_FLOOR=1
     scratch=$(mktemp -d)
-    trap 'status=$?; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
+    trap 'status=$?; set +e; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
     ln -s "$scratch" "$scratch/temporary"
     export TMPDIR="$scratch/temporary"
-    scripts/runtime-floor-build scripts/hosted-candidate-check --loader-checks-inside
+    scripts/runtime-floor-build scripts/hosted-candidate-check "$check_mode-inside"
     exit
 fi
-if [ "${1:-}" = --loader-checks-inside ]; then
+if [ "${1:-}" = --loader-checks-inside ] || [ "${1:-}" = --day-one-sdk-checks-inside ]; then
     pair=$(mktemp)
     scripts/native-pair export "$pair"
     scripts/native-pair import "$pair" "$(scripts/native-prepare --path)"
@@ -30,25 +48,45 @@ if [ "${1:-}" = --loader-checks-inside ]; then
     export THINKTHEN_GATE_STRICT=1 THINKTHEN_SDK_GATE_RUNNER=scripts/linux-binding-gate
     export THINKTHEN_SWIFT_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback"
     status=0
-    for gate in ruby-gate csharp-gate swift-gate; do
+    gates="ruby-gate csharp-gate swift-gate"
+    if [ "$1" = --day-one-sdk-checks-inside ]; then gates="jvm-gate ruby-gate zig-sdk-gate"; fi
+    for gate in $gates; do
         if scripts/linux-binding-gate "scripts/$gate"; then :; else status=1; fi
     done
     exit "$status"
+fi
+if [ "${1:-}" = --installer-checks ]; then
+    shift
+    export THINKTHEN_DOCKER_IN_FLOOR=1
+    exec scripts/runtime-floor-build scripts/hosted-candidate-check "$@"
 fi
 if [ "${1:-}" = --baseline ]; then
     [ "$#" -eq 3 ] || { echo 'usage: hosted-candidate-check --baseline REVISION TEST' >&2; exit 2; }
     current=$PWD
     scratch=$(mktemp -d)
-    trap 'status=$?; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
+    trap 'status=$?; set +e; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
     git archive "$2" | tar -x -C "$scratch"
     git -C "$scratch" init --quiet
     git -C "$scratch" add -f .
-    for test in stress-dispatch-test release-staging-test qualification-continuation-test qualification-recipe-test public-export-test duckdb-community-prepare-test; do
+    for test in stress-dispatch-test release-staging-test release-platform-test qualification-continuation-test qualification-recipe-test public-export-test duckdb-community-prepare-test; do
         cp "$current/scripts/$test" "$scratch/scripts/$test"
     done
+    cp "$current/scripts/stress-resource-lifetime-test" "$scratch/scripts/stress-resource-lifetime-test"
     cd "$scratch"
     if [ "$3" = release-staging-test ]; then /bin/bash --version; fi
     python3 "scripts/$3"
+    exit
+fi
+if [ "${1:-}" = --sampler-scan ]; then
+    ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/stress_resources.py scripts/stress_monitor.py scripts/stress-resource-lifetime-test scripts/postgres-resource-proof
+    for tool in vulture deptry jscpd; do
+        if command -v "$tool" >/dev/null 2>&1; then
+            printf '%s available\n' "$tool"
+        else
+            printf '%s unavailable\n' "$tool"
+        fi
+    done
+    git diff --check
     exit
 fi
 if [ "$#" -gt 0 ]; then

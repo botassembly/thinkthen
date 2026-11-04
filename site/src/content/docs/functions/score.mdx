@@ -1,0 +1,80 @@
+---
+title: score
+description: score places a piece of text on a scale of levels you name, from lowest to highest, and prints a number from 0 to 1.
+goal: A newcomer who needs to measure how much of something a text shows leaves able to get a score, read a low and a higher score, see the chance of each level, use more levels, and score every row of a CSV file.
+reader: Someone at the command line who needs to measure a text on a scale, such as how urgent it is
+kind: how-to
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "score: place a text on a scale from 0 to 1"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
+
+score places a piece of text on a scale of levels you name, from lowest to highest. It prints a number from 0, the lowest level, to 1, the highest.
+
+<Example id="score-low" />
+
+Close to 0: a refund request is routine, not urgent.
+
+## A higher score
+
+<Example id="score-high" />
+
+Higher: a double charge is more urgent than a plain refund request, but still nearer routine than urgent.
+
+## See why
+
+<details class="example-disclosure">
+<summary>See why</summary>
+
+`--json` prints the details. This `jq` keeps the chance of each level, lowest first.
+
+<Example id="score-why" />
+
+routine has 0.95 and urgent 0.05. The score weighs each level by its place on the scale, so with two levels it is the chance of the higher one. [JSON output](/reference/json-output/) lists every field.
+
+</details>
+
+## Use more levels
+
+<details class="example-disclosure">
+<summary>Use more levels</summary>
+
+Name the levels with `--level`, lowest first. With three levels, the middle one counts as 0.5.
+
+<Example id="score-levels" />
+
+score always prints a number from 0 to 1, however many levels you name.
+
+</details>
+
+## Score every row of a CSV file
+
+<details class="example-disclosure">
+<summary>Score every row of a CSV file</summary>
+
+<ExampleFile id="score-into" file="messages.csv" />
+
+<Example id="score-into" />
+
+`--column` names the column to read, and `--into` names the new answer column. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+
+</details>
+
+## Options
+
+<details class="example-disclosure">
+<summary>Options</summary>
+
+<FunctionOptions name="score" />
+
+</details>
+
+If score can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+
+**In code:** [Python](/sdks/python/#score) · [TypeScript](/sdks/typescript/#score) · [Go](/sdks/go/#score) · [Java](/sdks/java/#score) · [Kotlin](/sdks/kotlin/#score) · [C#](/sdks/csharp/#score) · [R](/sdks/r/#score) · [Ruby](/sdks/ruby/#score) · [Rust](/sdks/rust/#score) · [Swift](/sdks/swift/#score) · [Zig](/sdks/zig/#score) · [C](/sdks/c/#score) · [C++](/sdks/cpp/#score) · [DuckDB](/sdks/duckdb/#score) · [SQLite](/sdks/sqlite/#score) · [PostgreSQL](/sdks/postgresql/#score)
+
+Next: [rank](/functions/rank/) sorts lines from highest to lowest on the same kind of scale.

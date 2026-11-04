@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Run every complete authored Go program against the staged consumer module."""
+from pathlib import Path
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+root = Path(__file__).resolve().parents[2]
+consumer = Path.cwd()
+guide = (root / 'docs/surfaces/go.md').read_text()
+records = re.search(r'```json\n(.*?)```', guide, re.S)
+if records is None:
+    raise SystemExit('Go guide has no records.jsonl fixture')
+triage = re.search(r'Save this as `triage.json`:\s+```json\n(.*?)```', guide, re.S)
+if triage is None:
+    raise SystemExit('Go guide has no literal triage.json fixture')
+environment = dict(os.environ, THINKTHEN_BACKEND='stub')
+for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH', 'THINKTHEN_LIBRARY'):
+    environment.pop(name, None)
+count = 0
+with tempfile.TemporaryDirectory(prefix='go-examples-', dir=consumer) as scratch:
+    for source in (root / 'sdk/go/README.md', root / 'docs/surfaces/go.md'):
+        for number, program in enumerate(re.findall(r'```go\n(.*?)```', source.read_text(), re.S), 1):
+            if not program.startswith('package main\n'):
+                continue
+            count += 1
+            folder = Path(scratch) / str(count)
+            folder.mkdir()
+            (folder / 'main.go').write_text(program)
+            (folder / 'records.jsonl').write_text(records.group(1))
+            (folder / 'triage.json').write_text(triage.group(1))
+            result = subprocess.run([str(root / 'scripts/go-build'), 'run', '.'], cwd=folder, env=environment, capture_output=True, text=True)
+            print(f'Go example {source.relative_to(root)} #{number}:', flush=True)
+            print(result.stdout, end='', flush=True)
+            if result.returncode:
+                print(result.stderr, end='', file=sys.stderr)
+                raise SystemExit(result.returncode)
+if count != 6:
+    raise SystemExit(f'Expected six complete authored Go programs, found {count}')
+print('All six authored Go programs ran as written', flush=True)

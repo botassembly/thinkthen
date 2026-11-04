@@ -11,7 +11,7 @@ use super::*;
 use crate::{ABI_VERSION, Code, questions};
 pub use builders::{QuestionBuilder, ToolboxBuilder};
 pub use events::Events;
-pub use recording::{recording_evidence, validate_recording_answer};
+pub use recording::{recording_field, validate_recording_answer};
 pub use sql::{
     sql_engine, sql_engine_unrestricted, sql_postgres_id_error, sql_postgres_record,
     sql_postgres_row, sql_question, sql_request, sql_settings, sql_settings_with_policy,
@@ -123,6 +123,14 @@ pub const fn version() -> u32 {
 pub fn abi_error() -> Error {
     super::abi_error()
 }
+/// Explain how a C caller initializes an empty row output without changing its ABI error code.
+#[must_use]
+pub fn uninitialized_row_error() -> Error {
+    Error::from_contract(
+        Code::UsageAbi,
+        "row.struct_size is 0; initialize it with THINKTHEN_ROW_INIT",
+    )
+}
 /// Map a caught native-boundary panic without unwinding through a host.
 #[must_use]
 pub fn internal_error() -> Error {
@@ -203,7 +211,24 @@ pub fn cancelled_error() -> Error {
 #[must_use]
 pub fn closed_client_error() -> Error {
     Error::from_contract(
-        Code::UsageAbi,
+        Code::UsageClosed,
         crate::core::diagnostic::requirement("client", "an open client", "a closed client"),
+    )
+}
+
+/// Report a wrong native argument value using the engine's stable code and message.
+#[must_use]
+pub fn argument_error(code: Code) -> Error {
+    let (field, expected) = match code {
+        Code::UsageBackend => ("backend", "a known backend"),
+        Code::UsageFunction => ("function", "a known function"),
+        Code::UsageRecordKind => ("record kind", "a known record kind"),
+        Code::UsageOffsets => ("offsets", "a known string offset unit"),
+        Code::UsageName => ("name", "the name of an existing question"),
+        _ => ("argument", "a supported argument value"),
+    };
+    Error::from_contract(
+        code,
+        crate::core::diagnostic::requirement(field, expected, "an unsupported value"),
     )
 }

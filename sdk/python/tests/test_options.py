@@ -25,9 +25,9 @@ def test_saved_questions_keep_function_domains(function: str, domain: str) -> No
     ).question("entry")
     client = tt.Client(backend="stub")
     expected = getattr(client, function)("Which?", "alpha", **{domain: ["a", "b"]})
-    assert getattr(client, function)(question, "alpha") == expected
+    assert getattr(client, function)(question, "alpha").to_dict() == expected.to_dict()
     with getattr(client, function + "_stream")(question, ["alpha"]) as rows:
-        assert list(rows) == [expected]
+        assert [row.to_dict() for row in rows] == [expected.to_dict()]
 
 
 def test_evidence_pointer_maps_to_the_shared_record_selection() -> None:
@@ -35,7 +35,7 @@ def test_evidence_pointer_maps_to_the_shared_record_selection() -> None:
     with Loopback(path) as server:
         client = tt.Client(url=server.url, api_key="synthetic")
         selected = client.decide(
-            "Ready?", {"id": "r", "body": "evidence"}, evidence="/body"
+            "Ready?", {"id": "r", "body": "evidence"}, field="/body"
         )
         inline = client.decide("Ready?", "evidence")
         assert selected.answer == inline.answer is True

@@ -1,0 +1,19 @@
+---
+// HTML and Markdown read the same complete source and captured stream bytes.
+import { Code } from '@astrojs/starlight/components';
+import CapturedOutput from './CapturedOutput.astro';
+import { readExample, unverifiedLabel, outputStreams } from '../lib/examples.mjs';
+interface Props { id: string; title?: string; lines?: number; wrap?: boolean }
+const { id, title, wrap = true } = Astro.props;
+const ex = readExample(id);
+const streams = outputStreams(ex) as ['stdout' | 'stderr', string][];
+---
+<div class="example" data-example={id} data-example-language={ex.lang} data-unverified={ex.unverified || undefined}>
+  <Code code={ex.show} lang={ex.lang} title={title} frame={['sh', 'powershell'].includes(ex.lang) ? 'terminal' : 'code'} wrap={wrap} />
+  <p class="example-label">{ex.unverified ? unverifiedLabel(ex) : 'Output'}</p>
+  {streams.map(([stream, text]) => <CapturedOutput text={text} stream={stream} />)}
+</div>
+<style>
+  .example-label { font-size: var(--sl-text-sm); color: var(--sl-color-gray-3); margin-block: 0; }
+  .example > :global(.expressive-code) { margin-block: 0; }
+</style>

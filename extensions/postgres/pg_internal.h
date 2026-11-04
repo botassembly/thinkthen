@@ -17,7 +17,7 @@ typedef struct TtId { uint64 position; thinkthen_text value; } TtId;
 typedef struct TtOwner {
     thinkthen_sql_call *call;
     thinkthen_question *question;
-    uint32 function;
+    thinkthen_function function;
     int record_column;
     int id_column;
     uint64 input_position;
@@ -29,6 +29,13 @@ typedef struct TtOwner {
     Portal source;
     bool spi_connected;
     bool admitting;
+    bool keep_failures;
+    uint64 rows;
+    uint64 failed;
+    uint64 backend_failed;
+    uint64 first_failed_position;
+    int first_failed_code;
+    char *first_failed_message;
     MemoryContextCallback cleanup;
 } TtOwner;
 
@@ -46,6 +53,8 @@ void tt_restore_signals(const sigset_t *saved);
 void tt_release(void *context);
 void tt_check(TtOwner *owner, int result);
 int tt_sqlstate(int code);
+void tt_raise(int code, const char *message, const char *extra_hint);
+void tt_finish(TtOwner *owner);
 thinkthen_client *tt_client(TtOwner *owner);
 char *tt_utf8(const char *source, size_t length, size_t *converted_length);
 text *tt_server_text(const char *source, size_t length);

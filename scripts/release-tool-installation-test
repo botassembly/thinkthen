@@ -37,8 +37,8 @@ class ToolInstallation(unittest.TestCase):
         if surface == 'windows':
             with zipfile.ZipFile(archive, 'w') as zipped:
                 zipped.write(compiler, 'archive-root/' + relative)
-            duck = root / 'duck.zip'
-            with zipfile.ZipFile(duck, 'w'):
+            duck = root / 'duck.tar.gz'
+            with tarfile.open(duck, 'w:gz'):
                 pass
         else:
             with tarfile.open(archive, 'w:xz') as tar:

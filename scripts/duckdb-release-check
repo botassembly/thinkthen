@@ -1,0 +1,22 @@
+#!/bin/sh
+# Compile a debug-fixture consumer and load it in the exact release host.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+if [ "${1:-}" = --prepare ]; then python3 scripts/duckdb_release.py; shift; fi
+[ "$#" -eq 0 ] || { echo 'usage: scripts/duckdb-release-check [--prepare]' >&2; exit 2; }
+scripts/native-test-assets prepare
+eval "$(scripts/native-test-assets env)"
+export THINKTHEN_SQL_ARCHIVE="$THINKTHEN_SQL_TEST_ARCHIVE"
+duckdb_version=$(python3 scripts/duckdb_release.py --version)
+export THINKTHEN_DUCKDB_DEPS="$HOME/.local/share/thinkthen-build-tools/duckdb/$duckdb_version"
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+export THINKTHEN_DUCKDB_OUTPUT="$scratch/package"
+scripts/duckdb-build
+python3 databases/duckdb/tests/official-hosts.py "$scratch/package" "$THINKTHEN_DUCKDB_DEPS"
+community="$HOME/.local/share/thinkthen-build-tools/duckdb-community/$duckdb_version"
+THINKTHEN_DUCKDB_SOURCE="$community/duckdb" EXTENSION_CI_TOOLS="$community/extension-ci-tools" \
+    python3 databases/duckdb/tests/community-recipe.py
+sh databases/duckdb/tests/development.sh
+printf 'DuckDB %s loads the compiled extension in its official CLI and Python hosts\n' "$duckdb_version"

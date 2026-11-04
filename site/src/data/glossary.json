@@ -1,0 +1,15 @@
+{
+  "about": "Read by scripts/check-landing.mjs (rule L8). Only ThinkThen's own terms that a newcomer cannot guess from plain English; each term's page defines it in bold or with 'A term is'. Each term's first use on a page must link to its page or be defined there. pattern is a case-insensitive regular expression for the term's forms; it defaults to the term with an optional s.",
+  "terms": {
+    "field": {
+      "page": "/how-thinkthen-judges/#the-terms"
+    },
+    "toolbox": {
+      "page": "/toolboxes/",
+      "pattern": "\\btoolbox(es)?\\b"
+    },
+    "backend": {
+      "page": "/install/backends/"
+    }
+  }
+}

@@ -1,0 +1,4 @@
+msg_id,is_refund,topic,urgency,status
+1,t,billing,0.05,answered
+2,f,shipping,0.14,answered
+3,t,billing,0.45,answered

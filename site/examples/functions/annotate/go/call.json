@@ -1,0 +1,5 @@
+{
+  "anchor": "\tfor triage, err := range client.AnnotateAll(",
+  "before": 0,
+  "after": 2
+}

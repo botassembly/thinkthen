@@ -1,0 +1,16 @@
+decide: true
+filter: a1 kept=true
+filter: a2 kept=false
+filter: a3 kept=true
+choose: billing
+tag: ["billing","shipping"]
+score: 0.05
+rank: 1 a3
+rank: 2 a2
+rank: 3 a1
+find: "Please refund my order."
+recognize: person Morgan
+recognize: organization Example Group
+relate: Morgan works_for Example Group
+annotate: refund true
+annotate: topic billing

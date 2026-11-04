@@ -1,0 +1,2 @@
+{"id":"a3","text":"I was charged twice for one invoice.","is_refund":"unsure"}
+{"id":"a4","is_refund":null}

@@ -4,7 +4,7 @@ mkdir -p /work/home /work/build /work/package/lib /work/package/share/extension
 cp /src/extensions/postgres/*.c /src/extensions/postgres/*.h /src/extensions/postgres/Makefile \
     /src/extensions/postgres/*.sql /src/extensions/postgres/*.control /work/build/
 cd /work/build
-python3 /src/extensions/postgres/generate.py /src/schemas/contract.json thinkthen--0.2.0.sql
+python3 /src/extensions/postgres/generate.py /src/schemas/contract.json thinkthen--0.2.0.sql thinkthen--0.1.0--0.2.0.sql
 route_object=
 if [ -n "${THINKTHEN_SQL_TEST_BUILD:-}" ]; then
     cc -std=c11 -Wall -Wextra -Werror -fPIC -fvisibility=hidden \

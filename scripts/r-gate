@@ -3,6 +3,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
+case "${1:-}" in
+  '') ;;
+  --source) export THINKTHEN_R_SOURCE_NATIVE=1 ;;
+  *) echo 'usage: scripts/r-gate [--source]' >&2; exit 2 ;;
+esac
 python3 sdk/r/tests/comparison.py
 export CARGO_NET_OFFLINE=true
 export R_HOME="$(R RHOME)"
@@ -25,7 +30,7 @@ if ! R CMD INSTALL --library="$scratch/library" "$scratch"/thinkthen_*.tar.gz >"
 fi
 tail -3 "$scratch/install.log"
 profile=release
-if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then profile=debug; fi
+if [ "${THINKTHEN_R_SOURCE_NATIVE:-0}" = 1 ] || [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then profile=debug; fi
 python3 scripts/package-profile "$CARGO_TARGET_DIR/thinkthen-r-artifacts.json" \
     "$CARGO_TARGET_DIR/$profile/libthinkthen_r.a" "$profile" "$scratch/install.log"
 cargo build -p loopback --bin loopback --locked

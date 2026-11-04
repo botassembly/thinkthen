@@ -53,7 +53,7 @@ fn passing_records_keep_their_exact_input_bytes() {
         (
             &["--from", "lines"],
             b" refund first \r\nparcel\nmaybe\nbroken\nrefund last",
-            b" refund first \r\nrefund last",
+            b" refund first \r\nrefund last\n",
         ),
         (
             &["--from", "text"],
@@ -126,16 +126,6 @@ fn details_print_every_row_including_no_and_failure() {
 }
 
 #[test]
-fn empty_single_text_still_has_a_details_row() {
-    let output = run(&["--from", "text", "--json"], b"");
-    let row: Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(row["position"], 1);
-    assert_eq!(row["answer"], false);
-    assert_eq!(row["item"], "");
-    assert_eq!(output.status.code(), Some(0));
-}
-
-#[test]
 fn invalid_text_reports_failure_and_keeps_preceding_passes() {
     for (args, input, expected) in [
         (&[][..], &b"refund\xff"[..], &b""[..]),
@@ -178,7 +168,7 @@ fn closed_output_reports_local_failure_for_originals_and_details() {
 
 #[test]
 fn jsonl_filter_output_keeps_all_rows_and_their_original_identifiers() {
-    let output=run(&["--from", "jsonl","--json","--evidence","/body"], b" { \"id\": 1, \"body\": \"refund\" }\r\n{\"body\":\"parcel\"}\ninvalid\n{\"body\":\"refund last\"}");
+    let output=run(&["--from", "jsonl","--json","--field","/body"], b" { \"id\": 1, \"body\": \"refund\" }\r\n{\"body\":\"parcel\"}\ninvalid\n{\"body\":\"refund last\"}");
     let rows: Vec<Value> = String::from_utf8(output.stdout)
         .unwrap()
         .lines()
@@ -218,7 +208,7 @@ fn invalid_utf8_has_a_null_item_and_keeps_the_failed_row() {
 fn json_filter_retains_the_exact_original_json_value() {
     let original = r#"{ "id": 18446744073709551615, "body": "refund", "number": 1.2300e+2 }"#;
     let output = run(
-        &["--from", "jsonl", "--json", "--evidence", "/body"],
+        &["--from", "jsonl", "--json", "--field", "/body"],
         original.as_bytes(),
     );
     assert_eq!(output.status.code(), Some(0));

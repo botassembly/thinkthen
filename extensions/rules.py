@@ -26,7 +26,6 @@ def arguments(function):
 
 def header():
     lines = ['/* Generated from published schemas during packaging. */']
-    lines.append('#define TT_DEFAULT_BACKEND_NAME ' + json.dumps(CLIENT['properties']['backend']['default']))
     lines.append('static int tt_setting(const char *key) {')
     for key, (retry, definition) in SETTINGS.items():
         kind = 1 if key in ('backend', 'model') else 2

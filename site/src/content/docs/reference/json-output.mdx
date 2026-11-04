@@ -1,0 +1,80 @@
+---
+title: JSON output
+description: The fields of each line --json prints, for answered, not-sure and failed answers, and the answer and details of each of the ten functions.
+goal: A developer or agent reading --json output finds what each field holds, for every status and every function.
+reader: A developer or agent who parses thinkthen --json output, or the same answers from an SDK
+kind: reference
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "JSON output: every field --json prints"
+---
+import Example from '../../../components/Example.astro';
+
+With `--json`, ThinkThen prints one line of JSON for each text it judges. Each line says whether it answered, was not sure or failed, with the answer, its probability and its details; the SDKs return the same fields.
+
+`jq .` spreads each line out so you can read it. A yes:
+
+<Example id="ref-json-answered" />
+
+## The fields on every line
+
+| Field | What it holds |
+| --- | --- |
+| `function` | The function that answered, such as `decide`. |
+| `position` | Where the text came in the input, counting from 1. |
+| `id` | The `id` of the JSON line, when it has one. A string or a whole number, exactly as it was. |
+| `source` | Which question was asked, and where. See below. |
+| `status` | `answered`, `unsure` for not sure, or `failed`. |
+
+`source` holds:
+
+| Field | What it holds |
+| --- | --- |
+| `question_identity` | A fingerprint of the question. The same question asked the same way has the same fingerprint. |
+| `backend` | The service that answered, such as `systemone`. |
+| `model` | The model that answered. |
+| `name` | The name from `--name`, when you gave one. |
+
+## The fields for each status
+
+**`answered`** adds `answer`, and `probability` and `detail` for the functions that have them.
+
+**`unsure`** adds `probability`, which fell short of your bar for a sure answer, and `detail` for the functions that have it. It has no `answer`.
+
+<Example id="ref-json-unsure" />
+
+Not sure: the chance of yes falls between the bars of 0.2 and 0.8.
+
+**`failed`** adds `error`, with its `code` and `message`, and `http_status` when the service sent one. It has no `answer`. [Troubleshooting](/reference/troubleshooting/) lists each code.
+
+<Example id="ref-json-failed" />
+
+Failed: the line has no `text` field to judge.
+
+## The answer and details of each function
+
+| Function | `answer` | `detail` |
+| --- | --- | --- |
+| [decide](/functions/decide/) | `true` or `false` | none |
+| [filter](/functions/filter/) | `true` or `false` | none |
+| [choose](/functions/choose/) | One of your choices | `labels`: the chance of each choice |
+| [tag](/functions/tag/) | A list of the labels that fit | `labels`: the chance of each label |
+| [score](/functions/score/) | A number from 0 to 1 along your levels | `levels`: the chance of each level, in your order |
+| [rank](/functions/rank/) | The text's place, counting from 1 | `levels`: the chance of each level, in your order |
+| [find](/functions/find/) | The part that answers, as `text`, `start` and `end`, or `null` when none does | none |
+| [recognize](/functions/recognize/) | A list of names, each with `text`, `start`, `end`, `kind` and `probability` | `names` and `pieces`: the chance of each kind for each name and piece |
+| [relate](/functions/relate/) | A list of links, each with `source`, `relation`, `target` and `probability` | `names`, and `pairs`: the chance of each allowed link |
+| [annotate](/functions/annotate/) | An object with one answer per question name | none |
+
+`start` and `end` count characters from 0, and `end` is the position after the last character. In relate, `source` and `target` are names, each with `text`, `start`, `end` and `kind`, and `either` is `true` when the link can go either way.
+
+Each answer inside annotate has the `function`, `status`, `answer`, `probability`, `detail` and `error` fields of its own function, without `position`, `id` or `source`.
+
+## The extra fields from filter
+
+filter adds two fields on the command line. `item` holds the text or JSON line it judged, and `kept` is `true` for a line it keeps.
+
+## Next
+
+[JSON Lines](/command-line/json-lines/) shows how to keep your own fields and add the answer with `--into`.

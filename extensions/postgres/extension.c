@@ -20,7 +20,7 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
     int code;
     int last = PG_NARGS();
     if (PG_ARGISNULL(0) || PG_ARGISNULL(last - 3) || PG_ARGISNULL(last - 2))
-        ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE), errmsg("source_sql, params and record_column cannot be SQL NULL")));
+        ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("source_sql, params and record_column cannot be SQL NULL")));
     InitMaterializedSRF(fcinfo, MAT_SRF_USE_EXPECTED_DESC);
     invocation = AllocSetContextCreate(CurrentMemoryContext, "ThinkThen invocation", ALLOCSET_DEFAULT_SIZES);
     previous = MemoryContextSwitchTo(invocation);
@@ -55,7 +55,7 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
         if (!PG_ARGISNULL(last - 4)) {
             text *value = PG_GETARG_TEXT_PP(last - 4);
             size_t length;
-            name.data = (uint8_t *)tt_utf8(VARDATA_ANY(value), VARSIZE_ANY_EXHDR(value), &length);
+            name.data = tt_utf8(VARDATA_ANY(value), VARSIZE_ANY_EXHDR(value), &length);
             name.len = length;
         }
         TT_BRIDGE(code = thinkthen_sql_call_open_question(client, owner->question,
@@ -84,6 +84,7 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
             elog(ERROR, "cannot close source SPI scope");
         owner->spi_connected = false;
         tt_release(owner);
+        tt_finish(owner);
     }
     PG_CATCH();
     {
@@ -106,10 +107,11 @@ static Datum run(FunctionCallInfo fcinfo, const char *function)
     return (Datum)0;
 }
 
+/* The C library's own one-call functions use thinkthen_<function>, so these symbols say pg. */
 #define TT_FUNCTION(name) \
-    PG_FUNCTION_INFO_V1(thinkthen_##name); \
-    PGDLLEXPORT Datum thinkthen_##name(PG_FUNCTION_ARGS); \
-    Datum thinkthen_##name(PG_FUNCTION_ARGS) { return run(fcinfo, #name); }
+    PG_FUNCTION_INFO_V1(thinkthen_pg_##name); \
+    PGDLLEXPORT Datum thinkthen_pg_##name(PG_FUNCTION_ARGS); \
+    Datum thinkthen_pg_##name(PG_FUNCTION_ARGS) { return run(fcinfo, #name); }
 TT_FUNCTION(decide)
 TT_FUNCTION(choose)
 TT_FUNCTION(tag)

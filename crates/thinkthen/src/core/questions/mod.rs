@@ -10,6 +10,9 @@ mod choose_execution;
 pub(crate) use choose_execution::complete_choice;
 mod collection;
 mod domains;
+mod option;
+pub use option::AnswerOption;
+use option::OptionWire;
 mod predicates;
 #[cfg(feature = "native")]
 pub(crate) mod recording;
@@ -70,9 +73,11 @@ macro_rules! functions {
                 command::CommandSpec { description, threshold, check, list }
             }
             /// Its explicit stable native discriminator.
+            #[doc(hidden)]
             #[must_use]
             pub const fn abi(self)->u32{self as u32}
             /// Reject unknown native discriminators.
+            #[doc(hidden)]
             #[must_use]
             pub const fn from_abi(value:u32)->Option<Self>{match value{$($abi=>Some(Self::$variant),)+ANNOTATE_ABI=>Some(Self::Annotate),_=>None}}
         }
@@ -93,7 +98,7 @@ macro_rules! functions {
         /// ```compile_fail
         /// use thinkthen::questions::{AnnotatableQuestion, Annotate, Decide};
         /// let entry: AnnotatableQuestion = Decide::new("Ready?").unwrap().into();
-        /// let annotation = Annotate::new(std::collections::BTreeMap::from([("ready".into(), entry)])).unwrap();
+        /// let annotation = Annotate::new([("ready", entry)]).unwrap();
         /// let _: AnnotatableQuestion = annotation.into();
         /// ```
         #[non_exhaustive]
@@ -124,10 +129,10 @@ macro_rules! functions {
         }
         impl AnnotatableQuestion {
             pub(crate) fn as_question(&self) -> Question { match self { $(Self::$member(question) => Question::$member(question.clone()),)+ } }
-            /// The child's explicit evidence selection, or none to inherit annotation evidence.
+            /// The child's explicit field selection, or none to inherit annotation field.
             #[must_use]
-            pub fn evidence_override(&self) -> Option<&Pointer> {
-                match self { $(Self::$member(value) => value.evidence.as_ref(),)+ }
+            pub fn field_override(&self) -> Option<&Pointer> {
+                match self { $(Self::$member(value) => value.field.as_ref(),)+ }
             }
         }
         $(impl From<$member> for AnnotatableQuestion { fn from(value: $member) -> Self { Self::$member(value) } })+
@@ -180,32 +185,32 @@ macro_rules! functions {
             /// The function this admitted question names.
             #[must_use]
             pub const fn function(&self) -> FunctionName { match self { $(Self::$variant(_) => FunctionName::$variant,)+ Self::Annotate(_) => FunctionName::Annotate } }
-            pub(crate) fn without_evidence(&self) -> Self {
+            pub(crate) fn without_field(&self) -> Self {
                 let mut question = self.clone();
-                match &mut question { $(Self::$variant(value) => value.evidence = None,)+ Self::Annotate(value) => value.evidence = None }
+                match &mut question { $(Self::$variant(value) => value.field = None,)+ Self::Annotate(value) => value.field = None }
                 question
             }
             #[cfg(feature="native")]
-            pub(crate) fn evidence_override(&self)->Option<&Pointer>{match self{$(Self::$variant(value)=>value.evidence.as_ref(),)+Self::Annotate(value)=>value.evidence.as_ref()}}
-            /// The admitted evidence selection for this question.
+            pub(crate) fn field_override(&self)->Option<&Pointer>{match self{$(Self::$variant(value)=>value.field.as_ref(),)+Self::Annotate(value)=>value.field.as_ref()}}
+            /// The admitted field selection for this question.
             #[must_use]
-            pub fn evidence_pointer(&self) -> &Pointer { match self { $(Self::$variant(value) => value.evidence_pointer(),)+ Self::Annotate(value) => value.evidence_pointer() } }
+            pub fn field_pointer(&self) -> &Pointer { match self { $(Self::$variant(value) => value.field_pointer(),)+ Self::Annotate(value) => value.field_pointer() } }
         }
     };
 }
 functions! {
     annotatable {
-        Decide: DecideWire=1 => ("Judge whether evidence answers a question", command::ThresholdOption::Band, true, None),
+        Decide: DecideWire=1 => ("Judge whether a record answers a question", command::ThresholdOption::Band, true, None),
         Choose: ChooseWire=2 => ("Choose one answer from ordered choices", command::ThresholdOption::Band, true, Some(("choice", "choices", "THINKTHEN_CHOICES", "Choice; repeat in order"))),
-        Tag: TagWire=3 => ("Assign labels to evidence", command::ThresholdOption::Cut, false, Some(("label", "labels", "THINKTHEN_LABELS", "Label; repeat in order"))),
-        Score: ScoreWire=4 => ("Score evidence on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high"))),
-        Filter: FilterWire=5 => ("Keep evidence that answers a question", command::ThresholdOption::Band, true, None),
-        Find: FindWire=7 => ("Find the evidence unit that answers a question", command::ThresholdOption::Cut, true, None),
-        Recognize: RecognizeWire=8 => ("Recognize named kinds in evidence", command::ThresholdOption::Cut, false, Some(("kind", "kinds", "THINKTHEN_KINDS", "Kind; repeat in order"))),
+        Tag: TagWire=3 => ("Assign labels to records", command::ThresholdOption::Cut, false, Some(("label", "labels", "THINKTHEN_LABELS", "Label; repeat in order"))),
+        Score: ScoreWire=4 => ("Score records on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high"))),
+        Filter: FilterWire=5 => ("Keep records that answer a question", command::ThresholdOption::Band, true, None),
+        Find: FindWire=7 => ("Find the record unit that answers a question", command::ThresholdOption::Cut, true, None),
+        Recognize: RecognizeWire=8 => ("Recognize named kinds in records", command::ThresholdOption::Cut, false, Some(("kind", "kinds", "THINKTHEN_KINDS", "Kind; repeat in order"))),
         Relate: RelateWire=9 => ("Find relations between recognized names", command::ThresholdOption::Cut, false, None)
     }
     collection {
-        Rank: RankWire=6 => ("Rank evidence on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high")))
+        Rank: RankWire=6 => ("Rank records on ordered levels", command::ThresholdOption::None, false, Some(("level", "levels", "THINKTHEN_LEVELS", "Scale level; repeat low to high")))
     }
     annotation { ("Answer named questions about each record", command::ThresholdOption::None, false, None) }
 }
@@ -230,12 +235,12 @@ impl Question {
     }
 }
 
-// Omission inherits annotation evidence; an explicit empty pointer selects the root.
-fn deserialize_evidence<'de, D: serde::Deserializer<'de>>(
+// Omission inherits annotation field; an explicit empty pointer selects the root.
+fn deserialize_field<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<String>, D::Error> {
-    crate::core::diagnostic::evidence(deserializer).map(Some)
+    crate::core::diagnostic::field(deserializer).map(Some)
 }
-fn admit_evidence(value: Option<String>) -> Result<Option<Pointer>, Error> {
+fn admit_field(value: Option<String>) -> Result<Option<Pointer>, Error> {
     value.map(|pointer| pointer.parse()).transpose()
 }

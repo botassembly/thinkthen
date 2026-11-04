@@ -7,12 +7,13 @@ use std::time::Duration;
 use pyo3::exceptions::PyException;
 use pyo3::prelude::*;
 use pyo3::sync::MutexExt;
-use pyo3::types::PyIterator;
+use pyo3::types::{PyBytes, PyIterator, PyString};
 use thinkthen::{
     Cancel, Engine, OffsetUnit, Request, Settings,
     native::{Call, Event},
     questions::{Question, Toolbox},
-    records::Record,
+    records::{Record, RecordKind},
+    results::AnyRow,
 };
 
 pyo3::create_exception!(
@@ -321,6 +322,30 @@ fn input_record(item: Bound<'_, PyAny>) -> PyResult<(Record, Py<PyAny>)> {
     Ok((record, original))
 }
 
+/// An equal copy of a ranked record, or unavailable when the host value had no
+/// JSON form; the row then carries its own record error.
+fn ranked_item(py: Python<'_>, record: Option<&Record>) -> PyResult<(bool, Py<PyAny>)> {
+    let Some(record) = record else {
+        return Ok((false, py.None()));
+    };
+    let (kind, bytes) = record.original();
+    Ok(match kind {
+        RecordKind::Text => {
+            let text = std::str::from_utf8(bytes)
+                .map_err(|_| error(thinkthen::native::internal_error()))?;
+            (true, PyString::new(py, text).into_any().unbind())
+        }
+        RecordKind::Json => {
+            let value = py
+                .import("json")?
+                .call_method1("loads", (PyBytes::new(py, bytes),))?;
+            (true, value.unbind())
+        }
+        RecordKind::Missing => (true, py.None()),
+        _ => (false, py.None()),
+    })
+}
+
 #[derive(Debug)]
 struct StreamState {
     call: Option<Call>,
@@ -393,13 +418,21 @@ impl NativeStream {
                 Some(Event::Row(row)) => {
                     let position = usize::try_from(row.position())
                         .map_err(|_| error(thinkthen::native::abi_error()))?;
-                    let original = state
-                        .originals
-                        .remove(&position)
-                        .unwrap_or_else(|| py.None());
+                    let (available, original) = match &row {
+                        // Rank keeps no host objects: its item is a copy of the
+                        // engine's own bounded record.
+                        AnyRow::Rank(ranked) => ranked_item(py, ranked.record())?,
+                        _ => (
+                            true,
+                            state
+                                .originals
+                                .remove(&position)
+                                .unwrap_or_else(|| py.None()),
+                        ),
+                    };
                     let json = serde_json::to_string(&row)
                         .map_err(|_| error(thinkthen::native::internal_error()))?;
-                    return Ok(Some((json, None, true, original, position)));
+                    return Ok(Some((json, None, available, original, position)));
                 }
                 Some(Event::Finished) => {
                     state.call.take();

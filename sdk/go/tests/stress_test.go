@@ -59,16 +59,16 @@ func stressConsume(c *tt.Client, s stressPacket, call int, widths *atomic.Uint64
 		id, ok := row.ID()
 		text, isText := id.StringValue()
 		widths.Or(uint64(1) << len(text))
-		if row.Position() != uint64(received) || !ok || !isText || text != fmt.Sprintf("call-%d-record-%d", call, s.IdentifierBase+received-1) {
+		if row.Position() != received || !ok || !isText || text != fmt.Sprintf("call-%d-record-%d", call, s.IdentifierBase+received-1) {
 			return failed, errors.New("stress lost input position or id")
 		}
 		if row.Status() == tt.Failed {
 			failed++
-			if row.Error() == nil || row.Error().Code().String() != s.Scenario.Code {
+			if rowFailure(row.Err()) == nil || rowFailure(row.Err()).Code().String() != s.Scenario.Code {
 				return failed, errors.New("stress changed failure code")
 			}
 		} else {
-			value, present := row.Value()
+			value, present := valueOf(row)
 			probability, hasProbability := row.Probability()
 			if row.Status() != tt.Answered || !present || !value || !hasProbability || probability != s.Probability {
 				return failed, errors.New("stress changed answer")
@@ -91,7 +91,7 @@ func stressAdapter(s stressPacket) (stressReport, error) {
 		wire = tt.OpenAI
 	}
 	r := s.Client.Retry
-	c, err := tt.New(tt.Config{Backend: wire, Model: s.Client.Model, URL: s.Client.URL, APIKey: tt.APIKey(s.Client.APIKey), Batch: &s.Client.Batch,
+	c, err := tt.New(tt.Config{Backend: wire, Model: s.Client.Model, URL: s.Client.URL, APIKey: tt.APIKey(s.Client.APIKey), Batch: s.Client.Batch,
 		Retry: &tt.Retry{MaxRetries: r.MaxRetries, InitialBackoff: time.Duration(r.InitialBackoff) * time.Millisecond, AttemptTimeout: time.Duration(r.AttemptTimeout) * time.Millisecond}})
 	if err != nil {
 		return report, err

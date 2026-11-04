@@ -12,6 +12,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
+import tempfile
 
 from release_workflow import checksums, run, version
 from release_registry_check import install, install_python
@@ -33,25 +34,35 @@ def brew(packages, release, scratch):
     """Use the generated formula unchanged and seed its exact release download."""
     tap = 'botassembly/release-check'
     name = tap + '/thinkthen'
-    env = dict(os.environ, HOMEBREW_NO_AUTO_UPDATE='1', HOMEBREW_NO_INSTALL_CLEANUP='1',
-               HOMEBREW_NO_ANALYTICS='1', HOMEBREW_CACHE=str(scratch / 'brew-cache'))
-    run('brew', 'tap-new', '--no-git', tap, env=env)
-    installed = False
-    try:
-        repository = Path(subprocess.check_output(['brew', '--repository', tap], env=env, text=True).strip())
-        formula = repository / 'Formula/thinkthen.rb'
-        shutil.copy2(packages / 'homebrew/thinkthen.rb', formula)
-        cached = Path(subprocess.check_output(['brew', '--cache', '--formula', name], env=env, text=True).strip())
-        archive = release / f'thinkthen-{version()}-macos-arm64.tar.gz'
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(archive, cached)
-        run('brew', 'install', '--formula', name, env=env)
-        installed = True
-        run('brew', 'test', name, env=env)
-    finally:
-        if installed:
-            run('brew', 'uninstall', '--formula', name, env=env)
-        run('brew', 'untap', tap, env=env)
+    with tempfile.TemporaryDirectory(prefix='brew-config-', dir=scratch) as config:
+        env = dict(os.environ, HOMEBREW_NO_AUTO_UPDATE='1', HOMEBREW_NO_INSTALL_CLEANUP='1',
+                   HOMEBREW_NO_ANALYTICS='1', HOMEBREW_CACHE=str(scratch / 'brew-cache'),
+                   XDG_CONFIG_HOME=config, HOMEBREW_DEVELOPER='1')
+        run('brew', 'tap-new', '--no-git', tap, env=env)
+        install_attempted = False
+        try:
+            repository = Path(subprocess.check_output(['brew', '--repository', tap], env=env, text=True).strip())
+            formula = repository / 'Formula/thinkthen.rb'
+            shutil.copy2(packages / 'homebrew/thinkthen.rb', formula)
+            # --cache loads Ruby before install can grant implicit formula trust.
+            # https://docs.brew.sh/Tap-Trust
+            run('brew', 'trust', '--formula', name, env=env)
+            cached = Path(subprocess.check_output(['brew', '--cache', '--formula', name], env=env, text=True).strip())
+            archive = release / f'thinkthen-{version()}-macos-arm64.tar.gz'
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(archive, cached)
+            cellar = Path(subprocess.check_output(['brew', '--cellar', name], env=env, text=True).strip())
+            if cellar.exists():
+                raise ValueError('Homebrew rehearsal requires an absent installation: ' + str(cellar))
+            install_attempted = True
+            run('brew', 'install', '--formula', name, env=env)
+            run('brew', 'test', name, env=env)
+        finally:
+            try:
+                if install_attempted and cellar.exists():
+                    run('brew', 'uninstall', '--formula', name, env=env)
+            finally:
+                run('brew', 'untap', tap, env=env)
 
 
 def main():
@@ -59,22 +70,27 @@ def main():
     parser.add_argument('release', type=Path)
     parser.add_argument('revision')
     parser.add_argument('scratch', type=Path)
+    parser.add_argument('--homebrew-only', action='store_true',
+                        help='run only the macOS Homebrew consumer after full artifact admission')
     args = parser.parse_args()
     release, scratch = args.release.resolve(), args.scratch.resolve()
     scratch.mkdir(parents=True)
     packages = admit(release, args.revision, scratch)
+    if args.homebrew_only and __import__('platform').system() != 'Darwin':
+        parser.error('--homebrew-only requires macOS')
     failures = []
     outcomes = {}
     phases = [('prepare-nuget', lambda: release_installed_prepare.dotnet(scratch)),
               ('prepare-maven', lambda: release_installed_prepare.jvm(packages, scratch)),
               ('npm-nuget-maven', lambda: install(packages, scratch, lambda name, result: outcomes.update({name: result}))),
               ('python', lambda: install_python(packages, scratch))]
+    if args.homebrew_only: phases = []
     if __import__('platform').system() == 'Darwin':
         phases.append(('homebrew', lambda: brew(packages, release, scratch)))
     for name, check in phases:
         try:
             check()
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - Report every consumer before failing the run.
             outcomes[name] = {'outcome': 'failure', 'error': str(error)}
             failures.append(name)
         else:

@@ -1,0 +1,5 @@
+{
+  "anchor": "\ttopic, err := tt.Answer(client.Choose(context.Background(), topicQuestion,",
+  "before": 0,
+  "after": 2
+}

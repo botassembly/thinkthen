@@ -1,4 +1,4 @@
-//! Records: the evidence a question judges, and the id its row carries.
+//! Records: the field a question judges, and the id its row carries.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -7,9 +7,12 @@ use std::str::FromStr;
 use serde::ser::{Serialize, Serializer};
 use serde_json::value::RawValue;
 
-use crate::core::error::{Error, ErrorKind};
+use crate::core::{
+    Code,
+    error::{Error, ErrorKind},
+};
 
-/// A JSON Pointer, as RFC 6901 defines it. It names the evidence inside each record.
+/// A JSON Pointer, as RFC 6901 defines it. It names the field inside each record.
 ///
 /// The empty pointer, the default, names the whole record.
 #[derive(Debug, Clone, Default)]
@@ -31,7 +34,7 @@ impl FromStr for Pointer {
             Error::new(
                 ErrorKind::Pointer,
                 crate::core::diagnostic::requirement(
-                    "evidence",
+                    "field",
                     "a JSON Pointer as RFC 6901 defines it, such as /body",
                     "a string (contents redacted)",
                 ),
@@ -49,6 +52,12 @@ impl FromStr for Pointer {
             text: text.to_owned(),
             tokens,
         })
+    }
+}
+
+impl Pointer {
+    pub(crate) fn leaf(&self) -> Option<&str> {
+        self.tokens.last().map(String::as_str)
     }
 }
 
@@ -90,8 +99,14 @@ fn step<'a>(value: &'a RawValue, token: &str) -> Option<&'a RawValue> {
 }
 
 /// The text of a JSON string, or the JSON spelling of any other value.
-fn text_of(value: &RawValue) -> String {
-    serde_json::from_str::<String>(value.get()).unwrap_or_else(|_| value.get().to_owned())
+fn text_of(value: &RawValue) -> Result<String, Error> {
+    if value.get() == "null" {
+        return Err(Error::from_contract(
+            Code::RecordMissing,
+            "the record is missing",
+        ));
+    }
+    Ok(serde_json::from_str::<String>(value.get()).unwrap_or_else(|_| value.get().to_owned()))
 }
 
 /// The id a row carries: the record's own `id`, or its position from 1.
@@ -129,11 +144,11 @@ impl Serialize for Id {
     }
 }
 
-/// One record: the evidence its question judges, and its id when it names one.
+/// One record: the field its question judges, and its id when it names one.
 #[derive(Debug, Clone)]
 pub(crate) struct Record {
     pub(crate) id: Option<Id>,
-    pub(crate) evidence: Result<String, Error>,
+    pub(crate) field: Result<String, Error>,
     structured: Option<Box<RawValue>>,
 }
 
@@ -141,23 +156,23 @@ impl Record {
     pub(crate) fn failed(error: Error) -> Self {
         Self {
             id: None,
-            evidence: Err(error),
+            field: Err(error),
             structured: None,
         }
     }
 
-    /// A record whose evidence is `text`.
+    /// A record whose field is `text`.
     #[must_use]
     pub(crate) fn text(text: impl Into<String>) -> Self {
         Self {
             id: None,
-            evidence: Ok(text.into()),
+            field: Ok(text.into()),
             structured: None,
         }
     }
 
     /// A record read from the JSON `line`. Its `id` member, unless missing or
-    /// null, becomes the row's id, and `on` names its evidence. A string is judged as its text and
+    /// null, becomes the row's id, and `on` names its field. A string is judged as its text and
     /// any other value as its JSON spelling.
     ///
     /// A line that is not JSON fails with `usage.record`, and a pointer that finds
@@ -167,12 +182,12 @@ impl Record {
         let Ok(record) = serde_json::from_str::<&RawValue>(line) else {
             return Self {
                 id: None,
-                evidence: Err(Error::new(ErrorKind::Record, "the record is not JSON")),
+                field: Err(Error::new(ErrorKind::Record, "the record is not JSON")),
                 structured: None,
             };
         };
         let selected = select(record, on);
-        let evidence = selected
+        let field = selected
             .map(|value| {
                 if on.tokens.is_empty()
                     && let Ok(mut members) =
@@ -182,7 +197,7 @@ impl Record {
                     return serde_json::to_string(&members)
                         .map_err(|_| Error::new(ErrorKind::Record, "the record is not JSON"));
                 }
-                Ok(text_of(value))
+                text_of(value)
             })
             .unwrap_or_else(|| Err(missing(Some(record), on)));
         let structured = selected
@@ -192,26 +207,84 @@ impl Record {
             id: step(record, "id")
                 .filter(|id| id.get() != "null")
                 .map(|id| Id(IdKind::Given(id.to_owned()))),
-            evidence,
+            field,
             structured,
         }
     }
 
-    /// Read a pointer within this record's selected evidence. Text stays text.
+    /// Build named field with the same pointer admission as one selection.
+    pub(crate) fn json_fields(line: &str, pointers: &[Pointer]) -> Self {
+        let mut record = Self::json(line, &ROOT_POINTER);
+        let Ok(raw) = serde_json::from_str::<&RawValue>(line) else {
+            return record;
+        };
+        let mut fields = BTreeMap::new();
+        for pointer in pointers {
+            let selected = Self::json(line, pointer);
+            if let Err(error) = selected.field {
+                record.field = Err(error);
+                return record;
+            }
+            let Some(value) = select(raw, pointer) else {
+                record.field = Err(missing(Some(raw), pointer));
+                return record;
+            };
+            let Some(name) = pointer.leaf() else {
+                record.field = Err(Error::new(
+                    ErrorKind::Pointer,
+                    "repeated field requires named fields",
+                ));
+                return record;
+            };
+            fields.insert(name, value);
+        }
+        match serde_json::to_string(&fields) {
+            Ok(json) => {
+                record.structured = serde_json::from_str(&json).ok();
+                record.field = Ok(json);
+            }
+            Err(_) => record.field = Err(Error::new(ErrorKind::Record, "the record is not JSON")),
+        }
+        record
+    }
+
+    /// Read a pointer within this record's selected field. Text stays text.
     ///
     /// # Errors
     /// Returns the record's admission error, or `usage.missing` for an absent member.
-    pub(crate) fn evidence_at(&self, on: &Pointer) -> Result<String, Error> {
-        let text = self.evidence.as_ref().map_err(Clone::clone)?;
+    pub(crate) fn field_at(&self, on: &Pointer) -> Result<String, Error> {
+        let text = self.field.as_ref().map_err(Clone::clone)?;
         if on.tokens.is_empty() {
             return Ok(text.clone());
         }
-        self.structured
+        let selected = self
+            .structured
             .as_deref()
             .and_then(|record| select(record, on))
-            .map(text_of)
-            .ok_or_else(|| missing(self.structured.as_deref(), on))
+            .ok_or_else(|| missing(self.structured.as_deref(), on))?;
+        let text = text_of(selected)?;
+        validate_field(&text, selected.get().starts_with(['{', '[']))?;
+        Ok(text)
     }
+}
+
+fn validate_field(text: &str, structured: bool) -> Result<(), Error> {
+    let empty_container = structured
+        && match text.chars().next() {
+            Some('{') => serde_json::from_str::<BTreeMap<String, &RawValue>>(text)
+                .is_ok_and(|values| values.is_empty()),
+            Some('[') => {
+                serde_json::from_str::<Vec<&RawValue>>(text).is_ok_and(|values| values.is_empty())
+            }
+            _ => false,
+        };
+    if text.trim().is_empty() || empty_container {
+        return Err(Error::from_contract(
+            Code::RecordEmpty,
+            "the record is empty",
+        ));
+    }
+    Ok(())
 }
 
 fn missing(record: Option<&RawValue>, on: &Pointer) -> Error {
@@ -236,7 +309,7 @@ fn select<'a>(record: &'a RawValue, on: &Pointer) -> Option<&'a RawValue> {
         .try_fold(record, |value, token| step(value, token))
 }
 
-/// A record whose selected evidence passed admission.
+/// A record whose selected field passed admission.
 #[derive(Debug, Clone)]
 pub(crate) struct AdmittedRecord(Record);
 
@@ -244,20 +317,21 @@ impl AdmittedRecord {
     /// Admit a record before preparing any question about it.
     ///
     /// # Errors
-    /// Returns the record's parse or evidence-selection error.
+    /// Returns the record's parse or field-selection error.
     pub(crate) fn new(record: Record) -> Result<Self, Error> {
-        record.evidence.as_ref().map_err(Clone::clone)?;
+        let field = record.field.as_ref().map_err(Clone::clone)?;
+        validate_field(field, record.structured.is_some())?;
         Ok(Self(record))
     }
 
-    /// The admitted evidence.
+    /// The admitted field.
     #[must_use]
     #[expect(
         clippy::expect_used,
-        reason = "admission rejects every record without evidence"
+        reason = "admission rejects every record without field"
     )]
-    pub(crate) fn evidence(&self) -> &str {
-        self.0.evidence.as_deref().expect("admitted evidence")
+    pub(crate) fn field(&self) -> &str {
+        self.0.field.as_deref().expect("admitted field")
     }
 
     /// The original record, including its selected JSON type.

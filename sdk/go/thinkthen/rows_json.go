@@ -26,3 +26,21 @@ func (r Row[A, D]) MarshalJSON() ([]byte, error) {
 	}{Function(r.row.function).String(), r.row.position, r.row.id, r.row.source,
 		r.row.status, r.row.answer, r.row.probability, r.row.detail, failed})
 }
+
+// MarshalJSON exports the filter outcome, including whether the record was kept.
+func (r FilterRow) MarshalJSON() ([]byte, error) {
+	data, err := r.Row.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	var fields map[string]json.RawMessage
+	if err = json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	kept, err := json.Marshal(r.Kept())
+	if err != nil {
+		return nil, err
+	}
+	fields["kept"] = kept
+	return json.Marshal(fields)
+}

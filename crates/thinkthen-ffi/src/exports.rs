@@ -18,18 +18,19 @@ use thinkthen::{
     native::{self, Event},
     records::Record,
 };
-/// A row or successful operation.
+/// Success: the function did what it says, or wrote the next row.
 pub const THINKTHEN_OK: i32 = 0;
-/// Successful completion, including after record failures.
+/// A call has no more rows; failed records do not change this.
 pub const THINKTHEN_END: i32 = 1;
-/// One input slot is reserved before the host sends its next record.
+/// A streaming call waits for the next record or thinkthen_call_end_input.
 pub const THINKTHEN_NEEDS_INPUT: i32 = 2;
-/// A call-level error, separate from the row status and code registry.
+/// Not sure; no answer was written. This is not an engine error code.
+pub const THINKTHEN_UNSURE: i32 = 4;
+/// Kept for compatibility. Failures return the negative of a thinkthen_code, never this value.
 pub const THINKTHEN_ERROR: i32 = -1;
 pub(crate) const OK: i32 = THINKTHEN_OK;
 pub(crate) const END: i32 = THINKTHEN_END;
 pub(crate) const NEEDS_INPUT: i32 = THINKTHEN_NEEDS_INPUT;
-pub(crate) const ERROR: i32 = THINKTHEN_ERROR;
 pub(crate) fn guarded<T>(run: impl FnOnce() -> T) -> std::thread::Result<T> {
     catch_unwind(AssertUnwindSafe(run))
 }
@@ -39,65 +40,96 @@ pub(crate) unsafe fn operation(
     run: impl FnOnce() -> Result<i32, Error>,
 ) -> i32 {
     /* SAFETY: only the first size field is read until its supported prefix is validated. */
-    let Some(size) = (unsafe { error_size(error) }) else {
-        return ERROR;
-    };
-    /* SAFETY: the validated slot owns no live allocation on entry. */
-    unsafe {
-        HostError::empty(size).write(error);
+    let size = unsafe { error_size(error) };
+    if !error.is_null() && size.is_none() {
+        return -Code::UsageAbi.abi();
+    }
+    if let Some(size) = size {
+        /* SAFETY: an initialized error owns its message, which an earlier call may
+         * have left; freeing it here lets the caller reuse the variable. */
+        unsafe {
+            HostError::clear(error, size);
+        }
     }
     match guarded(run).unwrap_or_else(|_| Err(native::internal_error())) {
         Ok(status) => status,
         Err(failure) => {
-            /* SAFETY: the supported prefix is writable and exclusively owned. */
-            unsafe {
-                HostError::from_error(size, &failure).write(error);
+            if let Some(size) = size {
+                /* SAFETY: the supported prefix is writable and exclusively owned. */
+                unsafe {
+                    HostError::from_error(size, &failure).write(error);
+                }
             }
-            ERROR
+            -failure.code().abi()
         }
     }
 }
-/// Return the shared call-level error for host settings conversion failure.
+/// Fill error with the shared usage.settings error, for a binding that cannot convert its own
+/// settings.
+///
+/// Returns -THINKTHEN_CODE_USAGE_SETTINGS.
 /// # Safety
-/// The error is an exclusive, empty writable slot with a supported struct_size.
+/// Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_conversion_error(error: *mut HostError) -> i32 {
     /* SAFETY: the caller lends the sized error slot until return. */
     unsafe { operation(error, || Err(native::settings_conversion_error())) }
 }
-/// Return the shared call-level error for host question conversion failure.
+/// Fill error with the shared usage.question error, for a binding that cannot convert its own
+/// question.
+///
+/// Returns -THINKTHEN_CODE_USAGE_QUESTION.
 /// # Safety
-/// The error is an exclusive, empty writable slot with a supported struct_size.
+/// Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_conversion_error(error: *mut HostError) -> i32 {
     /* SAFETY: the caller lends the sized error slot until return. */
     unsafe { operation(error, || Err(native::question_conversion_error())) }
 }
-/// Return the shared cancellation error after a host interrupts a completed pull.
+/// Fill error with the shared local.cancelled error, for a binding that stops a call itself.
+///
+/// Returns -THINKTHEN_CODE_LOCAL_CANCELLED.
 /// # Safety
-/// The error is an exclusive, empty writable slot with a supported struct_size.
+/// Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_cancelled_error(error: *mut HostError) -> i32 {
     /* SAFETY: the caller lends the sized error slot until return. */
     unsafe { operation(error, || Err(native::cancelled_error())) }
 }
-/// Native ABI major/minor, independent of package version.
+/// Return the loaded library's binary interface version.
+///
+/// THINKTHEN_ABI_MAJOR is in the high 16 bits and THINKTHEN_ABI_MINOR in the low 16. Pass it
+/// with THINKTHEN_ABI_VERSION to thinkthen_abi_compatible. Any thread may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_abi_version() -> u32 {
     thinkthen::ABI_VERSION
 }
-/// Process-lifetime NUL-terminated package version; never free this pointer.
+/// Return the loaded library's version, such as "0.2.0".
+///
+/// The string is NUL-terminated and lasts for the whole process; never free it. Compare it with
+/// THINKTHEN_VERSION. Any thread may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_version() -> *const c_char {
     concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast()
 }
-/// Process-lifetime dotted code name, or NULL for an unknown integer.
+/// Return a code's dotted name, such as "record.empty", or NULL for an unknown code.
+///
+/// value may be positive or negative. The string is NUL-terminated and lasts for the whole
+/// process; never free it. Any thread may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_code_name(value: i32) -> *const c_char {
     code_metadata(value).map_or(ptr::null(), |(_, name, _)| name.as_ptr())
 }
-/// Process-lifetime NUL-terminated family, or NULL for an unknown code, including zero.
-/// The family comes from the engine registry. Never free the returned pointer.
+/// Return a code's family, such as "record", or NULL for an unknown code or 0.
+///
+/// The string is NUL-terminated and lasts for the whole process; never free it. Any thread may
+/// call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_code_family(value: i32) -> *const c_char {
     code_metadata(value).map_or(ptr::null(), |(_, _, family)| family.as_ptr())
@@ -120,9 +152,20 @@ fn code_metadata(value: i32) -> Option<&'static (i32, std::ffi::CString, std::ff
         .iter()
         .find(|(code, _, _)| *code == value)
 }
-/// Open a client from a copied typed settings snapshot.
+/// Open a client from settings, or from the environment when settings is NULL.
+///
+/// With NULL settings, THINKTHEN_BACKEND picks the backend and the backend's own variables give
+/// the key and URL. The client copies the settings, so they may be freed at once. Returns
+/// THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+/// -THINKTHEN_CODE_USAGE_BACKEND for an unknown THINKTHEN_BACKEND,
+/// -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set, or another
+/// usage code for settings that are not valid. The caller owns *out and frees it with
+/// thinkthen_client_free; an old handle in *out is not freed.
 /// # Safety
-/// Handles are live; out/error are distinct, empty writable slots.
+/// Any thread may call this. settings is NULL or live, and no thread changes it during the
+/// call. out is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+/// return it holds the code and message; passing it again frees what it held, so a reused error
+/// leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_client_open(
     settings: *const SettingsHandle,
@@ -133,15 +176,59 @@ pub unsafe extern "C" fn thinkthen_client_open(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let engine = crate::engine((*settings).0.clone())?;
+            let settings = settings
+                .as_ref()
+                .map_or_else(Settings::default, |settings| settings.0.clone());
+            let engine = crate::engine(settings)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })
     }
 }
-/// Admit canonical client JSON for a JSON-native host before resolving keys.
+/// Open a client on one backend with every other setting at its default.
+///
+/// This is the shortcut for thinkthen_settings_new, thinkthen_settings_set_backend,
+/// thinkthen_client_open and thinkthen_settings_free. The key comes from the backend's own
+/// environment variable, and the stub backend needs none. Returns THINKTHEN_OK with *out set,
+/// or a negative code with *out set to NULL: -THINKTHEN_CODE_USAGE_BACKEND for an unknown
+/// backend, or -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set.
+/// The caller owns *out and frees it with thinkthen_client_free; an old handle in *out is not
+/// freed.
 /// # Safety
-/// Counted bytes and distinct, empty outputs remain live until return.
+/// Any thread may call this. out is writable. error is NULL or initialized with
+/// THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+/// frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+/// its last use.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_client_open_backend(
+    backend: u32,
+    out: *mut *mut ClientHandle,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: the caller lends an exclusive output slot. */
+    unsafe {
+        operation(error, || {
+            out.write(ptr::null_mut());
+            let backend = thinkthen::BackendName::from_abi(backend)
+                .ok_or_else(|| native::argument_error(Code::UsageBackend))?;
+            let engine = crate::engine(Settings::default().with_backend(backend))?;
+            out.write(Box::into_raw(Box::new(ClientHandle(engine))));
+            Ok(OK)
+        })
+    }
+}
+/// Open a client from settings JSON.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+/// for settings that are not valid, -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a
+/// key and none is set, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller
+/// owns *out and frees it with thinkthen_client_free; an old handle in *out is not freed.
+/// # Safety
+/// Any thread may call this. settings points to len readable bytes, or to a NUL-terminated
+/// string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable.
+/// error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+/// code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+/// it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_client_open_json(
     settings: *const u8,
@@ -160,9 +247,11 @@ pub unsafe extern "C" fn thinkthen_client_open_json(
         })
     }
 }
-/// Free this client; its calls retain the engine independently.
+/// Free a client.
+///
+/// Free a client. NULL is ignored. Calls opened from it keep running on their own.
 /// # Safety
-/// NULL or one live owner after all active operations finish.
+/// Call this once, after every other use of client has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_client_free(client: *mut ClientHandle) {
     if !client.is_null() {
@@ -180,7 +269,8 @@ pub(crate) unsafe fn open(
     unsafe {
         out.write(ptr::null_mut());
     }
-    let offsets = OffsetUnit::from_abi(offsets).ok_or_else(native::abi_error)?;
+    let offsets = OffsetUnit::from_abi(offsets)
+        .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
     /* SAFETY: the client remains live while the engine snapshot is retained. */
     let call = native::Call::open(unsafe { &(*client).0 }, request, offsets)?;
     /* SAFETY: an independent owned call is published into the empty slot. */
@@ -193,11 +283,21 @@ pub(crate) unsafe fn open(
     }
     Ok(OK)
 }
-/// Open a copied typed question with its lists, options and optional execution name.
-/// NULL name is absent; a present empty name fails the shared name validation.
-/// Toolbox selection never supplies this execution name.
+/// Open a streaming call that asks question about each record you send.
+///
+/// offsets is a thinkthen_offset; C uses THINKTHEN_OFFSET_UTF8. name, when not NULL, names the
+/// run in each row's source; a present empty name is refused. Read the call with
+/// thinkthen_call_next. Returns THINKTHEN_OK with *out set, or a negative code with *out set to
+/// NULL: -THINKTHEN_CODE_USAGE_QUESTION for an incomplete question, -THINKTHEN_CODE_USAGE_NAME
+/// for a bad name, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit, or
+/// -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+/// thinkthen_call_free; an old handle in *out is not freed.
 /// # Safety
-/// Handles, optional name view and distinct empty outputs remain live until return.
+/// Any thread may call this while no thread changes question. client and question are live;
+/// both may be freed after return. name is NULL or points to a readable thinkthen_text. out is
+/// writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_open_question(
     client: *const ClientHandle,
@@ -211,7 +311,7 @@ pub unsafe extern "C" fn thinkthen_call_open_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).0.build()?);
+            let mut request = Request::new((*question).build()?);
             if !name.is_null() {
                 request = request.named(text((*name).data, (*name).len)?)?;
             }
@@ -219,9 +319,18 @@ pub unsafe extern "C" fn thinkthen_call_open_question(
         })
     }
 }
-/// Admit a canonical request for a JSON-native host; never load a question file.
+/// Open a call from request JSON, for a host that speaks JSON; question files are never read.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+/// for a request that is not valid, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit,
+/// or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it
+/// with thinkthen_call_free; an old handle in *out is not freed.
 /// # Safety
-/// Client and counted bytes are live; outputs are distinct empty slots.
+/// Any thread may call this. client is live. request points to len readable bytes, or to a NUL-
+/// terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is
+/// writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_open_json(
     client: *const ClientHandle,
@@ -243,9 +352,18 @@ pub unsafe extern "C" fn thinkthen_call_open_json(
         })
     }
 }
-/// Send copied text after NEEDS_INPUT; invalid UTF-8 becomes one record.invalid row.
+/// Send one text record to a call.
+///
+/// Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. Text that is not UTF-8 is
+/// sent as a record that fails as record.invalid, and blank text fails as record.empty; neither
+/// reaches the backend.
 /// # Safety
-/// One driver owns a live call and borrows counted readable bytes and an empty error.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+/// to len readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED;
+/// it is copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_send_text(
     call: *mut CallHandle,
@@ -256,7 +374,11 @@ pub unsafe extern "C" fn thinkthen_call_send_text(
     /* SAFETY: one driver exclusively accesses the cell; cancel uses a separate token. */
     unsafe {
         operation(error, || {
-            (&mut *(*call).call.get()).send(Record::from_utf8(bytes(data, len)))?;
+            (&mut *(*call).call.get()).send(crate::finite::admit_record(
+                data,
+                len,
+                thinkthen::records::RecordKind::Text.abi(),
+            )?)?;
             if let Some(originals) = &mut *(*call).originals.get() {
                 originals.push_back(crate::original::Original::new(
                     thinkthen::records::RecordKind::Text,
@@ -267,9 +389,17 @@ pub unsafe extern "C" fn thinkthen_call_send_text(
         })
     }
 }
-/// Send copied structured JSON; admission failures become failed records.
+/// Send one JSON record to a call.
+///
+/// Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. JSON that is not valid is
+/// sent as a record that fails as record.json.
 /// # Safety
-/// One driver owns the call; counted input and error slots remain live.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+/// to len readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED;
+/// it is copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_send_json(
     call: *mut CallHandle,
@@ -280,10 +410,8 @@ pub unsafe extern "C" fn thinkthen_call_send_json(
     /* SAFETY: one driver accesses the cell and borrows counted bytes until return. */
     unsafe {
         operation(error, || {
-            let record = match std::str::from_utf8(bytes(data, len)) {
-                Ok(json) => Record::from_json(json),
-                Err(_) => Record::invalid(),
-            };
+            let record =
+                crate::finite::admit_record(data, len, thinkthen::records::RecordKind::Json.abi())?;
             (&mut *(*call).call.get()).send(record)?;
             if let Some(originals) = &mut *(*call).originals.get() {
                 originals.push_back(crate::original::Original::new(
@@ -295,9 +423,17 @@ pub unsafe extern "C" fn thinkthen_call_send_json(
         })
     }
 }
-/// Send native-endian UTF-16; unpaired surrogates become one failed record.
+/// Send one UTF-16 text record, in the machine's byte order, to a call.
+///
+/// Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. Text with an unpaired
+/// surrogate is sent as a record that fails as record.invalid.
 /// # Safety
-/// One driver owns the call; data lends len aligned units or NULL at zero.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+/// to len readable, aligned uint16_t units; it may be NULL when len is 0. error is NULL or
+/// initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+/// passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_send_utf16(
     call: *mut CallHandle,
@@ -329,9 +465,16 @@ pub unsafe extern "C" fn thinkthen_call_send_utf16(
         })
     }
 }
-/// Send an explicit host missing value without a backend call.
+/// Send a missing value, such as a SQL NULL, to a call.
+///
+/// Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. It fails as record.missing
+/// without a backend request.
 /// # Safety
-/// One driver owns the live call and empty exclusive error slot.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. error is NULL
+/// or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_send_missing(
     call: *mut CallHandle,
@@ -351,9 +494,16 @@ pub unsafe extern "C" fn thinkthen_call_send_missing(
         })
     }
 }
-/// Send an explicit host conversion failure without fabricating a JSON id.
+/// Send a value the host could not convert to a call.
+///
+/// Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. It fails as record.invalid
+/// without a backend request.
 /// # Safety
-/// One driver owns the live call and empty exclusive error slot.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. error is NULL
+/// or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_send_invalid(
     call: *mut CallHandle,
@@ -373,9 +523,12 @@ pub unsafe extern "C" fn thinkthen_call_send_invalid(
         })
     }
 }
-/// Close input without waiting for output capacity or backend work.
+/// Say no more records are coming.
+///
+/// Rows already sent still arrive; thinkthen_call_next returns THINKTHEN_END after the last. It
+/// returns at once.
 /// # Safety
-/// A sole driver owns a live call; free cannot run concurrently.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. call is live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
     /* SAFETY: only the driver accesses the call cell. */
@@ -383,9 +536,21 @@ pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
         (&mut *(*call).call.get()).end_input();
     }
 }
-/// Pull one row, reserved input slot or completion. Failed records return OK.
+/// Read the call's next event: a row, a request for input, or the end.
+///
+/// Returns THINKTHEN_OK with the next row in *out; THINKTHEN_NEEDS_INPUT when a streaming call
+/// waits for a send or thinkthen_call_end_input; THINKTHEN_END when every row is read; or a
+/// negative code for the call as a whole, such as -THINKTHEN_CODE_LOCAL_CANCELLED. A record
+/// that fails is still THINKTHEN_OK: its row has status THINKTHEN_STATUS_FAILED and its own
+/// code, and reading goes on. *out is empty unless the return is THINKTHEN_OK. A filter row's
+/// input comes from thinkthen_row_original.
 /// # Safety
-/// A sole driver owns the call; row/error are sized, distinct, empty output slots.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. out is
+/// initialized with THINKTHEN_ROW_INIT. Passing it again frees the row it held, so a reused row
+/// leaks nothing; free it with thinkthen_row_free after its last use. error is NULL or
+/// initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+/// passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_next(
     call: *mut CallHandle,
@@ -396,27 +561,122 @@ pub unsafe extern "C" fn thinkthen_call_next(
     unsafe {
         operation(error, || {
             let size = row_size(out)?;
-            HostRow::empty(size).write(out);
-            match (&mut *(*call).call.get()).next_event()? {
-                Event::NeedsInput => Ok(NEEDS_INPUT),
-                Event::Finished => Ok(END),
-                Event::Row(row) => {
-                    let mut result = HostRow::from_row(size, row)?;
-                    if let Some(originals) = &mut *(*call).originals.get() {
-                        let original = originals.pop_front().ok_or_else(native::internal_error)?;
-                        result.source.attach_original(original);
-                    }
-                    result.write(out);
+            HostRow::clear(out);
+            match next(call)? {
+                Next::Status(status) => Ok(status),
+                Next::Row(row, original) => {
+                    publish(*row, original, size, out)?;
                     Ok(OK)
                 }
-                _ => Err(native::abi_error()),
             }
         })
     }
 }
-/// Request cancellation concurrently without touching driver state.
+enum Next {
+    Status(i32),
+    // A row is large beside a status, so it lives on the heap.
+    Row(
+        Box<thinkthen::results::AnyRow>,
+        Option<crate::original::Original>,
+    ),
+}
+// Pull one event and pair a filter row with its original input.
+unsafe fn next(call: *mut CallHandle) -> Result<Next, Error> {
+    /* SAFETY: only the sole driver reaches the call cell. */
+    unsafe {
+        Ok(match (&mut *(*call).call.get()).next_event()? {
+            Event::NeedsInput => Next::Status(NEEDS_INPUT),
+            Event::Finished => Next::Status(END),
+            Event::Row(row) => {
+                let original = match &mut *(*call).originals.get() {
+                    Some(originals) => {
+                        Some(originals.pop_front().ok_or_else(native::internal_error)?)
+                    }
+                    None => None,
+                };
+                Next::Row(Box::new(row), original)
+            }
+            _ => return Err(native::abi_error()),
+        })
+    }
+}
+unsafe fn publish(
+    row: thinkthen::results::AnyRow,
+    original: Option<crate::original::Original>,
+    size: u32,
+    out: *mut HostRow,
+) -> Result<(), Error> {
+    let mut result = HostRow::from_row(size, row)?;
+    /* SAFETY: the fresh row owns its source allocation, and out is a validated slot. */
+    unsafe {
+        if let Some(original) = original {
+            result.source.attach_original(original);
+        }
+        result.write(out);
+    }
+    Ok(())
+}
+/// Read the next kept record of a filter call, skipping the records it drops.
+///
+/// This is filter's usual view: a record the model answers no for, or is not sure about, is
+/// skipped. thinkthen_call_next stays the view of every row. Returns THINKTHEN_OK with *row
+/// holding a kept row (thinkthen_row_original gives its input); THINKTHEN_NEEDS_INPUT when a
+/// streaming call waits for a send; THINKTHEN_END when every record is judged; or a negative
+/// code. A failed record returns its own negative code in its place, with its row in *row and
+/// its message in error, and you may keep reading the records after it.
+/// -THINKTHEN_CODE_USAGE_FUNCTION means the call is not a filter call.
 /// # Safety
-/// The handle remains live until every concurrent operation returns.
+/// One thread at a time drives call; thinkthen_call_cancel may run on any thread. row is
+/// initialized with THINKTHEN_ROW_INIT. Passing it again frees the row it held, so a reused row
+/// leaks nothing; free it with thinkthen_row_free after its last use. error is NULL or
+/// initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+/// passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_call_next_kept(
+    call: *mut CallHandle,
+    row: *mut HostRow,
+    error: *mut HostError,
+) -> i32 {
+    /* SAFETY: size is validated before writing any supported output field. */
+    unsafe {
+        operation(error, || {
+            let size = row_size(row)?;
+            HostRow::clear(row);
+            if (*(*call).originals.get()).is_none() {
+                return Err(native::argument_error(Code::UsageFunction));
+            }
+            loop {
+                match next(call)? {
+                    Next::Status(status) => return Ok(status),
+                    Next::Row(item, original) => {
+                        let failure = item.error().cloned();
+                        let kept = matches!(
+                            &*item,
+                            thinkthen::results::AnyRow::Filter(item)
+                                if matches!(item.outcome(), thinkthen::results::Outcome::Answered { answer: true, .. })
+                        );
+                        if let Some(failure) = failure {
+                            publish(*item, original, size, row)?;
+                            return Err(failure);
+                        }
+                        if kept {
+                            publish(*item, original, size, row)?;
+                            return Ok(OK);
+                        }
+                    }
+                }
+            }
+        })
+    }
+}
+/// Ask a call to stop.
+///
+/// It returns at once. Once the call stops, thinkthen_call_next returns
+/// -THINKTHEN_CODE_LOCAL_CANCELLED, and a wait on the call's events wakes.
+/// # Safety
+/// Any thread may call this, also while another thread drives call. call is live until every
+/// such call returns.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_cancel(call: *mut CallHandle) {
     /* SAFETY: cancel accesses only its independently shared thread-safe token. */
@@ -424,9 +684,13 @@ pub unsafe extern "C" fn thinkthen_call_cancel(call: *mut CallHandle) {
         (*call).cancel.cancel();
     }
 }
-/// Cancel and release a call without joining a backend worker.
+/// Cancel and free a call.
+///
+/// Free a call. NULL is ignored. It does not wait for a backend request in flight. Rows already
+/// read stay valid.
 /// # Safety
-/// NULL or the unique owner after all active operations finish.
+/// Call this once, after every other use of call, including thinkthen_call_cancel, has
+/// returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_free(call: *mut CallHandle) {
     if !call.is_null() {
@@ -434,9 +698,11 @@ pub unsafe extern "C" fn thinkthen_call_free(call: *mut CallHandle) {
         drop(unsafe { Box::from_raw(call) });
     }
 }
-/// Free one owned counted buffer and clear it; empty/NULL is harmless.
+/// Free a buffer's contents and leave it empty.
+///
+/// NULL and an empty buffer are ignored, so a freed buffer may be freed again.
 /// # Safety
-/// The slot uniquely owns an engine allocation and no reader remains.
+/// Call this after the last read of buffer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_buffer_free(buffer: *mut Buffer) {
     if !buffer.is_null() {
@@ -446,23 +712,28 @@ pub unsafe extern "C" fn thinkthen_buffer_free(buffer: *mut Buffer) {
         }
     }
 }
-/// Free a supported error prefix while preserving caller size and trailing bytes.
+/// Free an error's message and leave it empty.
+///
+/// NULL, an empty error and an error not initialized with THINKTHEN_ERROR_INIT are ignored, so
+/// a freed error may be freed again or passed again.
 /// # Safety
-/// NULL or a sized unique error after readers finish; unsupported prefixes are untouched.
+/// Call this after the last read of error.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_error_free(error: *mut HostError) {
     /* SAFETY: only its first field is read until a supported prefix is known. */
     if let Some(size) = unsafe { error_size(error) } {
         /* SAFETY: the supported owned message and prefix are exclusively writable. */
         unsafe {
-            (*error).message.release();
-            HostError::empty(size).write(error);
+            HostError::clear(error, size);
         }
     }
 }
-/// Free a supported row prefix while preserving caller size and trailing bytes.
+/// Free a row's contents and leave it empty.
+///
+/// NULL, an empty row and a row not initialized with THINKTHEN_ROW_INIT are ignored, so a freed
+/// row may be freed again or passed again. Views borrowed from the row end here.
 /// # Safety
-/// NULL or a sized unique row after readers finish; unsupported prefixes are untouched.
+/// Call this after the last read of row and its views.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_row_free(row: *mut HostRow) {
     /* SAFETY: the first size field validates the remaining supported prefix. */

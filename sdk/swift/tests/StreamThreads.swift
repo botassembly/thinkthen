@@ -46,7 +46,7 @@ import ThinkThen
     var worker: UInt64?
     for try await row in client.decide("Ready?", records: records) {
       received += 1
-      precondition(row.position == UInt64(received))
+      precondition(row.position == received)
       let active = BridgeAudit.worker()
       precondition(active != 0, "stream does not have exactly one dedicated bridge thread")
       if let worker {
@@ -74,7 +74,7 @@ import ThinkThen
     do {
       _ = try await pending.value
       preconditionFailure("cancelled input returned a row")
-    } catch { try requireError(error, equals: .cancelled) }
+    } catch { guard error is CancellationError else { throw error } }
     await BridgeAudit.join()
     await released.fire()
     await returned.wait()
@@ -92,7 +92,7 @@ import ThinkThen
     do {
       _ = try await unopened.makeAsyncIterator().next()
       preconditionFailure("cancellation before iteration was ignored")
-    } catch { try requireError(error, equals: .cancelled) }
+    } catch { guard error is CancellationError else { throw error } }
     precondition(BridgeAudit.count() == 0, "an unopened stream started a bridge worker")
   }
 
@@ -106,7 +106,7 @@ import ThinkThen
           let rows = try await client.decide(
             "Ready?", records: ConcurrentRecords(barrier: barrier)
           ).collect()
-          precondition(rows.map(\.position) == Array(UInt64(1)...10))
+          precondition(rows.map(\.position) == Array(1...10))
           return rows.count
         }
       }
@@ -157,7 +157,7 @@ func outputWhileInputWaits(_ url: String) async throws {
   do {
     _ = try await iterator.next()
     preconditionFailure("cancelled stream accepted another next")
-  } catch { try requireError(error, equals: .cancelled) }
+  } catch { guard error is CancellationError else { throw error } }
   await released.fire()
   await returned.wait()
 }
@@ -177,7 +177,7 @@ func auditStreamThreadStarts(_ records: Int) async throws {
   if records > 0 {
     for try await row in client.decide("Ready?", records: input) {
       received += 1
-      precondition(row.position == UInt64(received))
+      precondition(row.position == received)
     }
   }
   precondition(received == records)

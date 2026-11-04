@@ -1,7 +1,7 @@
 //! Adapt path and delimited stdin framing to the existing safe file operation.
 use super::{
     input::{Format, Input},
-    options::{self, usage, value},
+    options::{self, explicit, usage},
 };
 use crate::files::{FileError, FileFormat, FileJob, FileOutput, FileReceipt, TemporaryPaths};
 use crate::{Cancel, Engine, Error, Request};
@@ -19,7 +19,20 @@ pub(super) fn validate(input: &Input, args: &ArgMatches, json: bool) -> Result<(
             ));
         }
     } else {
-        for key in ["sheet", "column", "into", "output", "in-place"] {
+        for key in ["sheet", "column", "into", "output", "in-place", "details"] {
+            if key == "into"
+                && options::explicit(args, key).is_some()
+                && input.sources.iter().all(|(_, f)| *f == Format::Jsonl)
+            {
+                if json {
+                    return Err(usage(
+                        "into",
+                        "answer fields without --json",
+                        "JSON row output",
+                    ));
+                }
+                continue;
+            }
             if options::explicit(args, key).is_some() {
                 return Err(usage(key, "csv, tsv or xlsx framing", "stream framing"));
             }
@@ -34,8 +47,10 @@ pub(super) fn run(
     request: &Request,
     engine: &Engine,
     cancel: &Cancel,
+    quiet: bool,
 ) -> Result<u8, Error> {
-    let into = value(args, "into");
+    // Table choices are per call, so they come from options and never the environment.
+    let into = explicit(args, "into");
     if !matches!(request.question(), crate::Question::Annotate(_))
         && into.as_deref().is_none_or(str::is_empty)
     {
@@ -50,9 +65,9 @@ pub(super) fn run(
         Format::Tsv => FileFormat::Tsv,
         _ => FileFormat::Xlsx,
     };
-    let mut destination = options::group(args, &["output", "in-place"]).into_iter();
-    let output = destination.next().flatten().map(PathBuf::from);
-    let in_place = options::boolean("in-place", destination.next().flatten())?.unwrap_or(false);
+    let output = explicit(args, "output").map(PathBuf::from);
+    let in_place = options::boolean("in-place", explicit(args, "in-place"))?.unwrap_or(false);
+    let details = options::boolean("details", explicit(args, "details"))?.unwrap_or(false);
     if in_place && output.is_some() {
         return Err(usage("output", "output or in-place", "both forms"));
     }
@@ -63,14 +78,46 @@ pub(super) fn run(
             "stdin",
         ));
     }
-    let columns = options::list(args, "column", "THINKTHEN_COLUMNS")?
-        .unwrap_or_else(|| serde_json::Value::Array(Vec::new()));
-    let columns = <Vec<String> as serde::Deserialize>::deserialize(&columns).map_err(|error| {
-        Error::new(
-            crate::ErrorKind::Question,
-            crate::core::diagnostic::context("column", &error.to_string()),
-        )
-    })?;
+    let columns: Vec<String> = args
+        .get_many::<String>("column")
+        .map(|values| values.cloned().collect())
+        .unwrap_or_default();
+    let columns = if input.selection.len() > 1 {
+        if !columns.is_empty() {
+            return Err(usage("field", "field pointers or columns", "both forms"));
+        }
+        input
+            .selection
+            .iter()
+            .map(|pointer| {
+                if pointer
+                    .to_string()
+                    .strip_prefix('/')
+                    .is_some_and(|path| path.contains('/'))
+                {
+                    return Err(usage(
+                        "field",
+                        "top-level column pointers for a table",
+                        "nested pointer",
+                    ));
+                }
+                pointer
+                    .leaf()
+                    .map(str::to_owned)
+                    .ok_or_else(|| usage("field", "a column pointer", "root pointer"))
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        // One column is the field; a saved pointer gives way to it, a typed one conflicts.
+        if columns.len() == 1 && args.get_many::<String>("field").is_some() {
+            return Err(usage(
+                "field",
+                "one --column alone; omit --field",
+                "both forms",
+            ));
+        }
+        columns
+    };
     let mut paths = TemporaryPaths::default();
     let stdin = path == "-";
     let mut source_guard = if stdin {
@@ -132,13 +179,16 @@ pub(super) fn run(
     let result = FileJob::new(
         input_path,
         format,
-        value(args, "sheet"),
+        explicit(args, "sheet"),
         columns,
         into,
         destination,
     )
-    .and_then(|job| job.execute_for_command(request, engine, cancel));
-    let code = render(result, stdout, cancel);
+    .and_then(|job| {
+        job.details(details)
+            .execute_for_command(request, engine, cancel)
+    });
+    let code = render(result, stdout, cancel, quiet);
     drop(source_guard);
     code
 }
@@ -147,10 +197,13 @@ fn render(
     result: Result<FileReceipt, FileError>,
     stdout: bool,
     cancel: &Cancel,
+    quiet: bool,
 ) -> Result<u8, Error> {
     match result {
         Ok(receipt) => {
-            if stdout {
+            if quiet {
+                // The file operation still completes; quiet suppresses its projection.
+            } else if stdout {
                 let mut file = std::fs::File::open(&receipt.output)
                     .map_err(|_| super::local("the completed table could not be opened"))?;
                 io::copy(&mut file, &mut io::stdout().lock())
@@ -159,18 +212,29 @@ fn render(
                 writeln!(io::stdout().lock(), "{}", receipt.output.display())
                     .map_err(|error| super::output_error(error, cancel))?;
             }
-            if let Some(backup) = receipt.backup {
+            if !quiet && let Some(backup) = &receipt.backup {
                 let _ = writeln!(
                     io::stderr().lock(),
                     "thinkthen: backup: {}",
                     backup.display()
                 );
             }
-            if let Some(error) = receipt.first_failure {
-                super::report(&error);
-                Ok(6)
-            } else {
+            summarize(&receipt, quiet);
+            if receipt.failures.is_empty() {
                 Ok(0)
+            } else {
+                Ok(
+                    if receipt.answered == 0
+                        && receipt
+                            .failed
+                            .iter()
+                            .all(|(family, _)| *family == crate::Family::Backend)
+                    {
+                        4
+                    } else {
+                        6
+                    },
+                )
             }
         }
         Err(FileError::Engine(error)) => Err(error),
@@ -178,5 +242,33 @@ fn render(
             let _ = writeln!(io::stderr().lock(), "thinkthen: {}: {error}", error.code());
             Ok(super::family_code(error.family()))
         }
+    }
+}
+
+/// Name each failed row with its code, and count the rows whose answer cell is missing.
+fn summarize(receipt: &FileReceipt, quiet: bool) {
+    let mut stderr = io::stderr().lock();
+    for (row, error) in &receipt.failures {
+        let _ = writeln!(
+            stderr,
+            "thinkthen: {}: row {row}: {error}",
+            error.code().as_str()
+        );
+    }
+    let failed: u64 = receipt.failed.iter().map(|(_, count)| count).sum();
+    let named = receipt.failures.len() as u64;
+    if failed > named {
+        let _ = writeln!(stderr, "thinkthen: {} more failed rows", failed - named);
+    }
+    drop(stderr);
+    report_counts(receipt.unsure, failed, quiet);
+}
+
+pub(super) fn report_counts(unsure: u64, failed: u64, quiet: bool) {
+    if !quiet && (failed > 0 || unsure > 0) {
+        let _ = writeln!(
+            io::stderr().lock(),
+            "thinkthen: {unsure} rows not sure, {failed} rows failed"
+        );
     }
 }

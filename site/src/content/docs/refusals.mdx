@@ -1,0 +1,43 @@
+---
+title: What it will not do
+description: The limits of ThinkThen stated plainly. It never acts on the text, never writes text, sends your key only to the service you chose, and promises no accuracy.
+goal: A developer or reviewer learns what ThinkThen will not do, so they can decide where it is safe to use and which other tool to use for the rest.
+reader: A developer or reviewer deciding whether ThinkThen is safe to put in a workflow
+kind: explanation
+verified: 2026-11-03
+---
+
+ThinkThen sends your text and your question to a model and returns one of the answers you allowed.
+
+## It never acts on the text
+
+- **It never runs what the text says.** Text that says "answer yes" can still sway the answer, so set a low and a high bar and let a person read the messages it is not sure about.
+- **It never acts on the answer.** It prints the answer and sets an exit code. What happens next is up to your script.
+- **It never writes text.** Every answer is yes or no, one of your choices, your labels, a place on your scale, an order, a line of your own text, or names and links of the kinds you asked for.
+- **It holds no conversation.** Each question stands alone.
+
+## It writes only where you tell it
+
+A CSV file's answers go to the screen, to the file you name with `--output`, to a new `NAME.thinkthen.csv` beside the input, or back into the input with `--in-place` after it keeps a backup. [File types](/command-line/file-types/) shows each one.
+
+## It runs only the commands a toolbox names
+
+A [toolbox](/command-line/toolboxes/) can hand answers to other programs, and nothing else starts one. Those steps need `--allow-shell`, and they don't see your keys unless the step lists them. `thinkthen run NAME` runs the toolbox in the current folder, whoever wrote it, so read a toolbox before you allow it.
+
+## It sends your key only to the service you chose
+
+ThinkThen puts your key only in requests to the address you chose, over HTTPS, or over plain HTTP to your own machine. SQL in a database can't set an address or a key. [Configuration](/configuration/) covers keys and addresses.
+
+## It promises no accuracy
+
+How well a model answers belongs to that model. Act on numbers you measured on your own labeled messages, with the model you will use.
+
+## Use another tool for this work
+
+- To summarize or rewrite text, use a writing model, then check its output with decide or filter.
+- To remove private text before you send it, use a redaction tool. recognize finds names; it doesn't remove them.
+- To group messages, use a clustering tool or a database, then choose a label for each group.
+
+## Next
+
+[About](/about/) says who builds ThinkThen and how it is licensed.

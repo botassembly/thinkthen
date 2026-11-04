@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! Public backend construction and key-based repeatability.
 
-use thinkthen::{BackendName, Decide, OffsetUnit, Record, Request, Settings};
+use thinkthen::{BackendName, Decide, OffsetUnit, Record, Request, Settings, Threshold};
 
 #[test]
 fn every_library_construction_matches_the_shared_stub_rows() {
@@ -37,7 +37,7 @@ fn every_library_construction_matches_the_shared_stub_rows() {
 #[test]
 fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
     use thinkthen::Annotate;
-    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a":{"function":"decide","question":"Ready?","evidence":"/body"},"b":{"function":"decide","question":"Ready?","evidence":"/body"},"c":{"function":"decide","question":"Ready?","threshold":0.8,"evidence":"/body"},"d":{"function":"decide","question":"Ready?","evidence":"/other"}}}"#)
+    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a":{"function":"decide","question":"Ready?","field":"/body"},"b":{"function":"decide","question":"Ready?","field":"/body"},"c":{"function":"decide","question":"Ready?","threshold":0.8,"field":"/body"},"d":{"function":"decide","question":"Ready?","field":"/other"}}}"#)
     .unwrap();
     let engine = Settings::default()
         .with_backend(BackendName::Stub)
@@ -56,20 +56,20 @@ fn annotation_stub_answers_use_each_questions_own_content_and_evidence() {
         .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["answer"]["a"], rows[0]["answer"]["b"]);
-    for (name, question, evidence) in [
+    for (name, question, field) in [
         ("a", Decide::new("Ready?").unwrap(), "evidence"),
         (
             "c",
             Decide::new("Ready?")
                 .unwrap()
-                .threshold("0.8".parse().unwrap()),
+                .threshold(Threshold::cut(0.8).unwrap()),
             "evidence",
         ),
         ("d", Decide::new("Ready?").unwrap(), "different"),
     ] {
         let mut standalone = Vec::new();
         engine
-            .rows(&question, [Record::text(evidence)])
+            .rows(&question, [Record::text(field)])
             .unwrap()
             .map(|row| row.unwrap())
             .for_each(|row| {

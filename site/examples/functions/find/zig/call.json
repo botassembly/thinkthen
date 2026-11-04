@@ -1,0 +1,5 @@
+{
+  "anchor": "    const action = try (try client.find(",
+  "before": 0,
+  "after": 2
+}

@@ -1,0 +1,18 @@
+{
+  "questions": {
+    "refund": {
+      "function": "decide",
+      "question": "Does the customer request a refund?"
+    },
+    "topic": {
+      "function": "choose",
+      "question": "What is the message about?",
+      "choices": ["billing", "shipping", "other"]
+    },
+    "urgency": {
+      "function": "score",
+      "question": "How urgent is the request?",
+      "levels": ["routine", "urgent"]
+    }
+  }
+}

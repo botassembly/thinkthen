@@ -1,0 +1,279 @@
+{
+  "about": "Read by scripts/gen-reference.mjs. One entry per code in schemas/contract.json: what the error means (the page title after the code), when a reader sees it, its cause and its fix, in plain words. example names the example that reproduces it; also names a second one. The causes come from the messages in crates/thinkthen/src and from the examples' runs.",
+  "codes": {
+    "usage.threshold": {
+      "means": "the cut or band is out of range",
+      "when": "you pass `--threshold`, `--low` or `--high` with a number the command cannot use",
+      "cause": "A cut must be above 0 and at most 1. A band needs both ends, with `0 < low < high <= 1`. A value such as `2`, `0`, or a `--low` above its `--high` stops the command before it judges any record.",
+      "fix": "Give a cut between 0 and 1, such as `--threshold 0.7`. For a band, give `--low` and `--high` together, low first, such as `--low 0.2 --high 0.8`. [Thresholds](/how-thinkthen-judges/#thresholds) explains what the numbers do.",
+      "example": "exit-usage"
+    },
+    "usage.question": {
+      "means": "the question or its table input is wrong",
+      "when": "the question is blank or cannot be read, or a table file cannot be judged as asked",
+      "cause": "The command checks the question, and for table input the file and its columns, before it judges any record. The message names the part it rejected and what it expected. The common cases are in the table below. A wrong command option, such as an unknown option or a missing `--choice`, reports [`usage.option`](/reference/errors/usage-option/) instead.",
+      "fix": "Find the message in the table and apply its fix. Each [function page](/functions/) shows a question for that function.",
+      "cases": [
+        [
+          "`question: expected nonblank text`",
+          "The question is empty. Pass the question in quotes."
+        ],
+        [
+          "`columns: expected at least one field column`",
+          "CSV, TSV and xlsx input needs `--column` to name the text to judge."
+        ],
+        [
+          "`file: … output already exists`",
+          "Pick a new `--output` path, or add `--in-place`."
+        ],
+        [
+          "`toolbox FILE: entry: expected one of …`",
+          "The toolbox has several entries, so the word after the toolbox is read as an entry name. Name the entry after the toolbox, as in `thinkthen run toolbox.json refunds messages.jsonl`, or pass `--entry refunds`."
+        ]
+      ],
+      "example": "error-question",
+      "also": "error-toolbox"
+    },
+    "usage.name": {
+      "means": "the name is blank or names no saved question",
+      "when": "you pass `--name` with blank text, or a language package asks for a named question that does not exist",
+      "cause": "A name labels a question on every row it returns, in `source.name`. It must hold at least one visible character. In a language package, a name must also match a question you saved under that name.",
+      "fix": "Pass a short, nonblank name, such as `--name refund-check`, or leave `--name` out. In a package, check the name against the questions you saved.",
+      "example": "error-name"
+    },
+    "usage.settings": {
+      "means": "the backend settings are malformed",
+      "when": "a language package or a database extension receives settings it cannot read",
+      "cause": "Packages and extensions take their backend settings as an object or JSON text. The settings fail when the JSON does not parse, when a field is unknown, or when a retry time is zero or not a whole number of milliseconds. A database session also fails when its settings name `url`, `api_key` or `key_source`: a database reads the address and the key from the server's environment, never from a query.",
+      "fix": "Pass only the settings fields your package's page lists, with whole-millisecond retry times above zero. In a database, remove `url` and any key from the session settings and set them in the database server's environment. [PostgreSQL](/install/postgresql/) lists the session settings.",
+      "instead": "The `thinkthen` command builds its settings from its options, so it does not return this code. Run the call that failed again after removing the field the message names."
+    },
+    "usage.backend": {
+      "means": "the backend name is unknown",
+      "when": "you pass `--backend`, or set `THINKTHEN_BACKEND`, to a name ThinkThen does not have",
+      "cause": "ThinkThen sends questions to the `systemone` or `openai` backend. Any other name, including a misspelling, stops the command. The message suggests the closest name.",
+      "fix": "Use `systemone` or `openai`; the suggestion after `did you mean` is usually right. [Models and backends](/install/backends/) says what each one does.",
+      "example": "error-backend-name"
+    },
+    "usage.url": {
+      "means": "the address is not HTTPS",
+      "when": "`--url` or `THINKTHEN_BASE_URL` names a plain `http://` address on another machine",
+      "cause": "ThinkThen sends your key with each request, so it refuses to send it in the clear. It accepts an `https://` address anywhere, and `http://` only to `localhost`, `127.0.0.1` or `[::1]`.",
+      "fix": "Use the service's `https://` address, or run your server on the local machine. Once the address passes this check, a wrong address shows as [`backend.transport`](/reference/errors/backend-transport/) instead.",
+      "example": "error-url"
+    },
+    "usage.key-missing": {
+      "means": "the backend key is not set",
+      "when": "you run a command with the `systemone` or `openai` backend and its key variable is unset or blank",
+      "cause": "Each backend reads its key from its own variable: `THINKTHEN_API_KEY` for `systemone`, `OPENAI_API_KEY` for `openai`. The command stops before it sends anything, so no record is judged.",
+      "fix": "Export the backend's key variable in the shell that runs the command. To check the variable without printing it, run `test -n \"$THINKTHEN_API_KEY\" && echo set`. [Supply the key](/install/backends/#supply-the-key) covers each backend.",
+      "example": "error-key-missing"
+    },
+    "usage.batch": {
+      "means": "the batch size is out of range",
+      "when": "you pass `--batch` with zero or a number too large for the machine",
+      "cause": "`--batch` sets how many records go to the backend in one request. It must be a positive whole number.",
+      "fix": "Leave `--batch` out to use the default, or pass a positive whole number such as `--batch 10`.",
+      "example": "error-batch"
+    },
+    "usage.pointer": {
+      "means": "the field pointer does not start with /",
+      "when": "you pass `--field` with a field name such as `text` instead of a JSON Pointer",
+      "cause": "`--field` selects the part of each JSON record to judge, written as a JSON Pointer. A pointer starts with `/`, so the field `text` is `/text` and a nested field is `/customer/note`.",
+      "fix": "Add the leading slash: `--field /text`. [Your data](/your-data/) shows pointers on real records.",
+      "example": "error-pointer"
+    },
+    "usage.sql-policy": {
+      "means": "the database's allowed-backends list is malformed",
+      "when": "a PostgreSQL session calls a ThinkThen function and the administrator's `thinkthen.allowed_backends` setting holds an entry ThinkThen cannot read",
+      "cause": "`thinkthen.allowed_backends` is a comma-separated list of `backend:model` entries, such as `systemone:jev-1.13.0, openai:*`, where `*` allows any model of that backend. An entry without a colon, with an unknown backend, with an empty model, or with `*` mixed into a model name fails every call in the session.",
+      "fix": "This is the database administrator's setting. Ask them to correct the entry the message points to; each entry is a backend name, a colon, and a model name or `*`. [PostgreSQL](/install/postgresql/) shows the setting.",
+      "instead": "Only the PostgreSQL extension returns this code. An administrator reproduces it by setting `thinkthen.allowed_backends` to `systemone` with no model, then calling any function."
+    },
+    "usage.sql-selection": {
+      "means": "the database does not allow that backend or model",
+      "when": "a database session asks for a backend and model that the administrator has not allowed",
+      "cause": "A database administrator decides which backends and models application roles may use, in `thinkthen.allowed_backends`. Without that setting, only the default backend and model are allowed. A session whose `thinkthen.backend` or `thinkthen.model` falls outside the list fails before any request leaves the server.",
+      "fix": "Pick a backend and model from the allowed list, or ask the administrator to add yours, such as `openai:*` to allow any `openai` model. [PostgreSQL](/install/postgresql/) shows both settings.",
+      "instead": "Only the database extensions return this code. You see it in the SQL error of the call, with the code `usage.sql-selection`."
+    },
+    "usage.abi": {
+      "means": "the caller and the native library disagree on the binary interface",
+      "when": "a language package loads a native library from a different ThinkThen release, or a C or C++ program passes the library a struct, text or call step it cannot accept",
+      "cause": "Every language package calls the same native library. When it loads, the package checks the library's interface version and refuses a library built for another release; the message reads `the native ABI is incompatible`. A C or C++ caller also sees this code for a row or error struct it did not initialize with `THINKTHEN_ROW_INIT` or `THINKTHEN_ERROR_INIT`, for text that is not UTF-8, and for a call step out of order, such as sending records the call did not ask for. A client used after it was closed reports [`usage.closed`](/reference/errors/usage-closed/) instead.",
+      "fix": "Install the package and its native library from the same release; reinstalling the package with your package manager fixes a mixed install. In C or C++, initialize each row and error with its `_INIT` macro, pass UTF-8 text, and follow the call order in the header. [Languages](/languages/) links each package's install page.",
+      "instead": "The `thinkthen` command carries its own library, so it does not return this code."
+    },
+    "usage.closed": {
+      "means": "the client or call was used after it was closed",
+      "when": "code in a language package asks a question through a client, or reads from a call, after closing it",
+      "cause": "Closing a client releases its engine, and closing a call ends it. A later question or read on the closed object fails with this code before any request leaves the machine. The message names what was closed, such as `client: expected an open client; received a closed client`.",
+      "fix": "Keep the client open until your last call returns, or create a new client for later work. In languages with scoped blocks, such as `with` in Python or `use` in Kotlin, make every call inside the block.",
+      "instead": "The `thinkthen` command opens and closes its own client, so it does not return this code. In a package, close a client and then ask it any question to see it."
+    },
+    "usage.function": {
+      "means": "the call or value belongs to another function",
+      "when": "a language package or the C library is asked for a function it does not know, or for an answer or detail that a value of another function does not have",
+      "cause": "Each question, row and answer belongs to one function, such as decide or tag. The code is raised when a function number passed to the C library is unknown, when a named annotate answer is read as the wrong function, when an accessor asks a value for something its function lacks, such as tag labels from a score answer, or when kept rows are read from a call that is not a filter call. The message reads `function: expected a known function; received an unsupported value`, or names the annotate question that asks another function.",
+      "fix": "Read each value with the accessor for its own function; the row's `function` field tells you which. Read kept rows only from filter calls, and in C pass function numbers from the `thinkthen.h` header. Each [function page](/functions/) lists that function's answer and detail.",
+      "instead": "The `thinkthen` command picks the function from its command name, so it does not return this code."
+    },
+    "usage.record-kind": {
+      "means": "the record kind is unknown",
+      "when": "a C or C++ program passes the native library a record kind number it does not define",
+      "cause": "Each record handed to the C library carries a kind: text, JSON, missing or invalid, from the `THINKTHEN_RECORD_*` values in `thinkthen.h`. Any other number stops the call before any request, with `record kind: expected a known record kind; received an unsupported value`.",
+      "fix": "Set each record's kind from the `THINKTHEN_RECORD_*` constants in the header that came with your library, never from a hand-written number.",
+      "instead": "The `thinkthen` command and the language packages set the kind themselves, so you see this code only from your own C or C++ code."
+    },
+    "usage.offsets": {
+      "means": "the offset unit is unknown",
+      "when": "a C or C++ program opens a call with an offset unit number the native library does not define",
+      "cause": "Opening a call names the unit in which spans report their positions: UTF-8 bytes, UTF-16 units, or Unicode characters with the end excluded or included. The units are the `THINKTHEN_OFFSET_*` values in `thinkthen.h`. Any other number stops the call before any record is read, with `offsets: expected a known string offset unit; received an unsupported value`.",
+      "fix": "Pass one of the `THINKTHEN_OFFSET_*` constants from the header that came with your library. C code uses `THINKTHEN_OFFSET_UTF8`.",
+      "instead": "The `thinkthen` command and the language packages choose the unit themselves, so you see this code only from your own C or C++ code."
+    },
+    "usage.argument": {
+      "means": "an argument is missing, out of range or not allowed here",
+      "when": "code passes the native library a NULL where text is needed, an index past the end of a list, or a flag outside its range",
+      "cause": "The C library checks each argument before it uses it. A NULL string, an answer or detail index at or past the list's count, such as the third label of a tag answer that holds two, or a relate rule whose `either` flag is above 1 stops that one function with `argument: expected a supported argument value; received an unsupported value`.",
+      "fix": "Pass real text, read the count before you index a list and stay below it, and set `either` to 0 or 1. The header comment above each function in `thinkthen.h` gives its valid arguments.",
+      "instead": "The `thinkthen` command builds every argument itself, so it does not return this code. You see it from code that calls the C library, directly or through C++."
+    },
+    "usage.option": {
+      "means": "a command option or argument is wrong",
+      "when": "the `thinkthen` command is given an option it does not have, a value it does not accept, or options that do not fit together",
+      "cause": "The command checks its options and arguments before it reads any record or sends any request. The message names the option, what it expected and what it received. The common cases are in the table below.",
+      "fix": "Find the message in the table and apply its fix. `thinkthen COMMAND --help` lists each command's options and their values.",
+      "cases": [
+        [
+          "`option: expected one of … received unknown field`",
+          "The command has no such option. Use the suggestion after `did you mean`."
+        ],
+        [
+          "`expected one of … received unknown value`",
+          "The option takes a fixed set of values. Pick one from the list in the message."
+        ],
+        [
+          "`choice: expected a supplied list`",
+          "The function needs its list: choose needs `--choice`, tag `--label`, score and rank `--level`, recognize `--kind`, relate `--rule`."
+        ],
+        [
+          "`expected true or false`",
+          "An option or its `THINKTHEN_` variable holds a switch value other than `true` or `false`."
+        ],
+        [
+          "`into: expected an answer column name`",
+          "Table input needs `--into` to name the new answer column."
+        ],
+        [
+          "`output: expected output or in-place`",
+          "Pass `--output` or `--in-place`, not both."
+        ],
+        [
+          "`field: expected one --column alone; omit --field`",
+          "For table input, name the text with `--column` and drop `--field`."
+        ],
+        [
+          "`json: expected text output for table framing`",
+          "Table input writes a table; drop `--json`."
+        ],
+        [
+          "`threshold: expected low and high together`",
+          "Give `--low` and `--high` as a pair, or use `--threshold` alone."
+        ],
+        [
+          "`quiet: expected false when verbose is true`",
+          "Drop `--quiet` or `--verbose`."
+        ]
+      ],
+      "example": "error-choices"
+    },
+    "record.json": {
+      "means": "a line of the input is not JSON",
+      "when": "you read JSON Lines input and one line does not parse",
+      "cause": "With `--from jsonl`, or a `.jsonl` file, each line must be one JSON value. A line that does not parse fails its own [row](/how-thinkthen-judges/#the-terms); the other records still get answers.",
+      "fix": "Fix the line the row's `position` points to. If the input is plain text, read it with `--from lines` instead.",
+      "example": "exit-failed-row"
+    },
+    "record.missing": {
+      "means": "the record holds nothing to judge",
+      "when": "a record has no value at the `--field` pointer, or the record itself is `null`",
+      "cause": "ThinkThen judges the value the `--field` pointer selects in each record. When that field is absent or `null`, there is nothing to send, so that record's [row](/how-thinkthen-judges/#the-terms) fails. In a language package, a missing value such as Python `None`, R `NA` or SQL `NULL` fails the same way.",
+      "fix": "Check the pointer against one record: `--field /text` needs a `text` field at the top level. Remove empty records, or fill them, before the call.",
+      "example": "error-record-missing"
+    },
+    "record.too-large": {
+      "means": "a record is too long to send",
+      "when": "one record, with its question, is larger than the backend's request limit",
+      "cause": "Each backend request has a size limit of {limits.requestBytes} bytes. When a single record with its question passes it, ThinkThen fails that record's [row](/how-thinkthen-judges/#the-terms) instead of sending it. Other records still get answers.",
+      "fix": "Split the record into smaller parts, or point `--field` at a smaller field.",
+      "example": "error-too-large"
+    },
+    "record.invalid": {
+      "means": "a value cannot become a record",
+      "when": "a language package receives a value it cannot convert to text or JSON without losing part of it",
+      "cause": "A language package turns each value you pass into a record before it asks the question. A value with no exact text or JSON form, such as a number too large for JSON or an object the package cannot read, fails its own [row](/how-thinkthen-judges/#the-terms) instead of being changed.",
+      "fix": "Convert the value to a string or plain JSON yourself before the call, so you decide what the model sees.",
+      "instead": "The `thinkthen` command reads text and JSON, so it never returns this code. In a package, the failed row's `error.code` holds `record.invalid` and the other rows still answer."
+    },
+    "record.empty": {
+      "means": "the record has nothing to judge",
+      "when": "a record's field is blank text, only spaces and line breaks, an empty JSON object or array, or a JSON record whose only member is `id`",
+      "cause": "ThinkThen checks each record's field before it asks anything, and never sends a blank record to the model. Field counts as empty when it is no text, only whitespace, `{}` or `[]` at the field pointer, or a JSON record such as `{\"id\": 7}`, whose field is what is left once `id` is set aside. The check runs on your machine, so the row fails with `the record is empty` and no request is made. When the whole input is one piece of text, the `thinkthen` command stops with exit code 2 instead, and a single-record call in a language package raises the error.",
+      "fix": "Drop blank records before the call, or point `--field` at a member that holds text. In a stream, the failed row keeps its `id`, so you can match it back to its source and the other records still answer.",
+      "instead": "With your backend's key set, run `printf '   ' | thinkthen decide \"Refund?\"`. The command makes no request, prints `thinkthen: record.empty: the record is empty` and ends with exit code 2."
+    },
+    "backend.transport": {
+      "means": "the service could not be reached",
+      "when": "ThinkThen cannot connect to the backend's address: the connection is refused, the name does not resolve, the request times out, or TLS fails",
+      "cause": "The request never got an answer from the service. A TLS failure means ThinkThen did not trust the service’s certificate. A transport failure before the first output row stops the command with exit 4. After rows have been written, affected rows fail and the completed stream exits 6, or 4 when every row failed with a backend error.",
+      "fix": "Check `--url` and `THINKTHEN_URL`, then try the address with `curl`. For a TLS failure behind a company proxy, add your certificate authority to the operating system store, or name a PEM file in `THINKTHEN_CA_FILE`.",
+      "example": "error-transport",
+      "also": "error-tls"
+    },
+    "backend.status": {
+      "means": "the service answered with an HTTP error",
+      "when": "the backend's service answers a request with an error status, such as 401, 429 or 500",
+      "cause": "The service received the request and refused it. The [row](/how-thinkthen-judges/#the-terms)'s `error.http_status` holds the status: 401 or 403 points to the key, 429 to a rate limit, and 5xx to the service. ThinkThen resends a request after 429, 500, 502, 503, 504 or 529, waiting longer each time, before it fails the rows. When the service sends a `Retry-After` header, ThinkThen waits at least that long, up to 60 seconds, as [`retry.rs`](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen/src/retry.rs) sets.",
+      "fix": "For 401 or 403, check the key variable and the account. For 429, lower `--batch` or wait. For 5xx, try again later. Rerun only the failed records.",
+      "example": "error-status",
+      "standIn": "refuses every request with status 401"
+    },
+    "backend.reply": {
+      "means": "the service's answer could not be read",
+      "when": "the service answers with status 200 but the body is not the reply the backend expects",
+      "cause": "Each backend speaks one service's API. When `--url` points at a server that speaks another API, or a proxy rewrites the answer, ThinkThen cannot read an answer from the body and fails the [rows](/how-thinkthen-judges/#the-terms) of that request.",
+      "fix": "Check that `--url` points at a server for the backend you chose: `systemone` for System One, `openai` for an OpenAI-compatible service. [Models and backends](/install/backends/) lists what each one expects.",
+      "example": "error-reply",
+      "standIn": "answers status 200 with `{\"message\": \"hello\"}`, which is not a System One reply"
+    },
+    "local.cancelled": {
+      "means": "the run was interrupted",
+      "when": "you press Ctrl-C, or another program sends SIGINT, while a call runs",
+      "cause": "An interrupt cancels the call: ThinkThen stops reading input, stops waiting for the backend, and stops any steps a toolbox started. The `thinkthen` command prints `thinkthen: cancelling; press Ctrl-C again to exit` and ends with exit code 130 instead of printing the code. A language package returns `local.cancelled` when your code cancels a call.",
+      "fix": "Nothing is wrong. Run the command again to finish the work. A second Ctrl-C exits at once.",
+      "example": "exit-interrupt"
+    },
+    "local.io": {
+      "means": "a file could not be read or written",
+      "when": "an input file is missing or unreadable, or the output file or folder cannot be written",
+      "cause": "ThinkThen opens every input file before it judges a record, and writes the output beside the input or where `--output` points. A wrong path or a missing permission stops the command with exit code 5.",
+      "fix": "Check the path the message names and its permissions. For output, check that the folder exists and that you can write to it.",
+      "example": "exit-local"
+    },
+    "local.toolbox": {
+      "means": "a saved run has shell steps and the command did not allow them",
+      "when": "`thinkthen run` loads an entry with a `shell` step and you did not pass `--allow-shell`",
+      "cause": "A [toolbox](/toolboxes/) entry can pipe its rows through a local program with a `shell` step. ThinkThen runs no local program unless you allow it, so it stops before it opens a client or sends any request, and the message lists the shell commands it refused. A toolbox that cannot be read, or an entry name it does not hold, is a [`usage.question`](/reference/errors/usage-question/) error instead.",
+      "fix": "Read the shell commands in the message. If you trust them, run the same command again with `--allow-shell`. [Toolbox format](/reference/toolbox-format/) describes `shell` steps.",
+      "instead": "Run a toolbox entry that has a `shell` step without `--allow-shell`. [Shell steps](/toolboxes/shell-steps/) saves `refund-ids.json`, whose entry has a `jq` shell step, so `thinkthen run refund-ids.json messages.jsonl` without `--allow-shell` stops with `local.toolbox` before any request."
+    },
+    "internal.bug": {
+      "means": "ThinkThen broke one of its own rules",
+      "when": "ThinkThen reaches a state its own code says cannot happen",
+      "cause": "This is a defect in ThinkThen, not in your input or setup. The command ends with exit code 5.",
+      "fix": "Report it on [GitHub](https://github.com/botassembly/thinkthen/issues) with the command, the output of `thinkthen --version`, and the input that triggers it, with any private text removed.",
+      "instead": "No input is known to cause it. If you see it, the steps in Fix help it get repaired."
+    }
+  }
+}

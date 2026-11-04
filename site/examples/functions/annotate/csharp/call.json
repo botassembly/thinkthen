@@ -1,0 +1,5 @@
+{
+  "anchor": "await foreach (var form in client.AnnotateStreamAsync(",
+  "before": 0,
+  "after": 2
+}

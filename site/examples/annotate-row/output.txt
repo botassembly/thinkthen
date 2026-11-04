@@ -1,0 +1,32 @@
+{
+  "refund": {
+    "function": "decide",
+    "status": "answered",
+    "answer": true,
+    "probability": 0.99
+  },
+  "topic": {
+    "function": "choose",
+    "status": "answered",
+    "answer": "billing",
+    "probability": 0.98,
+    "detail": {
+      "labels": {
+        "billing": 0.98,
+        "other": 0.02,
+        "shipping": 0.0
+      }
+    }
+  },
+  "urgency": {
+    "function": "score",
+    "status": "answered",
+    "answer": 0.05,
+    "detail": {
+      "levels": [
+        0.95,
+        0.05
+      ]
+    }
+  }
+}

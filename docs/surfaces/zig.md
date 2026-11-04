@@ -1,66 +1,69 @@
-# ThinkThen in Zig
+# Zig functions that answer questions about text
 
-[Where record text goes](service.md) describes the default service and connection settings.
+ThinkThen is a classifier you call like a function: it reads text, answers one bounded question, and returns a typed Zig value. Install it with `zig fetch --save=thinkthen https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-linux-x86_64.tar.gz` (or the `linux-arm64` or `macos-arm64` archive), and set `THINKTHEN_API_KEY` in the environment ([services and keys](service.md)).
 
-Methods ending in `One` return one row; named methods return pull Calls. A JSON array inside one Record remains one record. Deinit calls and clients explicitly; returned row allocations belong to the allocator you supply.
-
-Check `thinkthen/README.md` inside the archive for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
-
-Use Zig 0.17.0. Extract the supplied platform-specific Zig 0.2.0 package. Keep its layout intact; the module needs its matching C headers and native engine.
-
-Set `THINKTHEN_API_KEY` in the environment before creating a normal client. Keep keys out of code and reports. `tt.Client.init(.{}, &diagnostic)` selects the default backend. The stub needs no key or network and returns synthetic installation-check answers.
-
-A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
-
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Both calls use the stub backend. Keep every collection outcome, including answered false and failed rows.
+## Read a support inbox
 
 ```zig
 const std = @import("std");
 const tt = @import("thinkthen");
 
 pub fn main(init: std.process.Init) !void {
-    const allocator = std.heap.page_allocator;
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-    const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, "records.jsonl", allocator, .limited(16 * 1024 * 1024));
-    defer allocator.free(bytes);
-    var records: std.ArrayList(tt.Record) = .empty;
-    defer records.deinit(allocator);
-    var lines = std.mem.splitScalar(u8, bytes, '\n');
-    while (lines.next()) |line| {
-        const json = std.mem.trim(u8, line, " \t\r");
-        if (json.len != 0) try records.append(allocator, .{ .json = json });
-    }
-    var diagnostic: tt.Diagnostic = .{};
-    var client = try tt.Client.init(.{ .backend = .stub }, &diagnostic);
+    var buffer: [4096]u8 = undefined;
+    var stdout = std.Io.File.stdout().writer(init.io, &buffer);
+    const out = &stdout.interface;
+    defer out.flush() catch {};
+
+    var diag: tt.Diagnostic = .{};
+    var client = try tt.Client.init(.{}, &diag);
     defer client.deinit();
-    const array = try client.decideOne(arena.allocator(), "Does the customer request a refund?",
-        .{ .json = "[\"first\",\"second\"]" }, .{}, &diagnostic);
-    switch (array.outcome) {
-        .answered => std.debug.print("array answered\n", .{}),
-        .unsure => std.debug.print("array unsure\n", .{}),
-        .failed => |failure| std.debug.print("array failed {s}\n", .{failure.message}),
-    }
-    _ = arena.reset(.free_all);
-    var rows = try client.decide(allocator, "Does the customer request a refund?",
-        .{ .records = records.items }, .{ .evidence = "/text" }, &diagnostic);
-    defer rows.deinit();
-    while (try rows.next(arena.allocator(), &diagnostic)) |row| {
-        switch (row.outcome) {
-            .answered => |result| std.debug.print("{d} answered {}\n", .{row.position, result.answer}),
-            .unsure => std.debug.print("{d} unsure\n", .{row.position}),
-            .failed => |failure| std.debug.print("{d} failed {s}\n", .{row.position, failure.message}),
+    const question = "Does the customer request a refund?";
+
+    // A JSON array is one record, so this asks about the whole thread at once.
+    const thread = try client.decide(init.arena.allocator(), question,
+        .{ .json = "[\"Where is my parcel?\",\"Please refund my order.\"]" }, .{}, &diag);
+    try out.print("array {t}\n", .{thread.status()});
+
+    // In JSON Lines, each line is its own record and gets its own row, in input order.
+    const inbox = try std.Io.Dir.cwd().readFileAlloc(init.io, "records.jsonl", init.gpa, .limited(16 << 20));
+    defer init.gpa.free(inbox);
+    var refunds = try client.decideAll(init.gpa, question, .{ .json_lines = inbox }, .{ .field = "/text" }, &diag);
+    defer refunds.deinit();
+    while (try refunds.next(&diag)) |refund| {
+        switch (refund.outcome) {
+            .answered => |decision| try out.print("{d} answered {}\n", .{ refund.position, decision.answer }),
+            .unsure => try out.print("{d} unsure: send it to a person\n", .{refund.position}),
+            .failed => |failure| try out.print("{d} failed {s}: {s}\n", .{ refund.position, failure.name(), failure.message }),
         }
-        _ = arena.reset(.free_all);
     }
 }
 ```
 
-Run `zig init` in a new application directory. Add `.thinkthen = .{ .path = "../thinkthen" }` under dependencies in its generated build.zig.zon, with the relative path to the extracted package directory containing build.zig. Save the example above as src/main.zig. Replace build.zig with:
+Save the inbox beside it as `records.jsonl`:
+
+```json
+{"id":"a1","text":"Please refund my order."}
+{"id":"a2","text":"Where is my parcel?"}
+null
+{"id":"a4"}
+[{"text":"first"},{"text":"second"}]
+{"id":"a6","text":null}
+```
+
+<!-- Output: fill from the real-backend capture run. -->
+
+Every line gets a row, in order. Lines 3 to 5 hold no text at `/text`, so each fails in its place and reading goes on. A no is `answered false`, never a missing row.
+
+## Add it to your build
+
+Each ThinkThen release supports exactly the Zig version in its `build.zig.zon`, which is Zig 0.17.0 for ThinkThen 0.2.0.
+
+`zig fetch --save` adds the dependency to `build.zig.zon`. Import the module and install the engine beside your executable in `build.zig`:
 
 ```zig
 const std = @import("std");
 const thinkthen = @import("thinkthen");
+
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -81,96 +84,247 @@ pub fn build(b: *std.Build) !void {
 }
 ```
 
-Run `zig build`, then `./zig-out/bin/example`. installNative places the matching engine beside the executable.
+Run `zig build`, then `./zig-out/bin/example`.
 
-## Records and the ten functions
+## Get one answer
 
-Record is a tagged union: `.text` holds UTF-8 bytes, `.json` holds encoded JSON bytes and `.missing` marks a missing record. `Record.fromValue(allocator, value)` encodes a host value. Keep borrowed input bytes alive while the call uses them. Structured records can carry string, signed or unsigned integer IDs. Options.evidence takes a JSON Pointer such as `"/text"`; escape `/` as `~1` and `~` as `~0` inside keys.
-
-Each named function returns a pull Call. It takes allocator, required question/domain arguments, Input, function-specific options and an optional Diagnostic pointer:
-
-| Function | Required arguments before Input | Typed answer |
-| --- | --- | --- |
-| decide, filter | Wording | bool |
-| choose | Wording, `[]const Choice` choices | UTF-8 string |
-| tag | Wording, Choice labels | Slice of labels |
-| score | Wording, Choice levels | f64 from 0 to 1 |
-| rank | Wording, Choice levels | u64 rank |
-| find | Wording | ?Span |
-| recognize | Choice kinds | Slice of Name |
-| relate | RelationRule rules | Slice of Relation |
-| annotate | AnnotationQuestions | Slice of NamedAnnotation |
-
-For example `client.choose(allocator, "Which topic?", &.{.{ .name = "billing" }, .{ .name = "shipping" }}, input, .{}, &diagnostic)`. Recognize and relate have no invented question prompt. RelationRule uses `name`, `source`, `target` and optional `reads` and `either`.
-
-All ten methods have `One` forms such as `decideOne` taking one Record instead of Input. Typed calls use `client.open(.decide, allocator, question, input, &diagnostic)` or `client.one(...)`. Typed questions retain lists and options.
-
-Decide, choose and filter accept `.threshold = .{ .cut = 0.8 }` or `tt.Threshold.band(0.2, 0.8)`. Tag, find, recognize and relate take f64 cuts only. A decide/filter band yields false below low, unsure inside and true at or above high. Choose needs its winning choice to reach the upper cut. Score and rank levels go lowest to highest. Rank puts highest scores first; options.top limits successful ranks and retains failures.
-
-A rank row's answer is its rank; `position` is its input order. Filter returns FilterRow with original `record`, typed `row` and `kept()`. Every filter outcome appears.
-
-## Pull rows, questions and files
-
-Input is `.records = records` for a finite slice or `.source = tt.RecordSource.from(&source)` for a source implementing `next() error{RecordSource}!?Record`. Prefer one call over the collection so batching works. Settings.batch controls packing, with byte and backend limits also applied. One record may need several backend questions.
+Each function has a one-record form named for the function, such as `decide`, and a many-record form ending in `All`, such as `decideAll`. A one-record call returns a row, and `answer` turns the row into its answer in one step:
 
 ```zig
-var call = try client.decide(allocator, "Does the customer request a refund?",
-    .{ .records = &records }, .{}, &diagnostic);
-defer call.deinit();
-while (try call.next(arena.allocator(), &diagnostic)) |row| {
-    switch (row.outcome) {
-        .failed => return error.FailedRecord,
-        else => {},
-    }
-    // Save or copy needed row data before resetting its arena.
-    _ = arena.reset(.free_all);
+const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
+    .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
+try out.print("{}\n", .{is_refund});
+```
+
+The examples from here on go inside a `main` like the first one, with its `out`, `diag` and `client`. A one-record call's row lives in the allocator you pass, which must be an arena; `init.arena` lasts until the program exits.
+
+## Send not sure to a person
+
+`answer` returns `error.Unsure` when the model is not sure, and the record's error when it failed: `error.Record`, `error.Backend` and the rest of `tt.AnswerError`. It never turns either into an answer. Catch them to handle each case:
+
+```zig
+const messages = [_][]const u8{ "Please refund my order.", "Where is my parcel?", "I was charged twice for one invoice." };
+var refunds = try client.decideAll(init.gpa, "Does the customer request a refund?", .{ .texts = &messages }, .{}, &diag);
+defer refunds.deinit();
+while (try refunds.next(&diag)) |refund| {
+    const message = messages[@intCast(refund.position - 1)];
+    const is_refund = refund.answer(&diag) catch |err| switch (err) {
+        error.Unsure => {
+            try out.print("{s}: not sure, send it to a person\n", .{message});
+            continue;
+        },
+        else => {
+            try out.print("{s}: failed, {s}\n", .{ message, diag.message() });
+            continue;
+        },
+    };
+    try out.print("{s}: {}\n", .{ message, is_refund });
 }
 ```
 
-A row's allocated strings and slices belong to the allocator passed to next. Arena reset invalidates them. Filter original records are copied into that row allocation. Rows retain exact RecordId, input position, source and outcome. Source identifies the question, backend and served model. `.answered` carries answer, optional probability and typed detail; `.unsure` carries probability and detail; `.failed` carries Failure. Detail holds labels, levels, recognition pieces or relation pairs. Find can answer null. Spans use UTF-8 byte offsets from zero with an exclusive end. Find selects a whole nonblank line, so preserve line breaks.
+After `answer` returns an error, `diag` holds the row's `position`, and either its `probability` (not sure) or its `code` and `message()` (failed). A `switch` on `row.outcome` handles `.answered`, `.unsure` and `.failed` together, as the first example does. `row.isUnsure()`, `row.isFailed()`, `row.status()` and `row.probability()` read the rest.
 
-Toolbox holds NamedQuestion entries. Use `toolbox.get(name)` and then `entry.as(.decide)` for a typed question. AnnotationQuestions holds NamedAnnotationQuestion entries and excludes rank. `Toolbox.fromJson` loads saved question entries and `toJson` saves them. Shell runs remain a command feature. Inspect each named annotation's tagged function outcome; an answered outer annotation can contain failed children.
+Print a row with `{f}` to see its outcome and probability, such as `true (0.97)`, `unsure (0.50)` or `failed record.missing: ...`.
 
-Use Zig's file and serialization APIs to read records and save results. Rows implement jsonStringify for contract-row export, including typed answers and details. Preserve exact IDs and input positions. The SDK has no spreadsheet reader or writer.
+A client or call that can't start, such as one with no key or an invalid question, returns its error directly, with the code and message in `diag`.
 
-Call `relate` or `relateOne` alone when you need names and relations from the same evidence. The answered outcome's `detail.names` contains all admitted names, including names with no returned relation; `detail.pairs` contains scored relation pairs. Read accepted relations from its answer. A preceding recognize call is unnecessary.
+## The ten functions
+
+### decide: answer a yes-or-no question
+
+The answer is a `bool`.
+
+```zig
+const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
+    .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
+try out.print("{}\n", .{is_refund});
+```
+
+### choose: pick one option
+
+The answer is one of your labels. `tt.choices` builds the label list.
+
+```zig
+const topic = try (try client.choose(init.arena.allocator(), "What is the message about?",
+    tt.choices(&.{ "billing", "shipping", "other" }), .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
+try out.print("{s}\n", .{topic});
+```
+
+### tag: label every fit
+
+The answer is every label that fits, which may be none.
+
+```zig
+const topics = try (try client.tag(init.arena.allocator(), "Which topics appear?",
+    tt.choices(&.{ "billing", "shipping" }), .{ .text = "I was charged twice and my parcel is late again." }, .{}, &diag)).answer(&diag);
+for (topics) |topic| try out.print("{s}\n", .{topic});
+```
+
+### score: measure along levels
+
+Name the levels lowest first. The answer is an `f64` from 0 to 1 along them.
+
+```zig
+const urgency = try (try client.score(init.arena.allocator(), "How urgent is the request?",
+    tt.choices(&.{ "routine", "urgent" }), .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
+try out.print("{d}\n", .{urgency});
+```
+
+### filter: keep the records that pass
+
+`filterAll(...).next` yields only the kept records. Not-sure records are left out, and a failed record returns its error in its place, after which reading can go on.
+
+```zig
+const messages = [_][]const u8{ "Please refund my order.", "Where is my parcel?", "I was charged twice for one invoice." };
+var refunds = try client.filterAll(init.gpa, "Does the customer request a refund?", .{ .texts = &messages }, .{}, &diag);
+defer refunds.deinit();
+while (try refunds.next(&diag)) |refund| try out.print("{s}\n", .{refund.text});
+```
+
+To see every row, kept or not, read with `nextRow`, which yields each record with its row. The one-record `client.filter` returns the record when kept and `null` when not, and returns `error.Unsure` when not sure.
+
+### rank: order records by levels
+
+Rows come highest first. The answer is the rank, starting at 1, and `position` is the record's place in your input.
+
+```zig
+const messages = [_][]const u8{ "Please refund my order.", "Where is my parcel?", "I was charged twice for one invoice." };
+var by_urgency = try client.rankAll(init.gpa, "How urgent is the request?",
+    tt.choices(&.{ "routine", "urgent" }), .{ .texts = &messages }, .{}, &diag);
+defer by_urgency.deinit();
+while (try by_urgency.next(&diag)) |ranked| {
+    const rank = try ranked.answer(&diag);
+    try out.print("{d} {s}\n", .{ rank, ranked.item.text });
+}
+```
+
+`ranked.item` is the record you passed in, as a `tt.Record`, so `.text` is a text record's text and `.json` a JSON record's bytes. It lives in the row's memory: from `next`, until the next read or `deinit`; from `nextInto(arena, &diag)`, until you free that arena. To keep it longer, copy it with `ranked.item.copy(allocator)`. `.top = 3` in the options keeps only the three highest.
+
+### find: point to the line that answers
+
+The answer is a `?tt.Span`: the line's text with its UTF-8 byte offsets, or `null` when no line answers.
+
+```zig
+const action = try (try client.find(init.arena.allocator(), "Which line states the requested action?",
+    .{ .text = "Morgan works for Example Group.\nPlease refund my order." }, .{}, &diag)).answer(&diag);
+if (action) |line| try out.print("{s}\n", .{line.text}) else try out.print("no line answers\n", .{});
+```
+
+### annotate: fill in a form
+
+Give each question a name, then read each answer by its function and name. The form can't hold rank or annotate.
+
+```zig
+const form: tt.AnnotationQuestions = .{ .entries = &.{
+    .{ .name = "refund", .question = .{ .decide = .{ .question = "Does the customer request a refund?" } } },
+    .{ .name = "topic", .question = .{ .choose = .{ .question = "What is the message about?", .choices = tt.choices(&.{ "billing", "shipping", "other" }) } } },
+    .{ .name = "urgency", .question = .{ .score = .{ .question = "How urgent is the request?", .levels = tt.choices(&.{ "routine", "urgent" }) } } },
+} };
+const messages = [_][]const u8{ "Please refund my order.", "Where is my parcel?", "I was charged twice for one invoice." };
+var triage = try client.annotateAll(init.gpa, form, .{ .texts = &messages }, .{}, &diag);
+defer triage.deinit();
+while (try triage.next(&diag)) |filled| {
+    const answers = try filled.answer(&diag);
+    const is_refund = try answers.get(.decide, "refund").?.answer(&diag);
+    const topic = try answers.get(.choose, "topic").?.answer(&diag);
+    const urgency = try answers.get(.score, "urgency").?.answer(&diag);
+    try out.print("{} {s} {d}\n", .{ is_refund, topic, urgency });
+}
+```
+
+`get` returns `null` only when the form has no question of that function and name. Each answer it returns can be not sure or failed on its own, and `answer` says so.
+
+### recognize: pull out names
+
+The answer is each name with its `kind`, `text`, byte offsets and probability. Recognize takes kinds, not a question.
+
+```zig
+const names = try (try client.recognize(init.arena.allocator(), tt.choices(&.{ "person", "organization" }),
+    .{ .text = "Morgan works for Example Group." }, .{}, &diag)).answer(&diag);
+for (names) |name| try out.print("{s}: {s}\n", .{ name.kind, name.text });
+```
+
+### relate: link names
+
+Each rule names a relation and the kinds at each end. The answer is each related pair. Relate finds the names itself, so it needs no recognize call first.
+
+```zig
+const works_for = [_]tt.RelationRule{.{ .name = "works_for", .source = "person", .target = "organization" }};
+const relations = try (try client.relate(init.arena.allocator(), &works_for,
+    .{ .text = "Morgan works for Example Group.\nPlease refund my order." }, .{}, &diag)).answer(&diag);
+for (relations) |relation| try out.print("{s} --{s}--> {s}\n", .{ relation.source.text, relation.relation, relation.target.text });
+```
+
+A rule can add `.reads = "works for"` for how it reads in a sentence and `.either = true` when it holds both ways. The row's detail lists every name found, including names with no relation.
+
+## Many records
+
+A many-record call takes an `tt.Input`:
+
+- `.texts = &messages` for a slice of strings, one record each.
+- `.json_lines = bytes` for JSON Lines. Blank lines are skipped.
+- `.records = &records` for `tt.Record` values: `.text`, `.json` or `.missing`. `tt.Record.fromValue(allocator, value)` encodes any value `std.json` can write.
+- `.source = tt.RecordSource.from(&source)` for input too large to hold, where `source` has `fn next(self) error{RecordSource}!?tt.Record`.
+
+One call over the whole collection lets ThinkThen batch requests. An empty collection yields no rows and sends no request. Keep the input bytes alive until the call is done.
+
+`next(&diag)` reuses the call's memory, so a row is valid until the next read or `deinit`. To keep rows longer, read with `nextInto(arena, &diag)` and they live in your arena instead. `call.cancel()` stops a call from any thread, and the read in progress returns `error.Cancelled`. Always `defer call.deinit()`.
+
+## Options
+
+Each function takes its own options struct as the argument after the record or input:
+
+- `.field = "/text"`: a JSON Pointer to the text to judge in a JSON record.
+- `.threshold`: for decide, choose and filter, a cut such as `.{ .cut = 0.8 }` or a band such as `tt.Threshold.band(0.2, 0.8)`, which answers no below 0.2, yes above 0.8, and not sure between. Tag, find, recognize and relate take one `f64` cut.
+- `.name = "refund"`: names the question in each row's `source`.
+- `.top`: rank only.
+- `.yes_means` and `.no_means`: for decide and filter, what a yes and a no mean for this question.
+- `.descriptions`: for choose, tag, score and rank, a `std.json.ArrayHashMap([]const u8)` from a label or level to what it means. Describe as many as you like; a key that is not one of the call's labels or levels returns `error.Usage`.
+
+```zig
+const is_refund = try (try client.decide(init.arena.allocator(), "Does the customer request a refund?",
+    .{ .text = "Please refund my order." }, .{ .yes_means = "The customer wants money back.", .no_means = "The customer wants anything else." }, &diag)).answer(&diag);
+try out.print("{}\n", .{is_refund});
+
+var urgency_levels: std.json.ArrayHashMap([]const u8) = .{};
+try urgency_levels.map.put(init.arena.allocator(), "urgent", "The customer is out of money or waiting on a late order.");
+const urgency = try (try client.score(init.arena.allocator(), "How urgent is the request?",
+    tt.choices(&.{ "routine", "urgent" }), .{ .text = "Please refund my order." }, .{ .descriptions = urgency_levels }, &diag)).answer(&diag);
+try out.print("{d}\n", .{urgency});
+```
 
 ## Save and load questions
 
-A saved toolbox uses named question entries. Save this as `toolbox.json`:
+A toolbox holds named questions. Save this as `toolbox.json`:
 
 ```json
-{"entries":{"ready":{"question":{"function":"filter","question":"Does the customer request a refund?","evidence":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"evidence":"/text"}}}}
+{"entries":{"refund":{"question":{"function":"decide","question":"Does the customer request a refund?"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"]}},"urgency":{"question":{"function":"score","question":"How urgent is the request?","levels":["routine","urgent"]}}}}
 ```
 
-Load the entries once, select a typed question and pass the whole collection to its matching call. Saving the toolbox preserves question definitions and their evidence selectors. SDK toolboxes contain questions; command shell steps and runs belong to the command's richer saved-run format.
+Load it once. Ask one question by name with `open`, or every question at once with `annotate`:
 
 ```zig
-const toolbox_json = try std.Io.Dir.cwd().readFileAlloc(
-    init.io, "toolbox.json", allocator, .limited(16 * 1024 * 1024));
-defer allocator.free(toolbox_json);
-var box = try tt.Toolbox.fromJson(allocator, toolbox_json, &diagnostic);
-defer box.deinit();
-const encoded = try box.toJson(allocator, &diagnostic);
-defer allocator.free(encoded);
-const entry = box.get("topic") orelse return error.MissingQuestion;
-const topic = entry.as(.choose) orelse return error.WrongQuestionKind;
-var choices = try client.open(.choose, allocator, topic, .{ .records = records.items }, &diagnostic);
-defer choices.deinit();
-while (try choices.next(arena.allocator(), &diagnostic)) |row| {
-    switch (row.outcome) {
-        .answered => |value| std.debug.print("{s}\n", .{value.answer}),
-        .unsure => std.debug.print("unsure\n", .{}),
-        .failed => return error.FailedRecord,
-    }
-    _ = arena.reset(.free_all);
-}
+const saved = try std.Io.Dir.cwd().readFileAlloc(init.io, "toolbox.json", init.gpa, .limited(1 << 20));
+defer init.gpa.free(saved);
+var toolbox = try tt.Toolbox.fromJson(init.gpa, saved, &diag);
+defer toolbox.deinit();
+
+const topic_question = (toolbox.get("topic") orelse return error.MissingQuestion).as(.choose) orelse return error.WrongQuestionKind;
+const topic = try (try client.open(.choose, init.arena.allocator(), topic_question, .{ .text = "Please refund my order." }, &diag)).answer(&diag);
+try out.print("{s}\n", .{topic});
+
+const form = try toolbox.annotation(init.gpa, &diag);
+defer init.gpa.free(form.entries);
+const answers = try (try client.annotate(init.arena.allocator(), form, .{ .text = "Please refund my order." }, .{}, &diag)).answer(&diag);
+try out.print("{}\n", .{try answers.get(.decide, "refund").?.answer(&diag)});
 ```
 
-This code belongs inside the first example's main function with its allocator, client, records and diagnostic. Save `encoded` with your application's file IO. Loaded entries borrow the Toolbox owner; keep it alive until all selected calls finish, then call `deinit()`. The JSON returned by `toJson` belongs to the supplied allocator. `box.get("ready")` followed by `entry.as(.filter)` selects a loaded filter question for `client.open(.filter, ...)`.
+`openAll` asks a loaded question of many records. `toolbox.toJson(allocator, &diag)` writes the toolbox back out, and `annotation` returns `error.Usage` when the toolbox holds a rank question. Keep the toolbox alive until the calls that use its questions are done.
 
-## Failures and cancellation
+## Save rows
 
-Record and backend failures return `.failed` rows, including One calls. They do not become Zig errors automatically. Stop and deinit the call when the workload requires stopping after failure, and inspect annotation children too. Call-level errors use tt.Error; Diagnostic carries the stable code and message. Diagnostic and returned row allocations have separate ownership.
+Rows write and read JSON through `std.json`, with their position, id, source and outcome: `std.json.Stringify.valueAlloc(allocator, row, .{})` to save, and `std.json.parseFromSlice(tt.Row(.decide), allocator, bytes, .{})` to load.
 
-`call.cancel()` requests cancellation; the next read returns a cancellation error. Always `defer call.deinit()` and `defer client.deinit()`. Make each question unambiguous: define the evidence criterion, distinguish absence from explicit negatives and use distinct choices. The stub checks installation, not question quality.
+## Reference
+
+Every public name carries a reference comment in [`sdk/zig/src/thinkthen.zig`](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/zig/src/thinkthen.zig) and the files it imports.

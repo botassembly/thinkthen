@@ -1,0 +1,580 @@
+#!/usr/bin/env python3
+"""Stage a genuine source, build the Windows CLI, inventory tools, or hold its VM.
+
+Run on the VM's Linux host through pm job. Build takes a fresh external output;
+hold takes that build output, prints native capture paths, and owns the VM until
+SIGTERM/SIGINT, its duration bound, or --until-eof for a pipe controller. pm jobs
+have no stdin, so EOF control is explicitly selected. Inventory reads tool paths
+and executable version metadata without launching the tools. No recorder runs here.
+"""
+import argparse
+import base64
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tarfile
+import tempfile
+import threading
+import time
+import uuid
+import zipfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# Keep the existing compiler tools visible; Python belongs only to this job.
+WINDOWS_HOST_SETUP = r"""$toolRoot = 'C:\tt0106'
+$selected = @("$toolRoot\Git\cmd", "$env:USERPROFILE\.cargo\bin")
+"""
+
+
+def run(*command, **options):
+    return subprocess.run(list(map(str, command)), check=True, capture_output=True, **options)
+
+
+def stage_source(root, revision, archive):
+    """Fetch real objects at depth one; never copy the caller's Git config."""
+    environment = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull,
+                       GIT_CONFIG_NOSYSTEM='1', GIT_TERMINAL_PROMPT='0')
+    with tempfile.TemporaryDirectory(prefix='windows-cli-source-') as temporary:
+        source = Path(temporary) / 'source'
+        run('git', 'init', '--quiet', '--template=', source, env=environment)
+        git = ['git', '-C', source]
+        run(*git, 'config', 'core.autocrlf', 'false', env=environment)
+        run(*git, 'config', 'core.filemode', 'false', env=environment)
+        run(*git, '-c', 'protocol.file.allow=always', 'fetch', '--quiet', '--depth=1', '--no-tags',
+            root.resolve().as_uri(), revision, env=environment)
+        run(*git, 'checkout', '--quiet', '--detach', revision, env=environment)
+        actual = run(*git, 'rev-parse', 'HEAD', text=True).stdout.strip()
+        tree = run(*git, 'rev-parse', 'HEAD^{tree}', text=True).stdout.strip()
+        expected = run('git', '-C', root, 'rev-parse', revision + '^{tree}', text=True).stdout.strip()
+        if actual != revision or tree != expected or run(*git, 'rev-list', '--count', 'HEAD', text=True).stdout.strip() != '1':
+            raise ValueError('The shallow export differs from the requested commit/tree')
+        run(*git, 'diff-index', '--quiet', 'HEAD', '--', env=environment)
+        (source / '.git/FETCH_HEAD').unlink(missing_ok=True)
+        shutil.rmtree(source / '.git/logs', ignore_errors=True)
+        with tarfile.open(archive, 'w:gz') as output:
+            output.add(source, arcname='source')
+    return {'source': actual, 'tree': tree, 'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}
+
+
+def ssh_command(options, script):
+    if options.mode != 'inventory':
+        setup = WINDOWS_HOST_SETUP
+        if getattr(options, 'python_home', None):
+            setup += '$selected = @(' + quote(options.python_home) + ') + $selected\n'
+        script = setup + "$env:PATH = ($selected -join ';') + ';' + $env:PATH\n" + script
+    encoded = base64.b64encode(script.encode('utf-16-le')).decode('ascii')
+    return ['ssh', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=3', '-p', str(options.port),
+            options.host, 'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand ' + encoded]
+
+
+def ssh(options, script, *, timeout=30):
+    return run(*ssh_command(options, script), timeout=timeout)
+
+
+def quote(value):
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def ready(options, *, prerequisites=True):
+    deadline = time.monotonic() + options.ready_seconds
+    script = """$ErrorActionPreference='Stop'
+foreach($name in @('python','git','tar')) {
+    [Console]::Out.WriteLine('Readiness prerequisite: ' + $name)
+    $lookup = if($name -eq 'python'){$pythonExecutable}else{$name}
+    $tool = Get-Command $lookup -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if(!$tool) { [Console]::Error.WriteLine('Missing Windows prerequisite: ' + $name); exit 127 }
+    [Console]::Out.WriteLine($tool.Source)
+    & $tool.Source --version
+    if($LASTEXITCODE -ne 0) {
+        [Console]::Error.WriteLine('Windows prerequisite failed: ' + $name + ' (exit ' + $LASTEXITCODE + ')')
+        exit $LASTEXITCODE
+    }
+    if($name -eq 'python') {
+        & $tool.Source -c 'import encodings,json,tomllib,subprocess,ssl,ctypes,zlib,xml.etree.ElementTree,zipfile,hashlib,runpy,tarfile,os,sys; subprocess.run([os.environ[''COMSPEC''],''/c'',''exit'',''0''],check=True); print(''Python stdlib/process ready: '' + sys.version)'
+        if($LASTEXITCODE -ne 0) { [Console]::Error.WriteLine('Python standard-library bootstrap failed'); exit $LASTEXITCODE }
+    }
+}
+exit 0
+"""
+    if prerequisites:
+        script = '$pythonExecutable = ' + quote(options.python_home + '/python.exe') + '\n' + script
+    else:
+        script = "[Console]::Out.WriteLine('Windows SSH ready'); exit 0"
+    while True:
+        try:
+            result = ssh(options, script, timeout=8)
+            phase = 'readiness' if prerequisites else 'ssh-ready'
+            (options.output / (phase + '.stdout')).write_bytes(result.stdout)
+            (options.output / (phase + '.stderr')).write_bytes(result.stderr)
+            (options.output / (phase + '.json')).write_text(json.dumps({'exit': 0}) + '\n')
+            return
+        except (subprocess.SubprocessError, OSError) as error:
+            if prerequisites or time.monotonic() >= deadline:
+                stdout = getattr(error, 'stdout', None) or b''
+                stderr = getattr(error, 'stderr', None) or b''
+                detail = {'failure': type(error).__name__, 'exit': getattr(error, 'returncode', None),
+                          'timeout_seconds': getattr(error, 'timeout', None)}
+                (options.output / 'readiness.stdout').write_bytes(stdout)
+                (options.output / 'readiness.stderr').write_bytes(stderr)
+                (options.output / 'readiness.json').write_text(json.dumps(detail, indent=2) + '\n')
+                print('Last Windows readiness failure: ' + json.dumps(detail) +
+                      '; raw output retained in ' + str(options.output / 'readiness.stdout') +
+                      ' and readiness.stderr', file=sys.stderr)
+                print(stdout.decode('utf-8', errors='replace'), file=sys.stderr, end='')
+                print(stderr.decode('utf-8', errors='replace'), file=sys.stderr, end='')
+                raise TimeoutError('Native Windows SSH/Python/Git/tar did not become ready') from None
+            time.sleep(1)
+
+
+def inventory(options):
+    # File versions identify installed executables without executing interpreter
+    # launchers, compiler shims or any command that might provision a toolchain.
+    script = r"""$ErrorActionPreference='Stop'
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$userRoot = $env:USERPROFILE
+$programs = $env:ProgramFiles
+$programs32 = ${env:ProgramFiles(x86)}
+$vswhere = "$programs32\Microsoft Visual Studio\Installer\vswhere.exe"
+$visualStudio = @()
+$vswhereExit = $null
+$vswhereError = $null
+if(Test-Path -LiteralPath $vswhere -PathType Leaf) {
+    $found = & $vswhere -all -products '*' -format json -utf8
+    $vswhereExit = $LASTEXITCODE
+    if($vswhereExit -eq 0) {
+        try { $visualStudio = @((($found -join "`n") | ConvertFrom-Json) | Select-Object installationPath,installationVersion) }
+        catch { $vswhereError = $_.Exception.Message }
+    }
+}
+$pythonPaths = @("$env:LOCALAPPDATA\Programs\Python\Python*\python.exe", "$programs\Python*\python.exe", "$programs32\Python*\python.exe", 'C:\Python*\python.exe', 'C:\tools\python*\python.exe')
+$known = @{
+    python = $pythonPaths + @("$env:LOCALAPPDATA\Microsoft\WindowsApps\python.exe")
+    python3 = @("$env:LOCALAPPDATA\Microsoft\WindowsApps\python3*.exe")
+    py = @("$env:WINDIR\py.exe", "$env:LOCALAPPDATA\Programs\Python\Launcher\py.exe")
+    git = @("$programs\Git\cmd\git.exe", "$programs\Git\bin\git.exe")
+    tar = @("$env:WINDIR\System32\tar.exe", "$programs\Git\usr\bin\tar.exe")
+    cargo = @("$userRoot\.cargo\bin\cargo.exe", "$userRoot\.rustup\toolchains\*\bin\cargo.exe")
+    rustup = @("$userRoot\.cargo\bin\rustup.exe")
+    cl = @()
+    link = @()
+}
+$vsRoots = @($visualStudio | ForEach-Object { $_.installationPath }) + @("$programs\Microsoft Visual Studio\2022\*", "$programs32\Microsoft Visual Studio\2019\*", 'C:\BuildTools')
+foreach($name in @('cl','link')) {
+    $known[$name] = @($vsRoots | ForEach-Object { "$_\VC\Tools\MSVC\*\bin\Hostx64\x64\$name.exe" })
+}
+$tools = foreach($name in @('python','python3','py','git','tar','cargo','rustup','cl','link')) {
+    $selected = Get-Command $name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $paths = @($known[$name])
+    if($selected) { $paths += $selected.Source }
+    $files = @($paths | ForEach-Object { Get-Item -Path $_ -ErrorAction SilentlyContinue } | Where-Object { !$_.PSIsContainer } | Sort-Object FullName -Unique)
+    $locations = @($files | ForEach-Object {
+        $version = $null; $versionError = $null
+        try { $version = $_.VersionInfo } catch { $versionError = $_.Exception.Message }
+        @{path=$_.FullName; file_version=$version.FileVersion; product_version=$version.ProductVersion; version_error=$versionError}
+    })
+    @{name=$name; selected_path=$(if($selected){$selected.Source}else{$null}); installations=$locations}
+}
+$vswhereVersion = $null
+if(Test-Path -LiteralPath $vswhere -PathType Leaf) { $vswhereVersion = (Get-Item -LiteralPath $vswhere).VersionInfo.FileVersion }
+# Inspect only the retained interpreter's exact local layout; never run it.
+$pythonRoot = 'C:\tt0106\Python313'
+$layoutPaths = @('C:\tt0106', $pythonRoot) + @('python.exe','python313.dll','python3.dll','Lib','Lib\os.py','Lib\site.py','Lib\encodings','Lib\encodings\__init__.py','DLLs','DLLs\zlib.pyd','python313.zip','pyvenv.cfg','python._pth','python313._pth') | ForEach-Object { if($_ -match '^[A-Za-z]:'){$_}else{"$pythonRoot\$_"} }
+$layoutFiles = @($layoutPaths | ForEach-Object {
+    $path = $_
+    $item = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+    $readable = $null; $readError = $null
+    if($item -and !$item.PSIsContainer) {
+        try { $stream = [IO.File]::OpenRead($path); $stream.Dispose(); $readable = $true } catch { $readable = $false; $readError = $_.Exception.Message }
+    }
+    @{path=$path; readable=$readable; read_error=$readError; exists=($null -ne $item); directory=$(if($item){$item.PSIsContainer}else{$null}); length=$(if($item -and !$item.PSIsContainer){$item.Length}else{$null}); attributes=$(if($item){$item.Attributes.ToString()}else{$null}); link_type=$item.LinkType; target=$item.Target}
+})
+$children = @('','Lib','Lib\encodings') | ForEach-Object {
+    $path = if($_){Join-Path $pythonRoot $_}else{$pythonRoot}
+    $items = @(Get-ChildItem -LiteralPath $path -Force -ErrorAction SilentlyContinue)
+    @{path=$path; total=$items.Count; names=@($items | Select-Object -First 100 -ExpandProperty Name)}
+}
+$zipEntries = @(); $zipError = $null; $zipCount = $null
+if(Test-Path -LiteralPath "$pythonRoot\python313.zip" -PathType Leaf) {
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [IO.Compression.ZipFile]::OpenRead("$pythonRoot\python313.zip")
+        try {
+            $zipCount = $zip.Entries.Count
+            $zipEntries = @($zip.Entries | Where-Object { $_.FullName -match '(^|/)(encodings/__init__\.py|os\.py|site\.py)$' } | ForEach-Object { @{name=$_.FullName; length=$_.Length; compressed_length=$_.CompressedLength} })
+        } finally { $zip.Dispose() }
+    } catch { $zipError = $_.Exception.Message }
+}
+$configs = @('pyvenv.cfg','python._pth','python313._pth','..\pyvenv.cfg') | ForEach-Object {
+    $path = Join-Path $pythonRoot $_
+    $entries = @(); $unreported = 0; $configError = $null
+    try { if(Test-Path -LiteralPath $path -PathType Leaf) {
+        foreach($line in [IO.File]::ReadAllLines($path)) {
+            $line = $line.Trim()
+            if(!$line -or $line.StartsWith('#')) { continue }
+            # Only runtime path/version directives, never arbitrary file text.
+            if($line -match '^(home|executable)\s*=\s*([A-Za-z]:[\\/][A-Za-z0-9_. \\/-]+)$') { $entries += @{name=$Matches[1]; value=$Matches[2]} }
+            elseif($line -match '^(version|include-system-site-packages)\s*=\s*([0-9.]+|true|false)$') { $entries += @{name=$Matches[1]; value=$Matches[2]} }
+            elseif($path.EndsWith('._pth') -and $line -match '^(\.|\.\.|Lib|DLLs|python313\.zip|import site|[A-Za-z]:[\\/][A-Za-z0-9_. \\/-]+)$') { $entries += @{name='path'; value=$line} }
+            else { $unreported++ }
+        }
+    }
+    } catch { $configError = $_.Exception.Message }
+    @{path=$path; directives=$entries; unreported_lines=$unreported; error=$configError}
+}
+$envScript = 'C:\tt0106\env.ps1'
+$envDirectives = @(); $envScriptError = $null
+try { if(Test-Path -LiteralPath $envScript -PathType Leaf) {
+    foreach($line in [IO.File]::ReadAllLines($envScript)) {
+        if($line -match '^\s*\$env:(PYTHONHOME|PYTHONPATH)\s*=') {
+            $variable = $Matches[1]
+            # Report only references to the already known Python root, not
+            # script lines, expressions, other environment values or secrets.
+            $references = @([regex]::Matches($line, '(?i)C:[\\/]tt0106[\\/]Python313(?:[\\/](?:Lib|DLLs|python313\.zip))?') | ForEach-Object { $_.Value })
+            $envDirectives += @{variable=$variable; known_root_references=$references}
+        }
+    }
+}
+} catch { $envScriptError = $_.Exception.Message }
+$pythonLayout = @{root=$pythonRoot; files=$layoutFiles; children=@($children); zip=@{entry_count=$zipCount; relevant_entries=$zipEntries; error=$zipError}; configs=@($configs); env_script=@{path=$envScript; exists=(Test-Path -LiteralPath $envScript -PathType Leaf); python_directives=$envDirectives; error=$envScriptError}}
+$report = @{python_layout=$pythonLayout; tools=@($tools); version_kind='Windows executable file metadata; tools were not launched'; powershell=$PSVersionTable.PSVersion.ToString(); windows=[Environment]::OSVersion.VersionString; vswhere=@{path=$vswhere; file_version=$vswhereVersion; exit=$vswhereExit; error=$vswhereError; installations=$visualStudio}}
+[Console]::Out.WriteLine(($report | ConvertTo-Json -Depth 8))
+exit 0
+"""
+    result = None
+    try:
+        result = ssh(options, script, timeout=30)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        result = error
+        raise
+    finally:
+        if result is not None:
+            (options.output / 'inventory.stdout').write_bytes(result.stdout or b'')
+            (options.output / 'inventory.stderr').write_bytes(result.stderr or b'')
+            status = {'exit': getattr(result, 'returncode', None), 'timeout_seconds': getattr(result, 'timeout', None)}
+            (options.output / 'inventory-status.json').write_text(json.dumps(status, indent=2) + '\n')
+    report = json.loads(result.stdout.decode('utf-8-sig'))
+    (options.output / 'inventory.json').write_text(json.dumps(report, indent=2) + '\n')
+    print(json.dumps(report), flush=True)
+
+
+def prepare_python_archive(output):
+    from release_windows_host import prepare_embedded_python
+    return prepare_embedded_python(output)
+
+
+def python_ssh(options, script, *, phase):
+    result = None
+    try:
+        result = ssh(options, script, timeout=120)
+        return result
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        result = error
+        raise
+    finally:
+        if result is not None:
+            (options.output / (phase + '.stdout')).write_bytes(result.stdout or b'')
+            (options.output / (phase + '.stderr')).write_bytes(result.stderr or b'')
+
+
+def verify_python(options, native, manifest):
+    expected = base64.b64encode(json.dumps(manifest['files']).encode()).decode()
+    script = "$ErrorActionPreference='Stop'; $root=" + quote(native + '/python') + "; $expected=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + expected + "'))|ConvertFrom-Json; $actual=@{}; foreach($file in $expected.PSObject.Properties){$actual[$file.Name]=(Get-FileHash -Algorithm SHA256 -LiteralPath ($root+'/'+$file.Name)).Hash.ToLowerInvariant()}; [Console]::Out.WriteLine(($actual|ConvertTo-Json -Compress))"
+    actual = json.loads(python_ssh(options, script, phase='python-verify').stdout)
+    if actual != manifest['files']:
+        raise ValueError('Native owned Python runtime differs from its verified archive/configuration')
+
+
+def copy_archive(options, source, destination, label):
+    result = None
+    try:
+        result = run('scp', '-P', options.port, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=3',
+                     '-o', 'StrictHostKeyChecking=yes', source, destination, timeout=120)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        result = error
+        raise
+    finally:
+        if result is not None:
+            for stream in ('stdout', 'stderr'):
+                (options.output / (label + '.scp.' + stream)).write_bytes(getattr(result, stream) or b'')
+
+
+def upload_archive(options, path, archive, checksum, *, prepare=''):
+    """Use the existing native scp recipe, then verify native length and SHA."""
+    data = archive.read_bytes()
+    if hashlib.sha256(data).hexdigest() != checksum:
+        raise ValueError('Local upload archive checksum differs')
+    if prepare:
+        python_ssh(options, "$ErrorActionPreference='Stop'; " + prepare, phase=archive.name + '-directory')
+    copy_archive(options, archive, options.host + ':' + path, archive.name)
+    script = "$ErrorActionPreference='Stop'; $path=" + quote(path) + "; $bytes=(Get-Item -LiteralPath $path).Length; $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant(); [Console]::Out.WriteLine((@{bytes=$bytes;sha256=$hash}|ConvertTo-Json -Compress))"
+    receipt = json.loads(python_ssh(options, script, phase=archive.name + '-verify').stdout)
+    (options.output / (archive.name + '.upload.json')).write_text(json.dumps(receipt, indent=2) + '\n')
+    if receipt != {'bytes': len(data), 'sha256': checksum}:
+        raise ValueError('Native upload length/hash receipt differs from the local archive: ' + repr(receipt))
+
+
+def provision_python(options, native, manifest):
+    configured = base64.b64encode((options.output / 'python313._pth').read_bytes()).decode()
+    prepare = 'New-Item -ItemType Directory -Force ' + quote(options.vm_root) + '|Out-Null; New-Item -ItemType Directory ' + quote(native) + '|Out-Null; '
+    upload_archive(options, native + '/python.zip', options.output / 'python.zip',
+                   manifest['archive_sha256'], prepare=prepare)
+    script = "$ErrorActionPreference='Stop'; $archive=" + quote(native + '/python.zip') + "; Expand-Archive -LiteralPath $archive -DestinationPath " + quote(native + '/python') + "; [IO.File]::WriteAllBytes(" + quote(native + '/python/python313._pth') + ",[Convert]::FromBase64String('" + configured + "')); Remove-Item -LiteralPath $archive"
+    python_ssh(options, script, phase='python-extract')
+    verify_python(options, native, manifest)
+
+
+def prepare_replay(options):
+    folder = options.replay_inputs
+    if not folder.is_absolute() or folder.resolve().is_relative_to(ROOT):
+        raise ValueError('Replay inputs must be an absolute owned directory outside the checkout')
+    manifest = json.loads((folder / 'inputs.json').read_text(encoding='utf-8'))
+    source = manifest['linux_cli']['source']
+    if not re.fullmatch(r'[0-9a-f]{40}', source) or (folder / 'producer-source-commit').read_text().strip() != source:
+        raise ValueError('Linux version-probe CLI source provenance differs')
+    for name, expected in [('bin/thinkthen', manifest['linux_cli']['sha256']),
+                           ('recorded-responses.json', manifest['cache']['sha256'])]:
+        if hashlib.sha256((folder / name).read_bytes()).hexdigest() != expected:
+            raise ValueError('Replay input checksum differs: ' + name)
+    if not os.access(folder / 'bin/thinkthen', os.X_OK):
+        raise ValueError('Linux version-probe CLI is not executable')
+    if not isinstance(json.loads((folder / 'recorded-responses.json').read_bytes()), dict):
+        raise ValueError('Replay cache must contain the public request/response mapping')
+    node = shutil.which('node')
+    if node is None:
+        raise ValueError('Prepare the existing Node runtime before replay')
+    version = run(node, '--version', text=True, encoding='utf-8').stdout.strip()
+    match = re.fullmatch(r'v(\d+)\.(\d+)\.(\d+)', version)
+    if not match or tuple(map(int, match.groups())) < (22, 22, 0):
+        raise ValueError('Windows replay requires the existing Node >=22.22.0 runtime')
+    (options.output / 'replay-bin').mkdir()
+    shutil.copy2(folder / 'bin/thinkthen', options.output / 'replay-bin/thinkthen')
+    shutil.copyfile(folder / 'recorded-responses.json', options.output / 'replay-cache.json')
+    shutil.copyfile(folder / 'inputs.json', options.output / 'replay-inputs.json')
+    shutil.copyfile(folder / 'producer-source-commit', options.output / 'linux-producer-source-commit')
+    (options.output / 'replay-node.json').write_text(json.dumps({'path': node, 'version': version}) + '\n')
+    return node, manifest['cache']['sha256']
+
+
+def replay_windows(options, metadata, prepared):
+    node, cache_hash = prepared
+    # Only host SSH/runtime basics travel to the no-key recorder. There is no
+    # capture/live mode, arbitrary command, SDK prefix or prepared-program input.
+    env = {name: os.environ[name] for name in ('PATH', 'HOME', 'USER', 'LOGNAME', 'SSH_AUTH_SOCK', 'TMPDIR') if name in os.environ}
+    for name in ('SITE_CAPTURE_MAX_CALLS', 'SITE_CAPTURE_MAX_BYTES'):
+        if name in os.environ: env[name] = os.environ[name]
+    env.update(SITE_BIN_DIR=str(options.output / 'replay-bin'),
+               SITE_CAPTURE_FILE=str(options.output / 'replay-cache.json'),
+               SITE_CAPTURE_ARTIFACT_DIR=str(options.output / 'replay'),
+               SITE_WINDOWS_HOST=options.host, SITE_WINDOWS_PORT=str(options.port),
+               SITE_WINDOWS_PYTHON=metadata['python'], SITE_WINDOWS_HELPER=metadata['helper'],
+               SITE_WINDOWS_BINARY=metadata['binary'], SITE_WINDOWS_BINARY_SOURCE=metadata['source'],
+               SITE_WINDOWS_BINARY_SHA256=metadata['sha256'])
+    with (options.output / 'replay.stdout').open('wb') as stdout, (options.output / 'replay.stderr').open('wb') as stderr:
+        result = subprocess.run([node, 'scripts/run-examples.mjs', '--replay', 'start/decide-branch-ps'],
+                                cwd=ROOT / 'site', env=env, stdout=stdout, stderr=stderr, timeout=600)
+    sys.stdout.buffer.write((options.output / 'replay.stdout').read_bytes())
+    sys.stderr.buffer.write((options.output / 'replay.stderr').read_bytes())
+    manifest = json.loads((options.output / 'replay/manifest.json').read_text())
+    if manifest['calls'] != 0 or manifest['bytes'] != 0:
+        raise ValueError('Strict replay unexpectedly used a live provider')
+    if hashlib.sha256((options.output / 'replay-cache.json').read_bytes()).hexdigest() != cache_hash:
+        raise ValueError('Strict replay modified the public cache input')
+    result.check_returncode()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory'))
+    parser.add_argument('output', type=Path)
+    parser.add_argument('--source', default='HEAD')
+    parser.add_argument('--host', default='Docker@localhost')
+    parser.add_argument('--port', type=int, default=2222)
+    parser.add_argument('--container', default='windows-2022')
+    parser.add_argument('--vm-root', default='C:/thinkthen-jobs')
+    parser.add_argument('--seconds', type=float, default=600)
+    parser.add_argument('--ready-seconds', type=float, default=300)
+    parser.add_argument('--lock-seconds', type=float, default=600)
+    parser.add_argument('--until-eof', action='store_true')
+    parser.add_argument('--cleanup-root', action='append', default=[], help='exact ended-job native root authorized for removal')
+    parser.add_argument('--replay-inputs', type=Path, help='verified Linux version-probe CLI and public cache for the one strict Windows replay')
+    options = parser.parse_args()
+    options.python_home = None
+    if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds)):
+        parser.error('duration bounds must be finite and positive')
+    if options.cleanup_root and options.mode != 'build':
+        parser.error('ended-job cleanup is available only during an owned build lifecycle')
+    if options.replay_inputs and options.mode != 'build':
+        parser.error('strict Windows replay is available only during the owned build lifecycle')
+    for ended_root in options.cleanup_root:
+        if not re.fullmatch(re.escape(options.vm_root.rstrip('/')) + r'/cli-[0-9a-f]{12}-[0-9a-f]{8}', ended_root):
+            parser.error('cleanup root must name one exact owned native CLI job root')
+    output = options.output
+    if not output.is_absolute() or output.resolve().is_relative_to(ROOT):
+        parser.error('output must be an absolute owned directory outside the checkout')
+    revision = run('git', '-C', ROOT, 'rev-parse', options.source, text=True).stdout.strip()
+    if len(revision) != 40:
+        parser.error('source must resolve to a genuine commit')
+    if options.mode == 'inventory':
+        output.mkdir(parents=True, exist_ok=False)
+        (output / 'source.json').write_text(json.dumps({'source': revision, 'mode': 'inventory'}) + '\n')
+        native = None
+    elif options.mode != 'hold':
+        output.mkdir(parents=True, exist_ok=False)
+        (output / 'source.json').write_text(json.dumps({'source': revision}) + '\n')
+        if options.mode == 'stage-only':
+            source = stage_source(ROOT, revision, output / 'source.tar.gz')
+            (output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
+            print(json.dumps(source))
+            return
+        native = options.vm_root.rstrip('/') + '/cli-' + revision[:12] + '-' + uuid.uuid4().hex[:8]
+        metadata = {'root': native, 'helper': native + '/capture/site/scripts/windows-example.py',
+                    'binary': native + '/build/cli/thinkthen.exe', 'source': revision,
+                    'python': native + '/python/python.exe'}
+        replay = prepare_replay(options) if options.replay_inputs else None
+        python_manifest = prepare_python_archive(output)
+        (output / 'python.json').write_text(json.dumps(python_manifest, indent=2) + '\n')
+    else:
+        metadata = json.loads((output / 'vm.json').read_text())
+        native = metadata['root']
+        expected = re.escape(options.vm_root.rstrip('/') + '/cli-' + metadata['source'][:12]) + r'-[0-9a-f]{8}'
+        if not re.fullmatch(expected, native) or metadata['binary'] != native + '/build/cli/thinkthen.exe' or metadata['helper'] != native + '/capture/site/scripts/windows-example.py' or metadata['python'] != native + '/python/python.exe':
+            raise ValueError('Build metadata does not name its owned native root')
+        python_manifest = json.loads((output / 'python.json').read_text())
+    lock = Path.home() / '.windows-vm-lock'
+    deadline = time.monotonic() + options.lock_seconds
+    while True:
+        try:
+            lock.mkdir()
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError('Another owner holds the Windows VM lock')
+            time.sleep(1)
+    owner = 'thinkthen ' + Path(os.environ.get('TMPDIR', 'direct')).name + ' ' + os.environ.get('PM_JOB', 'direct')
+    (lock / 'owner').write_text(owner + '\n')
+    started = False
+    success = False
+
+    def interrupted(_signal, _frame):
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
+    try:
+        started = True
+        run('docker', 'start', options.container, timeout=30)
+        ready(options, prerequisites=False)
+        for ended_root in options.cleanup_root:
+            if ended_root == native:
+                raise ValueError('Cannot remove the active owned native root')
+            cleanup = "$ErrorActionPreference='Stop'; if(Test-Path -LiteralPath " + quote(ended_root) + "){Remove-Item -LiteralPath " + quote(ended_root) + " -Recurse -Force}; [Console]::Out.WriteLine('Removed ended-job native root: ' + " + quote(ended_root) + ")"
+            python_ssh(options, cleanup, phase='cleanup-' + ended_root.rsplit('/', 1)[1])
+        if options.mode == 'build':
+            provision_python(options, native, python_manifest)
+        elif options.mode == 'hold':
+            verify_python(options, native, python_manifest)
+        if options.mode != 'inventory':
+            options.python_home = native + '/python'
+            ready(options)
+        if options.mode == 'inventory':
+            inventory(options)
+        elif options.mode == 'build':
+            source = stage_source(ROOT, revision, output / 'source.tar.gz')
+            (output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
+            upload_archive(options, native + '/source.tar.gz', output / 'source.tar.gz',
+                           source['archive_sha256'])
+            import_probe = "import runpy; runpy.run_path('scripts/windows-native-proof',run_name='bootstrap_import'); runpy.run_path('site/scripts/windows-example.py',run_name='bootstrap_import'); print('Native producer/helper/cache imports ready')"
+            script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; Set-Location source; git config core.autocrlf false; git config core.filemode false; if((git rev-parse HEAD) -ne " + quote(revision) + "){throw 'Native source SHA differs'}; if((git rev-parse 'HEAD^{tree}') -ne " + quote(source['tree']) + "){throw 'Native source tree differs'}; git diff --quiet HEAD --; if($LASTEXITCODE){git diff --name-status --no-renames HEAD -- | Select-Object -First 40 | ForEach-Object {[Console]::Error.WriteLine($_)}; throw 'Native source bytes differ (first 40 paths above)'}; New-Item -ItemType Directory -Force ../capture/site/scripts,../capture/scripts|Out-Null; Copy-Item site/scripts/windows-example.py ../capture/site/scripts/; Copy-Item scripts/release_windows_cache.py ../capture/scripts/; & " + quote(metadata['python']) + " -c " + quote(import_probe) + "; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(metadata['python']) + " scripts/windows-native-proof cli ../build; if($LASTEXITCODE){exit $LASTEXITCODE}; Compress-Archive -Path ../build/cli/* -DestinationPath ../cli.zip -Force"
+            command = ssh_command(options, script)
+            with (output / 'build.log').open('wb') as log:
+                print('Build the native Windows command; output retained in ' + str(output / 'build.log'), flush=True)
+                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=3600)
+            sys.stdout.buffer.write((output / 'build.log').read_bytes())
+            result.check_returncode()
+            copy_archive(options, options.host + ':' + native + '/cli.zip', output / 'cli.zip', 'cli.zip')
+            with zipfile.ZipFile(output / 'cli.zip') as package:
+                if set(package.namelist()) != {'identity.json', 'thinkthen.exe'}:
+                    raise ValueError('CLI artifact archive has unexpected entries')
+                identity_bytes = package.read('identity.json')
+                identity = json.loads(identity_bytes)
+                binary = package.read('thinkthen.exe')
+            checksum = hashlib.sha256(binary).hexdigest()
+            if identity['inputs']['source_revision'] != revision or identity['artifacts'] != {'thinkthen.exe': checksum}:
+                raise ValueError('Collected Windows CLI identity differs')
+            (output / 'thinkthen.exe').write_bytes(binary)
+            (output / 'identity.json').write_bytes(identity_bytes)
+            metadata['sha256'] = checksum
+            (output / 'vm.json').write_text(json.dumps(metadata, indent=2) + '\n')
+            scratch_paths = [native + suffix for suffix in ('/source', '/source.tar.gz', '/cli.zip', '/build/target')]
+            cleanup = '$ErrorActionPreference="Stop"; ' + '; '.join('if(Test-Path -LiteralPath ' + quote(item) + '){Remove-Item -LiteralPath ' + quote(item) + ' -Recurse -Force}' for item in scratch_paths)
+            ssh(options, cleanup, timeout=120)
+            if replay:
+                replay_windows(options, metadata, replay)
+        else:
+            observed = ssh(options, "(Get-FileHash -Algorithm SHA256 -LiteralPath " + quote(metadata['binary']) + ").Hash.ToLowerInvariant()", timeout=10).stdout.decode().strip()
+            if observed != metadata['sha256']:
+                raise ValueError('Retained native CLI differs from its build')
+            print(json.dumps(metadata | {'ready': True}), flush=True)
+            finished = threading.Event()
+            if options.until_eof:
+                threading.Thread(target=lambda: (os.read(sys.stdin.fileno(), 1), finished.set()), daemon=True).start()
+            finished.wait(options.seconds)
+        success = True
+    finally:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        # Keep ownership unless Docker confirms the VM has stopped. Preserve
+        # the original failure when reporting a second failure during cleanup.
+        primary = sys.exc_info()[1]
+        cleanup_error = None
+        stopped = not started
+        try:
+            if started:
+                paths = [] if native is None else ([native + '/source', native + '/source.tar.gz', native + '/cli.zip'] if options.mode == 'build' and success and not options.replay_inputs else [native])
+                script = '$ErrorActionPreference="Stop"; ' + '; '.join('if(Test-Path -LiteralPath ' + quote(item) + '){Remove-Item -LiteralPath ' + quote(item) + ' -Recurse -Force}' for item in paths)
+                try:
+                    if native is not None:
+                        ssh(options, script, timeout=2)
+                except (subprocess.SubprocessError, OSError):
+                    print('Native scratch cleanup was not confirmed; retained owned root: ' + native, file=sys.stderr)
+                # Docker's daemon owns the submitted stop request even if its
+                # waiting CLI dies. All cleanup fits pm's ten-second grace.
+                try:
+                    run('docker', 'stop', '--time', '3', options.container, timeout=4)
+                except (subprocess.SubprocessError, OSError) as error:
+                    cleanup_error = error
+                try:
+                    state = run('docker', 'inspect', '--format', '{{.State.Running}}', options.container, timeout=2)
+                    stopped = state.stdout.strip() == b'false'
+                    if not stopped:
+                        cleanup_error = RuntimeError('Docker did not confirm a stopped VM')
+                except (subprocess.SubprocessError, OSError) as error:
+                    cleanup_error = error
+        finally:
+            if stopped:
+                try:
+                    if (lock / 'owner').read_text().strip() == owner:
+                        (lock / 'owner').unlink()
+                        lock.rmdir()
+                except OSError as error:
+                    cleanup_error = error
+            else:
+                print('Windows VM stop unconfirmed; retain owned lock ' + str(lock) +
+                      ' for ' + owner + '. Confirm docker stop ' + options.container +
+                      ' and inspect its stopped state before removing this lock.', file=sys.stderr)
+        if cleanup_error is not None:
+            print('Windows VM cleanup failed: ' + str(cleanup_error), file=sys.stderr)
+            if primary is None:
+                raise cleanup_error
+
+
+if __name__ == '__main__':
+    main()

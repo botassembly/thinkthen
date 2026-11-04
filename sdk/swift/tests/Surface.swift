@@ -75,7 +75,7 @@ func requireError(_ actual: any Error, equals expected: ThinkThenError) throws {
 }
 func requireSourceError(_ actual: any Error) throws {
   guard let typed = actual as? ThinkThenError else { throw actual }
-  guard case .recordSource = typed else { throw actual }
+  guard typed.kind == .recordSource else { throw actual }
 }
 
 // Feature: Swift actor callers consume sources without sending their iterators.
@@ -90,7 +90,7 @@ func requireSourceError(_ actual: any Error) throws {
     _ = try await rejected.next(isolation: MainActor.shared)
     preconditionFailure("second iterator was admitted")
   } catch { try requireError(error, equals: .iteration(.alreadyIterated)) }
-  var positions: [UInt64] = []
+  var positions: [Int] = []
   while let row = try await first.next(isolation: MainActor.shared) {
     positions.append(row.position)
   }
@@ -119,7 +119,7 @@ func cancelledSource(_ client: Client) async throws {
   do {
     _ = try await active.value
     preconditionFailure("task cancellation did not throw")
-  } catch { try requireError(error, equals: .cancelled) }
+  } catch { guard error is CancellationError else { throw error } }
   // Completion before release proves cancellation does not join the source.
   await released.fire()
   await returned.wait()
@@ -132,7 +132,7 @@ func cancelledSource(_ client: Client) async throws {
   do {
     _ = try await beforeStart.makeAsyncIterator().next()
     preconditionFailure("cancellation before iteration was ignored")
-  } catch { try requireError(error, equals: .cancelled) }
+  } catch { guard error is CancellationError else { throw error } }
 }
 
 // Feature: explicit stream cancel wakes a pending source read.
@@ -148,7 +148,7 @@ func explicitlyCancelledSource(_ client: Client) async throws {
   do {
     _ = try await active.value
     preconditionFailure("explicit cancellation did not throw")
-  } catch { try requireError(error, equals: .cancelled) }
+  } catch { guard error is CancellationError else { throw error } }
   await released.fire()
   await returned.wait()
 }
@@ -164,7 +164,7 @@ func rowRepresentation() throws {
   }
   precondition(answer == "shipping" && probability == 0.873194276251)
   precondition(detail?.labels["billing"] == 0.126805723749)
-  precondition(row.id == .string("r7") && row.position == 7 && row.source.backend == .openai)
+  precondition(row.id == .string("r7") && row.position == 7 && row.source.backend == .openAI)
   let copy = try JSONDecoder().decode(ChooseRow.self, from: encoded(row))
   precondition(copy == row)
   let fields = try JSONSerialization.jsonObject(with: encoded(copy)) as! [String: Any]
@@ -258,7 +258,7 @@ func recordResults(_ client: Client) async throws {
     precondition(roundTrip == row)
   }
   let input = [Record.missing, .text("kept or not kept")]
-  let filtered = try await client.filter("Ready?", records: input).collect()
+  let filtered = try await client.filterResults("Ready?", records: input).collect()
   precondition(filtered.count == 2 && filtered.map(\.item) == input)
   precondition(filtered[0].row.position == 1 && !filtered[0].kept)
   for result in filtered {
@@ -273,13 +273,13 @@ func recordEncodingFailures(_ client: Client) async throws {
     _ = try await client.decide("Ready?", record: invalid)
     preconditionFailure("finite record encoding unexpectedly succeeded")
   } catch {
-    guard case ThinkThenError.encoding = error else { throw error }
+    guard (error as? ThinkThenError)?.kind == .encoding else { throw error }
   }
   do {
     _ = try await client.decide("Ready?", records: ConfinedSource(records: [invalid])).collect()
     preconditionFailure("stream record encoding unexpectedly succeeded")
   } catch {
-    guard case ThinkThenError.encoding = error else { throw error }
+    guard (error as? ThinkThenError)?.kind == .encoding else { throw error }
   }
 }
 
@@ -288,12 +288,18 @@ func surface() async throws {
   let client = try Client(.init(backend: .stub))
   requireSendable(client)
   // Feature: host error presentation preserves the library's diagnostic message.
-  let diagnostic = ThinkThenError.unknownCode(
-    rawCode: 9999, message: "A future engine diagnostic", httpStatus: nil, rawName: nil)
+  let diagnostic = ThinkThenError.engine(
+    RowFailure(
+      code: ErrorCode(rawValue: "future.code"), message: "A future engine diagnostic",
+      httpStatus: nil))
   precondition(diagnostic.localizedDescription == "A future engine diagnostic")
-  precondition(ThinkThenError.cancelled.localizedDescription == "The call was cancelled")
+  try checkPublicInterface()
   try redactedSettings()
   try rowRepresentation()
+  try await settledTextCollections(client)
+  try await settledFilter(client)
+  try await settledRank(client)
+  try await settledQuestionMeanings(client)
   try await savedQuestions(client)
   try await isolatedIteration(client)
   try await cancelledSource(client)

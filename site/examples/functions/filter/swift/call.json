@@ -1,0 +1,5 @@
+{
+  "anchor": "for try await message in client.filter(",
+  "before": 0,
+  "after": 2
+}

@@ -3,9 +3,9 @@
 static void saved_toolbox(const char *json) {
     thinkthen_error error = {.struct_size = sizeof error};
     thinkthen_toolbox *tools = NULL;
-    assert(thinkthen_toolbox_from_json((const uint8_t *)json, strlen(json), &tools, &error) == THINKTHEN_OK);
+    assert(thinkthen_toolbox_from_json((const char *)json, strlen(json), &tools, &error) == THINKTHEN_OK);
     thinkthen_question *topic = NULL;
-    const uint8_t name[] = "topic";
+    const char name[] = "topic";
     assert(thinkthen_toolbox_select_as(tools, name, sizeof name - 1, THINKTHEN_FUNCTION_CHOOSE, &topic, &error) == THINKTHEN_OK);
     thinkthen_buffer saved = {0};
     assert(thinkthen_toolbox_to_json(tools, &saved, &error) == THINKTHEN_OK);
@@ -16,13 +16,13 @@ static void saved_toolbox(const char *json) {
     assert(thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &error) == THINKTHEN_OK);
     assert(thinkthen_client_open(settings, &client, &error) == THINKTHEN_OK);
     thinkthen_settings_free(settings);
-    const uint8_t record[] = "{\"body\":\"Bill\"}";
+    const char record[] = "{\"body\":\"Bill\"}";
     thinkthen_row first = {.struct_size = sizeof first}, second = {.struct_size = sizeof second};
     assert(thinkthen_run_one(client, topic, record, sizeof record - 1, THINKTHEN_RECORD_JSON, &first, &error) == THINKTHEN_OK);
     thinkthen_question_free(topic);
     tools = NULL;
     topic = NULL;
-    assert(thinkthen_toolbox_from_json(saved.data, saved.len, &tools, &error) == THINKTHEN_OK);
+    assert(thinkthen_toolbox_from_json((const char *)saved.data, saved.len, &tools, &error) == THINKTHEN_OK);
     assert(thinkthen_toolbox_select(tools, name, sizeof name - 1, &topic, &error) == THINKTHEN_OK);
     assert(thinkthen_run_one(client, topic, record, sizeof record - 1, THINKTHEN_RECORD_JSON, &second, &error) == THINKTHEN_OK);
     assert(first.probability == second.probability);

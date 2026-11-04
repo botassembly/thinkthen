@@ -1,0 +1,167 @@
+---
+title: Zig SDK
+description: "Zig SDK: ask the ten ThinkThen questions from Zig and get yes, no or not sure back as plain Zig values."
+goal: The reader runs a first decide in Zig, adds the SDK to a build, handles not sure and failures, and finds the Zig call for each of the ten functions.
+reader: A Zig developer who wants to ask questions about text from code
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "Zig"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The Zig SDK gives your Zig code the ten functions as methods on one client; each call gives back a result whose `answer` is a plain Zig value, such as `true` or `false` from decide, and returns `error.Unsure` when the answer is not sure.
+
+<Example id="functions/decide/zig" title="src/main.zig" />
+
+`true` means yes: the message asks for a refund.
+
+## Add it to your build
+
+The SDK needs <Fact k="languages.zig.requires" />. In a project that has a `build.zig.zon`, such as one `zig init` made, fetch the archive for your machine:
+
+<InstallLine k="languages.zig.install" lang="sh" />
+
+Archives are published for `linux-x86_64`, `linux-arm64` and `macos-arm64`; change the end of the address to match your machine. `zig fetch --save` adds the dependency to `build.zig.zon`.
+
+This `build.zig` builds `src/main.zig`, adds the `thinkthen` module, installs the native library beside your program with `installNative`, and adds a `run` step:
+
+<details class="example-disclosure">
+<summary>build.zig</summary>
+
+<ExampleFile id="lang-zig" file="build.zig" />
+
+</details>
+
+Save the program as `src/main.zig` and run `zig build run`. The client uses the key from the [Quickstart](/quickstart/).
+
+## Handle not sure and failures
+
+Set a low bar and a high bar with `tt.Threshold.band`. Between them, decide is not sure. Each result's `outcome` is a union of `.answered`, `.unsure` and `.failed`, so a `switch` handles all three:
+
+<Example id="sdks/zig/unsure" title="src/main.zig" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`try result.answer(&diag)` is the short way to the answer. It returns `error.Unsure` when not sure, with the probability in `diag.probability`. When ThinkThen can't judge the message, it returns that message's error, such as `error.Record` or `error.Backend`, and `diag.code` and `diag.message()` say why. Neither one can pass for `false`. A problem with the client or the call itself, such as a wrong argument, comes back as an error from `tt.Client.init` or the call, such as `error.Usage`, with `diag` filled the same way. [Troubleshooting](/reference/troubleshooting/) lists each error code.
+
+## The ten functions
+
+Each function reads the same support-inbox messages as the function pages. A one-message call, such as `client.decide`, takes an arena and gives back one result. A many-message call, such as `client.filterAll`, takes an allocator and an input such as `.{ .texts = &messages }`; read it with `while (try call.next(&diag)) |item|` and free it with `deinit`.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+<Example id="functions/decide/zig" title="src/main.zig" />
+
+Yes: the message asks for a refund. `DecideOptions` takes `.threshold` (one bar, or a low and a high bar with `tt.Threshold.band`), `.yes_means` and `.no_means`. `client.decideAll` takes many messages and gives one result each, in order. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/zig" title="src/main.zig" />
+
+A refund is about billing. `tt.choices` builds the list at compile time. `ChooseOptions` takes `.descriptions`, from each choice to what it means, and `.threshold`, which can make choose not sure. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="functions/filter/zig" title="src/main.zig" />
+
+The parcel question is left out. `next` gives back only the kept messages, and skips the ones it is not sure about. A message that fails returns its error in its place, with its position in `diag.position`, and reading can go on after it. `nextRow` gives every message with its outcome instead. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/zig" title="src/main.zig" />
+
+The message is about both billing and shipping. The answer is a slice of labels, empty when no label fits. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/zig" title="src/main.zig" />
+
+The levels run lowest first, so a plain refund request scores near routine. The answer is an `f64`. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+<Example id="functions/rank/zig" title="src/main.zig" />
+
+The double charge is the most urgent. Each result's answer is its rank, a `u64` starting at 1, and `position` is its place in your input, counting from 1. `RankOptions` takes `.top` to keep only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/zig" title="src/main.zig" />
+
+The second line states the action. The answer is a `?tt.Span` with `text`, `start` and `end`, or `null` when no line answers. Offsets count UTF-8 bytes. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/zig" title="src/main.zig" />
+
+The answer is a slice of `tt.Name`, each with `text`, `kind`, `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/zig" title="src/main.zig" />
+
+A `tt.RelationRule` names the kind of name at each end and the relation between them. Each `tt.Relation` in the answer has a `source`, a `target` and the `relation`. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+<Example id="functions/annotate/zig" title="src/main.zig" />
+
+`answers.get(.decide, "refund")` reads one answer by its function and name, and gives `null` for a name you never added. Each answer can be not sure or fail on its own, so its `answer` returns `error.Unsure` or its error, as decide does. For one message, call `client.annotate`. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+Each options type takes `.field`, a pointer such as `"/text"`, to judge one field of a JSON message passed as `.{ .json = ... }`. `tt.Client.init` takes `tt.Settings` to set the batch size and retries. A many-message call's `cancel` stops it from any thread. The [Zig API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/zig/src/thinkthen.zig) comments every public name.

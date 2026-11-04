@@ -7,8 +7,9 @@
 # It installs to ~/.local/bin, or THINKTHEN_INSTALL_DIR. It refuses a missing or
 # wrong checksum, a staged binary that reports another version, and a symlinked
 # folder or binary. It writes a receipt beside the binary, `pending` before the
-# swap and `installed` after it. It prints the PATH line and edits no shell
-# profile. To uninstall, delete the binary and thinkthen.install.json beside it.
+# swap and `installed` after it. It adds a marked PATH line to the user's shell
+# profiles unless THINKTHEN_NO_MODIFY_PATH=1. To uninstall, delete the binary and
+# receipt, and remove the marked line from the receipt's path_changes files.
 #
 # THINKTHEN_INSTALL_BASE and THINKTHEN_INSTALL_API replace https://github.com and
 # https://api.github.com, for a mirror or a local copy of a release.
@@ -19,6 +20,7 @@ main() {
 	BASE=${THINKTHEN_INSTALL_BASE:-https://github.com}
 	API=${THINKTHEN_INSTALL_API:-https://api.github.com}
 	INSTALL_DIR=${THINKTHEN_INSTALL_DIR:-$HOME/.local/bin}
+	REQUESTED_INSTALL_DIR=$INSTALL_DIR
 	VERSION=latest
 
 	die() {
@@ -117,6 +119,14 @@ main() {
 	case $INSTALL_DIR in
 	*\"* | *\\*) die "refusing an install folder with a quote or backslash: $INSTALL_DIR" ;;
 	esac
+	assert_path_separator() {
+		if [ "${THINKTHEN_NO_MODIFY_PATH:-}" != 1 ]; then
+			case $1 in
+			*:*) die 'install directory contains a PATH separator; set THINKTHEN_NO_MODIFY_PATH=1 for an explicit-path install' ;;
+			esac
+		fi
+	}
+	assert_path_separator "$INSTALL_DIR"
 	# Version zero needs a minor release of at least two.
 	major=${VERSION%%.*}
 	remaining=${VERSION#*.}
@@ -156,6 +166,7 @@ main() {
 	[ ! -L "$INSTALL_DIR" ] || die "refusing a symbolic-link install folder: $INSTALL_DIR"
 	mkdir -p "$INSTALL_DIR"
 	INSTALL_DIR=$(cd "$INSTALL_DIR" && pwd -P)
+	assert_path_separator "$INSTALL_DIR"
 	installed=$INSTALL_DIR/thinkthen
 	receipt=$INSTALL_DIR/thinkthen.install.json
 	for destination in "$installed" "$receipt"; do
@@ -167,6 +178,10 @@ main() {
 	field() {
 		sed -n "s/^  \"$1\": \"\\([^\"]*\\)\".*/\\1/p" "$receipt"
 	}
+	path_changes=
+	if [ -f "$receipt" ]; then
+		path_changes=$(sed -n 's/^  "path_changes": \[\(.*\)\],*$/\1/p' "$receipt")
+	fi
 	if [ -f "$receipt" ] && [ "$(field state)" = pending ]; then
 		[ "$(field executable_path)" = "$installed" ] || die 'the pending receipt names another binary; refusing to continue'
 		current=
@@ -191,6 +206,63 @@ main() {
 	old_sha=
 	[ ! -f "$installed" ] || old_sha=$(sha256 "$installed")
 
+	json_string() {
+		printf '%s' "$1" | awk '
+			BEGIN { printf "\""; for (i = 1; i < 32; i++) escape[sprintf("%c", i)] = sprintf("\\u%04x", i); escape["\\"] = "\\\\"; escape["\""] = "\\\"" }
+			{ if (NR > 1) printf "\\n"; for (i = 1; i <= length($0); i++) { c = substr($0, i, 1); printf "%s", (c in escape ? escape[c] : c) } }
+			END { printf "\"" }'
+	}
+
+	shell_quote() {
+		printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+	}
+
+	add_profile() {
+		profile=$1
+		[ ! -e "$profile" ] || [ -f "$profile" ] || die "refusing a non-file shell profile: $profile"
+		mkdir -p "$(dirname "$profile")"
+		if [ ! -f "$profile" ] || ! grep -F -x "$path_line" "$profile" >/dev/null 2>&1; then
+			printf '\n%s\n' "$path_line" >>"$profile"
+			printf 'Added thinkthen to PATH in %s\n' "$profile"
+		fi
+		changed=$(json_string "$profile")
+		case ,$path_changes, in
+		*"$changed"*) ;;
+		*) path_changes=${path_changes:+$path_changes,}$changed ;;
+		esac
+	}
+
+	modify_path() {
+		case :$PATH: in
+		*":$INSTALL_DIR:"* | *":$REQUESTED_INSTALL_DIR:"*) return ;;
+		esac
+		quoted=$(shell_quote "$INSTALL_DIR")
+		contains=$(shell_quote ":$INSTALL_DIR:")
+		path_line="case \":\$PATH:\" in *$contains*) ;; *) export PATH=$quoted:\"\$PATH\" ;; esac # thinkthen PATH"
+		current_line="export PATH=$quoted:\"\$PATH\""
+		login_shell=${SHELL:-sh}
+		if [ "${login_shell##*/}" = fish ]; then
+			quoted="'$(printf '%s' "$INSTALL_DIR" | sed "s/'/\\\\'/g")'"
+			path_line="if not contains -- $quoted \$PATH; set -gx PATH $quoted \$PATH; end # thinkthen PATH"
+			current_line="set -gx PATH $quoted \$PATH"
+		fi
+		if [ "${THINKTHEN_NO_MODIFY_PATH:-}" != 1 ]; then
+			case ${SHELL:-sh} in
+			*/zsh | zsh) add_profile "${ZDOTDIR:-$HOME}/.zshrc" ;;
+			*/bash | bash)
+				add_profile "$HOME/.bashrc"
+				if [ -f "$HOME/.bash_profile" ]; then add_profile "$HOME/.bash_profile"
+				elif [ -f "$HOME/.bash_login" ]; then add_profile "$HOME/.bash_login"
+				else add_profile "$HOME/.profile"; fi
+				;;
+			*/fish | fish) add_profile "${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/thinkthen.fish" ;;
+			*) add_profile "$HOME/.profile" ;;
+			esac
+			echo 'New terminals will find thinkthen.'
+		fi
+		printf 'For this shell, run:\n  %s\n' "$current_line"
+	}
+
 	write_receipt() {
 		receipt_stage=$(mktemp "$INSTALL_DIR/.thinkthen.install.json.XXXXXX")
 		chmod 600 "$receipt_stage"
@@ -198,10 +270,11 @@ main() {
 			echo '{'
 			echo '  "schema_version": 1,'
 			echo "  \"state\": \"$1\","
-			echo "  \"executable_path\": \"$installed\","
+			printf '  "executable_path": %s,\n' "$(json_string "$installed")"
 			echo "  \"version\": \"$VERSION\","
 			echo "  \"old_sha256\": \"$old_sha\","
-			echo "  \"new_sha256\": \"$new_sha\""
+			echo "  \"new_sha256\": \"$new_sha\","
+			printf '  "path_changes": [%s]\n' "$path_changes"
 			echo '}'
 		} >"$receipt_stage"
 		mv -f "$receipt_stage" "$receipt"
@@ -213,13 +286,9 @@ main() {
 	mv -f "$stage" "$installed"
 	stage=
 	sync 2>/dev/null || true
-	write_receipt installed
-
 	echo "Installed $reported to $installed"
-	case :$PATH: in
-	*":$INSTALL_DIR:"*) ;;
-	*) printf 'Add thinkthen to PATH:\n  export PATH="%s:$PATH"\n' "$INSTALL_DIR" ;;
-	esac
+	modify_path
+	write_receipt installed
 }
 
 main "$@"

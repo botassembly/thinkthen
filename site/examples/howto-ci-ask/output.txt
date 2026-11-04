@@ -1,0 +1,2 @@
+false
+exit code 1

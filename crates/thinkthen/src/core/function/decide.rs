@@ -9,8 +9,8 @@ use crate::core::threshold::{Threshold, Verdict};
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub(crate) struct Decide {
     pub(crate) text: String,
-    yes: Option<String>,
-    no: Option<String>,
+    pub(crate) yes: Option<String>,
+    pub(crate) no: Option<String>,
     pub(crate) threshold: Threshold,
 }
 
@@ -38,15 +38,15 @@ impl Decide {
 }
 
 impl super::Function for Decide {
-    /// The ask this question makes about `evidence`.
+    /// The ask this question makes about `field`.
     fn try_asks_record(
         &self,
         record: &crate::core::AdmittedRecord,
         _limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        let evidence = record.evidence();
+        let field = record.field();
         Ok(vec![Ask::YesNo {
-            instructions: super::quoted(evidence, &self.text),
+            instructions: super::quoted(field, &self.text),
             yes: self.yes.clone(),
             no: self.no.clone(),
         }])

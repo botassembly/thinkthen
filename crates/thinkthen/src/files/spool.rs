@@ -1,6 +1,6 @@
 //! Operation-owned, disk-backed records and position-indexed outcomes.
 
-use crate::files::{FileError, local};
+use crate::files::{FileError, cells::Cell, local};
 use serde_json::Value;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
@@ -72,7 +72,7 @@ impl Answers {
         })
     }
 
-    pub(crate) fn put(&mut self, row: usize, cells: &[Value]) -> Result<(), FileError> {
+    pub(crate) fn put(&mut self, row: usize, cells: &[Cell]) -> Result<(), FileError> {
         let offset = self.data.stream_position().map_err(local)?;
         serde_json::to_writer(&mut self.data, cells).map_err(local)?;
         self.data.write_all(b"\n").map_err(local)?;
@@ -82,7 +82,7 @@ impl Answers {
         self.index.write_all(&offset.to_le_bytes()).map_err(local)
     }
 
-    pub(crate) fn get(&mut self, row: usize) -> Result<Option<Vec<Value>>, FileError> {
+    pub(crate) fn get(&mut self, row: usize) -> Result<Option<Vec<Cell>>, FileError> {
         self.index
             .seek(SeekFrom::Start((row as u64) * 8))
             .map_err(local)?;

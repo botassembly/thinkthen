@@ -1,12 +1,12 @@
 CARGO_TARGET_DIR ?= $(CURDIR)/engine/target
 PROFILE = release
 CARGO_PROFILE = --release
-ifneq ($(THINKTHEN_COVERAGE_ROOT),)
+ifneq ($(filter 1,$(THINKTHEN_R_SOURCE_NATIVE))$(THINKTHEN_COVERAGE_ROOT),)
 PROFILE = debug
 CARGO_PROFILE =
 endif
 STATLIB = $(CARGO_TARGET_DIR)/$(PROFILE)/libthinkthen_r.a
-PKG_LIBS = $(STATLIB) $(shell sh native-frameworks) $(THINKTHEN_COVERAGE_LIBS)
+PKG_LIBS = $(STATLIB) $(shell sh ../tools/native-frameworks) $(THINKTHEN_COVERAGE_LIBS)
 
 all: $(SHLIB)
 

@@ -1,0 +1,5 @@
+{
+  "anchor": "  relations = client.relate(message, rules: [works_for]).answer",
+  "before": 0,
+  "after": 2
+}

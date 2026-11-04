@@ -14,10 +14,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 
 from build_targets import container_labels
 from release_images import image
 from release_go import home as go_home, prepare as prepare_go
+from native_platform import current
 
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path.home() / '.local/share/thinkthen-build-tools'
@@ -78,26 +80,60 @@ def prepare():
 
 def swift_command(arguments, mounts=(), environment=None):
     toolchain = TOOLS / 'swift/6.3.2-ubuntu22.04'
+    channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+    host = current()['rust']
+    rust = Path.home() / '.rustup/toolchains' / f'{channel}-{host}' / 'bin'
+    cargo = Path(os.environ.get('CARGO_HOME', Path.home() / '.cargo')).resolve()
+    # Git's loader and every transitive shared library travel together, as in
+    # gate-docker preparation: the host may have a newer libc than this image.
+    git = Path(shutil.which('git')).resolve()
+    git_tools = ROOT / 'target/source-tools/swift-git'
+    git_tools.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(git, git_tools / 'git.real')
+    libraries = subprocess.check_output(['ldd', str(git)], text=True)
+    paths = {Path(path) for path in re.findall(r'(/[^\s()]+)', libraries)}
+    for path in paths:
+        shutil.copy2(path, git_tools / path.name)
+    loader = next(path for path in paths if path.name.startswith('ld-linux'))
+    launcher = git_tools / 'git'
+    launcher.write_text('#!/bin/sh\nexec ' + shlex.quote(str(git_tools / loader.name)) +
+                        ' --library-path ' + shlex.quote(str(git_tools)) + ' ' +
+                        shlex.quote(str(git_tools / 'git.real')) + ' "$@"\n')
+    launcher.chmod(0o755)
+    linker = git_tools / 'clang-linker'
+    linker.write_text('#!/bin/sh\nexec ' + shlex.quote(str(toolchain / 'usr/bin/clang')) +
+                      ' "$@" -fuse-ld=lld\n')
+    linker.chmod(0o755)
     command = ['docker', 'run', '--rm', '--network', 'none', *container_labels(ROOT),
                '--user', f'{os.getuid()}:{os.getgid()}', '--workdir', str(ROOT)]
-    for path in dict.fromkeys((ROOT, Path.home(), *mounts)):
+    for path in dict.fromkeys((ROOT, Path.home(), cargo, *mounts)):
         command += ['-v', f'{path}:{path}']
     for name, value in (environment or {}).items():
         command += ['-e', name + '=' + str(value)]
-    command += ['-e', 'HOME=' + str(Path.home()), image('swift'), 'sh', '-eu', '-c',
-                'export PATH="$1/usr/bin:/usr/bin:/bin"; shift; exec "$@"', 'swift-gate', str(toolchain), *arguments]
+    command += ['-e', 'HOME=' + str(Path.home()), '-e', 'RUSTUP_TOOLCHAIN=' + channel,
+                '-e', 'CARGO_HOME=' + str(cargo),
+                '-e', 'CARGO_NET_OFFLINE=true', '-e', 'RUSTC_WRAPPER=', '-e', 'RUSTC_WORKSPACE_WRAPPER=',
+                '-e', 'CC=' + str(toolchain / 'usr/bin/clang'),
+                '-e', 'CXX=' + str(toolchain / 'usr/bin/clang++'),
+                '-e', 'CARGO_TARGET_' + host.upper().replace('-', '_') + '_LINKER=' + str(linker),
+                image('swift'), 'sh', '-eu', '-c',
+                'export PATH="$1/usr/bin:$2:$3:/usr/bin:/bin"; shift 3; exec "$@"',
+                'swift-gate', str(toolchain), str(rust), str(git_tools), *arguments]
     run(*command)
 
 
 def swift():
+    loopback = os.environ.get('THINKTHEN_SWIFT_LOOPBACK')
+    if loopback is None:
+        loopback = os.environ['THINKTHEN_LOOPBACK']
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-') as temporary:
         stage = Path(temporary) / 'ThinkThen'
         run('scripts/swift-package', stage)
         names = ('THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES')
         environment = {name: os.environ[name] for name in names}
-        environment.update(THINKTHEN_LOOPBACK=os.environ['THINKTHEN_SWIFT_LOOPBACK'], THINKTHEN_SWIFT_PACKAGE=stage)
+        environment.update(THINKTHEN_LOOPBACK=loopback, THINKTHEN_SWIFT_PACKAGE=stage)
         environment['THINKTHEN_GATE_STRICT'] = os.environ.get('THINKTHEN_GATE_STRICT', '0')
-        swift_command(['scripts/swift-gate'], (Path(temporary), Path(os.environ['THINKTHEN_SWIFT_LOOPBACK']).parent), environment)
+        swift_command(['scripts/swift-gate'], (Path(temporary), Path(loopback).parent), environment)
 
 
 def abi_binding(arguments):
@@ -162,6 +198,8 @@ if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['--prepare']:
             prepare()
+        elif sys.argv[1:] == ['--swift-header-check']:
+            swift_command(['scripts/header-contract-check'])
         elif sys.argv[1:] == ['--cli']:
             cli()
         elif sys.argv[1:2] == ['--abi-binding']:

@@ -159,10 +159,9 @@ fn typed_admission_identifies_fields_without_disclosing_values() {
             .unwrap_err(),
         thinkthen::Cut::new(0.0).unwrap_err(),
     ];
-    for (error, field) in
-        errors
-            .iter()
-            .zip(["question", "levels", "labels", "evidence", "threshold"])
+    for (error, field) in errors
+        .iter()
+        .zip(["question", "levels", "labels", "field", "threshold"])
     {
         assert!(
             error.message().starts_with(&format!("{field}: expected ")),
@@ -199,7 +198,12 @@ fn native_builder_setters_report_the_field_and_preserve_the_question() {
     }
     assert_eq!(question.build().unwrap().function(), FunctionName::Score);
     let error = "private-placeholder".parse::<BackendName>().unwrap_err();
-    assert!(!error.message().contains("private-placeholder"));
+    assert!(
+        error
+            .message()
+            .contains("unknown value \"private-placeholder\""),
+        "{error}"
+    );
     assert!(error.message().contains("did you mean"));
 }
 
@@ -207,13 +211,13 @@ fn native_builder_setters_report_the_field_and_preserve_the_question() {
 #[test]
 fn sql_relation_admission_identifies_the_rule_and_field() {
     for (field, expected) in [
-        ("name", "a string"),
+        ("relation", "a string"),
         ("source", "a string"),
         ("target", "a string"),
         ("reads", "a string"),
         ("either", "a boolean"),
     ] {
-        let mut rule = serde_json::json!({"name":"supports","source":"fact","target":"claim"});
+        let mut rule = serde_json::json!({"relation":"supports","source":"fact","target":"claim"});
         rule[field] = serde_json::json!(1);
         let input = serde_json::json!({"function":"relate","rules":[rule]});
         let error = thinkthen::native::sql_question(&input.to_string()).unwrap_err();

@@ -1,0 +1,5 @@
+                                message  is_refund
+0               Please refund my order.       True
+1                   Where is my parcel?      False
+2  I was charged twice for one invoice.       <NA>
+Ask a person: ['I was charged twice for one invoice.']

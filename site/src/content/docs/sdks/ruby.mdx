@@ -1,0 +1,163 @@
+---
+title: Ruby SDK
+description: "Ruby SDK: ask the ten ThinkThen questions from Ruby and get yes, no or not sure back as plain Ruby values."
+goal: The reader runs a first decide in Ruby, installs the gem, rescues not sure and failures, and finds the Ruby call for each of the ten functions.
+reader: A Ruby developer who wants to ask questions about text from code
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "Ruby"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The Ruby SDK gives your Ruby code the ten functions as methods on one client; `decide?` gives back `true` or `false`, and raises when the answer is not sure.
+
+<Example id="lang-ruby" title="refund.rb" />
+
+`true` means yes: the message asks for a refund.
+
+Install the gem (<Fact k="languages.ruby.requires" />). It includes the native engine.
+
+<InstallLine k="languages.ruby.install" lang="sh" />
+
+With Bundler, run `bundle add thinkthen --version 0.2.0`. The client uses the key from the [Quickstart](/quickstart/).
+
+## Rescue not sure and failures
+
+Give `threshold:` a range, such as `0.2..0.8`, to set a low bar and a high bar. Between them, decide is not sure, and `decide?` raises `ThinkThen::UnsureError`. When ThinkThen can't judge the message, it raises an error that includes `ThinkThen::Error`, such as `ThinkThen::RecordError`. Neither one can pass for `false`.
+
+<Example id="sdks/ruby/unsure" title="refund.rb" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`UnsureError#probability` is the chance of yes. `UnsureError` does not include `ThinkThen::Error`, so `rescue ThinkThen::Error` never catches a not sure by accident. The error's `code` names what went wrong, such as `:"record.empty"`; [Troubleshooting](/reference/troubleshooting/) lists each one.
+
+To check the outcome without raising, call `client.decide` without the question mark. What it gives back is a `ThinkThen::Answered`, `ThinkThen::Unsure` or `ThinkThen::Failed`, so you can test `unsure?` and `failed?`, or match it with `case ... in ThinkThen::Unsure`. Reading its `answer` raises just as `decide?` does.
+
+## The ten functions
+
+Each function asks the same support-inbox questions as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+<Example id="functions/decide/ruby" title="decide.rb" />
+
+Yes: the message asks for a refund. `decide?` takes `threshold:` (one bar, or a range for a low and a high bar), `yes_means:` and `no_means:`. [decide](/functions/decide/) shows every option.
+
+`decide_each` takes many messages and yields one result for each, in order. A not sure or a failure is a result like any other, so the rest keep going:
+
+<Example id="use-decide-ruby" title="decide_each.rb" />
+
+`field: "/text"` judges the `text` field of each Hash, and `id` is the message's own `id`. Each one-message method has an `_each` twin that works the same way.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/ruby" title="choose.rb" />
+
+A refund is about billing. `choose` takes `descriptions:`, a Hash from each choice to what it means, and `threshold:`, which can make choose not sure. `answer` raises `UnsureError` then. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="functions/filter/ruby" title="filter.rb" />
+
+The parcel question is left out. `filter` gives back your own messages, and leaves out the ones it is not sure about. If any message fails, it raises one `RecordError` after the kept ones, and its `rows` lists every failure. `failures: :row` hands the failures over after the kept messages instead, and `filter_each` gives every message with its outcome. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/ruby" title="tag.rb" />
+
+The message is about both billing and shipping. The answer is an Array of the labels that fit. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/ruby" title="score.rb" />
+
+The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+<Example id="sdks/ruby/rank" title="rank.rb" />
+
+The double charge is the most urgent. Each result holds a copy of your message as `item` and its place as `rank`, starting at 1. Reading `rank` raises `UnsureError` for a message it is not sure about; that message keeps its place in the order. `top:` keeps only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/ruby" title="find.rb" />
+
+The second line states the action. The answer is a `ThinkThen::Found` with `text`, `start` and `end`, or `nil` when no line answers. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/ruby" title="recognize.rb" />
+
+Each `ThinkThen::Name` holds `text`, `kind`, `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/ruby" title="relate.rb" />
+
+A `ThinkThen::RelationRule` names the kind of name at each end and the relation between them. It also takes `phrase:` and `symmetric: true`. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+<Example id="functions/annotate/ruby" title="annotate.rb" />
+
+`form[:refund]` takes a String or Symbol name and raises `KeyError` for a name you never added. Each `answer` raises `UnsureError` when not sure, as decide does. For one message, call `client.annotate(questions, message)`. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+A message is a String, or a Hash with String or Symbol keys; `field: "/text"` judges one field. Every call also takes `name:` and `cancel:`. Pass `cancel: ThinkThen::CancelToken.new`, and `cancel` on the token stops the call; Ctrl-C does the same, and both raise `ThinkThen::CancelledError`. `ThinkThen.configure` sets up one shared client for the module calls, such as `ThinkThen.decide?`.
+
+The [Ruby signatures](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/ruby/sig/thinkthen.rbs) list every public name, and the [Ruby API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/ruby/API.md) explains each one.

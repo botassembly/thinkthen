@@ -6,7 +6,7 @@ pub mod loopback;
 use loopback::{KEY, Loopback};
 use serde_json::json;
 use thinkthen::{
-    Annotate, Batch, Cancel, Decide, Key, OffsetUnit, Rank, Record, Request, Settings,
+    Annotate, Batch, Cancel, Decide, Key, OffsetUnit, Rank, Record, Request, Settings, Threshold,
 };
 #[test]
 fn questions_reuse_engine_settings_and_cancel_only_the_selected_call() {
@@ -20,8 +20,8 @@ fn questions_reuse_engine_settings_and_cancel_only_the_selected_call() {
         .unwrap();
     let question = Decide::new("Ready?")
         .unwrap()
-        .evidence("/body".parse().unwrap())
-        .threshold("0.95".parse().unwrap());
+        .field("/body".parse().unwrap())
+        .threshold(Threshold::cut(0.95).unwrap());
     let cancel = Cancel::default();
     cancel.cancel();
     let stopped = engine
@@ -38,17 +38,14 @@ fn questions_reuse_engine_settings_and_cancel_only_the_selected_call() {
         )
         .unwrap();
     assert_eq!(row.id().unwrap().as_str(), Some("original"));
-    assert_eq!(row.into_result().unwrap(), Some(false));
+    assert!(!row.into_answer().unwrap());
     assert_eq!(
         server.requests()[0].json().unwrap()["model"],
         "client-model"
     );
-    let annotate = Annotate::new(std::collections::BTreeMap::from([(
-        "ready".into(),
-        Decide::new("Ready?").unwrap().into(),
-    )]))
-    .unwrap()
-    .evidence("/body".parse().unwrap());
+    let annotate = Annotate::new([("ready", Decide::new("Ready?").unwrap())])
+        .unwrap()
+        .field("/body".parse().unwrap());
     let row = engine
         .run(&annotate, Record::json(json!({"body":"evidence"})))
         .unwrap();

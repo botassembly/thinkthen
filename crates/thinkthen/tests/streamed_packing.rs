@@ -44,7 +44,7 @@ fn pushed_records_pack_like_finite_input_and_keep_their_order() {
     assert_eq!(streamed.len(), finite.len());
     for (i, row) in streamed.into_iter().enumerate() {
         assert_eq!(row.position(), i as u64 + 1);
-        assert_eq!(row.into_result().unwrap(), Some(true));
+        assert!(row.into_answer().unwrap());
     }
     assert_eq!(server.count() - finite_requests, finite_requests);
 }

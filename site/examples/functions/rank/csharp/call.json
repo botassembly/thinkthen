@@ -1,0 +1,5 @@
+{
+  "anchor": "await foreach (var ranked in client.RankAsync(",
+  "before": 0,
+  "after": 2
+}

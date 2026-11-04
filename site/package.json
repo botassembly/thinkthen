@@ -1,0 +1,28 @@
+{
+  "name": "thinkthen-site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "examples": "node scripts/run-examples.mjs",
+    "reference": "node scripts/gen-reference.mjs",
+    "answers": "node scripts/gen-answers.mjs",
+    "dev": "astro dev",
+    "build": "node scripts/astro-build.mjs && node scripts/agent-files.mjs && node scripts/host-files.mjs && node scripts/check.mjs && node scripts/browser-box-job.mjs scripts/check-landing.mjs --strict --no-shots",
+    "landing": "node scripts/browser-box-job.mjs scripts/check-landing.mjs",
+    "preview": "astro preview",
+    "check:publish": "node scripts/check.mjs --publish",
+    "social-card": "node scripts/browser-box-job.mjs scripts/social-card.mjs"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.42.6",
+    "astro": "7.3.8",
+    "yaml": "2.9.1"
+  },
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

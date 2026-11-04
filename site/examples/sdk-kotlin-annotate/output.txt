@@ -1,0 +1,3 @@
+true billing 0.05
+false shipping 0.14
+true billing 0.45

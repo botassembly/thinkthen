@@ -1,6 +1,6 @@
 #![cfg(test)]
-#![cfg(feature = "command")]
 //! Global command options retain function behavior and reject incompatible forms.
+#![cfg(feature = "command")]
 #[path = "../../loopback/src/lib.rs"]
 pub mod loopback;
 mod support;
@@ -60,7 +60,7 @@ fn quiet_and_short_verbose_apply_to_every_function() {
             b"Ada joined Acme.",
         );
         assert_eq!(quiet.status.code(), Some(0));
-        assert_eq!(quiet.stdout, baseline.stdout);
+        assert!(quiet.stdout.is_empty());
         assert!(quiet.stderr.is_empty());
         let verbose = run(
             support::command()
@@ -168,9 +168,9 @@ fn scalar_environment_options_match_their_explicit_forms() {
             "\"evidence\"\n",
         ),
         (
-            "THINKTHEN_EVIDENCE",
+            "THINKTHEN_FIELD",
             "/body",
-            vec!["--evidence", "/body"],
+            vec!["--field", "/body"],
             "{\"body\":\"evidence\"}",
         ),
         (
@@ -311,7 +311,7 @@ fn function_environment_options_retain_their_typed_values() {
         support::command()
             .args(["run", "--backend", "stub", "--json"])
             .arg(&saved)
-            .env("THINKTHEN_ENTRY", "ready"),
+            .arg("ready"),
         b"\"evidence\"\n",
     );
     assert_eq!(actual.status.code(), Some(0), "{actual:?}");

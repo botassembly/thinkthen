@@ -16,13 +16,14 @@ static void load(const char *filename) { library = dlopen(filename, RTLD_NOW | R
 #endif
 
 typedef uint32_t (*version_fn)(void);
-typedef int32_t (*client_fn)(const uint8_t *, size_t, thinkthen_client **, thinkthen_error *);
+typedef int32_t (*client_fn)(const char *, size_t, thinkthen_client **, thinkthen_error *);
 typedef void (*client_free_fn)(thinkthen_client *);
-typedef int32_t (*question_fn)(uint32_t, const uint8_t *, size_t, thinkthen_question **, thinkthen_error *);
+typedef int32_t (*question_fn)(thinkthen_function, const char *, size_t, thinkthen_question **, thinkthen_error *);
 typedef void (*question_free_fn)(thinkthen_question *);
-typedef int32_t (*run_fn)(const thinkthen_client *, const thinkthen_question *, const uint8_t *, size_t, uint32_t, thinkthen_row *, thinkthen_error *);
+typedef int32_t (*run_fn)(const thinkthen_client *, const thinkthen_question *, const char *, size_t, thinkthen_record_kind, thinkthen_row *, thinkthen_error *);
 typedef void (*row_free_fn)(thinkthen_row *);
-typedef int32_t (*open_fn)(const thinkthen_client *, const thinkthen_question *, const thinkthen_text *, uint32_t, thinkthen_call **, thinkthen_error *);
+typedef void (*error_free_fn)(thinkthen_error *);
+typedef int32_t (*open_fn)(const thinkthen_client *, const thinkthen_question *, const thinkthen_text *, thinkthen_offset, thinkthen_call **, thinkthen_error *);
 typedef void (*call_free_fn)(thinkthen_call *);
 _Static_assert(_Generic(&thinkthen_abi_version, version_fn: 1, default: 0), "version signature");
 _Static_assert(_Generic(&thinkthen_client_open_json, client_fn: 1, default: 0), "client signature");
@@ -35,22 +36,23 @@ static void execute(void) {
     question_free_fn question_free = (question_free_fn)symbol("thinkthen_question_free");
     run_fn run_one = (run_fn)symbol("thinkthen_run_one");
     row_free_fn row_free = (row_free_fn)symbol("thinkthen_row_free");
+    error_free_fn error_free = (error_free_fn)symbol("thinkthen_error_free");
     open_fn open_question = (open_fn)symbol("thinkthen_call_open_question");
     call_free_fn call_free = (call_free_fn)symbol("thinkthen_call_free");
     const char *settings = "{\"backend\":\"stub\"}";
     thinkthen_error error = {0}; error.struct_size = sizeof(error);
     thinkthen_client *client = NULL;
-    assert(client_open((const uint8_t *)settings, strlen(settings), &client, &error) == THINKTHEN_OK);
+    assert(client_open((const char *)settings, strlen(settings), &client, &error) == THINKTHEN_OK);
     thinkthen_question *question = NULL;
-    assert(question_new(THINKTHEN_FUNCTION_DECIDE, (const uint8_t *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
+    assert(question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
     thinkthen_call *call = NULL;
     assert(open_question(client, question, NULL, THINKTHEN_OFFSET_CODE_POINTS, &call, &error) == THINKTHEN_OK);
     call_free(call);
     thinkthen_row row = {0}; row.struct_size = sizeof(row);
-    assert(run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, &row, &error) == THINKTHEN_OK);
+    assert(run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, &row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
     assert(row.status == THINKTHEN_STATUS_FAILED && row.error_code == THINKTHEN_CODE_RECORD_MISSING);
     assert(row.position == 1);
-    question_free(question); client_free(client); row_free(&row);
+    question_free(question); client_free(client); row_free(&row); error_free(&error);
 }
 int main(int argc, char **argv) {
     assert(argc >= 2); load(argv[1]);

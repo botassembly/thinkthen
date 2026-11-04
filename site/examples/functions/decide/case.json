@@ -1,0 +1,7 @@
+{
+  "question": "Does the customer request a refund?",
+  "records": [
+    "Please refund my order."
+  ],
+  "answers": "One boolean per record, in record order."
+}

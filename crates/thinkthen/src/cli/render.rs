@@ -50,13 +50,18 @@ impl Originals {
             if io::stdout().is_terminal() {
                 let mut text = String::new();
                 self.data.get_mut().take(length).read_to_string(&mut text)?;
-                let body = super::evidence(&text);
+                let body = super::field(&text);
                 let mut output = io::stdout().lock();
                 write!(output, "{}", terminal_text(body))?;
-                if text.ends_with('\n') {
-                    writeln!(output)?;
-                }
+                writeln!(output)?;
                 return Ok(());
+            }
+            let mut last = [0; 1];
+            if length > 0 {
+                let start = self.data.stream_position()?;
+                self.data.seek(SeekFrom::Start(start + length - 1))?;
+                self.data.get_mut().read_exact(&mut last)?;
+                self.data.seek(SeekFrom::Start(start))?;
             }
             let copied = io::copy(
                 &mut self.data.get_mut().take(length),
@@ -65,6 +70,9 @@ impl Originals {
             if copied != length {
                 return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
             }
+            if last != [b'\n'] {
+                writeln!(io::stdout().lock())?;
+            }
             Ok(())
         })();
         result.map_err(|error| output_error(error, cancel))
@@ -72,20 +80,24 @@ impl Originals {
 }
 
 pub(super) fn row(row: &AnyRow, json: bool, cancel: &Cancel) -> Result<(), Error> {
+    keyed_row(row, json, None, cancel)
+}
+
+pub(super) fn keyed_row(
+    row: &AnyRow,
+    json: bool,
+    key: Option<&str>,
+    cancel: &Cancel,
+) -> Result<(), Error> {
     if json {
         return json_row(row, cancel);
     }
     let mut output = io::stdout().lock();
     if row.error().is_some() {
-        return writeln!(output, "[{}] failed", row.position())
-            .map_err(|error| output_error(error, cancel));
+        return Ok(());
     }
     let value = serde_json::to_value(row).map_err(|_| local("the row could not be encoded"))?;
     let answer = value.get("answer");
-    let marked = matches!(
-        row,
-        AnyRow::Tag(_) | AnyRow::Recognize(_) | AnyRow::Relate(_) | AnyRow::Annotate(_)
-    );
     let text = if matches!(row, AnyRow::Find(_)) {
         answer
             .and_then(|answer| answer.get("text"))
@@ -98,18 +110,39 @@ pub(super) fn row(row: &AnyRow, json: bool, cancel: &Cancel) -> Result<(), Error
                         "unsure".to_owned()
                     }
                 },
-                |text| terminal_text(text).into_owned(),
+                |value| text(&serde_json::Value::String(value.into())),
             )
+    } else if matches!(row, AnyRow::Annotate(_)) {
+        answer
+            .and_then(serde_json::Value::as_object)
+            .map(|entries| {
+                entries
+                    .iter()
+                    .map(|(name, entry)| {
+                        let value = entry.get("answer").map_or_else(
+                            || entry.get("status").map_or_else(|| "unsure".into(), text),
+                            text,
+                        );
+                        format!(
+                            "{}={value}",
+                            terminal_text(&name.replace(['\n', '\r', '\t'], " "))
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\t")
+            })
+            .unwrap_or_default()
     } else {
         answer.map_or_else(|| "unsure".to_owned(), text)
     };
-    let result = if marked {
+    if key.is_none() && matches!(row, AnyRow::Find(_)) && text.is_empty() {
+        return Ok(());
+    }
+    let result = if let Some(key) = key {
         writeln!(
             output,
-            "[{}]{}{}",
-            row.position(),
-            if text.is_empty() { "" } else { "\t" },
-            text
+            "{}\t{text}",
+            terminal_text(&key.replace(['\n', '\r', '\t'], " "))
         )
     } else {
         writeln!(output, "{text}")
@@ -121,7 +154,7 @@ pub(super) fn item(
     bytes: &[u8],
     format: super::input::Format,
 ) -> Result<Box<serde_json::value::RawValue>, Error> {
-    let text = std::str::from_utf8(bytes).ok().map(super::evidence);
+    let text = std::str::from_utf8(bytes).ok().map(super::field);
     if format == super::input::Format::Jsonl
         && let Some(text) = text
         && let Ok(value) = serde_json::from_str(text)

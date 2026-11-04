@@ -28,9 +28,9 @@ int main(int argc, char **argv) {
     thinkthen_client *client = NULL;
     thinkthen_call *call = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
-    int32_t status = thinkthen_client_open_json((const uint8_t *)argv[2], strlen(argv[2]), &client, &error);
+    int32_t status = thinkthen_client_open_json((const char *)argv[2], strlen(argv[2]), &client, &error);
     if (status == THINKTHEN_OK)
-        status = thinkthen_call_open_json(client, (const uint8_t *)argv[1], strlen(argv[1]),
+        status = thinkthen_call_open_json(client, (const char *)argv[1], strlen(argv[1]),
                                           THINKTHEN_OFFSET_CODE_POINTS, &call, &error);
     thinkthen_client_free(client);
     /* Initial records are copied by the engine; closing adds no extra record. */
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < kept_count; ++i) printf("%s%s", i ? "," : "", kept[i] ? "true" : "false");
     printf("]");
     free(kept);
-    if (status == THINKTHEN_ERROR)
+    if (status < 0)
         printf(",\"error\":\"%s\"", thinkthen_code_name(error.code));
     else assert(status == THINKTHEN_END);
     puts("}");

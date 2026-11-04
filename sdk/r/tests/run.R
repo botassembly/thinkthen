@@ -84,7 +84,7 @@ result <- tryCatch({
     }
     if (verb == "find" && !is.null(row$answer)) {
       text <- records[[output$position[[i]]]]
-      pointer <- request$question$evidence
+      pointer <- request$question$field
       if (!is.null(pointer)) {
         for (part in strsplit(substring(pointer, 2L), "/", fixed = TRUE)[[1]]) {
           key <- gsub("~0", "~", gsub("~1", "/", part, fixed = TRUE), fixed = TRUE)

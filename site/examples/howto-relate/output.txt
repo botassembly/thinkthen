@@ -1,0 +1,3 @@
+docs/memo-1.txt	Hugo Brandt	works_for	Fabrikam	0.82
+docs/memo-2.txt	Kim Park	works_for	Globex	0.8
+docs/memo-3.txt	Leo Marsh	works_for	Fabrikam	0.68

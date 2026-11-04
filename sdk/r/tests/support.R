@@ -5,18 +5,13 @@ condition <- function(expr, class, code = NULL) {
   value <- tryCatch({ force(expr); NULL }, error = identity)
   stopifnot(inherits(value, class), inherits(value, "thinkthen_error"))
   if (!is.null(code)) stopifnot(identical(as.character(value$code), code))
-  value
+  invisible(value)
 }
 
 warned <- function(expr) {
-  warnings <- list()
-  value <- withCallingHandlers(expr, warning = function(w) {
-    warnings[[length(warnings) + 1L]] <<- w
-    invokeRestart("muffleWarning")
-  })
-  stopifnot(length(warnings) == 1L,
-            inherits(warnings[[1]], "thinkthen_failed_rows"))
-  value
+  error <- tryCatch(force(expr), thinkthen_failed_rows = identity)
+  stopifnot(inherits(error, "thinkthen_failed_rows"))
+  tt_answer(error$rows, errors = "na")
 }
 
 check_rows <- function(rows, verb, n) {
@@ -66,8 +61,8 @@ invoke <- function(records, q, client, name = NULL, vector = FALSE) {
   arg <- switch(q[["function"]], recognize = "kinds", relate = "rules",
                 annotate = "toolbox", "question")
   options <- list(client = client, .progress = FALSE, name = name)
-  if (q[["function"]] == "annotate") options$evidence <- q$evidence
-  do.call(get(paste0("tt_", q[["function"]], if (vector) "_vec" else "")),
+  if (q[["function"]] == "annotate") options$field <- q$field
+  do.call(get(paste0("tt_", q[["function"]], if (vector) "" else "_rows")),
           c(list(x = records), setNames(list(question(q)), arg), options))
 }
 

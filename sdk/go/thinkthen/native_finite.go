@@ -25,7 +25,7 @@ func openFinite(client *C.thinkthen_client, question *C.thinkthen_question, name
 		if record.kind != 0 {
 			data := C.CBytes([]byte(record.data))
 			defer C.free(data)
-			input.data = (*C.uint8_t)(data)
+			input.data = (*C.char)(data)
 			input.len = C.size_t(len(record.data))
 		}
 	}

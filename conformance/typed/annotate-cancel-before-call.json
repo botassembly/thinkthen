@@ -3,7 +3,7 @@
   "request": {
     "question": {
       "function": "annotate",
-      "evidence": "/body",
+      "field": "/body",
       "questions": {
         "decision": {
           "function": "decide",
@@ -12,12 +12,12 @@
         "missing": {
           "function": "decide",
           "question": "Ready?",
-          "evidence": "/absent"
+          "field": "/absent"
         },
         "root": {
           "function": "decide",
           "question": "Ready?",
-          "evidence": ""
+          "field": ""
         },
         "choice": {
           "function": "choose",

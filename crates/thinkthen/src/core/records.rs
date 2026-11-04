@@ -57,6 +57,7 @@ impl RecordId {
     /// Admit an explicit decimal integer without a floating-point intermediate.
     /// # Errors
     /// Rejects fractions, exponents, whitespace and integers outside both ranges.
+    #[doc(hidden)]
     pub fn integer_decimal(text: &str) -> Result<Self, Error> {
         let digits = text.strip_prefix('-').unwrap_or(text);
         if !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit()) {
@@ -146,6 +147,8 @@ enum Input {
 pub struct Record {
     input: Input,
     id: Option<RecordId>,
+    selection: Vec<Pointer>,
+    original_encoding: Option<(RecordKind, Vec<u8>)>,
 }
 impl Record {
     /// Retain literal text without interpreting it as JSON.
@@ -154,6 +157,8 @@ impl Record {
         Self {
             input: Input::Text(text.into()),
             id: None,
+            selection: Vec::new(),
+            original_encoding: None,
         }
     }
     /// Represent a host's None, NA or NULL without a backend call.
@@ -162,6 +167,7 @@ impl Record {
         Self::failed(Code::RecordMissing, "the record is missing")
     }
     /// Represent a host value that cannot be converted without loss.
+    #[doc(hidden)]
     #[must_use]
     pub fn invalid() -> Self {
         Self::failed(
@@ -190,11 +196,13 @@ impl Record {
         };
         Self {
             input: Input::Json(raw),
+            selection: Vec::new(),
             id,
+            original_encoding: None,
         }
     }
-    /// Insert an already admitted id into a structured object's evidence before admission.
-    /// Non-object values keep their original evidence and separate typed id.
+    /// Insert an already admitted id into a structured object's field before admission.
+    /// Non-object values keep their original field and separate typed id.
     #[must_use]
     pub fn from_json_with_id(json: &str, id: RecordId) -> Self {
         let Ok(mut fields) = serde_json::from_str::<BTreeMap<String, Box<RawValue>>>(json) else {
@@ -231,6 +239,7 @@ impl Record {
         }
     }
     /// Decode UTF-16 without replacing an unpaired surrogate.
+    #[doc(hidden)]
     #[must_use]
     pub fn from_utf16(units: &[u16]) -> Self {
         match String::from_utf16(units) {
@@ -253,11 +262,45 @@ impl Record {
         Self {
             input: Input::Failed(Error::from_contract(code, message)),
             id: None,
+            selection: Vec::new(),
+            original_encoding: None,
         }
+    }
+    /// Borrow the original admitted representation, independent of field selection.
+    #[must_use]
+    pub fn original(&self) -> (RecordKind, &[u8]) {
+        if let Some((kind, bytes)) = &self.original_encoding {
+            return (*kind, bytes);
+        }
+        match &self.input {
+            Input::Text(text) => (RecordKind::Text, text.as_bytes()),
+            Input::Json(raw) => (RecordKind::Json, raw.get().as_bytes()),
+            Input::Failed(error) if error.code() == Code::RecordMissing => {
+                (RecordKind::Missing, &[])
+            }
+            Input::Failed(_) => (RecordKind::Invalid, &[]),
+        }
+    }
+    /// Preserve a native input's original counted bytes before typed ID insertion.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_original_encoding(mut self, kind: RecordKind, bytes: &[u8]) -> Self {
+        if self.original() != (kind, bytes) {
+            self.original_encoding = Some((kind, bytes.to_owned()));
+        }
+        self
+    }
+    #[cfg(feature = "command")]
+    pub(crate) fn select_field(mut self, selection: Vec<Pointer>) -> Self {
+        self.selection = selection;
+        self
     }
     pub(crate) fn prepare(&self, pointer: &Pointer) -> super::Record {
         match &self.input {
             Input::Text(text) => super::Record::text(text),
+            Input::Json(raw) if self.selection.len() > 1 => {
+                super::Record::json_fields(raw.get(), &self.selection)
+            }
             Input::Json(raw) => super::Record::json(raw.get(), pointer),
             Input::Failed(error) => super::Record::failed(error.clone()),
         }

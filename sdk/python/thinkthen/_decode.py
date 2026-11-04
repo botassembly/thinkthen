@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from enum import Enum
 from types import MappingProxyType
@@ -60,7 +61,10 @@ def detail(function: str, value: Any) -> Any:
             ),
             tuple(
                 t.KindDetail(
-                    item["start"], item["end"], MappingProxyType(item["kinds"])
+                    item["text"],
+                    item["start"],
+                    item["end"],
+                    MappingProxyType(item["kinds"]),
                 )
                 for item in value["names"]
             ),
@@ -68,12 +72,22 @@ def detail(function: str, value: Any) -> Any:
     return None
 
 
-def result(value: dict[str, Any], *, child: bool = False, item: object = None) -> Any:
+def result(
+    value: dict[str, Any],
+    *,
+    child: bool = False,
+    item: object = None,
+    available: bool = True,
+    members: Mapping[str, Enum] | None = None,
+    children: Mapping[str, Mapping[str, Enum]] | None = None,
+) -> Any:
     function = value["function"]
     answer = value.get("answer")
     if answer is not None:
-        if function == "tag":
-            answer = tuple(answer)
+        if function == "choose":
+            answer = (members or {}).get(answer, answer)
+        elif function == "tag":
+            answer = tuple((members or {}).get(label, label) for label in answer)
         elif function == "find":
             answer = t.Span(**answer)
         elif function == "recognize":
@@ -82,7 +96,12 @@ def result(value: dict[str, Any], *, child: bool = False, item: object = None) -
             answer = tuple(relation(pair) for pair in answer)
         elif function == "annotate":
             answer = MappingProxyType(
-                {name: result(outcome, child=True) for name, outcome in answer.items()}
+                {
+                    name: result(
+                        outcome, child=True, members=(children or {}).get(name)
+                    )
+                    for name, outcome in answer.items()
+                }
             )
     error = value.get("error")
     kwargs: dict[str, Any] = {
@@ -111,15 +130,30 @@ def result(value: dict[str, Any], *, child: bool = False, item: object = None) -
         )
         if function == "filter":
             kwargs["item"] = item
+        elif function == "rank":
+            kwargs["_item"] = item if available else t.UNAVAILABLE
     return (_OUTCOMES if child else _ROWS)[function](**kwargs)
 
 
-def row_from_json(text: str, raw_detail: str | None = None, item: object = None) -> Any:
+def row_from_json(
+    text: str,
+    raw_detail: str | None = None,
+    item: object = None,
+    members: Mapping[str, Enum] | None = None,
+    children: Mapping[str, Mapping[str, Enum]] | None = None,
+    available: bool = True,
+) -> Any:
     try:
         value = json.loads(text)
         if raw_detail is not None:
             value["detail"] = json.loads(raw_detail)
-        return result(value, item=item)
+        return result(
+            value,
+            item=item,
+            available=available,
+            members=members,
+            children=children,
+        )
     except (KeyError, TypeError, ValueError):
         from ._contract import ABI_MESSAGE
         from ._types import ErrorCode, SetupError
@@ -133,7 +167,9 @@ def plain(value: Any) -> Any:
         return value.value
     if is_dataclass(value) and not isinstance(value, type):
         return {
-            field.name: plain(getattr(value, field.name)) for field in fields(value)
+            field.name: plain(getattr(value, field.name))
+            for field in fields(value)
+            if not field.name.startswith("_")
         }
     if isinstance(value, (dict, MappingProxyType)):
         return {plain(key): plain(item) for key, item in value.items()}

@@ -1,0 +1,12 @@
+{
+  "position": 1,
+  "answer": true
+}
+{
+  "position": 2,
+  "answer": false
+}
+{
+  "position": 3,
+  "answer": true
+}

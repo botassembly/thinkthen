@@ -6,7 +6,7 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use serde_json::json;
-use thinkthen::{Batch, Decide, Key, OffsetUnit, Record, Request, Settings};
+use thinkthen::{Batch, Decide, Key, OffsetUnit, Record, Request, Settings, Threshold};
 
 #[test]
 fn serialized_rows_preserve_every_probability_without_changing_answers() {
@@ -37,7 +37,7 @@ fn serialized_rows_preserve_every_probability_without_changing_answers() {
         .unwrap();
     let decide = Decide::new("Ready?")
         .unwrap()
-        .threshold("0.99".parse().unwrap());
+        .threshold(Threshold::cut(0.99).unwrap());
     let row = engine.run(&decide, Record::text("Ada")).unwrap();
     assert_eq!(row.probability().unwrap().get(), raw);
     let row = serde_json::to_value(row).unwrap();
@@ -45,8 +45,8 @@ fn serialized_rows_preserve_every_probability_without_changing_answers() {
     assert_eq!(row["answer"], false);
     let request = Request::from_json(&json!({"question":{"function":"annotate","questions":{
         "decision":{"function":"decide","question":"Ready?","threshold":0.99},
-        "names":{"function":"recognize","kinds":["person"],"evidence":"/name"},
-        "relations":{"function":"relate","rules":[{"relation":"knows","source":"person","target":"person"}],"evidence":"/pair"},
+        "names":{"function":"recognize","kinds":["person"],"field":"/name"},
+        "relations":{"function":"relate","rules":[{"relation":"knows","source":"person","target":"person"}],"field":"/pair"},
         "score":{"function":"score","question":"How much?","levels":["low","high"]},
         "tags":{"function":"tag","question":"Which labels?","labels":["ready"]}
     }},"records":[{"id":42,"name":"Ada","pair":"Ada meets Bob"}]}).to_string()).unwrap();

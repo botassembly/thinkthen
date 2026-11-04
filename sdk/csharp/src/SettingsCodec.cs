@@ -3,9 +3,12 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 namespace ThinkThen;
 
+/// <summary>Serializes client settings without exposing credentials.</summary>
 public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
 {
+    /// <summary>Serializes client settings without exposing credentials.</summary>
     public ThinkThenOptionsConverter() { }
+    /// <inheritdoc/>
     public override ThinkThenOptions Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
     {
         using JsonDocument document = JsonDocument.ParseValue(ref reader);
@@ -45,11 +48,16 @@ public sealed class ThinkThenOptionsConverter : JsonConverter<ThinkThenOptions>
         catch (Exception cause) when (cause is OverflowException or FormatException)
         { throw Json.Conversion(cause, settings: true); }
     }
+    /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, ThinkThenOptions value, JsonSerializerOptions options) => Node(value, false).WriteTo(writer);
     internal static JsonObject Node(ThinkThenOptions options, bool includeKey)
     {
-        JsonObject settings = new() { ["backend"] = Contract.BackendName((int)options.Backend) };
-        if (Contract.BackendName((int)options.Backend) is null) settings["backend"] = (int)options.Backend;
+        JsonObject settings = new();
+        if (options.Backend is Backend backend)
+        {
+            string? name = Contract.BackendName((int)backend);
+            settings["backend"] = name is null ? JsonValue.Create((int)backend) : JsonValue.Create(name);
+        }
         if (options.Model is string model) settings["model"] = Json.HostText(model, true);
         if (options.Url is Uri url) settings["url"] = Json.HostText(url.OriginalString, true);
         if (options.Batch is int batch) settings["batch"] = batch;

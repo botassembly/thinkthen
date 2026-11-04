@@ -37,22 +37,21 @@ fn completed_call_cancellation_does_not_close_a_reused_connection() {
         .unwrap();
     let old = Cancel::default();
     let question = Decide::new("Ready?").unwrap();
-    assert_eq!(
+    assert!(
         engine
             .clone()
             .cancel(old.clone())
             .run(&question, Record::text("first"))
             .unwrap()
-            .into_result()
-            .unwrap(),
-        Some(true)
+            .into_answer()
+            .unwrap()
     );
     let worker = std::thread::spawn(move || engine.run(&question, Record::text("second")));
     arrivals.recv_timeout(Duration::from_secs(30)).unwrap();
     old.cancel();
     release.send(()).unwrap();
     let row = worker.join().unwrap().unwrap();
-    assert_eq!(row.into_result().unwrap(), Some(true));
+    assert!(row.into_answer().unwrap());
     assert_eq!(server.count(), 2);
     assert_eq!(server.connections(), 1);
 }

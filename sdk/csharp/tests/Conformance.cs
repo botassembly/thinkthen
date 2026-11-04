@@ -40,7 +40,7 @@ internal static partial class Program
             }
             catch (ThinkThenException error)
             {
-                Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.Code, JsonOptions), sample["code"]), $"admission code: {name}");
+                Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.ErrorCode, JsonOptions), sample["code"]), $"admission code: {name}");
                 Check(error.Message == expected, $"admission message: {name}: {error.Message} != {expected}");
                 Check(!error.Message.Contains("secret-placeholder", StringComparison.Ordinal), $"admission leaked a secret: {name}");
             }
@@ -118,7 +118,7 @@ internal static partial class Program
                 catch (ThinkThenException error)
                 {
                     Check(output.Count == 0, "admission returned rows");
-                    Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.Code, JsonOptions), failure["error"]), "admission error code");
+                    Check(JsonNode.DeepEquals(JsonSerializer.SerializeToNode(error.ErrorCode, JsonOptions), failure["error"]), "admission error code");
                 }
                 catch (OperationCanceledException error)
                 {
@@ -181,11 +181,11 @@ internal static partial class Program
             case "relate":
                 return await Rows(client.RelateStreamAsync(toolbox!.Relate(entryName), source, name: executionName, cancellationToken: token), output);
             case "annotate":
-                Pointer? evidence = question["evidence"] is JsonNode pointer ? Pointer.From(pointer.GetValue<string>()) : null;
+                Pointer? field = question["field"] is JsonNode pointer ? Pointer.From(pointer.GetValue<string>()) : null;
                 return await Rows(client.AnnotateStreamAsync(AnnotationQuestions.Parse(question["questions"]!.ToJsonString(), token), source,
-                    new() { Evidence = evidence }, name: executionName, cancellationToken: token), output);
+                    new() { Field = field }, name: executionName, cancellationToken: token), output);
             case "filter":
-                await foreach (var item in client.FilterAsync(toolbox!.Filter(entryName), source, name: executionName, cancellationToken: token))
+                await foreach (var item in client.FilterStreamAsync(toolbox!.Filter(entryName), source, name: executionName, cancellationToken: token))
                 {
                     Check(item.Item.GetRawText() == records[checked((int)item.Row.Position - 1)].GetRawText(),
                         "filter changed the item joined by position");
@@ -213,10 +213,10 @@ internal static partial class Program
         {
             JsonNode? record = request["records"]![checked((int)row!["position"]!.GetValue<ulong>() - 1)];
             JsonNode question = request["question"]!;
-            string Evidence(JsonNode definition)
+            string Field(JsonNode definition)
             {
                 JsonNode? selected = record;
-                string? pointer = definition["evidence"]?.GetValue<string>() ?? question["evidence"]?.GetValue<string>();
+                string? pointer = definition["field"]?.GetValue<string>() ?? question["field"]?.GetValue<string>();
                 if (pointer is not null)
                     foreach (string part in pointer.Split('/').Skip(1))
                     {
@@ -227,11 +227,11 @@ internal static partial class Program
                     ? value : selected?.ToJsonString() ?? "null";
             }
             if (question["function"]!.GetValue<string>() == "annotate" && row["answer"] is JsonObject entries)
-                foreach (var entry in entries) Project(entry.Value, Evidence(question["questions"]![entry.Key]!));
+                foreach (var entry in entries) Project(entry.Value, Field(question["questions"]![entry.Key]!));
             else
             {
-                Project(row["answer"], Evidence(question));
-                Project(row["detail"], Evidence(question));
+                Project(row["answer"], Field(question));
+                Project(row["detail"], Field(question));
             }
         }
         static void Project(JsonNode? value, string text)

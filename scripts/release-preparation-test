@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -19,7 +20,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 def pair(scratch):
     source = scratch / 'source'
     (source / 'scripts').mkdir(parents=True)
-    for name in ('native-pair', 'release_images.py'):
+    for name in ('native-pair', 'release_images.py', 'native_platform.py'):
         shutil.copy2(ROOT / 'scripts' / name, source / 'scripts' / name)
     # The real import boundary asks the producer for its input key. This fixture
     # changes that key with the selected compiler image, without compiling Rust.
@@ -51,8 +52,26 @@ def pair(scratch):
         manifest.write_text(json.dumps(data))
         return command('import', str(manifest), str(assets), ok=ok)
 
+    store = Path(env['HOME']) / '.local/share/thinkthen-build-tools'
+    cache = store / 'native' / data['native_key']
+    mac = cache / 'osx-arm64/libthinkthen_ffi.dylib'
+    mac.parent.mkdir(parents=True)
+    mac.write_text('registered opposite-platform asset')
     imported()
-    imported()  # A complete warm import reuses identical assets.
+    for name, target in (('linux-amd64', 'linux-x64'), ('macos-arm64', 'osx-arm64')):
+        alias = cache / 'jvm' / name
+        assert alias.is_symlink() and alias.readlink() == Path('..') / target, alias
+    assert (cache / 'jvm/macos-arm64/libthinkthen_ffi.dylib').read_bytes() == mac.read_bytes()
+    imported()  # A complete warm import reuses identical assets and aliases.
+    alias = cache / 'jvm/macos-arm64'
+    alias.unlink()
+    alias.symlink_to('../linux-x64', target_is_directory=True)
+    imported(ok=False)  # An alias must not select a different platform.
+    alias.unlink()
+    alias.mkdir()
+    imported(ok=False)  # A writable directory is not the published cache link.
+    alias.rmdir()
+    imported()
     data.update(floor_image='sha256:' + 'b' * 64, native_key='b' * 64)
     imported()  # The same source may select a newly prepared compiler image.
     assert command('image').stdout.strip() == data['floor_image']
@@ -85,7 +104,7 @@ def pair(scratch):
     imported(ok=False)  # Unverified transfer bytes must fail.
     data['assets'][first] = hashlib.sha256((assets / first).read_bytes()).hexdigest()
     imported(ok=False)  # A changed manifest cannot redefine assets under one key.
-    print('native pair: cold/warm and competing imports select a valid pair; strict conflicts fail')
+    print('native pair: cold/warm imports publish both JVM aliases; competing imports and strict conflicts pass')
 
 
 def windows(scratch):
@@ -103,12 +122,17 @@ def windows(scratch):
     tools = scratch / 'windows-tools'
     source = scratch / 'windows-source'
     (source / 'sdk/r').mkdir(parents=True)
-    (source / 'sdk/r/DESCRIPTION').write_text('Package: thinkthen\nImports: Direct, base\n')
+    (source / 'sdk/r/DESCRIPTION').write_text('Package: thinkthen\nImports: Direct, base, stats\n')
     state['TOOLS'], state['ROOT'] = tools, source
     state['version'] = lambda: '0.2.0'
+    # Pins select downloads; target R metadata owns its standard packages.
+    with patch('release_windows_host.selections', return_value={'INPUTS': production}):
+        assert state['pins']() == production
     runtime = tools / 'windows/R-4.6.1'
-    (runtime / 'library/base').mkdir(parents=True)
-    (runtime / 'library/base/DESCRIPTION').write_text('Package: base\nVersion: 4.6.1\nPriority: base\n')
+    for package in ('base', 'stats'):
+        (runtime / 'library' / package).mkdir(parents=True)
+        (runtime / 'library' / package / 'DESCRIPTION').write_text(
+            f'Package: {package}\nVersion: 4.6.1\nPriority: base\n')
     (runtime / 'share/licenses').mkdir(parents=True)
     (runtime / 'share/licenses/GPL-3').write_text('target runtime license')
     selected = {'R-4.6.1-win.exe': ('unused', 'b' * 64)}
@@ -187,7 +211,7 @@ def windows(scratch):
             raise AssertionError('older Windows patch admitted wrong architecture')
     leaf.write_bytes(original)
     selected[leaf.name] = digest
-    assert json.loads((produced / 'runtime.json').read_text()) == {'version': '4.6.1', 'standard_packages': ['base']}
+    assert json.loads((produced / 'runtime.json').read_text()) == {'version': '4.6.1', 'standard_packages': ['base', 'stats']}
     assert (produced / 'licenses/GPL-3').read_text() == 'target runtime license'
     assert (produced / 'install-order.txt').read_text().splitlines() == inventory['install_order']
     folder = scratch / 'windows-r'
@@ -358,5 +382,6 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-preparation-') as temporary:
     node(scratch)
 
 subprocess.run([sys.executable, ROOT / "scripts/release-documentation-test"], check=True)
+subprocess.run([sys.executable, ROOT / "scripts/day-one-docs-test"], check=True)
 
 subprocess.run([sys.executable, ROOT / "scripts/postgres-installed-prepare-test"], check=True)

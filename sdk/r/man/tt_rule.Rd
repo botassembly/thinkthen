@@ -9,7 +9,7 @@ tt_rule(source, target, relation, ..., reads = NULL, either = FALSE)
 \item{source}{Source entity kind.}
 \item{target}{Target entity kind.}
 \item{relation}{Relation name.}
-\item{...}{Named options passed to the engine. Vector helpers pass all arguments to the corresponding row function.}
+\item{...}{Named engine options. Unknown options are refused before any backend call.}
 \item{reads}{Optional verb wording used in the relation question.}
 \item{either}{Whether either endpoint direction is accepted.}
 }

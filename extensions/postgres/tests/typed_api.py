@@ -8,15 +8,16 @@ import subprocess
 import sys
 import time
 import tempfile
+import traceback
 
 import psycopg2
 from psycopg2 import sql
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'databases/duckdb/tests'))
-from typed_api import fixture, contract_row
+from typed_api import fixture
 from migration_cases import command
-from migration_cases import semantic, expected_row, strict_equal
+from migration_cases import semantic, expected_row, strict_equal, validate_source
 from admission_cases import cases as admission_cases, diagnostic
 sys.path.insert(0, str(ROOT / 'databases'))
 from testing import child_environment
@@ -56,6 +57,9 @@ def query(database, statement, parameters=()):
 def guide(database):
     query(database, 'CREATE DATABASE guide_example')
     try:
+        # The test, not the guide, selects the stub, so readers see the real setup.
+        query(database, "ALTER DATABASE guide_example SET thinkthen.allowed_backends = 'stub:*'")
+        query(database, "ALTER DATABASE guide_example SET thinkthen.backend = 'stub'")
         with closing(psycopg2.connect(database.dsn, dbname='guide_example')) as example:
             with tempfile.TemporaryDirectory() as temporary:
                 helper = ROOT / 'scripts/surface-example'
@@ -68,11 +72,78 @@ def guide(database):
 
 
 def set_settings(database, settings):
+    # Engine keys ending in _ms are PostgreSQL time settings whose base unit is ms.
     for key, value in settings.items():
         for name, item in (value.items() if key == 'retry' else [(key, value)]):
             if item is None:
                 continue
-            query(database, sql.SQL('SET {} = %s').format(sql.Identifier('thinkthen.' + name)), (str(item),))
+            setting = 'thinkthen.' + name.removesuffix('_ms')
+            query(database, sql.SQL('SET {} = %s').format(sql.Identifier(setting)), (str(item),))
+
+
+# The one SQL row shape DuckDB, SQLite and PostgreSQL share.
+COLUMNS = ['position', 'id', 'answer', 'probability', 'status', 'error_code', 'error_message',
+           'error_http_status', 'source', 'detail']
+SPANS = {'start_offset': 'start', 'end_offset': 'end'}
+
+
+def engine_spans(value):
+    if isinstance(value, dict):
+        return {SPANS.get(key, key): engine_spans(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [engine_spans(item) for item in value]
+    return value
+
+
+def sqlstate(code):
+    """PostgreSQL's class for each engine code; DETAIL keeps the code itself."""
+    special = {'usage.sql-selection': '42501', 'local.cancelled': '57014', 'backend.transport': '08001'}
+    families = {'usage': '22023', 'record': '22000', 'internal': 'XX000'}
+    return special.get(code, families.get(code.split('.')[0], '58000'))
+
+
+def visible(question, expected):
+    """Filter returns kept rows, plus failed rows under failures => 'row'."""
+    if question['function'] != 'filter':
+        return expected
+    return [row for row in expected if row['status'] == 'failed'
+            or (row['status'] == 'answered' and row.get('answer') is True)]
+
+
+def backend_down(expected):
+    """No record answered and every failure is the backend's: the statement raises."""
+    return (isinstance(expected, list) and len(expected) > 0
+            and all(row['status'] == 'failed' and row['error']['code'].startswith('backend.') for row in expected))
+
+
+def contract_row(row, function):
+    assert row.keys() == set(COLUMNS), row
+    validate_source(row['source'])
+    answer, detail = row['answer'], row['detail']
+    if function == 'annotate' and answer is not None:
+        # The bare answers are each answered question's answer; detail keeps the outcomes.
+        assert engine_spans(answer) == {name: child.get('answer') if child['status'] == 'answered' else None
+                                        for name, child in detail.items()}, row
+        for name, child in detail.items():
+            assert child.keys() <= {'function', 'status', 'answer', 'probability', 'error', 'detail'}, child
+        answer, detail = engine_spans(detail), None
+    else:
+        answer = engine_spans(answer)
+    result = {'function': function, 'position': row['position'], 'status': row['status'], 'source': row['source']}
+    for key, value in (('id', row['id']), ('probability', row['probability']), ('detail', detail)):
+        if value is not None:
+            result[key] = value
+    if row['status'] != 'answered':
+        assert answer is None, row
+    if row['status'] != 'failed':
+        assert all(row[key] is None for key in ('error_code', 'error_message', 'error_http_status')), row
+    else:
+        result['error'] = {'code': row['error_code'], 'message': row['error_message']}
+        if row['error_http_status'] is not None:
+            result['error']['http_status'] = row['error_http_status']
+    if row['status'] == 'answered':
+        result['answer'] = answer
+    return result
 
 
 def invoke(database, request):
@@ -96,28 +167,20 @@ def invoke(database, request):
             arguments.append(sql.SQL('rules => ARRAY[{}]::thinkthen.rule[]').format(sql.SQL(',').join(rules)))
         else:
             arguments.append(sql.SQL('{} => %s' + ('::jsonb' if key == 'toolbox' else '')).format(sql.Identifier(key)))
-            if key == 'toolbox':
-                value = json.loads(json.dumps(value))
-                for child in value.values():
-                    for rule in child.get('rules', []):
-                        rule['name'] = rule.pop('relation')
             values.append(json.dumps(value) if key == 'toolbox' else value)
     if 'name' in request:
         arguments.append(sql.SQL('name => %s'))
         values.append(request['name'])
+    if question['function'] == 'filter':
+        arguments.append(sql.SQL("failures => 'row'"))
     arguments.append(sql.SQL('params => %s::jsonb'))
     values.append(json.dumps([json.dumps(request.get('records', []))]))
     statement = sql.SQL('SELECT to_jsonb(t) FROM thinkthen.{}({}) t').format(
         sql.Identifier(question['function']), sql.SQL(',').join(arguments))
     rows = []
     for (row,) in query(database, statement, values):
-        if question['function'] == 'filter':
-            assert row['kept'] is (row['status'] == 'answered' and row['answer'] is True), row
         if row['source'].get('name') is None:
             row['source'].pop('name', None)
-        if question['function'] == 'find':
-            row['found'] = (None if row['found_text'] is None else
-                {'text': row['found_text'], 'start': row['found_start'], 'end': row['found_end']})
         if question['function'] == 'relate' and row['answer'] is not None:
             for relation in row['answer']:
                 assert type(relation['either']) is bool, relation
@@ -147,8 +210,8 @@ def admission():
         failure(database, "SET thinkthen.max_retries='secret-placeholder'", '22023')
         settings = query(database, 'SELECT name FROM pg_settings WHERE name LIKE %s ORDER BY name', ('thinkthen.%',))
         assert [row[0] for row in settings] == [
-            'thinkthen.allowed_backends', 'thinkthen.attempt_timeout_ms', 'thinkthen.backend',
-            'thinkthen.batch', 'thinkthen.initial_backoff_ms', 'thinkthen.max_retries', 'thinkthen.model'], settings
+            'thinkthen.allowed_backends', 'thinkthen.attempt_timeout', 'thinkthen.backend',
+            'thinkthen.batch', 'thinkthen.initial_backoff', 'thinkthen.max_retries', 'thinkthen.model'], settings
         for case, request, expected in admission_cases(ROOT, 'postgresql'):
             try:
                 invoke(database, request)
@@ -163,12 +226,12 @@ def admission():
 def native():
     # Feature: schema-qualified typed SQL keeps native diagnostics and source rights.
     with server(child_environment()) as database:
-        guide(database)
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
-        failure(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record',NULL)", '22023', 'usage.question')
-        failure(database, "SELECT * FROM thinkthen.choose('SELECT ''x'' AS record','Which?',ARRAY['one',NULL,'two'])", '22023', 'usage.question')
-        assert query(database, "SELECT status,error_code,kept FROM thinkthen.filter('SELECT NULL::text AS record','Ready?')") == [('failed', 'record.missing', False)]
+        # Feature: a SQL NULL where a value is required is PostgreSQL's 22004, with the engine code.
+        failure(database, "SELECT * FROM thinkthen.decide('SELECT ''x'' AS record',NULL)", '22004', 'usage.question')
+        failure(database, "SELECT * FROM thinkthen.choose('SELECT ''x'' AS record','Which?',ARRAY['one',NULL,'two'])", '22004', 'usage.question')
+        failure(database, "SELECT * FROM thinkthen.decide(NULL,'Ready?')", '22004')
         query(database, 'CREATE SCHEMA hostile')
         query(database, "SET search_path = hostile,pg_catalog")
         rows = query(database, """SELECT position,id,status,answer,error_code,
@@ -256,8 +319,7 @@ def error_families(options):
               (str(options.abi_mismatch_extension.parent / 'family-probe.so'),))
         registry = json.loads((ROOT / 'schemas/contract.json').read_text())
         for code in registry['codes']:
-            expected = '22023' if code['family'] == 'usage' else '58000'
-            failure(database, 'SELECT pg_temp.family_probe(%s)', expected, parameters=(code['value'],))
+            failure(database, 'SELECT pg_temp.family_probe(%s)', sqlstate(code['name']), parameters=(code['value'],))
 
 
 def conformance(options):
@@ -267,7 +329,8 @@ def conformance(options):
         query(database, "SET thinkthen.allowed_backends = 'stub:*'")
         set_settings(database, {'backend': 'stub'})
         for case in json.loads((ROOT / 'construction/stub.json').read_text()):
-            assert strict_equal(invoke(database, case['request']), case['expected']), case['request']
+            expected = visible(case['request']['question'], case['expected'])
+            assert strict_equal(invoke(database, case['request']), expected), case['request']
         for case in json.loads((ROOT / 'construction/options.json').read_text()):
             if 'expected_error' in case:
                 try:
@@ -286,7 +349,9 @@ def conformance(options):
             else:
                 request = case.get('equivalent_request', case['request'])
                 actual = invoke(database, request)
-                assert strict_equal(actual, case['expected']), (case['name'], actual, case['expected'])
+                expected = visible(request['question'], case['expected'])
+                assert strict_equal(actual, expected), (case['name'], actual, expected)
+    failures = []
     directory = ROOT / 'conformance/typed'
     manifest = json.loads((directory / 'manifest.json').read_text())
     for filename in manifest['cases']:
@@ -298,54 +363,83 @@ def conformance(options):
             print(f'postgres {filename}: not applicable: ' + case['not_applicable']['postgres'])
             continue
         for backend in manifest['backends']:
-            settings = {**manifest['client'], **case.get('client', {}), 'backend': backend}
-            with fixture(options, path) as (loopback, environment), server(environment) as database:
-                query(database, 'SET thinkthen.allowed_backends = %s', (backend + ':*',))
-                if isinstance(case['expected'], dict):
-                    reason = case.get('not_applicable', {}).get('postgres')
-                    if reason is not None:
-                        assert isinstance(reason, str) and reason.strip(), filename
-                        zero_byte = r'\u0000' in json.dumps(case['request'])
-                        retry_bound = (case['expected']['error'] == 'usage.settings' and
-                            'max_retries' in case.get('client', {}).get('retry', {}))
-                        assert zero_byte or retry_bound, filename
+            # Each case reports its own failure, so one run lists them all.
+            try:
+                settings = {**manifest['client'], **case.get('client', {}), 'backend': backend}
+                with fixture(options, path) as (loopback, environment), server(environment) as database:
+                    query(database, 'SET thinkthen.allowed_backends = %s', (backend + ':*',))
+                    if isinstance(case['expected'], dict):
+                        if filename == 'usage-batch-zero.json':
+                            # SQL's automatic batch sentinel cannot produce the library's usage.batch error.
+                            assert case['expected']['error'] == 'usage.batch' and case['client']['batch'] == 0, filename
+                            assert case.get('not_applicable', {}).get('postgres'), filename
+                            set_settings(database, settings)
+                            rows = invoke(database, case['request'])
+                            assert len(rows) == 1 and rows[0]['error']['code'] == 'record.empty', rows
+                            assert int(command(loopback, 'count')) == 0, filename
+                            print(f'postgres {filename}: batch 0 is automatic; blank record fails without a backend call')
+                            continue
+                        reason = case.get('not_applicable', {}).get('postgres')
+                        if reason is not None:
+                            assert isinstance(reason, str) and reason.strip(), filename
+                            zero_byte = r'\u0000' in json.dumps(case['request'])
+                            retry_bound = (case['expected']['error'] == 'usage.settings' and
+                                'max_retries' in case.get('client', {}).get('retry', {}))
+                            assert zero_byte or retry_bound, filename
+                            try:
+                                set_settings(database, settings)
+                                invoke(database, case['request'])
+                            except ValueError as error:
+                                assert zero_byte, error
+                                assert 'NUL' in str(error) or '0x00' in str(error), error
+                            except psycopg2.Error as error:
+                                assert error.pgcode in (('22021', '22P05') if zero_byte else ('22023',)), error
+                            else:
+                                raise AssertionError(('host accepted a zero byte', filename))
+                            assert int(command(loopback, 'count')) == 0, filename
+                            print(f'postgres {filename}: canonical diagnostic not applicable: {reason}')
+                            continue
                         try:
                             set_settings(database, settings)
                             invoke(database, case['request'])
-                        except ValueError as error:
-                            assert zero_byte, error
-                            assert 'NUL' in str(error) or '0x00' in str(error), error
                         except psycopg2.Error as error:
-                            assert error.pgcode in (('22021', '22P05') if zero_byte else ('22023',)), error
+                            assert error.diag.message_detail == case['expected']['error'], (path, error)
                         else:
-                            raise AssertionError(('host accepted a zero byte', filename))
-                        assert int(command(loopback, 'count')) == 0, filename
-                        print(f'postgres {filename}: canonical diagnostic not applicable: {reason}')
+                            raise AssertionError(('admission succeeded', path))
+                        assert int(command(loopback, 'count')) == case['requests'], path
                         continue
-                    try:
-                        set_settings(database, settings)
-                        invoke(database, case['request'])
-                    except psycopg2.Error as error:
-                        assert error.diag.message_detail == case['expected']['error'], error
-                    else:
-                        raise AssertionError(('admission succeeded', path))
-                    assert int(command(loopback, 'count')) == case['requests'], path
-                    continue
-                set_settings(database, settings)
-                actual = invoke(database, case['request'])
-                for row in actual:
-                    source = row['source']
-                    assert source['backend'] == backend and source['model'] == settings['model'], source
-                    assert len(source['question_identity']) == 64, source
-                    assert source.get('name') == case['request'].get('name'), source
-                assert len(actual) == len(case['expected']), (path, backend, len(actual), len(case['expected']))
-                assert strict_equal([semantic(row, expected) for row, expected in zip(actual, case['expected'])], [expected_row(row) for row in case['expected']]), (path, backend, actual, case['expected'])
-                requests = int(command(loopback, 'count'))
-                assert requests == case['requests'], (path, backend, requests, case['requests'])
-                missing = query(database, "SELECT position,status,answer,error_code FROM thinkthen.decide('SELECT NULL::text AS record','Ready?')")
-                assert missing == [(1, 'failed', None, 'record.missing')], missing
-                assert int(command(loopback, 'count')) == requests, (path, backend)
-            covered.add((question['function'], backend))
+                    set_settings(database, settings)
+                    if backend_down(case['expected']):
+                        # Feature: a statement whose every record the backend failed raises that error.
+                        code = case['expected'][0]['error']['code']
+                        try:
+                            invoke(database, case['request'])
+                        except psycopg2.Error as error:
+                            assert (error.pgcode, error.diag.message_detail) == (sqlstate(code), code), (path, error)
+                        else:
+                            raise AssertionError(('backend failure returned rows', path))
+                        assert int(command(loopback, 'count')) == case['requests'], path
+                        covered.add((question['function'], backend))
+                        continue
+                    expected = visible(question, case['expected'])
+                    actual = invoke(database, case['request'])
+                    for row in actual:
+                        source = row['source']
+                        assert source['backend'] == backend and source['model'] == settings['model'], source
+                        assert len(source['question_identity']) == 64, source
+                        assert source.get('name') == case['request'].get('name'), source
+                    assert len(actual) == len(expected), (path, backend, len(actual), len(expected))
+                    assert strict_equal([semantic(row, wanted) for row, wanted in zip(actual, expected)], [expected_row(row) for row in expected]), (path, backend, actual, expected)
+                    requests = int(command(loopback, 'count'))
+                    assert requests == case['requests'], (path, backend, requests, case['requests'])
+                    missing = query(database, "SELECT position,status,answer,error_code FROM thinkthen.decide('SELECT NULL::text AS record','Ready?')")
+                    assert missing == [(1, 'failed', None, 'record.missing')], missing
+                    assert int(command(loopback, 'count')) == requests, (path, backend)
+                covered.add((question['function'], backend))
+            except Exception:
+                traceback.print_exc()
+                failures.append((filename, backend))
+    assert not failures, ('typed conformance cases failed', failures)
     functions = {'decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'}
     assert covered == {(function, backend) for function in functions for backend in ('systemone', 'openai')}, covered
 
@@ -396,6 +490,25 @@ def statement_timeout(options):
 
 def adapter_contracts():
     # Feature: planner contracts keep remote calls volatile and serial.
+    environment = child_environment()
+    for backend in ('stub', 'unknown-backend'):
+        environment['THINKTHEN_BACKEND'] = backend
+        with server(environment) as database:
+            statement = "SELECT (source).backend FROM thinkthen.decide('SELECT ''x'' AS record','Ready?')"
+            assert query(database, 'SHOW thinkthen.backend') == [('',)]
+            if backend == 'stub':
+                failure(database, statement, code='usage.sql-selection')
+                query(database, "SET thinkthen.allowed_backends='stub:*'")
+                assert query(database, statement) == [('stub',)]
+                query(database, "SET thinkthen.backend='systemone'")
+                failure(database, statement, code='usage.sql-selection')
+                query(database, 'RESET thinkthen.backend')
+                assert query(database, statement) == [('stub',)]
+            else:
+                query(database, "SET thinkthen.allowed_backends='stub:*'")
+                failure(database, statement, code='usage.backend')
+                query(database, "SET thinkthen.backend='stub'")
+                assert query(database, statement) == [('stub',)]
     with server(child_environment()) as database:
         assert query(database, "SELECT DISTINCT provolatile, proparallel FROM pg_proc WHERE pronamespace='thinkthen'::regnamespace AND prolang=(SELECT oid FROM pg_language WHERE lanname='c')") == [('v','u')]
         assert query(database, "SHOW thinkthen.batch") == [('0',)]
@@ -403,9 +516,10 @@ def adapter_contracts():
         assert query(database, "SHOW thinkthen.batch") == [('7',)]
         query(database, 'RESET thinkthen.batch')
         assert query(database, "SHOW thinkthen.batch") == [('0',)]
-        for setting, value in [('batch', -1), ('batch', 0), ('max_retries', -1), ('max_retries', 4), ('initial_backoff_ms', -1), ('attempt_timeout_ms', 0)]:
+        for setting, value in [('batch', -1), ('max_retries', -1), ('max_retries', 4), ('initial_backoff', -1), ('attempt_timeout', 0)]:
             failure(database, 'SET thinkthen.' + setting + '=' + str(value), '22023')
-        for setting, value in [('batch', 7), ('max_retries', 0), ('initial_backoff_ms', 0), ('attempt_timeout_ms', 1)]:
+        # Feature: batch accepts the 0 it shows, and time settings take PostgreSQL units.
+        for setting, value in [('batch', 0), ('batch', 7), ('max_retries', 0), ('initial_backoff', 0), ('attempt_timeout', 1)]:
             query(database, 'SET thinkthen.' + setting + '=' + str(value))
             query(database, 'RESET thinkthen.' + setting)
         shared = subprocess.check_output(['pg_config', '--sharedir'], text=True).strip()
@@ -445,23 +559,48 @@ if __name__ == '__main__':
         read_ahead(options, server, query, set_settings, fixture, child_environment)
         print('PostgreSQL adapter contracts pass')
         sys.exit(0)
-    admission()
+    # Run every stage and report each failure, so one gate run finds them all.
+    failed = []
+    def stage(name, run, *arguments, **keywords):
+        try:
+            run(*arguments, **keywords)
+        except Exception:
+            traceback.print_exc()
+            print(f'PostgreSQL stage failed: {name}', file=sys.stderr, flush=True)
+            failed.append(name)
+    def interface_checks():
+        from interface import verify as interface
+        with server(child_environment()) as database:
+            query(database, "CREATE FUNCTION pg_temp.question_probe(text) RETURNS void "
+                  "AS %s,'thinkthen_question_probe' LANGUAGE C STRICT",
+                  (str(options.abi_mismatch_extension.parent / 'family-probe.so'),))
+            interface(database, query, failure)
+    def guide_checks():
+        with server(child_environment()) as database:
+            guide(database)
+    if options.group in ('all', 'native', 'ownership'):
+        stage('guide', guide_checks)
+    stage('admission', admission)
     if options.group == 'admission':
-        sys.exit(0)
+        sys.exit(1 if failed else 0)
     if options.group != 'conformance':
-        abi_mismatch(options)
-        error_families(options)
-        native()
-        adapter_contracts()
         from request_counts import verify as request_counts
-        request_counts(options, server, query, set_settings, child_environment)
         from read_ahead import verify as read_ahead
-        read_ahead(options, server, query, set_settings, fixture, child_environment)
+        stage('abi_mismatch', abi_mismatch, options)
+        stage('error_families', error_families, options)
+        stage('native', native)
+        stage('interface', interface_checks)
+        stage('adapter_contracts', adapter_contracts)
+        stage('request_counts', request_counts, options, server, query, set_settings, child_environment)
+        stage('read_ahead', read_ahead, options, server, query, set_settings, fixture, child_environment)
     if options.group in ('all', 'conformance'):
-        conformance(options)
+        stage('conformance', conformance, options)
     if options.group in ('all', 'native'):
-        cancellation(options)
-        statement_timeout(options)
+        stage('cancellation', cancellation, options)
+        stage('statement_timeout', statement_timeout, options)
     if options.group != 'conformance':
-        subprocess.run(['/work/bundle/run-live', '--stub'], check=True, env=child_environment())
+        stage('run-live', subprocess.run, ['/work/bundle/run-live', '--stub'], check=True, env=child_environment())
+    if failed:
+        print(f'PostgreSQL {options.group} stages failed: {", ".join(failed)}', file=sys.stderr)
+        sys.exit(1)
     print(f'PostgreSQL {options.group} checks pass')

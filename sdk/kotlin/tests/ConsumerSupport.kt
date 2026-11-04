@@ -1,6 +1,6 @@
 package consumer
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,16 +15,16 @@ internal fun JsonObject.required(name: String): JsonElement =
     getValue(name)
 internal fun JsonObject.strings(name: String): List<String> =
     required(name).jsonArray.map { it.jsonPrimitive.content }
-internal fun JsonObject.pointer(): Pointer? = get("evidence")?.let { Pointer(it.jsonPrimitive.content) }
+internal fun JsonObject.pointer(): Pointer? = get("field")?.let { Pointer(it.jsonPrimitive.content) }
 internal fun JsonObject.cut(): Threshold.Cut? = get("threshold")?.let { Threshold.cut(it.jsonPrimitive.double) }
 internal fun JsonObject.threshold(): Threshold? = get("threshold")?.let {
     if (it is JsonObject) Threshold.band(it.required("low").jsonPrimitive.double, it.required("high").jsonPrimitive.double)
     else Threshold.cut(it.jsonPrimitive.double)
 }
 internal fun backend(name: String): Backend = when (name) {
-    "systemone" -> Backend.SystemOne
-    "openai" -> Backend.OpenAI
-    "stub" -> Backend.Stub
+    "systemone" -> Backend.SYSTEMONE
+    "openai" -> Backend.OPENAI
+    "stub" -> Backend.STUB
     else -> error("Unknown shared backend: $name")
 }
 
@@ -79,8 +79,8 @@ internal fun <A, D> assertRow(
     actual: Row<A, D>, expected: JsonObject, expectedBackend: Backend,
     answer: (A) -> JsonElement, detail: (D) -> JsonElement,
 ) {
-    val position: ULong = actual.position
-    check(position == expected.required("position").jsonPrimitive.content.toULong())
+    val position: Long = actual.position
+    check(position == expected.required("position").jsonPrimitive.content.toLong())
     check(actual.function.name.lowercase() == expected.required("function").jsonPrimitive.content)
     check(actual.id?.let { contractValue(it) } == expected["id"])
     if(expected["source"] != null) check(actual.source != null) { "Missing source metadata" }
@@ -94,7 +94,7 @@ internal fun <A, D> assertRow(
     }
     when (actual) {
         is Row.Answered -> {
-            check(actual.status == Status.Answered)
+            check(actual.status == Status.ANSWERED)
             check(expected.required("status").jsonPrimitive.content == "answered")
             check(contractMatches(answer(actual.answer),expected.required("answer"))) { "Answer mismatch: ${answer(actual.answer)} expected ${expected.required("answer")}" }
             check(actual.probability?.toBits() == expected["probability"]?.jsonPrimitive?.double?.toBits())
@@ -102,14 +102,14 @@ internal fun <A, D> assertRow(
             check("error" !in expected)
         }
         is Row.Unsure -> {
-            check(actual.status == Status.Unsure)
+            check(actual.status == Status.UNSURE)
             check(expected.required("status").jsonPrimitive.content == "unsure")
             check(actual.probability.toBits() == expected.required("probability").jsonPrimitive.double.toBits())
             check(actual.detail?.let(detail) == expected["detail"])
             check("answer" !in expected && "error" !in expected)
         }
         is Row.Failed -> {
-            check(actual.status == Status.Failed)
+            check(actual.status == Status.FAILED)
             check(expected.required("status").jsonPrimitive.content == "failed")
             assertError(actual.error, expected.required("error").jsonObject)
             check("answer" !in expected && "probability" !in expected && "detail" !in expected)
@@ -121,4 +121,15 @@ internal fun contractMatches(actual: JsonElement, expected: JsonElement): Boolea
     is JsonObject -> actual is JsonObject && actual.keys.filter { it != "message" }.toSet() == expected.keys.filter { it != "message" }.toSet() && expected.all { (key,value) -> actual[key]?.let { contractMatches(it,value) } == true }
     is JsonArray -> actual is JsonArray && actual.size == expected.size && actual.zip(expected).all { contractMatches(it.first,it.second) }
     else -> actual == expected
+}
+
+// Rank items are the engine's JsonValue snapshots; compare them with the input JSON, numbers by value.
+internal fun snapshotMatches(snapshot: dev.thinkthen.JsonValue, record: JsonElement?): Boolean =
+    sameJson(Json.parseToJsonElement(snapshot.toString()), record ?: JsonNull)
+internal fun sameJson(actual: JsonElement, expected: JsonElement): Boolean = when (expected) {
+    is JsonObject -> actual is JsonObject && actual.keys == expected.keys && expected.all { (key, value) -> sameJson(actual.getValue(key), value) }
+    is JsonArray -> actual is JsonArray && actual.size == expected.size && actual.zip(expected).all { sameJson(it.first, it.second) }
+    is JsonPrimitive -> actual is JsonPrimitive && actual.isString == expected.isString &&
+        (actual.content == expected.content || (!expected.isString && actual.doubleOrNull != null && actual.doubleOrNull == expected.doubleOrNull))
+    JsonNull -> actual == JsonNull
 }

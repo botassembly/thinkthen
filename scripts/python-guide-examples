@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+"""Run every Python example in the Python guide, as written, on the stub backend.
+
+Usage: python-guide-examples PYTHON
+
+Readers see the default client; THINKTHEN_BACKEND=stub moves each run to the
+stub. Each example runs alone in a fresh folder holding the files the guide
+tells readers to create. A block that uses `questions` without defining it
+runs after the ten-functions annotate example, as the guide says to reuse it.
+Prints one line per example and exits 1 if any fails.
+"""
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+GUIDE = ROOT / 'docs/surfaces/python.md'
+RECORDS = [{'id': 'a1', 'text': 'Please refund my order.'},
+           {'id': 'a2', 'text': 'Where is my parcel?'}, None, {'id': 'a4'}]
+MESSAGES = 'id,text\na1,Please refund my order.\na2,Where is my parcel?\n'
+
+
+def main(python):
+    text = GUIDE.read_text(encoding='utf-8')
+    blocks = re.findall(r'```(python|json)\n(.*?)\n```', text, re.S)
+    toolbox = next(body for kind, body in blocks if kind == 'json' and '"entries"' in body)
+    examples = [body for kind, body in blocks if kind == 'python']
+    shared = next(body for body in examples if re.search(r'^questions = ', body, re.M))
+    environment = {name: value for name, value in os.environ.items()
+                   if name not in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL')}
+    environment['THINKTHEN_BACKEND'] = 'stub'
+    failures = 0
+    for number, body in enumerate(examples, 1):
+        title = body.strip().splitlines()[-1].strip()[:60]
+        if re.search(r'\bquestions\b', body) and not re.search(r'^questions = ', body, re.M):
+            body = shared + '\n' + body
+        with tempfile.TemporaryDirectory(prefix='python-guide-') as folder:
+            folder = Path(folder)
+            (folder / 'records.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in RECORDS))
+            (folder / 'messages.csv').write_text(MESSAGES)
+            (folder / 'toolbox.json').write_text(toolbox + '\n')
+            (folder / 'example.py').write_text(body + '\n')
+            result = subprocess.run([python, '-I', 'example.py'], cwd=folder, env=environment,
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if result.returncode == 0:
+            print(f'example {number} passes: {title}')
+        else:
+            failures += 1
+            last = (result.stdout.strip().splitlines() or ['(no output)'])[-1]
+            print(f'example {number} FAILS: {title}\n  {last}')
+    print(f'{len(examples) - failures} of {len(examples)} Python guide examples pass')
+    return 1 if failures else 0
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SystemExit(__doc__)
+    sys.exit(main(sys.argv[1]))

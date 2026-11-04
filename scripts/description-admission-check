@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Run facade description regressions against an explicit prepared native input.
+
+Usage: description-admission-check java|r NATIVE_PATH SHA256 [--routine] [--facade-revision SHA]
+Prints test summaries; never compiles the native engine or calls a live backend.
+"""
+import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import threading
+
+ROOT = Path(__file__).resolve().parent.parent
+surface, native_name, expected = sys.argv[1:4]
+options = sys.argv[4:]
+routine = "--routine" in options
+revision = options[options.index("--facade-revision") + 1] if "--facade-revision" in options else None
+native = Path(native_name).resolve(strict=True)
+assert hashlib.sha256(native.read_bytes()).hexdigest() == expected, "prepared native input changed"
+requests = []
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        requests.append(self.path)
+        self.send_response(500)
+        self.end_headers()
+
+    def log_message(self, *_):
+        pass
+
+
+with tempfile.TemporaryDirectory(prefix="thinkthen-descriptions-") as temporary:
+    scratch = Path(temporary)
+    home = scratch / "home"
+    home.mkdir()
+    environment = {key: os.environ[key] for key in ("PATH", "R_HOME") if key in os.environ}
+    environment.update(HOME=str(home), XDG_CACHE_HOME=str(home / ".cache"))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    worker = threading.Thread(target=server.serve_forever)
+    worker.start()
+    url = f"http://127.0.0.1:{server.server_port}/v1"
+    failures = []
+
+    def run(arguments, **kwargs):
+        subprocess.run(list(map(str, arguments)), cwd=scratch, env=environment, check=True, **kwargs)
+
+    try:
+        if surface == "java":
+            cache = Path(os.environ.get("THINKTHEN_JVM_CACHE", Path.home() / ".local/share/thinkthen-build-tools/jvm"))
+            java_home = cache / "jdk-22.0.2+9"
+            if (java_home / "Contents/Home").is_dir():
+                java_home /= "Contents/Home"
+            dependencies = [next((cache / "m2" / path).glob("*.jar")) for path in (
+                "com/fasterxml/jackson/core/jackson-databind/2.20.1",
+                "com/fasterxml/jackson/core/jackson-core/2.20.1",
+                "com/fasterxml/jackson/core/jackson-annotations/2.20",
+                "org/jspecify/jspecify/1.0.0")]
+            classpath = os.pathsep.join(map(str, dependencies))
+            subprocess.run([sys.executable, str(ROOT / "scripts/jvm-generated"), str(scratch)], check=True)
+            sources = list((ROOT / "sdk/java/library/src/main/java").rglob("*.java")) + list((scratch / "library/target/generated-sources/contracts").rglob("*.java"))
+            sources = [source for source in sources if source.name != "module-info.java"]
+            if revision:
+                original = ROOT / "sdk/java/library/src/main/java/dev/thinkthen/Questions.java"
+                replacement = scratch / "Questions.java"
+                replacement.write_bytes(subprocess.check_output(["git", "show", revision + ":" + str(original.relative_to(ROOT))], cwd=ROOT))
+                sources = [replacement if source == original else source for source in sources]
+            classes = scratch / "classes"
+            run([java_home / "bin/javac", "-Xlint:all", "-Werror", "--release", "22", "-cp", classpath, "-d", classes, *sources])
+            resource = classes / "io/thinkthen/native/linux-amd64/libthinkthen_ffi.so"
+            resource.parent.mkdir(parents=True)
+            shutil.copy2(native, resource)
+            jar = scratch / "thinkthen-java.jar"
+            run([java_home / "bin/jar", "--create", "--file", jar, "-C", classes, "."])
+            classpath = str(jar) + os.pathsep + classpath
+            tests = ["JavaDescriptionCases"] + (["JavaInterfaceCases"] if routine else [])
+            test_sources = [ROOT / "sdk/java/consumer/src/main/java" / (name + ".java") for name in tests + ["BackendFixture"]]
+            run([java_home / "bin/javac", "-Xlint:all", "-Werror", "--release", "22", "-cp", classpath, "-d", scratch / "tests", *test_sources])
+            for name in tests:
+                try:
+                    run([java_home / "bin/java", f"-Duser.home={home}", "--enable-native-access=ALL-UNNAMED", "-cp", str(scratch / "tests") + os.pathsep + classpath, name, url])
+                except subprocess.CalledProcessError:
+                    failures.append(name)
+        elif surface == "r":
+            stage = scratch / "thinkthen"
+            stage.mkdir()
+            for name in ("DESCRIPTION", "NAMESPACE", "LICENSE"):
+                shutil.copy2(ROOT / "sdk/r" / name, stage / name)
+            shutil.copytree(ROOT / "sdk/r/R", stage / "R")
+            if revision:
+                for name in ("questions.R", "run.R"):
+                    (stage / "R" / name).write_bytes(subprocess.check_output(["git", "show", revision + ":sdk/r/R/" + name], cwd=ROOT))
+            libraries = stage / "inst/libs"
+            libraries.mkdir(parents=True)
+            shutil.copy2(native, libraries / "thinkthen.so")
+            library = scratch / "library"
+            library.mkdir()
+            environment.update(R_LIBS_USER=str(library) + os.pathsep + os.environ["R_LIBS_USER"], R_LIBS_SITE="", THINKTHEN_TEST_URL=url)
+            run(["R", "CMD", "INSTALL", "--library=" + str(library), stage])
+            tests = ["descriptions.R"] + (["interface.R"] if routine else [])
+            for name in tests:
+                try:
+                    run(["Rscript", "--vanilla", ROOT / "sdk/r/tests" / name])
+                except subprocess.CalledProcessError:
+                    failures.append(name)
+        else:
+            raise ValueError("surface must be java or r")
+    finally:
+        server.shutdown()
+        worker.join()
+        server.server_close()
+    print("Backend requests:", len(requests), flush=True)
+    assert not requests, "description admission made backend requests"
+    assert not failures, failures
+print(surface, "description admission passed")

@@ -1,0 +1,10 @@
+{
+  "answer": [
+    "billing",
+    "shipping"
+  ],
+  "labels": {
+    "billing": 0.9,
+    "shipping": 0.8
+  }
+}

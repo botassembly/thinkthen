@@ -9,7 +9,8 @@ JSON file at THINKTHEN_STRESS_CASE. Fields: client (wire settings including URL 
 synthetic key), scenario (shared expected status/code), records, probability,
 concurrency, rounds, cancel. Generate records lazily where the public API allows.
 Validate every row's ordinal position, record-N id, status, answer/probability and
-error code. Emit one JSON line: {calls, rows, failed, cancelled}. For cancel cases,
+error code. Emit one JSON line: {calls, rows, failed, cancelled}. SQL statements
+that raise report statement_errors as {engine_code: count}, with zero returned rows. For cancel cases,
 start an in-flight batch, read 'cancel' from stdin and cancel through the public
 API. No adapter selects faults, workload sizes or soak rounds. --sequential explicitly
 reports a sequential API and replaces the concurrent pair with two serial calls.
@@ -246,10 +247,16 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                 report.update(json.loads(result))
                 report.update(concurrency=concurrency, rounds=rounds)
                 expected_calls = concurrency * rounds
-                expected_rows = 0 if cancel else count * expected_calls
+                statement_errors = report.get('statement_errors', {})
+                if statement_errors:
+                    if (surface not in {'duckdb', 'sqlite', 'postgres'} or cancel or
+                            scenario['status'] != 'failed' or
+                            statement_errors != {scenario['code']: expected_calls} or report['failed'] != 0):
+                        raise RuntimeError(f'adapter misreported SQL statement errors: {report}')
+                expected_rows = 0 if cancel or statement_errors else count * expected_calls
                 if report['calls'] != expected_calls or report['rows'] != expected_rows or report['cancelled'] != cancel:
                     raise RuntimeError(f'adapter lost calls, rows or cancellation: {report}')
-                if not cancel and (report['failed'] > 0) != (scenario['status'] == 'failed'):
+                if not cancel and not statement_errors and (report['failed'] > 0) != (scenario['status'] == 'failed'):
                     raise RuntimeError(f'adapter lost expected failure rows: {report}')
                 if cancel:
                     if fixture.command('closed', timeout=max(0.001, 2 - (time.monotonic() - cancelled_at))) != 'closed':
@@ -282,7 +289,9 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                         raise RuntimeError(f'input adapter did not prove its pull bound: {pulled} > {read_ahead_limit}')
                 mask = report.pop('identifier_width_mask')
                 widths = [width for width in range(mask.bit_length()) if mask & (1 << width)]
-                if not cancel and len(widths) != 1:
+                if statement_errors and mask:
+                    raise RuntimeError('SQL statement errors reported identities without returned rows')
+                if not cancel and not statement_errors and len(widths) != 1:
                     raise RuntimeError(f'actual stress identifiers changed width: {widths}')
                 report.update(concurrency=concurrency, rounds=rounds,
                     identifiers=dict(observed_widths=widths, min_width=min(widths, default=None),
@@ -350,7 +359,7 @@ def main():
         backends = [args.backend]
     count = table['records']['full' if args.full else 'smoke']
     healthy = next(s for s in table['scenarios'] if s['name'] == 'healthy')
-    calls = rows = failed = 0
+    calls = rows = failed = failed_statements = 0
     reports = []
     for wire in backends:
         cases = [(s, 1, 1, False) for s in table['scenarios']]
@@ -381,6 +390,7 @@ def main():
             if 'error' in result:
                 break
             calls, rows, failed = totals
+            failed_statements += sum(result.get('statement_errors', {}).values())
         if 'error' in reports[-1]:
             break
     measured = sum('resources' in case for case in reports)
@@ -390,7 +400,7 @@ def main():
         'not measured: suite stopped before every required resource workload')
     print(json.dumps(dict(adapter=command[0], full=args.full,
         execution="sequential" if args.sequential else "concurrent", calls=calls, rows=rows,
-        failed=failed, cases=reports, sanitizer=args.sanitizer, resource_growth=resource_growth)), flush=True)
+        failed=failed, failed_statements=failed_statements, cases=reports, sanitizer=args.sanitizer, resource_growth=resource_growth)), flush=True)
     unmeasured = os.environ.get('THINKTHEN_GATE_STRICT') == '1' and resource_growth.startswith('not measured')
     if unmeasured:
         print('strict candidate resource check failed: ' + resource_growth, file=sys.stderr, flush=True)

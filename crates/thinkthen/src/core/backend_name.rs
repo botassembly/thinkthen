@@ -15,16 +15,23 @@ macro_rules! backend_names {
         impl std::str::FromStr for BackendName {
             type Err = Error;
             fn from_str(value: &str) -> Result<Self, Error> {
-                match value { $($name => Ok(Self::$variant),)+ _ => Err(Error::new(ErrorKind::Backend, crate::core::diagnostic::unknown_value("backend", value, &[$($name,)+]))) }
+                match value { $($name => Ok(Self::$variant),)+ _ => {
+                    let advertised = Self::ALL.iter().copied().filter(|backend| backend.advertised()).map(Self::as_str).collect::<Vec<_>>();
+                    Err(Error::new(ErrorKind::Backend, crate::core::diagnostic::unknown_option_value("backend", value, &advertised)))
+                } }
             }
         }
         impl BackendName {
             /// Every supported backend in native order.
             pub const ALL:&'static [Self]=&[$(Self::$variant,)+];
+            /// Whether public guidance advertises this backend.
+            pub(crate) const fn advertised(self) -> bool { !matches!(self, Self::Stub) }
             /// The explicit native discriminator.
+            #[doc(hidden)]
             #[must_use]
             pub const fn abi(self)->u32{self as u32}
             /// Reject unknown native discriminators.
+            #[doc(hidden)]
             #[must_use]
             pub const fn from_abi(value:u32)->Option<Self>{match value{$($abi=>Some(Self::$variant),)+_=>None}}
 

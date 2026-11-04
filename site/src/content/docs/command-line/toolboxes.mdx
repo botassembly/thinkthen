@@ -1,0 +1,92 @@
+---
+title: Toolboxes
+description: Save ThinkThen questions in a toolbox file, run one by name with thinkthen run, chain a question with your own shell commands, and look up the file format.
+goal: The reader saves a question in a toolbox, runs it by name, chains it with a shell step safely, and can write the file from its format.
+reader: A command-line user who asks the same questions again and wants them in a file under version control
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+A toolbox is a JSON file of saved questions. `thinkthen run` asks a saved question by its name, and a toolbox can also pass the answers on to your own commands.
+
+This toolbox saves two questions, `refunds` and `topic`:
+
+<ExampleFile id="run-entry" file="toolbox.json" />
+
+<ExampleFile id="run-entry" file="messages.jsonl" />
+
+Name the toolbox, then the entry, then the file:
+
+<Example id="run-entry" />
+
+`refunds` is a filter, so it prints the two messages that ask for a refund. The entry runs as if you had typed its function and options. `run` reads JSON Lines unless you say otherwise, such as `--from lines` or `--column text` for a CSV file.
+
+## Keep each question in its own file
+
+A folder named `thinkthen/` works as a toolbox, with one entry per file, named after the file. `thinkthen run NAME` looks for `thinkthen.json` or a `thinkthen/` folder in the current folder.
+
+<ExampleFile id="run-folder" file="thinkthen/refunds.json" />
+
+<ExampleFile id="run-folder" file="thinkthen/topic.json" />
+
+<ExampleFile id="run-folder" file="messages.jsonl" />
+
+<Example id="run-folder" />
+
+`ls` shows the two entries, and `run refunds` asks the one in `refunds.json`. A file that holds one entry runs without a name.
+
+## Ask every saved question at once
+
+[annotate](/functions/annotate/) asks every question in a toolbox about each message and gives back one answer per question. Its toolbox holds a `questions` map instead of `entries`; the format is below.
+
+## Pass the answers to your own command
+
+An entry can list steps. Each step reads the answers of the step before it, one JSON object per line. This entry keeps the refund requests, then `jq` prints the `id` and chance of yes of each:
+
+<ExampleFile id="run-chain" file="refund-ids.json" />
+
+<ExampleFile id="run-chain" file="messages.jsonl" />
+
+<Example id="run-chain" />
+
+A shell step runs only with `--allow-shell`. It names a program and its words, such as `["jq", "-c", "..."]`, and ThinkThen runs it as written, with no shell in between. To use shell syntax, name the shell: `["sh", "-c", "..."]`. A shell step that fails stops the run with its own exit code.
+
+**Read a toolbox before you add `--allow-shell`.** A shell step can run any program on your computer, so whoever wrote the toolbox decides what runs. A bare `thinkthen run NAME` uses the toolbox of the folder you are in, so in a folder you didn't write, such as a cloned project, read its `thinkthen.json` or `thinkthen/` folder first, or name the toolbox file you have read.
+
+ThinkThen removes `THINKTHEN_API_KEY` and `OPENAI_API_KEY` from shell steps. A step gets a key only when it lists it, as in `"env": ["THINKTHEN_API_KEY"]`, and the command then prints a notice that names it. Every other variable in your shell still reaches the step.
+
+## The toolbox format
+
+A file for `run` holds an `entries` map from name to entry, or one entry by itself. A `thinkthen/` folder holds one entry in each `NAME.json`.
+
+| An entry holds | What it is |
+| --- | --- |
+| `question` | One saved question, as in the table below. |
+| `run` | Steps, in order, instead of `question`. Nothing else sits beside `run`. |
+| `name` | An optional name for the answers, as `--name` gives. |
+
+A step is `{"question": ...}`, with an optional `name`, or `{"shell": ["PROGRAM", "WORD", ...]}`, with an optional `env` list of key names to pass.
+
+A file for annotate holds a `questions` map from name to question, and an optional `field` for every question that names none. rank and annotate can't sit inside it.
+
+Every question names its `function`, and every question takes an optional `field`, such as `"/text"`:
+
+| Function | Fields |
+| --- | --- |
+| decide, filter | `question`; optional `threshold`, `true`, `false` |
+| choose | `question`, `choices`; optional `threshold` |
+| tag | `question`, `labels`; optional `threshold` |
+| score | `question`, `levels`, lowest first |
+| rank | `question`, `levels`, lowest first; optional `top` |
+| find | `question`; optional `threshold` |
+| recognize | `kinds`; optional `threshold` |
+| relate | `rules`; optional `threshold` |
+| annotate | `questions`, a map from name to question |
+
+`threshold` is one bar, a number above 0 and at most 1, such as `0.8`; the default is `0.5`. decide, filter and choose also take a low and a high bar, `{"low": 0.2, "high": 0.8}`. A relate rule holds `relation`, `source` and `target`, and optional `either` and `reads`. A field the format doesn't list stops the command with the closest name it knows.
+
+## Next
+
+[Agents](/command-line/agents/) shows how an AI agent calls ThinkThen.

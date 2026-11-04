@@ -50,14 +50,20 @@ pub fn sql_engine(
     allowed: Option<&str>,
     variable: impl Fn(&str) -> Option<String>,
 ) -> Result<Engine, Error> {
-    sql_settings_with_policy(text, allowed)?.engine(variable)
+    sql_settings_with_policy(text, allowed, &variable)?.engine(variable)
 }
 
 /// Admit SQL settings under the administrator backend/model policy.
 /// # Errors
 /// Rejects forbidden fields and denied selections before resolving credentials.
-pub fn sql_settings_with_policy(text: &str, allowed: Option<&str>) -> Result<Settings, Error> {
+pub fn sql_settings_with_policy(
+    text: &str,
+    allowed: Option<&str>,
+    variable: impl Fn(&str) -> Option<String>,
+) -> Result<Settings, Error> {
     let settings = sql_settings(text)?;
+    let backend = settings.resolve_backend(variable)?;
+    let settings = settings.with_backend(backend);
     let table = BackendTable::default();
     let (backend, model) = settings.selection(&table)?;
     let permitted = if let Some(allowed) = allowed {
@@ -282,9 +288,8 @@ pub fn sql_postgres_record(json: &str) -> crate::Record {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 struct SqlRule {
-    #[serde(rename(serialize = "relation"))]
-    #[serde(deserialize_with = "crate::core::diagnostic::name")]
-    name: String,
+    #[serde(deserialize_with = "crate::core::diagnostic::relation")]
+    relation: String,
     #[serde(deserialize_with = "crate::core::diagnostic::source")]
     source: String,
     #[serde(deserialize_with = "crate::core::diagnostic::target")]
@@ -324,7 +329,7 @@ fn sql_question_value(value: &mut serde_json::Value) -> Result<(), Error> {
     }
     Ok(())
 }
-/// Admit SQL's structured question values, translating the public rule name once.
+/// Admit SQL structured question values with the canonical relation field.
 /// # Errors
 /// Returns shared question validation errors, including unknown rule fields.
 pub fn sql_question(json: &str) -> Result<Question, Error> {

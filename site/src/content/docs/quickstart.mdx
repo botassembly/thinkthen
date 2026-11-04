@@ -1,0 +1,69 @@
+---
+title: Quickstart
+description: Install ThinkThen, set your key, ask your first question about a customer message, and act on the answer in a script.
+goal: A newcomer with a shell installs ThinkThen, sets the key, gets a first real answer, and uses that answer in a script, in that order.
+reader: A developer with a shell who has never used ThinkThen
+kind: tutorial
+verified: 2026-11-03
+---
+import Example from '../../components/Example.astro';
+import InstallLine from '../../components/InstallLine.astro';
+
+Install ThinkThen, set your key, and ask your first question about a customer message.
+
+## 1. Install ThinkThen
+
+On macOS or Linux:
+
+<InstallLine k="install.installer" />
+
+In Windows PowerShell:
+
+<InstallLine k="install.installerWindows" lang="powershell" />
+
+Open a new terminal, then check that it worked:
+
+<Example id="version" />
+
+[Installation](/install/) covers Homebrew, Cargo and downloads.
+
+## 2. Set your key
+
+ThinkThen sends each question to TypeSafe's System One service, which bills your TypeSafe account for each call. Get a key on the [TypeSafe keys page](https://console.typesafe.ai/keys), then set it in your shell:
+
+```sh
+export THINKTHEN_API_KEY='your key'
+```
+
+In Windows PowerShell:
+
+```powershell
+$env:THINKTHEN_API_KEY = 'your key'
+```
+
+To use OpenAI or your own server instead, see [Configuration](/configuration/).
+
+## 3. Ask a question
+
+Pipe in the text, and put the question in quotes:
+
+<Example id="start/decide-yes" />
+
+`true` means yes: the message asks for a refund. If you see `usage.key-missing` instead, the key isn't set in this shell.
+
+## 4. Act on the answer
+
+`--check` turns the answer into the exit code, so a script can branch on it. Here the answer is yes, so the script sends the message to the refunds queue:
+
+<Example id="start/decide-branch" />
+
+In Windows PowerShell, `$LASTEXITCODE` holds the exit code:
+
+<Example id="start/decide-branch-ps" />
+
+## Next steps
+
+- [decide](/functions/decide/): yes, no and not sure.
+- [The ten functions](/#pick-the-function-that-fits-your-question): pick the one that fits your question.
+- [File types](/command-line/file-types/): answer every row of a CSV file.
+- [Python SDK](/sdks/python/) and the other SDKs: the same functions in your code.

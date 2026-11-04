@@ -1,0 +1,1 @@
+thinkthen: usage.option: json: expected text output for table framing; received JSON row output

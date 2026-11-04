@@ -1,0 +1,56 @@
+---
+title: Fail a CI job on a yes-or-no question
+description: Make a CI step pass when a pull request description says how the change was tested, fail when it doesn't, and ask a reviewer when ThinkThen is not sure.
+goal: A developer leaves with a CI script that passes on yes, fails on no, sends not sure to a reviewer, and never passes when the check itself fails.
+reader: A developer who wants a CI job to check what a pull request description, changelog or commit message says
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, your CI job passes when a pull request description says how the change was tested, fails when it doesn't, and asks a reviewer when ThinkThen is not sure.
+
+## 1. Save the description in a file
+
+Your CI job writes the pull request description to `pr.md`. This one doesn't say how the change was tested:
+
+<ExampleFile id="howto-ci-ask" file="pr.md" lang="markdown" />
+
+## 2. Ask the question with `--check`
+
+`--check` makes the answer the exit code: 0 for yes, 1 for no and 3 for not sure. The low and high bars send an unclear description to not sure.
+
+<Example id="howto-ci-ask" />
+
+No: the description says what changed, not how it was tested, so the exit code is 1.
+
+## 3. Turn each exit code into the job's result
+
+`check-pr.sh` reads the exit code and prints a note for the author or the reviewer. Any other code means the check itself didn't run, so the job fails with 2 rather than passing.
+
+<ExampleFile id="howto-ci-fail" file="check-pr.sh" lang="sh" />
+
+<Example id="howto-ci-fail" />
+
+The job fails, and the note tells the author what to add.
+
+## 4. Add the script to your CI job
+
+Run `sh check-pr.sh pr.md` as a step after the step that writes `pr.md`. The job needs `thinkthen` installed and your key in a CI secret. [Installation](/install/) and [Configuration](/configuration/) cover both.
+
+## Check the result
+
+Run the script on a description that says how the change was tested:
+
+<ExampleFile id="howto-ci-pass" file="pr-tested.md" lang="markdown" />
+
+<Example id="howto-ci-pass" />
+
+Yes: the description names the tests, so the job passes.
+
+A writer who knows the question can word a description to pass it. Treat the check as a reminder, and keep a reviewer on the not-sure branch. [Exit codes](/command-line/exit-codes/) lists every code the script can see.
+
+## Next
+
+[Measure answers against your own labels](/how-tos/measure-answers-against-your-own-labels/) checks your bars against answers you wrote yourself.

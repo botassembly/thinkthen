@@ -47,7 +47,7 @@ func TestScalarJSONIntegersKeepExactValues(t *testing.T) {
 	}
 	b := startBackend(t, fixture)
 	batch := 1
-	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: &batch})
+	c := apiClientFor(t, tt.Config{URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: batch})
 	for _, value := range []any{json.Number("9007199254740993"), int64(math.MinInt64), uint64(math.MaxUint64)} {
 		record, err := tt.JSON(value)
 		if err != nil {

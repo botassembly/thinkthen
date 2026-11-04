@@ -1,0 +1,59 @@
+---
+title: Let your shell branch on meaning
+description: How ThinkThen turns a judgment about text into an exit code a shell script can branch on, why not sure gets its own code, and why a failed line never passes for an answer.
+goal: Show a shell programmer how to branch on a ThinkThen judgment with --check, route not sure to a person, and stop safely on failed lines, using runs from the docs.
+reader: A developer who writes shell scripts, CI jobs or agent tools that must act on text
+kind: blog
+date: 2026-10-27
+author: Ian Maurer
+verified: 2026-11-02
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import Fact from '../../../components/Fact.astro';
+
+Shell scripts branch on exit codes, and ThinkThen <Fact k="version" /> lets them branch on meaning. `grep -q` exits 0 when it finds a match and 1 when it doesn't, and decades of scripts are built on that, but `grep` matches characters and can't tell you whether a message asks for a refund.
+
+ThinkThen gives the shell that missing test.
+
+## An if that reads meaning
+
+Add `--check` to `decide`, and the answer becomes the exit code. Yes is 0:
+
+<Example id="exit-check-yes" />
+
+No is 1:
+
+<Example id="exit-check-no" />
+
+That's enough to write `if printf '%s' "$message" | thinkthen decide --check -q '...'; then`. With `-q` the command prints nothing and only the exit code speaks. Same shape as `grep -q`, a different kind of match.
+
+## Not sure is not no
+
+Here's where I part ways with `grep`. A model has a probability, not a match. At 0.51 you'd rather not act as if it said yes.
+
+So ThinkThen has a third answer. Give it a low bar and a high bar with `--low` and `--high`, and an answer between them comes back as not sure, with its own exit code, 3:
+
+<Example id="exit-check-notsure" />
+
+Now the script has three branches: act, skip, or ask a person. In my experience the third branch is what makes automation safe to turn on. You start with the bars far apart and a busy person, and you move them closer as you check the model against your own labels.
+
+## A failure is not an answer
+
+The worst thing a classifier can do is fail quietly and look like a "no". A timeout reads as false, the script skips the refund, and nobody finds out.
+
+ThinkThen keeps those apart. A line that can't be judged comes back marked failed, with its error code. The other lines still get answered, and the command exits 6 after it has written every answer. In `broken.jsonl` the second line is not JSON, and the third has no text:
+
+<ExampleFile id="ans-stop-on-failure" file="broken.jsonl" />
+
+<Example id="ans-stop-on-failure" />
+
+A failed line wins over every answer, so `--check` never turns a failure into a 0 or a 1. A wrong command line exits 2 before anything is judged. Each code means one thing, and [Exit codes](/command-line/exit-codes/) lists them all.
+
+## Why this matters for agents
+
+An agent calling a tool is a shell script with opinions. It needs the same three things a script needs: a typed answer, a way to say "I'm not sure", and a failure that can't pass for an answer. ThinkThen gives an agent all three in one call, without asking it to parse prose.
+
+## Try it
+
+The [quickstart](/quickstart/) installs ThinkThen and asks your first question, and [Exit codes](/command-line/exit-codes/) has the full table.

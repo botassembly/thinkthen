@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+from package_inventory import python_wheelhouse as wheelhouse
 import shutil
 import subprocess
 import sys
@@ -165,7 +166,7 @@ def full(folder, build, *, caller_owned=False):
         installed_python = scratch / 'python/Scripts/python.exe'
         with check('Python'):
             execute(python, '-I', '-m', 'venv', scratch / 'python')
-            execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index', '--no-deps', packages['python'])
+            execute(installed_python, '-I', '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', wheelhouse(folder), packages['python'])
             execute(installed_python, '-I', checks / 'python.py', fixture)
         with check('Python frames'):
             optional = folder / 'prerequisites/python-frames-windows'

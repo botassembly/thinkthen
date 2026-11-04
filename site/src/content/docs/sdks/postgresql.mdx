@@ -1,0 +1,191 @@
+---
+title: PostgreSQL
+description: Install the extension in PostgreSQL 18 and ask a question about every message a query returns, with thinkthen.decide and nine more set-returning functions.
+goal: The reader installs the PostgreSQL extension, asks a first question of a table, sees not sure and a failure as psql prints them, lets other roles call it, and finds the query for each of the ten functions.
+reader: A database administrator or developer who wants answers as columns in PostgreSQL
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import Fact from '../../../components/Fact.astro';
+
+The PostgreSQL extension adds the ten functions in the `thinkthen` schema; each one runs a query you pass as text, asks a question about every message it returns, and gives the answer as a column, such as `t` or `f` from decide.
+
+<Example id="sdks/postgresql/start" />
+
+Messages 1 and 3 ask for a refund, so `is_refund` is `t`, and message 2 asks about a parcel, so it is `f`. The rest of this page uses the same database and the same `messages` table.
+
+## Install the extension and ask
+
+The extension runs on PostgreSQL 18, on Linux x86-64 or arm64 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server from the [<Fact k="version" /> release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), check it as [Installation](/install/) shows, and copy its files into the server's folders:
+
+```sh
+mkdir thinkthen-postgres
+tar -xzf thinkthen-postgres-*.tar.gz -C thinkthen-postgres
+cd thinkthen-postgres
+sudo cp lib/thinkthen_postgres.so \
+  "$(pg_config --pkglibdir)/"
+sudo cp share/extension/* \
+  "$(pg_config --sharedir)/extension/"
+```
+
+Set your key in the server's environment, as [Configuration](/configuration/) shows, and restart the server. SQL can never set the key.
+
+Connect with `psql` as an administrator.
+
+
+
+The first argument is the query to judge, as text. Its `record` column holds the text, and its `id` column comes back in `id` as `jsonb`, so `(id)::integer` joins it back to your table. Name the other arguments with `=>`, as `choices => ARRAY[...]`. PostgreSQL runs the whole function before it applies an outer `LIMIT`, so put any `LIMIT` inside the query you pass.
+
+Each run of a query asks again and is billed again, so save answers you need twice with `CREATE TABLE refund_answers AS SELECT ...` and query that table.
+
+To move from 0.1.0, copy these files over the old ones and run `ALTER EXTENSION thinkthen UPDATE;` in each database. It replaces the 0.1.0 functions with the ten below.
+
+## When decide is not sure
+
+Set a low bar and a high bar with `low` and `high`. decide says no below the low bar, yes at or above the high bar, and not sure in between:
+
+<Example id="sdks/postgresql/unsure" />
+
+A double charge might be a refund request or might not, so message 3 comes back `unsure`, with a NULL answer, which psql prints as a blank. Send it to a person. Test answers with `IS TRUE` and `IS FALSE`, which are both false for NULL, so not sure never counts as a no.
+
+## When a message fails
+
+A message that can't be judged comes back with `status` `failed`, a NULL answer and an `error_code`, and the query keeps going. Here message 7 has no text, so it fails as `record.missing`, and no question is sent for it:
+
+<Example id="sdks/postgresql/failed" />
+
+A mistake in the call itself, such as leaving out `choices`, raises an error before anything is sent. Its `DETAIL` holds the code, such as `usage.question`, and many carry a `HINT` with the fix. When every message fails for the same outside reason, such as a refused request, the query raises that error instead. [Troubleshooting](/reference/troubleshooting/) lists every code.
+
+## The ten functions
+
+Each query uses the `messages` table from the first example. Open a function to see its query and what psql prints. In psql, `\df+ thinkthen.*` describes each function with an example.
+
+### decide
+
+<details class="example-disclosure compact-spacing">
+<summary>Yes or no for each message</summary>
+
+<Example id="sdks/postgresql/decide" />
+
+`answer` is a `boolean`. `probability` is the chance of yes, also when the answer is no. It is high for message 1, low for message 2, and in between for message 3, the double charge. `yes_means` and `no_means` say what yes and no mean for your question. [decide](/functions/decide/) shows the command.
+
+</details>
+
+### choose
+
+<details class="example-disclosure compact-spacing">
+<summary>One of your choices for each message</summary>
+
+<Example id="sdks/postgresql/choose" />
+
+Message 1, a refund request, is about billing. `answer` is the choice, as `text`, and `detail -> 'labels'` gives every choice its probability. With `threshold`, or `low` and `high`, choose is not sure when the best choice falls short of the bar. [choose](/functions/choose/) shows the command.
+
+</details>
+
+### tag
+
+<details class="example-disclosure compact-spacing">
+<summary>Every label that fits each message</summary>
+
+<Example id="sdks/postgresql/tag" />
+
+Message 4 is about billing and shipping at once. `answer` is a `text[]`, which is empty when no label fits. `threshold` sets the bar a label must reach. [tag](/functions/tag/) shows the command.
+
+</details>
+
+### score
+
+<details class="example-disclosure compact-spacing">
+<summary>A number from 0 to 1 for each message</summary>
+
+<Example id="sdks/postgresql/score" />
+
+The double charge, message 3, is the most urgent of the three. `answer` is a `float8`: 0 means the first level, and 1 the last. List the levels lowest first. [score](/functions/score/) shows the command.
+
+</details>
+
+### filter
+
+<details class="example-disclosure compact-spacing">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="sdks/postgresql/filter" />
+
+Messages 1 and 3 ask for a refund, so filter keeps them. The no and not-sure messages are left out. If a message fails, the query judges them all, then raises one error that says how many failed, and returns nothing. Add `failures => 'row'` to get the failed messages back too, with `status` `failed`, so you keep the answers you paid for. To keep every message with its answer, use decide. [filter](/functions/filter/) shows the command.
+
+</details>
+
+### rank
+
+<details class="example-disclosure compact-spacing">
+<summary>Every message in order, highest first</summary>
+
+<Example id="sdks/postgresql/rank" />
+
+The double charge ranks first, the parcel second and the refund request last. `answer` is a `bigint` rank from 1, the most urgent first. `top => 2` keeps the first two. Failed messages come after the ranked ones, and `top` never drops them. [rank](/functions/rank/) shows the command.
+
+</details>
+
+### find
+
+<details class="example-disclosure compact-spacing">
+<summary>The line that answers in each message</summary>
+
+<Example id="sdks/postgresql/find" />
+
+The second line of message 5 states what the customer wants. `answer` is a `thinkthen.span` with the line's `text`, `start_offset` and `end_offset`. Offsets count characters from 0, and the end is not part of the line. When no line answers, `answer` is NULL and `status` is `answered`. [find](/functions/find/) shows the command.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure compact-spacing">
+<summary>Several questions about each message at once</summary>
+
+<Example id="sdks/postgresql/annotate" />
+
+Each message gets all three answers from one query. `toolbox` names each question, and rank can't be one of them. `answer` is a `jsonb` object with each question's answer by name. A value is JSON null when that question was not sure or failed, and `detail` holds each question's full outcome. [annotate](/functions/annotate/) shows the command.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure compact-spacing">
+<summary>The names of the kinds you ask for</summary>
+
+<Example id="sdks/postgresql/recognize" />
+
+Message 6 names a person, Morgan, and an organization, Example Group. `answer` is an array of `thinkthen.recognized_name`, each with `text`, `kind`, `start_offset`, `end_offset` and `probability`. `LEFT JOIN LATERAL unnest(...)` lists each name on its own, and keeps a message that has none. [recognize](/functions/recognize/) shows the command.
+
+</details>
+
+### relate
+
+<details class="example-disclosure compact-spacing">
+<summary>How the names in each message connect</summary>
+
+<Example id="sdks/postgresql/relate" />
+
+Morgan works for Example Group, so relate links the two names. A rule is `ROW(relation, source kind, target kind, reads, either)::thinkthen.rule`, and `reads` may be NULL. `answer` is an array of `thinkthen.relation`, each with `source`, `target`, `relation`, `probability` and `either`. [relate](/functions/relate/) shows the command.
+
+</details>
+
+## Let other roles call the functions
+
+`CREATE EXTENSION` takes the functions away from every role but the administrator's. Grant each role the schema and each function it calls. Only an administrator can set `thinkthen.allowed_backends`, which lists the services and models a role may use, and without it a role may use only the default:
+
+```sql wrap
+CREATE ROLE app LOGIN;
+GRANT USAGE ON SCHEMA thinkthen TO app;
+GRANT EXECUTE ON FUNCTION thinkthen.decide TO app;
+GRANT SELECT ON messages TO app;
+ALTER ROLE app
+  SET thinkthen.allowed_backends = 'systemone:*';
+```
+
+The role `app` can now call decide on `messages`, and any other function raises `permission denied`.
+
+## Every option and setting
+
+The [PostgreSQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md) lists every argument, result column, setting and error, such as `field => '/text'`, which judges one field of a JSON message, and `params`, which binds values to the `$1` in your query. The [extension's source](https://github.com/botassembly/thinkthen/tree/v0.2.0/extensions/postgres) shows how each call works.

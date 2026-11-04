@@ -1,0 +1,1 @@
+thinkthen: usage.pointer: field: expected a JSON Pointer as RFC 6901 defines it, such as /body; received a string (contents redacted)

@@ -10,9 +10,15 @@ use crate::{
 };
 use std::time::Duration;
 use thinkthen::{BackendName, Batch, Retry, native};
-/// Allocate default typed settings without reading keys or environment.
+/// Make settings with every default, without reading keys or the environment.
+///
+/// Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
+/// thinkthen_settings_free; an old handle in *out is not freed.
 /// # Safety
-/// Out and error are distinct empty writable slots.
+/// Any thread may call this. out is writable. error is NULL or initialized with
+/// THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+/// frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+/// its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_new(
     out: *mut *mut SettingsHandle,
@@ -26,9 +32,15 @@ pub unsafe extern "C" fn thinkthen_settings_new(
         })
     }
 }
-/// Select a typed backend before opening a client.
+/// Choose the backend, a thinkthen_backend.
+///
+/// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_BACKEND with the settings unchanged for an
+/// unknown backend.
 /// # Safety
-/// Settings is live and exclusively driven; error is empty writable storage.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+/// On a negative return it holds the code and message; passing it again frees what it held, so
+/// a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_backend(
     settings: *mut SettingsHandle,
@@ -38,15 +50,25 @@ pub unsafe extern "C" fn thinkthen_settings_set_backend(
     /* SAFETY: the driver owns the live builder and error slot. */
     unsafe {
         operation(error, || {
-            let backend = BackendName::from_abi(backend).ok_or_else(native::abi_error)?;
+            let backend = BackendName::from_abi(backend)
+                .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageBackend))?;
             (*settings).0 = (*settings).0.clone().with_backend(backend);
             Ok(OK)
         })
     }
 }
-/// Copy a validated direct API key; debug output never reveals it.
+/// Set the API key; the library never prints or logs it.
+///
+/// Without one, the client reads the backend's key variable. Returns THINKTHEN_OK, or a
+/// negative code with the settings unchanged: -THINKTHEN_CODE_USAGE_KEY_MISSING for a blank
+/// key, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
 /// # Safety
-/// Builder and counted bytes are live; error is exclusive and empty.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. data points to len readable bytes, or to a NUL-
+/// terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_api_key(
     settings: *mut SettingsHandle,
@@ -63,9 +85,17 @@ pub unsafe extern "C" fn thinkthen_settings_set_api_key(
         })
     }
 }
-/// Copy a model name without resolving the backend or credentials.
+/// Set the model name the backend uses.
+///
+/// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8, with the
+/// settings unchanged.
 /// # Safety
-/// Builder and counted bytes are live; error is exclusive and empty.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. data points to len readable bytes, or to a NUL-
+/// terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_model(
     settings: *mut SettingsHandle,
@@ -82,9 +112,18 @@ pub unsafe extern "C" fn thinkthen_settings_set_model(
         })
     }
 }
-/// Copy an admitted URL without reading credentials.
+/// Set the backend's base URL.
+///
+/// Returns THINKTHEN_OK, or a negative code with the settings unchanged:
+/// -THINKTHEN_CODE_USAGE_URL for a URL that is not valid, or -THINKTHEN_CODE_USAGE_ABI when the
+/// text is not UTF-8.
 /// # Safety
-/// Builder and counted bytes are live; error is exclusive and empty.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. data points to len readable bytes, or to a NUL-
+/// terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_url(
     settings: *mut SettingsHandle,
@@ -102,9 +141,15 @@ pub unsafe extern "C" fn thinkthen_settings_set_url(
         })
     }
 }
-/// Select a validated positive batch count.
+/// Set how many records go to the backend in one request.
+///
+/// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_BATCH with the settings unchanged when batch
+/// is 0 or too large.
 /// # Safety
-/// Builder is live and exclusive; error is empty writable storage.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+/// On a negative return it holds the code and message; passing it again frees what it held, so
+/// a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_batch(
     settings: *mut SettingsHandle,
@@ -120,9 +165,16 @@ pub unsafe extern "C" fn thinkthen_settings_set_batch(
         })
     }
 }
-/// Copy a validated retry policy expressed in whole milliseconds.
+/// Set how many times a failed request is retried, the first wait, and each attempt's limit, in
+/// milliseconds.
+///
+/// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_SETTINGS with the settings unchanged for
+/// values out of range.
 /// # Safety
-/// Builder is live and exclusive; error is empty writable storage.
+/// One thread at a time may call this on a settings object; other settings objects may be used
+/// on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+/// On a negative return it holds the code and message; passing it again frees what it held, so
+/// a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_set_retry(
     settings: *mut SettingsHandle,
@@ -144,9 +196,11 @@ pub unsafe extern "C" fn thinkthen_settings_set_retry(
         })
     }
 }
-/// Release a settings builder; already opened clients own their snapshots.
+/// Free settings.
+///
+/// Free settings. NULL is ignored. Clients opened from them keep their own copy.
 /// # Safety
-/// NULL or the unique live builder after all readers finish.
+/// Call this once, after every other use of settings has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_free(settings: *mut SettingsHandle) {
     if !settings.is_null() {
@@ -155,9 +209,15 @@ pub unsafe extern "C" fn thinkthen_settings_free(settings: *mut SettingsHandle) 
     }
 }
 
-/// Copy an independent settings snapshot without resolving environment variables.
+/// Copy settings into a new settings object, without reading the environment.
+///
+/// Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
+/// thinkthen_settings_free; an old handle in *out is not freed.
 /// # Safety
-/// Source is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees source. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_clone(
     source: *const SettingsHandle,
@@ -172,9 +232,14 @@ pub unsafe extern "C" fn thinkthen_settings_clone(
         })
     }
 }
-/// Replace only the explicit key from an opaque settings snapshot.
+/// Copy only the API key from source into destination.
+///
+/// Returns THINKTHEN_OK.
 /// # Safety
-/// Both handles are live; destination is exclusive; error is empty writable storage.
+/// One thread at a time may change destination, and no thread changes source during the call.
+/// error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+/// code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+/// it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_copy_api_key(
     destination: *mut SettingsHandle,
@@ -191,9 +256,18 @@ pub unsafe extern "C" fn thinkthen_settings_copy_api_key(
     }
 }
 
-/// Admit canonical settings with omitted fields resolved by the engine defaults.
+/// Read settings from JSON; fields left out take their defaults.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+/// -THINKTHEN_CODE_USAGE_SETTINGS, or another usage code naming the field, for JSON that is not
+/// valid settings, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns
+/// *out and frees it with thinkthen_settings_free; an old handle in *out is not freed.
 /// # Safety
-/// Counted bytes are live; out and error are distinct empty writable slots.
+/// Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+/// when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_settings_from_json(
     data: *const u8,

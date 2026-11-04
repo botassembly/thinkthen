@@ -36,7 +36,7 @@ fn drive(work: *Work) void {
     var received: usize = 0;
     var diag: tt.Diagnostic = .{};
     while (true) {
-        const row = work.call.next(arena.allocator(), &diag) catch |err| {
+        const row = work.call.next(&diag) catch |err| {
             std.debug.assert(work.cancel and err == error.Cancelled and diag.code == .local_cancelled and received == 0);
             return;
         } orelse break;
@@ -76,7 +76,7 @@ pub fn run(a: std.mem.Allocator, args: []const [:0]const u8) !void {
         for (work, threads, 0..) |*item, *thread, worker| {
             const offset = try std.fmt.parseInt(usize, args[9], 10) + (round * workers + worker) * count;
             item.* = .{ .call = undefined, .source = .{ .offset = offset, .count = count }, .count = count, .probability = try std.fmt.parseFloat(f64, args[6]), .code = args[5], .cancel = cancel, .offset = offset };
-            item.call = try client.decide(std.heap.page_allocator, "Ready?", .{ .source = tt.RecordSource.from(&item.source) }, .{ .evidence = "/body" }, null);
+            item.call = try client.decideAll(std.heap.page_allocator, "Ready?", .{ .source = tt.RecordSource.from(&item.source) }, .{ .field = "/body" }, null);
             thread.* = try std.Thread.spawn(.{}, drive, .{item});
         }
         if (cancel) {

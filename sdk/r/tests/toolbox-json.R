@@ -16,13 +16,13 @@ stopifnot(identical(canonical(jsonlite::fromJSON(saved, simplifyVector = FALSE))
                     canonical(jsonlite::fromJSON(json, simplifyVector = FALSE))))
 loaded <- tt_toolbox_from_json(saved)
 stub <- tt_client(backend = "stub")
-inline <- tt_choose_question("Which topic?", c("billing", "shipping"), threshold = .7, evidence = "/body")
+inline <- tt_choose_question("Which topic?", c("billing", "shipping"), threshold = .7, field = "/body")
 record <- list(list(body = "billing inquiry"))
-stopifnot(identical(tt_choose(record, tt_question(loaded, "topic"), client = stub),
-                    tt_choose(record, inline, client = stub)))
+stopifnot(identical(tt_choose_rows(record, tt_question(loaded, "topic"), client = stub),
+                    tt_choose_rows(record, inline, client = stub)))
 constructed <- tt_toolbox(list(choice = inline))
-stopifnot(identical(tt_choose(record, tt_question(tt_toolbox_from_json(tt_toolbox_to_json(constructed)), "choice"), client = stub),
-                    tt_choose(record, inline, client = stub)))
+stopifnot(identical(tt_choose_rows(record, tt_question(tt_toolbox_from_json(tt_toolbox_to_json(constructed)), "choice"), client = stub),
+                    tt_choose_rows(record, inline, client = stub)))
 for (bad in jsonlite::fromJSON(file.path(root, "malformed.json"))) {
   condition(tt_toolbox_from_json(bad), "thinkthen_usage_error", "usage.question")
 }

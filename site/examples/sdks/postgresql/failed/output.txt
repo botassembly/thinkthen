@@ -1,0 +1,6 @@
+ msg_id | is_refund |  status  |   error_code   
+--------+-----------+----------+----------------
+ 1      | t         | answered | 
+ 7      |           | failed   | record.missing
+(2 rows)
+

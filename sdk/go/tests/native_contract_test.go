@@ -41,7 +41,7 @@ func TestNativeABIManifest(t *testing.T) {
 		}
 		defer client.Close()
 		row, err := client.Decide(context.Background(), thinkthen.NewDecide("Ready?"), thinkthen.Missing())
-		if err != nil || !errors.Is(row.Error(), thinkthen.CodeRecordMissing) {
+		if err != nil || !errors.Is(rowFailure(row.Err()), thinkthen.CodeRecordMissing) {
 			t.Fatal("accepted engine did not forward failed row")
 		}
 		return
@@ -78,6 +78,9 @@ func TestNativeABIManifest(t *testing.T) {
 func TestNativeLoadFailure(t *testing.T) {
 	if path := os.Getenv("THINKTHEN_MISSING_NATIVE_CHILD"); path != "" {
 		_, err := thinkthen.New(thinkthen.Config{Backend: thinkthen.Stub})
+		if _, ok := err.(*thinkthen.Error); !ok {
+			t.Fatalf("loader error is not *thinkthen.Error: %T", err)
+		}
 		if err == nil || !errors.Is(err, thinkthen.CodeLocalIO) || errors.Is(err, thinkthen.CodeUsageABI) || !strings.Contains(err.Error(), path) {
 			t.Fatalf("wrong load diagnostic: %v", err)
 		}
@@ -123,7 +126,7 @@ func TestNativeTemporaryCache(t *testing.T) {
 		}
 		return
 	}
-	for _, mode := range []string{"unset", "readonly", "long", "occupied"} {
+	for _, mode := range []string{"unset", "readonly", "long", "occupied", "group-writable"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cache := filepath.Join(root, "cache")
@@ -136,6 +139,11 @@ func TestNativeTemporaryCache(t *testing.T) {
 			}
 			if err := os.Mkdir(cache, 0700); err != nil {
 				t.Fatal(err)
+			}
+			if mode == "group-writable" {
+				if err := os.Chmod(cache, 0775); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if mode == "long" {
 				cache = filepath.Join(root, strings.Repeat("x", 256))

@@ -9,14 +9,14 @@ using any_question = std::variant<tt::decide, tt::choose, tt::tag, tt::score, tt
 static_assert(!std::is_constructible_v<tt::annotation_question, tt::rank>);
 
 template<class Q> Q options(Q q, const json& value) {
-    if (value.contains("evidence")) q = q.evidence(value.at("evidence").get<std::string>());
+    if (value.contains("field")) q = q.field(value.at("field").get<std::string>());
     if constexpr (std::is_same_v<Q, tt::decide> || std::is_same_v<Q, tt::choose> || std::is_same_v<Q, tt::filter>) {
         if (value.contains("threshold")) {
             const auto& t = value.at("threshold");
-            q = q.cutoff(t.is_number() ? tt::threshold::cutoff(t.get<double>()) : tt::threshold::band(t.at("low"), t.at("high")));
+            q = q.threshold(t.is_number() ? tt::threshold::cutoff(t.get<double>()) : tt::threshold::band(t.at("low"), t.at("high")));
         }
     } else if constexpr (std::is_same_v<Q, tt::tag> || std::is_same_v<Q, tt::find> || std::is_same_v<Q, tt::recognize> || std::is_same_v<Q, tt::relate>) {
-        if (value.contains("threshold")) q = q.cutoff(value.at("threshold").get<double>());
+        if (value.contains("threshold")) q = q.threshold(value.at("threshold").get<double>());
     } else if constexpr (std::is_same_v<Q, tt::rank>) {
         if (value.contains("top")) q = q.top(value.at("top").get<std::size_t>());
     }
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
         }
         std::visit([&](const auto& value) {
             using Q = std::decay_t<decltype(value)>;
-#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) { if (shortcut) append_row(rows, kept, owner.QNAME(value, single, named)); else { auto stream = owner.QNAME##_each(value, records, named); if (argc == 4) stream.cancel_handle().request_cancel(); for (const auto& row : stream) append_row(rows, kept, row); } }
+#define THINKTHEN_COLLECT(QNAME) if constexpr (std::is_same_v<Q, tt::QNAME>) { if (shortcut) append_row(rows, kept, owner.QNAME(value, single, named)); else { auto stream = ([&] { if constexpr (std::is_same_v<Q, tt::filter>) return owner.filter_rows_each(value, records, named); else return owner.QNAME##_each(value, records, named); })(); if (argc == 4) stream.cancel_handle().request_cancel(); for (const auto& row : stream) append_row(rows, kept, row); } }
             THINKTHEN_COLLECT(decide) THINKTHEN_COLLECT(choose)
             THINKTHEN_COLLECT(tag) THINKTHEN_COLLECT(score)
             THINKTHEN_COLLECT(filter) THINKTHEN_COLLECT(rank)
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 #undef THINKTHEN_COLLECT
         }, q);
     } catch (const tt::error& error) {
-        std::cout << json{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(static_cast<int>(error.code()))}} << '\n';
+        std::cout << json{{"rows", rows}, {"kept", kept}, {"error", thinkthen_code_name(error.code().value())}} << '\n';
         return 0;
     }
     std::cout << json{{"rows", rows}, {"kept", kept}} << '\n';

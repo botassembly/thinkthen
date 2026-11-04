@@ -68,7 +68,10 @@ def guide():
     helper = args.root / "scripts/surface-example"
     subprocess.run([sys.executable, str(helper), "prepare", "r", str(folder)], check=True)
     subprocess.run([sys.executable, str(helper), "check", "r", "Rscript", "--vanilla", "example.R"],
-                   env=environment, cwd=folder, check=True)
+                   env=dict(environment, THINKTHEN_BACKEND="stub"), cwd=folder, check=True)
+    subprocess.run(["Rscript", "--vanilla", str(args.root / "sdk/r/tests/readme.R"),
+                    str(args.root / "docs/surfaces/r.md")],
+                   env=dict(environment, THINKTHEN_BACKEND="stub"), cwd=folder, check=True)
 
 
 def module_abi():
@@ -96,7 +99,7 @@ if args.module_abi_only:
     print("R native module reused unchanged:", module, digest, flush=True)
     module_abi()
     subprocess.run(["Rscript", "--vanilla", "-e",
-                    'library(thinkthen); stopifnot(tt_decide("text", "Ready?", '
+                    'library(thinkthen); stopifnot(tt_decide_rows("text", "Ready?", '
                     'client=tt_client(backend="stub"))$status == "answered")'],
                    env=environment, cwd=args.scratch, check=True)
     sys.exit(0)
@@ -130,6 +133,13 @@ def expected_r(value):
 
 from comparison import typed_numbers, assert_fields, shared_rows
 
+
+print(rscript(args.root / "sdk/r/tests/readme.R", args.root / "sdk/r/README.md",
+              env=dict(environment, THINKTHEN_BACKEND="stub")), end="", flush=True)
+guide()
+module_abi()
+for script in ("interface.R", "contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R", "frame-serialization.R"):
+    print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
 
 manifest = json.loads((args.root / "conformance/typed/manifest.json").read_text())
 coverage = {name: set() for name in manifest["backends"]}
@@ -223,20 +233,21 @@ print(rscript(args.root / "sdk/r/tests/admission.R", args.root / "conformance/pu
 context_case = args.scratch / "conversion-contexts.json"
 context_case.write_text(json.dumps({"replies": [], "requests": 0}))
 with backend(context_case) as (server, url):
-    for script in ("context.R", "typed-ids.R"):
+    for script in ("context.R", "typed-ids.R", "descriptions.R"):
         print(rscript(args.root / "sdk/r/tests" / script,
                       env=dict(environment, THINKTHEN_TEST_URL=url)), end="", flush=True)
+    print(rscript(args.root / "sdk/r/tests/wrong-answers.R", "client",
+                  env=dict(environment, THINKTHEN_TEST_URL=url, THINKTHEN_BASE_URL=url)),
+          end="", flush=True)
     server.stdin.write("count\n")
     server.stdin.flush()
-    assert int(read_line(server.stdout)) == 0, "host conversion contexts made a backend call"
+    assert int(read_line(server.stdout)) == 0, "host conversion or scoped client made a backend call"
+print(rscript(args.root / "sdk/r/tests/wrong-answers.R", "rank"), end="", flush=True)
 print(rscript(args.root / "sdk/r/tests/toolbox-json.R", args.root / "conformance/toolbox"), end="", flush=True)
-for script in ("contract.R", "typed-surface.R", "typed-frames.R", "surface.R", "frames.R", "frame-serialization.R"):
-    print(rscript(args.root / "sdk/r/tests" / script), end="", flush=True)
 
 print(rscript(args.root / "sdk/r/tests/release-cases.R", args.root / "construction/stub.json"),
       end="", flush=True)
 
-print(rscript(args.root / "sdk/r/tests/readme.R", args.root / "sdk/r/README.md"), end="", flush=True)
 
 # Keep a bound, non-listening port for the entire unreachable-backend call.
 with socket.socket() as reservation:
@@ -252,6 +263,4 @@ from interrupts import check as check_interrupts
 check_interrupts(args.root, args.scratch, environment)
 print("R unreachable code and held-request interrupt passed", flush=True)
 subprocess.run([sys.executable, str(args.root / "scripts/stress-adapters.py"), "--surface", "r", "--sequential", *(["--full"] if os.environ.get("THINKTHEN_STRESS_FULL") else []), "--", sys.executable, str(args.root / "sdk/c/tests/stress.py"), "r", "Rscript", "--vanilla", str(args.root / "sdk/r/tests/stress.R")], env=environment | {"THINKTHEN_GATE_STRICT": os.environ.get("THINKTHEN_GATE_STRICT", "0")}, cwd=args.scratch, check=True)
-guide()
-module_abi()
 assert not count_failures, ("shared push-input request counts", count_failures)

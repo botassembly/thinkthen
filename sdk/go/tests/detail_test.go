@@ -13,7 +13,7 @@ func assertDetail[D any](t *testing.T, detail D, raw json.RawMessage) {
 		var want struct {
 			Pieces []struct {
 				Text       string
-				Start, End uint64
+				Start, End int
 				Tags       map[string]float64
 			}
 			Names []tt.KindDetail
@@ -64,23 +64,55 @@ func assertAnnotations(t *testing.T, got tt.Annotations, raw json.RawMessage) {
 		if entry.Function().String() != want.Function {
 			t.Fatal("annotation function discriminator differs")
 		}
-		switch e := entry.(type) {
+		switch entry.(type) {
 		case tt.DecideAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Decide(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.ChooseAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Choose(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.TagAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Tag(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.ScoreAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Score(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.FilterAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Filter(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.FindAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Find(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.RecognizeAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Recognize(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		case tt.RelateAnnotation:
-			assertEntry(t, e, want)
+			child, err := got.Relate(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertEntry(t, child, want)
 		default:
 			t.Fatalf("untyped annotation %T", entry)
 		}
@@ -88,16 +120,16 @@ func assertAnnotations(t *testing.T, got tt.Annotations, raw json.RawMessage) {
 }
 func assertEntry[A, D any](t *testing.T, e interface {
 	Status() tt.Status
-	Value() (A, bool)
+	Answer() (A, error)
 	Probability() (float64, bool)
 	Detail() (D, bool)
-	Error() *tt.Error
+	Err() error
 }, want apiExpected) {
 	t.Helper()
 	if e.Status().String() != want.Status {
 		t.Fatal("annotation status differs")
 	}
-	answer, ok := e.Value()
+	answer, ok := valueOf(e)
 	if ok != (want.Status == "answered") {
 		t.Fatal("annotation Value status differs")
 	}
@@ -121,7 +153,7 @@ func assertEntry[A, D any](t *testing.T, e interface {
 	if present {
 		assertDetail(t, detail, want.Detail)
 	}
-	failure := e.Error()
+	failure := rowFailure(e.Err())
 	if (failure != nil) != (want.Error != nil) {
 		t.Fatal("annotation error presence differs")
 	}

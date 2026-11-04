@@ -1,0 +1,10 @@
+---
+import { surfaces } from '../lib/function-surfaces.mjs';
+interface Props { surface: string }
+const { surface } = Astro.props;
+if (!surfaces.some(({id}) => id === surface)) throw new Error(`Unknown language variant: ${surface}`);
+---
+<div data-pagefind-ignore={surface !== 'command' ? 'all' : undefined} data-language-variant={surface} hidden={surface !== 'command'}><slot /></div>
+<style>
+  [hidden] { display: none !important; }
+</style>

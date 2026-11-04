@@ -12,7 +12,7 @@ def verify(database, query, failure):
     rows = query(database, "SELECT position,id,status,error_code FROM thinkthen.decide(%s,'Ready?',record_column=>'body',id_column=>'key')", (source,))
     assert len(rows) == 1025
     assert rows == [(n, n, 'failed' if n % 127 == 0 else 'answered', 'record.missing' if n % 127 == 0 else None) for n in range(1,1026)], rows
-    ranked = query(database, "SELECT position,id,status,rank FROM thinkthen.rank(%s,'Urgent?',ARRAY['low','high'],top=>1,record_column=>'body',id_column=>'key')", (source,))
+    ranked = query(database, "SELECT position,id,status,answer FROM thinkthen.rank(%s,'Urgent?',ARRAY['low','high'],top=>1,record_column=>'body',id_column=>'key')", (source,))
     assert len(ranked) == 9 and ranked[0][2:] == ('answered',1), ranked
     assert all(position == identifier for position,identifier,_,_ in ranked)
     assert [row[0] for row in ranked[1:]] == list(range(127,1026,127)), ranked

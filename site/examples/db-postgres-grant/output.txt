@@ -1,0 +1,4 @@
+msg_id,is_refund
+1,t
+2,f
+3,t

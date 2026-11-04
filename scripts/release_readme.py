@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 from runtime_floors import FLOORS
+from release_python_dependencies import wheelhouse
 import re
 import tarfile
 import zipfile
@@ -51,7 +52,9 @@ def readme(name, out, artifact, *, root=ROOT):
     version = json.loads((out / 'build.json').read_text(encoding='utf-8'))['version']
     requirements = json.loads((out / 'requirements.json').read_text(encoding='utf-8'))[name]
     python = 'python' if requirements.get('platform') == 'windows-x86_64' else 'python3'
-    body = body.replace('pip install thinkthen', f'{python} -m pip install --no-index ./{artifact.name}')
+    if name == 'python':
+        dependencies = '../' + wheelhouse(out).relative_to(out).as_posix()
+        body = body.replace('pip install thinkthen', f'{python} -m pip install --no-index --find-links {dependencies} ./{artifact.name}')
     body = body.replace('npm install thinkthen', f'npm install --offline ./{artifact.name}')
     support = (FLOORS['windows']['support'].rstrip('.') if requirements.get('platform') == 'windows-x86_64' else f'macOS {requirements["macos"]}' if 'macos' in requirements else
                f'Linux glibc >= {requirements["supported_glibc"]}')

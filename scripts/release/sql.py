@@ -11,7 +11,7 @@ if kind == 'sqlite':
     shared = cases[0][0]
     request = shared['request']
     cases.append(({**shared, 'request': {**request,
-        'question': {**request['question'], 'evidence': '/body'},
+        'question': {**request['question'], 'field': '/body'},
         'records': [{'body': record} for record in request['records']]}}, True))
 
 
@@ -130,7 +130,7 @@ def public_question(question):
     return question
 
 
-for case, selected_evidence in cases:
+for case, selected_field in cases:
     request = case['request']
     question = public_question(request['question'])
     function = question['function']
@@ -189,7 +189,7 @@ for case, selected_evidence in cases:
         result = [json.loads(row['row']) for row in result]
     actual = [normalize(row, function) for row in result]
     expected = case['expected']
-    if selected_evidence:
+    if selected_field:
         for row, wanted in zip(actual, expected, strict=True):
             identity = row['source']['question_identity']
             assert len(identity) == 64 and all(character in '0123456789abcdef' for character in identity), identity

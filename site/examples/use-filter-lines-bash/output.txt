@@ -1,0 +1,6 @@
+Refund issued for order 1182.
+--- filter
+Refund issued for order 1182.
+Customer asked to cancel and get their money back.
+--- count
+       2

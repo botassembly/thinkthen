@@ -1,0 +1,55 @@
+---
+// Starlight's content wrapper, with a search weight for the function guides.
+// The copy controls sit in the top bar (Header.astro) and at the foot of the page (Footer.astro).
+import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+const route = Astro.url.pathname.replace(/\/$/, '');
+// Function guides should precede command-reference tables for a bare function query.
+const searchWeight = /^\/functions\/[^/]+$/.test(route) ? 10 : undefined;
+// Scrollable code stays in the keyboard order, including with scripts off.
+const content = (await Astro.slots.render('default'))
+  .replace(/<pre(?=\s|>)(?![^>]*\btabindex=)/g, '<pre tabindex="0"')
+  .replace(/(<pre\b[\s\S]*?<\/pre>)|(<code\b[^>]*>)([\s\S]*?)(<\/code>)/g,
+    (whole, pre, open, text, close) => pre ?? open + text.replace(/--[a-z][a-z0-9-]*/gi, '<span class="inline-flag">$&</span>') + close);
+---
+<div data-pagefind-weight={searchWeight}><Default><Fragment set:html={content} /></Default></div>
+
+<script>
+  // Expressive Code manages horizontal scrolling. Keep vertical code/output
+  // scrollers reachable too, including after its delayed tabindex updates.
+  let resize: ResizeObserver | undefined;
+  let attributes: MutationObserver | undefined;
+  let added = new Set<HTMLPreElement>();
+  function initializeScrollAccess() {
+    resize?.disconnect();
+    attributes?.disconnect();
+    added = new Set();
+    const main = document.querySelector('main');
+    if (!main) return;
+    const update = (pre: HTMLPreElement) => {
+      if (pre.checkVisibility() && pre.scrollHeight > pre.clientHeight) {
+        if (pre.tabIndex < 0) {
+          added.add(pre);
+          pre.tabIndex = 0;
+        }
+      } else if (added.delete(pre) && pre.scrollWidth <= pre.clientWidth && pre.getAttribute('tabindex') === '0') {
+        pre.removeAttribute('tabindex');
+      }
+    };
+    resize = new ResizeObserver((entries) => {
+      for (const { target } of entries) if (target instanceof HTMLPreElement) update(target);
+    });
+    attributes = new MutationObserver((entries) => {
+      for (const { target } of entries) {
+        if (target instanceof HTMLPreElement) update(target);
+      }
+    });
+    attributes.observe(main, { attributes: true, attributeFilter: ['tabindex'], subtree: true });
+    for (const pre of main.querySelectorAll('pre')) {
+      resize.observe(pre);
+      update(pre);
+    }
+    resize.observe(main);
+  }
+  initializeScrollAccess();
+  document.addEventListener('astro:page-load', initializeScrollAccess);
+</script>

@@ -4,8 +4,8 @@ module ThinkThen
   type function = :decide | :choose | :tag | :score | :filter | :rank | :find | :recognize | :relate | :annotate
   type piece_tag = "BEGIN" | "END" | "INSIDE" | "OUT" | "SINGLE"
   type status = :answered | :unsure | :failed
-  type json = nil | bool | Integer | Float | String | Array[json] | Hash[String, json]
-  type evidence = String | Array[String | Symbol | Integer]
+  type json = nil | bool | Integer | Float | String | Symbol | Array[json] | Hash[String | Symbol, json]
+  type field = String | Array[String | Symbol | Integer]
   type threshold = Float | Range[Float]
   type annotation_question = DecideQuestion | ChooseQuestion | TagQuestion | ScoreQuestion | FilterQuestion | FindQuestion | RecognizeQuestion | RelateQuestion
   type toolbox_question = annotation_question | RankQuestion
@@ -33,25 +33,37 @@ module ThinkThen
     | AnnotationAnswered[:relate, Array[Relation], RelationDetail]
     | AnnotationUnsure[:relate, RelationDetail]
     | AnnotationFailed[:relate]
-  class Error < StandardError
+  module Error
     attr_reader code: error_code
     attr_reader http_status: Integer?
     def initialize: (?String?, code: error_code, ?http_status: Integer?) -> void
   end
-  class UnknownCodeError < Error
+  class LibraryError < StandardError
+    include Error
+  end
+  class UnknownCodeError < LibraryError
     attr_reader raw_code: Integer
     attr_reader raw_name: String?
     def initialize: (?String?, raw_code: Integer, ?raw_name: String?, ?http_status: Integer?) -> void
   end
-  class UsageError < Error
+  class UsageError < ArgumentError
+    include Error
   end
-  class BackendError < Error
+  class BackendError < LibraryError
   end
-  class Cancelled < Error
+  class CancelledError < LibraryError
   end
-  class LocalError < Error
+  class LocalError < LibraryError
   end
-  class InternalError < Error
+  class InternalError < LibraryError
+  end
+  class UnsureError < StandardError
+    attr_reader probability: Float?
+    def initialize: (Float?) -> void
+  end
+  class RecordError < LibraryError
+    attr_reader rows: Array[untyped]
+    def initialize: (?String?, code: error_code, ?http_status: Integer?, ?rows: Array[untyped]) -> void
   end
   interface _HasStatus
     def status: () -> status
@@ -62,6 +74,7 @@ module ThinkThen
     def failed?: () -> bool
   end
   class Answered[A, D] < Data
+    include AnswerValue
     include RowPredicates
     attr_reader function: function
     attr_reader status: status
@@ -76,6 +89,7 @@ module ThinkThen
     attr_reader detail: D?
   end
   class AnnotationAnswered[F, A, D] < Data
+    include AnswerValue
     include RowPredicates
     attr_reader function: F
     attr_reader status: status
@@ -85,6 +99,8 @@ module ThinkThen
     attr_reader detail: D?
   end
   class Unsure[D] < Data
+    include UnsureAnswer
+    include AnswerValue
     include RowPredicates
     attr_reader function: function
     attr_reader status: status
@@ -98,6 +114,8 @@ module ThinkThen
     attr_reader detail: D?
   end
   class AnnotationUnsure[F, D] < Data
+    include UnsureAnswer
+    include AnswerValue
     include RowPredicates
     attr_reader function: F
     attr_reader status: status
@@ -106,6 +124,8 @@ module ThinkThen
     attr_reader detail: D?
   end
   class Failed < Data
+    include FailedAnswer
+    include AnswerValue
     include RowPredicates
     attr_reader function: function
     attr_reader status: status
@@ -118,6 +138,8 @@ module ThinkThen
     attr_reader error: RowError
   end
   class AnnotationFailed[F] < Data
+    include FailedAnswer
+    include AnswerValue
     include RowPredicates
     attr_reader function: F
     attr_reader status: status
@@ -125,6 +147,7 @@ module ThinkThen
     attr_reader error: RowError
   end
   class Source < Data
+    include WireValue
     attr_reader question_identity: String
     attr_reader backend: backend
     attr_reader model: String
@@ -132,7 +155,8 @@ module ThinkThen
     def to_h: () -> Hash[String, json]
     def self.new: (question_identity: String, backend: backend, model: String, ?name: String?) -> Source
   end
-  class RowError < Data
+  class RowError < RecordError
+    def to_json: (*untyped) -> String
     attr_reader code: error_code
     attr_reader message: String
     attr_reader http_status: Integer?
@@ -142,6 +166,7 @@ module ThinkThen
     def to_h: () -> Hash[String, json]
   end
   class RelationRule < Data
+    include WireValue
     attr_reader source: String
     attr_reader target: String
     attr_reader relation: String
@@ -151,23 +176,27 @@ module ThinkThen
     def to_h: () -> Hash[String, json]
   end
   class Retry < Data
+    include WireValue
     attr_reader max_retries: Integer?
-    attr_reader initial_backoff_ms: Integer?
-    attr_reader attempt_timeout_ms: Integer?
-    def self.new: (?max_retries: Integer?, ?initial_backoff_ms: Integer?, ?attempt_timeout_ms: Integer?) -> Retry
+    attr_reader initial_backoff: Float?
+    attr_reader attempt_timeout: Float?
+    def self.new: (?max_retries: Integer?, ?initial_backoff: Float?, ?attempt_timeout: Float?) -> Retry
     def to_h: () -> Hash[String, json]
   end
   class LabelDetail < Data
+    include WireValue
     attr_reader labels: Hash[String, Float]
     def to_h: () -> Hash[String, json]
     def self.new: (labels: Hash[String, Float]) -> LabelDetail
   end
   class LevelDetail < Data
+    include WireValue
     attr_reader levels: Array[Float]
     def to_h: () -> Hash[String, json]
     def self.new: (levels: Array[Float]) -> LevelDetail
   end
   class Found < Data
+    include WireValue
     attr_reader text: String
     attr_reader start: Integer
     attr_reader end: Integer
@@ -175,6 +204,7 @@ module ThinkThen
     def self.new: (text: String, start: Integer, end: Integer) -> Found
   end
   class Name < Data
+    include WireValue
     attr_reader text: String
     attr_reader start: Integer
     attr_reader end: Integer
@@ -184,6 +214,7 @@ module ThinkThen
     def self.new: (text: String, start: Integer, end: Integer, kind: String, ?probability: Float?) -> Name
   end
   class RelationName < Data
+    include WireValue
     attr_reader text: String
     attr_reader start: Integer
     attr_reader end: Integer
@@ -192,6 +223,7 @@ module ThinkThen
     def self.new: (text: String, start: Integer, end: Integer, kind: String) -> RelationName
   end
   class Relation < Data
+    include WireValue
     include WireValue
     attr_reader source: RelationName
     attr_reader target: RelationName
@@ -202,12 +234,14 @@ module ThinkThen
     def self.new: (source: RelationName, target: RelationName, relation: String, ?probability: Float?, ?symmetric: bool?) -> Relation
   end
   class RelationDetail < Data
+    include WireValue
     attr_reader names: Array[Name]
     attr_reader pairs: Array[Relation]
     def to_h: () -> Hash[String, json]
     def self.new: (names: Array[Name], pairs: Array[Relation]) -> RelationDetail
   end
   class PieceDetail < Data
+    include WireValue
     attr_reader text: String
     attr_reader start: Integer
     attr_reader end: Integer
@@ -216,19 +250,23 @@ module ThinkThen
     def self.new: (text: String, start: Integer, end: Integer, tags: Hash[piece_tag, Float]) -> PieceDetail
   end
   class KindDetail < Data
+    include WireValue
+    attr_reader text: String
     attr_reader start: Integer
     attr_reader end: Integer
     attr_reader kinds: Hash[String, Float]
     def to_h: () -> Hash[String, json]
-    def self.new: (start: Integer, end: Integer, kinds: Hash[String, Float]) -> KindDetail
+    def self.new: (text: String, start: Integer, end: Integer, kinds: Hash[String, Float]) -> KindDetail
   end
   class RecognizeDetail < Data
+    include WireValue
     attr_reader pieces: Array[PieceDetail]
     attr_reader names: Array[KindDetail]
     def to_h: () -> Hash[String, json]
     def self.new: (pieces: Array[PieceDetail], names: Array[KindDetail]) -> RecognizeDetail
   end
   class FilterRow < Data
+    include InputRow
     include RowPredicates
     attr_reader item: json
     attr_reader row: filter_result
@@ -246,28 +284,39 @@ module ThinkThen
     def cancel: () -> nil
     def cancelled?: () -> bool
   end
+  class RankRow < Data
+    include InputRow
+    attr_reader item: json
+    attr_reader row: rank_result
+    def rank: () -> Integer
+    def to_h: () -> Hash[String, untyped]
+    def self.new: (item: json, row: rank_result) -> RankRow
+  end
   class Rows[R] < Enumerator[R, void]
     def close: () -> nil
     def closed?: () -> bool
     def cancel: () -> nil
-    def initialize: (untyped, String, untyped, CancelToken?, bool) -> void
+    def initialize: (untyped, String, untyped, CancelToken?, Symbol?) -> void
     private
     def produce: (Enumerator::Yielder) -> void
     def pull: () -> untyped
     def drive: () -> untyped
     def blocking_next: (untyped) -> untyped
     def supply_input: () -> untyped
+    def explain: (untyped) -> untyped
   end
   class Question
   end
   class Toolbox
-    def self.from_json: (String) -> Toolbox
+    attr_reader questions: Hash[String, toolbox_question]
+    def self.load_file: (String) -> instance
+    def self.from_json: (String) -> instance
     def to_json: (*untyped) -> String
-    def initialize: (questions: Hash[String, toolbox_question]) -> void
-    def []: (String) -> toolbox_question
+    def initialize: (questions: Hash[String | Symbol, toolbox_question]) -> void
+    def []: (String | Symbol) -> toolbox_question
   end
   class AnnotationQuestions < Toolbox
-    def initialize: (questions: Hash[String, annotation_question]) -> void
+    def initialize: (questions: Hash[String | Symbol, annotation_question]) -> void
   end
   class RedactedKey
   end
@@ -285,169 +334,180 @@ module ThinkThen
   def self.close: () -> nil
   type decide_result = Answered[bool, nil] | Unsure[nil] | Failed
   class DecideQuestion < Question
-    def initialize: (String, ?threshold: threshold?, ?evidence: evidence?) -> void
+    def initialize: (String, ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?) -> void
   end
   type choose_result = Answered[String, LabelDetail] | Unsure[LabelDetail] | Failed
   class ChooseQuestion < Question
-    def initialize: (String, choices: Array[String], ?threshold: threshold?, ?evidence: evidence?) -> void
+    def initialize: (String, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
   end
   type tag_result = Answered[Array[String], LabelDetail] | Unsure[LabelDetail] | Failed
   class TagQuestion < Question
-    def initialize: (String, labels: Array[String], ?threshold: Float?, ?evidence: evidence?) -> void
+    def initialize: (String, labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
   end
   type score_result = Answered[Float, LevelDetail] | Unsure[LevelDetail] | Failed
   class ScoreQuestion < Question
-    def initialize: (String, levels: Array[String], ?evidence: evidence?) -> void
+    def initialize: (String, levels: Array[String], ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
   end
   type filter_result = Answered[bool, nil] | Unsure[nil] | Failed
   class FilterQuestion < Question
-    def initialize: (String, ?threshold: threshold?, ?evidence: evidence?) -> void
+    def initialize: (String, ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?) -> void
   end
   type rank_result = Answered[Integer, LevelDetail] | Unsure[LevelDetail] | Failed
   class RankQuestion < Question
-    def initialize: (String, levels: Array[String], ?top: Integer?, ?evidence: evidence?) -> void
+    def initialize: (String, levels: Array[String], ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?) -> void
   end
   type find_result = Answered[Found?, nil] | Unsure[nil] | Failed
   class FindQuestion < Question
-    def initialize: (String, ?threshold: Float?, ?evidence: evidence?) -> void
+    def initialize: (String, ?threshold: Float?, ?field: field?) -> void
   end
   type recognize_result = Answered[Array[Name], RecognizeDetail] | Unsure[RecognizeDetail] | Failed
   class RecognizeQuestion < Question
-    def initialize: (kinds: Array[String], ?threshold: Float?, ?evidence: evidence?) -> void
+    def initialize: (kinds: Array[String], ?threshold: Float?, ?field: field?) -> void
   end
   type relate_result = Answered[Array[Relation], RelationDetail] | Unsure[RelationDetail] | Failed
   class RelateQuestion < Question
-    def initialize: (rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?) -> void
+    def initialize: (rules: Array[RelationRule], ?threshold: Float?, ?field: field?) -> void
   end
   type annotate_result = Answered[Hash[String, annotation_entry], nil] | Unsure[nil] | Failed
   class AnnotateQuestion < Question
-    def initialize: (AnnotationQuestions, ?evidence: evidence?) -> void
+    def initialize: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], ?field: field?) -> void
   end
   class Client
+    def decide?: (String | DecideQuestion, json, **untyped) -> bool
     def initialize: (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?retry: Retry?) -> void
-    def self.open: [R] (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?retry: Retry?) { (Client) -> R } -> R
+    def self.open: (**untyped) -> Client
+                       | [R] (?backend: backend?, ?model: String?, ?url: String?, ?api_key: String | RedactedKey | nil, ?batch: Integer?, ?retry: Retry?) { (Client) -> R } -> R
     def close: () -> nil
     def closed?: () -> bool
     attr_reader api_key: RedactedKey?
-    def decide: (String, json, ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> decide_result
+    def decide: (String, json, ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> decide_result
       | (DecideQuestion, json, ?name: String?, ?cancel: CancelToken?) -> decide_result
-    def decide_each: (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
+    def decide_each: (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
-      | (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
-    def choose: (String, json, choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> choose_result
+    def choose: (String, json, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
       | (ChooseQuestion, json, ?name: String?, ?cancel: CancelToken?) -> choose_result
-    def choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
+    def choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
-      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
+      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
-    def tag: (String, json, labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> tag_result
+    def tag: (String, json, labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> tag_result
       | (TagQuestion, json, ?name: String?, ?cancel: CancelToken?) -> tag_result
-    def tag_each: (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
+    def tag_each: (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
       | (TagQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
-      | (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
+      | (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
       | (TagQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
-    def score: (String, json, levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> score_result
+    def score: (String, json, levels: Array[String], ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> score_result
       | (ScoreQuestion, json, ?name: String?, ?cancel: CancelToken?) -> score_result
-    def score_each: (String, Enumerable[json], levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
+    def score_each: (String, Enumerable[json], levels: Array[String], ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
       | (ScoreQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
-      | (String, Enumerable[json], levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
+      | (String, Enumerable[json], levels: Array[String], ?field: field?, ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
       | (ScoreQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
-    def filter: (String, json, ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> FilterRow
-      | (FilterQuestion, json, ?name: String?, ?cancel: CancelToken?) -> FilterRow
-    def filter_each: (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
+    def filter: (String, Enumerable[json], ?failures: (:raise | :row), ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Enumerator[json | FilterRow, void]
+      | (FilterQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) -> Enumerator[json | FilterRow, void]
+      | (String, Enumerable[json], ?failures: (:raise | :row), ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) { (json | FilterRow) -> void } -> nil
+      | (FilterQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) { (json | FilterRow) -> void } -> nil
+    def filter_each: (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
       | (FilterQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
-      | (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
       | (FilterQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
-    def rank: (String, json, levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> rank_result
-      | (RankQuestion, json, ?name: String?, ?cancel: CancelToken?) -> rank_result
-    def rank_each: (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[rank_result]
-      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[rank_result]
-      | (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (rank_result) -> void } -> nil
-      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (rank_result) -> void } -> nil
-    def find: (String, json, ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> find_result
+    def rank: (String, Enumerable[json], levels: Array[String], ?failures: (:raise | :row), ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Enumerator[RankRow, void]
+      | (RankQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) -> Enumerator[RankRow, void]
+      | (String, Enumerable[json], levels: Array[String], ?failures: (:raise | :row), ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+      | (RankQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+    def rank_each: (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[RankRow]
+      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[RankRow]
+      | (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+    def find: (String, json, ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> find_result
       | (FindQuestion, json, ?name: String?, ?cancel: CancelToken?) -> find_result
-    def find_each: (String, Enumerable[json], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
+    def find_each: (String, Enumerable[json], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
       | (FindQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
-      | (String, Enumerable[json], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
       | (FindQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
-    def recognize: (json, kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> recognize_result
+    def recognize: (json, kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> recognize_result
       | (RecognizeQuestion, json, ?name: String?, ?cancel: CancelToken?) -> recognize_result
-    def recognize_each: (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
+    def recognize_each: (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
       | (RecognizeQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
-      | (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
+      | (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
       | (RecognizeQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
-    def relate: (json, rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> relate_result
+    def relate: (json, rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> relate_result
       | (RelateQuestion, json, ?name: String?, ?cancel: CancelToken?) -> relate_result
-    def relate_each: (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
+    def relate_each: (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
       | (RelateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
-      | (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
+      | (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
       | (RelateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
-    def annotate: (AnnotationQuestions, json, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> annotate_result
+    def annotate: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], json, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> annotate_result
       | (AnnotateQuestion, json, ?name: String?, ?cancel: CancelToken?) -> annotate_result
-    def annotate_each: (AnnotationQuestions, Enumerable[json], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
+    def annotate_each: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], Enumerable[json], ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
       | (AnnotateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
-      | (AnnotationQuestions, Enumerable[json], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
+      | (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], Enumerable[json], ?field: field?, ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
       | (AnnotateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
   end
-  def self.decide: (String, json, ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> decide_result
+  def self.decide: (String, json, ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> decide_result
       | (DecideQuestion, json, ?name: String?, ?cancel: CancelToken?) -> decide_result
-  def self.decide_each: (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
+  def self.decide?: (String | DecideQuestion, json, **untyped) -> bool
+  def self.decide_each: (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[decide_result]
-      | (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
       | (DecideQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (decide_result) -> void } -> nil
-  def self.choose: (String, json, choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> choose_result
+  def self.choose: (String, json, choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> choose_result
       | (ChooseQuestion, json, ?name: String?, ?cancel: CancelToken?) -> choose_result
-  def self.choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
+  def self.choose_each: (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[choose_result]
-      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
+      | (String, Enumerable[json], choices: Array[String], ?threshold: threshold?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
       | (ChooseQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (choose_result) -> void } -> nil
-  def self.tag: (String, json, labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> tag_result
+  def self.tag: (String, json, labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> tag_result
       | (TagQuestion, json, ?name: String?, ?cancel: CancelToken?) -> tag_result
-  def self.tag_each: (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
+  def self.tag_each: (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
       | (TagQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[tag_result]
-      | (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
+      | (String, Enumerable[json], labels: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
       | (TagQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (tag_result) -> void } -> nil
-  def self.score: (String, json, levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> score_result
+  def self.score: (String, json, levels: Array[String], ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> score_result
       | (ScoreQuestion, json, ?name: String?, ?cancel: CancelToken?) -> score_result
-  def self.score_each: (String, Enumerable[json], levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
+  def self.score_each: (String, Enumerable[json], levels: Array[String], ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
       | (ScoreQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[score_result]
-      | (String, Enumerable[json], levels: Array[String], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
+      | (String, Enumerable[json], levels: Array[String], ?field: field?, ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
       | (ScoreQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (score_result) -> void } -> nil
-  def self.filter: (String, json, ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> FilterRow
-      | (FilterQuestion, json, ?name: String?, ?cancel: CancelToken?) -> FilterRow
-  def self.filter_each: (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
+  def self.filter: (String, Enumerable[json], ?failures: (:raise | :row), ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Enumerator[json | FilterRow, void]
+      | (FilterQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) -> Enumerator[json | FilterRow, void]
+      | (String, Enumerable[json], ?failures: (:raise | :row), ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) { (json | FilterRow) -> void } -> nil
+      | (FilterQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) { (json | FilterRow) -> void } -> nil
+  def self.filter_each: (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
       | (FilterQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[FilterRow]
-      | (String, Enumerable[json], ?threshold: threshold?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: threshold?, ?field: field?, ?yes_means: String?, ?no_means: String?, ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
       | (FilterQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (FilterRow) -> void } -> nil
-  def self.rank: (String, json, levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> rank_result
-      | (RankQuestion, json, ?name: String?, ?cancel: CancelToken?) -> rank_result
-  def self.rank_each: (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[rank_result]
-      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[rank_result]
-      | (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (rank_result) -> void } -> nil
-      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (rank_result) -> void } -> nil
-  def self.find: (String, json, ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> find_result
+  def self.rank: (String, Enumerable[json], levels: Array[String], ?failures: (:raise | :row), ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Enumerator[RankRow, void]
+      | (RankQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) -> Enumerator[RankRow, void]
+      | (String, Enumerable[json], levels: Array[String], ?failures: (:raise | :row), ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+      | (RankQuestion, Enumerable[json], ?failures: (:raise | :row), ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+  def self.rank_each: (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?field: field?, ?descriptions: Hash[String | Symbol, String]?, ?name: String?, ?cancel: CancelToken?) -> Rows[RankRow]
+      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[RankRow]
+      | (String, Enumerable[json], levels: Array[String], ?top: Integer?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+      | (RankQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (RankRow) -> void } -> nil
+  def self.find: (String, json, ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> find_result
       | (FindQuestion, json, ?name: String?, ?cancel: CancelToken?) -> find_result
-  def self.find_each: (String, Enumerable[json], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
+  def self.find_each: (String, Enumerable[json], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
       | (FindQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[find_result]
-      | (String, Enumerable[json], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
+      | (String, Enumerable[json], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
       | (FindQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (find_result) -> void } -> nil
-  def self.recognize: (json, kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> recognize_result
+  def self.recognize: (json, kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> recognize_result
       | (RecognizeQuestion, json, ?name: String?, ?cancel: CancelToken?) -> recognize_result
-  def self.recognize_each: (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
+  def self.recognize_each: (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
       | (RecognizeQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[recognize_result]
-      | (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
+      | (Enumerable[json], kinds: Array[String], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
       | (RecognizeQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (recognize_result) -> void } -> nil
-  def self.relate: (json, rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> relate_result
+  def self.relate: (json, rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> relate_result
       | (RelateQuestion, json, ?name: String?, ?cancel: CancelToken?) -> relate_result
-  def self.relate_each: (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
+  def self.relate_each: (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
       | (RelateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[relate_result]
-      | (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
+      | (Enumerable[json], rules: Array[RelationRule], ?threshold: Float?, ?field: field?, ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
       | (RelateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (relate_result) -> void } -> nil
-  def self.annotate: (AnnotationQuestions, json, ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> annotate_result
+  def self.annotate: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], json, ?field: field?, ?name: String?, ?cancel: CancelToken?) -> annotate_result
       | (AnnotateQuestion, json, ?name: String?, ?cancel: CancelToken?) -> annotate_result
-  def self.annotate_each: (AnnotationQuestions, Enumerable[json], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
+  def self.annotate_each: (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], Enumerable[json], ?field: field?, ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
       | (AnnotateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) -> Rows[annotate_result]
-      | (AnnotationQuestions, Enumerable[json], ?evidence: evidence?, ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
+      | (AnnotationQuestions | Toolbox | Hash[String | Symbol, annotation_question], Enumerable[json], ?field: field?, ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
       | (AnnotateQuestion, Enumerable[json], ?name: String?, ?cancel: CancelToken?) { (annotate_result) -> void } -> nil
 end

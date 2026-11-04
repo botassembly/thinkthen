@@ -1,0 +1,5 @@
+{
+  "status": "answered",
+  "line": "2. Either party may end this agreement with 60 days written notice.",
+  "probability": 0.95
+}

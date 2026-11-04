@@ -13,6 +13,14 @@ import xml.etree.ElementTree as ET
 
 from release_notice_check import contents, declared_notices
 
+def python_wheelhouse(package):
+    for name in ('python-runtime', 'python-frames-windows', 'python-frames-cp310'):
+        folder = package / 'prerequisites' / name / 'wheels'
+        if folder.is_dir():
+            return folder
+    raise ValueError('candidate has no Python dependency wheelhouse')
+
+
 # Each pair names a source glob and its destination glob. Stagers use the same
 # declarations as the source-free checker; generated/native files stay separate.
 INPUTS = {
@@ -163,7 +171,7 @@ def _check_payload(family, path, native, files, notices):
         expected = {name for name in payload if any(name == prefix + entry or name.startswith(prefix + entry + '/') for entry in declared)}
     elif family in ('java', 'kotlin'):
         # A module descriptor is standard JAR metadata, not an application class.
-        expected = {name for name in payload if name.startswith(('META-INF/', 'io/thinkthen/'))
+        expected = {name for name in payload if name.startswith(('META-INF/', 'dev/thinkthen/', 'io/thinkthen/native/'))
                     or (family == 'java' and name == 'module-info.class')}
     elif family == 'typescript':
         manifest = json.loads(files['package/package.json'])

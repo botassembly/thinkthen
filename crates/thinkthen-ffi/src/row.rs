@@ -41,6 +41,11 @@ impl HostRow {
         out.detail = field(&value, "detail");
         out.source = field(&value, "source");
         out.error = field(&value, "error");
+        if let AnyRow::Rank(row) = &row
+            && let Some(record) = row.record()
+        {
+            crate::original::attach_rank(&mut out, record);
+        }
         Ok(out)
     }
 }

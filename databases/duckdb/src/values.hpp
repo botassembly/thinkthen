@@ -25,13 +25,23 @@ string Encode(const Value &value) {
         }
         return result + "]";
     }
+    if (type.id() == LogicalTypeId::MAP) {
+        string result = "{";
+        for (auto &entry : MapValue::GetChildren(value)) {
+            auto &pair = StructValue::GetChildren(entry);
+            if (pair[0].IsNull()) throw InvalidInputException("usage.option: description keys cannot be NULL");
+            if (result.size() > 1) result += ",";
+            result += Quote(pair[0].GetValue<string>()) + ":" + Encode(pair[1]);
+        }
+        return result + "}";
+    }
     if (type.id() == LogicalTypeId::STRUCT) {
         string result = "{";
         auto &children = StructValue::GetChildren(value);
         for (idx_t i = 0; i < children.size(); ++i) {
             if (children[i].IsNull()) continue;
             if (result.size() > 1) result += ",";
-            result += Quote(StructType::GetChildName(type, i)) + ":" + Encode(children[i]);
+            result += Quote(StructType::GetChildName(type, i).GetIdentifierName()) + ":" + Encode(children[i]);
         }
         return result + "}";
     }
@@ -54,7 +64,7 @@ Value Project(const LogicalType &type, yyjson_val *value) {
     switch (type.id()) {
     case LogicalTypeId::STRUCT: {
         vector<Value> children;
-        for (auto &child : StructType::GetChildTypes(type)) children.push_back(Project(child.second, yyjson_obj_get(value, child.first.c_str())));
+        for (auto &child : StructType::GetChildTypes(type)) children.push_back(Project(child.second, yyjson_obj_get(value, child.first == "start_offset" ? "start" : child.first == "end_offset" ? "end" : child.first.c_str())));
         return Value::STRUCT(type, std::move(children));
     }
     case LogicalTypeId::LIST: {
@@ -86,17 +96,28 @@ Value Project(const LogicalType &type, const thinkthen_buffer &buffer) {
     auto doc = Parse(Text(buffer));
     return Project(type, yyjson_doc_get_root(doc.get()));
 }
-LogicalType AnnotationType(yyjson_val *questions) {
+LogicalType AnnotationType(yyjson_val *questions, bool bare) {
     child_list_t<LogicalType> fields;
     size_t index, size; yyjson_val *key, *child;
     yyjson_obj_foreach(questions, index, size, key, child) {
         auto function = yyjson_get_str(yyjson_obj_get(child, "function"));
         if (!function) throw BinderException("usage.question: missing annotation function");
-        fields.emplace_back(yyjson_get_str(key), LogicalType::STRUCT({
+        fields.emplace_back(yyjson_get_str(key), bare ? AnswerType(function) : LogicalType::STRUCT({
             {"function", LogicalTypeId::VARCHAR}, {"status", StatusType()},
             {"answer", AnswerType(function)}, {"probability", LogicalTypeId::DOUBLE},
             {"error", LogicalType::STRUCT({{"code", CodeType()}, {"message", LogicalTypeId::VARCHAR}, {"http_status", LogicalTypeId::BIGINT}})},
             {"detail", DetailType(function)}}));
     }
     return LogicalType::STRUCT(std::move(fields));
+}
+Value AnnotationAnswer(const LogicalType &type, const thinkthen_buffer &buffer) {
+    if (!buffer.data) return Value(type);
+    auto doc = Parse(Text(buffer));
+    auto root = yyjson_doc_get_root(doc.get());
+    vector<Value> children;
+    for (auto &child : StructType::GetChildTypes(type)) {
+        auto outcome = yyjson_obj_get(root, child.first.c_str());
+        children.push_back(Project(child.second, outcome ? yyjson_obj_get(outcome, "answer") : nullptr));
+    }
+    return Value::STRUCT(type, std::move(children));
 }

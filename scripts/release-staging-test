@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check extracted Windows source consumers, delivered checker imports and draft archives."""
 import json
+import ast
 import os
 import re
 import shlex
@@ -93,15 +94,25 @@ def missing_gate(scratch):
 def cleanup_status(scratch):
     # Exercise installed trap bodies, including named cleanup functions. This
     # contract accepts any implementation that preserves the caller's outcome.
-    for path in sorted((ROOT / 'scripts').glob('*-gate')) + [ROOT / 'scripts/sqlite-prepare', ROOT / 'scripts/go-api-check']:
+    failures = []
+    paths = sorted((ROOT / 'scripts').glob('*-gate')) + [ROOT / 'scripts/sqlite-prepare', ROOT / 'scripts/go-api-check']
+    paths += [ROOT / 'scripts' / name for name in
+              ('java-rank-check', 'source-linux-tools', 'hosted-candidate-check')]
+    if (ROOT / 'scripts/kotlin-interface-check').exists():
+        paths.append(ROOT / 'scripts/kotlin-interface-check')
+    paths += [ROOT / 'site/scripts' / name for name in
+              ('prepare-packages.sh', 'structure-job.sh', 'preview-job.sh')]
+    for path in paths:
         text = path.read_text()
         first_trap = text.find('\ntrap ')
         required = set(re.findall(r'\$\{([A-Za-z_][A-Za-z_0-9]*):?\?', text))
-        for variable in required:
+        # Hosted checks validate inputs within separate command branches.
+        for variable in required if path.name != 'hosted-candidate-check' else ():
             assert re.search(r'\$\{' + variable + r':?\?', text[:first_trap]), (path.name, variable, 'check required input before trapping cleanup')
         functions = '\n'.join(re.findall(r'^cleanup\(\) \{\n.*?^\}', text, re.M | re.S))
         signals = '\n'.join(line.strip() for line in text.splitlines()
-                            if line.strip().startswith('trap ') and 'HUP' in shlex.split(line)[2:])
+                            if line.strip().startswith('trap ') and
+                            {'HUP', 'INT', 'TERM'}.intersection(shlex.split(line)[2:]))
         for line in text.splitlines():
             line = line.strip()
             if not line.startswith('trap '):
@@ -109,18 +120,64 @@ def cleanup_status(scratch):
             arguments = shlex.split(line)
             if 'EXIT' not in arguments[2:] and '0' not in arguments[2:]:
                 continue
+            signal_status = {}
             for cleanup_fails in (False, True):
-                for command, expected in ((':', 0), ('exit 19', 19), ("sh -c 'exit 23'", 23), ('kill -TERM "$$"', 1)):
+                for command, expected in ((':', 0), ('exit 19', 19), ("sh -c 'exit 23'", 23),
+                                          *((f'kill -{signal} "$$"', None) for signal in ('HUP', 'INT', 'TERM'))):
                     owned = scratch / 'cleanup-owned'
                     owned.mkdir()
-                    environment = dict(os.environ, scratch=str(owned), stage=str(owned),
+                    environment = dict(os.environ, scratch=str(owned), red=str(owned), stage=str(owned), source_scratch=str(owned),
                                        pair=str(owned / 'pair'), publishing='')
                     cleanup = 'rm() { return 7; }\n' if cleanup_fails else ''
                     result = subprocess.run(['sh', '-eu', '-c', functions + '\n' + cleanup + line + '\n' + signals + '\n' + command],
                                             cwd=scratch, env=environment, capture_output=True, text=True)
-                    assert result.returncode == expected, (path.name, command, cleanup_fails, result)
+                    if expected is None:
+                        if not cleanup_fails:
+                            signal_status[command] = result.returncode
+                        expected = signal_status[command]
+                        matches = result.returncode != 0 and result.returncode == expected
+                    else:
+                        matches = result.returncode == expected
+                    if not matches:
+                        failures.append((path.name, command, cleanup_fails, expected, result.returncode, result.stderr))
                     shutil.rmtree(owned, ignore_errors=True)
+    assert not failures, failures
     print('Every gate cleanup trap preserves command outcomes despite cleanup failure, and signals fail', flush=True)
+    python_cleanup_status()
+
+
+def python_cleanup_status():
+    sources = [(ROOT / 'site/scripts/prepare-preview.py').read_text(),
+               (ROOT / 'site/scripts/prepare-packages.sh').read_text().split("<<'RUNTIMES'\n", 1)[1].split('\nRUNTIMES', 1)[0]]
+    checked = 0
+    class CopyFailure(Exception):
+        pass
+    for source in sources:
+        for node in ast.walk(ast.parse(source)):
+            if not isinstance(node, ast.Try) or not node.finalbody or "'rm'" not in ast.unparse(node.finalbody):
+                continue
+            body = ast.Try(body=[ast.Expr(value=ast.Call(func=ast.Name(id='copy', ctx=ast.Load()), args=[], keywords=[]))],
+                           handlers=[], orelse=[], finalbody=node.finalbody)
+            program = compile(ast.fix_missing_locations(ast.Module(body=[body], type_ignores=[])), '<actual-container-cleanup>', 'exec')
+            for copy_fails in (False, True):
+                for cleanup_fails in (False, True):
+                    def copy():
+                        if copy_fails:
+                            raise CopyFailure('original copy failure')
+                    def cleanup(*args, **kwargs):
+                        if cleanup_fails:
+                            raise subprocess.CalledProcessError(7, ['docker', 'rm'])
+                    expected = CopyFailure if copy_fails else subprocess.CalledProcessError if cleanup_fails else None
+                    with patch.object(subprocess, 'run', cleanup):
+                        try:
+                            exec(program, {'copy': copy, 'run': cleanup, 'subprocess': subprocess, 'sys': sys, 'container': 'fixture'})
+                        except Exception as error:
+                            assert expected is not None and isinstance(error, expected), (copy_fails, cleanup_fails, error)
+                        else:
+                            assert expected is None, (copy_fails, cleanup_fails)
+            checked += 1
+    assert checked == 4, checked
+    print('Four actual container cleanup paths preserve copy errors and expose cleanup-only failures', flush=True)
 
 
 
@@ -149,6 +206,11 @@ pub fn build(b: *std.Build) void {
     subprocess.run([tool, 'build', '-j2', '-Dtarget=x86_64-windows-msvc'], cwd=consumer, check=True)
     print('Extracted Windows Zig archive compiles a real consumer against its generated ErrorCode; no engine link', flush=True)
 
+
+if sys.argv[1:] == ['--cleanup-only']:
+    with tempfile.TemporaryDirectory(prefix='thinkthen-cleanup-') as temporary:
+        cleanup_status(Path(temporary))
+    sys.exit(0)
 
 # Check the tracked shell scripts with both the host shell and Bash. The macOS
 # system shell uses Bash's grammar, which differs from Linux dash here.

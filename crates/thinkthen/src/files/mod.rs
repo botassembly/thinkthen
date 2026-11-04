@@ -1,6 +1,7 @@
-//! Read tabular evidence and append judgments without replacing existing cells.
+//! Read tabular field and append judgments without replacing existing cells.
 
 mod admission;
+mod cells;
 mod cleanup;
 mod csv;
 mod lock;
@@ -11,7 +12,7 @@ mod xlsx_dates;
 mod xlsx_formats;
 
 pub(crate) use cleanup::TemporaryPaths;
-pub use cleanup::force_cleanup;
+pub(crate) use cleanup::force_cleanup;
 
 use crate::core::diagnostic;
 use crate::{Error, Family};
@@ -25,7 +26,7 @@ pub(crate) fn record_limit() -> FileError {
 
 /// The explicitly selected table encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FileFormat {
+pub(crate) enum FileFormat {
     /// UTF-8 comma-separated records.
     Csv,
     /// UTF-8 tab-separated records.
@@ -36,7 +37,7 @@ pub enum FileFormat {
 
 /// Where a completed file operation publishes its output.
 #[derive(Debug, Clone)]
-pub enum FileOutput {
+pub(crate) enum FileOutput {
     /// Create a new file; absence selects the input's `.thinkthen` sibling.
     NewFile(Option<PathBuf>),
     /// Replace the source only after retaining an exclusive backup.
@@ -45,29 +46,40 @@ pub enum FileOutput {
 
 /// A caller's file operation, independent of client routing and credentials.
 #[derive(Debug)]
-pub struct FileJob {
+pub(crate) struct FileJob {
     input: PathBuf,
     format: FileFormat,
     sheet: Option<String>,
     columns: Vec<String>,
     into: Option<String>,
     output: FileOutput,
+    details: bool,
 }
 
-/// A completely published file and its outcome failure, if any.
+/// The most failed rows a receipt names; `failed` counts them all.
+pub(crate) const NAMED_FAILURES: usize = 20;
+
+/// A completely published file and its outcome failures, if any.
 #[derive(Debug)]
-pub struct FileReceipt {
+pub(crate) struct FileReceipt {
     /// The file that was published.
-    pub output: PathBuf,
+    pub(crate) output: PathBuf,
     /// The original input retained before in-place publication.
-    pub backup: Option<PathBuf>,
-    /// The first engine outcome failure in input order, including annotations.
-    pub first_failure: Option<Error>,
+    pub(crate) backup: Option<PathBuf>,
+    /// The first failed rows in input order, by source row number, at most
+    /// [`NAMED_FAILURES`]. A row's failure is its first, including annotations.
+    pub(crate) failures: Vec<(usize, Error)>,
+    /// Rows with an answered or unsure outcome, including partial annotations.
+    pub(crate) answered: u64,
+    /// Rows whose outcome is not sure.
+    pub(crate) unsure: u64,
+    /// Failed rows by error family, including nested annotation failures.
+    pub(crate) failed: Vec<(Family, u64)>,
 }
 
 /// A file operation that could not complete its requested publication.
 #[derive(Debug, thiserror::Error)]
-pub enum FileError {
+pub(crate) enum FileError {
     /// The original engine admission or final call error.
     #[error("{0}")]
     Engine(#[from] Error),
@@ -82,7 +94,7 @@ pub enum FileError {
 impl FileError {
     /// Stable failure code without repeating engine mappings.
     #[must_use]
-    pub fn code(&self) -> &str {
+    pub(crate) fn code(&self) -> &str {
         match self {
             Self::Engine(error) => error.code().as_str(),
             Self::Invalid(_) => crate::Code::UsageQuestion.as_str(),
@@ -92,7 +104,7 @@ impl FileError {
 
     /// The existing command error family.
     #[must_use]
-    pub fn family(&self) -> Family {
+    pub(crate) fn family(&self) -> Family {
         match self {
             Self::Engine(error) => error.code().family(),
             Self::Invalid(_) => Family::Usage,
@@ -105,8 +117,8 @@ impl FileJob {
     /// Admit a file operation's explicit framing and selected column names.
     ///
     /// # Errors
-    /// Returns `usage.file` for missing or repeated column selections.
-    pub fn new(
+    /// Returns `usage.question` for missing or repeated column selections.
+    pub(crate) fn new(
         input: PathBuf,
         format: FileFormat,
         sheet: Option<String>,
@@ -130,7 +142,7 @@ impl FileJob {
         if columns.is_empty() {
             return Err(FileError::Invalid(diagnostic::requirement(
                 "columns",
-                "at least one evidence column with --column",
+                "at least one field column with --column",
                 "an empty selection",
             )));
         }
@@ -139,7 +151,7 @@ impl FileJob {
             if column.is_empty() || !unique.insert(column) {
                 return Err(FileError::Invalid(diagnostic::requirement(
                     "columns",
-                    "nonempty, distinct evidence column names",
+                    "nonempty, distinct field column names",
                     "an empty or repeated name",
                 )));
             }
@@ -158,7 +170,17 @@ impl FileJob {
             columns,
             into,
             output,
+            details: false,
         })
+    }
+
+    /// Add status, probability, error, detail and source columns after each answer.
+    ///
+    /// By default each question writes one answer column.
+    #[must_use]
+    pub(crate) fn details(mut self, details: bool) -> Self {
+        self.details = details;
+        self
     }
 }
 
@@ -185,19 +207,4 @@ fn headers(headers: &[String], selected: &[String]) -> Result<(), FileError> {
         }
     }
     Ok(())
-}
-
-fn cell_text(value: &serde_json::Value) -> String {
-    match value {
-        serde_json::Value::Null => String::new(),
-        serde_json::Value::String(s) => s.clone(),
-        serde_json::Value::Bool(b) => {
-            if *b {
-                "TRUE".into()
-            } else {
-                "FALSE".into()
-            }
-        }
-        value => value.to_string(),
-    }
 }

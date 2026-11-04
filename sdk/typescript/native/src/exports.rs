@@ -32,6 +32,16 @@ pub fn reject_question_conversion() -> napi::Result<()> {
     Err(host_error(thinkthen::native::question_conversion_error()))
 }
 
+/// Reject a host record representation before starting an operation.
+/// # Errors
+/// Always returns the library's record-kind argument error.
+#[napi]
+pub fn reject_record_kind() -> napi::Result<()> {
+    Err(host_error(thinkthen::native::argument_error(
+        thinkthen::Code::UsageRecordKind,
+    )))
+}
+
 /// Return the engine cancellation error without starting an operation.
 /// # Errors
 /// Always returns the library cancellation error.
@@ -176,7 +186,8 @@ fn start(
                     } else {
                         None
                     };
-                    let record = input_record(units, is_text, invalid, id);
+                    let missing = ctx.length > 5 && ctx.get::<JsBoolean>(5)?.get_value()?;
+                    let record = input_record(units, is_text, invalid, id, missing);
                     // A cancelled operation has already dropped its receiver.
                     event.replies.send(event.kind, record);
                     ctx.env.get_undefined()
@@ -237,8 +248,12 @@ fn input_record(
     text: bool,
     invalid: bool,
     id: Option<(String, String)>,
+    missing: bool,
 ) -> Option<thinkthen::records::Record> {
-    use thinkthen::records::{Record, RecordId};
+    use thinkthen::records::{Record, RecordId, RecordKind};
+    if missing {
+        return Some(Record::missing());
+    }
     if invalid {
         return Some(Record::invalid());
     }
@@ -261,12 +276,13 @@ fn input_record(
             Record::text(value).with_id(id)
         } else {
             Record::from_json_with_id(&value, id)
+                .with_original_encoding(RecordKind::Json, value.as_bytes())
         });
     }
     Some(if text {
         Record::text(value)
     } else {
-        Record::from_json(&value)
+        Record::from_json(&value).with_original_encoding(RecordKind::Json, value.as_bytes())
     })
 }
 

@@ -1,0 +1,5 @@
+{
+  "anchor": "\taction, err := tt.Answer(client.Find(context.Background(), actionQuestion,",
+  "before": 0,
+  "after": 2
+}

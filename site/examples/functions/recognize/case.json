@@ -1,0 +1,10 @@
+{
+  "kinds": [
+    "person",
+    "organization"
+  ],
+  "records": [
+    "Morgan works for Example Group."
+  ],
+  "answers": "One list per record of {text, kind} for each name, in text order, in record order."
+}

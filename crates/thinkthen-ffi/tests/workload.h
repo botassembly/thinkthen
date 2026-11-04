@@ -14,7 +14,7 @@ typedef struct {
 static thinkthen_call *workload_call(thinkthen_client *client, size_t worker, int cancel) {
     thinkthen_call *call = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
-    const char request[] = "{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\",\"threshold\":0.5,\"evidence\":\"/body\"}}";
+    const char request[] = "{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\",\"threshold\":0.5,\"field\":\"/body\"}}";
     char held[512];
     if (cancel) {
         int len = snprintf(held, sizeof held,
@@ -23,7 +23,7 @@ static thinkthen_call *workload_call(thinkthen_client *client, size_t worker, in
         assert(len > 0 && (size_t)len < sizeof held);
     }
     const char *input = cancel ? held : request;
-    assert(thinkthen_call_open_json(client, (const uint8_t *)input, strlen(input),
+    assert(thinkthen_call_open_json(client, (const char *)input, strlen(input),
                                    THINKTHEN_OFFSET_UTF8, &call, &error) == THINKTHEN_OK);
     return call;
 }
@@ -36,7 +36,7 @@ static void workload_record(workload_worker *worker, thinkthen_call *call,
         worker->worker, round, index, index);
     assert(len > 0 && (size_t)len < sizeof record);
     thinkthen_error error = {.struct_size = sizeof error};
-    assert(thinkthen_call_send_json(call, (const uint8_t *)record, (size_t)len, &error) == THINKTHEN_OK);
+    assert(thinkthen_call_send_json(call, (const char *)record, (size_t)len, &error) == THINKTHEN_OK);
     /* The ABI must own input bytes when send returns. */
     memset(record, 'x', (size_t)len);
 }
@@ -84,7 +84,7 @@ static void *run_workload(void *opaque) {
             } else if (status == THINKTHEN_OK) {
                 assert(!worker->cancel && received < worker->records);
                 workload_row(worker, &row, round, received++);
-            } else if (status == THINKTHEN_ERROR) {
+            } else if (status < 0) {
                 assert(worker->cancel && error.code == THINKTHEN_CODE_LOCAL_CANCELLED);
                 thinkthen_error_free(&error);
                 assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
@@ -113,7 +113,7 @@ static void workload(void) {
     free(parameters);
     thinkthen_client *client = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
-    assert(thinkthen_client_open_json((const uint8_t *)settings, strlen(settings), &client, &error) == THINKTHEN_OK);
+    assert(thinkthen_client_open_json((const char *)settings, strlen(settings), &client, &error) == THINKTHEN_OK);
     free(settings);
     pthread_t *threads = calloc(concurrency, sizeof *threads);
     workload_worker *workers = calloc(concurrency, sizeof *workers);

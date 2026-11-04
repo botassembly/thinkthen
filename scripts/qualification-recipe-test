@@ -196,11 +196,11 @@ rust.prepare('wasm32-unknown-unknown')
             pass
         def build(*arguments, **options):
             if arguments[0] == 'mvn':
-                base = Path(options['cwd']) / 'source/sdk/java/library/target/generated-sources/contracts/io/thinkthen'
+                base = Path(options['cwd']) / 'source/sdk/java/library/target/generated-sources/contracts/dev/thinkthen'
                 self.assertTrue((base / 'ErrorCode.java').is_file())
                 for name in ('DriverCode', 'NativeLayouts', 'NativeSignatures'):
                     self.assertTrue((base / 'internal' / (name + '.java')).is_file(), name)
-                self.assertTrue((base.parents[6] / 'kotlin/target/generated-sources/contracts/io/thinkthen/kotlin/ErrorCode.kt').is_file())
+                self.assertTrue((base.parents[6] / 'kotlin/target/generated-sources/contracts/dev/thinkthen/kotlin/ErrorCode.kt').is_file())
                 raise ReachedMaven()
             subprocess.run(list(map(str, arguments)), **options, check=True)
         with tempfile.TemporaryDirectory() as directory, patch.dict(action.__globals__, build=build):

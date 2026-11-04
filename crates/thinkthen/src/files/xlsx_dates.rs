@@ -1,4 +1,4 @@
-//! Interpret worksheet number formats as timezone-free ISO date or time evidence.
+//! Interpret worksheet number formats as timezone-free ISO date or time field.
 
 use super::FileError;
 use super::xlsx::{attr, integer, invalid, scan, xml_bytes};

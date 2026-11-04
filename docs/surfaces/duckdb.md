@@ -1,105 +1,319 @@
 # ThinkThen in DuckDB
 
-[Where record text goes](service.md) describes the default service and connection settings.
+The ThinkThen 0.2.0 extension adds ten table functions to DuckDB 2.0.0. Each one reads a query of records, asks one question of every record, and returns one row per record with a typed `answer` column beside your own columns.
 
-A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
-
-Use exactly DuckDB 1.4.3. Download the supplied matching DuckDB 0.2.0 archive. Before extraction, [verify the release checksum and provenance](../../README.md#verify-a-download). Start `duckdb -unsigned`, then load its extension by absolute path. This disables DuckDB’s extension signature verification for the session, so load only trusted extensions.
-
-Check `README.md` at the archive root for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
-
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Both calls use the stub backend. Keep every collection outcome, including answered false and failed rows.
+Set `THINKTHEN_API_KEY` in your shell, start `duckdb -unsigned`, and run:
 
 ```sql
 LOAD '/absolute/path/to/thinkthen.duckdb_extension';
-SET thinkthen_backend = 'stub';
-SET thinkthen_batch = 16;
-SELECT 'array' AS example, status
-FROM thinkthen_decide((SELECT '["first","second"]'::JSON AS record),
-  'Does the customer request a refund?');
-SELECT position, status, answer, error_code, error_message
+
+CREATE TABLE messages (msg_id INTEGER, body VARCHAR);
+INSERT INTO messages VALUES
+    (1, 'Please refund my order.'),
+    (2, 'Where is my parcel?'),
+    (3, 'I was charged twice for one invoice.'),
+    (4, 'I was charged twice and my parcel is late again.'),
+    (5, 'Morgan works for Example Group.
+Please refund my order.'),
+    (6, 'Morgan works for Example Group.');
+
+SELECT msg_id, answer AS is_refund, status
+FROM thinkthen_decide((SELECT msg_id, body FROM messages WHERE msg_id = 1),
+                      'Does the customer request a refund?', record := 'body');
+```
+
+<!-- capture: real-backend output of the query above. -->
+
+`is_refund` is `true` or `false` when `status` is `answered`. It is NULL when `status` is `unsure` or `failed`. The other examples on this page use the same `messages` table.
+
+## Load the extension
+
+1. Download the DuckDB archive for your platform and `SHA256SUMS` from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0). [Verify the checksum](../../README.md#verify-a-download), then extract it.
+2. Use DuckDB 2.0.0. DuckDB loads an extension only into the version it was built for.
+3. The extension is unsigned. Start the command with `duckdb -unsigned`. In Python, open the connection with `duckdb.connect(config={'allow_unsigned_extensions': 'true'})`. Either one turns off DuckDB's signature check for that session, so load only the file you verified.
+4. Run `LOAD '/absolute/path/to/thinkthen.duckdb_extension';`.
+
+DuckDB's community extension repository does not carry ThinkThen, so `INSTALL thinkthen FROM community` finds nothing.
+
+The extension contains the engine. It reads `THINKTHEN_API_KEY` from the DuckDB process environment, or `OPENAI_API_KEY` after `SET thinkthen_backend = 'openai'`. SQL can never set a key or a backend address.
+
+## Handle not sure and failures
+
+Save the answers in a table once, then read them as often as you like. Running a ThinkThen query again asks again and is billed again.
+
+```sql
+CREATE TABLE refund_answers AS
+SELECT msg_id, answer AS is_refund, status, error_code, error_message
+FROM thinkthen_decide((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+                      'Does the customer request a refund?', record := 'body');
+
+SELECT msg_id FROM refund_answers WHERE is_refund IS TRUE;                      -- yes
+SELECT msg_id FROM refund_answers WHERE is_refund IS FALSE;                     -- no
+SELECT msg_id FROM refund_answers WHERE status = 'unsure';                      -- send to a person
+SELECT msg_id, error_code, error_message FROM refund_answers WHERE status = 'failed';
+```
+
+- `status` is a `thinkthen_status` value: `answered`, `unsure` or `failed`.
+- Not sure has a NULL answer. Test answers with `IS TRUE` and `IS FALSE`, which are both false for NULL. `coalesce(is_refund, false)` and `CASE WHEN is_refund THEN ... ELSE ... END` turn not sure and failed rows into no.
+- A failed record is a row with `status = 'failed'` and a NULL answer, and the query keeps going. `error_code` is a `thinkthen_error_code` value such as `record.missing`, `error_message` says what went wrong, and `error_http_status` holds the backend's HTTP status when there was one.
+- A NULL record fails as `record.missing`. Empty or whitespace-only text fails as `record.empty`. Neither sends a request.
+- When the backend refuses a batch request after its retries, every record in that batch fails.
+- When every record fails with a backend error, the query raises that backend error instead of returning failed rows.
+- A usage mistake, such as a missing `choices` or a repeated choice, raises an `Invalid Input Error` whose message starts with a dotted code such as `usage.question`. It stops the query before any request is sent.
+
+## Keep only the matching rows
+
+`thinkthen_filter` returns only the records whose answer is yes. Not-sure records are left out.
+
+```sql
+SELECT msg_id, body
+FROM thinkthen_filter((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+                      'Does the customer request a refund?', record := 'body');
+```
+
+<!-- capture: real-backend output of the query above. -->
+
+If any record fails, filter raises one error after judging every record. The error names how many records failed and the first error code, and the statement fails. `failures := 'row'` returns each failed record as a row with `status = 'failed'` instead, so the answers you paid for are kept:
+
+```sql
+SELECT msg_id, body, status, error_code
+FROM thinkthen_filter((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+                      'Does the customer request a refund?', record := 'body',
+                      failures := 'row');
+```
+
+To keep every record with its yes, no or not sure, use `thinkthen_decide`.
+
+## The ten functions
+
+Each query below asks the same question of the same records as the function's page on thinkthen.dev.
+
+### decide: answer a yes-or-no question
+
+```sql
+SELECT msg_id, answer AS is_refund, status
+FROM thinkthen_decide((SELECT msg_id, body FROM messages WHERE msg_id = 1),
+                      'Does the customer request a refund?', record := 'body');
+```
+
+`answer` is `BOOLEAN`. `probability` is the probability of yes, also when the answer is no.
+
+### choose: pick one option
+
+```sql
+SELECT msg_id, answer AS topic, status
+FROM thinkthen_choose((SELECT msg_id, body FROM messages WHERE msg_id = 1),
+                      'What is the message about?',
+                      choices := ['billing', 'shipping', 'other'], record := 'body');
+```
+
+`answer` is `VARCHAR`. `probability` is the chosen option's probability, and `detail.labels` maps every option to its probability.
+
+### tag: every label that fits
+
+```sql
+SELECT msg_id, answer AS topics, status
+FROM thinkthen_tag((SELECT msg_id, body FROM messages WHERE msg_id = 4),
+                   'Which topics appear?',
+                   labels := ['billing', 'shipping'], record := 'body');
+```
+
+`answer` is `VARCHAR[]`, and it can be an empty list. `detail.labels` maps every label to its probability.
+
+### score: a number from 0 to 1 along your levels
+
+```sql
+SELECT msg_id, answer AS urgency, status
+FROM thinkthen_score((SELECT msg_id, body FROM messages WHERE msg_id = 1),
+                     'How urgent is the request?',
+                     levels := ['routine', 'urgent'], record := 'body');
+```
+
+`answer` is `DOUBLE`. List levels from lowest to highest. `detail.levels` holds each level's probability in the same order.
+
+### filter: keep the records that pass
+
+```sql
+SELECT msg_id, body
+FROM thinkthen_filter((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+                      'Does the customer request a refund?', record := 'body');
+```
+
+[Keep only the matching rows](#keep-only-the-matching-rows) covers failures.
+
+### rank: order every record
+
+```sql
+SELECT answer AS urgency_rank, msg_id, body
+FROM thinkthen_rank((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+                    'How urgent is the request?',
+                    levels := ['routine', 'urgent'], record := 'body')
+ORDER BY urgency_rank;
+```
+
+`answer` is a `BIGINT` rank from 1, highest first, ranked across the whole input, including every branch of a `UNION ALL`. Ties keep input order. `top := 2` keeps the first two ranks. Failed records come after the ranked rows, and `top` never drops them.
+
+Rank returns nothing until it has judged every record. Meanwhile DuckDB keeps each input row's original columns in its own buffer-managed storage, which spills to disk under `memory_limit` and `temp_directory`, as any DuckDB query does. The extension has no rank memory setting of its own.
+
+### find: the line that answers
+
+```sql
+SELECT msg_id, answer.text AS requested_action, status
+FROM thinkthen_find((SELECT msg_id, body FROM messages WHERE msg_id = 5),
+                    'Which line states the requested action?', record := 'body');
+```
+
+`answer` is `STRUCT(text VARCHAR, start_offset BIGINT, end_offset BIGINT)`, or NULL with `status = 'answered'` when no line answers. Offsets count Unicode code points from zero, and the end is exclusive. Find picks a whole line, so keep the record's line breaks.
+
+### annotate: fill in several questions at once
+
+```sql
+SELECT msg_id, answer.refund AS is_refund, answer.topic AS topic,
+       answer.urgency AS urgency, status
+FROM thinkthen_annotate((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
+  record := 'body',
+  toolbox := '{
+    "refund": {"function": "decide", "question": "Does the customer request a refund?"},
+    "topic": {"function": "choose", "question": "What is the message about?",
+              "choices": ["billing", "shipping", "other"]},
+    "urgency": {"function": "score", "question": "How urgent is the request?",
+                "levels": ["routine", "urgent"]}
+  }'::JSON);
+```
+
+`toolbox` maps each name to one question. Rank cannot be one of them. `answer` is a `STRUCT` with one field per name, typed for that question, and a field is NULL when that question was not sure or failed. `detail.refund.status`, `detail.refund.error` and the rest hold each question's full outcome. The row's own `status` can be `answered` while one question inside it failed, so check `detail` before you trust a NULL field.
+
+### recognize: pull out each name
+
+```sql
+SELECT msg_id, answer AS names, status
+FROM thinkthen_recognize((SELECT msg_id, body FROM messages WHERE msg_id = 6),
+                         kinds := ['person', 'organization'], record := 'body');
+```
+
+`answer` is a list of `STRUCT(text, kind, start_offset, end_offset, probability)`. `detail.names` and `detail.pieces` hold every candidate with its probabilities.
+
+### relate: link names by the relations you allow
+
+```sql
+SELECT msg_id, answer AS works_for, status
+FROM thinkthen_relate((SELECT msg_id, body FROM messages WHERE msg_id = 5),
+                      rules := [{'relation': 'works_for', 'source': 'person', 'target': 'organization'}],
+                      record := 'body');
+```
+
+Each rule has `relation`, `source` and `target`, plus optional `reads` (the relation's wording) and `either` (true when the relation has no direction). `answer` is a list of relations, each with `relation`, `source`, `target`, `either` and `probability`. `source` and `target` are names with `text`, `kind`, `start_offset` and `end_offset`. `detail.names` lists every recognized name, and `detail.pairs` scores every allowed pair. Call relate alone when you need both the names and the relations.
+
+To read one relation per row, unnest the saved answers:
+
+```sql
+CREATE TABLE employment AS
+SELECT msg_id, answer AS works_for, status
+FROM thinkthen_relate((SELECT msg_id, body FROM messages WHERE msg_id = 5),
+                      rules := [{'relation': 'works_for', 'source': 'person', 'target': 'organization'}],
+                      record := 'body');
+
+SELECT msg_id, link.source.text AS person, link.target.text AS organization
+FROM (SELECT msg_id, unnest(works_for) AS link FROM employment WHERE status = 'answered');
+```
+
+## Read JSON records and join on their id
+
+A JSON object record can carry its own `id`. `field := '/text'` selects the field to judge. Put these lines in `records.jsonl`:
+
+```json
+{"id":"a1","text":"Please refund my order."}
+{"id":"a2","text":"Where is my parcel?"}
+{"id":"a3","text":"I was charged twice for one invoice."}
+```
+
+```sql
+LOAD '/absolute/path/to/thinkthen.duckdb_extension';
+
+CREATE TABLE refund_answers AS
+SELECT position, id->>'$' AS ticket_id, answer AS is_refund, status, error_code, error_message
 FROM thinkthen_decide(
   (SELECT json AS record FROM read_json_objects('records.jsonl', format = 'newline_delimited')),
-  'Does the customer request a refund?', evidence := '/text');
+  'Does the customer request a refund?', field := '/text');
+
+SELECT * FROM refund_answers ORDER BY position;
 ```
 
-The extension includes the engine. Set `THINKTHEN_API_KEY` in the DuckDB process environment before using the default backend. Keep keys out of SQL and reports. Omit the stub setting for meaningful judgments. Stub answers are synthetic and need no key or network. Session settings also include thinkthen_model and retry settings such as thinkthen_max_retries.
+<!-- capture: real-backend output of the final SELECT above. -->
 
-All ten functions take a table and return rows, including a table with just one row. Database statement/cursor ownership closes the operation. There is no separate scalar API. A JSON array in one source cell is one record; it does not become multiple records.
+`id` is `JSON`, because an id can be a string or a number. `id->>'$'` reads it as `VARCHAR`, ready to join to your own key, as in `JOIN tickets t ON t.ticket_id = refund_answers.ticket_id`. An `id` with nothing else is a blank record and fails as `record.empty`. A record without the `text` field, or with `"text": null`, fails as `record.missing`.
 
-## Records and the ten functions
+A `JSON` record keeps its structure, and a `VARCHAR` record is judged as text, even when it looks like JSON. A JSON array is one record, not several.
 
-The input table must have a VARCHAR or JSON `record` column; `record := 'column_name'` selects another one. VARCHAR stays text, including JSON-looking text. JSON input preserves structured values, or evidence can select a field in encoded JSON. NULL returns a failed missing-record row. Original input columns are returned beside result columns. Their names must not collide with result names such as id, position, answer, rank or status; use aliases such as doc_id.
+## Options
 
-```sql
-CREATE TABLE documents(doc_id INTEGER, body VARCHAR);
-INSERT INTO documents VALUES
-  (1, 'Please refund my order.'),
-  (2, 'Where is my parcel?'),
-  (3, NULL);
-SELECT doc_id, position, status, answer, error_code
-FROM thinkthen_decide(
-  (SELECT doc_id, body AS record FROM documents ORDER BY doc_id),
-  'Does the customer request a refund?');
-```
-
-| Table function | Required arguments after input table | Answer column |
+| Option | Functions | What it does |
 | --- | --- | --- |
-| thinkthen_decide | Wording | answer BOOLEAN |
-| thinkthen_filter | Wording | answer BOOLEAN, kept BOOLEAN |
-| thinkthen_choose | Wording, choices := ['billing','shipping','other'] | answer VARCHAR |
-| thinkthen_tag | Wording, labels := ['billing','shipping'] | answer VARCHAR[] |
-| thinkthen_score | Wording, levels := ['routine','urgent'] | answer DOUBLE from 0 to 1 |
-| thinkthen_rank | Wording, levels | rank UBIGINT |
-| thinkthen_find | Wording | found STRUCT with text/start/end |
-| thinkthen_recognize | kinds := ['person','organization'] | answer typed names list |
-| thinkthen_relate | rules := typed rules list | answer typed relations list |
-| thinkthen_annotate | toolbox := named question map as JSON | answer typed annotation STRUCT |
-
-Rules are STRUCT values with name, source, target, reads and either. For example `rules := [{'name':'works_for','source':'person','target':'organization','reads':NULL,'either':false}]`. Recognize and relate have no wording prompt.
+| `record := 'body'` | all | Reads another `VARCHAR` or `JSON` input column. Without it, the column named `record` is read. |
+| `field := '/text'` | all | Judges one field of a JSON record, chosen by a JSON pointer. Write `/` in a key as `~1` and `~` as `~0`. |
+| `threshold := 0.8` | decide, filter, choose, tag, find, recognize, relate | Sets the cut an answer must reach. |
+| `low := 0.2, high := 0.8` | decide, filter, choose | Sets a band. Decide answers no below `low`, yes at or above `high`, and not sure between them. |
+| `top := 5` | rank | Keeps the first five ranks. |
+| `yes_means := '...'`, `no_means := '...'` | decide, filter | Says what yes and no mean for this question. |
+| `descriptions := MAP {'billing': 'Invoices, fees and refunds.'}` | choose, tag, score, rank | Describes some or all options or levels. A key that is not an option or level is refused. |
+| `failures := 'row'` | filter | Returns failed records as rows instead of raising. |
+| `name := 'refund-check'` | all | Names the question in `source.name`. |
 
 ```sql
-CREATE TEMP TABLE annotations AS
-SELECT doc_id, status, answer
-FROM thinkthen_annotate(
-  (SELECT doc_id, body AS record FROM documents ORDER BY doc_id),
-  toolbox := '{"refund":{"function":"decide","question":"Does the customer request a refund?"},"topic":{"function":"choose","question":"Which topic?","choices":["billing","shipping","other"]}}'::JSON);
+SELECT msg_id, answer AS topic, status
+FROM thinkthen_choose((SELECT msg_id, body FROM messages WHERE msg_id = 1),
+                      'What is the message about?',
+                      choices := ['billing', 'shipping', 'other'],
+                      descriptions := MAP {'billing': 'Invoices, fees and refunds.'},
+                      record := 'body');
 ```
 
-A rank row's `rank` is its rank answer; `position` is its input order. Rank reads the collection, returns highest scores first and keeps failures when `top := 5` limits successful ranks. Score/rank levels go lowest to highest. Filter returns every outcome; kept is true only for answered true.
+## Result columns
 
-## Rows, batching and files
+Every function returns your input columns first, then these columns in this order:
 
-Results expose position, id, status, probability, error_code, error_message, error_http_status, source, detail and the function's typed answer. Status and error_code are enums. Source is a typed STRUCT identifying the question, backend and served model. Details hold typed label or level probabilities, recognition pieces or relation pairs. Unsure and failed answers are NULL. Find can be answered with no match. Check status instead of treating NULL as failure. Find selects a whole nonblank line; preserve line breaks. Its offsets count Unicode code points from zero with an exclusive end.
+| Column | Type | Holds |
+| --- | --- | --- |
+| `position` | `BIGINT` | The record's place in the input, from 1 |
+| `id` | `JSON` | A JSON record's own `id`, or NULL |
+| `answer` | per function | The answer, or NULL when not sure or failed |
+| `probability` | `DOUBLE` | The answer's probability, when the function has one |
+| `status` | `thinkthen_status` | `answered`, `unsure` or `failed` |
+| `error_code` | `thinkthen_error_code` | The failure's code |
+| `error_message` | `VARCHAR` | What went wrong |
+| `error_http_status` | `BIGINT` | The backend's HTTP status, when there was one |
+| `source` | `STRUCT` | The backend, model, question name and question identity |
+| `detail` | per function | Probabilities and pieces behind the answer |
 
-A JSON object record can carry an exact string or integer id. Preserve the returned id or original doc_id column for joins. Use `evidence := '/text'` to select a field; pointers escape `/` as `~1` and `~` as `~0` in keys. Decide, choose and filter accept `threshold := 0.8` or `low := 0.2, high := 0.8`. Tag, find, recognize and relate accept numeric cuts only. A decide/filter band yields false below low, unsure inside and true at or above high. Choose needs its winner to reach the upper cut.
+An input column must not share a name with a result column. Rename it in the input query, as in `SELECT id AS ticket_id, body FROM tickets`.
 
-Pass the whole table in one call to batch it. Batch settings also obey byte and backend limits; one record may require multiple questions. Reexecuting a query sends another call. Materialize results once before inspecting, joining or exporting them. An annotation can be answered while a child is unsure or failed; inspect each answer field's status and error. Rank cannot be an annotation entry.
+`thinkthen_status` and `thinkthen_error_code` are named enum types, so you can write `status = 'unsure'::thinkthen_status`.
 
-An outer `LIMIT` may wait for other requests or their timeout and may pay for rows it never returns. Put `LIMIT` inside the input subquery to bound input work. While a request is held, DuckDB can buffer one 2048-row input vector separately from the engine iterator's read-ahead bound.
+## Settings
 
-Use read_csv/read_json or host file IO to load records and an annotation question map. The annotation toolbox is a flat named question map; no shell toolbox-run API exists. After checking all outer and nested failures, export a materialized outcome table with `COPY outcomes TO 'answers.csv' (HEADER, DELIMITER ',')`. DuckDB can also export JSON through COPY; CSV cells containing nested values retain their textual representations. XLSX needs an appropriate table library or extension outside this package.
+Settings last for the session. `SET GLOBAL` is refused.
 
-Call `thinkthen_relate` alone when you need names and relations from the same evidence. `detail.names` contains all admitted names, including names with no returned relation, and `detail.pairs` contains scored relation pairs. The `answer` contains accepted relations. Do not run recognize first for that task.
-
-SQL annotation accepts its existing named question map. It does not load the saved `entries` envelope used by SDK toolboxes and command runs. Load file contents with your application, then pass the annotation map through the existing toolbox argument.
-
-## Failures and cancellation
-
-Bad records or backend replies return failed rows, including a one-row table. Call-level errors fail the statement with the library code and message. A failed row does not automatically abort the statement. Stop subsequent work in the host when its task requires stopping, and inspect nested annotation failures too.
-
-Use the normal DuckDB query interrupt in your client or shell. Closing the query releases its operation. SQL cannot set an arbitrary backend URL or key source; the process owner supplies credentials outside SQL.
-
-Make questions unambiguous: define the evidence criterion, distinguish absence from explicit negatives and use distinct choices. The stub checks installation, not judgment quality.
-
-Each annotation child has its own status. For decide and filter, probability means the probability of yes, including when the answer is false. For choose, it means the chosen label's probability. Score and tag have no single probability; their distributions remain in detail.
-
-Materialize the annotation query once as `annotations`, then read its child STRUCT fields:
+| Setting | Default | Sets |
+| --- | --- | --- |
+| `thinkthen_backend` | `systemone` | The backend: `systemone` or `openai` |
+| `thinkthen_model` | the backend's default | The model |
+| `thinkthen_batch` | the engine's default | The most questions in one request |
+| `thinkthen_max_retries` | 3 | Retries after a failed request, from 0 to 3. `SET` refuses a larger value with `usage.settings`. |
+| `thinkthen_initial_backoff_ms` | 500 | The first wait before a retry |
+| `thinkthen_attempt_timeout_ms` | 120000 | The time limit for one attempt |
 
 ```sql
-SELECT d.*, a.answer.refund.answer AS refund,
-       a.answer.refund.probability AS refund_probability,
-       a.answer.topic.answer AS topic,
-       a.answer.topic.probability AS topic_probability
-FROM documents d JOIN annotations a ON a.doc_id = d.doc_id;
+SET thinkthen_backend = 'openai';
 ```
+
+DuckDB's own `memory_limit` and `temp_directory` settings govern the memory and disk that rank uses for its input columns.
+
+`RESET thinkthen_model` returns a setting to its default. `SELECT name, description FROM duckdb_settings() WHERE name LIKE 'thinkthen_%'` lists them inside DuckDB, and `duckdb_functions()` describes each function with an example.
+
+## Control cost and cancel
+
+- One ThinkThen call runs once per query and batches every record in it. Running the query again sends every question again.
+- Save results with `CREATE TABLE ... AS SELECT`, then inspect, join and export the table. `COPY refund_answers TO 'answers.csv' (HEADER)` writes a CSV.
+- An outer `LIMIT` can wait for other requests and pay for rows it never returns. Put `LIMIT` inside the input query to bound the work.
+- Ctrl-C, or your client's interrupt, stops the query and leaves the connection ready for the next one. The query's answers are discarded, and the backend still bills requests it completed. Split large jobs into several saved queries.
+- While a request is out, DuckDB can hold one more 2,048-row input vector in memory.

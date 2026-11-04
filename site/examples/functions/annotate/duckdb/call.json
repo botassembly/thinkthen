@@ -1,0 +1,5 @@
+{
+  "anchor": "FROM thinkthen_annotate((SELECT msg_id, body FROM messages), record := 'body',",
+  "before": 0,
+  "after": 2
+}

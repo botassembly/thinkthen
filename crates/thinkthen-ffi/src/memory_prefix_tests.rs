@@ -58,7 +58,10 @@ fn old_prefixes_work_when_engine_structs_are_larger() {
     unsafe {
         ptr::addr_of_mut!((*error).struct_size).write(HostError::PREFIX_SIZE);
         ptr::addr_of_mut!((*row).struct_size).write(HostRow::PREFIX_SIZE);
-        assert_eq!(thinkthen_settings_conversion_error(error), THINKTHEN_ERROR);
+        assert_eq!(
+            thinkthen_settings_conversion_error(error),
+            -thinkthen::Code::UsageSettings.abi()
+        );
         assert!((*error).code != 0 && (*error).message.len > 0);
         thinkthen_error_free(error);
         let mut client = ptr::null_mut();

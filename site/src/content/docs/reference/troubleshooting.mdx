@@ -1,0 +1,296 @@
+---
+title: Troubleshooting
+description: Every ThinkThen error, by what you see first, then its code, its cause and its fix, from a missing key to a service that can't be reached.
+goal: Someone whose command printed an error leaves knowing what went wrong and how to fix it, by matching the line they saw.
+reader: A ThinkThen user or agent whose command printed a line starting with thinkthen, or ended with a nonzero exit code
+kind: reference
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "Troubleshooting: every ThinkThen error and its fix"
+---
+
+When ThinkThen can't do what you asked, it prints a line on standard error, such as `thinkthen: usage.key-missing: …`, and ends with an exit code from 2 to 6. The word after `thinkthen:` is the error code.
+
+When one message fails and the others answer, the line also names where it was, as `thinkthen: CODE: position N id ID file FILE: message`, and the other answers still print. With `--json`, the failed message also gets a line with `"status":"failed"` and its `error`. [Exit codes](/command-line/exit-codes/) lists every exit code.
+
+## Before you run anything
+
+These stop the command before it sends any question, and it ends with exit code 2.
+
+<span id="usage-key-missing"></span>
+
+### It says the key is missing
+
+You see `thinkthen: usage.key-missing: api_key: expected a credential in THINKTHEN_API_KEY; received an unset or blank credential (contents redacted)`.
+
+**Code:** `usage.key-missing`. **Cause:** the key variable the message names is unset or blank in this shell. **Fix:** set it in the shell that runs the command, as [Configuration](/configuration/) shows.
+
+<span id="usage-backend"></span>
+
+### It doesn't know the service name
+
+You see `` thinkthen: usage.backend: backend: expected one of `systemone`, `openai`; received unknown value "openia"; did you mean `openai`? ``
+
+**Code:** `usage.backend`. **Cause:** `--backend` or `THINKTHEN_BACKEND` names a service ThinkThen doesn't have. **Fix:** use `systemone` or `openai`. The name after `did you mean` is usually right.
+
+<span id="usage-url"></span>
+
+### It refuses the address
+
+You see `thinkthen: usage.url: url: expected HTTPS, or HTTP to localhost, 127.0.0.1 or [::1]; received an insecure nonlocal URL (contents redacted)`.
+
+**Code:** `usage.url`. **Cause:** `--url`, `THINKTHEN_URL` or `THINKTHEN_BASE_URL` is a plain `http://` address on another machine. ThinkThen sends your key with every question, so it won't send it unencrypted. **Fix:** use the `https://` address, or run your server on this machine.
+
+<span id="usage-threshold"></span>
+
+### It refuses a bar
+
+You see `thinkthen: usage.threshold: threshold: expected a cut above 0 and at most 1, or a band with 0 < low < high <= 1; received an invalid threshold`.
+
+**Code:** `usage.threshold`. **Cause:** `--threshold`, `--low` or `--high` is 0, above 1, or the low bar is not below the high bar. **Fix:** give one bar above 0 and at most 1, such as `--threshold 0.7`, or a low and a high bar with the low one first, such as `--low 0.2 --high 0.8`.
+
+<span id="usage-batch"></span>
+
+### It refuses the batch size
+
+You see `thinkthen: usage.batch: batch: expected a positive integer within the platform range; received an out-of-range count`.
+
+**Code:** `usage.batch`. **Cause:** `--batch` is 0 or too large. **Fix:** leave `--batch` out, or give a whole number above 0, such as `--batch 10`.
+
+<span id="usage-pointer"></span>
+
+### It refuses the field
+
+You see `thinkthen: usage.pointer: field: expected a JSON Pointer as RFC 6901 defines it, such as /body; received a string (contents redacted)`.
+
+**Code:** `usage.pointer`. **Cause:** `--field` names a field without its leading slash, such as `text`. **Fix:** start it with `/`: `--field /text`, or `--field /customer/note` for a field inside another. [JSON Lines](/command-line/json-lines/) shows `--field` on real lines.
+
+<span id="usage-name"></span>
+
+### It refuses the name
+
+You see `thinkthen: usage.name: name: expected a nonblank execution name; received blank text`.
+
+**Code:** `usage.name`. **Cause:** `--name` or `THINKTHEN_NAME` is blank. **Fix:** give a short name, such as `--name refund-check`, or leave `--name` out.
+
+<span id="usage-question"></span>
+
+### It refuses the question, the toolbox or the CSV file
+
+The question, a toolbox, or a CSV, TSV or Excel file can't be used as asked.
+
+| You see | Fix |
+| --- | --- |
+| `question: expected nonblank text; received blank text` | Put the question in quotes after the function name. |
+| `toolbox toolbox.json: entry: expected one of …; received unknown field …` | The toolbox has several entries, so the word after it is read as an entry name. Name the entry, as in `thinkthen run toolbox.json refunds messages.jsonl`, or pass `--entry refunds`. |
+| `columns: expected at least one field column with --column; received an empty selection` | Name the column to read with `--column`. |
+| `file: expected a valid file operation; received output already exists; choose a new --output path` | ThinkThen never overwrites a file. Name a new file with `--output`, or change the file itself with `--in-place`, which keeps a backup. |
+| `` file: expected a valid file operation; received answer column `refund` already exists … `` | Pick a new name for `--into`. |
+
+**Code:** `usage.question`. [File types](/command-line/file-types/) covers CSV, TSV and Excel files, and [Toolboxes](/command-line/toolboxes/) covers toolbox entries.
+
+<span id="usage-option"></span>
+
+### It refuses an option
+
+An option is unknown, has a value it doesn't take, or doesn't fit with another option.
+
+| You see | Fix |
+| --- | --- |
+| `option: expected one of …; received unknown field …` | This function has no such option. Use the one after `did you mean`, or see the function's own page. |
+| `expected one of …; received unknown value …` | The option takes one of a fixed list of values. Pick one from the message. |
+| `expected true or false` | An on-or-off option, or its `THINKTHEN_` variable, holds something other than `true` or `false`. |
+| `choice: expected a supplied list; received absent option` | Give the function its list: `--choice` for choose, `--label` for tag, `--level` for score and rank, `--kind` for recognize, `--rule` for relate. |
+| `threshold: expected low and high together; received one bound` | Give `--low` and `--high` as a pair, or `--threshold` alone. |
+| `check: expected text framing and exactly one source; …` | `--check` answers one text. To check many lines, use [filter](/functions/filter/) with `--check`. |
+| `field: expected JSON or table framing; omit --field for lines; …` | Plain lines have no fields. Drop `--field`, or read JSON Lines with `--from jsonl`. |
+| `into: expected an answer column name; received absent name` | Name the new answer column of a CSV, TSV or Excel file with `--into`. |
+| `into: expected JSON objects without the answer field; …` | A line of the JSON Lines input already has a field with the `--into` name, or isn't a JSON object. Pick a new name, or fix the line. |
+| `into: expected answer fields without --json; received JSON row output` | `--into` writes your lines back with an answer field. Drop `--json`, or drop `--into`. |
+| `json: expected text output for table framing; received JSON row output` | A CSV, TSV or Excel file comes back as a file with answer columns. Drop `--json`. |
+| `field: expected one --column alone; omit --field; received both forms` | For a CSV, TSV or Excel file, name the column with `--column` and drop `--field`. |
+| `output: expected output or in-place; received both forms` | Use `--output` or `--in-place`, not both. |
+| `quiet: expected false when verbose is true; received true` | Use `--quiet` or `--verbose`, not both. |
+
+**Code:** `usage.option`. `thinkthen FUNCTION --help` lists each function's options, and [Options](/reference/options/) lists the ones every function shares.
+
+### It prints a usage line instead of an answer
+
+When a required argument is missing, such as the question, the command prints what it was missing and a usage line, and ends with exit code 2. Add the missing argument. `thinkthen FUNCTION --help` shows each argument.
+
+<span id="reading-standard-input"></span>
+
+### It waits and says it's reading standard input
+
+You see `reading standard input; press Ctrl-D to end`. This isn't an error. You gave no file and no `--text`, so the command is reading what you type. Pipe text in, name a file, use `--text`, or type the text and press Ctrl-D.
+
+## When one message fails
+
+These fail one message. The other messages still answer, and the command ends with exit code 6 once every answer is printed.
+
+<span id="record-json"></span>
+
+### It says the line is not JSON
+
+You see `thinkthen: record.json: position 2 id none file broken.jsonl: the record is not JSON`.
+
+**Code:** `record.json`. **Cause:** a line of JSON Lines input doesn't parse as JSON. It also happens when you pipe several JSON lines with `--field` but without `--from jsonl`, because a pipe is read as one text. **Fix:** fix the line at that position, add `--from jsonl` to a pipe, or read plain text with `--from lines`.
+
+<span id="record-missing"></span>
+
+### It says there's nothing at the field
+
+You see `thinkthen: record.missing: position 1 id a4 file -: the record holds nothing at /text`.
+
+**Code:** `record.missing`. **Cause:** the line has no value at the `--field` you named, or the value is `null`. **Fix:** check the field against one line. `--field /text` needs a `text` field at the top level.
+
+<span id="record-empty"></span>
+
+### It says the text is empty
+
+You see `thinkthen: record.empty: the record is empty`.
+
+**Code:** `record.empty`. **Cause:** the text is blank or only spaces, the field holds `{}` or `[]`, or the line holds only an `id`. ThinkThen never sends a blank text. When the whole input is one text, the command ends with exit code 2 instead of 6. **Fix:** drop blank lines first, or point `--field` at a field that holds text.
+
+<span id="record-too-large"></span>
+
+### It says the text is too large
+
+You see `thinkthen: record.too-large: position 1 id none file -: the record's question is larger than the backend request limit of 96000 bytes`.
+
+**Code:** `record.too-large`. **Cause:** one text, with its question, is larger than one request may be. **Fix:** split the text into smaller parts, or point `--field` at a smaller field.
+
+## When the service fails
+
+A service error before the first answer stops the command with exit code 4. After answers have started, it fails the messages in that request and the command ends with exit code 6, or 4 when every message failed this way. Rerun only the messages that failed.
+
+<span id="backend-transport"></span>
+
+### It can't reach the service
+
+You see `thinkthen: backend.transport: the systemone backend could not be reached: …`, ending with the cause, such as `TLS failure; check the operating system certificate store or THINKTHEN_CA_FILE`.
+
+**Code:** `backend.transport`. **Cause:** the connection was refused, the name didn't resolve, the request timed out, or the service's certificate isn't trusted. **Fix:** check `--url` and `THINKTHEN_URL`, then try the address with `curl`. Behind a company proxy, add its certificate authority to your system's certificate store, or name a PEM file in `THINKTHEN_CA_FILE`.
+
+<span id="backend-status"></span>
+
+### The service answered with an error status
+
+You see `thinkthen: backend.status: … the backend answered status 401: …`, with the status the service sent.
+
+**Code:** `backend.status`. **Cause:** the service received the question and refused it. With `--json`, the line's `error.http_status` holds the status. ThinkThen asks again after 429, 500, 502, 503, 504 and 529, waiting longer each time, before it gives up. **Fix:** for 401 or 403, check your key and your account. For 429, lower `--batch` or wait. For a status from 500 up, try again later.
+
+<span id="backend-reply"></span>
+
+### The service's answer can't be read
+
+You see `thinkthen: backend.reply: … the backend's reply is not a System One reply`, or another line that starts `the backend`.
+
+**Code:** `backend.reply`. **Cause:** the service answered, but not in the form ThinkThen expects, often because `--url` points at a server for another service, or a proxy changed the answer. **Fix:** check that `--url` points at a server for the service you chose. [Configuration](/configuration/) lists each one.
+
+## When a file or a run fails
+
+<span id="local-io"></span>
+
+### It can't open or write a file
+
+You see `thinkthen: local.io: input no-such-file.txt could not be opened`, or another line that names a file.
+
+**Code:** `local.io`, exit code 5. **Cause:** the path is wrong, or you can't read the input or write the output there. **Fix:** check the path and its permissions, and that the output folder exists.
+
+<span id="local-toolbox"></span>
+
+### It won't run a toolbox's shell steps
+
+You see `thinkthen: local.toolbox: shell steps require --allow-shell: …`, followed by the commands it refused.
+
+**Code:** `local.toolbox`, exit code 5. **Cause:** a toolbox entry runs a program on your machine, and ThinkThen runs none unless you allow it. It stops before it sends any question. **Fix:** read the commands in the message. If you trust them, run the same command again with `--allow-shell`.
+
+<span id="local-cancelled"></span>
+
+### It stopped when you pressed Ctrl-C
+
+You see `thinkthen: cancelling; press Ctrl-C again to exit`, and the exit code is 130.
+
+**Code:** `local.cancelled`. **Cause:** you pressed Ctrl-C, or another program interrupted the run. Answers to questions already sent can be lost, and the service still charges for them. **Fix:** nothing is wrong. Run the command again to finish. A second Ctrl-C exits at once.
+
+### It ends with exit code 141
+
+The program reading the output, such as `head`, closed the pipe early. This isn't an error. Under `set -o pipefail` the pipeline returns 141 too, and `set -e` stops the script.
+
+<span id="internal-bug"></span>
+
+### It says it broke one of its own rules
+
+You see a line with the code `internal.bug`, and the exit code is 5.
+
+**Code:** `internal.bug`. **Cause:** a defect in ThinkThen, not in your input or setup. **Fix:** report it on [GitHub](https://github.com/botassembly/thinkthen/issues) with the command, the output of `thinkthen --version`, and the input that causes it, with any private text removed.
+
+## Errors from an SDK or a database
+
+The command never returns these. An SDK or a database extension returns them with the same code.
+
+<span id="usage-settings"></span>
+
+### The SDK can't read its settings
+
+**Code:** `usage.settings`. **Cause:** the settings aren't valid JSON, name a setting that doesn't exist, or give a retry time that isn't a whole number of milliseconds above 0. A database session also refuses `url`, `api_key` and `key_source`, because a database reads the address and key from the server's environment. **Fix:** pass only the settings your SDK page lists. In a database, set the address and key in the server's environment.
+
+<span id="usage-sql-policy"></span>
+
+### PostgreSQL can't read its allowed list
+
+**Code:** `usage.sql-policy`. **Cause:** the administrator's `thinkthen.allowed_backends` setting holds an entry that isn't a service name, a colon, and a model name or `*`, such as `systemone:jev-1.13.0, openai:*`. **Fix:** ask the database administrator to correct the entry. [PostgreSQL](/sdks/postgresql/) shows the setting.
+
+<span id="usage-sql-selection"></span>
+
+### The database doesn't allow that service or model
+
+**Code:** `usage.sql-selection`. **Cause:** the session asks for a service and model the administrator hasn't allowed in `thinkthen.allowed_backends`. Without that setting, only the default is allowed. **Fix:** pick an allowed service and model, or ask the administrator to add yours.
+
+<span id="usage-closed"></span>
+
+### The client was already closed
+
+**Code:** `usage.closed`. **Cause:** your code asked a question through a client, or read from a call, after closing it. **Fix:** keep the client open until your last call returns. With a scoped block, such as `with` in Python, make every call inside it.
+
+<span id="usage-function"></span>
+
+### The answer belongs to another function
+
+**Code:** `usage.function`. **Cause:** your code read a value with the accessor of another function, such as tag labels from a score answer, read kept lines from a call that isn't filter, or passed C an unknown function number. **Fix:** read each answer with its own function's accessor. The `function` field of each answer names it.
+
+<span id="usage-abi"></span>
+
+### The SDK and its native library don't match
+
+**Code:** `usage.abi`. **Cause:** the SDK loaded a native library from another ThinkThen release, or a C or C++ program passed a struct it didn't initialize, text that isn't UTF-8, or a call step out of order. **Fix:** reinstall the SDK so it and its library come from the same release. In C or C++, initialize each struct with its `_INIT` macro and follow the call order in `thinkthen.h`.
+
+<span id="usage-argument"></span>
+
+### A C argument is missing or out of range
+
+**Code:** `usage.argument`. **Cause:** C code passed NULL where text belongs, an index past the end of a list, or a flag outside its range. **Fix:** pass real text, read a list's count before you index it, and check each function's comment in `thinkthen.h`.
+
+<span id="usage-record-kind"></span>
+
+### A C input kind is unknown
+
+**Code:** `usage.record-kind`. **Cause:** C or C++ code passed an input kind number the library doesn't define. **Fix:** use the `THINKTHEN_RECORD_*` constants from `thinkthen.h`.
+
+<span id="usage-offsets"></span>
+
+### A C offset unit is unknown
+
+**Code:** `usage.offsets`. **Cause:** C or C++ code opened a call with an offset unit number the library doesn't define. **Fix:** use a `THINKTHEN_OFFSET_*` constant from `thinkthen.h`, such as `THINKTHEN_OFFSET_UTF8`.
+
+<span id="record-invalid"></span>
+
+### A value can't be sent as text
+
+**Code:** `record.invalid`. **Cause:** an SDK was given a value with no exact text or JSON form, such as a number too large for JSON. That value fails, and the others still answer. **Fix:** turn the value into text or plain JSON yourself before the call, so you decide what the model reads.
+
+## Next
+
+[Exit codes](/command-line/exit-codes/) shows how a script tells these errors apart.

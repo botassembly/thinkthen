@@ -9,7 +9,7 @@ Description: Judge text and structured records with typed questions. The native
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.2.0)
-Imports: jsonlite, vctrs, rlang, cli, tibble
+Imports: jsonlite, vctrs, rlang, cli, tibble, withr, stats
 Suggests: dplyr, data.table
 SystemRequirements: Rust (>= 1.95.0), Cargo, GNU make, C compiler
 URL: https://github.com/botassembly/thinkthen

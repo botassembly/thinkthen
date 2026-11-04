@@ -125,7 +125,7 @@ fn malformed_question_answer_fails_only_its_named_entry() {
 
 #[test]
 fn evidence_pointers_and_missing_fields_belong_to_each_entry() {
-    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a":{"function":"decide","question":"Yes?","evidence":"/body"},"b":{"function":"decide","question":"No?","evidence":"/other"},"missing":{"function":"decide","question":"Missing?","evidence":"/absent"}}}"#).unwrap();
+    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a":{"function":"decide","question":"Yes?","field":"/body"},"b":{"function":"decide","question":"No?","field":"/other"},"missing":{"function":"decide","question":"Missing?","field":"/absent"}}}"#).unwrap();
     let server = Loopback::answering(|q| json!({"type":"noul","noul":if q["instructions"].as_str().unwrap().contains("yes evidence") {0.9} else {0.1}})).unwrap();
     let engine = Settings::default()
         .url(server.base())
@@ -201,7 +201,7 @@ fn failed_request_keeps_other_requests_answers_intact() {
 fn local_entry_failures_skip_requests_and_root_pointer_keeps_text() {
     for (pointer, expected, requests) in [("/missing", "failed", 0), ("", "answered", 1)] {
         let toolbox = serde_json::from_value::<Annotate>(
-            json!({"questions":{"q":{"function":"decide","question":"Yes?","evidence":pointer}}}),
+            json!({"questions":{"q":{"function":"decide","question":"Yes?","field":pointer}}}),
         )
         .unwrap();
         let server = Loopback::noul(0.9).unwrap();
@@ -225,7 +225,7 @@ fn local_entry_failures_skip_requests_and_root_pointer_keeps_text() {
 #[test]
 fn dependent_questions_keep_their_evidence_histories_and_failures_separate() {
     for (bad_boundary, bad_kind) in [(false, false), (false, true), (true, false)] {
-        let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a_find":{"function":"find","question":"Which line?","evidence":"/lines","threshold":0.8},"b_name":{"function":"recognize","kinds":["person"],"evidence":"/left"},"c_name":{"function":"recognize","kinds":["place"],"evidence":"/right"},"d_decide":{"function":"decide","question":"Ready?","evidence":"/decision"},"e_empty":{"function":"recognize","kinds":["ENTITY"],"evidence":"/empty"},"f_missing":{"function":"recognize","kinds":["person"],"evidence":"/absent"}}}"#)
+        let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"a_find":{"function":"find","question":"Which line?","field":"/lines","threshold":0.8},"b_name":{"function":"recognize","kinds":["person"],"field":"/left"},"c_name":{"function":"recognize","kinds":["place"],"field":"/right"},"d_decide":{"function":"decide","question":"Ready?","field":"/decision"},"e_empty":{"function":"recognize","kinds":["ENTITY"],"field":"/empty"},"f_missing":{"function":"recognize","kinds":["person"],"field":"/absent"}}}"#)
         .unwrap();
         let server = Loopback::answering(move |q| {
             let instructions = q["instructions"].as_str().unwrap();
@@ -281,7 +281,7 @@ fn dependent_questions_keep_their_evidence_histories_and_failures_separate() {
                 assert_eq!(entries["c_name"]["answer"][0]["kind"], "place");
             }
             assert_eq!(entries["d_decide"]["answer"], true);
-            assert_eq!(entries["e_empty"]["answer"], json!([]));
+            assert_eq!(entries["e_empty"]["error"]["code"], "record.empty");
             assert_eq!(entries["f_missing"]["error"]["code"], "record.missing");
         }
         // Name evidence separates the requests and their dependent rounds.
@@ -313,7 +313,7 @@ fn pointers_preserve_selected_json_types_and_never_parse_text() {
         (Record::from_json("null"), "/body", None),
     ] {
         let toolbox = serde_json::from_value::<Annotate>(
-            json!({"questions":{"q":{"function":"decide","question":"Yes?","evidence":pointer}}}),
+            json!({"questions":{"q":{"function":"decide","question":"Yes?","field":pointer}}}),
         )
         .unwrap();
         let server = Loopback::answering(|q| {

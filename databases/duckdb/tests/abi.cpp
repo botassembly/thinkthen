@@ -7,7 +7,7 @@ int main() {
     ErrorOwner error;
     error.value.code = INT_MAX;
     try {
-        Checked(THINKTHEN_ERROR, error);
+        Checked(-error.value.code, error);
     } catch (const InvalidInputException &failure) {
         return string(failure.what()).find("usage.abi") == string::npos ? 1 : 0;
     }

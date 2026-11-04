@@ -1,0 +1,7 @@
+{"id":"a1","refund":"answered","topic":"billing","urgency":0.05}
+{"id":"a2","refund":"answered","topic":"shipping","urgency":0.14}
+{"id":"a3","refund":"unsure","topic":"billing","urgency":0.45}
+--- queues, most urgent first
+person a3
+shipping a2
+billing a1

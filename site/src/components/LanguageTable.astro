@@ -1,0 +1,53 @@
+---
+// The language packages, with the install line and requirements each language page shows.
+import site from '../data/site.json' with { type: 'json' };
+import { oneLine } from '../lib/facts.mjs';
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+---
+<div class:list={["language-table", { compact }]} tabindex={compact ? 0 : undefined} role={compact ? 'region' : undefined} aria-label={compact ? 'Language packages' : undefined}>
+<table>
+  <thead><tr><th>Language</th><th>Package</th><th>Install</th><th>Requires</th></tr></thead>
+  <tbody>
+    {Object.values(site.languages).map((l) => (
+      <tr>
+        <td data-label="Language"><a href={l.page}>{l.name}</a></td>
+        <td data-label="Package">{l.package}</td>
+        <td data-label="Install"><code>{oneLine(l.install)}</code></td>
+        <td data-label="Requires">{l.requires}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+</div>
+<style>
+  .compact {
+    max-block-size: 32rem;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .compact:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+  .compact td a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+  @media (max-width: 50rem) {
+    .compact table, .compact tbody, .compact tr, .compact td { display: block; }
+    .compact table { width: 100%; }
+    .compact thead { display: none; }
+    .compact tr { padding-block: 0.5rem; }
+    .compact td {
+      display: grid;
+      grid-template-columns: 5rem minmax(0, 1fr);
+      gap: 0.5rem;
+      overflow-wrap: anywhere;
+    }
+    .compact td::before { content: attr(data-label); font-weight: 600; }
+    .compact td code { white-space: normal; overflow-wrap: anywhere; }
+  }
+</style>

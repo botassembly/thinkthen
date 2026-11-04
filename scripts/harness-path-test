@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Regression: deep job scratch cannot break sockets or share Swift's module cache."""
-import json
 import os
 from pathlib import Path
 import shutil
@@ -47,6 +46,10 @@ def swift_case(folder):
     (source / 'sdk/swift/tests').mkdir(parents=True)
     (source / 'sdk/swift/tests/Consumer.swift').touch()
     shutil.copy2(ROOT / 'scripts/swift-gate', source / 'scripts/swift-gate')
+    # This fixture checks cache ownership, not the separate Swift interface gate.
+    preflight = source / 'scripts/swift-interface-check'
+    preflight.write_text('#!/bin/sh\nexit 0\n')
+    preflight.chmod(0o755)
     package = folder / 'package'
     package.mkdir()
     tools = folder / 'bin'

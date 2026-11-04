@@ -1,0 +1,87 @@
+#!/bin/sh
+# Run command checks with the repository's prepared development compilers.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+case "${1:-}" in
+    --generate-contracts)
+        generated_output=${2:?usage: command-check --generate-contracts ABSOLUTE_OUTPUT}
+        python3 - "$generated_output" <<'PY'
+from pathlib import Path
+import sys
+output = Path(sys.argv[1])
+if not output.is_absolute() or output.resolve().is_relative_to(Path.cwd().resolve()) or output.exists():
+    raise SystemExit('generation output must be a new absolute directory outside the checkout')
+output.mkdir(parents=True)
+PY
+        preserve_generated() {
+            generated_status=$?
+            set +e
+            git diff --binary > "$generated_output/generated.patch"
+            git rev-parse HEAD > "$generated_output/source.txt"
+            python3 - "$generated_output" "$generated_status" <<'PY'
+from pathlib import Path
+import hashlib
+import json
+import sys
+output = Path(sys.argv[1])
+patch = (output / 'generated.patch').read_bytes()
+receipt = dict(source=(output / 'source.txt').read_text().strip(), exit=int(sys.argv[2]),
+               patch_bytes=len(patch), patch_sha256=hashlib.sha256(patch).hexdigest())
+(output / 'generation.json').write_text(json.dumps(receipt, indent=2) + '\n')
+print(json.dumps(receipt))
+PY
+            exit "$generated_status"
+        }
+        trap preserve_generated EXIT
+        cargo fmt --all
+        cargo run --quiet --locked -p thinkthen --example schema
+        cargo run --quiet --locked -p thinkthen-ffi --example headers
+        cp construction/options.json "$generated_output/construction-options-input.json"
+        cp construction/stub.json "$generated_output/construction-stub-input.json"
+        cargo run --quiet --locked -p thinkthen --example construction
+        python3 - "$generated_output" <<'PY'
+from pathlib import Path
+import json
+import sys
+output = Path(sys.argv[1])
+for name in ('options', 'stub'):
+    previous = json.loads((output / f'construction-{name}-input.json').read_text())
+    metadata = {case['name']: case['not_applicable'] for case in previous if 'not_applicable' in case}
+    path = Path('construction') / f'{name}.json'
+    cases = json.loads(path.read_text())
+    for case in cases:
+        if case.get('name') in metadata:
+            case['not_applicable'] = metadata.pop(case['name'])
+    if metadata:
+        raise SystemExit('generation lost construction applicability cases')
+    path.write_text(json.dumps(cases, ensure_ascii=False, indent=2) + '\n')
+PY
+        cp extensions/postgres/thinkthen--0.1.0--0.2.0.sql "$generated_output/thinkthen--0.1.0--0.2.0.sql"
+        python3 extensions/postgres/generate.py schemas/contract.json extensions/postgres/thinkthen--0.2.0.sql "$generated_output/thinkthen--0.1.0--0.2.0.sql"
+        generation_go_home=$(python3 -c 'import sys; sys.path.insert(0, "scripts"); from release_go import home; print(home())')
+        "$generation_go_home/bin/gofmt" -w sdk/go/thinkthen/*.go sdk/go/tests/*.go
+        scripts/notices refresh
+        cargo fmt --all
+        exit 0
+        ;;
+    --contracts)
+        RUSTUP_TOOLCHAIN=$(python3 -c 'import tomllib; from pathlib import Path; print(tomllib.loads(Path("rust-toolchain.toml").read_text())["toolchain"]["channel"])')
+        export RUSTUP_TOOLCHAIN
+        scripts/core-check
+        scripts/bindings-schema
+        scripts/contract-schema-check
+        scripts/rust-dependencies
+        scripts/words
+        exec scripts/secrets
+        ;;
+    --verify|--focused)
+        mode=$1
+        shift
+        cargo fmt --all --check
+        cargo clippy -p thinkthen --all-targets --features stream --locked -- -D warnings
+        if [ "$mode" = --verify ]; then set -- --tests; fi
+        exec cargo test -p thinkthen --features stream --locked "$@" --no-fail-fast
+        ;;
+esac
+exec "$@"

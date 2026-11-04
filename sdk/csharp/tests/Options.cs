@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ThinkThen;
@@ -24,7 +23,7 @@ internal static partial class Program
         var chosen = Case<Answered<string, LabelsDetail>>(typed);
         Check(chosen.Answer is "billing" or "shipping", "choice answer is not in the required list");
         Check(chosen.Detail is LabelsDetail { Labels.Count: 2 }, "choose detail must be typed label probabilities");
-        ImmutableDictionary<string, double> probabilities = chosen.Detail!.Labels;
+        ValueMap<string, double> probabilities = chosen.Detail!.Labels;
         Check(probabilities.Keys.ToHashSet().SetEquals(["billing", "shipping"]), "typed label names changed");
         await Code(ErrorCode.UsageName, () => Task.FromResult(toolbox.Choose("ready")));
         await Code(ErrorCode.UsageName, () => Task.FromResult(toolbox.Choose("absent")));
@@ -35,11 +34,11 @@ internal static partial class Program
             "execution name did not join identity, or toolbox selection implied a name");
         await Code(ErrorCode.UsageName, async () => { await client.ChooseAsync(selected, "alpha", name: ""); });
 
-        Row<ImmutableArray<string>, LabelsDetail> tags = await client.TagAsync("Which labels?", "alpha", ["billing", "shipping"]);
-        Check(Case<Answered<ImmutableArray<string>, LabelsDetail>>(tags).Detail!.Labels.Count == 2,
+        Row<ValueList<string>, LabelsDetail> tags = await client.TagAsync("Which labels?", "alpha", ["billing", "shipping"]);
+        Check(Case<Answered<ValueList<string>, LabelsDetail>>(tags).Detail!.Labels.Count == 2,
             "tag must expose its own typed labels detail");
         Row<double, LevelsDetail> score = await client.ScoreAsync("How urgent?", "alpha", ["routine", "urgent"]);
-        Check(Case<Answered<double, LevelsDetail>>(score).Detail!.Levels.Length == 2,
+        Check(Case<Answered<double, LevelsDetail>>(score).Detail!.Levels.Count == 2,
             "score must expose typed level probabilities without an aggregate probability");
         Check(Case<Answered<double, LevelsDetail>>(score).Probability is null, "score invented an aggregate probability");
 
@@ -64,30 +63,27 @@ internal static partial class Program
         foreach (int retries in new[] {-1,maximum+1})
             await Code(ErrorCode.UsageSettings, () => { using var invalid = new ThinkThenClient(new() { Backend = Backend.Stub, Retry = new() { MaxRetries = retries } }); return Task.CompletedTask; });
 
-        // Invalid host question containers use the same engine error as invalid JSON.
+        // Null host arguments follow .NET; malformed UTF-8 still uses shared conversion admission.
         foreach (Action admit in new Action[]
         {
-            () => RelateQuestion.Create([null!]),
-            () => Toolbox.Create(null!),
-            () => Toolbox.Create(new Dictionary<string, ToolboxQuestion>
-                { ["\ud800"] = new AnnotationQuestion.Decide(DecideQuestion.Create("Ready?")) }),
+            () => RelateQuestion.Create([null!]), () => Toolbox.Create(null!),
             () => Toolbox.Create(new Dictionary<string, ToolboxQuestion> { ["bad"] = null! }),
             () => AnnotationQuestions.Create(null!),
-            () => AnnotationQuestions.Create(new Dictionary<string, AnnotationQuestion>
-                { ["\udc00"] = new AnnotationQuestion.Decide(DecideQuestion.Create("Ready?")) }),
             () => AnnotationQuestions.Create(new Dictionary<string, AnnotationQuestion> { ["bad"] = null! }),
-            () => AnnotateQuestion.Create(null!),
-            () => new ToolboxQuestion.Rank(null!),
-            () => new AnnotationQuestion.Decide(null!),
-            () => new AnnotationQuestion.Choose(null!),
-            () => new AnnotationQuestion.Tag(null!),
-            () => new AnnotationQuestion.Score(null!),
-            () => new AnnotationQuestion.Filter(null!),
-            () => new AnnotationQuestion.Find(null!),
-            () => new AnnotationQuestion.Recognize(null!),
-            () => new AnnotationQuestion.Relate(null!)
+            () => AnnotateQuestion.Create(null!), () => new ToolboxQuestion.Rank(null!),
+            () => new AnnotationQuestion.Decide(null!), () => new AnnotationQuestion.Choose(null!),
+            () => new AnnotationQuestion.Tag(null!), () => new AnnotationQuestion.Score(null!),
+            () => new AnnotationQuestion.Filter(null!), () => new AnnotationQuestion.Find(null!),
+            () => new AnnotationQuestion.Recognize(null!), () => new AnnotationQuestion.Relate(null!)
         })
-            await Code(ErrorCode.UsageQuestion, () => { admit(); return Task.CompletedTask; });
+        {
+            try { admit(); throw new Exception("null host argument was accepted"); }
+            catch (ArgumentNullException) { }
+        }
+        await Code(ErrorCode.UsageQuestion, () => Task.FromResult(Toolbox.Create(new Dictionary<string, ToolboxQuestion>
+            { ["\ud800"] = new AnnotationQuestion.Decide(DecideQuestion.Create("Ready?")) })));
+        await Code(ErrorCode.UsageQuestion, () => Task.FromResult(AnnotationQuestions.Create(new Dictionary<string, AnnotationQuestion>
+            { ["\udc00"] = new AnnotationQuestion.Decide(DecideQuestion.Create("Ready?")) })));
 
         var rankedToolbox = Toolbox.Create(new Dictionary<string, ToolboxQuestion>
         { ["priority"] = new ToolboxQuestion.Rank(RankQuestion.Create("Urgency?", ["routine", "urgent"])) });
@@ -98,7 +94,7 @@ internal static partial class Program
             """{"priority":{"function":"rank","question":"Urgency?","levels":["routine","urgent"]}}""")));
 
         var annotated = await client.Toolbox(AnnotationQuestions.Parse(toolboxJson)).AnnotateAsync("alpha");
-        var answer = Case<Answered<ImmutableDictionary<string, AnnotationEntry>, NoDetail>>(annotated).Answer;
+        var answer = Case<Answered<ValueMap<string, AnnotationEntry>, NoDetail>>(annotated).Answer;
         Check(answer.Count == 4, "annotation lost named entries");
         ChooseEntry route = Case<ChooseEntry>(answer["route"]);
         Check(route.Function == Function.Choose, "annotation entry lost its function discriminator");
@@ -116,8 +112,8 @@ internal static partial class Program
         Check(snapshot.Answer is "billing" or "shipping", "a caller changed an admitted choice list");
         Check(snapshot.Detail!.Labels.Keys.ToHashSet().SetEquals(["billing", "shipping"]),
             "typed detail retained the caller's mutable list");
-        Check(typeof(Unsure<bool, NoDetail>).GetProperty("Answer") is null, "unsure exposes an answer");
-        Check(typeof(Failed<bool, NoDetail>).GetProperty("Probability") is null, "failed exposes a probability");
+        Check(typeof(Row<bool, NoDetail>).GetProperty("Answer") is not null, "base row must expose throwing answer access");
+        Check(typeof(Row<bool, NoDetail>).GetProperty("Probability") is not null, "base row must expose nullable probability");
     }
 
     private static async Task HostBehavior(string loopback, string directory)
@@ -130,7 +126,7 @@ internal static partial class Program
         foreach (string id in new[] { "null", "true", "{}", "[]", "1.5", "18446744073709551616", "-9223372036854775809" })
         {
             var row = await remote.DecideAsync("Ready?", Json("{\"id\":" + id + ",\"body\":\"alpha\"}"));
-            Check(Case<Failed<bool, NoDetail>>(row).Error.Code == ErrorCode.RecordInvalid,
+            Check(Case<Failed<bool, NoDetail>>(row).Error.ErrorCode == ErrorCode.RecordInvalid,
                 $"invalid id {id} was admitted or rounded");
             Check(row.Position == 1 && row.Id is null, "invalid id lost its position or exposed an invalid identifier");
         }
@@ -143,39 +139,39 @@ internal static partial class Program
             Check(Row(row)["id"]!.ToJsonString() == id, "identifier changed JSON type or precision");
         }
         foreach (string invalidText in new[] { "\ud800", "\udc00" })
-            Check(await remote.DecideAsync("Ready?", invalidText) is Failed<bool, NoDetail> { Error.Code: ErrorCode.RecordInvalid },
+            Check(await remote.DecideAsync("Ready?", invalidText) is Failed<bool, NoDetail> { Error.ErrorCode: ErrorCode.RecordInvalid },
                 "bad UTF-16 record must remain a failed row");
         var absent = await client.DecideAsync("Ready?", Json("{\"body\":\"alpha\"}"));
         Check(absent.Id is null && Row(absent)["id"] is null, "missing id acquired a synthetic value");
         foreach (object? missing in new object?[] { null, Json("null") })
         {
             var row = await remote.DecideAsync("Ready?", missing);
-            Check(Case<Failed<bool, NoDetail>>(row).Error.Code == ErrorCode.RecordMissing,
+            Check(Case<Failed<bool, NoDetail>>(row).Error.ErrorCode == ErrorCode.RecordMissing,
                 "nullable input did not map to the explicit missing-record operation");
         }
-        Check(Case<Failed<bool, NoDetail>>(await remote.DecideAsync<int?>("Ready?", null)).Error.Code
+        Check(Case<Failed<bool, NoDetail>>(await remote.DecideAsync<int?>("Ready?", null)).Error.ErrorCode
             == ErrorCode.RecordMissing, "generic nullable value did not map to missing input");
         Check(await monitor.Command("count") == "0", "stub or failed record contacted a service");
 
         var source = new object?[] { new Message("one", "alpha"), null, new Message("three", "beta") };
         int count = 0;
-        await foreach (var item in client.FilterAsync("Ready?", Records(source)))
+        await foreach (var item in client.FilterStreamAsync("Ready?", Records(source)))
         {
             Check(ReferenceEquals(item.Item, source[checked((int)item.Row.Position - 1)]),
                 "filter replaced the caller's original managed item");
             if (item.Row.Position == 2)
-                Check(item.Row is Failed<bool, NoDetail> { Error.Code: ErrorCode.RecordMissing } && !item.Kept,
+                Check(item.Row is Failed<bool, NoDetail> { Error.ErrorCode: ErrorCode.RecordMissing } && !item.Kept,
                     "filter discarded a missing record instead of yielding its failed row");
             count++;
         }
         Check(count == 3, "filter dropped a failed or unselected input");
-        var ranks = new List<RankedItem<object?>>();
-        await foreach (var item in client.RankAsync("Urgency?", Records(source), ["routine", "urgent"], new RankOptions { Top = 1 }))
+        var ranks = new List<RankedItem<Message?>>();
+        await foreach (var item in client.RankAsync("Urgency?", Records(source.Cast<Message?>()), ["routine", "urgent"], new RankOptions { Top = 1 }))
             ranks.Add(item);
         Check(ranks.Count == 2 && ranks.Count(item => item.Row is Failed<long, LevelsDetail>) == 1,
             "rank top suppressed failures or retained too many successful rows");
         foreach (var item in ranks)
-            Check(ReferenceEquals(item.Item, source[checked((int)item.Row.Position - 1)]), "rank lost original item identity");
+            Check(Equals(item.Item, source[checked((int)item.Row.Position - 1)]), "rank lost original item values");
         Check(ranks.Single(item => item.Row is Answered<long, LevelsDetail>).Row is Answered<long, LevelsDetail> { Answer: 1 },
             "rank answer must remain separate from original input position");
         foreach (Backend backend in new[] { Backend.SystemOne, Backend.OpenAI })
@@ -187,16 +183,17 @@ internal static partial class Program
                 Retry = new RetryOptions { MaxRetries = 0 }
             });
             var failed = Case<Failed<bool, NoDetail>>(await unavailable.DecideAsync("Ready?", "alpha"));
-            Check(failed.Error.Code == ErrorCode.BackendTransport && failed.Source.Backend == backend,
+            Check(failed.Error.ErrorCode == ErrorCode.BackendTransport && failed.Source.Backend == backend,
                 "single backend failure must return a typed failed row for the selected backend");
         }
-        await Code(ErrorCode.UsageQuestion, async () => { await client.ChooseAsync("Which?", "alpha", null!); });
+        try { await client.ChooseAsync("Which?", "alpha", null!); throw new Exception("null choices were accepted"); }
+        catch (ArgumentNullException) { }
         try { await client.DecideAsync("\ud800", "alpha"); throw new Exception("invalid question encoding was accepted"); }
         catch (ThinkThenException error)
-        { Check(error.Code == ErrorCode.UsageQuestion && error.InnerException is System.Text.EncoderFallbackException, "host conversion lost its engine code or cause"); }
+        { Check(error.ErrorCode == ErrorCode.UsageQuestion && error.InnerException is System.Text.EncoderFallbackException, "host conversion lost its engine code or cause"); }
         var cycle = new Cycle(); cycle.Next = cycle;
         var invalid = await remote.DecideAsync("Ready?", cycle);
-        Check(invalid is Failed<bool, NoDetail> { Error.Code: ErrorCode.RecordInvalid }, "host record conversion became a call fault");
+        Check(invalid is Failed<bool, NoDetail> { Error.ErrorCode: ErrorCode.RecordInvalid }, "host record conversion became a call fault");
         Check(await monitor.Command("count") == "0", "invalid host conversion contacted a backend");
         var owner = new ThinkThenClient(new() { Backend = Backend.Stub });
         var retained = Case<Answered<string, LabelsDetail>>(await owner.ChooseAsync("Which?", "alpha", ["first", "second"]));
@@ -221,11 +218,11 @@ internal static partial class Program
         settings.Json = new JsonSerializerOptions();
         Message value = new("m1", "alpha");
         var typed = await client.DecideAsync("Ready?", value,
-            new DecideOptions { Evidence = Pointer.From("/messageBody") });
+            new DecideOptions { Field = Pointer.From("/messageBody") });
         Check(typed is not Failed<bool, NoDetail> && typed.Source.Backend == Backend.Stub,
             "client retained mutable options or failed to snapshot its serializer");
-        var metadata = await client.DecideAsync("Ready?", value, ConsumerJson.Default.Message,
-            new DecideOptions { Evidence = Pointer.From("/messageBody") });
+        var metadata = await client.DecideWithMetadataAsync("Ready?", value, ConsumerJson.Default.Message,
+            new DecideOptions { Field = Pointer.From("/messageBody") });
         Check(JsonNode.DeepEquals(Row(typed), Row(metadata)), "explicit record metadata changed the call");
     }
 }

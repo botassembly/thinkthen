@@ -1,0 +1,173 @@
+---
+title: C# SDK
+description: "C# SDK: ask the ten ThinkThen questions from .NET and get yes, no or not sure back as plain C# values."
+goal: The reader runs a first decide in C#, installs the SDK, catches not sure and failures, and finds the C# call for each of the ten functions.
+reader: A C# developer who wants to ask questions about text from code
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "C#"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The C# SDK gives your .NET code the ten functions as async methods on one client; each call gives back a plain C# value, such as `true` or `false` from decide, and throws when the answer is not sure.
+
+<Example id="sdks/csharp/first" title="Program.cs" />
+
+`True` means yes: the message asks for a refund.
+
+Install it (<Fact k="languages.csharp.requires" />):
+
+<InstallLine k="languages.csharp.install" lang="sh" />
+
+Run it inside a console project made with `dotnet new console`, then `dotnet run`. The client uses the key from the [Quickstart](/quickstart/).
+
+## Catch not sure and failures
+
+Set a low bar and a high bar with `Threshold.Band`. Between them, decide is not sure, and reading the answer as a `bool` throws `UnsureException`. When ThinkThen can't judge the message, it throws `ThinkThenException` instead. Neither one can pass for `false`.
+
+<Example id="sdks/csharp/unsure" title="Program.cs" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`UnsureException.Probability` is the chance of yes. `ThinkThenException.Code` names the error, such as `record.empty`; [Troubleshooting](/reference/troubleshooting/) lists each one. To check the outcome without an exception, keep the result as it comes back and test `IsUnsure` or `IsFailed`, or call `TryGetAnswer`.
+
+## The ten functions
+
+Each function reads the same support-inbox messages as the function pages. Where a program reads `message.txt` or `messages.txt`, the text it holds is named above the program.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/decide/csharp" title="Program.cs" />
+
+Yes: the message asks for a refund. `DecideOptions` takes `Threshold` (one bar, or a low and a high bar with `Threshold.Band`), `YesMeans` and `NoMeans`. `DecideStreamAsync` takes many messages and gives one answer each, in order. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/choose/csharp" title="Program.cs" />
+
+A refund is about billing. `ChooseOptions` takes `Descriptions`, a dictionary from each choice to what it means, and `Threshold`, which can make choose not sure. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+`messages.txt` holds three lines: `Please refund my order.`, `Where is my parcel?` and `I was charged twice for one invoice.`
+
+<Example id="functions/filter/csharp" title="Program.cs" />
+
+The parcel question is left out. `FilterAsync` gives back your own messages, and leaves out the ones it is not sure about. If any message fails, it throws `ThinkThenException` after the kept ones, and its `FailedRows` lists every failure. `FilterStreamAsync` gives every message with its outcome instead. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+`message.txt` holds `I was charged twice and my parcel is late again.`
+
+<Example id="functions/tag/csharp" title="Program.cs" />
+
+The message is about both billing and shipping. The answer is a `ValueList<string>`, empty when no label fits. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/score/csharp" title="Program.cs" />
+
+The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+`messages.txt` holds the three messages from filter.
+
+<Example id="functions/rank/csharp" title="Program.cs" />
+
+The double charge is the most urgent. Each `RankedItem` holds your message as `Item` and its rank as `Row`, starting at 1. `RankOptions` takes `Top` to keep only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+`message.txt` holds two lines: `Morgan works for Example Group.` and `Please refund my order.`
+
+<Example id="functions/find/csharp" title="Program.cs" />
+
+The second line states the action. The answer is a `TextSpan` with `Text`, `Start` and `End`, or `null` when no line answers. Offsets count UTF-16 units, as .NET strings do. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+`message.txt` holds `Morgan works for Example Group.`
+
+<Example id="functions/recognize/csharp" title="Program.cs" />
+
+Each `Entity` holds a `Mention`, with the name's `Span` and `Kind`, and its `Probability`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+`message.txt` holds the two lines from find.
+
+<Example id="functions/relate/csharp" title="Program.cs" />
+
+A `RelationRule` names the kind of name at each end and the relation between them. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+`messages.txt` holds the three messages from filter.
+
+<Example id="functions/annotate/csharp" title="Program.cs" />
+
+Each answer is read by name and converts to its own type, and throws `UnsureException` when not sure, as decide does. For one message, call `AnnotateAsync(questions, message)`. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+Each options type takes `Field`, such as `Pointer.From("/text")`, to judge one field of a structured message. Every call also takes a final `CancellationToken`, and cancelling it throws `OperationCanceledException`. In ASP.NET, `services.AddThinkThen(...)` registers one shared client. The [C# API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/csharp/API.md) lists every type and method.

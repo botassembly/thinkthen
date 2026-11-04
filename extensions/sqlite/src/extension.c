@@ -6,17 +6,24 @@
 SQLITE_EXTENSION_INIT1
 
 static const char *const argument_names[] = {"source_sql","question","choices","labels","levels","kinds",
-    "rules","toolbox","threshold","low","high","top","evidence","params","record_column","id_column","format","name"};
-static const char *const column_names[] = {"position INTEGER","status TEXT","answer","probability REAL",
-    "error_code TEXT","error_message TEXT","error_http_status INTEGER","detail TEXT","id","source TEXT",
-    "kept INTEGER","rank INTEGER","found_text TEXT","found_start INTEGER","found_end INTEGER"};
+    "rules","toolbox","threshold","low","high","top","field","params","record_column","id_column","format","name",
+    "yes_means","no_means","descriptions","failures"};
+static const char *const column_names[] = {"position INTEGER","id","answer","probability REAL","status TEXT",
+    "error_code TEXT","error_message TEXT","error_http_status INTEGER","source TEXT","detail TEXT"};
 
 static int is_function(Table *table, const char *name) {
     return strcmp(table->registration->function, name) == 0;
 }
 static int exposed(Table *table, int argument) {
-    if (argument == ARG_SOURCE || argument >= ARG_PARAMS) return 1;
-    return tt_argument(table->registration->function, argument_names[argument]);
+    const char *function = table->registration->function;
+    if (argument == ARG_SOURCE || (argument >= ARG_PARAMS && argument <= ARG_NAME)) return 1;
+    /* SQL keywords true and false name the shared answer meanings. */
+    if (argument == ARG_YES_MEANS) return tt_argument(function, "true");
+    if (argument == ARG_NO_MEANS) return tt_argument(function, "false");
+    if (argument == ARG_DESCRIPTIONS)
+        return tt_argument(function, "choices") || tt_argument(function, "labels") || tt_argument(function, "levels");
+    if (argument == ARG_FAILURES) return is_function(table, "filter");
+    return tt_argument(function, argument_names[argument]);
 }
 static int connect_table(sqlite3 *db, void *aux, int argc, const char *const *argv,
                          sqlite3_vtab **output, char **error) {
@@ -28,13 +35,7 @@ static int connect_table(sqlite3 *db, void *aux, int argc, const char *const *ar
     memset(table,0,sizeof(*table)); table->db=db; table->registration=aux;
     sqlite3_str *schema=sqlite3_str_new(db);
     sqlite3_str_appendall(schema,"CREATE TABLE x(");
-    for (int n=0;n<15;n++) {
-        if ((n==COL_ANSWER && (is_function(table,"rank") || is_function(table,"find"))) ||
-            (n==COL_KEPT && !is_function(table,"filter")) || (n==COL_RANK && !is_function(table,"rank")) ||
-            (n>=COL_TEXT && !is_function(table,"find"))) continue;
-        if(table->column_count) sqlite3_str_appendall(schema,",");
-        sqlite3_str_appendall(schema,column_names[n]); table->columns[table->column_count++]=n;
-    }
+    for (int n=0;n<COL_COUNT;n++) sqlite3_str_appendf(schema,"%s%s",n?",":"",column_names[n]);
     for(int n=0;n<ARG_COUNT;n++) if(exposed(table,n)) {
         sqlite3_str_appendf(schema,",%s HIDDEN",argument_names[n]); table->arguments[table->argument_count++]=n;
     }
@@ -51,16 +52,18 @@ static int best_index(sqlite3_vtab *base, sqlite3_index_info *index) {
     for(int n=0;n<table->argument_count;n++) {
         int found=-1, key=table->arguments[n];
         for(int i=0;i<index->nConstraint;i++) {
-            if(index->aConstraint[i].iColumn!=table->column_count+n) continue;
+            if(index->aConstraint[i].iColumn!=COL_COUNT+n) continue;
             if(!index->aConstraint[i].usable) return SQLITE_CONSTRAINT;
             if(index->aConstraint[i].op!=SQLITE_INDEX_CONSTRAINT_EQ || found!=-1) {
-                base->zErrMsg=sqlite3_mprintf("argument %s requires one equality",argument_names[key]);return SQLITE_ERROR;
+                base->zErrMsg=sqlite3_mprintf("usage.argument: %s takes one value, as %s = ...",argument_names[key],argument_names[key]);
+                return SQLITE_ERROR;
             }
             found=i;
         }
         if(found<0) {
             if(key<=ARG_TOOLBOX && key!=ARG_THRESHOLD) {
-                base->zErrMsg=sqlite3_mprintf("%s is required",argument_names[key]);return SQLITE_ERROR;
+                base->zErrMsg=sqlite3_mprintf("usage.argument: %s is required for thinkthen_%s",argument_names[key],table->registration->function);
+                return SQLITE_ERROR;
             }
             continue;
         }
@@ -88,7 +91,7 @@ static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, 
         if(!cursor->replaying)thinkthen_row_free(&cursor->row);
         json_decref(cursor->answer);cursor->answer=NULL;
         json_decref(cursor->error);cursor->error=NULL;
-        cursor->replaying=1;cursor->rowid=0;
+        cursor->replaying=1;cursor->rowid=0;filter_reset(cursor);
         if(!cursor->read && sqlite3_prepare_v2(cursor->replay,"SELECT * FROM rows ORDER BY rowid",-1,&cursor->read,NULL)!=SQLITE_OK)
             return cursor_error(cursor,SQLITE_ERROR,"cannot rewind result spool");
         sqlite3_reset(cursor->read);
@@ -99,14 +102,23 @@ static int filter_cursor(sqlite3_vtab_cursor *base, int mask, const char *plan, 
     cursor->generation=table->registration->connection->generation;
     int opened=replay_open(cursor);if(opened!=SQLITE_OK)return opened;
     int index=0;
+    static const char *const type_names[]={"","an integer","a real number","text","a blob","NULL"};
     for(int n=0;n<ARG_COUNT;n++) if(mask&(1<<n)) {
         int type=sqlite3_value_type(argv[index]);
         int numeric=n==ARG_THRESHOLD || n==ARG_LOW || n==ARG_HIGH;
         if((numeric && type!=SQLITE_FLOAT && type!=SQLITE_INTEGER) ||
            (n==ARG_TOP && type!=SQLITE_INTEGER) || (!numeric && n!=ARG_TOP && type!=SQLITE_TEXT))
-            return cursor_error(cursor,SQLITE_MISMATCH,"argument has an incompatible SQL type");
+            return usage_error(cursor,"%s must be %s, not %s",argument_names[n],
+                numeric?"a number":n==ARG_TOP?"an integer":"text",type_names[type]);
         cursor->arguments[n]=sqlite3_value_dup(argv[index++]);
         if(!cursor->arguments[n])return cursor_error(cursor,SQLITE_NOMEM,"out of memory");
+    }
+    if(cursor->arguments[ARG_FAILURES]) {
+        const char *failures=(const char*)sqlite3_value_text(cursor->arguments[ARG_FAILURES]);
+        if(!failures)return cursor_error(cursor,SQLITE_NOMEM,"out of memory");
+        if(strcmp(failures,"row") && strcmp(failures,"raise"))
+            return usage_error(cursor,"failures must be 'raise' or 'row', not '%s'",failures);
+        cursor->keep_failures=!strcmp(failures,"row");
     }
     int result=source_open(cursor);if(result!=SQLITE_OK)return result;
     Connection *connection=table->registration->connection;char *message=NULL;
@@ -123,6 +135,10 @@ static int eof_cursor(sqlite3_vtab_cursor *base) {return ((Cursor*)base)->eof;}
 static int rowid_cursor(sqlite3_vtab_cursor *base,sqlite3_int64 *id) {*id=((Cursor*)base)->rowid;return SQLITE_OK;}
 static const sqlite3_module module={.iVersion=1,.xConnect=connect_table,.xBestIndex=best_index,.xDisconnect=disconnect_table,
     .xOpen=open_cursor,.xClose=close_cursor,.xFilter=filter_cursor,.xNext=next_cursor,.xEof=eof_cursor,.xColumn=cursor_column,.xRowid=rowid_cursor};
+static void version(sqlite3_context *context,int argc,sqlite3_value **argv) {
+    (void)argc;(void)argv;
+    sqlite3_result_text(context,thinkthen_version(),-1,SQLITE_STATIC);
+}
 static void registration_free(void *pointer) {Registration *registration=pointer;connection_release(registration->connection);sqlite3_free(registration);}
 static void set_setting(sqlite3_context *context,int argc,sqlite3_value **argv) {
     (void)argc;
@@ -134,7 +150,7 @@ static void set_setting(sqlite3_context *context,int argc,sqlite3_value **argv) 
     int count=setting==2 || setting==4;
     if(sqlite3_value_type(argv[0])!=SQLITE_TEXT || (key && (size_t)sqlite3_value_bytes(argv[0])!=strlen(key)) || (!text && !count) || (text && type!=SQLITE_TEXT) || (count && type!=SQLITE_INTEGER)) {
         thinkthen_error error={.struct_size=sizeof(error)};char *message=NULL;
-        thinkthen_settings_conversion_error(&error);engine_error(&error,&message);
+        if(thinkthen_settings_conversion_error(&error)<0)engine_error(&error,&message);
         sqlite3_result_error(context,message?message:"out of memory",-1);sqlite3_free(message);return;
     }
     json_t *settings=connection->settings ? json_loadb(connection->settings,connection->settings_len,0,NULL):json_object();
@@ -175,6 +191,10 @@ int sqlite3_thinkthensqlite_init(sqlite3 *db,char **error,const sqlite3_api_rout
         ++registered;
     }
     if(result==SQLITE_OK) {++connection->references;result=sqlite3_create_function_v2(db,"thinkthen_set",2,SQLITE_UTF8|SQLITE_DIRECTONLY,connection,set_setting,NULL,NULL,connection_release);}
+    if(result==SQLITE_OK) {
+        result=sqlite3_create_function_v2(db,"thinkthen_version",0,SQLITE_UTF8|SQLITE_DETERMINISTIC|SQLITE_INNOCUOUS,NULL,version,NULL,NULL,NULL);
+        if(result!=SQLITE_OK) sqlite3_create_function_v2(db,"thinkthen_set",2,SQLITE_UTF8,NULL,NULL,NULL,NULL,NULL);
+    }
     /* SQLite unloads a failed extension without removing its registrations. */
     if(result!=SQLITE_OK) {
         while(registered) sqlite3_create_module_v2(db,modules[--registered],NULL,NULL,NULL);

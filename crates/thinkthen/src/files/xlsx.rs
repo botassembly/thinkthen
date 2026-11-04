@@ -4,12 +4,12 @@ use crate::Cancel;
 use crate::files::{
     FileError,
     admission::{check_cancel, copy},
+    cells::Cell as Answer,
     local,
 };
 use quick_xml::events::{BytesEnd, BytesStart, BytesText, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::{NsReader, Writer};
-use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -31,6 +31,8 @@ pub(crate) struct Sheet {
     pub(crate) headers: Vec<String>,
     pub(crate) last_column: usize,
     pub(crate) last_row: usize,
+    /// Whether the worksheet holds Excel tables, which own their own filters.
+    pub(crate) tables: bool,
 }
 
 #[derive(Default)]
@@ -195,6 +197,7 @@ pub(crate) fn admit(
         headers: Vec::new(),
         last_column: 0,
         last_row: 1,
+        tables: false,
     };
     let mut row_number = 0;
     let mut row = BTreeMap::new();
@@ -370,6 +373,7 @@ pub(crate) fn admit(
     if sheet.headers.is_empty() {
         return Err(invalid("worksheet row 1 must contain column headers"));
     }
+    sheet.tables = !table_ids.is_empty();
     table_bounds(&mut zip, &mut sheet, &table_ids, cancel)?;
     Ok(sheet)
 }
@@ -468,7 +472,7 @@ fn check_merge(e: &BytesStart<'_>, selected: &[usize], sheet: &mut Sheet) -> Res
         sheet.last_row = sheet.last_row.max(a.1).max(b.1);
         if b.1 > 1 && selected.iter().any(|c| *c >= a.0 && *c <= b.0) {
             return Err(invalid(&format!(
-                "selected evidence intersects merged cells {range}; select an unmerged text column"
+                "selected field intersects merged cells {range}; select an unmerged text column"
             )));
         }
     }
@@ -528,12 +532,45 @@ fn append_shared_text(item: &mut String, text: &str) -> Result<(), FileError> {
     Ok(())
 }
 
+/// Elements that follow `autoFilter` in a worksheet, in schema order.
+const AFTER_FILTER: [&[u8]; 28] = [
+    b"sortState",
+    b"dataConsolidate",
+    b"customSheetViews",
+    b"mergeCells",
+    b"phoneticPr",
+    b"conditionalFormatting",
+    b"dataValidations",
+    b"hyperlinks",
+    b"printOptions",
+    b"pageMargins",
+    b"pageSetup",
+    b"headerFooter",
+    b"rowBreaks",
+    b"colBreaks",
+    b"customProperties",
+    b"cellWatches",
+    b"ignoredErrors",
+    b"smartTags",
+    b"drawing",
+    b"legacyDrawing",
+    b"legacyDrawingHF",
+    b"drawingHF",
+    b"picture",
+    b"oleObjects",
+    b"controls",
+    b"webPublishItems",
+    b"tableParts",
+    b"extLst",
+];
+
 pub(crate) fn write(
     source: &Path,
     output: &mut File,
     sheet: &Sheet,
     names: &[String],
     answers: &mut crate::files::spool::Answers,
+    filter: bool,
     cancel: &Cancel,
 ) -> Result<(), FileError> {
     let mut archive = ZipArchive::new(File::open(source).map_err(local)?).map_err(local)?;
@@ -554,8 +591,23 @@ pub(crate) fn write(
         let mut row = 0;
         let mut row_name = Vec::new();
         let mut appended = false;
+        let mut prefix = String::new();
+        // Filter hides the rows it does not keep with the sheet's AutoFilter.
+        let mut filtered = !filter;
+        let mut filter_start = None;
         scan(BufReader::new(file), cancel, |event, main, depth| {
             match event {
+                Event::Start(e) if main && depth == 1 => {
+                    prefix = element_prefix(e.name().as_ref())?;
+                    writer.write_event(Event::Start(e)).map_err(local)?;
+                }
+                Event::End(e) if main && depth == 1 => {
+                    if !filtered {
+                        new_filter(&mut writer, &prefix, sheet, names.len())?;
+                        filtered = true;
+                    }
+                    writer.write_event(Event::End(e)).map_err(local)?;
+                }
                 Event::Start(e) if main && e.local_name().as_ref() == b"row" => {
                     row = attr(&e, b"r")?
                         .map(|r| integer(&r))
@@ -563,9 +615,8 @@ pub(crate) fn write(
                         .unwrap_or(row + 1);
                     row_name = e.name().as_ref().to_vec();
                     appended = false;
-                    writer
-                        .write_event(Event::Start(row_spans(&e, sheet, names.len())?))
-                        .map_err(local)?;
+                    let start = hide(row_spans(&e, sheet, names.len())?, row, filter, answers)?;
+                    writer.write_event(Event::Start(start)).map_err(local)?;
                 }
                 Event::End(e) if main && e.local_name().as_ref() == b"row" => {
                     if !appended {
@@ -579,9 +630,8 @@ pub(crate) fn write(
                         .transpose()?
                         .unwrap_or(row + 1);
                     row_name = e.name().as_ref().to_vec();
-                    writer
-                        .write_event(Event::Start(row_spans(&e, sheet, names.len())?))
-                        .map_err(local)?;
+                    let start = hide(row_spans(&e, sheet, names.len())?, row, filter, answers)?;
+                    writer.write_event(Event::Start(start)).map_err(local)?;
                     append(&mut writer, row, &row_name, sheet, names, answers)?;
                     writer
                         .write_event(Event::End(BytesEnd::new(
@@ -601,6 +651,7 @@ pub(crate) fn write(
                 Event::Start(e)
                     if main && depth == 2 && e.local_name().as_ref() == b"autoFilter" =>
                 {
+                    filter_start = Some(filter_column_start(&e)?);
                     writer
                         .write_event(Event::Start(filter_range(&e, sheet, names.len())?))
                         .map_err(local)?;
@@ -608,9 +659,46 @@ pub(crate) fn write(
                 Event::Empty(e)
                     if main && depth == 2 && e.local_name().as_ref() == b"autoFilter" =>
                 {
-                    writer
-                        .write_event(Event::Empty(filter_range(&e, sheet, names.len())?))
-                        .map_err(local)?;
+                    let range = filter_range(&e, sheet, names.len())?;
+                    if filtered {
+                        writer.write_event(Event::Empty(range)).map_err(local)?;
+                    } else {
+                        let end = range.to_end().into_owned();
+                        writer.write_event(Event::Start(range)).map_err(local)?;
+                        let column = answer_column(sheet, filter_column_start(&e)?);
+                        filter_column(&mut writer, &prefix, column)?;
+                        writer.write_event(Event::End(end)).map_err(local)?;
+                        filtered = true;
+                    }
+                }
+                Event::Start(ref e) | Event::Empty(ref e)
+                    if main
+                        && depth == 3
+                        && !filtered
+                        && filter_start.is_some()
+                        && matches!(e.local_name().as_ref(), b"sortState" | b"extLst") =>
+                {
+                    let start = filter_start.unwrap_or(1);
+                    filter_column(&mut writer, &prefix, answer_column(sheet, start))?;
+                    filtered = true;
+                    writer.write_event(event).map_err(local)?;
+                }
+                Event::End(e) if main && depth == 2 && e.local_name().as_ref() == b"autoFilter" => {
+                    if let (false, Some(start)) = (filtered, filter_start) {
+                        filter_column(&mut writer, &prefix, answer_column(sheet, start))?;
+                        filtered = true;
+                    }
+                    writer.write_event(Event::End(e)).map_err(local)?;
+                }
+                Event::Start(ref e) | Event::Empty(ref e)
+                    if main
+                        && depth == 2
+                        && !filtered
+                        && AFTER_FILTER.contains(&e.local_name().as_ref()) =>
+                {
+                    new_filter(&mut writer, &prefix, sheet, names.len())?;
+                    filtered = true;
+                    writer.write_event(event).map_err(local)?;
                 }
                 Event::Start(e) if main && e.local_name().as_ref() == b"dimension" => {
                     writer
@@ -634,6 +722,100 @@ pub(crate) fn write(
     Ok(())
 }
 
+fn element_prefix(name: &[u8]) -> Result<String, FileError> {
+    Ok(std::str::from_utf8(name)
+        .map_err(local)?
+        .rsplit_once(':')
+        .map(|(p, _)| format!("{p}:"))
+        .unwrap_or_default())
+}
+
+/// Hide a data row whose filter answer does not keep it.
+fn hide(
+    start: BytesStart<'static>,
+    row: usize,
+    filter: bool,
+    answers: &mut crate::files::spool::Answers,
+) -> Result<BytesStart<'static>, FileError> {
+    if !filter || row == 1 {
+        return Ok(start);
+    }
+    let kept = answers
+        .get(row)?
+        .and_then(|cells| cells.into_iter().next())
+        .is_some_and(|cell| cell.kept());
+    if kept {
+        Ok(start)
+    } else {
+        replace_attribute(&start, b"hidden", "1")
+    }
+}
+
+/// The first column of an existing AutoFilter range.
+fn filter_column_start(e: &BytesStart<'_>) -> Result<usize, FileError> {
+    let range = attr(e, b"ref")?.unwrap_or_else(|| "A1".into());
+    let start = range.split(':').next().unwrap_or("A1");
+    Ok(coordinate(start)?.0)
+}
+
+/// The answer column's offset within a filter range starting at `start`.
+const fn answer_column(sheet: &Sheet, start: usize) -> usize {
+    (sheet.last_column + 1).saturating_sub(start)
+}
+
+/// Add an AutoFilter that keeps TRUE answers. A sheet with Excel tables gets
+/// one over the answer columns only, because a sheet filter may not overlap a table.
+fn new_filter<W: Write>(
+    writer: &mut Writer<W>,
+    prefix: &str,
+    sheet: &Sheet,
+    count: usize,
+) -> Result<(), FileError> {
+    let first = if sheet.tables {
+        sheet.last_column + 1
+    } else {
+        1
+    };
+    let name = format!("{prefix}autoFilter");
+    let mut start = BytesStart::new(&name);
+    let range = format!(
+        "{}1:{}{}",
+        column_name(first),
+        column_name(sheet.last_column + count),
+        sheet.last_row
+    );
+    start.push_attribute(("ref", range.as_str()));
+    writer.write_event(Event::Start(start)).map_err(local)?;
+    filter_column(writer, prefix, answer_column(sheet, first))?;
+    writer
+        .write_event(Event::End(BytesEnd::new(&name)))
+        .map_err(local)
+}
+
+fn filter_column<W: Write>(
+    writer: &mut Writer<W>,
+    prefix: &str,
+    column: usize,
+) -> Result<(), FileError> {
+    let column_tag = format!("{prefix}filterColumn");
+    let filters_tag = format!("{prefix}filters");
+    let mut start = BytesStart::new(&column_tag);
+    start.push_attribute(("colId", column.to_string().as_str()));
+    writer.write_event(Event::Start(start)).map_err(local)?;
+    writer
+        .write_event(Event::Start(BytesStart::new(&filters_tag)))
+        .map_err(local)?;
+    let mut keep = BytesStart::new(format!("{prefix}filter"));
+    keep.push_attribute(("val", "TRUE"));
+    writer.write_event(Event::Empty(keep)).map_err(local)?;
+    writer
+        .write_event(Event::End(BytesEnd::new(&filters_tag)))
+        .map_err(local)?;
+    writer
+        .write_event(Event::End(BytesEnd::new(&column_tag)))
+        .map_err(local)
+}
+
 fn append<W: Write>(
     writer: &mut Writer<W>,
     row: usize,
@@ -643,72 +825,47 @@ fn append<W: Write>(
     answers: &mut crate::files::spool::Answers,
 ) -> Result<(), FileError> {
     let cells = if row == 1 {
-        Some(names.iter().cloned().map(Value::String).collect())
+        Some(names.iter().cloned().map(Answer::Text).collect())
     } else {
         answers.get(row)?
     };
-    let Some(cells): Option<Vec<Value>> = cells else {
+    let Some(cells): Option<Vec<Answer>> = cells else {
         return Ok(());
     };
-    let prefix = std::str::from_utf8(row_name)
-        .map_err(local)?
-        .rsplit_once(':')
-        .map(|(p, _)| format!("{p}:"))
-        .unwrap_or_default();
+    let prefix = element_prefix(row_name)?;
     for (offset, value) in cells.iter().enumerate() {
-        if value.is_null() {
-            continue;
-        }
+        let (kind, text) = match value {
+            Answer::Empty => continue,
+            // `#N/A` makes formulas fail visibly instead of reading a blank as FALSE.
+            Answer::Missing => ("e", "#N/A".to_owned()),
+            Answer::Bool(answer) => ("b", if *answer { "1" } else { "0" }.to_owned()),
+            Answer::Number(number) => ("n", number.to_string()),
+            Answer::Text(text) => ("inlineStr", encode_string(text)),
+        };
         let name = format!("{prefix}c");
         let mut cell = BytesStart::new(&name);
         let address = format!("{}{row}", column_name(sheet.last_column + offset + 1));
         cell.push_attribute(("r", address.as_str()));
-        let kind = match value {
-            Value::Bool(_) => "b",
-            Value::Number(_) => "n",
-            _ => "inlineStr",
-        };
         cell.push_attribute(("t", kind));
         writer.write_event(Event::Start(cell)).map_err(local)?;
-        if kind == "inlineStr" {
-            let is = format!("{prefix}is");
-            let t = format!("{prefix}t");
-            writer
-                .write_event(Event::Start(BytesStart::new(&is)))
-                .map_err(local)?;
-            let mut start = BytesStart::new(&t);
-            start.push_attribute(("xml:space", "preserve"));
-            writer.write_event(Event::Start(start)).map_err(local)?;
-            let text = encode_string(&crate::files::cell_text(value));
-            writer
-                .write_event(Event::Text(BytesText::new(&text)))
-                .map_err(local)?;
-            writer
-                .write_event(Event::End(BytesEnd::new(&t)))
-                .map_err(local)?;
-            writer
-                .write_event(Event::End(BytesEnd::new(&is)))
-                .map_err(local)?;
+        let tags = if kind == "inlineStr" {
+            vec![format!("{prefix}is"), format!("{prefix}t")]
         } else {
-            let v = format!("{prefix}v");
+            vec![format!("{prefix}v")]
+        };
+        for (index, tag) in tags.iter().enumerate() {
+            let mut start = BytesStart::new(tag);
+            if index == 1 {
+                start.push_attribute(("xml:space", "preserve"));
+            }
+            writer.write_event(Event::Start(start)).map_err(local)?;
+        }
+        writer
+            .write_event(Event::Text(BytesText::new(&text)))
+            .map_err(local)?;
+        for tag in tags.iter().rev() {
             writer
-                .write_event(Event::Start(BytesStart::new(&v)))
-                .map_err(local)?;
-            let text = match value {
-                Value::Bool(b) => {
-                    if *b {
-                        "1".into()
-                    } else {
-                        "0".into()
-                    }
-                }
-                _ => value.to_string(),
-            };
-            writer
-                .write_event(Event::Text(BytesText::new(&text)))
-                .map_err(local)?;
-            writer
-                .write_event(Event::End(BytesEnd::new(&v)))
+                .write_event(Event::End(BytesEnd::new(tag)))
                 .map_err(local)?;
         }
         writer

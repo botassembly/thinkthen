@@ -1,42 +1,77 @@
 # ThinkThen
 
-ThinkThen gives programs ten functions that judge evidence by meaning.
+ThinkThen answers questions about text, from your shell or your code. Ask decide whether a support message requests a refund, and it says yes, no or not sure.
 
-Install the command on Linux or macOS with `curl -fsSL https://thinkthen.dev/install.sh | sh`, or in Windows PowerShell with `irm https://thinkthen.dev/install.ps1 | iex`. Homebrew users run `brew install botassembly/thinkthen/thinkthen`.
+## Install
 
-Download the command archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0). Extract it and put its command directory on `PATH`. Each archive includes the command and its licenses. Read the release runtime requirements before installing.
-
-Rust applications use `cargo add thinkthen --no-default-features`. Install the command from source with `cargo install thinkthen`.
-
-Package-site installs follow publication of 0.2.0: [PyPI](sdk/python/README.md), [npm](sdk/typescript/README.md), [RubyGems](sdk/ruby/README.md), [NuGet](sdk/csharp/README.md), [Maven Central for Java](sdk/java/README.md) and [Kotlin](sdk/kotlin/README.md), and [r-universe for R](sdk/r/README.md). Use the Go module `github.com/botassembly/thinkthen/sdk/go/thinkthen` at `v0.2.0` or [Swift Package Manager](sdk/swift/README.md) at version `0.2.0`.
-
-The `native` crate feature exposes unstable integration helpers for bindings, proxies and database hosts. These helpers may change or disappear without the public Rust API compatibility guarantees. Applications should use the typed Rust API.
-
-The example uses the stub backend and needs no key or service. On Linux x86-64:
+macOS or Linux:
 
 ```sh
-mkdir thinkthen-0.2.0
-tar -xzf thinkthen-0.2.0-linux-x86_64.tar.gz -C thinkthen-0.2.0
-printf '%s\n' 'Please refund my order.' > message.txt
-./thinkthen-0.2.0/thinkthen decide --backend stub --json \
-  'Does the customer ask for money back?' < message.txt
+curl -fsSL https://thinkthen.dev/install.sh | sh
 ```
 
-Use the matching archive name on Linux arm64 or Apple Silicon macOS. On Windows:
+Windows PowerShell:
 
 ```powershell
-Expand-Archive .\thinkthen-0.2.0-windows-x86_64.zip .\thinkthen-0.2.0
-Set-Content -Encoding utf8 message.txt 'Please refund my order.'
-Get-Content -Raw message.txt | .\thinkthen-0.2.0\thinkthen.exe decide --backend stub --json 'Does the customer ask for money back?'
+irm https://thinkthen.dev/install.ps1 | iex
 ```
 
-[Command API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen/src/cli/grammar.rs). [Rust API reference](https://docs.rs/thinkthen/0.2.0/thinkthen/).
+Homebrew users run `brew install botassembly/thinkthen/thinkthen`. [Installation](https://thinkthen.dev/install/) covers Cargo and the release archives.
 
-[Where record text goes](docs/surfaces/service.md) describes the default service and connection settings.
+Each question is a paid call to Jev, the default model. ThinkThen reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one, and how to use OpenAI instead.
 
-Language packages: [Python](sdk/python/README.md), [TypeScript](sdk/typescript/README.md), [Go](sdk/go/README.md), [Java](sdk/java/README.md), [Kotlin](sdk/kotlin/README.md), [C#](sdk/csharp/README.md), [R](sdk/r/README.md), [C](sdk/c/README.md), [C++](sdk/cpp/README.md), [Ruby](sdk/ruby/README.md), [Swift](sdk/swift/README.md) and [Zig](sdk/zig/README.md).
+## Ask a question
 
-Database packages: [SQLite](extensions/sqlite/README.md), [PostgreSQL](extensions/postgres/README.md) and [DuckDB](databases/duckdb/README.md).
+Pipe in the text, and put the question in quotes:
+
+```sh
+echo 'Please refund my order.' |
+  thinkthen decide 'Does the customer request a refund?'
+```
+
+Output:
+
+```text
+true
+```
+
+decide prints `true` for yes and `false` for no. Set a low and a high bar, and it prints `unsure` between them, so you can send that message to a person.
+
+## The ten functions
+
+- [decide](https://thinkthen.dev/functions/decide/) answers a yes-or-no question: yes, no or not sure.
+- [choose](https://thinkthen.dev/functions/choose/) picks the one option from your list that fits, or not sure.
+- [filter](https://thinkthen.dev/functions/filter/) keeps only the texts that pass a yes-or-no question.
+- [tag](https://thinkthen.dev/functions/tag/) gives every label from your list that fits.
+- [score](https://thinkthen.dev/functions/score/) places a text on your levels, as a number from 0 to 1.
+- [rank](https://thinkthen.dev/functions/rank/) orders texts by your levels, highest first.
+- [find](https://thinkthen.dev/functions/find/) points to the line that answers your question, or none.
+- [recognize](https://thinkthen.dev/functions/recognize/) pulls out names, each with its kind.
+- [relate](https://thinkthen.dev/functions/relate/) links names by the relations you allow.
+- [annotate](https://thinkthen.dev/functions/annotate/) answers several questions about each text, like a form.
+
+## SDKs
+
+The same ten functions, in your code or your database:
+
+- [Python SDK](https://thinkthen.dev/sdks/python/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/python.md)
+- [TypeScript SDK](https://thinkthen.dev/sdks/typescript/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/typescript.md)
+- [Go SDK](https://thinkthen.dev/sdks/go/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/go.md)
+- [Java SDK](https://thinkthen.dev/sdks/java/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/java.md)
+- [Kotlin SDK](https://thinkthen.dev/sdks/kotlin/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/kotlin.md)
+- [C# SDK](https://thinkthen.dev/sdks/csharp/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/csharp.md)
+- [R SDK](https://thinkthen.dev/sdks/r/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/r.md)
+- [Ruby SDK](https://thinkthen.dev/sdks/ruby/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/ruby.md)
+- [Rust SDK](https://thinkthen.dev/sdks/rust/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/rust.md)
+- [Swift SDK](https://thinkthen.dev/sdks/swift/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/swift.md)
+- [Zig SDK](https://thinkthen.dev/sdks/zig/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/zig.md)
+- [C SDK](https://thinkthen.dev/sdks/c/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md)
+- [C++ SDK](https://thinkthen.dev/sdks/cpp/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md)
+- [DuckDB](https://thinkthen.dev/sdks/duckdb/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/duckdb.md)
+- [SQLite](https://thinkthen.dev/sdks/sqlite/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/sqlite.md)
+- [PostgreSQL](https://thinkthen.dev/sdks/postgresql/), with its [guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md)
+
+The [command guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/bash.md) covers every option of the command, and [Where your text goes](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/service.md) covers keys and connection settings.
 
 ## Verify a download
 

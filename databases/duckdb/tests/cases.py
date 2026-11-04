@@ -14,35 +14,28 @@ def scalar(value):
     return quote(value) if isinstance(value, str) else repr(value)
 
 
-def public_question(question):
-    question = json.loads(json.dumps(question))
-    if question['function'] == 'relate':
-        for rule in question['rules']:
-            rule['name'] = rule.pop('relation')
-    elif question['function'] == 'annotate':
-        question['questions'] = {name: public_question(child) for name, child in question['questions'].items()}
-    return question
-
-
 def arguments(question):
     result = [scalar(question['question'])] if 'question' in question else []
     for key, value in question.items():
         if key in ('function', 'question'):
             continue
+        if key in ('true', 'false'):
+            key = {'true': 'yes_means', 'false': 'no_means'}[key]
         if key == 'threshold' and isinstance(value, dict):
             result.extend(bound + ' := ' + scalar(number) for bound, number in value.items())
             continue
         if key == 'questions':
-            value = public_question(question)['questions']
+            value = question['questions']
             key, value = 'toolbox', quote(json.dumps(value)) + '::JSON'
         elif key in ('choices', 'labels', 'levels', 'kinds'):
-            value = '[' + ','.join(map(scalar, value)) + ']'
+            described = {item['name']: item['description'] for item in value if isinstance(item, dict)}
+            if described:
+                result.append("descriptions := MAP {" + ','.join(quote(name) + ':' + quote(text) for name, text in described.items()) + '}')
+            value = '[' + ','.join(scalar(item['name']) if isinstance(item, dict) else scalar(item) for item in value) + ']'
         elif key == 'rules':
             rules = []
             for rule in value:
-                # The public SQL contract names the relation rule's label name.
-                fields = {('name' if name == 'relation' else name): item for name, item in rule.items()}
-                rules.append('struct_pack(' + ','.join(name + ' := ' + scalar(item) for name, item in fields.items()) + ')')
+                rules.append('struct_pack(' + ','.join(name + ' := ' + scalar(item) for name, item in rule.items()) + ')')
             value = '[' + ','.join(rules) + ']'
         else:
             value = scalar(value)
@@ -67,12 +60,8 @@ def canonical(row, function):
     for key in ('answer', 'detail', 'source'):
         if key in row:
             row[key] = compact(row[key])
-    if function == 'annotate' and row['answer'] is not None:
-        row['answer'] = {key: canonical(child, child['function']) for key, child in row['answer'].items()}
-    if function == 'rank' and 'rank' in row:
-        row['answer'] = row.pop('rank')
-    if function == 'find' and 'found' in row:
-        row['answer'] = row.pop('found')
+    if function == 'annotate' and row['detail'] is not None:
+        row['answer'] = {key: canonical(child, child['function']) for key, child in row.pop('detail').items()}
     if row.get('error_code') is not None:
         row['error'] = {key: row['error_' + key] for key in ('code', 'message', 'http_status') if row.get('error_' + key) is not None}
     if row.get('error') is not None:
@@ -86,6 +75,6 @@ def compact(value):
     if isinstance(value, dict):
         if 'function' in value and 'status' in value:
             return canonical(value, value['function'])
-        return {key: compact(child) for key, child in value.items()
+        return {{'start_offset':'start','end_offset':'end'}.get(key, key): compact(child) for key, child in value.items()
                 if child is not None and not (key == 'either' and child is False)}
     return value

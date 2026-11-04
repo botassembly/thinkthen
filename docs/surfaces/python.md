@@ -1,16 +1,12 @@
-# ThinkThen in Python
+# Python functions that answer questions about text
 
-[Where record text goes](service.md) describes the default service and connection settings.
+ThinkThen is a classifier you call like a function: it reads text, answers one bounded question, and returns a typed value. In Python, each result stands for its answer, ready for an `if`.
 
-ThinkThen judges evidence with ten functions. Use Python 3.10 or later. Install the supplied 0.2.0 wheel in a virtual environment; replace the wheel path with the supplied filename:
+Use Python 3.10 or later. Run `python3 -m venv .venv`, then `. .venv/bin/activate`, then `python -m pip install thinkthen==0.2.0`. The wheel includes the native engine. Set `THINKTHEN_API_KEY` in the environment first; the client reads it from there.
 
-Run `python3 -m venv .venv`, then `. .venv/bin/activate`, then `python -m pip install /path/to/thinkthen-0.2.0-platform.whl`.
+## Judge a file of messages
 
-The wheel includes the native engine. Once 0.2.0 is published, `python -m pip install thinkthen==0.2.0` installs it from the package index. Set `THINKTHEN_API_KEY` through your environment or secret manager before creating a normal client. Keep keys out of scripts, output and reports. `Client()` selects the default backend. `Client(backend="stub")` needs no key or network and produces deterministic synthetic answers for installation checks.
-
-A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
-
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Both calls use the stub backend. Keep every collection outcome, including answered false and failed rows.
+Put one JSON record per line in `records.jsonl`, such as `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}`.
 
 ```python
 import json
@@ -18,176 +14,394 @@ import thinkthen as tt
 
 with open("records.jsonl", encoding="utf-8") as source:
     records = [json.loads(line) for line in source if line.strip()]
-with tt.Client(backend="stub") as client:
-    array = client.decide("Does the customer request a refund?", ["first", "second"])
-    print("array", array.status.value)
-    with client.decide_stream("Does the customer request a refund?", records, evidence="/text") as rows:
-        for row in rows:
-            print(row.position, row.status.value, row.answer, row.error.message if row.error else "")
+with tt.Client() as client:
+    with client.decide_stream("Does the customer request a refund?", records, field="/text") as refund_checks:
+        for is_refund in refund_checks:
+            if is_refund.error is None:
+                print(is_refund.position, "answered", is_refund)
+            else:
+                print(is_refund.position, "failed", is_refund.error.message)
 ```
 
-`decide`, `choose`, `tag`, `score`, `find`, `recognize`, `relate` and `annotate` return one row. Their `_stream` methods take many records and return streams. `filter` and `rank` already return streams. Rows need no closing. Use a `with` block on a stream to close it, including after an early break. With `AsyncClient`, await single-record calls and use `async with` on streams.
+<!-- output: capture -->
 
-Use a normal client for meaningful judgments. Reuse one client for multiple calls and close it with a `with` block. Client options include `api_key`, `batch` and `retry=tt.RetryPolicy(...)`. Retry time values use seconds. Prefer environment keys to literal `api_key` values.
+Look for one line per record, numbered from 1, with `True` or `False` for each message. A line that is `null`, or a record with no `text`, prints `failed` with `record.missing` in its place and sends nothing to the backend. A blank record, such as `""`, only spaces or `{}`, prints `failed` with `record.empty` the same way. The stream carries on past both.
 
-## Records and rows
+[Where record text goes](service.md) covers keys, backends and connection settings.
 
-A record is a string or a JSON-compatible Python value. A list passed to a single-record call is one JSON-array record. Object records can carry a string or integer `id`. `evidence="/text"` selects a field with a JSON Pointer. Without a selector, ThinkThen uses the whole record. A pointer uses `/` between keys, `~1` for a literal slash and `~0` for a literal tilde.
+## Branch on the answer
 
-A pointer selects one value. To judge several fields together, place them under one object, such as `{"id": "a1", "evidence": {"subject": "Invoice refund", "body": "Please refund my order."}}`, and use `evidence="/evidence"`. This includes both fields and preserves the outer ID. Build the evidence object from the fields your question needs; selecting one field does not include its siblings.
-
-Rows are frozen dataclasses. Each row has `function`, `position`, `id`, `source`, `status`, `answer`, `probability`, `error` and `detail`. Positions start at 1. Compare `status` with `tt.Status.ANSWERED`, `UNSURE` or `FAILED`. An unsure or failed row has `answer=None`. An answered find row can also have `answer=None` when no line answers the question. `row.ok` means answered, so it can be true for a negative decision or a missing find result.
-
-A rank row's `answer` is its rank and `position` is its input order.
+A one-record call returns the answer for that record. `if is_refund:` reads it as yes or no.
 
 ```python
+import thinkthen as tt
+
 with tt.Client() as client:
-    row = client.decide(
+    is_refund = client.decide(
         "Does the customer request a refund?",
-        {"id": "a1", "text": "Please refund my order."},
-        evidence="/text",
+        "Where is my parcel?",
         threshold=(0.2, 0.8),
     )
-    row.raise_for_error()
-    if row.status is tt.Status.UNSURE:
-        print("unsure", row.probability)
-    else:
-        print(row.id, row.answer, row.probability)
+try:
+    print("refund queue" if is_refund else "inbox")
+except tt.Unsure:
+    print("a person reads it", is_refund.probability)
 ```
 
-A numeric decide or filter threshold yields true at or above its cut and false below it. A `(low, high)` tuple or `tt.Band(low, high)` yields false below the lower bound, unsure inside the band and true at or above the upper bound. Choose accepts the same forms and yields unsure unless its winning choice reaches the upper cut. Tag, find, recognize and relate accept only a numeric cut.
+<!-- output: capture -->
+
+`threshold=(0.2, 0.8)` is a band: no below 0.2, not sure from 0.2 up to 0.8, yes at 0.8 or above. Without a band, decide uses a cut at 0.5 and is never not sure. A number such as `threshold=0.7` sets a different cut, and `tt.Band(0.2, 0.8)` is the same as the tuple. Choose takes either form and is not sure unless its best choice reaches the upper cut. Tag, find, recognize and relate take only a number.
+
+Using an answer raises when there is no answer to use:
+
+| Raised | When |
+| --- | --- |
+| `tt.Unsure` | The probability falls inside the band. `.row` holds the result. |
+| `tt.RecordError` | ThinkThen could not judge the record. It carries `code` and its message. |
+
+Truth, equality (`==` and `!=`), printing, `str()`, iteration over tag, recognize and relate answers, and `float()` on a score all raise this way. Send not sure to a person; it is not a failure. Check `.unsure` and `.failed` before comparing an answer, or inspect `.answer` directly to read its plain value.
+
+To look without raising, read the fields: `is_refund.unsure`, `is_refund.failed`, `is_refund.ok` (answered), `is_refund.answer` (`None` unless answered), `is_refund.probability` and `is_refund.error`. Every result also has `function`, `status` (`tt.Status.ANSWERED`, `UNSURE` or `FAILED`), `position` from 1, `id` when the record has one, `source` and `detail`.
+
+A one-record call given a blank record, such as `""`, only spaces or `{}`, raises `tt.RecordError` with code `record.empty` straight away and sends nothing to the backend.
+
+Problems with the call itself raise straight away, as subclasses of `tt.ThinkThenError`: `UsageError`, `SetupError`, `InternalError` or `Cancelled`. Each carries `code`, its message and `http_status` when the service sent one.
 
 ## The ten functions
 
-This example shows call shapes. Each line invokes a separate function. Choose, tag, score, rank, recognize and relate require their named lists.
+Each example below runs on its own and uses the same support inbox. Printing an answer raises `tt.Unsure` if ThinkThen is not sure, so a not-sure answer stops the script instead of printing.
+
+### decide: answer a yes-or-no question
 
 ```python
 import thinkthen as tt
-
-text = "Morgan works for Example Group.\nPlease refund my order."
-records = [{"id": "a1", "text": text}, {"id": "a2", "text": "Where is my parcel?"}]
-record = {"id": "a1", "text": text}
-rules = [tt.RelationRule(source="person", target="organization", relation="works_for")]
-questions = tt.AnnotationQuestions({
-    "refund": tt.DecideQuestion("Does the customer request a refund?"),
-    "topic": tt.ChooseQuestion("What is the message about?", choices=["billing", "shipping", "other"]),
-    "urgency": tt.ScoreQuestion("How urgent is the request?", levels=["routine", "urgent"]),
-})
 
 with tt.Client() as client:
-    decision = client.decide("Does the customer request a refund?", record, evidence="/text")
-    choice = client.choose("What is the message about?", record, choices=["billing", "shipping", "other"], evidence="/text")
-    tags = client.tag("Which topics appear?", record, labels=["billing", "shipping"], evidence="/text")
-    score = client.score("How urgent is the request?", record, levels=["routine", "urgent"], evidence="/text")
-    found = client.find("Which line states the requested action?", record, evidence="/text")
-    names = client.recognize(record, kinds=["person", "organization"], evidence="/text")
-    relations = client.relate(record, rules=rules, evidence="/text")
-    annotation = client.annotate(questions, record, evidence="/text")
-    for result in (decision, choice, tags, score, found, names, relations, annotation):
-        result.raise_for_error()
-    assert annotation.answer is not None
-    for outcome in annotation.answer.values():
-        outcome.raise_for_error()
-    with client.filter("Does the customer request a refund?", records, evidence="/text") as rows:
-        for row in rows:
-            row.raise_for_error()
-            print(row.id, row.item, row.kept, row.status)
-    with client.rank("How urgent is the request?", records, levels=["routine", "urgent"], evidence="/text", top=5) as rows:
-        for row in rows:
-            row.raise_for_error()
-            print(row.id, row.answer)
-```
-
-| Function | Answer when answered |
-| --- | --- |
-| decide | Boolean |
-| filter | Boolean; `item` holds the original record and `kept` selects true answers |
-| choose | One choice string |
-| tag | Tuple of all matching labels, possibly empty |
-| score | Number from 0 to 1 on the ordered scale |
-| rank | Rank starting at 1, highest score first |
-| find | `Span(text, start, end)`, or `None` |
-| recognize | Tuple of names with `text`, `start`, `end`, `kind` and `probability` |
-| relate | Tuple of relations with `source`, `target`, `relation`, `probability` and `either` |
-| annotate | Mapping of question names to typed outcomes |
-
-Score and rank levels run from lowest to highest. Score uses the probability-weighted scale position. Rank reads the whole collection before returning ranked answers; `top` limits answered ranks and retains failed records. Find chooses one whole nonblank line; preserve line breaks in the evidence. Spans use Python string offsets with an inclusive start and exclusive end: `text[span.start:span.end]`. Relation rules can set `reads` to a wording and `either=True` for an undirected relation. The source and target in a returned relation are typed spans.
-
-`AnnotationQuestions` accepts per-record question objects, including filter, find, recognize and relate. Rank cannot be an annotation entry. The outer annotation can be answered while an entry is unsure or failed. Inspect each entry's status, or call its `raise_for_error()`. An entry can carry its own evidence selector; otherwise it uses the selector passed to annotate.
-
-Use `FilterQuestion` for a saved filter definition, including inside `AnnotationQuestions`; a `DecideQuestion` is a different function. The live filter row has a computed `kept` property. Its `to_dict()` export includes `status`, `answer` and original `item`, but does not include that property. Add it explicitly when your saved table needs it:
-
-```python
-refund_filter = tt.FilterQuestion("Does the customer request a refund?", evidence="/text")
-with tt.Client() as client, client.filter(refund_filter, records) as rows:
-    filter_outcomes = [{**row.to_dict(), "kept": row.kept} for row in rows]
-```
-
-The same flag can be derived from exported data as `outcome["status"] == "answered" and outcome["answer"] is True`. Keep false, unsure and failed outcomes in the saved result, then inspect their statuses before starting another call.
-
-Question classes such as `DecideQuestion`, `ChooseQuestion` and `RecognizeQuestion` let you construct a question once and reuse it. Pass that object in place of the string question; recognize and relate then take `(question, record)`. A `Toolbox` stores named question objects, and methods such as `toolbox.decide("refund")` retrieve a typed question. It does not execute shell commands.
-
-## Export results
-
-Call `row.to_dict()` to export a row, including its answer, details, source and error, to independent plain Python values. Nested dataclasses and mappings become dictionaries; tuples become lists and enums become strings. Optional fields remain present as `None`. Filter exports also include the original `item`, so use JSON-compatible records when exporting filter rows. The export contains no client credentials or raw backend responses. Probabilities keep their full Python float precision, and integer record IDs keep their exact values.
-
-```python
-import json
-import thinkthen as tt
-
-with tt.Client(backend="stub") as client:
-    row = client.choose(
-        "Which team?",
-        {"id": "a1", "text": "Please refund my order."},
-        choices=["billing", "shipping"],
-        evidence="/text",
+    is_refund = client.decide(
+        "Does the customer request a refund?",
+        "Please refund my order.",
     )
-    row.raise_for_error()
-    exported = row.to_dict()
-    text = json.dumps(exported, ensure_ascii=False)
-    assert json.loads(text) == exported
+print(is_refund)
 ```
 
-Annotation outcomes also have `.to_dict()`. The row export already converts every nested answer and detail. Preserve `row.id` when saving results or joining them to input records; rank can change row order. Use `row.position - 1` to find an input record when it has no ID.
+<!-- output: capture -->
 
-Give each question one explicit meaning. Name the evidence field, allowed values and any date rule instead of relying on phrases such as “currently available.” Reuse a question object when several calls must apply the same definition.
+### filter: keep the records that pass
 
-## Streams and batching
+```python
+import thinkthen as tt
 
-Streams take iterables of records and are iterators themselves. `.to_list()` collects and closes a stream. Filter streams also have `.kept_items()`, which yields only original kept records; inspect full rows when you need failures and unsure outcomes.
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+with tt.Client() as client:
+    refund_requests = list(
+        client.filter("Does the customer request a refund?", messages)
+    )
+for refund_request in refund_requests:
+    print(refund_request)
+```
+
+<!-- output: capture -->
+
+`filter` gives back your own records, the ones answered yes, in their input order. Not-sure records are left out. `filter` and `filter_rows` take `yes_means` and `no_means`, as decide does; see [Say what each answer means](#say-what-each-answer-means). [Keep what filter drops](#keep-what-filter-drops) shows failures and the full view.
+
+### choose: pick one option
+
+```python
+import thinkthen as tt
+
+with tt.Client() as client:
+    topic = client.choose(
+        "What is the message about?",
+        "Please refund my order.",
+        choices=["billing", "shipping", "other"],
+    )
+print(topic)
+```
+
+<!-- output: capture -->
+
+### tag: label every topic that fits
+
+```python
+import thinkthen as tt
+
+with tt.Client() as client:
+    topics = client.tag(
+        "Which topics appear?",
+        "I was charged twice and my parcel is late again.",
+        labels=["billing", "shipping"],
+    )
+print(list(topics))
+```
+
+<!-- output: capture -->
+
+The answer can be empty when no label fits.
+
+### score: place a message on your levels
+
+```python
+import thinkthen as tt
+
+with tt.Client() as client:
+    urgency = client.score(
+        "How urgent is the request?",
+        "Please refund my order.",
+        levels=["routine", "urgent"],
+    )
+print(urgency)
+```
+
+<!-- output: capture -->
+
+Levels run from lowest to highest. The answer is a number from 0 to 1 along them, weighted by each level's probability. Use it to order a queue a person reads; `urgency > 0.5` works.
+
+### rank: order records, highest first
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+with tt.Client() as client:
+    by_urgency = client.rank(
+        "How urgent is the request?",
+        messages,
+        levels=["routine", "urgent"],
+    ).to_list()
+for ranked in by_urgency:
+    print(ranked, ranked.item)
+```
+
+<!-- output: capture -->
+
+Each result's answer is its rank from 1, and `ranked.item` is your record. Rank reads the whole collection before it returns. `top=5` limits how many records get a rank; failed records still come back. `descriptions` says what each level means, as in `descriptions={"urgent": "the customer needs an answer today"}`.
+
+### find: point to the line that answers
+
+```python
+import thinkthen as tt
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+with tt.Client() as client:
+    action = client.find("Which line states the requested action?", message)
+print(action)
+```
+
+<!-- output: capture -->
+
+Find chooses one whole nonblank line, so keep the line breaks in the field. The answer is a `tt.Span` with `text`, `start` and `end`, or `None` when no line answers. Offsets count Python characters, with an inclusive start and exclusive end: `message[action.start:action.end]`.
+
+### recognize: pull out each name
+
+```python
+import thinkthen as tt
+
+with tt.Client() as client:
+    names = client.recognize(
+        "Morgan works for Example Group.",
+        kinds=["person", "organization"],
+    )
+for name in names:
+    print(name.kind, name.text)
+```
+
+<!-- output: capture -->
+
+Each name also has `start`, `end` and `probability`.
+
+### relate: link the names you allow
+
+```python
+import thinkthen as tt
+
+message = "Morgan works for Example Group.\nPlease refund my order."
+rules = [
+    tt.RelationRule(
+        source="person", target="organization", relation="works_for"
+    )
+]
+with tt.Client() as client:
+    relations = client.relate(message, rules=rules)
+for relation in relations:
+    print(relation.source.text, relation.relation, relation.target.text)
+```
+
+<!-- output: capture -->
+
+A rule can set `reads` to a wording, and `either=True` for a relation with no direction. Each relation has `source`, `target`, `relation`, `probability` and `either`. Call relate alone when you need names and relations from the same text: `relations.detail.names` holds every name it found, including names in no relation, and `relations.detail.pairs` holds every scored pair. [Relation rule fields](service.md#relation-rule-fields) lists the rule fields.
+
+### annotate: fill in a form for each record
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+questions = tt.AnnotationQuestions({
+    "refund": tt.DecideQuestion("Does the customer request a refund?"),
+    "topic": tt.ChooseQuestion(
+        "What is the message about?",
+        choices=["billing", "shipping", "other"],
+    ),
+    "urgency": tt.ScoreQuestion(
+        "How urgent is the request?",
+        levels=["routine", "urgent"],
+    ),
+})
+with tt.Client() as client:
+    forms = client.annotate_stream(questions, messages).to_list()
+for form in forms:
+    print(form["refund"], form["topic"], form["urgency"])
+```
+
+<!-- output: capture -->
+
+Each entry in a form is its own answer, with its own status, so one entry can be not sure while the others answer. Entries can be any per-record question, including filter, find, recognize and relate; rank cannot be an entry. An entry can carry its own `field`; otherwise it uses the one passed to annotate.
+
+## Say what each answer means
+
+Decide, filter and filter_rows take `yes_means` and `no_means`. Choose, tag, score and rank take `descriptions`, which maps each choice, label or level to what it means. A key that is not one of them is refused with `tt.UsageError`. The question classes take the same, as in `tt.FilterQuestion("Does the customer request a refund?", yes_means="the customer wants money back")` and `tt.RankQuestion("How urgent is the request?", levels=["routine", "urgent"], descriptions={"urgent": "the customer needs an answer today"})`.
+
+```python
+import thinkthen as tt
+
+with tt.Client() as client:
+    is_refund = client.decide(
+        "Does the customer request a refund?",
+        "I was charged twice for one invoice.",
+        yes_means="the customer wants money back, including for a duplicate charge",
+        no_means="the customer wants anything else",
+    )
+    topic = client.choose(
+        "What is the message about?",
+        "I was charged twice for one invoice.",
+        choices=["billing", "shipping", "other"],
+        descriptions={
+            "billing": "charges, invoices and refunds",
+            "shipping": "parcels and delivery",
+        },
+    )
+print(is_refund, topic)
+```
+
+<!-- output: capture -->
+
+Choices, labels and levels can also be an `Enum` class or a `Literal` type, and the answer then comes back as that type. Key `descriptions` by the Enum members, as in `{Topic.BILLING: "charges, invoices and refunds"}`. Name the field, the allowed values and any date rule in the question rather than relying on phrases such as "currently available".
+
+## Keep what filter drops
+
+When a record fails, `filter` still gives you every kept record first. Then it raises one `tt.RecordError`, whose `code` is the first failure's code and whose `rows` holds every failed result in input order.
+
+```python
+import thinkthen as tt
+
+messages: list[tt.Record] = [
+    "Please refund my order.",
+    None,
+    "I was charged twice for one invoice.",
+]
+with tt.Client() as client:
+    try:
+        for refund_request in client.filter("Does the customer request a refund?", messages):
+            print("refund queue:", refund_request)
+    except tt.RecordError as failure:
+        for failed in failure.rows:
+            print("failed:", failed.position, failed.error.code)
+```
+
+<!-- output: capture -->
+
+Look for the kept messages first, then `failed: 2 record.missing` for the `None`.
+
+`errors="coerce"` yields each failed `tt.FilterRow` in its record's place instead of raising:
+
+```python
+import thinkthen as tt
+
+messages: list[tt.Record] = [
+    "Please refund my order.",
+    None,
+    "I was charged twice for one invoice.",
+]
+with tt.Client() as client:
+    for refund_request in client.filter("Does the customer request a refund?", messages, errors="coerce"):
+        if isinstance(refund_request, tt.FilterRow):
+            print("failed:", refund_request.position)
+        else:
+            print("refund queue:", refund_request)
+```
+
+<!-- output: capture -->
+
+`filter_rows` gives one `tt.FilterRow` for every record, kept or not. Each has `item`, your record, and `kept`, which is true only for an answered yes:
+
+```python
+import thinkthen as tt
+
+messages = [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice.",
+]
+with tt.Client() as client:
+    refund_checks = client.filter_rows(
+        "Does the customer request a refund?", messages, threshold=(0.2, 0.8)
+    ).to_list()
+for refund_check in refund_checks:
+    print(refund_check.position, refund_check.status, refund_check.kept, refund_check.item)
+```
+
+<!-- output: capture -->
+
+## Records
+
+A record is a string or a JSON-compatible Python value. `field="/text"` picks one field with a JSON Pointer; without it, ThinkThen judges the whole record. A pointer uses `/` between keys, `~1` for a literal slash and `~0` for a literal tilde. To judge several fields together, put them under one object, such as `{"id": "a1", "message": {"subject": "Invoice refund", "body": "Please refund my order."}}`, and use `field="/message"`.
+
+Give object records a string or integer `id`. Each result carries it back in `.id`, so keep it to join answers to your data; `position` counts only within one call.
+
+A one-record call refuses a list, a tuple, a pandas Series or a DataFrame with a `TypeError` that names the `_stream` form. To judge a JSON array as one record, wrap it in an object, such as `{"items": [...]}`.
+
+## Judge many records at once
+
+`decide`, `choose`, `tag`, `score`, `find`, `recognize`, `relate` and `annotate` each have a `_stream` form, such as `decide_stream`, that takes many records and yields one result per record. `filter`, `filter_rows` and `rank` always take many. A stream carries on past a not-sure or failed record, so each result keeps its own status.
+
+Pass the whole collection to one stream so the engine can batch the questions. A list or tuple is a finite collection; a generator supplies records as you produce them. Use a `with` block on a stream to close it, including after an early `break`. `.to_list()` collects and closes a stream. `Client(batch=...)` sets how many records go in one request; the engine also applies request size and backend limits.
+
+To save every result, write `.to_dict()` for each one. It turns a result, with its answer, details, source and error, into plain Python values: tuples become lists and enums become strings. It holds no credentials or backend responses.
 
 ```python
 import json
 import thinkthen as tt
 
-with open("messages.jsonl", encoding="utf-8") as source:
+with open("records.jsonl", encoding="utf-8") as source:
     records = [json.loads(line) for line in source if line.strip()]
-results = []
-try:
-    with tt.Client() as client, client.annotate_stream(questions, records, evidence="/text") as rows:
-        for row in rows:
-            results.append(row)
-finally:
-    with open("outcomes.jsonl", "w", encoding="utf-8") as destination:
-        for row in results:
-            destination.write(json.dumps(row.to_dict(), ensure_ascii=False) + "\n")
-print("rows:", len(results), "IDs:", [row.id for row in results])
-for row in results:
-    row.raise_for_error()
-    if row.answer is not None:
-        for outcome in row.answer.values():
-            outcome.raise_for_error()
+with (
+    tt.Client() as client,
+    client.decide_stream("Does the customer request a refund?", records, field="/text") as refund_checks,
+    open("refund-checks.jsonl", "w", encoding="utf-8") as destination,
+):
+    for is_refund in refund_checks:
+        destination.write(json.dumps(is_refund.to_dict(), ensure_ascii=False) + "\n")
 ```
 
-The example retains every returned row and its original ID, including false, unsure and failed outcomes. It writes consumed rows even if a call-level error interrupts traversal. After saving, it raises for failed outer or nested outcomes before later work starts. Do not replace IDs with enumeration indexes or save only positive answers. JSON Lines holds one result per line, not one JSON array.
-
-Pass the whole collection to one stream so the engine can batch questions. A list or tuple supplies a finite collection. A generator supplies records incrementally. Avoid a loop of single-record calls when you can stream. `Client(batch=...)` controls packing; the engine also applies request size and backend limits. One record may require several backend questions, so batch size does not equal network request count.
-
-Top-level functions such as `tt.decide(...)` use a shared default client. They also accept `client=client`. An explicit client gives your application clear resource ownership.
+The file keeps one line per record with its `id`, including the no, not-sure and failed ones. A filter result's `.to_dict()` includes `item` but not `kept`.
 
 ## Tables and async code
 
-The optional pandas and Polars integrations add `.thinkthen` accessors to Series and DataFrames. Install `thinkthen[pandas]` or `thinkthen[polars]` when using an indexed package, or install the optional dependency alongside the supplied wheel. Import `thinkthen.pandas` or `thinkthen.polars` to register its accessor. The SDK does not read spreadsheet files itself; use your table library to load them.
+The optional pandas and Polars integrations add `.thinkthen` accessors to Series and DataFrames. Install `thinkthen[pandas]` or `thinkthen[polars]` from PyPI. Import `thinkthen.pandas` or `thinkthen.polars` to register its accessor. The SDK does not read spreadsheet files itself; use your table library to load them.
+
+The CSV file must have a `text` column.
 
 ```python
 import pandas as pd
@@ -196,54 +410,75 @@ import thinkthen.pandas
 
 frame = pd.read_csv("messages.csv")
 with tt.Client() as client:
-    outcomes = frame.thinkthen.annotate(questions, evidence="/text", client=client)
-    print(outcomes[["topic", "topic_status", "topic_probability"]])
+    is_refund = frame.thinkthen.decide(
+        "Does the customer request a refund?", field="/text", client=client
+    )
+print(frame.assign(is_refund=is_refund))
 ```
 
-DataFrame annotation returns the input columns followed by `name`, `name_status`, `name_probability` and `name_detail` for each child. pandas preserves the original index, including duplicates. Polars returns the same column layout with native column types. Existing column names must not overlap the added names. Series annotation and stream conversion retain nested outcomes. Other pandas operations return an outcome DataFrame with the original index. A filter accessor returns outcomes and a `kept` column. It does not discard input rows. Streams can also collect with `.to_pandas()` or `.to_polars()`. These collection methods retain all result rows in memory.
+Each accessor method returns one answer per input row by default, as a Series on the input's index. A Series keeps its name; a DataFrame's answers are named `answer`. pandas answers are `boolean` for decide, `string` for choose, `Float64` for score and `Int64` for rank, and Polars answers use native Polars types. Not sure is `<NA>` in pandas and `null` in Polars. `filter` returns the kept subset of your own Series or DataFrame, and leaves out the rows that are not sure. `details=True` returns the outcomes instead: pandas gives an outcome DataFrame on the input's index, and Polars gives a struct of outcomes. With `details=True`, DataFrame annotation returns the input columns followed by `name`, `name_status`, `name_probability` and `name_detail` for each question name. pandas keeps the original index, including duplicates, and Polars uses the same column layout with native column types. Existing column names must not overlap the added names. By default (`errors="raise"`), a failed row, such as a missing value, raises `RecordError` after every row is judged, and the error's `outcomes` attribute holds every outcome already paid for. `errors="coerce"` gives a failed row a missing answer instead, so it reads like not sure, and `filter` then leaves failed rows out of the subset without raising. Choose `errors="coerce"` only when your code checks for missing answers. Streams can also collect with `.to_pandas()` or `.to_polars()`. These collection methods retain all result rows in memory.
 
-`tt.AsyncClient` supports `async with`. Await its single-record methods and iterate its streams with `async for` inside `async with`. Async streams offer `.to_list()` and `.aclose()`. The async API accepts ordinary iterables and async iterables of records. `thinkthen.aio` supplies top-level async functions. Cancelling an asyncio task keeps Python's normal task cancellation behavior and closes the underlying operation.
+`tt.AsyncClient` supports `async with`. Await its one-record methods, and iterate its streams with `async for` inside `async with`. Its `filter` yields kept records the same way, then raises one `tt.RecordError` for failures. Row streams offer `.to_list()` and `.aclose()`. The async calls accept ordinary iterables and async iterables of records, and `thinkthen.aio` supplies top-level async functions. Cancelling an asyncio task keeps Python's normal cancellation behavior and closes the underlying operation.
+
+```python
+import asyncio
+import thinkthen as tt
+
+
+async def main() -> None:
+    async with tt.AsyncClient() as client:
+        is_refund = await client.decide(
+            "Does the customer request a refund?",
+            "Please refund my order.",
+        )
+    print("refund queue" if is_refund else "inbox")
+
+
+asyncio.run(main())
+```
+
+<!-- output: capture -->
 
 ## Save and load questions
 
-A saved toolbox uses named question entries. Save this as `toolbox.json`:
+Question classes such as `tt.DecideQuestion`, `tt.FilterQuestion` and `tt.ChooseQuestion` hold a question, its options and its field selector, so several calls apply the same definition. Pass one in place of the question text; recognize and relate then take `(question, record)`. A `tt.Toolbox` stores named questions and saves them as JSON. It never runs shell commands; command shell steps and runs belong to the command's own saved-run format.
+
+Save this as `toolbox.json`:
 
 ```json
-{"entries":{"ready":{"question":{"function":"filter","question":"Does the customer request a refund?","evidence":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"evidence":"/text"}}}}
+{"entries":{"refund_request":{"question":{"function":"filter","question":"Does the customer request a refund?","field":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"field":"/text"}}}}
 ```
-
-Load the entries once, select a typed question and pass the whole collection to its matching call. Saving the toolbox preserves question definitions and their evidence selectors. SDK toolboxes contain questions; command shell steps and runs belong to the command's richer saved-run format.
 
 ```python
-from pathlib import Path
 import thinkthen as tt
 
-box = tt.Toolbox.from_json(Path("toolbox.json").read_text(encoding="utf-8"))
-Path("toolbox-copy.json").write_text(box.to_json(), encoding="utf-8")
-with tt.Client(backend="stub") as client:
-    filtered = client.filter(box.filter("ready"), records).to_list()
-    for row in filtered:
-        row.raise_for_error()
-    kept = [row.item for row in filtered if row.kept]
-    rows = client.annotate_stream(
-        tt.AnnotationQuestions({"topic": box.choose("topic")}), kept
+messages: list[tt.Record] = [
+    {"id": "a1", "text": "Please refund my order."},
+    {"id": "a2", "text": "Where is my parcel?"},
+    {"id": "a3", "text": "I was charged twice for one invoice."},
+]
+toolbox = tt.Toolbox.load("toolbox.json")
+with tt.Client() as client:
+    refund_requests = list(client.filter(toolbox.filter("refund_request"), messages))
+    forms = client.annotate_stream(
+        {"topic": toolbox.choose("topic")}, refund_requests
     ).to_list()
-    for row in rows:
-        row.raise_for_error()
-        if row.answer is not None:
-            for outcome in row.answer.values():
-                outcome.raise_for_error()
-        print(row.id, row.answer)
+for form in forms:
+    print(form.id, form["topic"])
 ```
 
-`box["topic"]` retrieves a general question; selectors such as `box.choose("topic")` return the matching typed question. The example retains every filter outcome and checks failures before selecting answered true input items or starting annotation. Annotation takes `AnnotationQuestions`; use `annotate_stream` for a collection.
+<!-- output: capture -->
 
-Call `relate` or `relate_stream` alone when you need names and relations from the same evidence. `row.detail.names` contains all admitted names in the existing `Name` shape, including names with no returned relation. `row.detail.pairs` contains the scored relation pairs; `row.answer` contains the accepted relations. Do not run recognize first for that task.
+`toolbox["topic"]` returns a general question; `toolbox.choose("topic")` and its siblings return the typed one, and refuse an entry of another function. `toolbox.to_json()` gives the saved form back, with every field selector. `tt.Toolbox.from_json(text)` reads it from a string.
 
-## Failures and cancellation
+## Cancel a call
 
-A bad record or backend answer returns a failed row. It does not raise automatically, even for one record. Call `row.raise_for_error()` if your application wants a `tt.RecordError`. Call-level problems raise `tt.ThinkThenError` subclasses: `UsageError`, `SetupError`, `InternalError` or `Cancelled`. These carry `code`, their library message and optional `http_status`.
+Pass `cancel=tt.Cancel()` to a call when another thread or callback must stop it. Calling that handle's `.cancel()` stops the operation, which then raises `tt.Cancelled` with code `local.cancelled`. A stream also has `.cancel()`; close the stream afterwards. Ctrl-C during a call raises `tt.Cancelled` too. Catch it apart from record failures.
 
-Pass `cancel=tt.Cancel()` to a call when another thread or callback must interrupt it. Calling that handle's `.cancel()` stops the operation; reading it raises `tt.Cancelled` with code `local.cancelled`. A stream also has `.cancel()`. Close streams after cancellation. Ctrl-C during a native call maps to `tt.Cancelled`. Catch that exception separately from failed rows.
+## Client settings
 
-Each annotation child has its own status. For decide and filter, probability means the probability of yes, including when the answer is false. For choose, it means the chosen label's probability. Score and tag have no single probability; their distributions remain in detail.
+Reuse one client for many calls and close it with a `with` block. `tt.Client()` reads `THINKTHEN_BACKEND` when you pass no `backend`, as the command does, and otherwise uses System One. Its other options are `url`, `model`, `api_key`, `batch` and `retry=tt.RetryPolicy(...)`, whose times are in seconds. Prefer an environment key to a literal `api_key`.
+
+Top-level functions such as `tt.decide(...)` use a shared default client, and also accept `client=client`. An explicit client makes it clear who owns and closes it.
+
+For decide and filter, `probability` is the probability of yes, even on a no. For choose, it is the chosen option's probability. Score and tag have no single probability; their distributions are in `detail`.

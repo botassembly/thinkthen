@@ -1,0 +1,52 @@
+---
+title: Measure answers against your own labels
+description: Answer a question over messages you labeled by hand, count where ThinkThen agrees with you, its wrong yeses and its missed yeses, and see what a higher bar changes.
+goal: A developer or analyst leaves knowing how often the answers match their own labels, which mistakes the model makes, and how moving the bar changes them.
+reader: Someone about to rely on ThinkThen answers who can label a few dozen messages by hand
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, you know how often ThinkThen agrees with the answers you wrote yourself, and what a higher bar changes.
+
+## 1. Label some messages yourself
+
+Write one message per line, with the answer you expect in `label`. Use real messages. The more you label, the steadier the counts; this example uses six.
+
+<ExampleFile id="howto-labels-ask" file="labeled.jsonl" />
+
+## 2. Answer each message beside its label
+
+`--field /text` sends only the text, so the model never sees your label. `--into answer` adds the answer to each line:
+
+<Example id="howto-labels-ask" />
+
+Each line now holds your label and the model's answer side by side.
+
+## 3. Count the agreements and the mistakes
+
+A wrong yes is a yes where you wrote no. A missed yes is a no where you wrote yes.
+
+<Example id="howto-labels-count" />
+
+The model agrees with you on all six messages, with no wrong yeses and no missed yeses.
+
+## 4. Raise the bar and count again
+
+`--threshold 0.8` says yes only when the chance of yes is at least 0.8. The default bar is 0.5.
+
+<Example id="howto-labels-bar" />
+
+One missed yes: the model is less sure about the double charge than the new bar asks, so it is now a no. A higher bar gives fewer wrong yeses and more missed yeses.
+
+## Check the result
+
+- Pick the bar from what a mistake costs. A wrong yes in a refund queue costs a person a minute. A missed yes costs a customer their refund, so take a lower bar.
+- When neither mistake is cheap, set a low and a high bar, and send the not-sure messages to a person, as [Triage a support inbox](/how-tos/triage-a-support-inbox/) does.
+- Keep `labeled.jsonl`. Run these steps again when you change the question or the model, and compare the counts.
+
+## Next
+
+[Screen papers for a review](/how-tos/screen-papers-for-a-review/) puts two questions with bars to work on research abstracts.

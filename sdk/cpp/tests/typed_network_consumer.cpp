@@ -11,8 +11,8 @@
 
 namespace tt = thinkthen;
 
-static std::string code_name(tt::errc code) {
-    return thinkthen_code_name(static_cast<std::int32_t>(code));
+static std::string code_name(std::error_code code) {
+    return thinkthen_code_name(code.value());
 }
 
 /* The runner supplies isolated configuration, a loopback URL and the selected
@@ -41,7 +41,7 @@ static void typed_wire_projection(const tt::settings& config) {
                                   tt::text{"refund please"});
     constexpr double expected_probability = 0.7000000000000001;
     assert(row.status() == tt::status::answered && row.position() == 1);
-    assert(row.value() && *row.value() == "billing");
+    assert(row.answer() && *row.answer() == "billing");
     assert(row.probability() && *row.probability() == expected_probability);
     assert(row.failure() == nullptr);
     const auto detail = row.detail();
@@ -57,7 +57,7 @@ static void failed_stream(const tt::settings& config) {
             std::vector<tt::owned_record>{tt::owned_text{"first"}, tt::owned_text{"second"}})) {
         assert(row.status() == tt::status::failed);
         assert(row.position() == ++count);
-        assert(!row.value() && !row.probability() && row.failure());
+        assert(!row.answer() && !row.probability() && row.failure());
         assert(code_name(row.failure()->code()) == "backend.transport");
     }
     assert(count == 2);

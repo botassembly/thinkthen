@@ -91,9 +91,11 @@ fn dynamic_question_and_toolbox_admission_preserve_library_messages() {
         assert!(output.stdout.is_empty());
         assert_eq!(
             String::from_utf8(output.stderr).unwrap(),
+            // The command names the toolbox file before the library message.
             format!(
-                "thinkthen: {}: {}\n",
+                "thinkthen: {}: toolbox {}: {}\n",
                 error.code().as_str(),
+                path.display(),
                 error.message()
             ),
             "{}",

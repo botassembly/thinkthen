@@ -3,17 +3,27 @@
 import os
 from pathlib import Path
 from csharp_dependencies import prepare_project
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
 import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
+from functools import partial
 
 from release_windows_cache import check_cache
 from release_windows_sdks import environment, run, runtime_environment
+from release_native import source_inputs, stage_outputs
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def metadata_run(*arguments, cwd, env):
+    """Cargo JSON and tool identity protocols use UTF-8, not the host code page."""
+    return subprocess.run(list(arguments), cwd=cwd, env=env, check=True,
+                          capture_output=True, text=True, encoding='utf-8', errors='strict')
 
 
 def build(*arguments, cwd, env):
@@ -141,15 +151,40 @@ def main():
     output = Path(folder).resolve()
     output.mkdir(parents=True, exist_ok=True)
     native = output / 'target/x86_64-pc-windows-msvc/release/thinkthen_ffi.dll'
-    if phase == 'native':
+    if phase in ('native', 'cli'):
         channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
-        env = dict(os.environ, CARGO_TARGET_DIR=str(output / 'target'), CARGO_BUILD_JOBS='2',
+        if phase == 'cli':
+            from release_windows_host import environment as native_environment
+            env = native_environment()
+        else:
+            env = dict(os.environ)
+        env.update(CARGO_TARGET_DIR=str(output / 'target'), CARGO_BUILD_JOBS='2',
                    RUSTUP_TOOLCHAIN=channel, RUSTFLAGS='-C target-feature=+crt-static')
         env.pop('CARGO_ENCODED_RUSTFLAGS', None)
         build('rustup', 'toolchain', 'install', channel, '--profile', 'minimal', cwd=ROOT, env=env)
-        build('cargo', 'build', '--locked', '--release', '--target', 'x86_64-pc-windows-msvc',
-              '-p', 'thinkthen-ffi', cwd=ROOT, env=env)
-        assert native.is_file(), 'native producer did not create the engine'
+        if phase == 'native':
+            build('cargo', 'build', '--locked', '--release', '--target', 'x86_64-pc-windows-msvc',
+                  '-p', 'thinkthen-ffi', cwd=ROOT, env=env)
+            assert native.is_file(), 'native producer did not create the engine'
+        else:
+            build('cargo', 'fetch', '--locked', cwd=ROOT, env=env)
+            command = ['cargo', 'build', '--locked', '--release', '--target',
+                       'x86_64-pc-windows-msvc', '-p', 'thinkthen', '--bin', 'thinkthen']
+            build(*command, cwd=ROOT, env=env)
+
+            metadata = partial(metadata_run, cwd=ROOT, env=env)
+            inputs = source_inputs(ROOT, metadata)
+            inputs['source_revision'] = metadata('git', 'rev-parse', 'HEAD').stdout.strip()
+            inputs['compiler'] = metadata('rustc', '-vV').stdout
+            inputs['command'] = command
+            inputs['runtime'] = 'static-crt'
+            inputs['RUSTFLAGS'] = env['RUSTFLAGS']
+            inputs['producer_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+            source = output / 'target/x86_64-pc-windows-msvc/release'
+            stage_outputs(source, output / 'cli', inputs, ['thinkthen.exe'])
+            print(json.dumps({'binary': str(output / 'cli/thinkthen.exe'),
+                              'source': inputs['source_revision'],
+                              'sha256': hashlib.sha256((output / 'cli/thinkthen.exe').read_bytes()).hexdigest()}), flush=True)
         return
     scratch = output / phase
     scratch.mkdir()

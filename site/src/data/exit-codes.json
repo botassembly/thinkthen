@@ -1,0 +1,130 @@
+[
+  {
+    "code": 0,
+    "name": "finished",
+    "meaning": "The command finished and no row failed. Without --check, every answer ends here, including no and not sure. With --check, decide takes one text and succeeds when its answer is yes; filter succeeds when at least one of its records answers yes.",
+    "when": "Every row answered or was not sure. With --check: the single decide answer was true, filter kept at least one record, a choose answer was given, or find found a line.",
+    "example": "exit-check-yes",
+    "source": "crates/thinkthen/src/cli/execute.rs, Completion::code",
+    "next": {
+      "title": "Use the answer as an exit code",
+      "href": "/how-thinkthen-judges/#exit-codes"
+    }
+  },
+  {
+    "code": 1,
+    "name": "no",
+    "meaning": "With --check, no record answered yes and none was not sure.",
+    "when": "Only with --check on decide, filter, choose or find.",
+    "example": "exit-check-no",
+    "source": "crates/thinkthen/src/cli/execute.rs, Completion::code",
+    "next": {
+      "title": "Use the answer as an exit code",
+      "href": "/how-thinkthen-judges/#exit-codes"
+    }
+  },
+  {
+    "code": 2,
+    "name": "usage",
+    "meaning": "An argument, option, setting or key is wrong or missing, or a single text input is empty or blank. No record was judged.",
+    "when": "A usage error stops the call before any row returns.",
+    "example": "exit-usage",
+    "families": [
+      "usage"
+    ],
+    "source": "crates/thinkthen/src/cli/main.rs, family_code",
+    "next": {
+      "title": "Troubleshooting usage errors",
+      "href": "/troubleshooting/#usage-errors"
+    }
+  },
+  {
+    "code": 3,
+    "name": "not sure",
+    "meaning": "With --check, no record answered yes and at least one was not sure.",
+    "when": "Only with --check, when an answer fell inside the --low and --high band.",
+    "example": "exit-check-notsure",
+    "source": "crates/thinkthen/src/cli/execute.rs, Completion::code",
+    "next": {
+      "title": "Thresholds and the not sure band",
+      "href": "/how-thinkthen-judges/#thresholds"
+    }
+  },
+  {
+    "code": 4,
+    "name": "backend",
+    "meaning": "A backend failure stopped the call, including a transport failure on the first row before any output, or every row failed with a backend error.",
+    "when": "A call-level backend error, backend.transport on the first row before any row was written, or a finished command where every row failed with a backend error, as when the key is wrong.",
+    "example": "error-transport",
+    "families": [
+      "backend"
+    ],
+    "source": "crates/thinkthen/src/cli/main.rs, family_code",
+    "next": {
+      "title": "Troubleshooting backend errors",
+      "href": "/troubleshooting/#backend-errors"
+    },
+    "beforeOutputCodes": [
+      "backend.transport"
+    ],
+    "allRowsFailedFamilies": [
+      "backend"
+    ]
+  },
+  {
+    "code": 5,
+    "name": "local",
+    "meaning": "A local failure stopped the call: a file could not be opened or written, or a toolbox could not be read.",
+    "when": "A local or internal error raised for the call.",
+    "example": "exit-local",
+    "families": [
+      "local",
+      "internal"
+    ],
+    "source": "crates/thinkthen/src/cli/main.rs, family_code",
+    "next": {
+      "title": "Troubleshooting local errors",
+      "href": "/troubleshooting/#local-errors"
+    }
+  },
+  {
+    "code": 6,
+    "name": "failed rows",
+    "meaning": "The command finished, and one or more rows failed. The other rows still hold their answers.",
+    "when": "Any row has status failed, unless every row failed with a backend error, which exits 4. A failed row wins over every --check verdict.",
+    "example": "exit-failed-row",
+    "rowFailures": true,
+    "source": "crates/thinkthen/src/cli/execute.rs, Completion::code",
+    "next": {
+      "title": "Troubleshooting failed rows",
+      "href": "/troubleshooting/#record-errors"
+    }
+  },
+  {
+    "code": 130,
+    "name": "interrupted",
+    "meaning": "The command was interrupted with Ctrl-C or SIGINT. A second interrupt exits at once.",
+    "when": "The first interrupt cancels input, backend work and run children.",
+    "example": "exit-interrupt",
+    "codes": [
+      "local.cancelled"
+    ],
+    "source": "crates/thinkthen/src/cli/main.rs, main",
+    "next": {
+      "title": "Troubleshooting",
+      "href": "/troubleshooting/"
+    }
+  },
+  {
+    "code": 141,
+    "name": "broken pipe",
+    "meaning": "The program reading the output closed the pipe before the command finished writing.",
+    "when": "A downstream command such as head exits early. Under set -o pipefail the pipeline returns 141 too, so set -e stops the script.",
+    "example": "exit-pipe",
+    "source": "crates/thinkthen/src/cli/main.rs, main",
+    "next": {
+      "title": "Troubleshooting",
+      "href": "/troubleshooting/"
+    }
+  }
+]

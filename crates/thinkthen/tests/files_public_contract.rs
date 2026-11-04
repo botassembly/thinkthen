@@ -2,8 +2,7 @@
 //! File admission and access preserve their public codes.
 #![cfg(feature = "command")]
 
-use thinkthen::files::{FileFormat, FileJob, FileOutput};
-use thinkthen::{BackendName, Cancel, Decide, Request, Settings};
+mod support;
 
 #[test]
 fn file_boundaries_keep_argument_and_access_failures_distinct() {
@@ -12,27 +11,26 @@ fn file_boundaries_keep_argument_and_access_failures_distinct() {
     ))
     .unwrap();
     let directory = tempfile::tempdir().unwrap();
-    let client = Settings::default()
-        .with_backend(BackendName::Stub)
-        .engine(|_| None)
-        .unwrap();
-    let request = Request::new(Decide::new("Ready?").unwrap());
     for case in cases["files"].as_array().unwrap() {
-        let result = FileJob::new(
-            directory.path().join("absent.csv"),
-            FileFormat::Csv,
-            None,
-            serde_json::from_value(case["columns"].clone()).unwrap(),
-            Some("result".to_owned()),
-            FileOutput::NewFile(None),
-        )
-        .and_then(|job| job.execute(&request, &client, &Cancel::default()));
-        let expected = match case["code"].as_str().unwrap() {
-            "usage.file" => "usage.question",
-            "local.file" => "local.io",
-            other => other,
+        let mut command = support::command();
+        command
+            .args(["decide", "Ready?", "--backend", "stub", "--into", "result"])
+            .arg(directory.path().join("absent.csv"));
+        for column in case["columns"].as_array().unwrap() {
+            command.args(["--column", column.as_str().unwrap()]);
+        }
+        let output = command.output().unwrap();
+        let expected = if case["columns"].as_array().unwrap().is_empty() {
+            "usage.question"
+        } else {
+            "local.io"
         };
-        assert_eq!(result.unwrap_err().code(), expected);
+        assert_eq!(
+            support::reported(&output),
+            expected,
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
 }
 
@@ -41,11 +39,6 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
     let directory = tempfile::tempdir().unwrap();
     let input = directory.path().join("input.xlsx");
     diagnostic_workbook(&input, r#"<c r="A2" t="b"><v>SECRET-CELL</v></c>"#);
-    let client = Settings::default()
-        .with_backend(BackendName::Stub)
-        .engine(|_| None)
-        .unwrap();
-    let request = Request::new(Decide::new("Ready?").unwrap());
     for (sheet, column, parts) in [
         (
             None,
@@ -92,19 +85,26 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
             ],
         ),
     ] {
-        let error = FileJob::new(
-            input.clone(),
-            FileFormat::Xlsx,
-            sheet.map(String::from),
-            vec![column.into()],
-            Some("answer".into()),
-            FileOutput::NewFile(None),
-        )
-        .unwrap()
-        .execute(&request, &client, &Cancel::default())
-        .unwrap_err();
-        assert_eq!(error.code(), "usage.question");
-        let message = error.to_string();
+        let mut command = support::command();
+        command
+            .args([
+                "decide",
+                "Ready?",
+                "--backend",
+                "stub",
+                "--column",
+                column,
+                "--into",
+                "answer",
+            ])
+            .arg(&input);
+        if let Some(sheet) = sheet {
+            command.args(["--sheet", sheet]);
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(support::reported(&output), "usage.question");
+        let message = String::from_utf8(output.stderr).unwrap();
         for part in parts {
             assert!(message.contains(part), "missing {part:?}: {message}");
         }
@@ -116,30 +116,31 @@ fn file_diagnostics_identify_column_sheet_and_wrong_type_cell() {
 fn malformed_workbook_values_keep_cell_context_and_repair_advice() {
     let directory = tempfile::tempdir().unwrap();
     let input = directory.path().join("input.xlsx");
-    let client = Settings::default()
-        .with_backend(BackendName::Stub)
-        .engine(|_| None)
-        .unwrap();
-    let request = Request::new(Decide::new("Ready?").unwrap());
     for cell in [
         r#"<c r="A2" t="s"><v>SECRET-CELL</v></c>"#,
         r#"<c r="A2" t="s"><v>42</v></c>"#,
         r#"<c r="A2" t="inlineStr"><is><t>_xD800_</t></is></c>"#,
     ] {
         diagnostic_workbook(&input, cell);
-        let error = FileJob::new(
-            input.clone(),
-            FileFormat::Xlsx,
-            Some("Intake".into()),
-            vec!["Body".into()],
-            Some("answer".into()),
-            FileOutput::NewFile(None),
-        )
-        .unwrap()
-        .execute(&request, &client, &Cancel::default())
-        .unwrap_err();
-        assert_eq!(error.code(), "usage.question");
-        let message = error.to_string();
+        let output = support::command()
+            .args([
+                "decide",
+                "Ready?",
+                "--backend",
+                "stub",
+                "--sheet",
+                "Intake",
+                "--column",
+                "Body",
+                "--into",
+                "answer",
+            ])
+            .arg(&input)
+            .output()
+            .unwrap();
+        assert_eq!(output.status.code(), Some(2));
+        assert_eq!(support::reported(&output), "usage.question");
+        let message = String::from_utf8(output.stderr).unwrap();
         for part in [
             "sheet `Intake`",
             "row 2",

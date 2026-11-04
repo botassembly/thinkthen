@@ -41,7 +41,7 @@ def test_known_finite_inputs_keep_batches_bounded_and_invalid_neighbors_visible(
             api_key="synthetic",
             batch=batch,
         )
-        with client.decide_stream("Ready?", records, evidence="/body") as stream:
+        with client.decide_stream("Ready?", records, field="/body") as stream:
             rows = list(stream)
         assert [row.position for row in rows] == [1, 2, 3, 4, 5, 6, 7]
         assert [row.status for row in rows] == [

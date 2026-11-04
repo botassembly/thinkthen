@@ -1,11 +1,15 @@
 #include "duckdb.hpp"
+#include "duckdb/parser/parsed_data/create_table_function_info.hpp"
 #include "duckdb/common/string_util.hpp"
+#include "duckdb/common/types/column/column_data_collection.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_context_state.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/planner/operator/logical_extension_operator.hpp"
 #include "duckdb/planner/operator/logical_get.hpp"
 #include "duckdb/execution/physical_plan_generator.hpp"
+#include "duckdb/parallel/meta_pipeline.hpp"
+#include "duckdb/parallel/pipeline.hpp"
 #include "thinkthen_sql.h"
 #include "yyjson.hpp"
 #include <cstdlib>
@@ -31,7 +35,7 @@ struct ErrorOwner {
 };
 using Document = std::unique_ptr<yyjson_doc, decltype(&yyjson_doc_free)>;
 
-const uint8_t *Bytes(const string &value) { return reinterpret_cast<const uint8_t *>(value.data()); }
+const char *Bytes(const string &value) { return value.data(); }
 string Text(const thinkthen_buffer &value) { return string(reinterpret_cast<const char *>(value.data), value.len); }
 #include "values.hpp"
 Value EngineCode(int32_t number) {
@@ -41,7 +45,7 @@ Value EngineCode(int32_t number) {
     catch (const Exception &) { throw InvalidInputException("usage.abi: unknown engine error code"); }
 }
 void Checked(int32_t result, ErrorOwner &error) {
-    if (result != THINKTHEN_ERROR) return;
+    if (result >= 0) return;
     auto code = EngineCode(error.value.code).ToString();
     throw InvalidInputException("%s: %s", code.c_str(), Text(error.value.message).c_str());
 }
@@ -82,10 +86,12 @@ template <int Option> void Configure(ClientContext &context, SetScope scope, Val
     context.registered_state->GetOrCreate<Session>("thinkthen")->Configure(SettingKey(Option), value);
 }
 using QuestionOwner = std::shared_ptr<thinkthen_question>;
+struct PipelineCount { idx_t value = 1; };
 struct Binding : FunctionData {
     string function, identity, name;
-    bool json, has_name = false;
+    bool json, has_name = false, failure_rows = false;
     idx_t record;
+    std::shared_ptr<PipelineCount> pipelines = std::make_shared<PipelineCount>();
     vector<LogicalType> types;
     QuestionOwner question;
     unique_ptr<FunctionData> Copy() const override { return make_uniq<Binding>(*this); }
@@ -96,19 +102,30 @@ struct Binding : FunctionData {
 };
 struct RetainedChunk {
     DataChunk source;
+    unique_ptr<ColumnDataCollection> spilled;
     idx_t remaining = 0;
 };
-struct Invocation : LocalTableFunctionState {
+struct LocalInvocation : LocalTableFunctionState {
+    bool finalized = false;
+};
+struct Invocation : GlobalTableFunctionState {
+    idx_t remaining_pipelines = 0;
     CallOwner call{nullptr, thinkthen_sql_call_free};
     bool submitted = false, ended = false;
     uint64_t position = 0;
+    uint64_t answered = 0, unsure = 0, failed = 0, backend_failed = 0;
+    string first_code, first_message;
     std::map<uint64_t, RetainedChunk> retained;
+    ColumnDataScanState ranked_scan;
+    DataChunk ranked_chunk;
+    uint64_t ranked_chunk_end = 0;
+    idx_t ranked_chunk_index = DConstants::INVALID_INDEX;
 };
-unique_ptr<LocalTableFunctionState> Init(ExecutionContext &context, TableFunctionInitInput &input,
-                                       GlobalTableFunctionState *) {
+unique_ptr<GlobalTableFunctionState> Init(ClientContext &context, TableFunctionInitInput &input) {
     auto &bind = input.bind_data->Cast<Binding>();
-    auto client = context.client.registered_state->GetOrCreate<Session>("thinkthen")->Current();
+    auto client = context.registered_state->GetOrCreate<Session>("thinkthen")->Current();
     auto state = make_uniq<Invocation>();
+    state->remaining_pipelines = bind.pipelines->value;
     thinkthen_sql_call *call = nullptr;
     ErrorOwner error;
     thinkthen_text name{Bytes(bind.name), bind.name.size()};
@@ -116,26 +133,48 @@ unique_ptr<LocalTableFunctionState> Init(ExecutionContext &context, TableFunctio
     state->call.reset(call);
     return state;
 }
-uint8_t Interrupted(void *context) { return static_cast<ClientContext *>(context)->interrupted ? 1 : 0; }
+uint8_t Interrupted(void *context) { return static_cast<ClientContext *>(context)->IsInterrupted() ? 1 : 0; }
 void CheckInterrupt(ClientContext &context, Invocation &state) {
-    if (context.interrupted) { state.call.reset(); throw InterruptException(); }
+    if (context.IsInterrupted()) { state.call.reset(); throw InterruptException(); }
 }
 void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &state, const Binding &bind) {
     auto original = state.retained.lower_bound(row.position);
-    if (original == state.retained.end() || row.position <= original->first - original->second.source.size())
-        throw InvalidInputException("usage.abi: unknown row position");
-    auto &source = original->second.source;
-    auto offset = row.position - (original->first - source.size()) - 1;
+    if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
+    auto &retained = original->second;
+    auto size = retained.spilled ? retained.spilled->Count() : retained.source.size();
+    if (row.position <= original->first - size) throw InvalidInputException("usage.abi: unknown row position");
+    auto offset = row.position - (original->first - size) - 1;
+    auto *source = &retained.source;
+    if (retained.spilled) {
+        // Each input chunk has its own spill collection, so an arbitrary ranked
+        // position never scans the whole table. Keep only the selected chunk's
+        // pages pinned; FetchChunk would duplicate its entire string heap.
+        auto chunk_index = offset / STANDARD_VECTOR_SIZE;
+        if (state.ranked_chunk_end != original->first || state.ranked_chunk_index > chunk_index) {
+            state.ranked_scan = ColumnDataScanState{};
+            retained.spilled->InitializeScan(state.ranked_scan, ColumnDataScanProperties::ALLOW_ZERO_COPY);
+            state.ranked_chunk_end = original->first;
+            state.ranked_chunk_index = DConstants::INVALID_INDEX;
+        }
+        while (state.ranked_chunk_index == DConstants::INVALID_INDEX || state.ranked_chunk_index < chunk_index) {
+            if (!retained.spilled->Scan(state.ranked_scan, state.ranked_chunk))
+                throw InvalidInputException("usage.abi: unknown row position");
+            state.ranked_chunk_index = state.ranked_chunk_index == DConstants::INVALID_INDEX ? 0 : state.ranked_chunk_index + 1;
+        }
+        source = &state.ranked_chunk;
+        offset %= STANDARD_VECTOR_SIZE;
+    }
     idx_t col = 0;
-    for (; col < source.ColumnCount(); ++col) output.SetValue(col, index, source.GetValue(col, offset));
-    if (--original->second.remaining == 0) state.retained.erase(original);
-    auto put = [&](Value value) { output.SetValue(col++, index, value); };
-    put(Value::UBIGINT(row.position));
+    for (; col < source->ColumnCount(); ++col) output.data[col].Append(source->GetValue(col, offset));
+    if (--retained.remaining == 0) state.retained.erase(original);
+    auto put = [&](Value value) { output.data[col++].Append(value); };
+    put(Value::BIGINT(static_cast<int64_t>(row.position)));
     put(Project(LogicalType::JSON(), row.id));
+    put(bind.function == "annotate" ? AnnotationAnswer(bind.types[col], row.answer) : Project(bind.types[col], row.answer));
+    put(std::isnan(row.probability) ? Value(LogicalTypeId::DOUBLE) : Value::DOUBLE(row.probability));
     const char *status = row.status == THINKTHEN_STATUS_ANSWERED ? "answered" : row.status == THINKTHEN_STATUS_UNSURE ? "unsure" : row.status == THINKTHEN_STATUS_FAILED ? "failed" : nullptr;
     if (!status) throw InvalidInputException("usage.abi: unknown engine status");
     put(Value(status).DefaultCastAs(StatusType()));
-    put(std::isnan(row.probability) ? Value(LogicalTypeId::DOUBLE) : Value::DOUBLE(row.probability));
     if (row.error_code) put(EngineCode(row.error_code));
     else put(Value(CodeType()));
     auto error = row.error.data ? Parse(Text(row.error)) : Document(nullptr, yyjson_doc_free);
@@ -143,9 +182,37 @@ void Emit(DataChunk &output, idx_t index, const thinkthen_row &row, Invocation &
     put(Project(LogicalTypeId::VARCHAR, root ? yyjson_obj_get(root, "message") : nullptr));
     put(Project(LogicalTypeId::BIGINT, root ? yyjson_obj_get(root, "http_status") : nullptr));
     put(Project(SourceType(), row.source));
-    put(Project(bind.types[col], row.detail));
-    put(Project(bind.types[col], row.answer));
-    if (bind.function == "filter") put(Value::BOOLEAN(row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0));
+    put(Project(bind.types[col], bind.function == "annotate" ? row.answer : row.detail));
+}
+bool Select(const thinkthen_row &row, Invocation &state, const Binding &bind) {
+    if (row.status == THINKTHEN_STATUS_ANSWERED) ++state.answered;
+    else if (row.status == THINKTHEN_STATUS_UNSURE) ++state.unsure;
+    else if (row.status == THINKTHEN_STATUS_FAILED) {
+        if (++state.failed == 1) {
+            state.first_code = EngineCode(row.error_code).ToString();
+            auto error = Parse(Text(row.error));
+            auto message = yyjson_obj_get(yyjson_doc_get_root(error.get()), "message");
+            state.first_message = string(yyjson_get_str(message), yyjson_get_len(message));
+        }
+        const char *family = thinkthen_code_family(row.error_code);
+        if (family && string(family) == "backend") ++state.backend_failed;
+    }
+    bool selected = bind.function != "filter" ||
+        (row.status == THINKTHEN_STATUS_ANSWERED && row.answer_bool) ||
+        (row.status == THINKTHEN_STATUS_FAILED && bind.failure_rows);
+    if (!selected) {
+        auto original = state.retained.lower_bound(row.position);
+        if (original == state.retained.end()) throw InvalidInputException("usage.abi: unknown row position");
+        if (--original->second.remaining == 0) state.retained.erase(original);
+    }
+    return selected;
+}
+void Complete(const Invocation &state, const Binding &bind) {
+    if (state.failed && !state.answered && !state.unsure && state.backend_failed == state.failed)
+        throw InvalidInputException("%s: %s", state.first_code, state.first_message);
+    if (bind.function == "filter" && state.failed && !bind.failure_rows)
+        throw InvalidInputException("%s: %llu records failed; %s", state.first_code,
+                                    static_cast<unsigned long long>(state.failed), state.first_message);
 }
 int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row, uint32_t timeout) {
     ErrorOwner error;
@@ -155,27 +222,33 @@ int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row, uint32_t 
     return result;
 }
 OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, DataChunk &input, DataChunk &output) {
-    auto &state = data.local_state->Cast<Invocation>();
+    auto &state = data.global_state->Cast<Invocation>();
     auto &bind = data.bind_data->Cast<Binding>();
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row, count ? 0 : 20);
-        if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
+        if (result == THINKTHEN_OK) { if (Select(row.value, state, bind)) Emit(output, count++, row.value, state, bind); }
         else if (result == THINKTHEN_PENDING && count) {
-            output.SetCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT;
+            output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT;
         }
         else if (result == THINKTHEN_NEEDS_INPUT) {
-            if (state.submitted) { state.submitted = false; output.SetCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
+            if (state.submitted) { state.submitted = false; output.CheckCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
             vector<string> values;
             values.reserve(input.size());
             vector<thinkthen_sql_input> records;
             records.reserve(input.size());
             state.position += input.size();
             auto &retained = state.retained[state.position];
-            retained.source.Initialize(context.client, input.GetTypes(), input.size());
-            input.Copy(retained.source);
             retained.remaining = input.size();
+            if (bind.function == "rank") {
+                retained.spilled = make_uniq<ColumnDataCollection>(context.client, input.GetTypes());
+                if (!state.ranked_chunk.ColumnCount()) retained.spilled->InitializeScanChunk(state.ranked_chunk);
+                retained.spilled->Append(input);
+            } else {
+                retained.source.Initialize(context.client, input.GetTypes(), input.size());
+                input.Copy(retained.source);
+            }
             for (idx_t i = 0; i < input.size(); ++i) {
                 CheckInterrupt(context.client, state);
                 auto value = input.GetValue(bind.record, i);
@@ -188,33 +261,58 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
             Checked(thinkthen_sql_call_send_chunk(state.call.get(), records.data(), records.size(), &error.value), error);
             state.submitted = true;
         } else if (result == THINKTHEN_END) {
-            output.SetCardinality(count); return OperatorResultType::FINISHED;
+            if (count) { output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT; }
+            Complete(state, bind);
+            output.CheckCardinality(count); return OperatorResultType::FINISHED;
         }
     }
-    output.SetCardinality(count);
+    output.CheckCardinality(count);
     return OperatorResultType::HAVE_MORE_OUTPUT;
 }
 OperatorFinalizeResultType Final(ExecutionContext &context, TableFunctionInput &data, DataChunk &output) {
-    auto &state = data.local_state->Cast<Invocation>();
+    auto &state = data.global_state->Cast<Invocation>();
     auto &bind = data.bind_data->Cast<Binding>();
+    auto &local = data.local_state->Cast<LocalInvocation>();
+    if (!local.finalized) {
+        local.finalized = true;
+        --state.remaining_pipelines;
+    }
+    if (state.remaining_pipelines) return OperatorFinalizeResultType::FINISHED;
     if (!state.ended) { thinkthen_sql_call_end_input(state.call.get()); state.ended = true; }
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
         auto result = Poll(context.client, state, row, count ? 0 : 20);
-        if (result == THINKTHEN_OK) Emit(output, count++, row.value, state, bind);
+        if (result == THINKTHEN_OK) { if (Select(row.value, state, bind)) Emit(output, count++, row.value, state, bind); }
         else if (result == THINKTHEN_PENDING && count) {
-            output.SetCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT;
+            output.CheckCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT;
         }
         else if (result == THINKTHEN_END) {
-            output.SetCardinality(count); return OperatorFinalizeResultType::FINISHED;
+            if (count) { output.CheckCardinality(count); return OperatorFinalizeResultType::HAVE_MORE_OUTPUT; }
+            Complete(state, bind);
+            output.CheckCardinality(count); return OperatorFinalizeResultType::FINISHED;
         }
     }
-    output.SetCardinality(count);
+    output.CheckCardinality(count);
     return OperatorFinalizeResultType::HAVE_MORE_OUTPUT;
 }
 struct Sequential : PhysicalOperator {
-    Sequential(PhysicalPlan &plan, vector<LogicalType> types) : PhysicalOperator(plan, PhysicalOperatorType::EXTENSION, std::move(types), 1) {}
+    std::shared_ptr<PipelineCount> pipelines;
+    Sequential(PhysicalPlan &plan, vector<LogicalType> types, std::shared_ptr<PipelineCount> pipelines)
+        : PhysicalOperator(plan, PhysicalOperatorType::EXTENSION, std::move(types), 1), pipelines(std::move(pipelines)) {}
+    void BuildPipelines(Pipeline &current, MetaPipeline &meta) override {
+        PhysicalOperator::BuildPipelines(current, meta);
+        // UNION and outer joins may create several input pipelines. Count the
+        // actual consumers, rather than guessing from the logical query tree.
+        vector<shared_ptr<Pipeline>> consumers;
+        meta.GetPipelines(consumers, false);
+        pipelines->value = 0;
+        for (auto &pipeline : consumers) {
+            for (auto &op : meta.GetState().GetPipelineOperators(*pipeline)) {
+                if (&op.get() == this) ++pipelines->value;
+            }
+        }
+    }
     OperatorResultType Execute(ExecutionContext &, DataChunk &input, DataChunk &output, GlobalOperatorState &, OperatorState &) const override {
         output.Reference(input); return OperatorResultType::NEED_MORE_INPUT;
     }
@@ -222,14 +320,16 @@ struct Sequential : PhysicalOperator {
     OrderPreservationType OperatorOrder() const override { return OrderPreservationType::FIXED_ORDER; }
 };
 struct LogicalSequential : LogicalExtensionOperator {
-    explicit LogicalSequential(unique_ptr<LogicalOperator> child) { children.push_back(std::move(child)); }
+    std::shared_ptr<PipelineCount> pipelines;
+    explicit LogicalSequential(unique_ptr<LogicalOperator> child)
+        : pipelines(child->Cast<LogicalGet>().bind_data->Cast<Binding>().pipelines) { children.push_back(std::move(child)); }
     vector<ColumnBinding> GetColumnBindings() override { return children[0]->GetColumnBindings(); }
     void ResolveTypes() override { types = children[0]->types; }
     string GetExtensionName() const override { return "thinkthen"; }
     bool SupportSerialization() const override { return false; }
     PhysicalOperator &CreatePlan(ClientContext &, PhysicalPlanGenerator &planner) override {
         auto &child = planner.CreatePlan(*children[0]);
-        auto &op = planner.Make<Sequential>(types); op.children.push_back(child); return op;
+        auto &op = planner.Make<Sequential>(types, pipelines); op.children.push_back(child); return op;
     }
 };
 #include "binding.hpp"

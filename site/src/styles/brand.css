@@ -1,0 +1,180 @@
+/* Phosphor, the ThinkThen palette, mapped onto Starlight's tokens.
+   Green means yes, amber not sure, red no, grey broken. Those colors stay on marks. */
+:root {
+  --tt-yes: #2fd27a;
+  --tt-notsure: #ffb000;
+  --tt-no: #ff5d5d;
+  --tt-broken: #7d8a83;
+
+  --sl-color-accent-low: #12301f;
+  --sl-color-accent: #2fd27a;
+  --sl-color-accent-high: #b8f5d2;
+  --sl-color-white: #e6eee8;
+  --sl-color-gray-1: #d2ddd6;
+  --sl-color-gray-2: #b3c2b9;
+  --sl-color-gray-3: #8a9a90;
+  --sl-color-gray-4: #4f5d55;
+  --sl-color-gray-5: #2a3531;
+  --sl-color-gray-6: #18211d;
+  --sl-color-black: #0e1311;
+  --sl-font-system-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+:root[data-theme='light'] {
+  --tt-yes: #0b8046;
+  --tt-notsure: #a56300;
+  --tt-no: #c62828;
+  --tt-broken: #6b746f;
+
+  --sl-color-accent-low: #d4f1df;
+  --sl-color-accent: #0b8046;
+  --sl-color-accent-high: #064527;
+  --sl-color-white: #18201c;
+  --sl-color-gray-1: #2a3531;
+  --sl-color-gray-2: #3d4a43;
+  --sl-color-gray-3: #5d6b63;
+  --sl-color-gray-4: #9aa59e;
+  --sl-color-gray-5: #e3ded1;
+  --sl-color-gray-6: #f3f0e6;
+  --sl-color-gray-7: #f8f6ef;
+  --sl-color-black: #faf8f1;
+}
+
+/* Answer marks: always beside their word, never color alone. */
+.mark-yes { color: var(--tt-yes); }
+.mark-notsure { color: var(--tt-notsure); }
+.mark-no { color: var(--tt-no); }
+.mark-broken { color: var(--tt-broken); }
+
+/* The home page's first screen: the headline and one sentence, left-aligned and compact, so the
+   install line and the first call with its answer fit on a phone's first screen. */
+.hero { padding-block: 0.5rem 0; gap: 0; }
+.hero .stack { text-align: start; gap: 0; }
+.hero .copy { align-items: flex-start; gap: 0.6rem; }
+.hero .tagline { max-width: 40ch; }
+.hero h1 { font-size: clamp(2rem, 1.25rem + 3.2vw, 2.75rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; }
+.hero .tagline { font-size: clamp(1.0625rem, 0.95rem + 0.6vw, 1.3rem); line-height: 1.45; }
+@media (min-width: 50rem) {
+  .hero:not(:has(> img, > .hero-html)) { grid-template-columns: 1fr; padding-block: 1.5rem 0; }
+}
+[data-has-hero] .sl-markdown-content > p:first-child { margin-block-start: 0.5rem; }
+
+/* Prose: wrap long words and code instead of pushing the page sideways. */
+.sl-markdown-content { overflow-wrap: break-word; }
+.sl-markdown-content :not(pre) > code { overflow-wrap: anywhere; }
+.sl-markdown-content code .inline-flag { white-space: nowrap; overflow-wrap: normal; }
+
+/* Tables: full width, tight rows, a header rule, and their own scroll on a narrow screen. */
+.sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: var(--sl-text-sm); }
+.sl-markdown-content :is(th, td) { padding: 0.45rem 0.9rem 0.45rem 0; border-block-end: 1px solid var(--sl-color-hairline); vertical-align: top; }
+.sl-markdown-content th { border-block-end: 2px solid var(--sl-color-gray-5); background: none; text-align: start; }
+.sl-markdown-content :is(th, td):last-child { padding-inline-end: 0; }
+@media (min-width: 50rem) { .sl-markdown-content table { display: table; width: 100%; } }
+
+/* Output follows its command directly, with the exact mixed-case label. */
+.example-label { margin-block: 0 !important; text-transform: none; letter-spacing: normal; }
+
+/* Code and its copy control share one grid cell, below any file title. The
+   control stays inside the code border without creating a separate row. */
+.expressive-code .frame { display: grid; grid-template-columns: minmax(0, 1fr); }
+.expressive-code .frame > .header { grid-area: 1 / 1; }
+.expressive-code .frame > pre { grid-area: 2 / 1; min-inline-size: 0; min-block-size: 3.5rem; }
+.expressive-code .frame .copy {
+  grid-area: 2 / 1;
+  position: relative;
+  inset: auto;
+  align-self: start;
+  justify-self: end;
+  z-index: 1;
+  margin: 0.25rem;
+  padding: 0;
+  display: flex;
+}
+.expressive-code .frame .copy button { min-width: 44px; min-height: 44px; }
+.expressive-code:not(.example-label + .expressive-code) .frame:has(.copy button) pre > code { min-inline-size: 0; flex: 1 1 100%; }
+.expressive-code:not(.example-label + .expressive-code) .frame:has(.copy button) :nth-child(-n+2 of .ec-line) { grid-template-columns: auto minmax(0, 1fr); }
+.expressive-code:not(.example-label + .expressive-code) .frame:has(.copy button) :nth-child(-n+2 of .ec-line) .code {
+  min-inline-size: 0;
+  padding-inline-end: calc(3rem + var(--ec-codePadInl));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.expressive-code .frame.is-terminal:not(.has-title) .header { display: none; }
+.expressive-code .frame.is-terminal:not(.has-title) pre {
+  border-block-start: var(--ec-brdWd) solid var(--ec-brdCol);
+  border-radius: var(--ec-brdRad);
+}
+/* Soft-wrap commands at whitespace while preserving their exact copy text. */
+.expressive-code pre[data-language="sh"] > code { min-inline-size: 0; flex: 1 1 100%; }
+.expressive-code pre[data-language="sh"] .ec-line { grid-template-columns: auto minmax(0, 1fr); }
+.expressive-code pre[data-language="sh"] .ec-line .code {
+  min-inline-size: 0;
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* Keep the canonical menu names on one line, including the longest how-to.
+   The sidebar and content offset share Starlight's width token. */
+:root { --sl-sidebar-width: 22rem; }
+@media (width < 50rem) { :root { --sl-sidebar-pad-x: 0.5rem; } }
+.sidebar a, .sidebar summary { white-space: nowrap; }
+
+/* On a phone, code sets a little smaller so a 40-character line fits without scrolling. */
+@media (max-width: 50rem) {
+  .expressive-code { --ec-codeFontSize: 0.8rem; --ec-codePadInl: 0.75rem; }
+  .hero .tagline { font-size: 1rem; }
+}
+
+@media (max-width: 50rem) {
+  [data-has-hero] .content-panel:has(.hero) { padding-block: 1rem 0; }
+  [data-has-hero] .content-panel:has(.sl-markdown-content) { padding-block-start: 0.5rem; }
+  [data-has-hero] .sl-markdown-content { font-size: 0.95rem; line-height: 1.45; }
+  [data-has-hero] .sl-markdown-content > :is(p, [data-language-group]) { margin-block-start: 0.75rem; }
+}
+
+/* Complete copied examples wrap visually; source and clipboard bytes stay
+   untouched. The old excerpt/output caps do not apply to the new templates. */
+[data-example] > .expressive-code pre { max-block-size: none; }
+[data-example] > .expressive-code pre > code { min-inline-size: 0; flex: 1 1 100%; }
+[data-example] > .expressive-code .ec-line { grid-template-columns: auto minmax(0, 1fr); }
+[data-example] > .expressive-code .ec-line .code {
+  min-inline-size: 0;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+}
+
+/* Explicit page opt-ins keep later examples compact without hiding section links. */
+.sl-markdown-content .example-disclosure {
+  margin-block: 0.75rem 1.25rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.375rem;
+  padding-inline: 0.75rem;
+}
+.sl-markdown-content .example-disclosure > summary {
+  cursor: pointer;
+  min-block-size: 44px;
+  align-content: center;
+  font-size: var(--sl-text-sm);
+}
+.sl-markdown-content .example-disclosure[open] { padding-block-end: 0.75rem; }
+.sl-markdown-content .bounded-example {
+  max-block-size: 30rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin-block: 1rem;
+}
+.sl-markdown-content .bounded-example:focus-visible {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: 2px;
+}
+
+.sl-markdown-content .bounded-example.compact { max-block-size: 24rem; }
+
+/* Dense database guides keep the same 44px controls with less surrounding space. */
+.sl-markdown-content .example-disclosure.compact-spacing {
+  margin-block: 0.25rem 0.5rem;
+}
+
+.sl-markdown-content .example-disclosure.compact-spacing + .sl-heading-wrapper {
+  margin-block-start: 0.75rem;
+}

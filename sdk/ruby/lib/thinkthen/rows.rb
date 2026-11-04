@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
 module ThinkThen
+  # A single-pass Enumerable of native outcomes. Close it when external iteration stops early.
   class Rows < Enumerator
 
     def initialize(client, request, records, cancel, filter)
       @client, @filter, @items, @position = client, filter, {}, 0
       initial = records.is_a?(Array) ? Array.new(records) : nil
-      @initial = initial
-      @owner = CallOwner.new(client.send(:admit, request, initial))
+      # Filter returns the caller's own objects. Rank keeps only the engine's
+      # snapshots and returns a copy of each record read back from JSON, with String keys.
+      @initial = filter == :filter ? initial : nil
+      @invalid = Hash.new #: Hash[Integer, String]
+      @owner = CallOwner.new(client.send(:admit, request, initial, @invalid))
       @cancel = cancel
       @cancel&.attach(@owner)
       # @type var input: untyped
@@ -21,7 +25,9 @@ module ThinkThen
       # Only the core initializer crosses this boundary; produce stays checked.
       # @type var initializer: untyped
       initializer = Enumerator.instance_method(:initialize)
-      initializer.bind_call(self) { |yielder| produce(yielder) }
+      initializer.bind_call(self, initial ? initial.size : records.respond_to?(:size) ? records.size : nil) { |yielder| produce(yielder) }
+      # The block above captures this scope; drop the admitted copy it no longer needs.
+      initial = nil
     rescue Exception
       close if @owner
       raise
@@ -60,6 +66,7 @@ module ThinkThen
         @reader = nil
         @initial = nil
         @items.clear
+        @invalid.clear
         @records = nil
       end
       @client.send(:forget, self)
@@ -101,7 +108,7 @@ module ThinkThen
             @owner.cancel
             begin
               Native.checked { |error| Native.thinkthen_cancelled_error(error) }
-            rescue Cancelled => error
+            rescue CancelledError => error
               raise error, cause: interruption
             end
           end
@@ -117,8 +124,10 @@ module ThinkThen
         begin
           status = blocking_next(native)
           if status == 0
-            row = Row.decode(native)
-            if @filter
+            row = explain(Row.decode(native))
+            if @filter == :rank
+              return RankRow.new(item: Native.original(native), row: row)
+            elsif @filter
               item = @initial ? @initial[row.position - 1] : @items.delete(row.position)
               return FilterRow.new(item: item, row: row)
             end
@@ -148,6 +157,15 @@ module ThinkThen
       end
     end
 
+    # The engine reports only record.invalid; name the record's class and reason.
+    def explain(row)
+      reason = @invalid.delete(row.position)
+      return row unless reason && row.failed? && row.error.code == :"record.invalid"
+      error = row.error
+      row.with(error: RowError.new(code: error.code, message: "record #{row.position}: #{reason}", http_status: error.http_status,
+                                   raw_code: error.raw_code, raw_name: error.raw_name))
+    end
+
     def supply_input
       record = begin
         # Caller input may block in Ruby; native storage stays protected outside it.
@@ -157,8 +175,9 @@ module ThinkThen
         return
       end
       @position += 1
-      @items[@position] = record if @filter
-      kind, value = Native.record_value(record)
+      @items[@position] = record if @filter == :filter
+      kind, value, reason = Native.record_value(record)
+      @invalid[@position] = reason if reason
       if value.nil?
         @owner.use do |pointer|
           Native.checked do |error|

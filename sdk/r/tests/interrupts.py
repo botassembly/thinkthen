@@ -25,7 +25,7 @@ def check(root, scratch, environment):
     interrupted <- tryCatch(invoke(case$request$records, case$request$question, client),
       thinkthen_cancelled_error=identity)
     stopifnot(inherits(interrupted, "thinkthen_cancelled_error"), interrupted$code == "local.cancelled")
-    stopifnot(tt_decide("alpha", "Ready?", client=tt_client(backend="stub"))$status == "answered")
+    stopifnot(tt_decide_rows("alpha", "Ready?", client=tt_client(backend="stub"))$status == "answered")
     cat("interrupted and still usable\\n")''')
     for function, case in held_cases.items():
         seen, closed = threading.Event(), threading.Event()

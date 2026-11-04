@@ -1,0 +1,3 @@
+s1 include
+s2 exclude
+s3 include

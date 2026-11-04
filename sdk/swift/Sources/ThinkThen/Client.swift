@@ -1,14 +1,25 @@
 import Foundation
 import Synchronization
 
+/// The typed Client value exchanged with the engine.
 public final class Client: Sendable {
   private let native: Native
   private let handle: Mutex<NativeHandle>
-  public init(_ settings: Settings = .init()) throws(ThinkThenError) {
+  /// Create this value from its typed fields.
+  public init(_ settings: Settings) throws {
     do {
       native = try Native.loaded.get()
       handle = Mutex(NativeHandle(pointer: try native.openClient(settings)))
     } catch { throw typedError(error) }
+  }
+  /// Open a client, reading THINKTHEN_BACKEND when no backend is passed.
+  public convenience init(
+    backend: Backend? = nil, url: URL? = nil, model: String? = nil,
+    apiKey: APIKey? = nil, batch: Int? = nil, retry: Retry? = nil
+  ) throws {
+    try self.init(
+      Settings(backend: backend, url: url, model: model, apiKey: apiKey, batch: batch, retry: retry)
+    )
   }
   func open(_ request: Data, name: String?, records: [Record]?) throws -> NativeHandle {
     try handle.withLock {
@@ -27,13 +38,16 @@ public final class Client: Sendable {
         decode: decode)
     }
   }
-  func single<E: Sendable>(_ rows: Rows<E>) async throws(ThinkThenError) -> E {
+  func single<Q: FunctionShape>(_ rows: Rows<Row<Q>>) async throws -> Row<Q> {
     let iterator = rows.makeAsyncIterator()
     guard let first = try await iterator.next() else {
-      throw .contract(message: "Engine returned no single row")
+      throw ThinkThenError.contract(message: "Engine returned no single row")
     }
     guard try await iterator.next() == nil else {
-      throw .contract(message: "Engine returned multiple single rows")
+      throw ThinkThenError.contract(message: "Engine returned multiple single rows")
+    }
+    if let failure = first.failure, failure.code == .recordEmpty {
+      throw ThinkThenError.engine(failure)
     }
     return first
   }

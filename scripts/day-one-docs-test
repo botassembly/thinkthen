@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Check day-one public documentation offline; optionally check a private baseline."""
+import io
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+if len(sys.argv) == 3 and sys.argv[1] == '--baseline':
+    with tempfile.TemporaryDirectory(prefix='thinkthen-docs-baseline-') as folder:
+        archive = subprocess.check_output(['git', 'archive', sys.argv[2]], cwd=ROOT)
+        tarfile.open(fileobj=io.BytesIO(archive)).extractall(folder, filter='data')
+        subprocess.run([sys.executable, __file__, '--root', folder], check=True)
+    sys.exit(0)
+if len(sys.argv) == 3 and sys.argv[1] == '--root':
+    ROOT = Path(sys.argv[2])
+sys.path.insert(0, str(ROOT / 'scripts'))
+from release_install import release_note
+
+errors = []
+readme = (ROOT / 'README.md').read_text()
+for guide in sorted((ROOT / 'docs/surfaces').glob('*.md')):
+    if f'docs/surfaces/{guide.name}' not in readme:
+        errors.append(f'guide missing from README: {guide.name}')
+    text = guide.read_text()
+    for pattern in (r'\bsupplied\b', r'go mod edit -replace', r'\.package\(path:', r'pip install /', r'npm install /', r'gem install --local'):
+        if re.search(pattern, text, re.I):
+            errors.append(f'{guide.name}: outdated local-package instruction: {pattern}')
+for path in ('sdk/java/PACKAGING.md', 'sdk/csharp/PACKAGING.md', 'crates/thinkthen-proxy/README.md'):
+    if (ROOT / path).exists():
+        errors.append(f'internal design/packaging note remains public: {path}')
+ffi = (ROOT / 'crates/thinkthen-ffi/README.md').read_text()
+if 'sdk/c/README.md' not in ffi or re.search(r'\bthinkthen_(?:client_open|call_open|send_text|next)\b', ffi):
+    errors.append('C ABI README must link to the real C interface')
+for language, entry in (('java', 'public static void main('), ('kotlin', 'fun main() = runBlocking')):
+    text = (ROOT / f'sdk/{language}/README.md').read_text()
+    if entry not in text:
+        errors.append(f'{language}: quickstart has no runnable entry point')
+for folder in (ROOT / 'sdk').iterdir():
+    path = folder / 'README.md'
+    if path.exists() and 'docs/surfaces/' not in path.read_text():
+        errors.append(f'{folder.name}: SDK README has no surface-guide link')
+note = release_note('0.2.0', {})
+headings = re.findall(r'^## (.+)$', note, re.M)
+if headings[:3] != ['Install', 'For 0.1 users', 'Known limits']:
+    errors.append(f'release section order: {headings[:3]}')
+for command in ('--model', '--format', '--name', '--verbose', '--quiet', 'completions', 'THINKTHEN_BACKEND'):
+    if command not in (ROOT / 'docs/surfaces/bash.md').read_text():
+        errors.append(f'CLI option missing: {command}')
+if errors:
+    raise SystemExit('\n'.join(errors))
+print('Day-one public documentation: PASS')

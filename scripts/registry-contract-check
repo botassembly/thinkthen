@@ -127,7 +127,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-registry-contract-') as tempo
             'version': version(), 'platform': target, 'revision': revision}))
         runtime = {name: {'runtime': value} for name, value in
                    dict(command='operating system', swift=FLOORS['runtimes']['swift'], r='R 4.6',
-                        sqlite='SQLite >=3.41 with extension loading', duckdb='DuckDB 1.4.3').items()}
+                        sqlite='SQLite >=3.41 with extension loading', duckdb='DuckDB ' + __import__('duckdb_release').VERSION).items()}
         if target.startswith('linux-'):
             runtime['postgres'] = {'runtime': 'PostgreSQL18 ' + target}
         if target != 'windows-x86_64':

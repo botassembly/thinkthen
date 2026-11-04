@@ -2,6 +2,7 @@
 #[cfg(all(feature = "fixture-routing", not(debug_assertions)))]
 compile_error!("fixture routing cannot enter a production release build");
 mod builders;
+mod direct;
 mod events;
 #[cfg(test)]
 mod events_tests;
@@ -11,11 +12,14 @@ mod memory;
 #[cfg(test)]
 mod memory_prefix_tests;
 mod original;
+#[cfg(test)]
+mod reuse_tests;
 mod row;
 mod single;
 mod sql;
 mod values;
 pub use builders::*;
+pub use direct::*;
 pub use events::*;
 pub use exports::*;
 pub use finite::*;
@@ -36,6 +40,8 @@ mod fixture_routes;
 pub use fixture::*;
 
 fn engine(settings: thinkthen::Settings) -> Result<thinkthen::Engine, thinkthen::Error> {
+    let backend = settings.resolve_backend(|name| std::env::var(name).ok())?;
+    let settings = settings.with_backend(backend);
     #[cfg(all(feature = "fixture-routing", debug_assertions))]
     let settings = if let Some(url) = fixture_routes::route(settings.backend().as_str()) {
         settings.url(url)

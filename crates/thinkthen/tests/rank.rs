@@ -40,7 +40,7 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
         let engine = settings(&server).engine(|_| None).unwrap();
         let mut question = Rank::new("Priority?", ["low", "high"])
             .unwrap()
-            .evidence("/body".parse().unwrap());
+            .field("/body".parse().unwrap());
         if let Some(top) = top {
             question = question.top(NonZeroUsize::new(top).unwrap()).unwrap();
         }
@@ -80,8 +80,17 @@ fn rank_orders_stably_with_failures_last_and_limits_successful_rows() {
                 (inputs.iter().position(|input| *input == id).unwrap() + 1) as u64
             );
             assert!(row.probability().is_none());
+            let original = row.record().expect("rank rows retain original input");
+            assert_eq!(original.id(), row.id());
+            let (kind, bytes) = original.original();
+            assert_eq!(kind, thinkthen::records::RecordKind::Json);
+            assert_eq!(
+                serde_json::from_slice::<serde_json::Value>(bytes).unwrap(),
+                json!({"id":id,"body":id})
+            );
+            assert!(serde_json::to_value(row).unwrap().get("original").is_none());
             if index < length {
-                assert_eq!(row.clone().into_result().unwrap().unwrap().get(), index + 1);
+                assert_eq!(row.clone().into_answer().unwrap().get(), index + 1);
             } else {
                 assert_eq!(row.error().unwrap().code().as_str(), "backend.reply");
             }
@@ -171,4 +180,51 @@ fn zero_top_is_refused_at_json_admission_without_sending() {
     let error = Request::from_json(r#"{"question":{"function":"rank","question":"Priority?","levels":["low","high"],"top":0},"records":["evidence"]}"#).unwrap_err();
     assert_eq!(error.code().as_str(), "usage.question");
     assert_eq!(server.count(), 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn ranked_top_one_retains_bounded_original_storage_for_a_long_stream() {
+    fn resident_bytes() -> usize {
+        let status = std::fs::read_to_string("/proc/self/status").unwrap();
+        status
+            .lines()
+            .find_map(|line| {
+                line.strip_prefix("VmRSS:")
+                    .and_then(|value| value.split_whitespace().next())
+                    .map(|value| value.parse::<usize>().unwrap() * 1024)
+            })
+            .unwrap()
+    }
+    let samples = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let observed = Arc::clone(&samples);
+    let engine = Settings::default()
+        .with_backend(thinkthen::BackendName::Stub)
+        .batch("1".parse().unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let question = Rank::new("Priority?", ["low", "high"])
+        .unwrap()
+        .top(NonZeroUsize::new(1).unwrap())
+        .unwrap();
+    let records = (0..8192).map(move |index| {
+        if index >= 1024 && index % 512 == 0 {
+            observed.lock().unwrap().push(resident_bytes());
+        }
+        thinkthen::records::Record::text(format!("{index}:{}", "x".repeat(32768)))
+    });
+    let rows = engine
+        .rows(&question, records)
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert!(rows[0].record().unwrap().original().1.len() >= 32768);
+    let samples = samples.lock().unwrap();
+    let first = samples[0];
+    let maximum = *samples.iter().max().unwrap();
+    assert!(
+        maximum.saturating_sub(first) < 64 * 1024 * 1024,
+        "top one retained more than 64 MiB while consuming 256 MiB: first={first}, peak={maximum}"
+    );
 }

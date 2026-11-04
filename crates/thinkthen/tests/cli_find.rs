@@ -22,7 +22,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "answer\n",
             0,
         ),
-        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "\n", 0),
+        (json!({"u1":0.2,"none":0.8}), "answer", vec![], "", 0),
         (
             json!({"u1":0.6,"none":0.4}),
             "answer",
@@ -30,7 +30,6 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             "unsure\n",
             0,
         ),
-        (json!({"u1":0.8,"none":0.2}), " \n", vec![], "\n", 0),
         (
             json!({"u1":0.8,"none":0.2}),
             "answer",
@@ -42,7 +41,7 @@ fn prints_found_text_null_and_unsure_with_their_exit_codes() {
             json!({"u1":0.2,"none":0.8}),
             "answer",
             vec!["--check"],
-            "\n",
+            "",
             1,
         ),
         (
@@ -90,13 +89,7 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
             .unwrap();
     let mut child = support::command()
         .args([
-            "find",
-            "Which?",
-            "--from",
-            "jsonl",
-            "--json",
-            "--evidence",
-            "/body",
+            "find", "Which?", "--from", "jsonl", "--json", "--field", "/body",
         ])
         .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
@@ -112,7 +105,7 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
         .write_all(b"{\"id\":\"x\",\"body\":\"answer\"}\n{\"id\":\"empty\",\"body\":\"\"}\n")
         .unwrap();
     let output = child.wait_with_output().unwrap();
-    assert!(output.status.success());
+    assert_eq!(output.status.code(), Some(6));
     let rows: Vec<Value> = String::from_utf8(output.stdout)
         .unwrap()
         .lines()
@@ -128,6 +121,6 @@ fn jsonl_selects_each_text_and_details_include_offsets() {
     );
     assert_eq!(
         rows[1],
-        json!({"function":"find","position":2,"id":"empty","status":"answered","answer":null})
+        json!({"function":"find","position":2,"id":"empty","status":"failed","error":{"code":"record.empty","message":"the record is empty"}})
     );
 }

@@ -1,0 +1,4 @@
+[{"msg_id":1,"is_refund":true,"status":"answered","probability":0.99}]
+[{"msg_id":1}]
+[]
+[]

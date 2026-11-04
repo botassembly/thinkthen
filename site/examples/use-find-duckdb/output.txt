@@ -1,0 +1,1 @@
+[{"note_id":1,"requested_action":"Please refund my order.","start_offset":32,"end_offset":55,"status":"answered"}]

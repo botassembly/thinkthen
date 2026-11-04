@@ -16,14 +16,14 @@ int main(void) {
     assert(thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &error) == THINKTHEN_OK);
     assert(thinkthen_client_open(settings, &client, &error) == THINKTHEN_OK);
     thinkthen_settings_free(settings);
-    assert(thinkthen_question_new(THINKTHEN_FUNCTION_FILTER, (const uint8_t *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
+    assert(thinkthen_question_new(THINKTHEN_FUNCTION_FILTER, (const char *)"Ready?", 6, &question, &error) == THINKTHEN_OK);
     assert(thinkthen_question_set_band(question, 0.001, 1, &error) == THINKTHEN_OK);
     const char json[] = "{\"id\":{\"invalid\":true},\"body\":\"original\"}";
-    const uint8_t invalid_utf8[] = {0xff};
+    const char invalid_utf8[] = {(char)0xff};
     thinkthen_record_input records[] = {
-        {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_TEXT, .data = (const uint8_t *)"evidence", .len = 8},
+        {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_TEXT, .data = (const char *)"evidence", .len = 8},
         {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_MISSING},
-        {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_JSON, .data = (const uint8_t *)json, .len = sizeof json - 1},
+        {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_JSON, .data = (const char *)json, .len = sizeof json - 1},
         {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_INVALID},
         {.struct_size = sizeof(thinkthen_record_input), .kind = THINKTHEN_RECORD_TEXT, .data = invalid_utf8, .len = 1},
     };
@@ -52,7 +52,7 @@ int main(void) {
         for (size_t j = 0; j < sizeof outputs[i].suffix; ++j) assert(outputs[i].suffix[j] == 0xa5);
         const uint32_t size = outputs[i].row.struct_size;
         outputs[i].row.struct_size = sizeof(uint32_t);
-        assert(thinkthen_row_original(&outputs[i].row, &original, &error) == THINKTHEN_ERROR);
+        assert(thinkthen_row_original(&outputs[i].row, &original, &error) < 0);
         assert(error.code == THINKTHEN_CODE_USAGE_ABI);
         thinkthen_error_free(&error);
         outputs[i].row.struct_size = size;

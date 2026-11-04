@@ -48,7 +48,7 @@ if $PROGRAM_NAME == __FILE__
       end
       begin
         error = trace.enable do
-          raises(action == "interrupt" ? ThinkThen::Cancelled : action == "timeout" ? Timeout::Error : RuntimeError) do
+          raises(action == "interrupt" ? ThinkThen::CancelledError : action == "timeout" ? Timeout::Error : RuntimeError) do
             stream.to_a
           end
         end

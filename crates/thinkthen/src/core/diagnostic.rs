@@ -84,8 +84,9 @@ pub(crate) fn expected(field: &str, expected: &str, value: &serde_json::Value) -
     requirement(field, expected, &description)
 }
 
-/// Suggest a canonical name without disclosing a caller's string value.
-pub(crate) fn unknown_value(field: &str, value: &str, accepted: &[&str]) -> String {
+/// Describe a typed option value whose schema carries no credential or field.
+pub(crate) fn unknown_option_value(field: &str, value: &str, accepted: &[&str]) -> String {
+    let received = format!("unknown value {:?}", preview_name(value));
     let choices = accepted
         .iter()
         .map(|name| format!("`{name}`"))
@@ -95,7 +96,7 @@ pub(crate) fn unknown_value(field: &str, value: &str, accepted: &[&str]) -> Stri
     requirement(
         field,
         &format!("one of {choices}"),
-        &format!("an unknown string (contents redacted){suggestion}"),
+        &format!("{received}{suggestion}"),
     )
 }
 
@@ -205,7 +206,7 @@ fields!(
     reads,
     either,
     name,
-    evidence
+    field
 );
 
 // The element visitor preserves the failing index even under internally tagged
@@ -250,14 +251,14 @@ fn sequence<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
             })
         })
 }
-macro_rules! string_fields {
+macro_rules! domain_fields {
     ($($field:ident),+ $(,)?) => {$(
-        pub(crate) fn $field<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
-            sequence(deserializer, stringify!($field), "an array of strings")
+        pub(crate) fn $field<'de, D: Deserializer<'de>, T: Deserialize<'de>>(deserializer: D) -> Result<Vec<T>, D::Error> {
+            sequence(deserializer, stringify!($field), "an array of answer names")
         }
     )+};
 }
-string_fields!(choices, labels, levels, kinds);
+domain_fields!(choices, labels, levels, kinds);
 
 pub(crate) fn rules<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
     deserializer: D,

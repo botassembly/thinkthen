@@ -1,0 +1,119 @@
+# Getting ThinkThen running. Sources: product (the help, the install channels), cases (the tutorial tasks).
+- id: what-is-thinkthen
+  question: What is ThinkThen?
+  source: product
+  frequency: first question for every new reader; the home page answers it
+  rank: 1
+  page: /
+  reference: /functions/
+- id: install-thinkthen
+  question: How do I install ThinkThen?
+  source: product
+  frequency: required step for every reader; four install channels
+  rank: 2
+  page: /install/
+  reference: /reference/commands/completions/
+- id: first-question
+  question: How do I ask ThinkThen a yes-or-no question about text?
+  source: product
+  frequency: the first task in every guide; decide is the core function
+  rank: 3
+  page: /quickstart/
+  reference: /reference/commands/decide/
+- id: real-model
+  question: How do I choose a backend and supply its key?
+  source: product
+  frequency: every first run
+  rank: 5
+  page: /install/backends/
+  reference: /reference/options/
+- id: which-function
+  question: Which ThinkThen function should I use?
+  source: product
+  frequency: ten functions; every new task starts with this choice
+  rank: 6
+  page: /functions/
+  reference: /reference/rows/
+- id: check-version
+  question: How do I check which ThinkThen version is installed?
+  source: product
+  frequency: every install and every bug report
+  rank: 20
+  page: /install/
+  reference: /reference/
+- id: completions
+  question: How do I get shell completions for thinkthen?
+  source: product
+  frequency: one command in the help; rare
+  rank: 55
+  page: /install/
+  reference: /reference/commands/completions/
+- id: env-settings
+  question: How do I set ThinkThen options with environment variables?
+  source: product
+  frequency: every THINKTHEN_* variable in the help; scripts and CI jobs need it
+  rank: 30
+  page: /reference/environment/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Environment variables
+  reference_title: Command options
+  reader: A developer configuring thinkthen in a script or CI job
+  answer: |
+    Set the `THINKTHEN_*` variable that matches the option, such as `THINKTHEN_FIELD=/text` for `--field /text` or `THINKTHEN_JSON=true` for `--json`, and ThinkThen {version} reads it for every command in that shell. A flag given on the command line wins over its variable.
+  why: |
+    Each option's help line names its variable in brackets, such as `--backend <backend> Backend name [THINKTHEN_BACKEND; default: systemone]`. ThinkThen reads the variable when the flag is absent. Switch options such as `--json` take `true` or `false` in their variable.
+  limits: |
+    Backend keys are not options: `THINKTHEN_API_KEY` and `OPENAI_API_KEY` are read by their backend only. List options such as `--choice` take a JSON array in their variable, such as `THINKTHEN_CHOICES='["billing","shipping"]'`. `--url` has no variable; the systemone backend reads `THINKTHEN_BASE_URL` instead.
+  examples:
+    - id: ans-env-settings
+      says: "Set the field pointer and JSON output once, then run a command without `--field`:"
+  explain:
+    id: The record's id, from JSON Lines read with the `/text` pointer that `THINKTHEN_FIELD` set.
+    answer: The answer, in the JSON row that `THINKTHEN_JSON` turned on.
+- id: shell-variable
+  question: How do I store a ThinkThen answer in a shell variable?
+  source: cases
+  frequency: every shell script that branches on an answer needs it
+  rank: 60
+  page: /articles/shell-branches-on-meaning/
+  reference: /reference/commands/decide/
+  answers_page: true
+  page_title: Let your shell branch on meaning
+  reference_title: thinkthen decide
+  reader: A shell scripter who wants the answer as a value, not an exit code
+  answer: |
+    Capture the command's text output with `$(...)`. In text mode ThinkThen {version} prints the answer and nothing else, such as `true`, `false` or `unsure`, so the variable holds exactly the answer.
+  why: |
+    Text output is the default. For decide it is one line per record holding `true`, `false` or `unsure`, and notices and errors go to standard error, so `$(...)` captures only the answer.
+  limits: |
+    A failed record prints nothing on standard output, and its error goes to standard error. The command exits 6, or 4 when the backend failed and no record was answered, so check `$?` or compare against all three values. Empty or blank input exits 2 before any request. For a plain yes-or-no branch, `--check` and the exit code are shorter. The model judges each message on its own, so handle `false` and `unsure` too.
+  examples:
+    - id: ans-shell-variable
+      says: "Capture the answer in `$answer` and branch on it:"
+  explain:
+    "answer is:": "The captured text: the answer and nothing else."
+    refunds queue: The branch taken because the answer was `true`.
+- id: stdin-and-file
+  question: How do I read standard input and a file in one ThinkThen command?
+  source: product
+  frequency: FILE arguments accept `-` for standard input
+  rank: 64
+  page: /your-data/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Your data
+  reference_title: Command options
+  reader: A shell user combining saved records with records from a pipe
+  answer: |
+    Name the file and `-` as arguments. ThinkThen {version} reads them in the order given, and `-` stands for standard input, so one command judges the saved records and the piped ones.
+  why: |
+    Every function takes several FILE arguments and reads them in order. `position` counts records across all of them, so the rows of `saved.txt` come first and the piped record follows.
+  limits: |
+    `-` may appear once. Every input uses the same framing, here `--from lines`. The model judges each line on its own words, whichever input it came from.
+  examples:
+    - id: ans-stdin-and-file
+      says: "Judge the two lines of `saved.txt` and one piped line in one command:"
+  explain:
+    position: "The record's place across both inputs: `saved.txt` first, then the piped line."
+    answer: Yes or no for each line.

@@ -1,25 +1,71 @@
-# ThinkThen for C#
+# C# SDK
 
-Use .NET 10 and run `dotnet add package Botassembly.ThinkThen`.
+The C# SDK asks questions about text from your .NET code. Its first function, decide, answers a yes-or-no question with yes (`True`), no (`False`) or not sure.
 
-The example uses the stub backend and needs no key or service.
+Install it with .NET 10:
+
+```sh
+dotnet add package Botassembly.ThinkThen --version 0.2.0
+```
+
+It carries its own engine. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+
+## Ask a question
+
+Ask whether a support message requests a refund:
 
 ```csharp
 using ThinkThen;
 
-await using var client = new ThinkThenClient(new ThinkThenOptions { Backend = Backend.Stub });
-using var stop = new CancellationTokenSource();
-var row = await client.DecideAsync(
-    "Does the customer ask for money back?",
-    "Please refund my order.",
-    cancellationToken: stop.Token);
-
-if (row is Answered<bool, NoDetail> answered)
-    Console.WriteLine(answered.Answer);
-else if (row is Failed<bool, NoDetail> failed)
-    Console.Error.WriteLine($"{failed.Error.Code}: {failed.Error.Message}");
-else
-    Console.WriteLine("Not sure");
+await using var client = new ThinkThenClient();
+bool isRefund = await client.DecideAsync(
+    "Does the customer request a refund?",
+    "Please refund my order.");
+Console.WriteLine(isRefund);
 ```
 
-[API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/csharp/API.md).
+Output:
+
+```text
+True
+```
+
+## Not sure and failures
+
+Set a low and a high bar, and decide is not sure between them. Turning the result into a `bool` throws `UnsureException` when decide is not sure, and `ThinkThenException` when ThinkThen could not judge the message, so neither one passes for `false`. Send both to a person.
+
+```csharp
+using ThinkThen;
+
+await using var client = new ThinkThenClient();
+var bars = new DecideOptions
+{
+    Threshold = Threshold.Band(0.2, 0.8),
+};
+try
+{
+    bool isRefund = await client.DecideAsync(
+        "Does the customer request a refund?",
+        "I was charged twice for one invoice.", bars);
+    Console.WriteLine(isRefund);
+}
+catch (UnsureException unsure)
+{
+    Console.WriteLine(
+        $"Not sure ({unsure.Probability}): ask a person.");
+}
+catch (ThinkThenException failure)
+{
+    Console.WriteLine($"{failure.Code}: {failure.Message}");
+}
+```
+
+Output:
+
+```text
+Not sure (0.7): ask a person.
+```
+
+## Next
+
+The [C# SDK page](https://thinkthen.dev/sdks/csharp/) shows all ten functions. The [C# guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/csharp.md) and the [API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/csharp/API.md) cover every option.

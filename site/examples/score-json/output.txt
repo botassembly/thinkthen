@@ -1,0 +1,17 @@
+{
+  "function": "score",
+  "position": 1,
+  "source": {
+    "question_identity": "d5a7a9344256810949c74504b6f6ac9c282a362d25be2acd7bd1ba7bd4eef15b",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "answered",
+  "answer": 0.05,
+  "detail": {
+    "levels": [
+      0.95,
+      0.05
+    ]
+  }
+}

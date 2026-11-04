@@ -23,6 +23,7 @@ with tempfile.TemporaryDirectory(prefix='gate-report-') as temporary:
             target = scripts / source.name
             target.write_text('#!/bin/sh\nexit 0\n')
             target.chmod(0o755)
+    shutil.copy2(ROOT / 'bash-guide', scripts / 'bash-guide')
     if (ROOT / 'gate-stage').exists():
         shutil.copy2(ROOT / 'gate-stage', scripts / 'gate-stage')
     tools = root / 'tools'
@@ -77,6 +78,8 @@ esac
         assert followup.returncode == expected, followup.stdout
         if mode == 'guide':
             assert 'Failed gate stage: bash-guide (exit 19;' in followup.stdout, followup.stdout
+            assert 'Gate stage: rust-tests ' not in followup.stdout, followup.stdout
+            assert 'Gate stage: sdk-gates ' not in followup.stdout, followup.stdout
     # A runner may kill the whole process group without allowing EXIT traps.
     # Wait for a stage's output event, then kill it while it blocks on a FIFO.
     block = root / 'block'
@@ -153,7 +156,7 @@ with tempfile.TemporaryDirectory(prefix='gate-prepared-') as temporary:
     root = Path(temporary)
     scripts = root / 'scripts'
     scripts.mkdir()
-    for name in ('hosted-gate', 'native-pair', 'release_images.py'):
+    for name in ('hosted-gate', 'native-pair', 'native_platform.py', 'release_images.py'):
         shutil.copy2(ROOT / name, scripts / name)
     for name in ('native-tools-env', 'native-env', 'native-producer',
                  'native-test-assets', 'native-abi-assets', 'gate'):

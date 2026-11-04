@@ -6,7 +6,7 @@ extern "C" const char* thinkthen_code_name(std::int32_t code) {
     return code == 999 ? "future.code" : "usage.abi";
 }
 extern "C" std::int32_t thinkthen_value_error(const thinkthen_value*, thinkthen_error* out, thinkthen_error*) {
-    (void)thinkthen_settings_conversion_error(out);
+    if (thinkthen_settings_conversion_error(out) >= 0) return THINKTHEN_ERROR;
     out->code = 999;
     return THINKTHEN_OK;
 }

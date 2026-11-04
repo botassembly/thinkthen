@@ -60,12 +60,18 @@ macro_rules! function_set {
         }
         /// A named annotation result without an enclosing position, id or source.
         #[non_exhaustive]
-        #[derive(Debug,Clone,serde::Serialize,serde::Deserialize,schemars::JsonSchema)]
+        #[derive(Debug,Clone,PartialEq,serde::Serialize,serde::Deserialize,schemars::JsonSchema)]
         #[serde(tag="function",rename_all="lowercase")]
         #[schemars(extend("unevaluatedProperties" = false))]
         pub enum AnnotationEntry {$(#[doc=stringify!($member)] $member(Outcome<<questions::$member as Function>::Answer,<questions::$member as Function>::Detail>),)+}
-        #[cfg(feature = "command")]
+        /// Prints the entry's bare answer, `unsure`, or `failed: ` and the error code.
+        impl std::fmt::Display for AnnotationEntry {
+            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { match self { $(Self::$member(outcome) => std::fmt::Display::fmt(outcome, formatter),)+ } }
+        }
         impl AnnotationEntry {
+            pub(crate) fn function(&self) -> FunctionName { match self { $(Self::$member(_) => FunctionName::$member,)+ } }
+            pub(crate) fn outcome_any(&self) -> &dyn std::any::Any { match self { $(Self::$member(outcome) => outcome,)+ } }
+            #[cfg(feature = "command")]
             fn error(&self) -> Option<&Error> { match self { $(Self::$member(outcome) => match outcome { Outcome::Failed { error } => Some(error), _ => None },)+ } }
         }
     };

@@ -67,7 +67,7 @@ def sign_maven(registry):
 def homebrew(staged):
     destination = staged / 'homebrew'
     destination.mkdir()
-    text = ['class Thinkthen < Formula', '  desc "Typed questions about evidence"',
+    text = ['class Thinkthen < Formula', '  desc "Typed questions about records"',
             '  homepage "https://github.com/botassembly/thinkthen"',
             f'  version "{version()}"', '  license "MIT"', '  if OS.mac?',
             '    depends_on arch: :arm64', '    depends_on macos: :sequoia']

@@ -1,0 +1,5 @@
+{
+  "anchor": "ValueList<Entity> names = await client.RecognizeAsync(",
+  "before": 0,
+  "after": 2
+}

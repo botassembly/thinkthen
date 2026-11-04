@@ -62,20 +62,20 @@ static void ownership(void) {
     thinkthen_error error = {.struct_size = sizeof error};
     const char settings[] = "{\"backend\":\"stub\"}";
     const char request[] = "{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\"}}";
-    assert(thinkthen_client_open_json((const uint8_t *)settings, sizeof settings - 1, &client, &error) == THINKTHEN_OK);
-    assert(thinkthen_call_open_json(client, (const uint8_t *)request, sizeof request - 1,
+    assert(thinkthen_client_open_json((const char *)settings, sizeof settings - 1, &client, &error) == THINKTHEN_OK);
+    assert(thinkthen_call_open_json(client, (const char *)request, sizeof request - 1,
                                     THINKTHEN_OFFSET_CODE_POINTS, &call, &error) == THINKTHEN_OK);
-    assert(thinkthen_call_open_json(client, (const uint8_t *)request, sizeof request - 1,
+    assert(thinkthen_call_open_json(client, (const char *)request, sizeof request - 1,
                                     THINKTHEN_OFFSET_CODE_POINTS, &invalid_call, &error) == THINKTHEN_OK);
     thinkthen_client_free(client);
-    assert(thinkthen_call_send_text(call, NULL, 0, &error) == THINKTHEN_ERROR);
+    assert(thinkthen_call_send_text(call, NULL, 0, &error) < 0);
     assert(error.code == THINKTHEN_CODE_USAGE_ABI);
     thinkthen_error saved = error;
     error = (thinkthen_error){.struct_size = sizeof error};
     thinkthen_row row = {.struct_size = sizeof row};
     assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_NEEDS_INPUT);
     char text[] = "raw \"quoted\" 😀\n";
-    assert(thinkthen_call_send_text(call, (const uint8_t *)text, sizeof text - 1, &error) == THINKTHEN_OK);
+    assert(thinkthen_call_send_text(call, (const char *)text, sizeof text - 1, &error) == THINKTHEN_OK);
     memset(text, 'x', sizeof text - 1);
     thinkthen_call_end_input(call);
     thinkthen_call_end_input(call);
@@ -87,7 +87,7 @@ static void ownership(void) {
     thinkthen_call_free(call);
     print_row(&saved_row);
     assert(thinkthen_call_next(invalid_call, &row, &error) == THINKTHEN_NEEDS_INPUT);
-    const uint8_t invalid[] = {0xff};
+    const char invalid[] = {(char)0xff};
     assert(thinkthen_call_send_text(invalid_call, invalid, sizeof invalid, &error) == THINKTHEN_OK);
     thinkthen_call_end_input(invalid_call);
     assert(thinkthen_call_next(invalid_call, &row, &error) == THINKTHEN_OK);
@@ -124,7 +124,7 @@ static void *run_concurrent(void *opaque) {
         thinkthen_call *call = NULL;
         thinkthen_error error = {.struct_size = sizeof error};
         const char request[] = "{\"question\":{\"function\":\"decide\",\"question\":\"Ready?\",\"threshold\":0.5},\"records\":[\"shared client\"]}";
-        assert(thinkthen_call_open_json(worker->client, (const uint8_t *)request, sizeof request - 1,
+        assert(thinkthen_call_open_json(worker->client, (const char *)request, sizeof request - 1,
                                         THINKTHEN_OFFSET_UTF8, &call, &error) == THINKTHEN_OK);
         thinkthen_call_end_input(call);
         thinkthen_row row = {.struct_size = sizeof row};
@@ -144,7 +144,7 @@ static void concurrent(void) {
     thinkthen_client *client = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
     const char settings[] = "{\"backend\":\"stub\"}";
-    assert(thinkthen_client_open_json((const uint8_t *)settings, sizeof settings - 1, &client, &error) == THINKTHEN_OK);
+    assert(thinkthen_client_open_json((const char *)settings, sizeof settings - 1, &client, &error) == THINKTHEN_OK);
     pthread_t threads[4];
     concurrent_worker worker = {.client = client, .lock = PTHREAD_MUTEX_INITIALIZER,
                                 .start = PTHREAD_COND_INITIALIZER, .ready = 0};
@@ -176,34 +176,35 @@ int main(int argc, char **argv) {
     thinkthen_client *client = NULL;
     thinkthen_call *call = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
-    int32_t status = thinkthen_client_open_json((const uint8_t *)settings, strlen(settings), &client, &error);
+    int32_t status = thinkthen_client_open_json((const char *)settings, strlen(settings), &client, &error);
     free(settings);
     if (status == THINKTHEN_OK && strcmp(argv[1], "single") == 0) {
         thinkthen_question *question = NULL;
-        assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const uint8_t *)"Ready?", 6,
+        assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6,
                                       &question, &error) == THINKTHEN_OK);
-        assert(thinkthen_question_set_evidence(question, (const uint8_t *)"/body", 5, &error) == THINKTHEN_OK);
+        assert(thinkthen_question_set_field(question, (const char *)"/body", 5, &error) == THINKTHEN_OK);
         thinkthen_row row = {.struct_size = sizeof row};
-        assert(thinkthen_run_one(client, question, (const uint8_t *)"{}", 2,
-                                 THINKTHEN_RECORD_JSON, &row, &error) == THINKTHEN_OK);
+        assert(thinkthen_run_one(client, question, (const char *)"{}", 2,
+                                 THINKTHEN_RECORD_JSON, &row, &error) == -THINKTHEN_CODE_RECORD_MISSING);
         thinkthen_question_free(question);
         thinkthen_client_free(client);
         free(request);
-        assert(error.code == 0);
+        assert(error.code == THINKTHEN_CODE_RECORD_MISSING);
+        thinkthen_error_free(&error);
         print_row(&row);
         puts("{\"end\":true}");
         return 0;
     }
     if (status == THINKTHEN_OK) {
-        uint32_t offsets = THINKTHEN_OFFSET_UTF8;
+        thinkthen_offset offsets = THINKTHEN_OFFSET_UTF8;
         if (strcmp(argv[1], "utf16") == 0) offsets = THINKTHEN_OFFSET_UTF16;
         if (strcmp(argv[1], "points") == 0) offsets = THINKTHEN_OFFSET_CODE_POINTS;
         if (strcmp(argv[1], "invalid-offset") == 0) offsets = UINT32_MAX;
-        status = thinkthen_call_open_json(client, (const uint8_t *)request, strlen(request), offsets, &call, &error);
+        status = thinkthen_call_open_json(client, (const char *)request, strlen(request), offsets, &call, &error);
     }
     free(request);
     thinkthen_client_free(client);
-    if (status == THINKTHEN_ERROR) { print_error(&error); return 0; }
+    if (status < 0) { print_error(&error); return 0; }
     pthread_t canceller;
     int cancel = strcmp(argv[1], "cancel") == 0;
     if (cancel || strcmp(argv[1], "free-held") == 0) thinkthen_call_end_input(call);
@@ -224,10 +225,10 @@ int main(int argc, char **argv) {
             if (record == NULL) { thinkthen_call_end_input(call); continue; }
             assert(record[0] == 'T' || record[0] == 'J');
             status = record[0] == 'T'
-                ? thinkthen_call_send_text(call, (const uint8_t *)record + 1, strlen(record + 1), &error)
-                : thinkthen_call_send_json(call, (const uint8_t *)record + 1, strlen(record + 1), &error);
+                ? thinkthen_call_send_text(call, (const char *)record + 1, strlen(record + 1), &error)
+                : thinkthen_call_send_json(call, (const char *)record + 1, strlen(record + 1), &error);
             free(record);
-            if (status == THINKTHEN_ERROR) { print_error(&error); break; }
+            if (status < 0) { print_error(&error); break; }
         } else if (status == THINKTHEN_OK) {
             print_row(&row);
         } else if (status == THINKTHEN_END) {

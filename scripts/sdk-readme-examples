@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Run literal quickstarts using the SDK gate's installed dependencies and isolated home."""
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def block(path, language, index=0):
+    return re.findall(r'```' + language + r'\n(.*?)\n```', path.read_text(), re.S)[index] + '\n'
+
+
+def run(*command, cwd, env=None):
+    subprocess.run(list(map(str, command)), cwd=cwd, env=env, check=True)
+
+
+with tempfile.TemporaryDirectory(prefix='thinkthen-quickstarts-') as folder:
+    scratch = Path(folder)
+    if sys.argv[1] == 'jvm':
+        environment = dict(os.environ)
+        for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_URL', 'THINKTHEN_BATCH', 'JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS'):
+            environment.pop(name, None)
+        environment['THINKTHEN_BACKEND'] = 'stub'
+        classpath, repository, home = sys.argv[2:]
+        classpath = os.pathsep.join(str(Path(p).resolve()) for p in classpath.split(os.pathsep))
+        source = scratch / 'Example.java'
+        source.write_text(block(ROOT / 'sdk/java/README.md', 'java'))
+        run('javac', '-J-Duser.home=' + home, '-cp', classpath, source, cwd=scratch, env=environment)
+        run('java', '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch) + os.pathsep + classpath, 'Example', cwd=scratch, env=environment)
+        source = scratch / 'Quickstart.kt'
+        source.write_text(block(ROOT / 'sdk/kotlin/README.md', 'kotlin'))
+        compiler = os.pathsep.join(str(p) for p in Path(repository).rglob('*.jar'))
+        run('java', '-Duser.home=' + home, '-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
+            '-no-stdlib', '-no-reflect', '-jvm-target', '22', '-classpath', classpath,
+            '-d', scratch / 'kotlin', source, cwd=scratch, env=environment)
+        run('java', '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin') + os.pathsep + classpath, 'QuickstartKt', cwd=scratch, env=environment)
+    elif sys.argv[1] == 'ruby':
+        guide = (ROOT / 'docs/surfaces/ruby.md').read_text()
+        examples = re.findall(r'```ruby\n(.*?)\n```', guide, re.S)
+        # The guide names one client scope and shared records for its remaining snippets.
+        scoped = 'require "thinkthen"\nThinkThen::Client.open do |client|\n' + '\n'.join(examples[2:]) + '\nend\n'
+        (scratch / 'toolbox.json').write_text(re.findall(r'```json\n(.*?)\n```', guide, re.S)[0])
+        for source_text in (block(ROOT / 'sdk/ruby/README.md', 'ruby'), *examples[:2], scoped):
+            source = scratch / 'example.rb'
+            source.write_text(source_text)
+            # The examples open a default client; the gate selects the stub through the environment.
+            subprocess.run(['ruby', str(source)], cwd=scratch, check=True, env=dict(os.environ, THINKTHEN_BACKEND='stub'))
+        print(f'Literal Ruby guide: all {len(examples)} code examples passed')
+    else:
+        raise SystemExit('usage: sdk-readme-examples jvm CLASSPATH MAVEN_REPOSITORY HOME | ruby')
+print('Literal README quickstarts: PASS')

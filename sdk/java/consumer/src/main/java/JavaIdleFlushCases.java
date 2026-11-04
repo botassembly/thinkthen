@@ -1,6 +1,6 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;

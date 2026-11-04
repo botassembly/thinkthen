@@ -76,7 +76,9 @@ fn r_admit(value: &str, kind: i32) -> List {
             .and_then(|toolbox| toolbox.definitions_json()),
         4 => thinkthen::questions::Toolbox::from_definitions_json(value)
             .and_then(|toolbox| toolbox.to_json()),
-        _ => Err(thinkthen::native::abi_error()),
+        _ => Err(thinkthen::native::argument_error(
+            thinkthen::Code::UsageArgument,
+        )),
     };
     match result {
         Ok(value) => list!(value = value),
@@ -110,7 +112,9 @@ fn r_prepare_record(value: &str, kind: i32, id: Robj) -> List {
         None
     } else {
         let Ok(id) = ExternalPtr::<NativeId>::try_from(id) else {
-            return failure(thinkthen::native::abi_error());
+            return failure(thinkthen::native::argument_error(
+                thinkthen::Code::UsageArgument,
+            ));
         };
         Some(id.0.clone())
     };
@@ -132,7 +136,7 @@ fn r_open_finite(client: ExternalPtr<NativeClient>, request: &str, records: List
         let mut initial = Vec::with_capacity(records.len());
         for record in records.values() {
             let record = ExternalPtr::<NativeRecord>::try_from(record)
-                .map_err(|_| thinkthen::native::abi_error())?;
+                .map_err(|_| thinkthen::native::argument_error(thinkthen::Code::UsageArgument))?;
             initial.push(
                 record
                     .0
@@ -269,7 +273,9 @@ fn r_abi_version() -> i32 {
 fn r_cancel_release(call: Robj) -> List {
     if !call.is_null() {
         let Ok(call) = ExternalPtr::<NativeCall>::try_from(call) else {
-            return failure(thinkthen::native::abi_error());
+            return failure(thinkthen::native::argument_error(
+                thinkthen::Code::UsageArgument,
+            ));
         };
         if let Some(call) = call.0.borrow_mut().take() {
             call.cancel();

@@ -11,11 +11,11 @@
       ]
     },
     "code": "usage.question",
-    "message": "question.levels[0]: expected a string; received integer `1`",
+    "message": "question.levels[0]: expected a string or an object with name and description; received integer `1`",
     "kind": "admission"
   },
   {
-    "name": "TypeScript saved toolbox array evidence",
+    "name": "TypeScript saved toolbox array field",
     "boundary": "toolbox",
     "input": {
       "entries": {
@@ -23,7 +23,7 @@
           "question": {
             "function": "decide",
             "question": "Ready?",
-            "evidence": [
+            "field": [
               "body"
             ]
           }
@@ -31,7 +31,7 @@
       }
     },
     "code": "usage.question",
-    "message": "toolbox.entries.[0].question.evidence: expected a string; received an array",
+    "message": "toolbox.entries.[0].question.field: expected a string; received an array",
     "kind": "admission"
   },
   {
@@ -70,7 +70,7 @@
     },
     "code": "usage.question",
     "kind": "admission",
-    "message": "question.tags: expected one of `question`, `labels`, `threshold`, `evidence`; received unknown field `tags`; did you mean `labels`?",
+    "message": "question.tags: expected one of `question`, `labels`, `threshold`, `field`; received unknown field `tags`; did you mean `labels`?",
     "contains": [
       "question.tags:",
       "expected",

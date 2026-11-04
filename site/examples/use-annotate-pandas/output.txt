@@ -1,0 +1,4 @@
+id  refund    topic  urgency
+a1    True  billing     0.05
+a2   False shipping     0.14
+a3    True  billing     0.45

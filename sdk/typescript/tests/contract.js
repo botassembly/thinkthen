@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 export function hostValue(value) {
   if (Array.isArray(value)) return value.map(hostValue);
   if (value === null || typeof value !== "object") return value;
-  const fields = Object.fromEntries(Object.entries(value).filter(([key]) => key !== "message" || typeof value.code !== "string").map(([key, child]) => [key, hostValue(child)]));
+  const fields = Object.fromEntries(Object.entries(value).filter(([key]) => (key !== "message" || typeof value.code !== "string") && (key !== "item" || value.function !== "rank")).map(([key, child]) => [key, hostValue(child)]));
   if (typeof fields.function === "string") {
     if (fields.source && "question_identity" in fields.source) {
       const {question_identity,...source} = fields.source;
@@ -29,7 +29,7 @@ export function questionOf(request) {
 export function streamFor(client, request, signal) {
   const question = questionOf(request);
   const { function: name, ...fields } = question;
-  if (name === "annotate") return client.annotateStream(Object.fromEntries(Object.entries(fields.questions).map(([key, value]) => [key, hostQuestion(value)])), request.records, { ...(fields.evidence === undefined ? {} : {evidence: fields.evidence}), ...(request.name === undefined ? {} : {name: request.name}), signal });
+  if (name === "annotate") return client.annotateStream(Object.fromEntries(Object.entries(fields.questions).map(([key, value]) => [key, hostQuestion(value)])), request.records, { ...(fields.field === undefined ? {} : {field: fields.field}), ...(request.name === undefined ? {} : {name: request.name}), signal });
   return client[`${name}Stream`](hostQuestion(question), request.records, { ...(request.name === undefined ? {} : {name: request.name}), signal });
 }
 
@@ -41,13 +41,13 @@ export function expectedRows(fixture) {
     const question = fixture.request.question;
     if (question.function === "annotate" && row.status === "answered") {
       for (const [name, child] of Object.entries(row.answer)) {
-        const pointer = question.questions[name].evidence ?? question.evidence;
-        offsets(child.answer, evidence(record, pointer));
-        offsets(child.detail, evidence(record, pointer));
+        const pointer = question.questions[name].field ?? question.field;
+        offsets(child.answer, field(record, pointer));
+        offsets(child.detail, field(record, pointer));
       }
     } else {
-      offsets(row.answer, evidence(record, question.evidence));
-      offsets(row.detail, evidence(record, question.evidence));
+      offsets(row.answer, field(record, question.field));
+      offsets(row.detail, field(record, question.field));
     }
   }
   return hostValue(expected);
@@ -62,7 +62,7 @@ function offsets(value, text) {
   }
   for (const child of Object.values(value)) offsets(child, text);
 }
-function evidence(record, pointer) {
+function field(record, pointer) {
   if (typeof record === "string") return record;
   let value = record;
   if (pointer) for (const part of pointer.slice(1).split("/")) value = value?.[part.replaceAll("~1", "/").replaceAll("~0", "~")];

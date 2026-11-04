@@ -1,0 +1,35 @@
+#!/bin/sh
+# Compile an external consumer of the public value API without a native engine.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+if [ "$(uname -s)" = Darwin ]; then SDKROOT=$(xcrun --show-sdk-path); export SDKROOT; fi
+cp sdk/swift/tests/Interface.swift "$scratch/main.swift"
+printf '\ntry checkPublicInterface()\n' >> "$scratch/main.swift"
+if [ "${1:-}" = --native ] || [ "${3:-}" = --native ]; then
+    printf '\nlet client = try Client(backend: .stub)\ncheckTextSequenceLaziness(client)\ntry await checkRankOriginalKinds(client)\n' >> "$scratch/main.swift"
+fi
+source_root=$PWD
+if [ "${1:-}" = --against ]; then
+    test "$#" = 2 || { test "$#" = 3 && test "$3" = --native; }
+    mkdir "$scratch/source"
+    git archive "$2" sdk/swift/Sources/ThinkThen sdk/swift/generate-codes.py schemas/contract.json crates/thinkthen-ffi/include/thinkthen.h | tar -x -C "$scratch/source"
+    source_root="$scratch/source"
+    # SwiftPM normally emits this accessor. Value tests do not open an engine.
+    printf 'import Foundation\nextension Bundle { static var module: Bundle { .main } }\n' > "$source_root/sdk/swift/Sources/ThinkThen/Resources.swift"
+fi
+python3 "$source_root/sdk/swift/generate-codes.py" "$source_root/schemas/contract.json" "$scratch/ErrorCode.swift"
+mkdir "$scratch/CThinkThen"
+cp "$source_root/crates/thinkthen-ffi/include/thinkthen.h" "$scratch/CThinkThen/thinkthen.h"
+printf 'module CThinkThen { header "thinkthen.h" export * }\n' > "$scratch/CThinkThen/module.modulemap"
+swiftc -swift-version 6 -warnings-as-errors -emit-library -emit-module -module-name ThinkThen \
+    -I "$scratch/CThinkThen" \
+    -o "$scratch/libThinkThen.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)" \
+    -emit-module-path "$scratch/ThinkThen.swiftmodule" \
+    "$source_root"/sdk/swift/Sources/ThinkThen/*.swift "$scratch/ErrorCode.swift"
+swiftc -swift-version 6 -warnings-as-errors -I "$scratch" -I "$scratch/CThinkThen" -L "$scratch" -lThinkThen \
+    "$scratch/main.swift" -o "$scratch/Interface"
+THINKTHEN_BACKEND=stub LD_LIBRARY_PATH="$scratch${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+DYLD_LIBRARY_PATH="$scratch${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" "$scratch/Interface"

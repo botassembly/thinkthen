@@ -1,0 +1,30 @@
+---
+// Shows one file an example reads from examples/<id>/, such as its input or a build file.
+// A spreadsheet shows as one table per worksheet.
+import fs from 'node:fs';
+import path from 'node:path';
+import { Code } from '@astrojs/starlight/components';
+import { EXAMPLES, fileLang, isSpreadsheet } from '../lib/examples.mjs';
+import { readXlsx } from '../lib/xlsx.mjs';
+interface Props { id: string; file: string; lang?: string }
+const { id, file, lang } = Astro.props;
+const p = path.join(EXAMPLES, id, file);
+const sheets = isSpreadsheet(file) ? readXlsx(p) : null;
+const code = sheets ? '' : fs.readFileSync(p, 'utf8').trimEnd();
+---
+{sheets ? (
+  sheets.map(({ name, rows: [head = [], ...body] }) => (
+    <figure class="example-sheet">
+      <figcaption>{file}, worksheet {name}</figcaption>
+      <table>
+        <thead><tr>{head.map((c) => <th>{c}</th>)}</tr></thead>
+        <tbody>{body.map((r) => <tr>{head.map((_, i) => <td>{r[i] ?? ''}</td>)}</tr>)}</tbody>
+      </table>
+    </figure>
+  ))
+) : (
+  <Code code={code} lang={fileLang(file, lang)} title={file} wrap />
+)}
+<style>
+  .example-sheet figcaption { font-size: var(--sl-text-sm); color: var(--sl-color-gray-3); }
+</style>

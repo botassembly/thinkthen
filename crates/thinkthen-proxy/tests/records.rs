@@ -423,7 +423,7 @@ fn gold_uses_the_shared_typed_function_contract() {
     let find = service
         .admit_question(
             "Find a name",
-            &request("find", json!("Name?"), json!({"evidence":"/body"})),
+            &request("find", json!("Name?"), json!({"field":"/body"})),
         )
         .unwrap();
     for selected in [json!("Ana"), json!({"id":"Ana","body":"Bob"})] {

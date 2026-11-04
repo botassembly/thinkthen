@@ -98,7 +98,7 @@ impl Retry {
 #[serde(try_from = "Input", into = "Input")]
 #[schemars(with = "Input")]
 pub struct Settings {
-    backend: BackendName,
+    backend: Option<BackendName>,
     model: Option<String>,
     url: Option<String>,
     api_key: Option<Key>,
@@ -108,10 +108,10 @@ pub struct Settings {
 #[derive(Debug, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 struct Input {
-    #[serde(default = "default_backend")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "BackendName")]
-    #[serde(deserialize_with = "crate::core::diagnostic::backend")]
-    backend: String,
+    #[serde(deserialize_with = "explicit_backend")]
+    backend: Option<String>,
     #[serde(default)]
     #[schemars(!default)]
     #[serde(deserialize_with = "crate::core::diagnostic::model")]
@@ -150,7 +150,7 @@ impl Settings {
         retry: Retry,
     ) -> Self {
         Self {
-            backend,
+            backend: Some(backend),
             model: Some(model.to_owned()),
             url: url.map(str::to_owned),
             api_key: None,
@@ -171,16 +171,34 @@ impl Settings {
             })?
             .try_into()
     }
-    /// The selected backend; defaults to System One.
+    /// The explicit backend, or the built-in default before environment resolution.
     #[must_use]
     pub const fn backend(&self) -> BackendName {
-        self.backend
+        match self.backend {
+            Some(backend) => backend,
+            None => BackendName::SystemOne,
+        }
     }
     /// Select a backend with its own model and environment defaults.
     #[must_use]
     pub fn with_backend(mut self, backend: BackendName) -> Self {
-        self.backend = backend;
+        self.backend = Some(backend);
         self
+    }
+    /// Resolve the explicit backend, then THINKTHEN_BACKEND, then the built-in default.
+    /// # Errors
+    /// Returns usage.backend for an unknown environment value before reading credentials.
+    pub fn resolve_backend(
+        &self,
+        variable: impl Fn(&str) -> Option<String>,
+    ) -> Result<BackendName, Error> {
+        match self.backend {
+            Some(backend) => Ok(backend),
+            None => variable("THINKTHEN_BACKEND")
+                .map(|name| name.parse())
+                .transpose()
+                .map(Option::unwrap_or_default),
+        }
     }
     /// Supply a direct API key; it takes precedence over the selected variable.
     #[must_use]
@@ -217,7 +235,7 @@ impl Settings {
         &'a self,
         table: &'a BackendTable,
     ) -> Result<(&'a str, &'a str), Error> {
-        table.selection(self.backend.as_str(), self.model.as_deref())
+        table.selection(self.backend().as_str(), self.model.as_deref())
     }
     #[cfg(feature = "native")]
     pub(crate) fn sql_retry_limit(self) -> Result<Self, Error> {
@@ -235,8 +253,9 @@ impl Settings {
     /// # Errors
     /// Returns the shared backend, URL, credential, batch or policy error.
     pub fn engine(&self, variable: impl Fn(&str) -> Option<String>) -> Result<Engine, Error> {
+        let selected = self.resolve_backend(&variable)?;
         let backend = BackendTable::default().resolve_direct(
-            self.backend.as_str(),
+            selected.as_str(),
             self.url.as_deref(),
             self.model.as_deref(),
             self.api_key.as_ref(),
@@ -244,7 +263,7 @@ impl Settings {
         )?;
         let batch = match self.batch {
             Some(batch) => batch,
-            None if self.backend == BackendName::Stub => Batch::default(),
+            None if selected == BackendName::Stub => Batch::default(),
             None => Batch::resolve(None, variable)?,
         };
         Ok(Engine::new(backend)
@@ -257,7 +276,7 @@ impl TryFrom<Input> for Settings {
     fn try_from(value: Input) -> Result<Self, Error> {
         let api_key = value.api_key.map(|key| key.parse()).transpose()?;
         Ok(Self {
-            backend: value.backend.parse()?,
+            backend: value.backend.map(|name| name.parse()).transpose()?,
             model: value.model,
             url: value.url,
             api_key,
@@ -286,7 +305,7 @@ impl TryFrom<Input> for Settings {
 impl From<Settings> for Input {
     fn from(value: Settings) -> Self {
         Self {
-            backend: value.backend.as_str().to_owned(),
+            backend: value.backend.map(|backend| backend.as_str().to_owned()),
             model: value.model,
             url: value.url,
             api_key: None,
@@ -301,8 +320,10 @@ fn settings_error(message: impl Into<String>) -> Error {
     Error::new(ErrorKind::Settings, message)
 }
 
-fn default_backend() -> String {
-    BackendName::default().as_str().to_owned()
+fn explicit_backend<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error> {
+    crate::core::diagnostic::backend(deserializer).map(Some)
 }
 
 fn checked_retry_count(value: u32) -> Result<u32, Error> {

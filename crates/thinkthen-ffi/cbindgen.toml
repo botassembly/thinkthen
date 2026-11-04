@@ -4,7 +4,8 @@ cpp_compat = true
 usize_is_size_t = true
 documentation = true
 style = "both"
-sys_includes = ["stddef.h", "stdint.h"]
+no_includes = true
+sys_includes = ["stdbool.h", "stddef.h", "stdint.h", "stdlib.h"]
 [export]
 exclude = ["OK", "END", "NEEDS_INPUT", "ERROR"]
 [export.rename]

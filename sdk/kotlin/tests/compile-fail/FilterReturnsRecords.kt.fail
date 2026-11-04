@@ -1,0 +1,9 @@
+package consumer.rejected
+
+import dev.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.Flow
+
+// Feature: FilterReturnsRecords. filter gives the kept records themselves; filterRows gives the rows.
+fun rejectedFilterReturnsRecords(client: ThinkThen) {
+    val rows: Flow<Filtered<String>> = client.filter("Ready?", listOf("alpha", "beta"))
+}

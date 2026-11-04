@@ -16,13 +16,12 @@ sys.path.insert(0, str(ROOT / 'databases/duckdb/tests'))
 api = runpy.run_path(str(Path(__file__).with_name('typed_api.py')))
 sys.path.insert(0, str(ROOT / 'databases'))
 from testing import read_line
-from stress import check_round, environment, report, settings, workload
+from stress import check_round, environment, report, settings, statement_failure, workload
 
 
 def scan(database, count, prefix='', basis=0):
     source = f"SELECT '{prefix}record-' || (n-1+{basis})::text AS id,'{prefix}' || n::text AS record FROM generate_series(1,{count}) n ORDER BY n"
     return api['query'](database, "SELECT position,id,status,answer,probability,error_code FROM thinkthen.decide(%s,'Ready?',id_column=>'id')", (source,))
-
 
 def configure(database, case):
     api['query'](database, 'SET thinkthen.allowed_backends = %s', (case['client']['backend'] + ':*',))
@@ -70,7 +69,16 @@ def main():
                         index, connection = item
                         prefix = f'round-{case["identifier_base"] + round_index}-call-{case["identifier_base"] + index}-'
                         barrier.wait()
-                        return check_round(case, [(prefix, scan(connection, case['records'], prefix, case['identifier_base']))])
+                        try:
+                            rows = scan(connection, case['records'], prefix, case['identifier_base'])
+                        except psycopg2.Error as error:
+                            # A statement whose every record the backend failed raises that error.
+                            if not (error.diag.message_detail or '').startswith('backend.'):
+                                raise
+                            assert error.pgcode == api['sqlstate'](error.diag.message_detail), error
+                            # DETAIL carries the engine code; the primary message is the engine's text.
+                            rows = statement_failure(case, f'{error.diag.message_detail}: {error.diag.message_primary}')
+                        return check_round(case, [(prefix, rows)])
                     for round_calls, round_failed in workers.map(call, enumerate(connections)):
                         calls += round_calls
                         failed += round_failed

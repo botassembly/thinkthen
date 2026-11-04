@@ -1,0 +1,180 @@
+# The ten functions. Source: product (one entry per function from the help), cases (the support inbox tasks).
+- id: decide
+  question: How do I get true or false from text in a script?
+  source: product
+  frequency: decide is the first function in the help and in every guide
+  rank: 7
+  page: /functions/decide/
+  reference: /reference/commands/decide/
+- id: filter
+  question: How do I keep only the lines that match a question, like grep by meaning?
+  source: product
+  frequency: filter is the stream form of decide; common shell task
+  rank: 8
+  page: /functions/filter/
+  reference: /reference/commands/filter/
+- id: choose
+  question: How do I classify text into one of several categories?
+  source: cases
+  frequency: routing tasks in the support inbox, survey and log cases
+  rank: 9
+  page: /functions/choose/
+  reference: /reference/commands/choose/
+- id: tag
+  question: How do I apply several labels to one message?
+  source: product
+  frequency: one function in the help; multi-label cases
+  rank: 13
+  page: /functions/tag/
+  reference: /reference/commands/tag/
+- id: score
+  question: How do I score text on a scale such as urgency?
+  source: product
+  frequency: one function in the help; urgency and severity cases
+  rank: 14
+  page: /functions/score/
+  reference: /reference/commands/score/
+- id: rank
+  question: How do I sort records by urgency with ThinkThen?
+  source: cases
+  frequency: the inbound-leads and inbox cases rank records
+  rank: 15
+  page: /functions/rank/
+  reference: /reference/commands/rank/
+- id: find
+  question: How do I find the line in a document that answers a question?
+  source: product
+  frequency: one function in the help; extraction cases
+  rank: 16
+  page: /functions/find/
+  reference: /reference/commands/find/
+- id: recognize
+  question: How do I extract names of people and organizations from text?
+  source: product
+  frequency: one function in the help; the products-and-makers case
+  rank: 17
+  page: /functions/recognize/
+  reference: /reference/commands/recognize/
+- id: relate
+  question: How do I find who works for which organization in text?
+  source: product
+  frequency: one function in the help; relation extraction cases
+  rank: 18
+  page: /functions/relate/
+  reference: /reference/commands/relate/
+- id: annotate
+  question: How do I ask several questions about each record at once?
+  source: cases
+  frequency: every triage case asks several questions per record
+  rank: 10
+  page: /functions/annotate/
+  reference: /reference/commands/annotate/
+- id: probability
+  question: What does the probability on a ThinkThen answer mean?
+  source: product
+  frequency: every row carries it; needed before setting a threshold
+  rank: 11
+  page: /how-thinkthen-judges/
+  reference: /reference/rows/
+- id: threshold
+  question: How do I set a threshold or a not sure band?
+  source: product
+  frequency: --threshold, --low and --high on five functions
+  rank: 12
+  page: /how-thinkthen-judges/
+  reference: /reference/options/
+- id: not-sure-queue
+  question: How do I send the answers ThinkThen is not sure about to a person?
+  source: cases
+  frequency: every triage case routes the band's middle to a person
+  rank: 19
+  page: /break-a-problem-into-decisions/
+  reference: /reference/rows/
+  answers_page: true
+  page_title: Break a problem into decisions
+  reference_title: Result rows
+  reader: A developer who wants a person to review the cases the model is not sure about
+  answer: |
+    Give the question a band with `--low` and `--high`, write JSON Lines with `--json`, and select the rows whose `status` is `unsure`. Each of those records goes to a person; the rest carry a `true` or `false` answer your code can act on. This works with ThinkThen {version}'s decide, filter and choose.
+  why: |
+    Inside the band, ThinkThen returns the row with `"status":"unsure"`, its probability, and no answer. Below `--low` the answer is `false`; at or above `--high` it is `true`. `jq` keeps the ids of the not sure rows.
+  limits: |
+    Tag, find, recognize and relate take a single cut, not a band. In a spreadsheet, a not sure row's answer cell is empty, or `#N/A` in xlsx; add `--details` for a `_status` column that reads `unsure`, and filter that column instead of using `jq`. The model puts the records it finds hard into the band, and how many depends on the model and on where you set `--low` and `--high`. A band does not make a model calibrated: check where its answers fall on your own labeled sample.
+  examples:
+    - id: ans-notsure-queue
+      says: "Ask with a band from 0.2 to 0.8 and print the id of each not sure row:"
+  explain:
+    a3: The id of the one record whose probability fell inside the band.
+- id: count-yes
+  question: How do I count how many records answer yes?
+  source: cases
+  frequency: survey and screening cases report counts
+  rank: 26
+  page: /functions/filter/
+  reference: /reference/rows/
+  answers_page: true
+  page_title: "filter: keep the records that answer yes"
+  reference_title: Result rows
+  reader: A developer or analyst who needs a count of yes answers
+  answer: |
+    Run filter with `--json` so every record gets a row, then count the rows whose `answer` is `true`. One ThinkThen {version} command and one `jq` call give the total and the yes count.
+  why: |
+    `--json` writes one row per record, including the no, not sure and failed ones, so the total is the number of rows. `jq -s` reads every row into one array, and `select(.answer == true)` keeps the yes rows.
+  limits: |
+    Text output of filter prints only the yes records, so `wc -l` on it counts yes answers but hides failures. Count `status` values too when some rows may have failed or been not sure. The yes count is the model's judgment of each record; check it on a sample before you report it.
+  examples:
+    - id: ans-count-yes
+      says: "Judge three messages and count the rows and the yes answers:"
+  explain:
+    records: The number of rows, one per record.
+    yes: The number of rows whose answer is `true`.
+- id: classify-log
+  question: How do I classify every line of a log file?
+  source: cases
+  frequency: the group-alerts-into-incidents case
+  rank: 27
+  page: /how-tos/sort-alerts-by-kind/
+  reference: /reference/commands/choose/
+  answers_page: true
+  page_title: Sort alerts by kind
+  reference_title: thinkthen choose
+  reader: An operator who wants each log line labeled by system
+  answer: |
+    Run `thinkthen choose` with `--from lines` on the log file, one `--choice` per category, and `--json`. ThinkThen {version} judges each line as its own record and returns one choice per line, numbered by `position`.
+  why: |
+    `--from lines` makes each nonblank line a record. Choose returns exactly one of the choices for each, and `position` ties each answer to its line. An `other` choice catches lines that fit no category.
+  limits: |
+    Choose picks one category per line; use tag when a line can belong to several. A very long line still has to fit the backend's request limit. The model reads each line's words, so a line that fits no category goes to `other` only when you offer it.
+  examples:
+    - id: ans-log-lines
+      says: "Sort each line of `app.log` into one of four categories. `jq` keeps the line number and the answer:"
+  explain:
+    position: The line's number in the log.
+    answer: The category chosen for that line.
+- id: choice-probabilities
+  question: How do I see the probability of every choice or label in ThinkThen?
+  source: product
+  frequency: choose and tag rows carry a detail field
+  rank: 70
+  page: /functions/choose/
+  reference: /reference/rows/
+  answers_page: true
+  page_title: "choose: pick one answer from a list"
+  reference_title: Result rows
+  reader: A developer who wants the runner-up choice, not only the winner
+  answer: |
+    Add `--json` and read the row's `detail.labels`. For choose and tag, ThinkThen {version} puts one probability per choice or label there, beside the answer.
+  why: |
+    `probability` belongs to the winning choice, and a tag row has one answer list. `detail.labels` keeps every probability, so you can see how close the runner-up came or set your own cut per label.
+  limits: |
+    Score and rank keep their numbers in `detail` too, under their own fields; [Result rows](/reference/rows/) lists each. The runner-up's probability shows how close the call was.
+  examples:
+    - id: ans-choice-probabilities
+      says: "Choose a topic for one message and keep every choice's probability:"
+    - id: ans-tag-probabilities
+      says: "Tag a message with two labels and keep each label's probability:"
+  explain:
+    answer: The winning choice, or the list of labels at or above the cut.
+    probability: The winning choice's probability.
+    choices: Every choice with its probability, from `detail.labels`.
+    labels: Every label with its probability, from `detail.labels`.

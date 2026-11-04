@@ -1,0 +1,1 @@
+thinkthen: usage.threshold: threshold: expected a cut above 0 and at most 1, or a band with 0 < low < high <= 1; received an invalid threshold

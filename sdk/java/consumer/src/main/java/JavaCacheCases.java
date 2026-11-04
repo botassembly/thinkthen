@@ -1,4 +1,4 @@
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -17,12 +17,14 @@ public final class JavaCacheCases {
         }
         Path root = Files.createTempDirectory("thinkthen-cache-consumer-");
         try {
-            for (String mode : java.util.List.of("unavailable","unsafe","missing-home","relative","occupied")) {
+            for (String mode : java.util.List.of("fresh","unavailable","unsafe","missing-home","relative","occupied")) {
                 Path home = Files.createDirectories(root.resolve(mode));
                 boolean mac = System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac");
                 Path cache = mac ? home.resolve("Library/Caches") : home.resolve("cache");
-                Files.createDirectories(cache);
-                Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString(mode.equals("unsafe") ? "rwxrwx---" : "r-x------"));
+                if (!mode.equals("fresh")) {
+                    Files.createDirectories(cache);
+                    Files.setPosixFilePermissions(cache,PosixFilePermissions.fromString(mode.equals("unsafe") ? "rwxrwx---" : "r-x------"));
+                }
                 Path temporary = Files.createDirectories(home.resolve("temporary"));
                 if (mode.equals("occupied")) {
                     // Any predictable entry of the wrong type must be left untouched.
@@ -32,12 +34,20 @@ public final class JavaCacheCases {
                 var process = new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin/java").toString(),
                     "--enable-native-access=ALL-UNNAMED", "-Duser.home=" + ((mode.equals("missing-home") || mode.equals("occupied")) ? "" : mode.equals("relative") && mac ? "relative-home" : home.toString()), "-Djava.io.tmpdir=" + temporary,
                     "-cp", System.getProperty("java.class.path"), "JavaCacheCases", "child");
+                if (mode.equals("fresh")) {
+                    var command = new java.util.ArrayList<>(java.util.List.of("/bin/sh", "-c", "umask 0002; exec \"$@\"", "cache-consumer"));
+                    command.addAll(process.command());
+                    process.command(command);
+                }
                 if (mode.equals("missing-home") || mode.equals("occupied")) process.environment().remove("XDG_CACHE_HOME");
                 else process.environment().put("XDG_CACHE_HOME",mode.equals("relative") ? "relative-cache" : cache.toString());
                 var child = process.redirectErrorStream(true).start();
                 String output = new String(child.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
                 int exit = child.waitFor();
-                if (!mode.equals("unsafe")) {
+                if (mode.equals("fresh")) {
+                    JavaApiCases.equal(exit,0,"new cache loads under a group-writable umask: " + output);
+                    JavaApiCases.equal(Files.getPosixFilePermissions(cache),PosixFilePermissions.fromString("rwx------"),"new cache is private");
+                } else if (!mode.equals("unsafe")) {
                     JavaApiCases.equal(exit,0,"unavailable user cache loads from private temporary cache: " + output);
                     try (var files = Files.walk(temporary)) {
                         JavaApiCases.check(files.anyMatch(p -> p.getFileName().toString().startsWith("libthinkthen_ffi")),"fallback contains engine");

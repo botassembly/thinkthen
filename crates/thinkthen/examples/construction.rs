@@ -140,8 +140,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             json!({"question":{"function":"annotate","questions":{"rank":{"function":"rank","question":"How much?","levels":["low","high"]}}}}),
         ),
         (
-            "evidence-needs-pointer",
-            json!({"question":{"function":"decide","question":"Ready?","evidence":"body"}}),
+            "field-needs-pointer",
+            json!({"question":{"function":"decide","question":"Ready?","field":"body"}}),
         ),
     ];
     let mut options = Vec::new();

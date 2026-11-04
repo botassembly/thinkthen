@@ -14,42 +14,61 @@ use thinkthen::{
     records::{Record, RecordKind},
 };
 
-/// One borrowed finite input; its byte view is copied before open returns.
+/// One record for thinkthen_call_open_records_*; its bytes are copied before the call opens.
 #[repr(C)]
 #[derive(Debug)]
 pub struct RecordInput {
-    /// Allocated descriptor size, at least the current prefix and at most record_stride.
+    /// sizeof(thinkthen_record_input), at most record_stride.
     pub struct_size: u32,
-    /// Generated record kind; missing and invalid need no byte view.
+    /// How to read data, a thinkthen_record_kind; missing and invalid records need no data.
     pub kind: u32,
-    /// Readable bytes for text or JSON, or NULL at zero length.
+    /// The record's bytes for text or JSON; NULL only when len is 0.
     pub data: *const u8,
-    /// Byte length without a terminator.
+    /// The byte length, or THINKTHEN_NUL_TERMINATED.
     pub len: usize,
 }
 
 pub(crate) unsafe fn admit_record(data: *const u8, len: usize, kind: u32) -> Result<Record, Error> {
     /* SAFETY: text and JSON borrow the caller's counted readable bytes. */
     unsafe {
-        match RecordKind::from_abi(kind).ok_or_else(native::abi_error)? {
-            RecordKind::Text => Ok(Record::from_utf8(bytes(data, len))),
-            RecordKind::Json => Ok(match std::str::from_utf8(bytes(data, len)) {
+        let kind = RecordKind::from_abi(kind)
+            .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageRecordKind))?;
+        let data = if matches!(kind, RecordKind::Text | RecordKind::Json) {
+            bytes(data, len)
+        } else {
+            &[]
+        };
+        let record = match kind {
+            RecordKind::Text => Record::from_utf8(data),
+            RecordKind::Json => match std::str::from_utf8(data) {
                 Ok(json) => Record::from_json(json),
                 Err(_) => Record::invalid(),
-            }),
-            RecordKind::Missing => Ok(Record::missing()),
-            RecordKind::Invalid => Ok(Record::invalid()),
-            _ => Err(native::abi_error()),
-        }
+            },
+            RecordKind::Missing => Record::missing(),
+            RecordKind::Invalid => Record::invalid(),
+            _ => return Err(native::abi_error()),
+        };
+        Ok(record.with_original_encoding(kind, data))
     }
 }
 
-/// Admit a question and copy all finite descriptors before starting the shared worker.
-/// Initial records in request JSON are rejected as competing collections.
+/// Open a call over count records with a question from request JSON.
+///
+/// The request must not carry its own records. Read the call with thinkthen_call_next; it never
+/// returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK with *out set, or a negative code with
+/// *out set to NULL: a usage code for a request that is not valid or carries records,
+/// -THINKTHEN_CODE_USAGE_RECORD_KIND for an unknown record kind, -THINKTHEN_CODE_USAGE_ABI for
+/// a bad record size or stride, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit, or
+/// -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+/// thinkthen_call_free; an old handle in *out is not freed.
 /// # Safety
-/// Client and counted request bytes are live; records points to count readable slots
-/// of record_stride bytes each, with readable byte views for text and JSON kinds.
-/// Each slot has a readable size field; out/error are distinct empty writable slots.
+/// Any thread may call this. client is live. request points to len readable bytes, or to a NUL-
+/// terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. records
+/// points to count readable thinkthen_record values, each record_stride bytes apart and each
+/// with struct_size set, whose bytes are copied before return. out is writable. error is NULL
+/// or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_open_records_json(
     client: *const ClientHandle,
@@ -70,7 +89,8 @@ pub unsafe extern "C" fn thinkthen_call_open_records_json(
             if !request.records().is_empty() {
                 return Err(native::abi_error());
             }
-            let offsets = OffsetUnit::from_abi(offsets).ok_or_else(native::abi_error)?;
+            let offsets = OffsetUnit::from_abi(offsets)
+                .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
             let (initial, originals) = admit_records(
                 records,
                 count,
@@ -119,12 +139,23 @@ unsafe fn admit_records(
     }
 }
 
-/// Open a typed named question over a finite collection copied before return.
-/// The exact count preserves finite batching and model-bound admission.
+/// Open a call that asks question about count records.
+///
+/// name works as in thinkthen_call_open_question. Read the call with thinkthen_call_next; it
+/// never returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK with *out set, or a negative code
+/// with *out set to NULL: -THINKTHEN_CODE_USAGE_QUESTION for an incomplete question,
+/// -THINKTHEN_CODE_USAGE_NAME for a bad name, -THINKTHEN_CODE_USAGE_RECORD_KIND for an unknown
+/// record kind, -THINKTHEN_CODE_USAGE_ABI for a bad record size or stride, or
+/// -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit. The caller owns *out and frees it
+/// with thinkthen_call_free; an old handle in *out is not freed.
 /// # Safety
-/// Client, question, optional name and counted descriptors are live until return.
-/// Each descriptor has record_stride readable bytes and a supported size prefix.
-/// Out and error are distinct empty writable slots; one thread drives the call.
+/// Any thread may call this while no thread changes question. client and question are live.
+/// records points to count readable thinkthen_record values, each record_stride bytes apart and
+/// each with struct_size set, whose bytes are copied before return. name is NULL or points to a
+/// readable thinkthen_text. out is writable. error is NULL or initialized with
+/// THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+/// frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+/// its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_open_records_question(
     client: *const ClientHandle,
@@ -141,11 +172,12 @@ pub unsafe extern "C" fn thinkthen_call_open_records_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).0.build()?);
+            let mut request = Request::new((*question).build()?);
             if !name.is_null() {
                 request = request.named(text((*name).data, (*name).len)?)?;
             }
-            let offsets = OffsetUnit::from_abi(offsets).ok_or_else(native::abi_error)?;
+            let offsets = OffsetUnit::from_abi(offsets)
+                .ok_or_else(|| native::argument_error(thinkthen::Code::UsageOffsets))?;
             let (initial, originals) = admit_records(
                 records,
                 count,

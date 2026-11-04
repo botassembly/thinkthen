@@ -83,7 +83,7 @@ func TestSharedConstructionOptions(t *testing.T) {
 			if err := json.Unmarshal(sample.ExpectedData, &sample.Expected); err != nil {
 				t.Fatal(err)
 			}
-			cfg := tt.Config{Backend: tt.Stub, Batch: sample.Client.Batch}
+			cfg := tt.Config{Backend: tt.Stub, Batch: batchValue(sample.Client.Batch)}
 			cfg.Retry = retryFor(sample.Client.Retry)
 			runTypedCase(t, apiClientFor(t, cfg), sample)
 		})

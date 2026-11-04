@@ -1,5 +1,7 @@
 """SQL row checks for the shared offline stress workload."""
+from dataclasses import dataclass
 import json
+import re
 import os
 from pathlib import Path
 
@@ -41,17 +43,42 @@ def check_rows(case, rows, prefix):
     return failed
 
 
+@dataclass(frozen=True)
+class StatementFailure:
+    """An actual SQL statement error, with no returned result rows."""
+    code: str
+
+
+def statement_failure(case, message):
+    """Read the engine code from the host's own exception prefix."""
+    assert case['scenario']['status'] == 'failed', message
+    match = re.search(r'(?:^|: )(backend\.[a-z-]+):', message)
+    assert match is not None, message
+    code = match.group(1)
+    assert code == case['scenario']['code'], (message, case['scenario'])
+    return StatementFailure(code)
+
+
 def check_round(case, results):
     """Release completed result ownership before returning round counts."""
     calls = failed = 0
     for prefix, rows in results:
-        failed += check_rows(case, rows, prefix)
+        if isinstance(rows, StatementFailure):
+            errors = case.setdefault('statement_errors', {})
+            errors[rows.code] = errors.get(rows.code, 0) + 1
+        else:
+            failed += check_rows(case, rows, prefix)
         calls += 1
     return calls, failed
 
 
 def report(case, calls, failed=0, cancelled=False):
     if not cancelled and case['scenario']['status'] == 'failed':
-        assert failed > 0, case['scenario']
-    print(json.dumps(dict(identifier_width_mask=sum(1 << width for width in case.get("identifier_widths", ())), calls=calls, rows=0 if cancelled else calls * case['records'],
-                          failed=failed, cancelled=cancelled)), flush=True)
+        assert failed > 0 or case.get('statement_errors'), case['scenario']
+    statement_errors = case.get('statement_errors', {})
+    returned_rows = (calls - sum(statement_errors.values())) * case['records']
+    result = dict(identifier_width_mask=sum(1 << width for width in case.get("identifier_widths", ())),
+                  calls=calls, rows=0 if cancelled else returned_rows, failed=failed, cancelled=cancelled)
+    if statement_errors:
+        result['statement_errors'] = statement_errors
+    print(json.dumps(result), flush=True)

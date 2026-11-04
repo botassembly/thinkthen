@@ -25,7 +25,7 @@ impl QuestionDefinition {
             .and_then(|v| v.as_str().map(str::to_owned))
             .ok_or(Error::Question)?;
         fields.remove("threshold");
-        fields.remove("evidence");
+        fields.remove("field");
         fields.remove("top");
         let mut domain = serde_json::Map::new();
         for key in ["choices", "labels", "levels", "kinds", "rules"] {

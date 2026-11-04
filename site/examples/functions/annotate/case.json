@@ -1,0 +1,31 @@
+{
+  "questions": {
+    "refund": {
+      "function": "decide",
+      "question": "Does the customer request a refund?"
+    },
+    "topic": {
+      "function": "choose",
+      "question": "What is the message about?",
+      "choices": [
+        "billing",
+        "shipping",
+        "other"
+      ]
+    },
+    "urgency": {
+      "function": "score",
+      "question": "How urgent is the request?",
+      "levels": [
+        "routine",
+        "urgent"
+      ]
+    }
+  },
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ],
+  "answers": "One object per record mapping each question name to its bare answer, in record order."
+}

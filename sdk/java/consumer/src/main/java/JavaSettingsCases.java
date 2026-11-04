@@ -1,4 +1,4 @@
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ public final class JavaSettingsCases {
         }
     }
     static void registry(Path contract) throws Exception {
-        var codes = io.thinkthen.internal.DriverClient.codes();
+        var codes = dev.thinkthen.internal.DriverClient.codes();
         JavaApiCases.equal(ErrorCode.values().length,codes.size(),"complete generated error registry");
         for (var entry : codes) {
             var code = ErrorCode.fromWire(entry.name());

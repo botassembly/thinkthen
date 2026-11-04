@@ -1,29 +1,69 @@
-# ThinkThen for PostgreSQL
+# PostgreSQL
 
-The supplied archives support Linux x86-64 and arm64 servers running PostgreSQL 18 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server architecture from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it. Copy `lib/thinkthen_postgres.so` into `pg_config --pkglibdir` and `share/extension/*` into the `extension` directory under `pg_config --sharedir`. Run the example as an administrator. Grant application roles schema USAGE and EXECUTE on the functions they need.
+The PostgreSQL extension adds the ten functions to PostgreSQL 18, in the `thinkthen` schema. `thinkthen.decide` answers a yes-or-no question about each text in a query: `t` for yes, `f` for no, or NULL with the status `unsure` when it is not sure.
 
-The example uses the stub backend and needs no key or service.
+## Install
+
+The extension runs on PostgreSQL 18, on Linux x86-64 or arm64 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#verify-a-download), and copy its files into the server's folders:
+
+```sh
+mkdir thinkthen-postgres
+tar -xzf thinkthen-postgres-*.tar.gz -C thinkthen-postgres
+cd thinkthen-postgres
+sudo cp lib/thinkthen_postgres.so \
+  "$(pg_config --pkglibdir)/"
+sudo cp share/extension/* \
+  "$(pg_config --sharedir)/extension/"
+```
+
+Set `THINKTHEN_API_KEY` in the server's environment and restart the server; SQL can never set the key. [Configuration](https://thinkthen.dev/configuration/) shows how to get one. `CREATE EXTENSION` revokes the functions from `PUBLIC`, so grant each application role `USAGE` on schema `thinkthen` and `EXECUTE` on the functions it calls.
+
+## Ask a question
+
+Connect with `psql` as an administrator. Create the extension, make a table of support messages, and ask whether the first three request a refund:
 
 ```sql
 CREATE SCHEMA thinkthen;
 CREATE EXTENSION thinkthen SCHEMA thinkthen;
-SET thinkthen.allowed_backends = 'stub:*';
-SET thinkthen.backend = 'stub';
+CREATE TABLE messages (
+  msg_id integer PRIMARY KEY, body text);
+INSERT INTO messages VALUES
+  (1, 'Please refund my order.'),
+  (2, 'Where is my parcel?'),
+  (3, 'I was charged twice for one invoice.'),
+  (4, 'I was charged twice and my parcel is late again.'),
+  (5, 'Morgan works for Example Group.
+Please refund my order.'),
+  (6, 'Morgan works for Example Group.');
 
-CREATE TABLE documents(id bigint PRIMARY KEY, body text NOT NULL);
-INSERT INTO documents VALUES
-  (1, 'Please refund the extra charge.'),
-  (2, 'The meeting is on Monday.');
-
-SELECT * FROM thinkthen.decide(
-  'SELECT body AS record FROM documents ORDER BY id',
-  'Does the message request a refund?');
+SELECT id AS msg_id, answer AS is_refund, status
+FROM thinkthen.decide(
+  'SELECT msg_id AS id, body AS record FROM messages
+   WHERE msg_id <= 3',
+  'Does the customer request a refund?');
 ```
 
-SQL cannot set `max_retries` above the engine default.
+Output:
 
-PostgreSQL fetches source rows in native chunks. Its source buffer rounds the engine iterator’s read-ahead bound up to the next chunk.
+`id` comes back as `jsonb`, so `(id)::integer` joins it back to `messages`.
 
-PostgreSQL evaluates the full function before applying an outer `LIMIT`. Limit the query in `source_sql` to limit paid requests.
+## Not sure and failures
 
-[API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/extensions/postgres/thinkthen--0.2.0.sql).
+Set a low and a high bar, and decide is not sure between them. A not-sure answer is NULL with the status `unsure`, and a message ThinkThen could not judge is NULL with the status `failed` and an `error_code`, so neither one passes for `f`. The query keeps going either way. Send both to a person. In the same database:
+
+```sql
+SELECT id AS msg_id, answer AS is_refund, status
+FROM thinkthen.decide(
+  'SELECT msg_id AS id, body AS record FROM messages
+   WHERE msg_id <= 3',
+  'Does the customer request a refund?',
+  low => 0.2, high => 0.8);
+```
+
+Output:
+
+Test the answer with `IS TRUE` and `IS FALSE`, never with `coalesce(is_refund, false)`, which turns not sure and failures into no.
+
+## Next
+
+The [PostgreSQL page](https://thinkthen.dev/sdks/postgresql/) shows all ten functions. The [PostgreSQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md) covers every option, column, setting and error, and moving from 0.1.0.

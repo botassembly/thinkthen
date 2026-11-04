@@ -36,7 +36,7 @@ def ruby_abandoned_streams
     active = client.decide_each("Ready?", ["record"], cancel: token)
     GC.start
     token.cancel
-    raises(ThinkThen::Cancelled) { active.to_a }
+    raises(ThinkThen::CancelledError) { active.to_a }
     assert(active.closed?, "retained live stream remains cancellable after GC")
     assert(token.cancelled?, "retained token remains usable after stream collection")
     assert(!client.closed?, "GC does not close the caller's client")

@@ -6,41 +6,67 @@ const q = @import("questions.zig");
 const r = @import("row.zig");
 const d = @import("diagnostic.zig");
 const Allocator = std.mem.Allocator;
+/// A filter row with its record, from `nextRow`. Read the decision with `row.answer`.
 pub const FilterRow = struct {
+    /// A copy of the record judged.
     record: t.Record,
+    /// The row; its answer is true when the record is kept.
     row: r.Row(.filter),
-    pub fn kept(self: FilterRow) bool {
-        return switch (self.row.outcome) {
-            .answered => |v| v.answer,
-            else => false,
-        };
-    }
 };
+/// What `next` yields: a row, or for filter the kept record.
 pub fn Item(comptime function: t.Function) type {
+    return if (function == .filter) t.Record else r.Row(function);
+}
+fn Pulled(comptime function: t.Function) type {
     return if (function == .filter) FilterRow else r.Row(function);
 }
 fn descriptor(record: t.Record) c.thinkthen_record_input {
     return switch (record) {
-        .text => |v| .{ .struct_size = @sizeOf(c.thinkthen_record_input), .kind = c.THINKTHEN_RECORD_TEXT, .data = v.ptr, .len = v.len },
-        .json => |v| .{ .struct_size = @sizeOf(c.thinkthen_record_input), .kind = c.THINKTHEN_RECORD_JSON, .data = v.ptr, .len = v.len },
+        .text => |v| .{ .struct_size = @sizeOf(c.thinkthen_record_input), .kind = c.THINKTHEN_RECORD_TEXT, .data = @ptrCast(v.ptr), .len = v.len },
+        .json => |v| .{ .struct_size = @sizeOf(c.thinkthen_record_input), .kind = c.THINKTHEN_RECORD_JSON, .data = @ptrCast(v.ptr), .len = v.len },
         .missing => .{ .struct_size = @sizeOf(c.thinkthen_record_input), .kind = c.THINKTHEN_RECORD_MISSING, .data = null, .len = 0 },
     };
 }
+// Texts and JSON Lines become records; the caller frees the slice when it differs from input's.
+fn collect(allocator: Allocator, input: t.Input) error{OutOfMemory}![]const t.Record {
+    switch (input) {
+        .records => |records| return records,
+        .texts => |texts| {
+            const records = try allocator.alloc(t.Record, texts.len);
+            for (texts, records) |text, *record| record.* = .{ .text = text };
+            return records;
+        },
+        .json_lines => |bytes| {
+            var records: std.ArrayList(t.Record) = .empty;
+            errdefer records.deinit(allocator);
+            var lines = std.mem.splitScalar(u8, bytes, '\n');
+            while (lines.next()) |line| {
+                if (std.mem.trim(u8, line, " \t\r\n\x0c").len == 0) continue;
+                try records.append(allocator, .{ .json = line });
+            }
+            return records.toOwnedSlice(allocator);
+        },
+        .source => unreachable,
+    }
+}
 pub fn open(comptime function: t.Function, client: ?*c.thinkthen_client, allocator: Allocator, question: q.QuestionType(function), input: t.Input, diag: ?*d.Diagnostic) d.Error!Call(function) {
     d.clear(diag);
-    if (client == null) return error.Internal;
+    if (client == null) return d.promote(.{ .code = .usage_closed, .message = "the client is closed" }, diag);
     const builder = try admit(function, allocator, question, diag);
     defer native.function("thinkthen_question_free")(builder);
     var err = d.emptyError();
-    var result: Call(function) = .{ .allocator = allocator, .input = input };
+    var result: Call(function) = .{ .allocator = allocator, .input = input, .rows = .init(allocator) };
     errdefer result.deinit();
     var name: c.thinkthen_text = undefined;
     const name_ptr: ?*const c.thinkthen_text = if (question.options.name) |v| named: {
-        name = .{ .data = v.ptr, .len = v.len };
+        name = .{ .data = @ptrCast(v.ptr), .len = v.len };
         break :named &name;
     } else null;
     switch (input) {
-        .records => |records| {
+        .source => try d.check(native.function("thinkthen_call_open_question")(client, builder, name_ptr, c.THINKTHEN_OFFSET_UTF8, &result.handle, &err), &err, diag),
+        else => {
+            const records = try collect(allocator, input);
+            defer if (input != .records) allocator.free(records);
             const inputs = try allocator.alloc(c.thinkthen_record_input, records.len);
             defer allocator.free(inputs);
             for (records, inputs) |record, *slot| slot.* = descriptor(record);
@@ -49,25 +75,31 @@ pub fn open(comptime function: t.Function, client: ?*c.thinkthen_client, allocat
                 errdefer copy.free(allocator);
                 try result.originals.put(allocator, position, copy);
             };
-            try d.check(native.function("thinkthen_call_open_records_question")(client, builder, name_ptr, inputs.ptr, inputs.len, @sizeOf(c.thinkthen_record_input), c.THINKTHEN_OFFSET_UTF8, &result.handle, &err), &err, diag);
+            try d.check(native.function("thinkthen_call_open_records_question")(client, builder, name_ptr, @ptrCast(inputs.ptr), inputs.len, @sizeOf(c.thinkthen_record_input), c.THINKTHEN_OFFSET_UTF8, &result.handle, &err), &err, diag);
         },
-        .source => try d.check(native.function("thinkthen_call_open_question")(client, builder, name_ptr, c.THINKTHEN_OFFSET_UTF8, &result.handle, &err), &err, diag),
     }
     return result;
 }
+/// A many-record call. Read it with `while (try call.next(&diag)) |row|`, then `deinit`.
+/// `next` reuses the call's own memory, so a row is valid until the next read or `deinit`.
+/// To keep rows longer, read with `nextInto(arena, &diag)`.
+/// One thread reads a call; any thread may `cancel` it.
 pub fn Call(comptime function: t.Function) type {
     return struct {
         handle: ?*c.thinkthen_call = null,
         allocator: Allocator,
         input: t.Input,
+        rows: std.heap.ArenaAllocator,
         done: bool = false,
         input_ended: bool = false,
         originals: std.AutoHashMapUnmanaged(u64, t.Record) = .empty,
         next_position: u64 = 1,
         const Self = @This();
+        /// Stop the call. A read in progress returns `error.Cancelled`. Safe from any thread.
         pub fn cancel(self: *const Self) void {
             if (self.handle) |handle| native.function("thinkthen_call_cancel")(handle);
         }
+        /// Free the call and every row `next` returned.
         pub fn deinit(self: *Self) void {
             if (self.handle) |handle| native.function("thinkthen_call_free")(handle);
             self.handle = null;
@@ -75,10 +107,50 @@ pub fn Call(comptime function: t.Function) type {
             while (originals.next()) |record| record.free(self.allocator);
             self.originals.deinit(self.allocator);
             self.originals = .empty;
+            self.rows.deinit();
+            self.rows = .init(self.allocator);
             self.done = true;
         }
-        /// Returned rows and retained filter records live in arena until it is reset or freed.
-        pub fn next(self: *Self, arena: Allocator, diag: ?*d.Diagnostic) d.Error!?Item(function) {
+        /// The next row in input order, or null at the end. For filter, the next kept record:
+        /// not-sure records are skipped, and a failed record returns its error with its position,
+        /// code and message in diag, after which reading can continue.
+        /// The result is valid until the next read or `deinit`.
+        pub fn next(self: *Self, diag: ?*d.Diagnostic) d.Error!?Item(function) {
+            _ = self.rows.reset(.retain_capacity);
+            if (function == .filter) return self.kept(null, diag);
+            return self.pull(self.rows.allocator(), diag);
+        }
+        /// As `next`, but the result lives in arena, which must be an arena: rows are never freed one by one.
+        pub fn nextInto(self: *Self, arena: Allocator, diag: ?*d.Diagnostic) d.Error!?Item(function) {
+            if (function == .filter) return self.kept(arena, diag);
+            return self.pull(arena, diag);
+        }
+        /// Filter only: every row with its record, kept or not, not sure or failed.
+        /// The result is valid until the next read or `deinit`.
+        pub fn nextRow(self: *Self, diag: ?*d.Diagnostic) d.Error!?FilterRow {
+            if (function != .filter) @compileError("nextRow reads filter calls; use next");
+            _ = self.rows.reset(.retain_capacity);
+            return self.pull(self.rows.allocator(), diag);
+        }
+        /// As `nextRow`, but the result lives in arena, which must be an arena.
+        pub fn nextRowInto(self: *Self, arena: Allocator, diag: ?*d.Diagnostic) d.Error!?FilterRow {
+            if (function != .filter) @compileError("nextRowInto reads filter calls; use nextInto");
+            return self.pull(arena, diag);
+        }
+        fn kept(self: *Self, arena: ?Allocator, diag: ?*d.Diagnostic) d.Error!?t.Record {
+            while (true) {
+                _ = self.rows.reset(.retain_capacity);
+                const item = (try self.pull(self.rows.allocator(), diag)) orelse return null;
+                const keep = item.row.answer(diag) catch |failure| switch (failure) {
+                    error.Unsure => continue,
+                    else => |other| return other,
+                };
+                if (!keep) continue;
+                d.clear(diag);
+                return if (arena) |target| try item.record.copy(target) else item.record;
+            }
+        }
+        fn pull(self: *Self, arena: Allocator, diag: ?*d.Diagnostic) d.Error!?Pulled(function) {
             d.clear(diag);
             if (self.done) return null;
             errdefer {
@@ -98,7 +170,7 @@ pub fn Call(comptime function: t.Function) type {
                         if (self.input_ended) return error.Internal;
                         const record = switch (self.input) {
                             .source => |source| try source.nextFn(source.context),
-                            .records => null,
+                            else => null,
                         };
                         if (record) |value| {
                             if (function == .filter) {
@@ -108,8 +180,8 @@ pub fn Call(comptime function: t.Function) type {
                                 self.next_position += 1;
                             }
                             const result = switch (value) {
-                                .text => |v| native.function("thinkthen_call_send_text")(self.handle, v.ptr, v.len, &err),
-                                .json => |v| native.function("thinkthen_call_send_json")(self.handle, v.ptr, v.len, &err),
+                                .text => |v| native.function("thinkthen_call_send_text")(self.handle, @ptrCast(v.ptr), v.len, &err),
+                                .json => |v| native.function("thinkthen_call_send_json")(self.handle, @ptrCast(v.ptr), v.len, &err),
                                 .missing => native.function("thinkthen_call_send_missing")(self.handle, &err),
                             };
                             try d.check(result, &err, diag);
@@ -151,7 +223,7 @@ fn admit(comptime function: t.Function, allocator: Allocator, question: q.Questi
         if (@hasField(@TypeOf(base.options), "threshold")) base.options.threshold = null;
         const encoded = try std.json.Stringify.valueAlloc(allocator, base, .{ .emit_null_optional_fields = false });
         defer allocator.free(encoded);
-        try d.check(native.function("thinkthen_question_from_json")(encoded.ptr, encoded.len, &builder, &err), &err, diag);
+        try d.check(native.function("thinkthen_question_from_json")(@ptrCast(encoded.ptr), encoded.len, &builder, &err), &err, diag);
     }
     errdefer native.function("thinkthen_question_free")(builder);
     if (@hasField(@TypeOf(question.options), "threshold")) {
@@ -165,13 +237,13 @@ fn admit(comptime function: t.Function, allocator: Allocator, question: q.Questi
         }
     }
     if (function == .annotate) {
-        if (question.options.evidence) |v| try d.check(native.function("thinkthen_question_set_evidence")(builder, v.ptr, v.len, &err), &err, diag);
+        if (question.options.field) |v| try d.check(native.function("thinkthen_question_set_field")(builder, @ptrCast(v.ptr), v.len, &err), &err, diag);
         for (question.questions.entries) |entry| {
             switch (entry.question) {
                 inline else => |child, tag| {
                     const handle = try admit(@field(t.Function, @tagName(tag)), allocator, child, diag);
                     defer native.function("thinkthen_question_free")(handle);
-                    try d.check(native.function("thinkthen_question_add_entry")(builder, entry.name.ptr, entry.name.len, handle, &err), &err, diag);
+                    try d.check(native.function("thinkthen_question_add_entry")(builder, @ptrCast(entry.name.ptr), entry.name.len, handle, &err), &err, diag);
                 },
             }
         }

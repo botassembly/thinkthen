@@ -6,9 +6,13 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def package_id():
+    return ET.parse(ROOT / 'sdk/csharp/ThinkThen.csproj').findtext('.//PackageId')
+
+
 def prepare_project(aot=False):
     library = ET.parse(ROOT / 'sdk/csharp/ThinkThen.csproj')
-    identity = library.findtext('.//PackageId')
+    identity = package_id()
     project = ET.Element('Project', Sdk='Microsoft.NET.Sdk')
     properties = ET.SubElement(project, 'PropertyGroup')
     values = {'OutputType': 'Exe', 'TargetFramework': library.findtext('.//TargetFramework'),

@@ -1,0 +1,7 @@
+┌────────┬───────────┬──────────────────┬──────────────────────┐
+│ msg_id │ is_refund │      status      │      error_code      │
+│ int32  │  boolean  │ thinkthen_status │ thinkthen_error_code │
+├────────┼───────────┼──────────────────┼──────────────────────┤
+│      1 │ true      │ answered         │ NULL                 │
+│      7 │ NULL      │ failed           │ record.missing       │
+└────────┴───────────┴──────────────────┴──────────────────────┘

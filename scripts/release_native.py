@@ -1,6 +1,5 @@
 """Build the release Rust surfaces together, then reuse their immutable outputs."""
 from contextlib import contextmanager
-import fcntl
 import hashlib
 import json
 import os
@@ -67,6 +66,7 @@ def publish(source, destination):
 
 @contextmanager
 def prepare(root, run, native_run):
+    import fcntl
     host = current()
     cache = Path(run('scripts/native-prepare', '--path').stdout.strip())
     inputs = source_inputs(root, run)

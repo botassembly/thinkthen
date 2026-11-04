@@ -1,0 +1,5 @@
+messages.thinkthen.csv
+message,urgency_rank
+Please refund my order.,3
+Where is my parcel?,2
+I was charged twice for one invoice.,1

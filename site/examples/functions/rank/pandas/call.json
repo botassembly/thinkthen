@@ -1,0 +1,5 @@
+{
+  "anchor": "messages[\"urgency_rank\"] = messages[\"message\"].thinkthen.rank(",
+  "before": 0,
+  "after": 2
+}

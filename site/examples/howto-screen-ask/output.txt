@@ -1,0 +1,3 @@
+{"id":"p1","screen":{"lung":true,"trial":true}}
+{"id":"p2","screen":{"lung":false,"trial":false}}
+{"id":"p3","screen":{"lung":true,"trial":"unsure"}}

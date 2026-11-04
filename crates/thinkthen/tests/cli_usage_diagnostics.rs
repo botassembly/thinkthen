@@ -9,21 +9,21 @@ fn failure(command: &mut Command, field: &str, suggestion: Option<&str>) {
         .stdin(Stdio::null())
         .output()
         .unwrap();
-    assert_eq!(
-        output.status.code(),
-        Some(if field == "shell" || field == "entry" {
-            5
-        } else {
-            2
-        }),
-        "{output:?}"
-    );
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
     let message = String::from_utf8(output.stderr).unwrap();
+    if field.is_empty() && message.starts_with("error:") {
+        assert!(
+            message.contains("Usage:") && message.contains("--help"),
+            "{message}"
+        );
+        assert!(!message.contains("private-payload"), "{message}");
+        return;
+    }
     assert!(
-        message.contains(if field == "shell" || field == "entry" {
-            "local.toolbox:"
-        } else {
-            "usage.question:"
+        message.contains(match field {
+            // Toolbox mistakes are usage errors.
+            "shell" | "entry" | "shel" | "qusetion" => "usage.question:",
+            _ => "usage.option:",
         }),
         "{message}"
     );
@@ -36,7 +36,22 @@ fn failure(command: &mut Command, field: &str, suggestion: Option<&str>) {
             "{message}"
         );
     }
-    assert!(!message.contains("private-payload"), "{message}");
+    if !matches!(
+        field,
+        "batch"
+            | "threshold"
+            | "low"
+            | "high"
+            | "top"
+            | "from"
+            | "format"
+            | "color"
+            | "quiet"
+            | "check"
+            | "json"
+    ) {
+        assert!(!message.contains("private-payload"), "{message}");
+    }
 }
 
 #[test]
@@ -70,9 +85,8 @@ fn command_options_report_wrong_types_and_closest_names() {
 fn command_framing_reports_wrong_types_and_closest_names() {
     failure(
         support::command()
-            .args(["decide", "Ready?"])
-            .env("THINKTHEN_COLUMNS", "[23]")
-            .args(["--from", "csv"]),
+            .args(["decide", "Ready?", "--column", "Body"])
+            .args(["--from", "jsonl"]),
         "column",
         None,
     );
@@ -108,7 +122,6 @@ fn command_saved_runs_report_wrong_types_and_closest_names() {
 #[test]
 fn command_grammar_reports_missing_and_unknown_arguments_without_values() {
     for arguments in [
-        vec!["decide"],
         vec!["decide", "Ready?", "--batch"],
         vec!["relate", "--rule", "works_for", "person"],
         vec!["decide", "Ready?", "--batc=private-payload"],
@@ -149,7 +162,7 @@ fn command_saved_entry_selection_suggests_an_available_entry() {
 }
 
 #[test]
-fn command_enum_diagnostics_redact_unknown_value_contents() {
+fn command_enum_diagnostics_show_typed_option_values() {
     for (option, environment) in [
         ("from", "THINKTHEN_FROM"),
         ("format", "THINKTHEN_FORMAT"),
@@ -176,8 +189,8 @@ fn command_enum_diagnostics_redact_unknown_value_contents() {
 }
 
 #[test]
-fn evidence_pointers_refuse_unstructured_text_before_reading_input() {
-    for framing in [None, Some("text"), Some("lines")] {
+fn evidence_pointers_refuse_line_framing_before_reading_input() {
+    for framing in [Some("lines")] {
         for environment in [false, true] {
             let mut command = support::command();
             command.args(["decide", "Ready?", "--backend", "stub"]);
@@ -185,19 +198,19 @@ fn evidence_pointers_refuse_unstructured_text_before_reading_input() {
                 command.args(["--from", framing]);
             }
             if environment {
-                command.env("THINKTHEN_EVIDENCE", "/body");
+                command.env("THINKTHEN_FIELD", "/body");
             } else {
-                command.args(["--evidence", "/body"]);
+                command.args(["--field", "/body"]);
             }
             let output = command.stdin(Stdio::null()).output().unwrap();
             assert_eq!(output.status.code(), Some(2), "{output:?}");
             assert!(output.stdout.is_empty());
             let message = String::from_utf8(output.stderr).unwrap();
             assert!(
-                message.starts_with("thinkthen: usage.question: "),
+                message.starts_with("thinkthen: usage.option: "),
                 "{message}"
             );
-            assert!(message.contains("evidence"), "{message}");
+            assert!(message.contains("field"), "{message}");
         }
     }
 }

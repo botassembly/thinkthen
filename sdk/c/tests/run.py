@@ -112,7 +112,7 @@ for name, case in cases:
             if not has_offsets(row.get("answer")) and not has_offsets(row.get("detail")):
                 continue
             record = case["request"].get("records", [])[row["position"] - 1]
-            pointer = case["request"]["question"].get("evidence")
+            pointer = case["request"]["question"].get("field")
             if pointer:
                 for part in pointer.lstrip('/').split('/'):
                     key = part.replace('~1', '/').replace('~0', '~')
@@ -120,7 +120,7 @@ for name, case in cases:
             byte_offsets(row.get("answer"), record)
             byte_offsets(row.get("detail"), record)
     backends = ["stub"] if name.startswith("options:") else manifest["backends"]
-    modes = [None, "shortcut"] if offset_units and name == "find-evidence-name.json" else [None]
+    modes = [None, "shortcut"] if offset_units and name == "find-field-name.json" else [None]
     for backend, mode in ((backend, mode) for backend in backends for mode in modes):
         try:
             settings = dict(manifest["client"], **case.get("client", {}))

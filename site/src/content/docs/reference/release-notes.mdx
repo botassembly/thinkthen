@@ -1,0 +1,50 @@
+---
+title: Release notes
+description: What ThinkThen 0.2.0 holds, from the ten functions and their not-sure answer to the SDKs and databases, and its known limits before you install it or pay for questions.
+goal: Someone about to install ThinkThen or send it paid questions leaves knowing what 0.2.0 holds and each known limit, with the step that avoids it.
+reader: A developer or reviewer about to install ThinkThen or put it in front of a paid service
+kind: reference
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "Release notes: what ThinkThen 0.2.0 holds and its limits"
+---
+
+ThinkThen answers questions about text with ten functions, from the command line, thirteen language SDKs and three databases.
+
+## What 0.2.0 holds
+
+- **Ten functions:** [decide](/functions/decide/), [choose](/functions/choose/), [filter](/functions/filter/), [tag](/functions/tag/), [score](/functions/score/), [rank](/functions/rank/), [find](/functions/find/), [recognize](/functions/recognize/), [relate](/functions/relate/) and [annotate](/functions/annotate/).
+- **A not-sure answer.** decide, choose and filter say not sure when the model's answer doesn't reach your bar, so you can send those texts to a person.
+- **Answers a script can branch on.** `--check` makes yes, no and not sure the exit codes 0, 1 and 3. [Exit codes](/command-line/exit-codes/) lists every code.
+- **Text from anywhere.** `--text`, a pipe, or files: plain text, one text per line, JSON Lines, CSV, TSV and Excel. [File types](/command-line/file-types/) shows each.
+- **Answers beside your data.** `--field` picks the part of each JSON line to judge, and `--into` adds the answer to each line, or a new column to a CSV, TSV or Excel file. [JSON Lines](/command-line/json-lines/) shows both.
+- **Every detail as JSON.** `--json` prints each answer with its status, probability and details. [JSON output](/reference/json-output/) lists the fields.
+- **Toolboxes.** A file of named questions, asked together with annotate or run from a saved entry with `run`. [Toolboxes](/command-line/toolboxes/) covers them.
+- **SDKs** for Python, with pandas and Polars, TypeScript, Go, Java, Kotlin, C#, R, Ruby, Rust, Swift, Zig, C and C++, and extensions for DuckDB, SQLite and PostgreSQL. Each returns the same answers as the command.
+- **Two services:** System One, with its model Jev as the default, and OpenAI. [Configuration](/configuration/) sets them up.
+- **30 error codes,** each with its fix in [Troubleshooting](/reference/troubleshooting/), plus a manual page and shell completions.
+- **Platforms:** Linux with glibc 2.28 or later, macOS 15 on Apple silicon, and Windows on x86-64.
+
+## Upgrading from 0.1
+
+0.2.0 changes the command and the SDKs, with no compatibility with 0.1, so update your scripts and code. The [release page on GitHub](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) lists every command and option that changed or went away.
+
+ThinkThen is still at 0.x, so commands, options and SDKs can change between releases.
+
+## Known limits
+
+| Limit | What happens | What to do |
+| --- | --- | --- |
+| Unsigned macOS files | Apple hasn't notarized them, so macOS can block them after a browser download. | Check the download against `SHA256SUMS`, then run `xattr -dr com.apple.quarantine thinkthen-0.2.0` on the folder you extracted. Do this only for a download that passed the check. |
+| Unsigned Windows files | They carry no signature, so Windows can block them. | Check the zip against `SHA256SUMS`, then run `Unblock-File` on it before you extract it. Windows policy can still block it. [Installation](/install/) shows both checks. |
+| Cancelling any run | Ctrl-C stops new questions, but answers to questions already sent can be lost, and the service still charges for them. | Run large jobs in smaller parts, and keep each part's answers. |
+| Running a database query again | Each run asks the questions again, and the service charges again. | Save the answers in a table, then query the table. |
+| SQLite joins | A ThinkThen function inside a join or a correlated subquery can run more than once and pay again. | Save one ThinkThen query in a temporary table, then join the table. [SQLite](/sdks/sqlite/) shows how. |
+| PostgreSQL LATERAL joins | A function in a correlated LATERAL join asks again for each line of the outer table, and pays each time. | Save one ThinkThen query in a table, then join its answers. |
+| PostgreSQL LIMIT | PostgreSQL answers every input before it applies LIMIT, so LIMIT 1 can pay for them all. | Limit the input inside a subquery, before the ThinkThen function. |
+| DuckDB LIMIT | An outer LIMIT can wait for other questions and pay for answers it never returns. | Put LIMIT inside the input subquery. |
+| Cancelling a database query | Cancelling a DuckDB, SQLite or PostgreSQL query throws away the answers it already got, and the service still charges for them. | Save each part's answers in a table before the next. |
+| DuckDB version | The extension loads only into DuckDB 2.0.0, with unsigned extensions allowed. | Start DuckDB with `duckdb -unsigned`. [DuckDB](/sdks/duckdb/) shows the steps. |
+| Toolbox shell steps | A toolbox can run programs on your machine. | ThinkThen runs them only with `--allow-shell`, and passes your key only to a step whose `env` names it. Run only toolboxes you have read. |
+| Memory over long runs | Memory was measured over long test runs of the SDKs and databases, but the measurements don't prove they never leak. | Keep long-running programs bounded and watch their memory. The [resource observations](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/resource-observations.md) give the measurements. |

@@ -1,0 +1,70 @@
+---
+// Adds the social card and structured data for search engines to Starlight's own head.
+import Default from '@astrojs/starlight/components/Head.astro';
+import { markdownTwin } from '../lib/routes.mjs';
+import site from '../data/site.json';
+import product from '../../product.config.mjs';
+const { entry } = Astro.locals.starlightRoute;
+const d = entry.data;
+const url = new URL(Astro.url.pathname, Astro.site).href;
+// public/social-card.png, made by scripts/social-card.mjs from the brand marks.
+const card = new URL('/social-card.png', Astro.site).href;
+// The card shows the mark and the tagline, the same on every page.
+const cardAlt = `${product.name}: ${product.socialCard.tagline}`;
+let ld;
+if (!d.kind) {
+  ld = undefined;
+} else if (d.kind === 'answer') {
+  ld = {
+    '@context': 'https://schema.org',
+    '@type': 'QAPage',
+    mainEntity: {
+      '@type': 'Question',
+      name: d.title,
+      answerCount: 1,
+      acceptedAnswer: { '@type': 'Answer', text: d.description, url },
+    },
+  };
+} else if (d.kind === 'blog' || d.kind === 'article') {
+  ld = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: d.title,
+    description: d.description,
+    url,
+    datePublished: d.date?.toISOString().slice(0, 10),
+    author: d.author ? { '@type': 'Person', name: d.author } : undefined,
+  };
+} else if (entry.id === '' || entry.id === 'index') {
+  ld = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: site.product,
+    softwareVersion: site.version,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: site.platforms,
+    url,
+    description: d.description,
+  };
+} else {
+  ld = {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: d.title,
+    description: d.description,
+    url,
+    dateModified: d.verified.toISOString().slice(0, 10),
+    proficiencyLevel: d.kind === 'tutorial' ? 'Beginner' : 'Expert',
+    about: { '@type': 'SoftwareApplication', name: site.product, softwareVersion: site.version },
+  };
+}
+---
+<Default />
+<link rel="alternate" type="text/markdown" href={markdownTwin(Astro.url.pathname)} />
+<meta property="og:image" content={card} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={cardAlt} />
+<meta name="twitter:image" content={card} />
+<meta name="twitter:image:alt" content={cardAlt} />
+{ld && <script type="application/ld+json" set:html={JSON.stringify(ld)} />}

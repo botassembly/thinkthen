@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract or run a guide's first call with an array record and six offline collection inputs.
+"""Extract or run a guide's collection example with six offline inputs.
 
 Prepare prints one source path. Check accepts the caller's installed runtime,
 runs from its isolated directory and checks every input position and failure.
@@ -27,10 +27,11 @@ LANGUAGES = {
 def prepare(surface, folder, engine=None):
     language, filename = LANGUAGES[surface]
     text = (ROOT / 'docs/surfaces' / (surface + '.md')).read_text()
-    code = re.search(r'```([^\n]*)\n(.*?)\n```', text, re.S)
-    if code is None or code[1] != language or 'records.jsonl' not in code[2]:
-        raise SystemExit('guide must start with its JSON Lines collection example: ' + surface)
-    if 'records[0]' in text:
+    code = next((block for block in re.finditer(r'```([^\n]*)\n(.*?)\n```', text, re.S)
+                 if block[1] == language and 'records.jsonl' in block[2]), None)
+    if code is None:
+        raise SystemExit('guide must include its JSON Lines collection example: ' + surface)
+    if 'records[0]' in code[2]:
         raise SystemExit('guide must pass every record: ' + surface)
     folder.mkdir(parents=True, exist_ok=True)
     # Missing records and missing fields must remain separate input positions.
@@ -43,6 +44,8 @@ def prepare(surface, folder, engine=None):
     if engine:
         source = source.replace('/absolute/path/to/thinkthen_sqlite', engine)
         source = source.replace('/absolute/path/to/thinkthen.duckdb_extension', engine)
+    if surface == 'duckdb':
+        source = re.sub(r"(LOAD\s+'[^']+';)", r"\1\nSET thinkthen_backend = 'stub';", source, flags=re.I)
     path.write_text(source + '\n')
     print(path)
 
@@ -52,6 +55,7 @@ def check(surface, command):
     environment = dict(os.environ)
     for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH'):
         environment.pop(name, None)
+    environment['THINKTHEN_BACKEND'] = 'stub'
     result = subprocess.run(command, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if result.returncode and not (surface == 'bash' and result.returncode == 6):
         raise SystemExit(result.stdout)
@@ -65,30 +69,26 @@ def check(surface, command):
                 remaining = remaining[end:].strip()
         else:
             rows = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
-        array, *rows = rows
-        array_status = array['status']
-        actual = [(row['position'], row['status']) for row in rows]
-        false_answer = any(row['status'] == 'answered' and row.get('answer') is False for row in rows)
+        if len(rows) == 7:
+            rows = rows[1:]
+        actual = [(int(row['position']) if surface == 'duckdb' else row['position'], row['status']) for row in rows]
+        false_answer = any(row['status'] == 'answered' and row.get('answer', row.get('is_refund')) is False for row in rows)
     else:
-        array = re.search(r'^\s*array(?:\s+|\|)(answered|unsure|failed|completed)\b', result.stdout, re.M | re.I)
-        array_status = array[1].lower() if array else 'missing'
         actual = [(int(position), status.lower()) for position, status in
                   re.findall(r'^\s*([1-6])(?:\s+|\|)(answered|unsure|failed|completed)\b', result.stdout, re.M | re.I)]
         # SQL hosts print their native boolean representation.
         boolean = {'sqlite': r'(?:false|0)', 'postgresql': r'(?:false|f)'}.get(surface, r'false')
         false_answer = re.search(r'^\s*[1-6](?:\s+|\|)(?:answered|completed)(?:\s+|\|)'
                                  + boolean + r'\b', result.stdout, re.M | re.I) is not None
-    if (array_status not in ('answered', 'completed')
-            or [position for position, _ in actual] != [1, 2, 3, 4, 5, 6]
+    if ([position for position, _ in actual] != [1, 2, 3, 4, 5, 6]
             or any(status == 'failed' for _, status in actual[:2])
-            or [status for _, status in actual[2:5]] != ['failed', 'failed', 'failed']
-            or actual[5][1] not in ('answered', 'completed')):
+            or [status for _, status in actual[2:]] != ['failed', 'failed', 'failed', 'failed']):
         raise SystemExit('guide dropped or misreported array/null inputs: ' + surface + '\n' + result.stdout)
     if not false_answer:
         raise SystemExit('guide lost the answered false value: ' + surface + '\n' + result.stdout)
     if 'array of 2 values' not in result.stdout or 'stream form of the call' not in result.stdout:
         raise SystemExit('guide lost the shared array hint: ' + surface + '\n' + result.stdout)
-    print(surface + ' guide: single array and all six collection outcomes survived, including answered false and selected null')
+    print(surface + ' guide: all six collection outcomes survived, including answered false and missing selected null')
 
 
 if __name__ == '__main__':

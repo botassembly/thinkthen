@@ -79,6 +79,7 @@ fn saved_questions_use_explicit_files_folders_and_local_lookup() {
     for args in [
         vec!["single.json"],
         vec!["thinkthen.json", "--entry", "ready"],
+        vec!["thinkthen.json", "ready"],
         vec!["ready"],
     ] {
         let actual = rows(&fixture.run(&args, "\"alpha\"\n\"evidence 5\"\n"));
@@ -88,13 +89,54 @@ fn saved_questions_use_explicit_files_folders_and_local_lookup() {
     }
     std::fs::create_dir(fixture.0.join("thinkthen")).unwrap();
     fixture.write("thinkthen/ready.json", &question());
-    assert_eq!(fixture.run(&["ready"], "").status.code(), Some(5));
+    let ambiguous = fixture.run(&["ready"], "");
+    assert_eq!(ambiguous.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&ambiguous.stderr).contains("thinkthen.json and thinkthen/"));
     std::fs::remove_file(fixture.0.join("thinkthen.json")).unwrap();
     assert_eq!(rows(&fixture.run(&["ready"], "\"alpha\"\n")).len(), 1);
+    for args in [
+        vec!["thinkthen", "--entry", "ready"],
+        vec!["thinkthen", "ready"],
+    ] {
+        assert_eq!(rows(&fixture.run(&args, "\"alpha\"\n")).len(), 1);
+    }
+    std::fs::write(fixture.0.join("input.jsonl"), "\"alpha\"\n\"evidence 5\"\n").unwrap();
+    // A file with one entry takes input next; a folder takes an entry name next.
     assert_eq!(
-        rows(&fixture.run(&["thinkthen", "--entry", "ready"], "\"alpha\"\n")).len(),
-        1
+        rows(&fixture.run(&["single.json", "input.jsonl"], "")).len(),
+        2
     );
+    assert_eq!(
+        rows(&fixture.run(&["thinkthen", "ready", "input.jsonl"], "")).len(),
+        2
+    );
+}
+
+#[test]
+fn toolbox_mistakes_are_usage_errors_that_name_the_file() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "two.json",
+        &json!({"entries":{"ready":question(),"other":question()}}),
+    );
+    fixture.write("thinkthen.json", &json!({"entries":{"ready":question()}}));
+    std::fs::create_dir(fixture.0.join("folder")).unwrap();
+    for (args, file) in [
+        (vec!["missing.json"], "missing.json"),
+        (vec!["two.json", "raedy"], "two.json"),
+        (vec!["two.json"], "two.json"),
+        (vec!["two.json", "--entry", "../invalid"], "two.json"),
+        (vec!["../invalid"], "thinkthen.json"),
+        (vec!["folder"], "folder"),
+        (vec!["folder", "../invalid"], "folder"),
+        (vec!["folder", "absent"], "folder"),
+    ] {
+        let output = fixture.run(&args, "");
+        assert_eq!(output.status.code(), Some(2), "{args:?}: {output:?}");
+        assert_eq!(support::reported(&output), "usage.question", "{args:?}");
+        let message = String::from_utf8_lossy(&output.stderr);
+        assert!(message.contains(&format!("toolbox {file}")), "{message}");
+    }
 }
 
 #[test]
@@ -119,9 +161,49 @@ fn shell_failure_keeps_its_status_and_stops_function_output() {
     assert!(output.stdout.is_empty());
     fixture.write(
         "invalid.json",
-        &json!({"run":[{"shell":["/bin/sh","-c","printf '%s\\n' not-json"]}]}),
+        &json!({"run":[{"shell":["/bin/sh","-c","printf '%s\\n' not-json"]}, question()]}),
     );
     assert_eq!(fixture.run(&["invalid.json"], "").status.code(), Some(5));
+}
+
+#[test]
+fn the_last_step_prints_plain_text_unchanged() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "count.json",
+        &json!({"run":[question(), {"shell":["/bin/sh","-c","printf 'rows: '; wc -l | tr -d ' '; printf '\\n'"]}]}),
+    );
+    let output = fixture.run(&["count.json"], "\"alpha\"\n\"evidence 5\"\n");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "rows: 2\n\n");
+    for (command, expected) in [
+        ("printf 'refund'", "refund"),
+        ("printf 'refund\\r\\n\\r\\nlast'", "refund\r\n\r\nlast"),
+    ] {
+        fixture.write(
+            "text.json",
+            &json!({"run":[{"shell":["/bin/sh","-c",command]}]}),
+        );
+        let output = fixture.run(&["text.json"], "");
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        assert_eq!(output.stdout, expected.as_bytes(), "{command}");
+    }
+}
+
+#[test]
+fn a_filter_row_reaches_the_next_step_as_one_json_line() {
+    let fixture = Fixture::new();
+    fixture.write(
+        "kept.json",
+        &json!({"run":[{"question":{"function":"filter","question":"Ready?"}}, {"shell":["cat"]}]}),
+    );
+    for ending in ["\n", "\r\n"] {
+        let input = format!("\"alpha\"{ending}\"evidence 5\"{ending}");
+        let actual = rows(&fixture.run(&["kept.json"], &input));
+        assert_eq!(actual.len(), 1, "{ending:?}");
+        assert_eq!(actual[0]["item"], "evidence 5");
+        assert_eq!(actual[0]["answer"], true);
+    }
 }
 
 #[test]
@@ -164,14 +246,14 @@ fn signals_terminate_the_interpreter_and_its_child() {
         assert_eq!(output.status.code(), Some(130));
         assert!(output.stdout.is_empty());
         let live = support::process::alive(descendant);
-        let evidence = if live {
-            let evidence = support::process::evidence(&[descendant]);
+        let field = if live {
+            let field = support::process::evidence(&[descendant]);
             let _ = Command::new("kill").args(["-KILL", descendant]).status();
-            evidence
+            field
         } else {
             String::new()
         };
-        assert!(!live, "owned process survived command exit:\n{evidence}");
+        assert!(!live, "owned process survived command exit:\n{field}");
     }
 }
 
@@ -193,7 +275,7 @@ fn admission_finishes_before_any_declared_command_starts() {
         std::fs::write(fixture.0.join("invalid.json"), text).unwrap();
         assert_eq!(
             fixture.run(&["invalid.json"], "").status.code(),
-            Some(5),
+            Some(2),
             "{text}"
         );
     }
@@ -296,7 +378,7 @@ fn an_early_reader_cancels_only_its_upstream_function_call() {
 fn a_failed_function_row_never_becomes_input_to_a_shell() {
     let fixture = Fixture::new();
     let mut request = question();
-    request["question"]["evidence"] = json!("/missing");
+    request["question"]["field"] = json!("/missing");
     fixture.write(
         "failed.json",
         &json!({"run":[
@@ -328,11 +410,11 @@ fn saved_numeric_bands_preserve_unsure_rows_without_a_verdict_exit() {
 fn global_evidence_replaces_saved_function_evidence_in_a_pipeline() {
     let fixture = Fixture::new();
     fixture.write("evidence.json", &json!({"run":[
-        {"name":"stored","question":{"function":"decide","question":"Ready?","evidence":"/missing"}},
+        {"name":"stored","question":{"function":"decide","question":"Ready?","field":"/missing"}},
         {"shell":["cat"]}
     ]}));
     let output = fixture.run(
-        &["evidence.json", "--evidence", "/body"],
+        &["evidence.json", "--field", "/body"],
         "{\"body\":\"chosen\"}\n",
     );
     let actual = rows(&output);

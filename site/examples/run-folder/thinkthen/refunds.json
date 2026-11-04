@@ -1,0 +1,7 @@
+{
+  "question": {
+    "function": "filter",
+    "question": "Does the customer request a refund?",
+    "field": "/text"
+  }
+}

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
 from dataclasses import replace
+from enum import Enum
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias, TypeVar, cast
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -18,11 +19,13 @@ if TYPE_CHECKING:
 from . import _native
 from ._decode import row_from_json
 from ._runtime import binding
-from ._types import FilterRow
+from ._types import FilterRow, RecordError
 
 R_co = TypeVar("R_co", covariant=True)
 T = TypeVar("T")
+T_co = TypeVar("T_co", covariant=True)
 _END = object()
+Errors: TypeAlias = Literal["raise", "coerce"]
 
 
 class RowStream(Iterator[R_co], Generic[R_co]):
@@ -34,11 +37,15 @@ class RowStream(Iterator[R_co], Generic[R_co]):
         *,
         function: str,
         question: object,
+        members: Mapping[str, Enum] | None = None,
+        children: Mapping[str, Mapping[str, Enum]] | None = None,
     ) -> None:
         self._native = native
         self._failures = failures
         self._function = function
         self._question = question
+        self._members = members
+        self._children = children
         self._remaining = remaining
         self._closed = False
 
@@ -54,7 +61,9 @@ class RowStream(Iterator[R_co], Generic[R_co]):
                 self.close()
                 raise StopIteration
             self._remaining = max(0, self._remaining - 1)
-            row = row_from_json(raw[0], raw[1], raw[3])
+            row = row_from_json(
+                raw[0], raw[1], raw[3], self._members, self._children, raw[2]
+            )
             cause = self._failures.pop(row.position, None)
             if cause is not None and row.error is not None:
                 row = replace(
@@ -96,14 +105,6 @@ class RowStream(Iterator[R_co], Generic[R_co]):
     def __del__(self) -> None:
         if hasattr(self, "_native"):
             self._native.cancel()
-
-    def kept_items(self: RowStream[FilterRow[T]]) -> Iterator[T]:
-        try:
-            for row in self:
-                if row.kept:
-                    yield row.item
-        finally:
-            self.close()
 
     def to_list(self) -> list[R_co]:
         try:
@@ -219,14 +220,6 @@ class AsyncRowStream(Generic[R_co]):
         if hasattr(self, "_cancel_pending"):
             self.cancel()
 
-    async def kept_items(self: AsyncRowStream[FilterRow[T]]) -> AsyncIterator[T]:
-        try:
-            async for row in self:
-                if row.kept:
-                    yield row.item
-        finally:
-            await self.aclose()
-
     async def to_list(self) -> list[R_co]:
         try:
             return [row async for row in self]
@@ -252,4 +245,129 @@ class AsyncRowStream(Generic[R_co]):
             await self.aclose()
 
 
-__all__ = ["AsyncRowStream", "RowStream"]
+def coerce_errors(errors: object) -> bool:
+    """Admit the failure policy shared with the data frame methods."""
+    if errors not in {"raise", "coerce"}:
+        raise ValueError('errors must be "raise" or "coerce"')
+    return errors == "coerce"
+
+
+def _filter_failure(rows: list[FilterRow[Any]]) -> RecordError:
+    first = rows[0]
+    assert first.error is not None
+    count = f"{len(rows)} record{'' if len(rows) == 1 else 's'} failed"
+    return RecordError(
+        first.error.code,
+        f"{count}; the first at position {first.position}: {first.error.message}",
+        first.error.http_status,
+        tuple(rows),
+    )
+
+
+class KeptStream(Iterator[T_co], Generic[T_co]):
+    """The kept records of one filter call, as the caller passed them.
+
+    Not-sure records are left out. Under ``errors="raise"`` every kept record is
+    delivered first, then one ``RecordError`` lists the failed rows in ``rows``.
+    Under ``errors="coerce"`` each failed ``FilterRow`` is yielded in its place.
+    Use ``filter_rows`` for every row.
+    """
+
+    def __init__(self, rows: RowStream[FilterRow[Any]], coerce: bool) -> None:
+        self._rows = rows
+        self._coerce = coerce
+        self._failed: list[FilterRow[Any]] = []
+
+    def __iter__(self) -> KeptStream[T_co]:
+        return self
+
+    def __next__(self) -> T_co:
+        for row in self._rows:
+            if row.kept:
+                return cast(T_co, row.item)
+            if row.failed:
+                if self._coerce:
+                    return cast(T_co, row)
+                self._failed.append(row)
+        if self._failed:
+            failed, self._failed = self._failed, []
+            raise _filter_failure(failed)
+        raise StopIteration
+
+    def cancel(self) -> None:
+        self._rows.cancel()
+
+    def to_list(self) -> list[T_co]:
+        """Collect the remaining kept records and close the stream."""
+        try:
+            return list(self)
+        finally:
+            self.close()
+
+    def close(self) -> None:
+        self._rows.close()
+        self._failed.clear()
+
+    def __enter__(self) -> KeptStream[T_co]:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        self.close()
+
+
+class AsyncKeptStream(Generic[T_co]):
+    """The kept records of one async filter call; see ``KeptStream``."""
+
+    def __init__(self, rows: AsyncRowStream[FilterRow[Any]], coerce: bool) -> None:
+        self._rows = rows
+        self._coerce = coerce
+        self._failed: list[FilterRow[Any]] = []
+
+    def __aiter__(self) -> AsyncKeptStream[T_co]:
+        return self
+
+    async def __anext__(self) -> T_co:
+        async for row in self._rows:
+            if row.kept:
+                return cast(T_co, row.item)
+            if row.failed:
+                if self._coerce:
+                    return cast(T_co, row)
+                self._failed.append(row)
+        if self._failed:
+            failed, self._failed = self._failed, []
+            raise _filter_failure(failed)
+        raise StopAsyncIteration
+
+    def cancel(self) -> None:
+        self._rows.cancel()
+
+    async def to_list(self) -> list[T_co]:
+        """Collect the remaining kept records and close the stream."""
+        try:
+            return [record async for record in self]
+        finally:
+            await self.aclose()
+
+    async def aclose(self) -> None:
+        self._failed.clear()
+        await self._rows.aclose()
+
+    async def __aenter__(self) -> AsyncKeptStream[T_co]:
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        await self.aclose()
+
+
+__all__ = ["AsyncKeptStream", "AsyncRowStream", "KeptStream", "RowStream"]

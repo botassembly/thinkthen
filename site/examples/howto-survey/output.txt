@@ -1,0 +1,6 @@
+survey.thinkthen.csv
+respondent,answer,sentiment
+r1,The new checkout is much faster than before.,positive
+r2,I could not find the cancel button anywhere.,negative
+r3,It works. Nothing special.,neutral
+r4,Support answered within minutes and fixed my problem.,positive

@@ -6,15 +6,14 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::core::diagnostic;
-use crate::files::{FileError, FileJob, FileReceipt};
-use crate::{Cancel, Engine, Error, ErrorKind, Request, TOOLBOX_LIMIT};
+use crate::{Code, Error, ErrorKind, Request, TOOLBOX_LIMIT};
 use serde::de::{Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::value::RawValue;
 
 /// A saved function request or a nonempty sequence of declared steps.
 #[derive(Debug)]
-pub struct RunEntry(pub(crate) Vec<Step>);
+pub(crate) struct RunEntry(pub(crate) Vec<Step>);
 
 #[derive(Debug)]
 pub(crate) enum Step {
@@ -30,7 +29,7 @@ impl RunEntry {
     ///
     /// # Errors
     /// Returns the toolbox or existing function admission error.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    pub(crate) fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() > TOOLBOX_LIMIT {
             return Err(invalid(&diagnostic::requirement(
                 "toolbox",
@@ -108,34 +107,18 @@ impl RunEntry {
         })
     }
 
+    /// Whether the last step is a shell step, whose output is the caller's.
+    pub(crate) fn final_shell(&self) -> bool {
+        matches!(self.0.last(), Some(Step::Shell { .. }))
+    }
+
     /// Borrow the function request when this entry contains exactly one function.
     #[must_use]
-    pub fn request(&self) -> Option<&Request> {
+    pub(crate) fn request(&self) -> Option<&Request> {
         match self.0.as_slice() {
             [Step::Function(request)] => Some(request),
             _ => None,
         }
-    }
-
-    /// Execute file framing through the shared table operation for one function.
-    ///
-    /// # Errors
-    /// Rejects a mixed-step entry before file or backend work, and otherwise
-    /// preserves the file operation's admission, execution and publication errors.
-    pub fn execute_file(
-        &self,
-        job: &FileJob,
-        client: &Engine,
-        cancel: &Cancel,
-    ) -> Result<FileReceipt, FileError> {
-        let request = self.request().ok_or_else(|| {
-            FileError::Invalid(diagnostic::requirement(
-                "entry",
-                "a single-function entry for file framing",
-                "a mixed-step run",
-            ))
-        })?;
-        job.execute(request, client, cancel)
     }
 }
 
@@ -196,12 +179,8 @@ fn step(text: &str) -> Result<Step, Error> {
         #[serde(default)]
         env: Vec<String>,
     }
-    let shell: ShellStep = serde_json::from_str(text).map_err(|error| {
-        Error::new(
-            ErrorKind::Toolbox,
-            diagnostic::context("step", &error.to_string()),
-        )
-    })?;
+    let shell: ShellStep = serde_json::from_str(text)
+        .map_err(|error| invalid(&diagnostic::context("step", &error.to_string())))?;
     let args = shell.shell;
     if args.first().is_none_or(String::is_empty) || args.iter().any(|arg| arg.contains('\0')) {
         return Err(invalid(&diagnostic::requirement(
@@ -235,34 +214,75 @@ fn shell_arguments<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Str
 /// Relative paths are resolved against `directory`; this never changes working directory.
 ///
 /// # Errors
-/// Returns a local error for unreadable, ambiguous, missing or invalid entries.
-pub fn load(
+/// Returns a usage error naming the toolbox file for an unreadable, ambiguous,
+/// missing or invalid entry.
+pub(crate) fn load(
     directory: &Path,
     toolbox_or_name: &str,
     name: Option<&str>,
 ) -> Result<RunEntry, Error> {
     if let Some(name) = name {
-        validate_name(name)?;
-        return selected(&directory.join(toolbox_or_name), Some(name));
+        return in_file(
+            toolbox_or_name,
+            selected(&directory.join(toolbox_or_name), Some(name)),
+        );
     }
-    if toolbox_or_name.ends_with(".json") {
-        return selected(&directory.join(toolbox_or_name), None);
+    if toolbox_or_name.ends_with(".json") || directory.join(toolbox_or_name).is_dir() {
+        return in_file(
+            toolbox_or_name,
+            selected(&directory.join(toolbox_or_name), None),
+        );
     }
-    validate_name(toolbox_or_name)?;
     let file = directory.join("thinkthen.json");
     let folder = directory.join("thinkthen");
     match (file.try_exists(), folder.try_exists()) {
         (Ok(true), Ok(true)) => Err(invalid(
-            "both local toolboxes exist; name the toolbox explicitly",
+            "both thinkthen.json and thinkthen/ exist; name the toolbox explicitly",
         )),
-        (Ok(true), Ok(false)) => selected(&file, Some(toolbox_or_name)),
-        (Ok(false), Ok(true)) => selected(&folder, Some(toolbox_or_name)),
-        (Ok(false), Ok(false)) => Err(invalid("no local toolbox exists")),
+        (Ok(true), Ok(false)) => in_file("thinkthen.json", selected(&file, Some(toolbox_or_name))),
+        (Ok(false), Ok(true)) => in_file("thinkthen/", selected(&folder, Some(toolbox_or_name))),
+        (Ok(false), Ok(false)) => Err(invalid(
+            "no thinkthen.json or thinkthen/ in the current directory; name the toolbox",
+        )),
         _ => Err(invalid("the local toolbox could not be inspected")),
     }
 }
 
+/// Whether `word`, after an explicit toolbox, names an entry rather than input.
+///
+/// A folder, or a toolbox file with several entries, takes an entry name next.
+/// A toolbox file with one entry takes that entry's name or input.
+pub(crate) fn names_entry(directory: &Path, toolbox: &str, word: &str) -> bool {
+    let path = directory.join(toolbox);
+    if path.is_dir() {
+        return true;
+    }
+    if !toolbox.ends_with(".json") {
+        return false;
+    }
+    read(&path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .as_ref()
+        .and_then(|toolbox| toolbox.get("entries"))
+        .and_then(serde_json::Value::as_object)
+        .is_some_and(|entries| entries.len() > 1 || entries.contains_key(word))
+}
+
+/// A toolbox mistake names the file it is in.
+fn in_file<T>(file: &str, result: Result<T, Error>) -> Result<T, Error> {
+    result.map_err(|error| {
+        Error::from_contract(
+            error.code(),
+            format!("toolbox {}: {error}", crate::escape_diagnostic(file)),
+        )
+    })
+}
+
 fn selected(path: &Path, name: Option<&str>) -> Result<RunEntry, Error> {
+    if let Some(name) = name {
+        validate_name(name)?;
+    }
     if path.is_dir() {
         let name = name.ok_or_else(|| {
             invalid(&diagnostic::requirement(
@@ -271,7 +291,15 @@ fn selected(path: &Path, name: Option<&str>) -> Result<RunEntry, Error> {
                 "absent name",
             ))
         })?;
-        return RunEntry::from_bytes(&read(&path.join(format!("{name}.json")))?);
+        let file = path.join(format!("{name}.json"));
+        if !file.is_file() {
+            return Err(invalid(&diagnostic::requirement(
+                "entry",
+                "an entry file in the toolbox folder",
+                &format!("no {name}.json"),
+            )));
+        }
+        return RunEntry::from_bytes(&read(&file)?);
     }
     let bytes = read(path)?;
     let probe: serde_json::Value = serde_json::from_slice(&bytes).map_err(|error| {
@@ -375,11 +403,12 @@ fn selected(path: &Path, name: Option<&str>) -> Result<RunEntry, Error> {
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
-    crate::core::questions::validate_saved_name(name)
+    crate::core::questions::validate_saved_name(name).map_err(|error| invalid(&error.to_string()))
 }
 
 fn read(path: &Path) -> Result<Vec<u8>, Error> {
-    let file = std::fs::File::open(path).map_err(|_| invalid("the toolbox could not be opened"))?;
+    let file = std::fs::File::open(path)
+        .map_err(|_| invalid("the toolbox could not be opened; check its path"))?;
     let mut bytes = Vec::new();
     file.take((TOOLBOX_LIMIT + 1) as u64)
         .read_to_end(&mut bytes)
@@ -394,17 +423,15 @@ fn read(path: &Path) -> Result<Vec<u8>, Error> {
     Ok(bytes)
 }
 
+/// Toolbox mistakes are the caller's to fix, so they are usage errors.
 fn invalid(message: &str) -> Error {
-    Error::new(ErrorKind::Toolbox, message)
+    Error::from_contract(Code::UsageQuestion, message)
 }
 fn parse_error(error: serde_json::Error) -> Error {
     parse_error_at("toolbox", error)
 }
 fn parse_error_at(field: &str, error: serde_json::Error) -> Error {
-    Error::new(
-        ErrorKind::Toolbox,
-        diagnostic::context(field, &error.to_string()),
-    )
+    invalid(&diagnostic::context(field, &error.to_string()))
 }
 
 struct Fields(BTreeMap<String, Box<RawValue>>);

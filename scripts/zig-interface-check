@@ -1,0 +1,13 @@
+#!/bin/sh
+# Run the Zig gate on a Mac against this revision's debug engine, without full gate preparation.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+cargo build --offline --locked -p thinkthen-ffi -p loopback
+target=${CARGO_TARGET_DIR:-$PWD/target}
+case "$target" in /*) ;; *) target="$PWD/$target" ;; esac
+scripts/native-fixtures --engine "$target/debug/libthinkthen_ffi.dylib" --output "$scratch/native"
+THINKTHEN_NATIVE_FIXTURES="$scratch/native" THINKTHEN_LOOPBACK="$target/debug/loopback" \
+    THINKTHEN_ZIG_NATIVE_FILE="$target/debug/libthinkthen_ffi.dylib" scripts/zig-sdk-gate "$@"

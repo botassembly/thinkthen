@@ -1,0 +1,12 @@
+{"id":"a1","label":true,"answer":true,"probability":0.99}
+{"id":"a2","label":false,"answer":false,"probability":0.03}
+{"id":"a3","label":true,"answer":true,"probability":0.7}
+{"id":"a4","label":true,"answer":true,"probability":0.98}
+{"id":"a5","label":false,"answer":false,"probability":0.02}
+{"id":"a6","label":true,"answer":true,"probability":0.96}
+--- counts
+{"agree":6,"wrong_yes":0,"missed_yes":0}
+--- yes rows at each cut
+{"cut":0.3,"wrong_yes":0,"missed_yes":0}
+{"cut":0.5,"wrong_yes":0,"missed_yes":0}
+{"cut":0.7,"wrong_yes":0,"missed_yes":0}

@@ -3,7 +3,9 @@
 use crate::contract_driver::driver::{Driver, Event};
 use crate::files::admission::{check_cancel, copy};
 use crate::files::{
-    FileError, FileFormat, FileJob, FileOutput, FileReceipt, csv, headers, local, spool, xlsx,
+    FileError, FileFormat, FileJob, FileOutput, FileReceipt, NAMED_FAILURES,
+    cells::{self, Cell},
+    csv, headers, local, spool, xlsx,
 };
 use crate::records::Record;
 use crate::{Cancel, Engine, Error, ErrorKind, OffsetUnit, Question, Request};
@@ -15,38 +17,7 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
-enum TransportFailure {
-    Row,
-    #[cfg(feature = "command")]
-    CallBeforeRows,
-}
-
-impl TransportFailure {
-    const fn is_call(&self) -> bool {
-        match self {
-            Self::Row => false,
-            #[cfg(feature = "command")]
-            Self::CallBeforeRows => true,
-        }
-    }
-}
-
 impl FileJob {
-    /// Execute one function over the file and atomically publish complete outcomes.
-    ///
-    /// # Errors
-    /// Returns an error for admission, cancellation, final-call, format or
-    /// filesystem failure. An in-place source conflict retains the completed
-    /// output at the path named in the error. Completed row failures stay in the receipt.
-    pub fn execute(
-        &self,
-        request: &Request,
-        client: &Engine,
-        cancel: &Cancel,
-    ) -> Result<FileReceipt, FileError> {
-        self.execute_with_transport(request, client, cancel, TransportFailure::Row)
-    }
-
     #[cfg(feature = "command")]
     pub(crate) fn execute_for_command(
         &self,
@@ -54,31 +25,16 @@ impl FileJob {
         client: &Engine,
         cancel: &Cancel,
     ) -> Result<FileReceipt, FileError> {
-        self.execute_with_transport(request, client, cancel, TransportFailure::CallBeforeRows)
-    }
-
-    fn execute_with_transport(
-        &self,
-        request: &Request,
-        client: &Engine,
-        cancel: &Cancel,
-        transport: TransportFailure,
-    ) -> Result<FileReceipt, FileError> {
         if !request.records().is_empty() {
             return Err(invalid(
                 "a file operation's request must not contain initial records",
             ));
         }
+        let (request, narrowed) = table_request(request, &self.columns)?;
+        let request = &request;
         let prepared = request.question();
         let annotation = matches!(prepared, Question::Annotate(_));
-        if !annotation
-            && self.columns.len() == 1
-            && !prepared.evidence_pointer().to_string().is_empty()
-        {
-            return Err(invalid(
-                "a single --column supplies text; omit --evidence or select several named columns",
-            ));
-        }
+        let filter = matches!(prepared, Question::Filter(_));
         let names: Vec<String> = if annotation {
             if self.into.is_some() {
                 return Err(invalid("annotate uses its question names; omit --into"));
@@ -135,7 +91,7 @@ impl FileJob {
                 self.sheet.as_deref(),
                 &self.columns,
                 cancel,
-                |row, values| records.push(row, self.evidence(values, annotation)),
+                |row, values| records.push(row, self.field(values, narrowed)),
             )?;
             input_headers.clone_from(&sheet.headers);
             Some(sheet)
@@ -182,15 +138,17 @@ impl FileJob {
                     .iter()
                     .map(|p| row.fields.get(*p).cloned().unwrap_or_default())
                     .collect();
-                records.push(row.number, self.evidence(values, annotation))?;
+                records.push(row.number, self.field(values, narrowed))?;
             }
             None
         };
         let mut generated = Vec::new();
         for name in &names {
             generated.push(name.clone());
-            for suffix in ["_status", "_probability", "_error", "_detail", "_source"] {
-                generated.push(format!("{name}{suffix}"));
+            if self.details {
+                for suffix in cells::DETAIL_SUFFIXES {
+                    generated.push(format!("{name}{suffix}"));
+                }
             }
         }
         let mut unique: BTreeSet<_> = input_headers.iter().map(String::as_str).collect();
@@ -201,7 +159,7 @@ impl FileJob {
                 )));
             }
             if self.format == FileFormat::Xlsx {
-                check_cell(&Value::String(name.clone()))?;
+                check_text(name)?;
             }
         }
         if let Some(sheet) = &sheet
@@ -219,8 +177,11 @@ impl FileJob {
             request,
             OffsetUnit::CodePoints,
         )?;
-        let mut first_failure = None;
+        let mut failures: Vec<(usize, Error)> = Vec::new();
         let mut rows = 0_u64;
+        let mut answered = 0_u64;
+        let mut unsure = 0_u64;
+        let mut failed: Vec<(crate::Family, u64)> = Vec::new();
         loop {
             match call.next_event()? {
                 Event::NeedsInput => match inputs.next().transpose()? {
@@ -229,8 +190,7 @@ impl FileJob {
                     None => call.end_input(),
                 },
                 Event::Row(row) => {
-                    if transport.is_call()
-                        && rows == 0
+                    if rows == 0
                         && let Some(error) = row.failure()
                         && error.code() == crate::Code::BackendTransport
                     {
@@ -239,6 +199,8 @@ impl FileJob {
                     rows += 1;
                     let source_row =
                         records.source_row(usize::try_from(row.position()).map_err(local)?)?;
+                    answered += u64::from(row.status() != crate::Status::Failed);
+                    unsure += u64::from(row.status() == crate::Status::Unsure);
                     let mut failure = row.failure().cloned();
                     let value = serde_json::to_value(&row).map_err(local)?;
                     let mut cells = Vec::new();
@@ -248,17 +210,23 @@ impl FileJob {
                                 .get("answer")
                                 .and_then(|a| a.get(name))
                                 .unwrap_or(&value);
-                            cells.extend(file_outcome(named, self.format, &mut failure));
+                            cells.extend(self.file_outcome(named, &mut failure));
                         }
                     } else {
-                        cells.extend(file_outcome(&value, self.format, &mut failure));
+                        cells.extend(self.file_outcome(&value, &mut failure));
                     }
-                    if let Some(failure) = failure
-                        && first_failure
-                            .as_ref()
-                            .is_none_or(|(position, _)| source_row < *position)
-                    {
-                        first_failure = Some((source_row, failure));
+                    if let Some(error) = &failure {
+                        let family = error.code().family();
+                        if let Some((_, count)) =
+                            failed.iter_mut().find(|(kind, _)| *kind == family)
+                        {
+                            *count += 1;
+                        } else {
+                            failed.push((family, 1));
+                        }
+                    }
+                    if let Some(failure) = failure {
+                        name_failure(&mut failures, source_row, failure);
                     }
                     answers.put(source_row, &cells)?;
                 }
@@ -278,6 +246,7 @@ impl FileJob {
                 sheet,
                 &generated,
                 &mut answers,
+                filter,
                 cancel,
             )?;
         } else {
@@ -286,6 +255,7 @@ impl FileJob {
                 &mut temporary,
                 &generated,
                 &mut answers,
+                filter,
                 cancel,
             )?;
         }
@@ -329,17 +299,26 @@ impl FileJob {
         Ok(FileReceipt {
             output,
             backup,
-            first_failure: first_failure.map(|(_, error)| error),
+            failures,
+            answered,
+            unsure,
+            failed,
         })
     }
 
-    fn evidence(&self, values: Vec<String>, annotation: bool) -> Value {
-        if values.len() == 1 && !annotation {
+    /// One column's cell is the field text. Several columns form an object,
+    /// and a row whose selected cells are all blank is the blank object `{}`
+    /// unless a pointer selects one of its columns.
+    fn field(&self, values: Vec<String>, narrowed: bool) -> Value {
+        if values.len() == 1 {
             return values
                 .into_iter()
                 .next()
                 .map(Value::String)
                 .unwrap_or(Value::Null);
+        }
+        if !narrowed && values.iter().all(|value| value.trim().is_empty()) {
+            return Value::Object(Map::new());
         }
         Value::Object(
             self.columns
@@ -461,6 +440,7 @@ impl FileJob {
         output: &mut NamedTempFile,
         names: &[String],
         answers: &mut spool::Answers,
+        filter: bool,
         cancel: &Cancel,
     ) -> Result<(), FileError> {
         let mut reader =
@@ -469,21 +449,22 @@ impl FileJob {
             output.write_all(b"\xef\xbb\xbf").map_err(local)?;
         }
         while let Some(row) = reader.next()? {
-            output.write_all(&row.raw).map_err(local)?;
             let cells = if row.number == 1 {
-                names.iter().cloned().map(Value::String).collect()
+                names.iter().cloned().map(Cell::Text).collect()
             } else {
                 answers
                     .get(row.number)?
-                    .unwrap_or_else(|| vec![Value::Null; names.len()])
+                    .unwrap_or_else(|| vec![Cell::Empty; names.len()])
             };
+            // Filter writes only the kept rows, as csvgrep does.
+            if filter && row.number != 1 && !cells.first().is_some_and(Cell::kept) {
+                continue;
+            }
+            output.write_all(&row.raw).map_err(local)?;
             for cell in cells {
                 output.write_all(&[self.delimiter()]).map_err(local)?;
                 output
-                    .write_all(&csv::encode(
-                        &crate::files::cell_text(&cell),
-                        self.delimiter(),
-                    ))
+                    .write_all(&csv::encode(&cell.text(), self.delimiter()))
                     .map_err(local)?;
             }
             output.write_all(&row.ending).map_err(local)?;
@@ -492,40 +473,72 @@ impl FileJob {
     }
 }
 
-fn file_outcome(value: &Value, format: FileFormat, failure: &mut Option<Error>) -> Vec<Value> {
-    let cells = outcome(value);
-    if format == FileFormat::Xlsx
-        && let Some(error) = cells.iter().find_map(|cell| check_cell(cell).err())
-    {
-        let error = Error::new(ErrorKind::Io, error.to_string());
-        failure.get_or_insert_with(|| error.clone());
-        return outcome(&serde_json::json!({"status":"failed", "error": error}));
+impl FileJob {
+    fn file_outcome(&self, value: &Value, failure: &mut Option<Error>) -> Vec<Cell> {
+        let cells = cells::outcome(value, self.details);
+        if self.format == FileFormat::Xlsx
+            && let Some(error) = cells.iter().find_map(|cell| check_cell(cell).err())
+        {
+            let error = Error::new(ErrorKind::Io, error.to_string());
+            failure.get_or_insert_with(|| error.clone());
+            return cells::outcome(
+                &serde_json::json!({"status":"failed", "error": error}),
+                self.details,
+            );
+        }
+        cells
     }
-    cells
 }
 
-fn outcome(value: &Value) -> Vec<Value> {
-    let answer = match value.get("status").and_then(Value::as_str) {
-        Some("answered") => match value.get("answer").unwrap_or(&Value::Null) {
-            Value::Null => Value::String("null".into()),
-            Value::Array(_) | Value::Object(_) => {
-                Value::String(value.get("answer").unwrap_or(&Value::Null).to_string())
-            }
-            answer => answer.clone(),
-        },
-        _ => Value::Null,
-    };
-    let mut cells = vec![answer];
-    for key in ["status", "probability", "error", "detail", "source"] {
-        let value = value.get(key).cloned().unwrap_or(Value::Null);
-        cells.push(if matches!(value, Value::Array(_) | Value::Object(_)) {
-            Value::String(value.to_string())
-        } else {
-            value
-        });
+/// Keep the first failed rows by source row number.
+fn name_failure(failures: &mut Vec<(usize, Error)>, row: usize, error: Error) {
+    let at = failures.partition_point(|(named, _)| *named < row);
+    if at < NAMED_FAILURES {
+        failures.insert(at, (row, error));
+        failures.truncate(NAMED_FAILURES);
     }
-    cells
 }
+
+/// Table framing selects field with `--column`. One column's cell is the
+/// field and replaces every saved pointer. Several columns form an object,
+/// and each saved pointer must select one of them. Returns the request and
+/// whether any pointer selects a column.
+fn table_request(request: &Request, columns: &[String]) -> Result<(Request, bool), FileError> {
+    let mut encoded = serde_json::to_value(request).map_err(local)?;
+    let question = encoded
+        .get_mut("question")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| local("the request question could not be encoded"))?;
+    let mut narrowed = select(question, columns)?;
+    if let Some(children) = question.get_mut("questions").and_then(Value::as_object_mut) {
+        for child in children.values_mut().filter_map(Value::as_object_mut) {
+            narrowed |= select(child, columns)?;
+        }
+    }
+    let request = Request::from_json(&encoded.to_string())?;
+    Ok((request, narrowed))
+}
+
+fn select(question: &mut Map<String, Value>, columns: &[String]) -> Result<bool, FileError> {
+    if columns.len() == 1 {
+        question.remove("field");
+        return Ok(false);
+    }
+    match question.get("field").and_then(Value::as_str) {
+        None | Some("") => Ok(false),
+        Some(pointer)
+            if columns.iter().any(|column| {
+                pointer == format!("/{}", column.replace('~', "~0").replace('/', "~1"))
+            }) =>
+        {
+            Ok(true)
+        }
+        Some(pointer) => Err(invalid(&format!(
+            "field pointer `{pointer}` selects none of the --column names; select its column or remove the pointer"
+        ))),
+    }
+}
+
 fn sibling(input: &Path, suffix: &str) -> Result<PathBuf, FileError> {
     let stem = input
         .file_stem()
@@ -580,8 +593,10 @@ fn hash(path: &Path, cancel: &Cancel) -> Result<Vec<u8>, FileError> {
     }
     Ok(hash.finalize().to_vec())
 }
-fn check_cell(value: &Value) -> Result<(), FileError> {
-    let text = crate::files::cell_text(value);
+fn check_cell(cell: &Cell) -> Result<(), FileError> {
+    check_text(&cell.text())
+}
+fn check_text(text: &str) -> Result<(), FileError> {
     if text.encode_utf16().count() > xlsx::MAX_TEXT_UNITS {
         return Err(invalid(
             "answer exceeds Excel's cell text limit; use CSV or TSV to retain the full answer",

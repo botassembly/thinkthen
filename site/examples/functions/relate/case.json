@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "relation": "works_for",
+      "source": "person",
+      "target": "organization"
+    }
+  ],
+  "records": [
+    "Morgan works for Example Group.\nPlease refund my order."
+  ],
+  "answers": "One list per record of {source, relation, target}, with source and target as their text, in record order."
+}

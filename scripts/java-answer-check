@@ -1,0 +1,63 @@
+#!/bin/sh
+# Check Java's public answer contract without a backend or native build.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BACKEND THINKTHEN_BASE_URL THINKTHEN_BATCH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+rm -rf sdk/java/library/target/classes
+if [ "${1:-}" = --stub ] || [ "${1:-}" = --examples ] || [ "${1:-}" = --rank-memory ] || [ "${1:-}" = --selectors ]; then
+    cargo build --offline --locked -p thinkthen-ffi -p loopback --lib --bin loopback
+    THINKTHEN_LOOPBACK="$PWD/${CARGO_TARGET_DIR:-target}/debug/loopback"
+    case "${CARGO_TARGET_DIR:-target}" in /*) THINKTHEN_LOOPBACK="$CARGO_TARGET_DIR/debug/loopback" ;; esac
+    export THINKTHEN_LOOPBACK
+    mkdir -p "sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform"
+    cp "${CARGO_TARGET_DIR:-target}/debug/$jvm_library" "sdk/java/library/target/classes/io/thinkthen/native/$jvm_platform/"
+fi
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT HUP INT TERM
+python3 scripts/jvm-generated
+python3 scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
+mvn -o -q -B -f sdk/java/pom.xml -pl library -am -Dmaven.repo.local="$scratch/m2" package -DskipTests
+mvn -o -q -B -f sdk/java/library/pom.xml -Dmaven.repo.local="$scratch/m2" dependency:build-classpath -Dmdep.outputFile="$scratch/classpath"
+classpath="$(find sdk/java/library/target -maxdepth 1 -name 'thinkthen-java-*.jar'):$(cat "$scratch/classpath")"
+"$JAVA_HOME/bin/javac" --release 22 -Xlint:all -Werror -cp "$classpath" -d "$scratch" sdk/java/consumer/src/main/java/JavaAnswerCases.java
+"$JAVA_HOME/bin/java" -cp "$scratch:$classpath" JavaAnswerCases
+
+if [ "${1:-}" = --stub ]; then
+    "$JAVA_HOME/bin/javac" --release 22 -Xlint:all -Werror -cp "$classpath" -d "$scratch" $(find sdk/java/consumer/src/main/java -name "*.java")
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaCacheCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaInterfaceCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaDescriptionCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaAnnotationCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaApiCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" ConsumerCases construction/stub.json
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" OptionCases construction/options.json
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaSettingsCases schemas/contract.json
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaOwnershipCases conformance
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaClosedClientCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" ConformanceCases conformance/typed
+    python3 scripts/java-example-check "$classpath" "$scratch"
+fi
+
+if [ "${1:-}" = --rank-memory ]; then
+    "$JAVA_HOME/bin/javac" --release 22 -Xlint:all -Werror -cp "$classpath" -d "$scratch" sdk/java/consumer/src/main/java/JavaRankMemoryCases.java sdk/java/consumer/src/main/java/JavaApiCases.java sdk/java/consumer/src/main/java/JavaEnvironmentCases.java
+    "$JAVA_HOME/bin/java" -Xmx64m -XX:+ExitOnOutOfMemoryError --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaRankMemoryCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaApiCases
+    python3 scripts/java-example-check "$classpath" "$scratch"
+    "$JAVA_HOME/bin/javadoc" -quiet -Xdoclint:all -Werror -classpath "$classpath" -d "$scratch/javadoc" sdk/java/library/src/main/java/dev/thinkthen/*.java sdk/java/library/target/generated-sources/contracts/dev/thinkthen/ErrorCode.java
+fi
+
+if [ "${1:-}" = --examples ]; then
+    "$JAVA_HOME/bin/javac" --release 22 -Xlint:all -Werror -cp "$classpath" -d "$scratch" sdk/java/consumer/src/main/java/JavaEnvironmentCases.java
+    python3 scripts/java-example-check "$classpath" "$scratch"
+fi
+
+if [ "${1:-}" = --javadoc ] || [ "${1:-}" = --stub ] || [ "${1:-}" = --examples ]; then
+    "$JAVA_HOME/bin/javadoc" -quiet -Xdoclint:all -Werror -classpath "$classpath" -d "$scratch/javadoc" sdk/java/library/src/main/java/dev/thinkthen/*.java sdk/java/library/target/generated-sources/contracts/dev/thinkthen/ErrorCode.java
+fi
+
+if [ "${1:-}" = --selectors ]; then
+    "$JAVA_HOME/bin/javac" --release 22 -Xlint:all -Werror -cp "$classpath" -d "$scratch" $(find sdk/java/consumer/src/main/java -name "*.java")
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaApiCases
+    "$JAVA_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$scratch:$classpath" JavaAnnotationCases
+fi

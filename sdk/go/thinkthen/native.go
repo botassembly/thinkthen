@@ -9,7 +9,6 @@ import "C"
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -41,7 +40,7 @@ func loadNative() error {
 		var err error
 		path, err = cachedLibrary()
 		if err != nil {
-			return err
+			return &Error{code: CodeLocalIO, message: err.Error(), cause: err}
 		}
 	}
 	name := C.CString(path)
@@ -49,7 +48,7 @@ func loadNative() error {
 	if message := C.tt_load(name); message != nil {
 		err := &Error{code: Code(C.tt_load_code()), message: C.GoString(message)}
 		if C.tt_load_code() == C.THINKTHEN_CODE_LOCAL_IO {
-			return fmt.Errorf("cannot load native engine %s: %w", path, err)
+			err.message = "cannot load native engine " + path + ": " + err.message
 		}
 		return err
 	}
@@ -57,8 +56,8 @@ func loadNative() error {
 	return nil
 }
 
-func bytesPointer(value []byte) *C.uint8_t {
-	return (*C.uint8_t)(unsafe.Pointer(unsafe.SliceData(value)))
+func bytesPointer(value []byte) *C.char {
+	return (*C.char)(unsafe.Pointer(unsafe.SliceData(value)))
 }
 func copyBuffer(value C.thinkthen_buffer) []byte {
 	return append([]byte(nil), unsafe.Slice((*byte)(unsafe.Pointer(value.data)), int(value.len))...)
@@ -83,8 +82,8 @@ func (c nativeClient) free() { C.tt_client_free(c.ptr) }
 func (c nativeCall) send(record wireRecord) error {
 	e := C.thinkthen_error{struct_size: C.uint32_t(C.sizeof_thinkthen_error)}
 	var status C.int32_t
-	if record.invalid {
-		status = C.tt_call_send_invalid(c.ptr, &e)
+	if record.missing {
+		status = C.tt_call_send_missing(c.ptr, &e)
 	} else if record.text {
 		status = C.tt_call_send_text(c.ptr, bytesPointer(record.data), C.size_t(len(record.data)), &e)
 	} else {
@@ -101,13 +100,15 @@ func (c nativeCall) free()   { C.tt_call_free(c.ptr) }
 func (c nativeCall) next() (wireRow, bool, bool, error) {
 	row := C.thinkthen_row{struct_size: C.uint32_t(C.sizeof_thinkthen_row)}
 	e := C.thinkthen_error{struct_size: C.uint32_t(C.sizeof_thinkthen_error)}
-	switch C.tt_call_next(c.ptr, &row, &e) {
+	statusCode := C.tt_call_next(c.ptr, &row, &e)
+	if statusCode < 0 {
+		return wireRow{}, false, false, takeError(&e)
+	}
+	switch statusCode {
 	case C.THINKTHEN_NEEDS_INPUT:
 		return wireRow{}, false, true, nil
 	case C.THINKTHEN_END:
 		return wireRow{}, false, false, nil
-	case C.THINKTHEN_ERROR:
-		return wireRow{}, false, false, takeError(&e)
 	case C.THINKTHEN_OK:
 		defer C.tt_row_free(&row)
 		status := ""
@@ -126,7 +127,27 @@ func (c nativeCall) next() (wireRow, bool, bool, error) {
 		default:
 			return wireRow{}, false, false, &Error{code: CodeUsageABI, message: C.THINKTHEN_ABI_ERROR_MESSAGE}
 		}
+		if uint64(row.position) > uint64(^uint(0)>>1) {
+			return wireRow{}, false, false, abiError()
+		}
 		result := wireRow{id: copyBuffer(row.id), answer: copyBuffer(row.answer), detail: copyBuffer(row.detail), source: copyBuffer(row.source), status: status, position: uint64(row.position), function: uint32(row.function), kept: row.function == C.THINKTHEN_FUNCTION_FILTER && row.status == C.THINKTHEN_STATUS_ANSWERED && row.answer_bool != 0}
+		if row.function == C.THINKTHEN_FUNCTION_RANK {
+			var original C.thinkthen_record_view
+			if err := nativeResult(C.tt_row_original(&row, &original, &e), &e); err != nil {
+				return wireRow{}, false, false, err
+			}
+			data := string(unsafe.Slice((*byte)(unsafe.Pointer(original.data)), int(original.len)))
+			switch original.kind {
+			case C.THINKTHEN_RECORD_TEXT:
+				result.original = Text(data)
+			case C.THINKTHEN_RECORD_JSON:
+				result.original = Record{kind: 2, data: data}
+			case C.THINKTHEN_RECORD_MISSING:
+				result.original = Missing()
+			default:
+				return wireRow{}, false, false, abiError()
+			}
+		}
 		if !math.IsNaN(float64(row.probability)) {
 			p := float64(row.probability)
 			result.probability = &p

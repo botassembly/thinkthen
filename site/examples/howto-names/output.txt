@@ -1,0 +1,11 @@
+{
+  "id": "docs/memo-1.txt",
+  "text": "Hugo Brandt joined Fabrikam.\n"
+}
+--- names
+docs/memo-1.txt	person	Hugo Brandt	1.0
+docs/memo-1.txt	organization	Fabrikam	1.0
+docs/memo-2.txt	person	Kim Park	1.0
+docs/memo-2.txt	organization	Globex	0.99
+docs/memo-3.txt	organization	Fabrikam	1.0
+docs/memo-3.txt	person	Leo Marsh	1.0

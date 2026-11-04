@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import AsyncIterable, Callable, Iterable, Iterator, Mapping
 from datetime import date
 from threading import Lock
 from typing import NoReturn, TypeVar, cast
@@ -23,6 +23,7 @@ from ._types import (
     ErrorCode,
     InternalError,
     Record,
+    RecordError,
     SetupError,
     ThinkThenError,
     UsageError,
@@ -112,6 +113,30 @@ def normalize(value: object, missing: Callable[[object], bool]) -> object:
     if isinstance(value, (list, tuple)):
         return [normalize(item, missing) for item in value]
     return value
+
+
+def single_record(function: str, record: object) -> None:
+    """Refuse collection-shaped host values before starting a single call."""
+    frame = any(
+        parent.__module__.split(".")[0] in {"pandas", "polars"}
+        and parent.__name__ in {"Series", "DataFrame", "LazyFrame"}
+        for parent in type(record).__mro__
+    )
+    collection = isinstance(record, (Iterable, AsyncIterable)) and not isinstance(
+        record, (str, Mapping)
+    )
+    if collection or frame:
+        raise TypeError(
+            f"{function} takes one record; use .thinkthen for a column or {function}_stream for many records"
+        )
+
+
+def one_row(row: T) -> T:
+    """Return a one-record call's row; blank input raises its record error."""
+    error = getattr(row, "error", None)
+    if error is not None and error.code is ErrorCode.RECORD_EMPTY:
+        raise RecordError(error.code, error.message, error.http_status)
+    return row
 
 
 def source(

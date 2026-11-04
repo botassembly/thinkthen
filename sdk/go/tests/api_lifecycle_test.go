@@ -125,7 +125,7 @@ func TestLazyAdmissionAndBreakStopInput(t *testing.T) {
 		}
 	})
 	batch := 1
-	c2 := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: &batch})
+	c2 := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: batch})
 	seq := c2.DecideAll(context.Background(), tt.NewDecide("Ready?"), input)
 	if started != 0 {
 		t.Fatal("constructing an iterator consumed input")
@@ -192,7 +192,7 @@ func TestCallbackPanicsStopInput(t *testing.T) {
 	for _, where := range []string{"input", "output"} {
 		t.Run(where, func(t *testing.T) {
 			batch := 1
-			c := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: &batch})
+			c := apiClientFor(t, tt.Config{Backend: tt.Stub, Batch: batch})
 			stopped := false
 			marker := new(int)
 			input := tt.FromSeq(func(yield func(tt.Record, error) bool) {
@@ -363,7 +363,7 @@ func TestHeldPullReadAheadRemainsBounded(t *testing.T) {
 		t.Run(wire.String(), func(t *testing.T) {
 			b := startBackend(t, "--held", "headers")
 			batch := 2
-			c := apiClientFor(t, tt.Config{Backend: wire, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: &batch, Retry: &tt.Retry{AttemptTimeout: 2 * time.Minute}})
+			c := apiClientFor(t, tt.Config{Backend: wire, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: batch, Retry: &tt.Retry{AttemptTimeout: 2 * time.Minute}})
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			var pulled atomic.Int64

@@ -1,4 +1,4 @@
-//! The functions. Each turns evidence into asks and reads the answers into a row.
+//! The functions. Each turns field into asks and reads the answers into a row.
 
 pub(crate) mod annotate;
 pub(crate) mod choose;
@@ -17,12 +17,12 @@ fn quoted(text: &str, question: &str) -> String {
     format!("The text is {text}. {question}")
 }
 
-pub(crate) fn stub_key(identity: &str, evidence: &str, round: usize, position: usize) -> [u8; 32] {
+pub(crate) fn stub_key(identity: &str, field: &str, round: usize, position: usize) -> [u8; 32] {
     use sha2::{Digest, Sha256};
     let mut hash = Sha256::new();
     for field in [
         identity.as_bytes(),
-        evidence.as_bytes(),
+        field.as_bytes(),
         &(round as u64).to_be_bytes(),
         &(position as u64).to_be_bytes(),
     ] {
@@ -35,7 +35,7 @@ pub(crate) fn stub_key(identity: &str, evidence: &str, round: usize, position: u
 /// A question that prepares rounds and reads the answers for one record.
 pub(crate) trait Function: Sync + Sized {
     /// Deterministic caller-test key for one ask in this question's local round.
-    /// Composite questions delegate to the member's own content and evidence.
+    /// Composite questions delegate to the member's own content and field.
     #[must_use]
     fn stub_key(
         context: FunctionAnswers<'_, Self>,
@@ -45,7 +45,7 @@ pub(crate) trait Function: Sync + Sized {
     ) -> [u8; 32] {
         stub_key(
             identity,
-            context.record().evidence(),
+            context.record().field(),
             context.answers().len(),
             position,
         )
@@ -88,7 +88,7 @@ pub(crate) trait Function: Sync + Sized {
 /// ```compile_fail
 /// use thinkthen::core::{AdmittedRecord, Decide, FunctionAnswers, Record};
 /// let question = Decide::new("Yes?").unwrap();
-/// let record = AdmittedRecord::new(Record::text("evidence")).unwrap();
+/// let record = AdmittedRecord::new(Record::text("field")).unwrap();
 /// let forged = FunctionAnswers::new(&question, &record, &[]);
 /// ```
 #[derive(Debug)]
@@ -117,7 +117,7 @@ impl<'a, F: Function> FunctionAnswers<'a, F> {
         self.question
     }
 
-    /// The admitted record that supplied the evidence.
+    /// The admitted record that supplied the field.
     #[must_use]
     pub(crate) const fn record(&self) -> &'a crate::core::AdmittedRecord {
         self.record

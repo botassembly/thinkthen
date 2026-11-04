@@ -29,7 +29,7 @@ def test_question_overloads_preserve_lists_and_use_the_supplied_client(
     tmp_path: Path,
 ) -> None:
     choices = ["billing", "shipping"]
-    question = tt.ChooseQuestion("Which team?", choices=choices, evidence="/body")
+    question = tt.ChooseQuestion("Which team?", choices=choices, field="/body")
     choices[0] = "changed"
     toolbox = tt.Toolbox({"route": question})
     replies = [
@@ -92,13 +92,13 @@ def test_required_lists_cannot_be_omitted_or_replaced_by_strings(
     with backend(tmp_path, yes()) as server, client(server) as selected:
         call = getattr(selected, method)
         args = (
-            (["body"],)
+            ("body",)
             if method in {"recognize", "relate"}
             else ("Which?", ["body"] if method == "rank" else "body")
         )
         with pytest.raises(TypeError):
             call(*args)
-        with pytest.raises(tt.UsageError):
+        with pytest.raises(TypeError, match=keyword):
             call(*args, **{keyword: "not-a-list"})
         assert server.count() == 0
 
@@ -156,7 +156,7 @@ def test_missing_and_failed_filter_rows_retain_original_objects(tmp_path: Path) 
     with (
         backend(tmp_path, yes()) as server,
         client(server) as selected,
-        selected.filter("Ready?", records) as stream,
+        selected.filter_rows("Ready?", records) as stream,
     ):
         rows = list(stream)
         assert len(rows) == 3 and [row.position for row in rows] == [1, 2, 3]
@@ -183,7 +183,7 @@ def test_stream_conversion_closes_only_its_call_and_does_not_replay() -> None:
         stream.close()
         assert selected.decide("Ready?", "another").position == 1
     assert first.source.backend is tt.Backend.STUB
-    with pytest.raises(tt.SetupError):
+    with pytest.raises(tt.UsageError):
         selected.decide("Ready?", "closed")
 
 
@@ -252,7 +252,7 @@ def test_async_input_conversion_and_explicit_client_routing() -> None:
             assert (await selected.decide("Ready?", "again")).position == 1
             await aio.aclose_default_client()
         assert row.source.backend is tt.Backend.STUB
-        with pytest.raises(tt.SetupError):
+        with pytest.raises(tt.UsageError):
             await selected.decide("Ready?", "closed")
 
     asyncio.run(scenario())
@@ -328,9 +328,9 @@ def test_all_ten_functions_return_their_specific_typed_rows(
         else:
             args = [] if question is None else [question]
         if function in {"filter", "rank"}:
-            with getattr(selected, function)(
-                *args, ["Ada knows Bob."], **options
-            ) as stream:
+            with getattr(
+                selected, function + ("_rows" if function == "filter" else "")
+            )(*args, ["Ada knows Bob."], **options) as stream:
                 rows = list(stream)
             assert len(rows) == 1
             row = rows[0]
@@ -382,7 +382,7 @@ def test_resolved_settings_have_seconds_and_no_credentials(tmp_path: Path) -> No
     secret = "synthetic-never-display-key"
     with (
         backend(tmp_path, yes()) as server,
-        tt.Client.from_env(
+        tt.Client(
             url=server.url,
             api_key=secret,
             model="selected-model",
@@ -467,9 +467,9 @@ def test_client_close_cancels_its_active_call_and_is_idempotent() -> None:
         server.event("closed")
         assert list(rows) == []
         selected.close()
-        with pytest.raises(tt.SetupError) as raised:
+        with pytest.raises(tt.UsageError) as raised:
             selected.decide("Ready?", "closed")
-        assert raised.value.code is tt.ErrorCode.USAGE_ABI
+        assert raised.value.code is tt.ErrorCode.USAGE_CLOSED
 
 
 @pytest.mark.parametrize(
@@ -481,34 +481,23 @@ def test_omitted_records_are_call_errors(operation: str) -> None:
         getattr(selected, operation)()
 
 
-@pytest.mark.parametrize("asynchronous", [False, True])
-def test_kept_items_consumes_remaining_filter_rows_without_replay(
-    tmp_path: Path, asynchronous: bool
+def test_clients_read_the_backend_setting_when_none_is_passed(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    records: list[tt.Record] = [{"body": "consumed"}, None, {"body": "kept"}]
-    with backend(tmp_path, yes()) as server:
-        if asynchronous:
+    monkeypatch.setenv("THINKTHEN_BACKEND", "stub")
+    assert tt.decide("Ready?", "body").source.backend is tt.Backend.STUB
+    with tt.Client(backend="openai", api_key="synthetic-key") as selected:
+        assert selected.settings.backend is tt.Backend.OPENAI
 
-            async def scenario() -> None:
-                async with (
-                    tt.AsyncClient(
-                        url=server.url, api_key="synthetic-loopback-key", batch=1
-                    ) as selected,
-                    selected.filter("Ready?", records) as rows,
-                ):
-                    await anext(rows)
-                    kept = [item async for item in rows.kept_items()]
-                    assert len(kept) == 1 and kept[0] is records[2]
-                    assert await rows.to_list() == []
+    async def scenario() -> tt.Backend:
+        async with tt.AsyncClient() as selected:
+            return (await selected.decide("Ready?", "body")).source.backend
 
-            asyncio.run(scenario())
-        else:
-            with (
-                client(server) as selected,
-                selected.filter("Ready?", records) as rows,
-            ):
-                next(rows)
-                kept = list(rows.kept_items())
-                assert len(kept) == 1 and kept[0] is records[2]
-                assert rows.to_list() == []
-        assert server.count() == 2
+    assert asyncio.run(scenario()) is tt.Backend.STUB
+    monkeypatch.setenv("THINKTHEN_BACKEND", "nonesuch")
+    with pytest.raises(tt.UsageError) as raised:
+        tt.Client()
+    assert raised.value.code is tt.ErrorCode.USAGE_BACKEND
+    monkeypatch.delenv("THINKTHEN_BACKEND")
+    with tt.Client(api_key="synthetic-key") as selected:
+        assert selected.settings.backend is tt.Backend.SYSTEMONE

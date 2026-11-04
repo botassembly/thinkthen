@@ -1,30 +1,50 @@
 #!/usr/bin/env python3
 """Generate JVM error types from the shared engine contract."""
 import json
+import shutil
 from pathlib import Path
 import sys
 
 root = Path(__file__).resolve().parent.parent
 codes = json.loads((root / 'schemas/contract.json').read_text())['codes']
 base = Path(sys.argv[1]) if len(sys.argv) > 1 else root / 'sdk/java'
-output = base / 'library/target/generated-sources/contracts/io/thinkthen'
+generated = base / 'library/target/generated-sources/contracts'
+shutil.rmtree(generated, ignore_errors=True)
+output = generated / 'dev/thinkthen'
 output.mkdir(parents=True, exist_ok=True)
 entries = []
 for code in codes:
     name = code['name'].upper().replace('.', '_').replace('-', '_')
-    entries.append(f'    {name}({code["value"]}, "{code["name"]}", Family.{code["family"].upper()})')
-(output / 'ErrorCode.java').write_text('''package io.thinkthen;
+    entries.append(f'    /** The shared engine code {code["name"]}. */\n    {name}({code["value"]}, "{code["name"]}", Family.{code["family"].upper()})')
+(output / 'ErrorCode.java').write_text('''package dev.thinkthen;
 
+/** Stable shared engine codes. Include a default branch when switching over this enum, because codes can grow. */
 public enum ErrorCode {
 ''' + ',\n'.join(entries) + ''';
-    public enum Family { USAGE, RECORD, BACKEND, LOCAL, INTERNAL }
+    /** The shared error families. */
+    public enum Family {
+        /** Invalid caller usage. */ USAGE,
+        /** A record could not be processed. */ RECORD,
+        /** A backend call failed. */ BACKEND,
+        /** A local operation failed. */ LOCAL,
+        /** An internal operation failed. */ INTERNAL
+    }
     private final int value;
     private final String wireName;
     private final Family family;
     ErrorCode(int value, String wireName, Family family) { this.value = value; this.wireName = wireName; this.family = family; }
+    /** Return the ABI numeric code.
+     * @return the numeric code */
     public int value() { return value; }
+    /** Return the stable wire name.
+     * @return the wire name */
     public String wireName() { return wireName; }
+    /** Return the error family.
+     * @return the family */
     public Family family() { return family; }
+    /** Look up a wire code.
+     * @param name the stable wire name
+     * @return the matching code */
     public static ErrorCode fromWire(String name) {
         for (var code : values()) if (code.wireName.equals(name)) return code;
         throw new IllegalArgumentException("Unknown native error code");
@@ -32,7 +52,7 @@ public enum ErrorCode {
 }
 ''')
 (output / 'internal').mkdir(exist_ok=True)
-(output / 'internal/DriverCode.java').write_text('''package io.thinkthen.internal;
+(output / 'internal/DriverCode.java').write_text('''package dev.thinkthen.internal;
 
 public record DriverCode(int value, String name, String family) {
     public static java.util.List<DriverCode> values() { return java.util.List.of(
@@ -52,9 +72,12 @@ primitive = {
     'size_t': ('ValueLayout.JAVA_LONG', 8, 8),
     'double': ('ValueLayout.JAVA_DOUBLE', 8, 8),
 }
+# Public C enum discriminators retain the uint32_t ABI representation.
+for enum in re.findall(r'typedef enum (thinkthen_\w+)\s*\{', header):
+    primitive[enum] = primitive['uint32_t']
 layouts = dict(primitive)
 declarations = []
-for name in ('buffer', 'error', 'row', 'record_input'):
+for name in ('buffer', 'error', 'row', 'record_input', 'record_view'):
     body = re.search(r'typedef struct thinkthen_' + name + r'\s*\{(.*?)\}', header, re.S).group(1)
     offset, alignment, fields = 0, 1, []
     for declaration in body.split(';'):
@@ -79,7 +102,7 @@ for name in ('buffer', 'error', 'row', 'record_input'):
     symbol = name.upper()
     layouts['struct thinkthen_' + name] = (symbol, offset + padding, alignment)
     declarations.append('    static final MemoryLayout ' + symbol + ' = MemoryLayout.structLayout(\n        ' + ',\n        '.join(fields) + ');')
-(output / 'internal/NativeLayouts.java').write_text('''package io.thinkthen.internal;
+(output / 'internal/NativeLayouts.java').write_text('''package dev.thinkthen.internal;
 
 import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.ValueLayout;
@@ -94,7 +117,7 @@ for export in abi['exports']:
     if not match:
         continue
     result, name, arguments = match.groups()
-    result = result.strip()
+    result = result.strip().removeprefix('THINKTHEN_NODISCARD ')
     def layout(ctype):
         return 'ValueLayout.ADDRESS' if '*' in ctype else primitive[ctype.strip()][0]
     try:
@@ -103,7 +126,7 @@ for export in abi['exports']:
     except KeyError:
         continue
     functions.append(f'            case "{name.removeprefix("thinkthen_")}" -> {signature};')
-(output / 'internal/NativeSignatures.java').write_text('''package io.thinkthen.internal;
+(output / 'internal/NativeSignatures.java').write_text('''package dev.thinkthen.internal;
 
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.ValueLayout;
@@ -120,9 +143,44 @@ final class NativeSignatures {
 ''')
 
 # Kotlin declarations use the same registry and remain build output.
-kotlin = base.parent / 'kotlin/target/generated-sources/contracts/io/thinkthen/kotlin'
+kotlin_generated = base.parent / 'kotlin/target/generated-sources/contracts'
+shutil.rmtree(kotlin_generated, ignore_errors=True)
+kotlin = kotlin_generated / 'dev/thinkthen/kotlin'
 kotlin.mkdir(parents=True, exist_ok=True)
-families = list(dict.fromkeys(code['family'] for code in codes))
-family_entries = ', '.join(f'@SerialName("{family}") {family.upper()}("{family}")' for family in families)
-code_entries = ',\n'.join(f'    @SerialName("{code["name"]}") {code["name"].upper().replace(".","_").replace("-","_")}({code["value"]}, "{code["name"]}")' for code in codes)
-(kotlin / 'ErrorCode.kt').write_text('package io.thinkthen.kotlin\n\nimport kotlinx.serialization.Serializable\nimport kotlinx.serialization.SerialName\n\n@Serializable public enum class ErrorFamily(public val wireName: String) { ' + family_entries + ' }\n@Serializable public enum class ErrorCode(public val value: Int, public val wireName: String) {\n' + code_entries + ';\n    public val family: ErrorFamily get() = translate { val nativeFamily = io.thinkthen.internal.DriverClient.codeFamily(value); ErrorFamily.entries.singleOrNull { it.wireName == nativeFamily } ?: throw io.thinkthen.internal.DriverClient.invalidRow(IllegalArgumentException("Unknown native error family")) }\n    public companion object { public fun fromWire(name: String): ErrorCode = entries.single { it.wireName == name } }\n}\n')
+# Java's Family order, so both enums share ordinals.
+families = ['usage', 'record', 'backend', 'local', 'internal']
+assert set(families) == {code['family'] for code in codes}, 'update both JVM family enums'
+family_entries = ',\n'.join(f'    /** The {family} family. */\n    @SerialName("{family}") {family.upper()}("{family}")' for family in families)
+code_entries = ',\n'.join(f'    /** The shared engine code {code["name"]}. */\n    @SerialName("{code["name"]}") {code["name"].upper().replace(".","_").replace("-","_")}({code["value"]}, "{code["name"]}", ErrorFamily.{code["family"].upper()})' for code in codes)
+(kotlin / 'ErrorCode.kt').write_text('''package dev.thinkthen.kotlin
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+/** The shared error families. */
+@Serializable public enum class ErrorFamily(
+    /** The stable wire name. */
+    public val wireName: String,
+) {
+''' + family_entries + '''
+}
+
+/** Stable shared engine codes. Include an `else` branch when matching on this enum, because codes can grow. */
+@Serializable public enum class ErrorCode(
+    /** The ABI numeric code. */
+    public val value: Int,
+    /** The stable wire name. */
+    public val wireName: String,
+    /** The error family. */
+    public val family: ErrorFamily,
+) {
+''' + code_entries + ''';
+
+    /** Looks up codes by wire name. */
+    public companion object {
+        /** The code with this wire name. Throws [ThinkThenException] with `usage.abi` for a name this library does not know. */
+        public fun fromWire(name: String): ErrorCode = entries.singleOrNull { it.wireName == name }
+            ?: throw ThinkThenException(USAGE_ABI, "Unknown native error code $name")
+    }
+}
+''')

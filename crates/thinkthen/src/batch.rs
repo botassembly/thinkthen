@@ -19,6 +19,7 @@ impl Batch {
     /// # Errors
     ///
     /// `usage.batch` when the chosen value is not a whole number of at least 1.
+    #[doc(hidden)]
     pub fn resolve(
         flag: Option<&str>,
         variable: impl Fn(&str) -> Option<String>,
@@ -31,6 +32,7 @@ impl Batch {
     ///
     /// # Errors
     /// Returns `usage.batch` when the selected override is invalid.
+    #[doc(hidden)]
     pub fn override_from(
         flag: Option<&str>,
         variable: impl Fn(&str) -> Option<String>,

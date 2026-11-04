@@ -59,6 +59,7 @@
     "rejectCancellation",
     "rejectNonFiniteJson",
     "rejectQuestionConversion",
+    "rejectRecordKind",
     "rejectSettingsConversion",
     "serializeToolbox"
   ]

@@ -18,7 +18,7 @@ fn labels(value: &ValueHandle) -> Result<Option<&BTreeMap<String, Probability>>,
         FunctionName::Tag => value
             .detail::<questions::Tag>()?
             .map(|detail| detail.labels()),
-        _ => return Err(native::abi_error()),
+        _ => return Err(native::argument_error(thinkthen::Code::UsageFunction)),
     })
 }
 fn levels(value: &ValueHandle) -> Result<Option<&Vec<Probability>>, Error> {
@@ -29,34 +29,44 @@ fn levels(value: &ValueHandle) -> Result<Option<&Vec<Probability>>, Error> {
         FunctionName::Rank => value
             .detail::<questions::Rank>()?
             .map(|detail| detail.levels()),
-        _ => return Err(native::abi_error()),
+        _ => return Err(native::argument_error(thinkthen::Code::UsageFunction)),
     })
 }
 fn piece(value: &ValueHandle, index: usize) -> Result<&PieceDetail, Error> {
     value
         .detail::<questions::Recognize>()?
         .and_then(|detail| detail.pieces().get(index))
-        .ok_or_else(native::abi_error)
+        .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))
 }
 fn kind(value: &ValueHandle, index: usize) -> Result<&KindDetail, Error> {
     value
         .detail::<questions::Recognize>()?
         .and_then(|detail| detail.names().get(index))
-        .ok_or_else(native::abi_error)
+        .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))
 }
 fn probability(
     values: &BTreeMap<String, Probability>,
     index: usize,
 ) -> Result<ProbabilityView, Error> {
-    let (label, probability) = values.iter().nth(index).ok_or_else(native::abi_error)?;
+    let (label, probability) = values
+        .iter()
+        .nth(index)
+        .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?;
     Ok(ProbabilityView {
         label: views::text(label),
         probability: probability.get(),
     })
 }
-/// Count optional choose/tag label probabilities.
+/// Write how many label probabilities a choose or tag value's detail holds to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+/// writes 0.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_label_count(
     value: *const ValueHandle,
@@ -66,9 +76,17 @@ pub unsafe extern "C" fn thinkthen_value_label_count(
     /* SAFETY: value is borrowed and outputs are exclusive until return. */
     unsafe { project(out, error, || Ok(labels(&*value)?.map_or(0, BTreeMap::len))) }
 }
-/// Borrow one choose/tag label probability, including unselected labels.
+/// Write the label probability at index, chosen or not, to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_label_at(
     value: *const ValueHandle,
@@ -79,13 +97,24 @@ pub unsafe extern "C" fn thinkthen_value_label_at(
     /* SAFETY: label text borrows value and output slots are exclusive. */
     unsafe {
         project(out, error, || {
-            probability(labels(&*value)?.ok_or_else(native::abi_error)?, index)
+            probability(
+                labels(&*value)?
+                    .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?,
+                index,
+            )
         })
     }
 }
-/// Count optional score/rank level probabilities in question order.
+/// Write how many level probabilities a score or rank value's detail holds to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+/// writes 0.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_level_count(
     value: *const ValueHandle,
@@ -95,9 +124,16 @@ pub unsafe extern "C" fn thinkthen_value_level_count(
     /* SAFETY: value is borrowed and output slots are exclusive. */
     unsafe { project(out, error, || Ok(levels(&*value)?.map_or(0, Vec::len))) }
 }
-/// Read one score/rank level probability in question order.
+/// Write the probability of the level at index, in question order, to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_level_at(
     value: *const ValueHandle,
@@ -110,14 +146,21 @@ pub unsafe extern "C" fn thinkthen_value_level_at(
         project(out, error, || {
             Ok(levels(&*value)?
                 .and_then(|levels| levels.get(index))
-                .ok_or_else(native::abi_error)?
+                .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?
                 .get())
         })
     }
 }
-/// Count recognition's original pieces, or zero when detail is absent.
+/// Write how many pieces a recognize value's detail split the text into to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+/// writes 0.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_piece_count(
     value: *const ValueHandle,
@@ -133,9 +176,17 @@ pub unsafe extern "C" fn thinkthen_value_piece_count(
         })
     }
 }
-/// Borrow an original piece and its translated span.
+/// Write the piece at index, with its span, to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_piece_at(
     value: *const ValueHandle,
@@ -150,15 +201,22 @@ pub unsafe extern "C" fn thinkthen_value_piece_at(
             Ok(SpanView {
                 present: 1,
                 text: views::text(piece.text()),
-                start: *piece.start() as u64,
-                end: *piece.end() as u64,
+                start: piece.start() as u64,
+                end: piece.end() as u64,
             })
         })
     }
 }
-/// Count one piece's typed boundary probabilities.
+/// Write how many boundary probabilities the piece at index holds to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_piece_tag_count(
     value: *const ValueHandle,
@@ -169,9 +227,17 @@ pub unsafe extern "C" fn thinkthen_value_piece_tag_count(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe { project(out, error, || Ok(piece(&*value, index)?.tags().len())) }
 }
-/// Borrow one original piece's boundary label and probability.
+/// Write boundary probability tag of the piece at index to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_piece_tag_at(
     value: *const ValueHandle,
@@ -187,9 +253,16 @@ pub unsafe extern "C" fn thinkthen_value_piece_tag_at(
         })
     }
 }
-/// Count proposed-name detail entries for recognition.
+/// Write how many proposed names a recognize value's detail holds to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+/// writes 0.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_kind_count(
     value: *const ValueHandle,
@@ -205,9 +278,17 @@ pub unsafe extern "C" fn thinkthen_value_kind_count(
         })
     }
 }
-/// Read one proposed name's translated span; this detail has no text field.
+/// Write the text and span of the proposed name at index to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_kind_span(
     value: *const ValueHandle,
@@ -221,16 +302,23 @@ pub unsafe extern "C" fn thinkthen_value_kind_span(
             let kind = kind(&*value, index)?;
             Ok(SpanView {
                 present: 1,
-                start: *kind.start() as u64,
-                end: *kind.end() as u64,
-                ..SpanView::default()
+                text: views::text(kind.text()),
+                start: kind.start() as u64,
+                end: kind.end() as u64,
             })
         })
     }
 }
-/// Count one proposed name's caller-domain kind probabilities.
+/// Write how many kind probabilities the proposed name at index holds to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_kind_probability_count(
     value: *const ValueHandle,
@@ -241,9 +329,17 @@ pub unsafe extern "C" fn thinkthen_value_kind_probability_count(
     /* SAFETY: value and exclusive output slots remain live until return. */
     unsafe { project(out, error, || Ok(kind(&*value, index)?.kinds().len())) }
 }
-/// Borrow one proposed name's kind label and probability.
+/// Write kind probability choice of the proposed name at index to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_kind_probability_at(
     value: *const ValueHandle,
@@ -259,9 +355,16 @@ pub unsafe extern "C" fn thinkthen_value_kind_probability_at(
         })
     }
 }
-/// Count evaluated relation candidate pairs, including pairs outside the answer.
+/// Write how many name pairs a relate value's detail judged, related or not, to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+/// writes 0.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_pair_count(
     value: *const ValueHandle,
@@ -277,9 +380,17 @@ pub unsafe extern "C" fn thinkthen_value_pair_count(
         })
     }
 }
-/// Borrow one evaluated candidate pair using the same typed relation shape.
+/// Write the judged pair at index to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+/// -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+/// -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+/// *out borrows from value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_pair_at(
     value: *const ValueHandle,
@@ -294,7 +405,7 @@ pub unsafe extern "C" fn thinkthen_value_pair_at(
                 (*value)
                     .detail::<questions::Relate>()?
                     .and_then(|detail| detail.pairs().get(index))
-                    .ok_or_else(native::abi_error)?,
+                    .ok_or_else(|| native::argument_error(thinkthen::Code::UsageArgument))?,
             ))
         })
     }

@@ -7,10 +7,9 @@ import ThinkThen
       _ = try Client(Settings(backend: .stub))
       preconditionFailure("Future error was ignored")
     } catch {
-      guard case ThinkThenError.unknownCode(let rawCode, let message, _, let rawName) = error else {
-        throw error
-      }
-      precondition(rawCode == 2_147_483_647 && rawName == "future.code")
+      guard let failure = (error as? ThinkThenError)?.failure else { throw error }
+      precondition(failure.code.rawValue == "future.code")
+      let message = failure.message
       precondition(message == CommandLine.arguments[1])
     }
   }
@@ -21,7 +20,7 @@ import ThinkThen
       guard case .failed(let failure) = row.outcome else {
         preconditionFailure("Future record failure was ignored")
       }
-      precondition(failure.code == .unknown && failure.rawCode == 2_147_483_647)
+      precondition(failure.code.rawValue == "future.code")
       precondition(failure.message == CommandLine.arguments[1])
     } else if CommandLine.arguments.last == "child" {
       let client = try Client(Settings(backend: .stub))
@@ -30,9 +29,8 @@ import ThinkThen
       guard let answer = row.answer, case .decide(.failed(let failure)) = answer["future"] else {
         preconditionFailure("Future child failure was ignored")
       }
-      precondition(failure.code == .unknown && failure.rawCode == nil)
       precondition(
-        failure.rawName == "future.problem" && failure.message == CommandLine.arguments[1])
+        failure.code.rawValue == "future.problem" && failure.message == CommandLine.arguments[1])
     } else {
       try operation()
     }

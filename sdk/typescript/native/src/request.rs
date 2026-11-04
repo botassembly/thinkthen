@@ -3,7 +3,7 @@ use super::Bridge;
 use serde_json::json;
 use std::time::Duration;
 use thinkthen::{
-    Engine, Error, OffsetUnit, Request,
+    AnyRow, Engine, Error, OffsetUnit, Request,
     native::{Call, Event},
 };
 pub(super) fn run(
@@ -101,7 +101,20 @@ pub(super) fn run(
                         json!({"kind":id.kind(),"value":id.as_i64().map(|id|id.to_string()).or_else(||id.as_u64().map(|id|id.to_string()))})
                     }
                 };
-                let packet = json!({"row":value,"position":row.position(),"id":id});
+                let original = if let AnyRow::Rank(rank) = &row {
+                    rank.record()
+                        .map(|record| {
+                            let (kind, bytes) = record.original();
+                            std::str::from_utf8(bytes)
+                                .map(|data| json!({"kind":kind,"data":data}))
+                                .map_err(|_| thinkthen::native::internal_error())
+                        })
+                        .transpose()?
+                } else {
+                    None
+                };
+                let packet =
+                    json!({"row":value,"position":row.position(),"id":id,"original":original});
                 buffered = Some(packet.to_string());
                 continue;
             }

@@ -1,0 +1,1 @@
+example.csproj: Standard net10 console scaffold and package reference recreated by the page's dotnet new console and dotnet add package commands; the runner restores it from the staged offline feed.

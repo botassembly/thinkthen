@@ -14,8 +14,10 @@
     {
       "function": "find",
       "position": 1,
-      "status": "answered",
-      "answer": null
+      "status": "failed",
+      "error": {
+        "code": "record.empty"
+      }
     }
   ],
   "requests": 0

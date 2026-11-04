@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from native_platform import ARM_BASE, HOSTS
+from native_platform import ARM_BASE, HOSTS, publish_jvm_aliases
 from build_targets import floor_target
 
 from runtime_floors import FLOORS
@@ -157,14 +157,7 @@ def main():
             archive_temporary = archive.with_suffix(".partial")
             shutil.copy2(target / host / "release" / archive.name, archive_temporary)
             archive_temporary.replace(archive)
-        for asset_rid, jvm, _ in platforms.values():
-            alias = cache / "jvm" / jvm
-            alias.parent.mkdir(exist_ok=True)
-            asset = cache / asset_rid
-            if not asset.is_dir():
-                continue
-            if not alias.is_symlink() and not alias.exists():
-                alias.symlink_to(Path("..") / asset_rid, target_is_directory=True)
+        publish_jvm_aliases(cache)
         shutil.copy2(ROOT / "crates/thinkthen-ffi/include/thinkthen.h", cache / "thinkthen.h")
         if receipt is not None:
             from native_producer import validate_receipt

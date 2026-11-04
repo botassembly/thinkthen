@@ -18,16 +18,20 @@ flags=$(pkg-config --cflags --libs thinkthen-c)
 case "$flags" in *rpath*) echo 'pkg-config must not choose runtime lookup' >&2; exit 1 ;; esac
 mkdir "$scratch/readme"
 ln -s "$scratch/installed" "$scratch/readme/thinkthen"
-(unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH
+# The README example names no backend, so the environment picks the offline one.
+(unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL
+    export THINKTHEN_BACKEND=stub
     python3 scripts/readme-example "$scratch/installed/share/thinkthen-c/README.md" c "$scratch/readme/example.c")
 if [ "${1:-}" = --readme-only ]; then exit 0; fi
 flags="$flags -Wl,-rpath,$(pkg-config --variable=libdir thinkthen-c)"
+cc -std=c11 -Wall -Wextra -Werror "$scratch/readme/example.c" $flags -o "$scratch/example"
+THINKTHEN_BACKEND=stub "$scratch/example"
+python3 scripts/c-doc-examples "$scratch/doc-examples" "$flags"
 # Deliberately compile through the installed pkg-config surface, not source paths.
 cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/consumer.c \
     $flags -o "$scratch/consumer"
 cc -DNDEBUG -std=c11 -Wall -Wextra -Werror -pthread sdk/c/tests/conformance.c \
     $flags -o "$scratch/conformance"
-cc -std=c11 -Wall -Wextra -Werror "$scratch/readme/example.c" $flags -o "$scratch/example"
 if [ -n "${THINKTHEN_LOOPBACK:-}" ]; then
     test -x "$THINKTHEN_LOOPBACK"
 else
@@ -38,7 +42,6 @@ export THINKTHEN_LOOPBACK
 c_library=$(find "$scratch/installed/lib" -maxdepth 1 -type f -name 'libthinkthen.*' -print)
 case $(uname -s) in Darwin) c_attempted=$(pkg-config --variable=libdir thinkthen-c)/$(basename "$c_library") ;; *) c_attempted=$(basename "$c_library") ;; esac
 python3 scripts/loader-failure-check "$c_library" --attempted "$c_attempted" -- "$scratch/example"
-"$scratch/example"
 cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $flags -o "$scratch/original"
 "$scratch/original"
 python3 sdk/c/tests/installed_boundaries.py "$root" "$flags" "$c_library"
@@ -46,11 +49,11 @@ mkdir "$scratch/home"
 unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
 python3 sdk/c/tests/toolbox.py "$scratch/consumer" "$root"
 HOME="$scratch/home" python3 sdk/c/tests/run.py "$scratch/consumer" "$THINKTHEN_LOOPBACK" "$scratch/conformance" "$root/conformance/typed/manifest.json"
-python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
 cmake -S sdk/c/tests -B "$scratch/cmake-consumer" \
     -DCMAKE_PREFIX_PATH="$scratch/installed" -DCMAKE_BUILD_TYPE=Release
 cmake --build "$scratch/cmake-consumer" --parallel 2
 "$scratch/cmake-consumer/consumer"
+python3 scripts/stress-adapters.py --surface c ${THINKTHEN_STRESS_FULL:+--full} -- python3 sdk/c/tests/stress.py c "$scratch/conformance"
 if [ -n "${THINKTHEN_C_ARTIFACT_DIR:-}" ]; then
     mkdir -p "$THINKTHEN_C_ARTIFACT_DIR"
     cp "$scratch/package"/*.tar.gz "$THINKTHEN_C_ARTIFACT_DIR/"

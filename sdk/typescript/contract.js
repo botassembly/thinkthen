@@ -3,7 +3,7 @@ export const ABI_VERSION = 131074;
 export const ABI_VERSION_EXPORT = "abiVersion";
 export const ABI_CODE = "usage.abi";
 export const ABI_MESSAGE = "the native ABI is incompatible";
-export const ABI_EXPORTS = ["Client","Client.prototype.close","Client.prototype.start","Client.prototype.startFinite","Operation","Operation.prototype.cancel","Operation.prototype.close","Operation.prototype.reference","Operation.prototype.unreference","abiVersion","parseToolbox","rejectCancellation","rejectNonFiniteJson","rejectQuestionConversion","rejectSettingsConversion","serializeToolbox"];
+export const ABI_EXPORTS = ["Client","Client.prototype.close","Client.prototype.start","Client.prototype.startFinite","Operation","Operation.prototype.cancel","Operation.prototype.close","Operation.prototype.reference","Operation.prototype.unreference","abiVersion","parseToolbox","rejectCancellation","rejectNonFiniteJson","rejectQuestionConversion","rejectRecordKind","rejectSettingsConversion","serializeToolbox"];
 /** @type {Readonly<Record<number, string>>} */
 export const FUNCTION_NAMES = Object.freeze({
     "1": "decide",
@@ -64,10 +64,17 @@ export const CODE_NAMES = Object.freeze({
     "1010": "usage.sql-policy",
     "1011": "usage.sql-selection",
     "1012": "usage.abi",
+    "1013": "usage.closed",
+    "1014": "usage.function",
+    "1015": "usage.record-kind",
+    "1016": "usage.offsets",
+    "1017": "usage.argument",
+    "1018": "usage.option",
     "2001": "record.json",
     "2002": "record.missing",
     "2003": "record.too-large",
     "2004": "record.invalid",
+    "2005": "record.empty",
     "3001": "backend.transport",
     "3002": "backend.status",
     "3003": "backend.reply",

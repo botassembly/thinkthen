@@ -1,5 +1,6 @@
 """Run the documented quickstart against the installed wheel."""
 
+import os
 import re
 import subprocess
 import sys
@@ -12,4 +13,6 @@ def test_readme_quickstart(tmp_path: Path) -> None:
     assert example is not None
     code = tmp_path / "example.py"
     code.write_text(example[1])
-    subprocess.run([sys.executable, str(code)], check=True)
+    # Readers see the default client; the example runs on the stub.
+    environment = {**os.environ, "THINKTHEN_BACKEND": "stub"}
+    subprocess.run([sys.executable, str(code)], check=True, env=environment)

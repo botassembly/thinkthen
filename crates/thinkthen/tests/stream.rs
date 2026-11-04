@@ -28,7 +28,7 @@ fn a_registered_stream_waker_observes_published_rows_and_completion() {
         .open(&questions::Decide::new("Ready?").unwrap())
         .unwrap();
     let sender = call.sender();
-    let mut rows = call.rows();
+    let mut rows = call.rows().into_stream();
     assert!(Pin::new(&mut rows).poll_next(&mut cx).is_pending());
     sender.send(Record::missing()).unwrap();
     sender.close();

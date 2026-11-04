@@ -10,7 +10,7 @@ stopifnot(inherits(ids, "tt_id_integer"), inherits(ids, "vctrs_rcrd"),
           is.na(tt_id_integer(NA_character_)))
 client <- tt_client(backend = "stub")
 for (i in seq_along(expected)) {
-  out <- tt_decide(list(list(id = ids[[i]], body = "text")), "Ready?", client = client)
+  out <- tt_decide_rows(list(list(id = ids[[i]], body = "text")), "Ready?", client = client)
   stopifnot(nrow(out) == 1L, out$status != "failed",
             inherits(out$id[[1]], "tt_id_integer"),
             identical(format(out$id[[1]]), expected[[i]]))
@@ -18,12 +18,12 @@ for (i in seq_along(expected)) {
 
 # Both direct record-vector columns and mixed list columns retain ID identity.
 frame <- tibble::tibble(id = ids, body = rep("text", length(ids)))
-rows <- tt_decide(frame, "Ready?", client = client)
+rows <- tt_decide_rows(frame, "Ready?", client = client)
 stopifnot(nrow(rows) == length(ids),
           identical(vapply(rows$id, format, character(1)), expected))
 mixed <- tibble::tibble(id = list(ids[[4]], expected[[4]], 1L, 2),
                         body = rep("text", 4L))
-rows <- tt_decide(mixed, "Ready?", client = client)
+rows <- tt_decide_rows(mixed, "Ready?", client = client)
 stopifnot(inherits(rows$id[[1]], "tt_id_integer"),
           identical(format(rows$id[[1]]), expected[[4]]),
           is.character(rows$id[[2]]), identical(rows$id[[2]], expected[[4]]),
@@ -32,7 +32,7 @@ stopifnot(inherits(rows$id[[1]], "tt_id_integer"),
 
 # Safe ordinary doubles remain numeric IDs; the next boundary requires a wrapper.
 safe <- c(-(2^53 - 1), 2^53 - 1)
-rows <- tt_decide(lapply(safe, function(id) list(id = id, body = "text")),
+rows <- tt_decide_rows(lapply(safe, function(id) list(id = id, body = "text")),
                   "Ready?", client = client)
 stopifnot(all(rows$status != "failed"),
           all(vapply(rows$id, inherits, logical(1), "tt_id_integer")),
@@ -55,7 +55,7 @@ for (bad in list(1, "1e3", "1.5", " 1", "-9223372036854775809", "184467440737095
   condition(tt_id_integer(bad), "thinkthen_usage_error")
 }
 # An absent member is valid, and remains distinct from a present NULL member.
-absent <- tt_decide(list(list(body = "text")), "Ready?", client = client)
+absent <- tt_decide_rows(list(list(body = "text")), "Ready?", client = client)
 stopifnot(absent$status != "failed", is.null(absent$id[[1]]))
 tt_close(client)
 
@@ -70,7 +70,7 @@ for (backend in c("systemone", "openai")) {
   bad_ids <- list(2^53, -(2^53), Inf, NaN, 1.5, TRUE, NULL,
                   tt_id_integer(NA_character_), list(1L))
   records <- lapply(bad_ids, function(id) list(id = id, body = "text"))
-  rows <- tt_decide(records, "Ready?", client = client, .progress = FALSE)
+  rows <- tt_decide_rows(records, "Ready?", client = client, .progress = FALSE)
   stopifnot(nrow(rows) == length(records),
             identical(rows$position, as.double(seq_along(records))),
             all(rows$status == "failed"),

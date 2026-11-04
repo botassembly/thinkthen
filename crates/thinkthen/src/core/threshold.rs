@@ -1,7 +1,5 @@
 //! The rule that turns a probability into yes, no or not sure.
 
-use std::str::FromStr;
-
 use crate::core::error::{Error, ErrorKind};
 use crate::core::probability::Probability;
 
@@ -74,8 +72,12 @@ pub(crate) fn invalid() -> Error {
 
 /// A single cut, or a band with a not sure middle.
 ///
-/// A cut `T` says yes at `p >= T`. A band `LOW:HIGH` says yes at `p >= HIGH`,
-/// no below `LOW`, and not sure from `LOW` up to `HIGH`.
+/// A cut `T` says yes at `p >= T`. A band from `low` to `high` says yes at
+/// `p >= high`, no below `low`, and not sure from `low` up to `high`. Build one
+/// with [`Threshold::cut`] or [`Threshold::band`]; there is no string form.
+/// ```compile_fail
+/// let band: thinkthen::Threshold = "0.2:0.8".parse().unwrap();
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Threshold(Rule);
 
@@ -92,6 +94,13 @@ impl Threshold {
             Rule::Cut(value) => Ok(Cut(value)),
             Rule::Band(..) => Err(invalid()),
         }
+    }
+    /// Construct a single cut: yes at or above `value`, otherwise no.
+    ///
+    /// # Errors
+    /// Returns `usage.threshold` unless 0 < value <= 1.
+    pub fn cut(value: f64) -> Result<Self, Error> {
+        Cut::new(value).map(Into::into)
     }
     /// Construct a band with ordered, validated numeric bounds.
     ///
@@ -140,19 +149,6 @@ impl Threshold {
 impl Default for Threshold {
     fn default() -> Self {
         Self(Rule::Cut(Probability::HALF))
-    }
-}
-
-// The command and current request parser retain their text adapter until their
-// own contract slice. New serde admission never accepts this string grammar.
-impl FromStr for Threshold {
-    type Err = Error;
-    fn from_str(text: &str) -> Result<Self, Error> {
-        let number = |part: &str| part.parse::<f64>().map_err(|_| invalid());
-        match text.split_once(':') {
-            Some((low, high)) => Self::band(number(low)?, number(high)?),
-            None => Cut::new(number(text)?).map(Into::into),
-        }
     }
 }
 

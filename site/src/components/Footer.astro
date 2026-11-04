@@ -1,0 +1,75 @@
+---
+// The foot of every page: the copy button, then the site footer from the first
+// thinkthen.dev: three columns of links, the exit-code legend, the tagline, the maker and the license.
+// Every link here points at a page or file this build makes; check.mjs fails on a broken one.
+import CopyMarkdown from './CopyMarkdown.astro';
+import product from '../../product.config.mjs';
+
+const repo = product.social.find((s) => s.icon === 'github').href;
+const columns = [
+  ['Product', [
+    ['/install/', 'Installation'],
+    ['/quickstart/', 'Quickstart'],
+    ['/', 'Home'],
+    ['/how-tos/triage-a-support-inbox/', 'How-tos'],
+    ['/reference/options/', 'Options'],
+    ['/blog/', 'Blog'],
+  ]],
+  ['Project', [
+    [repo, 'GitHub repository'],
+    ['/about/', 'About'],
+    ['/refusals/', 'What it will not do'],
+    ['/reference/release-notes/', 'Release notes'],
+    ['/version.json', 'Build proof'],
+  ]],
+  ['For machines', [
+    ['/llms.txt', 'llms.txt'],
+    ['/llms-full.txt', 'llms-full.txt'],
+    ['/sitemap.xml', 'Sitemap'],
+  ]],
+];
+---
+<footer class="site-foot print:hidden" data-pagefind-ignore>
+  <CopyMarkdown variant="button" />
+  <div class="cols">
+    {columns.map(([name, links]) => (
+      <nav aria-label={name}>
+        <p class="head">{name}</p>
+        <ul>{links.map(([href, label]) => <li><a href={href}>{label}</a></li>)}</ul>
+      </nav>
+    ))}
+  </div>
+
+  <div class="band">
+    <a href="/">ThinkThen: code that knows what you mean</a>
+    <a class="maker" href="https://www.genomoncology.com/">
+      <span>Made by</span>
+      <img src="/brand/genomoncology-logo-light.png" alt="GenomOncology" class="on-light" width="131" height="24" />
+      <img src="/brand/genomoncology-logo-dark.png" alt="GenomOncology" class="on-dark" width="131" height="24" />
+    </a>
+    <span><a href={`${repo}/blob/main/LICENSE`}>MIT License</a> · © 2026 Ian Maurer</span>
+  </div>
+</footer>
+
+<style>
+  .site-foot { margin-block-start: 2rem; font-size: var(--sl-text-sm); color: var(--sl-color-gray-3); }
+  .site-foot a { color: var(--sl-color-gray-2); text-decoration: none; }
+  .site-foot a:hover { color: var(--sl-color-text-accent); text-decoration: underline; }
+  .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; margin-block-start: 2.5rem; }
+  .head { margin: 0 0 0.5rem; font-family: var(--sl-font-system-mono); font-size: var(--sl-text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--sl-color-gray-3); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { margin-block: 0.35rem; }
+  .legend { margin-block: 2rem 0; padding-block-start: 1.25rem; border-block-start: 1px solid var(--sl-color-hairline); font-size: var(--sl-text-xs); line-height: 1.8; }
+  .legend span { font-family: var(--sl-font-system-mono); white-space: nowrap; margin-inline-end: 0.35rem; }
+  .legend code { font-size: inherit; }
+  .band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; margin-block: 1rem 2rem; }
+  .maker { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .maker img { block-size: 24px; inline-size: auto; }
+  .on-dark { display: none; }
+  :global([data-theme='dark']) .on-dark { display: inline; }
+  :global([data-theme='dark']) .on-light { display: none; }
+  @media (max-width: 40rem) {
+    .cols { grid-template-columns: 1fr 1fr; }
+    .band { flex-direction: column; align-items: flex-start; }
+  }
+</style>

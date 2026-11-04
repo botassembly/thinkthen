@@ -1,0 +1,3 @@
+a1 ANSWERED kept=true
+a2 ANSWERED kept=false
+a3 ANSWERED kept=true

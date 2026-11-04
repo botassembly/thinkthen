@@ -1,0 +1,171 @@
+---
+title: SQLite
+description: Load the extension into SQLite 3.41 or later and ask a question about every message a query returns, with thinkthen_decide and nine more table-valued functions.
+goal: The reader loads the SQLite extension, asks a first question of a table, sees not sure and a failure as the sqlite3 shell prints them, and finds the query for each of the ten functions.
+reader: A developer using SQLite who wants answers as columns
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import Fact from '../../../components/Fact.astro';
+
+The SQLite extension adds the ten functions as table-valued functions; each one runs a query you pass as text, asks a question about every message it returns, and gives the answer as a column, such as 1 or 0 from decide.
+
+<Example id="sdks/sqlite/start" />
+
+Messages 1 and 3 ask for a refund, so `is_refund` is 1, and message 2 asks about a parcel, so it is 0. The rest of this page runs in the same session, with the same `messages` table.
+
+## Load the extension and ask
+
+Download the SQLite archive for your platform from the [<Fact k="version" /> release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), check it as [Installation](/install/) shows, and extract it into a folder of its own. Start `sqlite3` in that folder:
+
+```sh
+mkdir thinkthen-sqlite
+tar -xzf thinkthen-sqlite-*.tar.gz -C thinkthen-sqlite
+cd thinkthen-sqlite
+sqlite3
+```
+
+The extension needs SQLite 3.41.0 or later with extension loading on, which the `sqlite3` shell has. `SELECT thinkthen_version();` prints the version you loaded.
+
+
+
+SQLite needs your key in its environment, as [Configuration](/configuration/) shows. In Python, call `connection.enable_load_extension(True)`, then `connection.load_extension('./thinkthen_sqlite')`, and run the same SQL.
+
+The first argument is the query to judge, as text. Its `record` column holds the text, and its `id` column comes back in `id` with the same type, so it joins straight back to your table. Name any other argument in `WHERE`, as `WHERE choices = '[...]'`. Lists and toolboxes are JSON text.
+
+Each run of a query asks again and is billed again, and a join or a subquery around a function can run it again too. Save answers you need twice with `CREATE TABLE refund_answers AS SELECT ...`, and join that table.
+
+## When decide is not sure
+
+Set a low bar and a high bar with `low` and `high`. decide says no below the low bar, yes at or above the high bar, and not sure in between:
+
+<Example id="sdks/sqlite/unsure" />
+
+A double charge might be a refund request or might not, so message 3 comes back `unsure`, with a NULL answer, which the shell prints as a blank. Send it to a person. Test answers with `IS TRUE` and `IS FALSE`, which are both false for NULL, so not sure never counts as a no.
+
+## When a message fails
+
+A message that can't be judged comes back with `status` `failed`, a NULL answer and an `error_code`, and the query keeps going. Here message 7 has no text, so it fails as `record.missing`, and no question is sent for it:
+
+<Example id="sdks/sqlite/failed" />
+
+A number or a blob in `record` fails as `record.invalid`. A mistake in the call itself, such as leaving out `choices`, stops the query before anything is sent, with a message that starts with a code such as `usage.argument`. When every message fails for the same outside reason, such as a refused request, the query raises that error instead. [Troubleshooting](/reference/troubleshooting/) lists every code.
+
+## The ten functions
+
+Each query runs in the session the first example opened. Open a function to see its query and what the shell prints.
+
+### decide
+
+<details class="example-disclosure compact-spacing">
+<summary>Yes or no for each message</summary>
+
+<Example id="sdks/sqlite/decide" />
+
+`answer` is 1 for yes and 0 for no. `probability` is the chance of yes, also when the answer is no. It is high for message 1, low for message 2, and in between for message 3, the double charge. `yes_means` and `no_means` say what yes and no mean for your question. [decide](/functions/decide/) shows the command.
+
+</details>
+
+### choose
+
+<details class="example-disclosure compact-spacing">
+<summary>One of your choices for each message</summary>
+
+<Example id="sdks/sqlite/choose" />
+
+Message 1, a refund request, is about billing. `answer` is the choice, as text, and `detail ->> '$.labels'` gives every choice its probability. With `threshold`, or `low` and `high`, choose is not sure when the best choice falls short of the bar. [choose](/functions/choose/) shows the command.
+
+</details>
+
+### tag
+
+<details class="example-disclosure compact-spacing">
+<summary>Every label that fits each message</summary>
+
+<Example id="sdks/sqlite/tag" />
+
+Message 4 is about billing and shipping at once. `answer` is a JSON array, which is empty when no label fits. `threshold` sets the bar a label must reach. [tag](/functions/tag/) shows the command.
+
+</details>
+
+### score
+
+<details class="example-disclosure compact-spacing">
+<summary>A number from 0 to 1 for each message</summary>
+
+<Example id="sdks/sqlite/score" />
+
+The double charge, message 3, is the most urgent of the three. `answer` is a number: 0 means the first level, and 1 the last. List the levels lowest first. [score](/functions/score/) shows the command.
+
+</details>
+
+### filter
+
+<details class="example-disclosure compact-spacing">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="sdks/sqlite/filter" />
+
+Messages 1 and 3 ask for a refund, so filter keeps them. The no and not-sure messages are left out. If a message fails, filter returns the kept messages, then raises one error that says how many failed. Add `failures = 'row'` to the `WHERE` clause to get the failed messages back too, with `status` `failed`, so you keep the answers you paid for. To keep every message with its answer, use decide. [filter](/functions/filter/) shows the command.
+
+</details>
+
+### rank
+
+<details class="example-disclosure compact-spacing">
+<summary>Every message in order, highest first</summary>
+
+<Example id="sdks/sqlite/rank" />
+
+The double charge ranks first, the parcel second and the refund request last. `answer` is a rank from 1, the most urgent first. `top = 2` keeps the first two. Failed messages come after the ranked ones with a NULL rank, and `top` never drops them. [rank](/functions/rank/) shows the command.
+
+</details>
+
+### find
+
+<details class="example-disclosure compact-spacing">
+<summary>The line that answers in each message</summary>
+
+<Example id="sdks/sqlite/find" />
+
+The second line of message 5 states what the customer wants. `answer` is a JSON object with the line's `text`, `start_offset` and `end_offset`. Offsets count characters from 0, and the end is not part of the line. When no line answers, `answer` is NULL and `status` is `answered`. [find](/functions/find/) shows the command.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure compact-spacing">
+<summary>Several questions about each message at once</summary>
+
+<Example id="sdks/sqlite/annotate" />
+
+Each message gets all three answers from one query. `toolbox` names each question, and rank can't be one of them. `answer` is a JSON object with each question's answer by name. A value is null when that question was not sure or failed, and `detail` holds each question's full outcome. [annotate](/functions/annotate/) shows the command.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure compact-spacing">
+<summary>The names of the kinds you ask for</summary>
+
+<Example id="sdks/sqlite/recognize" />
+
+Message 6 names a person, Morgan, and an organization, Example Group. `answer` is a JSON array of names, each with `text`, `kind`, `start_offset`, `end_offset` and `probability`. `json_each` lists each name on its own. [recognize](/functions/recognize/) shows the command.
+
+</details>
+
+### relate
+
+<details class="example-disclosure compact-spacing">
+<summary>How the names in each message connect</summary>
+
+<Example id="sdks/sqlite/relate" />
+
+Morgan works for Example Group, so relate links the two names. Each rule has `relation`, `source` and `target`, plus optional `reads` and `either`. `answer` is a JSON array of relations, each with `relation`, `source`, `target`, `either` and `probability`. [relate](/functions/relate/) shows the command.
+
+</details>
+
+## Every option and setting
+
+The [SQLite guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/sqlite.md) lists every argument, result column and setting, such as `field = '/text'`, which judges one field of a JSON message, and `params`, which binds values to the `?` in your query. The [extension's source](https://github.com/botassembly/thinkthen/tree/v0.2.0/extensions/sqlite) shows how each call works.

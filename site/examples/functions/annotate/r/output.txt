@@ -1,0 +1,6 @@
+# A tibble: 3 × 3
+  refund topic    urgency
+  <lgl>  <chr>      <dbl>
+1 TRUE   billing     0.05
+2 FALSE  shipping    0.14
+3 TRUE   billing     0.45

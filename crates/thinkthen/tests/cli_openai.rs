@@ -23,9 +23,9 @@ fn command_routes_each_backends_key_only_to_its_own_address() {
         )
     })
     .unwrap();
-    for (backend, key, server, retired_url) in [
-        ("systemone", "synthetic-system", &system, openai.base()),
-        ("openai", "synthetic-openai", &openai, system.base()),
+    for (backend, key, server) in [
+        ("systemone", "synthetic-system", &system),
+        ("openai", "synthetic-openai", &openai),
     ] {
         let mut command = support::command();
         command
@@ -33,13 +33,10 @@ fn command_routes_each_backends_key_only_to_its_own_address() {
             .env("THINKTHEN_API_KEY", "synthetic-system")
             .env("OPENAI_API_KEY", "synthetic-openai")
             .env("THINKTHEN_BASE_URL", system.base())
-            .env("THINKTHEN_URL", retired_url)
+            .env("THINKTHEN_URL", server.base())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        if backend == "openai" {
-            command.args(["--url", openai.base()]);
-        }
         let mut child = command.spawn().unwrap();
         child
             .stdin

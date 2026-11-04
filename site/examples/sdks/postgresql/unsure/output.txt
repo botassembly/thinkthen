@@ -1,0 +1,7 @@
+ msg_id | is_refund |  status  
+--------+-----------+----------
+ 1      | t         | answered
+ 2      | f         | answered
+ 3      |           | unsure
+(3 rows)
+

@@ -1,6 +1,6 @@
 package consumer.rejected
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.flow.flowOf
 
 // Feature: ToolboxRejectsNestedAnnotate. This expression must fail after the positive consumer compiles.

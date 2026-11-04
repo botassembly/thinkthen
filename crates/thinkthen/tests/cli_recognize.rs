@@ -47,10 +47,10 @@ fn names_print_one_json_object_each_and_empty_names_succeed() {
         if single {
             assert_eq!(
                 String::from_utf8(output.stdout).unwrap(),
-                "[1]\tENTITY: Ada (0..3)\n"
+                "ENTITY: Ada (0..3)\n"
             );
         } else {
-            assert_eq!(output.stdout, b"[1]\n");
+            assert_eq!(output.stdout, b"\n");
         }
     }
 }
@@ -60,7 +60,7 @@ fn details_and_records_render_rows_without_top_probability() {
         (vec!["--json"], "Ada", 1),
         (vec!["--from", "lines", "--json"], "Ada\nBea\n", 2),
         (
-            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
+            vec!["--from", "jsonl", "--json", "--field", "/body"],
             "{\"body\":\"Ada\"}\n",
             1,
         ),
@@ -85,7 +85,7 @@ fn threshold_bands_fail_before_sending() {
     let server = server(true);
     let output = run(&server, &["--threshold", "0.2:0.8"], "Ada");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.question");
+    assert_eq!(support::reported(&output), "usage.option");
     assert_eq!(server.count(), 0);
 }
 
@@ -97,6 +97,6 @@ fn named_kinds_reach_the_dependent_round() {
     }).unwrap();
     let output = run(&server, &["--kind", "person"], "Ada");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(output.stdout, b"[1]\tperson: Ada (0..3)\n");
+    assert_eq!(output.stdout, b"person: Ada (0..3)\n");
     assert_eq!(server.count(), 2);
 }

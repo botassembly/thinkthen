@@ -52,6 +52,11 @@ private typealias ConversionErrorCall =
   @convention(c) (OpaquePointer?, UnsafeMutablePointer<thinkthen_error>?) -> Int32
 private typealias FreeError = @convention(c) (UnsafeMutablePointer<thinkthen_error>?) -> Void
 private typealias FreeRow = @convention(c) (UnsafeMutablePointer<thinkthen_row>?) -> Void
+private typealias OriginalRecord =
+  @convention(c) (
+    UnsafePointer<thinkthen_row>?, UnsafeMutablePointer<thinkthen_record_view>?,
+    UnsafeMutablePointer<thinkthen_error>?
+  ) -> Int32
 
 // Immutable process-owned function table. Workers may outlive a cancelled call.
 final class Native: Sendable {
@@ -59,6 +64,7 @@ final class Native: Sendable {
   private let clientOpen: OpenClient, callOpen: OpenCall, sendText: Send, sendJSON: Send
   private let nextRow: Next, errorFree: FreeError, rowFree: FreeRow, codeName: CodeName
   private let recordsOpen: OpenRecords
+  private let originalRecord: OriginalRecord
   private let admitSettings: Admit, admitQuestion: Admit
   private let settingsFree: PointerAction, questionFree: PointerAction
   private let admitToolbox: Admit, admitDefinitions: Admit
@@ -80,7 +86,25 @@ final class Native: Sendable {
     #else
       throw ThinkThenError.engineUnavailable(message: "No packaged engine for this host")
     #endif
-    let path = Bundle.module.bundleURL.appendingPathComponent("Native/" + resource).path
+    let environment = ProcessInfo.processInfo.environment
+    let executable = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL
+      .deletingLastPathComponent()
+    let bundles = [Bundle.main.bundleURL, executable].flatMap { base in
+      ["ThinkThen_ThinkThen.bundle", "ThinkThen_ThinkThen.resources"].map {
+        base.appendingPathComponent($0).appendingPathComponent("Native/" + resource).path
+      }
+    }
+    guard
+      let path = environment["THINKTHEN_NATIVE_LIBRARY"]
+        ?? bundles.first(where: {
+          FileManager.default.fileExists(atPath: $0)
+        })
+    else {
+      throw ThinkThenError.engineUnavailable(
+        message:
+          "Cannot load packaged engine; searched \(bundles.joined(separator: ", ")); set THINKTHEN_NATIVE_LIBRARY to the native library path"
+      )
+    }
     #if os(Windows)
       guard let handle = path.withCString(encodedAs: UTF16.self, { LoadLibraryW($0) }) else {
         throw ThinkThenError.engineUnavailable(
@@ -127,6 +151,7 @@ final class Native: Sendable {
     clientOpen = try symbol("thinkthen_client_open", OpenClient.self)
     callOpen = try symbol("thinkthen_call_open_question", OpenCall.self)
     recordsOpen = try symbol("thinkthen_call_open_records_question", OpenRecords.self)
+    originalRecord = try symbol("thinkthen_row_original", OriginalRecord.self)
     sendText = try symbol("thinkthen_call_send_text", Send.self)
     sendJSON = try symbol("thinkthen_call_send_json", Send.self)
     events = try symbol("thinkthen_call_events", RetainEvents.self)
@@ -160,19 +185,14 @@ final class Native: Sendable {
   }
   private func check(_ status: Int32, _ error: inout thinkthen_error) throws {
     defer { errorFree(&error) }
-    if status == THINKTHEN_ERROR {
+    if status < 0 {
       let message = String(decoding: copy(error.message), as: UTF8.self)
       let name = codeName(error.code).map { String(cString: $0) }
-      guard let name, let typed = ErrorCode(rawValue: name) else {
-        throw ThinkThenError.unknownCode(
-          rawCode: error.code, message: message,
-          httpStatus: error.http_status == 0 ? nil : error.http_status, rawName: name)
-      }
-      if name == "local.cancelled" { throw ThinkThenError.cancelled }
+      if name == "local.cancelled" { throw CancellationError() }
       throw ThinkThenError.engine(
         RowFailure(
-          code: typed, message: String(decoding: copy(error.message), as: UTF8.self),
-          httpStatus: error.http_status == 0 ? nil : error.http_status))
+          code: ErrorCode(rawValue: name ?? "native.\(error.code)"), message: message,
+          httpStatus: error.http_status == 0 ? nil : Int(error.http_status)))
     }
   }
   private func admit(_ bytes: Data, using operation: Admit) throws -> OpaquePointer {
@@ -223,11 +243,12 @@ final class Native: Sendable {
     let nameBytes = name.map { Data($0.utf8) }
     let status = try (nameBytes ?? Data()).withUnsafeBytes { buffer -> Int32 in
       var view = thinkthen_text(
-        data: buffer.bindMemory(to: UInt8.self).baseAddress, len: buffer.count)
+        data: buffer.bindMemory(to: CChar.self).baseAddress, len: buffer.count)
       return try withUnsafePointer(to: &view) { nameView in
         let named = name == nil ? nil : nameView
         guard let records else {
-          return callOpen(client, question, named, THINKTHEN_OFFSET_CODE_POINTS, &pointer, &error)
+          return callOpen(
+            client, question, named, THINKTHEN_OFFSET_CODE_POINTS.rawValue, &pointer, &error)
         }
         var payload = Data()
         var inputs: [thinkthen_record_input] = []
@@ -240,7 +261,7 @@ final class Native: Sendable {
           case .text(let text):
             input.kind = THINKTHEN_RECORD_TEXT
             value = Data(text.utf8)
-          case .missing, .json(.null):
+          case .missing:
             input.kind = THINKTHEN_RECORD_MISSING
             value = Data()
           case .json(let json):
@@ -254,14 +275,14 @@ final class Native: Sendable {
         }
         return payload.withUnsafeBytes { payloadBuffer in
           for index in inputs.indices {
-            inputs[index].data = payloadBuffer.bindMemory(to: UInt8.self).baseAddress?.advanced(
+            inputs[index].data = payloadBuffer.bindMemory(to: CChar.self).baseAddress?.advanced(
               by: offsets[index])
           }
           return inputs.withUnsafeBufferPointer {
             recordsOpen(
               client, question, named, $0.baseAddress, inputs.count,
-              MemoryLayout<thinkthen_record_input>.stride, THINKTHEN_OFFSET_CODE_POINTS, &pointer,
-              &error)
+              MemoryLayout<thinkthen_record_input>.stride, THINKTHEN_OFFSET_CODE_POINTS.rawValue,
+              &pointer, &error)
           }
         }
       }
@@ -279,7 +300,7 @@ final class Native: Sendable {
     case .text(let text):
       bytes = Data(text.utf8)
       operation = sendText
-    case .missing, .json(.null):
+    case .missing:
       var error = emptyError()
       let status = sendMissing(call, &error)
       try check(status, &error)
@@ -331,20 +352,27 @@ final class Native: Sendable {
     case THINKTHEN_FUNCTION_ANNOTATE: function = "annotate"
     default: throw rowABIFailure("Unknown native function")
     }
-    var failure = row.error.data == nil ? nil : copy(row.error)
-    if row.status == THINKTHEN_STATUS_FAILED,
-      codeName(row.error_code).flatMap({ ErrorCode(rawValue: String(cString: $0)) }) == nil,
-      let bytes = failure,
-      var fields = try JSONSerialization.jsonObject(with: bytes) as? [String: Any]
-    {
-      fields["raw_name"] = codeName(row.error_code).map { String(cString: $0) } ?? fields["code"]
-      fields["code"] = "unknown"
-      fields["raw_code"] = row.error_code
-      failure = try JSONSerialization.data(withJSONObject: fields)
+    let original: Record?
+    if row.function == THINKTHEN_FUNCTION_RANK {
+      var view = thinkthen_record_view()
+      var error = emptyError()
+      try check(originalRecord(&row, &view, &error), &error)
+      let data = view.data.map { Data(bytes: $0, count: view.len) } ?? Data()
+      switch view.kind {
+      case THINKTHEN_RECORD_TEXT: original = .text(String(decoding: data, as: UTF8.self))
+      case THINKTHEN_RECORD_JSON:
+        original = .json(try JSONDecoder().decode(JSONValue.self, from: data))
+      case THINKTHEN_RECORD_MISSING: original = .missing
+      default: throw rowABIFailure("Rank row has an unknown original record kind")
+      }
+    } else {
+      original = nil
     }
+    let failure = row.error.data == nil ? nil : copy(row.error)
     return .row(
       WireRow(
-        function: function, id: row.id.data == nil ? nil : copy(row.id), status: rowStatus,
+        function: function, original: original, id: row.id.data == nil ? nil : copy(row.id),
+        status: rowStatus,
         answer: row.answer.data == nil ? nil : copy(row.answer),
         probability: row.probability.isNaN ? nil : row.probability,
         error: failure,
@@ -355,6 +383,7 @@ final class Native: Sendable {
 }
 struct WireRow: Sendable {
   let function: String
+  let original: Record?
   let id: Data?, status: Status, answer: Data?, probability: Double?, error: Data?
   let detail: Data?, source: Data, position: UInt64, kept: Bool
   func decode<F: FunctionShape>(_ type: F.Type) throws -> Row<F> {
@@ -376,5 +405,5 @@ struct WireRow: Sendable {
 }
 
 func rowABIFailure(_ message: String) -> ThinkThenError {
-  .engine(RowFailure(code: .usageAbi, message: message, httpStatus: nil))
+  .engine(RowFailure(code: .usageABI, message: message, httpStatus: nil))
 }

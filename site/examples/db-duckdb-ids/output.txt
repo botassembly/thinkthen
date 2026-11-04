@@ -1,0 +1,3 @@
+[{"ticket_id":"a1","is_refund":true,"status":"answered"},
+{"ticket_id":"a2","is_refund":false,"status":"answered"},
+{"ticket_id":"a3","is_refund":true,"status":"answered"}]

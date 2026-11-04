@@ -1,0 +1,2 @@
+{"id":"a1","text":"Please refund my order.","customer":"Ana"}
+{"id":"a3","text":"I was charged twice for one invoice.","customer":"Ana"}

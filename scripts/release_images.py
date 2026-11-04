@@ -4,7 +4,8 @@ import re
 import subprocess
 import sys
 
-TAGS = {'floor': 'thinkthen-floor-build:glibc2.28', 'swift': 'thinkthen-swift-build:6.3.2-ubuntu22.04'}
+TAGS = {'floor': 'thinkthen-floor-build:glibc2.28', 'swift': 'thinkthen-swift-build:6.3.2-ubuntu22.04',
+        'installer': 'thinkthen-installer-test:fish3.7.0-1'}
 
 
 def image(name):

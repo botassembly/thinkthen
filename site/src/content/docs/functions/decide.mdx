@@ -1,0 +1,107 @@
+---
+title: decide
+description: decide answers a yes-or-no question about a piece of text with yes, no or, between two bars, not sure.
+goal: A newcomer who needs a yes or no about a text leaves able to ask the question, read yes, no and not sure, see the chance of yes, move the bar, branch a script on the answer, and answer every row of a CSV file.
+reader: Someone at the command line who needs a yes-or-no answer about a text
+kind: how-to
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "decide: yes, no or not sure about any text"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
+
+decide answers a yes-or-no question about a piece of text. It says yes (`true`) or no (`false`), or, when you set a low and a high bar, not sure (`unsure`).
+
+<Example id="decide-yes" />
+
+Yes: the message asks for a refund.
+
+## A no
+
+<Example id="decide-no" />
+
+No: the message asks about a delivery, not a refund.
+
+## Not sure
+
+Set a low bar and a high bar. decide says no below the low bar, yes at or above the high bar, and not sure in between.
+
+<Example id="decide-unsure" />
+
+Not sure: a double charge might be a refund request, or might not. Send not sure to a person. Never treat it as a no.
+
+## See why
+
+<details class="example-disclosure">
+<summary>See why</summary>
+
+`--json` prints the details. This `jq` keeps the two that explain the answer.
+
+<Example id="decide-why" />
+
+`probability` is the chance of yes. 0.7 falls between the bars of 0.2 and 0.8, so decide is not sure. [JSON output](/reference/json-output/) lists every field.
+
+</details>
+
+## Move the bar
+
+<details class="example-disclosure">
+<summary>Move the bar</summary>
+
+With one bar, `--threshold`, decide always says yes or no. Raise the bar to 0.8 and the same text is a no, because 0.7 is below it.
+
+<Example id="decide-bar" />
+
+The default bar is 0.5. Lower it to say yes more often. Raise it to say yes only when the model is sure.
+
+</details>
+
+## Use the answer in a script
+
+<details class="example-disclosure">
+<summary>Use the answer in a script</summary>
+
+`--check` turns the answer into the exit code.
+
+<Example id="decide-script" />
+
+| Answer | Exit code with `--check` |
+|---|---|
+| `true` | 0 |
+| `false` | 1 |
+| `unsure` | 3 |
+
+Without `--check`, decide exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
+
+</details>
+
+## Answer every row of a CSV file
+
+<details class="example-disclosure">
+<summary>Answer every row of a CSV file</summary>
+
+<ExampleFile id="decide-csv" file="messages.csv" />
+
+<Example id="decide-csv" />
+
+`--column` names the column to read, and `--into` names the new answer column. A CSV file holds `TRUE` and `FALSE`, which Excel reads as yes and no. With no bars, the double charge is a yes. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+
+</details>
+
+## Options
+
+<details class="example-disclosure">
+<summary>Options</summary>
+
+<FunctionOptions name="decide" />
+
+</details>
+
+If decide can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+
+**In code:** [Python](/sdks/python/#decide) · [TypeScript](/sdks/typescript/#decide) · [Go](/sdks/go/#decide) · [Java](/sdks/java/#decide) · [Kotlin](/sdks/kotlin/#decide) · [C#](/sdks/csharp/#decide) · [R](/sdks/r/#decide) · [Ruby](/sdks/ruby/#decide) · [Rust](/sdks/rust/#decide) · [Swift](/sdks/swift/#decide) · [Zig](/sdks/zig/#decide) · [C](/sdks/c/#decide) · [C++](/sdks/cpp/#decide) · [DuckDB](/sdks/duckdb/#decide) · [SQLite](/sdks/sqlite/#decide) · [PostgreSQL](/sdks/postgresql/#decide)
+
+Next: [choose](/functions/choose/) picks one answer from your list.

@@ -1,0 +1,64 @@
+---
+title: Break a problem into decisions
+description: Split a fuzzy job, such as handling a support message, into small questions with fixed answers, try each on one message, then ask them all at once with annotate.
+goal: A developer leaves able to split a job into the decisions a person makes, ask each as a question with a fixed answer, try it on one message, and put the questions in one toolbox.
+reader: A developer or team lead deciding how to use a model inside a real workflow
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, a fuzzy job is a few small questions with fixed answers, each tried on a real message and saved in one toolbox.
+
+## 1. Write down the decisions a person makes
+
+"Handle this support message" has no answer you can check. A person doing the job makes three decisions:
+
+- Does the customer request a refund? A yes or no, from [decide](/functions/decide/).
+- What is the message about? One of billing, shipping or other, from [choose](/functions/choose/).
+- How urgent is it? A number from routine to urgent, from [score](/functions/score/).
+
+Each has a small answer, so you can check it against what you would have said.
+
+## 2. Ask the yes-or-no decision
+
+Try each question on one real message with `--text`. Set a low and a high bar, so a message the model can't settle comes back not sure:
+
+<Example id="howto-break-refund" />
+
+Not sure: a double charge might be a refund request, or might not. That is the message a person should read.
+
+## 3. Ask the choice
+
+<Example id="howto-break-topic" />
+
+Billing: a double charge is about an invoice.
+
+## 4. Ask the scale
+
+<Example id="howto-break-urgency" />
+
+The answer is a number from 0 for routine to 1 for urgent.
+
+## 5. Put the questions in one toolbox
+
+Save the three questions in a [toolbox](/command-line/toolboxes/), with the same bars:
+
+<ExampleFile id="howto-break-all" file="inbox.json" />
+
+[annotate](/functions/annotate/) asks all three at once and prints each answer by its name:
+
+<Example id="howto-break-all" />
+
+The same three answers come back in one call: not sure, billing and the urgency.
+
+## Check the result
+
+- Each answer is one you could have given yourself. If you can't say whether an answer is right, the question is still too big; split it again.
+- Name everything the model needs in the question itself: the allowed values, and any date or amount rule.
+- Code routes, counts and acts on the answers. The model only answers. A person reads the not-sure cases.
+
+## Next
+
+[Triage a support inbox](/how-tos/triage-a-support-inbox/) asks these questions about a whole inbox and sends each message to its queue.

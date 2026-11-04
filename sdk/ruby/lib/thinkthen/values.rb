@@ -12,7 +12,7 @@ module ThinkThen
     end
     def self.wire(value)
       case value
-      when Data then value.to_h
+      when Data, RowError then value.to_h
       when Symbol then value.to_s
       when Array then value.map { |entry| wire(entry) }
       when Hash then value.to_h { |key, entry| [key.to_s, wire(entry)] }
@@ -21,12 +21,15 @@ module ThinkThen
     end
   end
   module WireValue
+    # Serialize the contract value, including when JSON.generate calls this method.
+    def to_json(*_args) = JSON.generate(to_h)
     def to_h
       # @type var klass: untyped
       klass = self.class
       klass.members.to_h { |key| [key.to_s, Values.wire(public_send(key))] }.reject { |_, value| value.nil? }
     end
   end
+  # The question identity, backend, model and optional execution name.
   Source = Data.define(:question_identity, :backend, :model, :name)
   class Source
     include WireValue
@@ -34,13 +37,20 @@ module ThinkThen
       super
     end
   end
-  RowError = Data.define(:code, :message, :http_status, :raw_code, :raw_name)
-  class RowError
-    include WireValue
+  # A record failure can be inspected as a value or raised as an exception.
+  class RowError < RecordError
+    attr_reader :raw_code, :raw_name
     def initialize(code:, message:, http_status: nil, raw_code: nil, raw_name: nil)
-      super(code: code.to_sym, message: Values.freeze_copy(message), http_status: http_status, raw_code: raw_code, raw_name: Values.freeze_copy(raw_name))
+      @raw_code, @raw_name = raw_code, Values.freeze_copy(raw_name)
+      super(message, code: code, http_status: http_status)
     end
+    def to_h
+      {"code" => code.to_s, "message" => message, "http_status" => http_status,
+       "raw_code" => raw_code, "raw_name" => raw_name}.reject { |_, value| value.nil? }
+    end
+    def to_json(*_args) = JSON.generate(to_h)
   end
+  # A named source/target relationship and its optional phrase.
   RelationRule = Data.define(:source, :target, :relation, :phrase, :symmetric)
   class RelationRule
     include WireValue
@@ -53,18 +63,29 @@ module ThinkThen
       {"source" => source, "target" => target, "relation" => relation, "reads" => phrase, "either" => symmetric}.reject { |_, value| value.nil? }
     end
   end
-  Retry = Data.define(:max_retries, :initial_backoff_ms, :attempt_timeout_ms)
+  # Retry delays and attempt timeouts are expressed in seconds.
+  Retry = Data.define(:max_retries, :initial_backoff, :attempt_timeout)
   class Retry
     include WireValue
-    def initialize(max_retries: nil, initial_backoff_ms: nil, attempt_timeout_ms: nil)
+    def initialize(max_retries: nil, initial_backoff: nil, attempt_timeout: nil)
       super
     end
+    def to_h
+      {"max_retries" => max_retries, "initial_backoff_ms" => initial_backoff && (initial_backoff * 1000).round,
+       "attempt_timeout_ms" => attempt_timeout && (attempt_timeout * 1000).round}.reject { |_, value| value.nil? }
+    end
   end
+  # Per-label probabilities for choose and tag answers.
   LabelDetail = Data.define(:labels) { include WireValue }
+  # Per-level probabilities for score and rank answers.
   LevelDetail = Data.define(:levels) { include WireValue }
+  # Matched text and zero-based character offsets.
   Found = Data.define(:text, :start, :end) { include WireValue }
+  # Recognized text, character offsets, kind and probability.
   Name = Data.define(:text, :start, :end, :kind, :probability) { include WireValue }
+  # An endpoint name, its character offsets and its kind.
   RelationName = Data.define(:text, :start, :end, :kind) { include WireValue }
+  # The source and target names, relation probability and symmetry.
   Relation = Data.define(:source, :target, :relation, :probability, :symmetric)
   class Relation
     include WireValue
@@ -75,8 +96,12 @@ module ThinkThen
       result
     end
   end
+  # The recognized names and evaluated relation pairs.
   RelationDetail = Data.define(:names, :pairs) { include WireValue }
+  # A text piece, character offsets and tag probabilities.
   PieceDetail = Data.define(:text, :start, :end, :tags) { include WireValue }
-  KindDetail = Data.define(:start, :end, :kinds) { include WireValue }
+  # Name text, character offsets and kind probabilities.
+  KindDetail = Data.define(:text, :start, :end, :kinds) { include WireValue }
+  # The text pieces and recognized name details.
   RecognizeDetail = Data.define(:pieces, :names) { include WireValue }
 end

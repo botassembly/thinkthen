@@ -36,12 +36,12 @@ type apiQuestion struct {
 	Rules                          []tt.Rule              `json:"rules"`
 	Questions                      map[string]apiQuestion `json:"questions"`
 	Threshold                      json.RawMessage        `json:"threshold"`
-	Evidence                       *string                `json:"evidence"`
+	Field                          *string                `json:"field"`
 	Top                            *int                   `json:"top"`
 }
 type apiExpected struct {
 	Function       string          `json:"function"`
-	Position       uint64          `json:"position"`
+	Position       int             `json:"position"`
 	ID             json.RawMessage `json:"id"`
 	Status         string          `json:"status"`
 	Answer, Detail json.RawMessage
@@ -89,8 +89,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(thresholdFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "choose":
@@ -98,8 +98,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(thresholdFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "filter":
@@ -107,8 +107,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(thresholdFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "tag":
@@ -116,14 +116,14 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(cutFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "score":
 		v := tt.NewScore(q.Question, q.Levels)
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "rank":
@@ -131,8 +131,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if q.Top != nil {
 			v = v.WithTop(*q.Top)
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "find":
@@ -140,8 +140,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(cutFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "recognize":
@@ -149,8 +149,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(cutFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	case "relate":
@@ -158,8 +158,8 @@ func questionFor(t *testing.T, q apiQuestion) tt.Question {
 		if len(q.Threshold) > 0 {
 			v = v.WithThreshold(cutFor(t, q.Threshold))
 		}
-		if q.Evidence != nil {
-			v = v.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			v = v.WithField(*q.Field)
 		}
 		return v
 	default:

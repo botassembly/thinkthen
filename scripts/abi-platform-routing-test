@@ -7,14 +7,44 @@ import runpy
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 
 class AbiPlatformRouting(unittest.TestCase):
+    def test_swift_sdk_routes_the_canonical_loopback_and_preserves_an_override(self):
+        module = runpy.run_path(str(ROOT / 'scripts/linux-binding-gate'))
+        state = module['swift'].__globals__
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            canonical = str(scratch / 'canonical/loopback')
+            override = str(scratch / 'swift/loopback')
+            assets = {name: str(scratch / name) for name in (
+                'THINKTHEN_CSHARP_NATIVE_ASSETS', 'THINKTHEN_JVM_NATIVE_ASSETS', 'THINKTHEN_NATIVE_FIXTURES')}
+            for loopbacks, expected in (
+                ({'THINKTHEN_LOOPBACK': canonical}, canonical),
+                ({'THINKTHEN_LOOPBACK': canonical, 'THINKTHEN_SWIFT_LOOPBACK': override}, override),
+                ({'THINKTHEN_SWIFT_LOOPBACK': override}, override),
+            ):
+                with self.subTest(loopbacks=loopbacks):
+                    package, launch = Mock(), Mock()
+                    with patch.dict(os.environ, {**assets, **loopbacks, 'THINKTHEN_GATE_STRICT': '1'}, clear=True), \
+                            patch.dict(state, run=package, swift_command=launch):
+                        module['swift']()
+                    package.assert_called_once()
+                    launch.assert_called_once()
+                    package_command, stage = package.call_args.args
+                    self.assertEqual(package_command, 'scripts/swift-package')
+                    command, mounts, forwarded = launch.call_args.args
+                    self.assertEqual(command, ['scripts/swift-gate'])
+                    self.assertEqual(mounts, (stage.parent, Path(expected).parent))
+                    self.assertEqual(forwarded, {**assets, 'THINKTHEN_LOOPBACK': expected,
+                                                'THINKTHEN_SWIFT_PACKAGE': stage, 'THINKTHEN_GATE_STRICT': '1'})
+
     def test_abi_consumers_use_the_platform_runner_while_native_commands_stay_local(self):
         module = runpy.run_path(str(ROOT / 'scripts/abi-minor-check'))
         state = module['bindings'].__globals__
@@ -46,6 +76,8 @@ class AbiPlatformRouting(unittest.TestCase):
         self.assertFalse(any(args[0] in ('ruby', 'swift') or args[0].endswith('/MinorError') for args in calls))
 
     def test_linux_runner_selects_prepared_gems_and_the_pinned_swift_container(self):
+        from native_platform import current
+
         with tempfile.TemporaryDirectory() as temporary:
             scratch = Path(temporary)
             docker = scratch / 'docker'
@@ -66,8 +98,15 @@ class AbiPlatformRouting(unittest.TestCase):
             self.assertIn('none', arguments)
             self.assertTrue(any(value.startswith('pm.repo=') for value in arguments))
             self.assertTrue(any(value.startswith('pm.ticket=') for value in arguments))
-            self.assertEqual(arguments[-5:], [str(Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'),
-                                               'swift', 'build', '--jobs', '2'])
+            setup = arguments.index('swift-gate') + 1
+            channel = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']['channel']
+            rust = Path.home() / '.rustup/toolchains' / f'{channel}-{current()["rust"]}' / 'bin'
+            self.assertEqual(arguments[setup:setup + 3], [
+                str(Path.home() / '.local/share/thinkthen-build-tools/swift/6.3.2-ubuntu22.04'),
+                str(rust),
+                str(ROOT / 'target/source-tools/swift-git'),
+            ])
+            self.assertEqual(arguments[setup + 3:], ['swift', 'build', '--jobs', '2'])
 
 
 if __name__ == '__main__':

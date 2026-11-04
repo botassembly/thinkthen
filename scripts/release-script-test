@@ -22,6 +22,30 @@ import release_windows_sdks
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_qualification_readmes_imports_current_csharp_helpers(self):
+        namespace = runpy.run_path(str(ROOT / 'scripts/qualification-readmes'),
+                                   run_name='qualification_readmes_import')
+        example = namespace['example']
+        example.__globals__['PACKAGE'] = ROOT / 'sdk'
+        self.assertTrue(example('typescript', 'js'))
+
+    def test_nuget_same_version_stale_package_is_refused(self):
+        from release_registry_check import verify_nuget
+        from csharp_dependencies import package_id
+        with tempfile.TemporaryDirectory(prefix='thinkthen-nuget-identity-') as temporary:
+            scratch = Path(temporary)
+            packages = scratch / 'packages'
+            packages.mkdir()
+            identity = package_id()
+            (packages / (identity + '.' + version() + '.nupkg')).write_bytes(b'current package')
+            cached = scratch / 'cache' / identity.lower() / version() / (identity.lower() + '.' + version() + '.nupkg')
+            cached.parent.mkdir(parents=True)
+            cached.write_bytes(b'older package labelled with the same version')
+            with self.assertRaisesRegex(ValueError, 'same version'):
+                verify_nuget(packages, scratch / 'cache')
+            cached.write_bytes(b'current package')
+            verify_nuget(packages, scratch / 'cache')
+
     def test_windows_unicode_probe_restores_shared_console_pages(self):
         main = runpy.run_path(str(ROOT / 'scripts/windows-cli-check'))['main']
         with tempfile.TemporaryDirectory(prefix='thinkthen-unicode-console-') as temporary:
@@ -444,7 +468,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
                 built = target / f'thinkthen-{family}-{version()}.jar'
                 with zipfile.ZipFile(built, 'w') as archive:
                     archive.writestr('META-INF/MANIFEST.MF', 'Manifest-Version: 1.0\n')
-                    archive.writestr('io/thinkthen/Fixture.class', b'class fixture')
+                    archive.writestr('dev/thinkthen/Fixture.class', b'class fixture')
                     if family == 'java':
                         archive.writestr('io/thinkthen/native/fixture/' + native.name, native.read_bytes())
                 selected = repository / built.name
@@ -516,7 +540,7 @@ for platform, fallback in (
                      'Package.swift', 'go.mod', 'CMakeLists.txt', 'community-versions.json'}
             inputs = {'scripts/release_metadata.py', 'scripts/runtime_floors.py', 'scripts/runtime-floors.json',
                       'scripts/sqlite-package', 'scripts/sqlite-prepare', 'sdk/ruby/thinkthen.gemspec',
-                      'extensions/postgres/Makefile', 'extensions/postgres/package.sh', 'databases/duckdb/build.sh'}
+                      'extensions/postgres/Makefile', 'extensions/postgres/package.sh', 'scripts/release-tools.json'}
             for name in tracked:
                 path = Path(name)
                 if name in inputs or path.name in names or path.suffix in ('.csproj', '.control', '.sql'):
@@ -529,6 +553,8 @@ for platform, fallback in (
             command = [sys.executable, source / 'scripts/release_metadata.py']
             result = subprocess.run(command, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+            duckdb = json.loads((source / 'scripts/release-tools.json').read_text())['duckdb']
+            duckdb_revision = json.loads((source / 'databases/duckdb/community-versions.json').read_text())[duckdb]['duckdb']
             mutations = {
                 'sdk/ruby/lib/thinkthen/version.rb': ('0.2.0', '0.0.0'),
                 'sdk/swift/Package.swift': ('swift-tools-version: 6.3', 'swift-tools-version: 5.0'),
@@ -536,7 +562,8 @@ for platform, fallback in (
                 'sdk/c/CMakeLists.txt': ('VERSION "${package_version}"', 'VERSION "0.0.0"'),
                 'sdk/cpp/CMakeLists.txt': ('VERSION "${package_version}"', 'VERSION "0.0.0"'),
                 'databases/duckdb/CMakeLists.txt': ('LANGUAGES C CXX)', 'VERSION 0.0.0 LANGUAGES C CXX)'),
-                'databases/duckdb/community-versions.json': ('d1dc88f950d456d72493df452dabdcd13aa413dd', '0' * 40),
+                'databases/duckdb/community-versions.json': (duckdb_revision, '0' * 40),
+                'scripts/release-tools.json': ('"duckdb": "' + duckdb + '"', '"duckdb": "0.0.0"'),
                 'scripts/sqlite-package': ('sqlite-3.41.0', 'sqlite-3.54.1'),
                 'extensions/postgres/Makefile': ('thinkthen--0.2.0.sql', 'thinkthen--0.0.0.sql'),
                 'extensions/postgres/package.sh': ('thinkthen--0.2.0.sql', 'thinkthen--0.0.0.sql'),
@@ -626,12 +653,13 @@ for platform, fallback in (
     def windows_smoke(self, banner, status=0):
         cases = json.loads((ROOT / 'construction/stub.json').read_bytes())
         first = next(case for case in cases if case['request']['question']['function'] == 'decide')
-        self.assertEqual(first['request']['records'], [[]])
+        # Keep the framing regression on a nonempty structured array.
+        first['request']['records'] = [['evidence']]
         with tempfile.TemporaryDirectory(prefix='thinkthen-windows-smoke-') as temporary:
             package = Path(temporary)
             checks = package / 'checks'
             checks.mkdir()
-            shutil.copy2(ROOT / 'construction/stub.json', checks / 'stub.json')
+            (checks / 'stub.json').write_text(json.dumps(cases), encoding='utf-8')
             shutil.copy2(ROOT / 'schemas/contract.json', checks / 'contract.json')
             shutil.copy2(ROOT / 'scripts/release/native_cases.py', checks / 'native_cases.py')
             (checks / 'c-consumer.exe').write_bytes(b'fixture consumer')
@@ -650,7 +678,7 @@ for platform, fallback in (
                     output = json.dumps({'rows': case['expected']})
                 else:
                     self.assertIn('jsonl', args)
-                    self.assertEqual(options['input'], b'[]\n')
+                    self.assertEqual(options['input'], b'["evidence"]\n')
                     self.assertEqual(json.loads(options['input']), first['request']['records'][0])
                     output = json.dumps(first['expected'][0])
                 return subprocess.CompletedProcess(args, 0, output.encode(), b'')

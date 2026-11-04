@@ -5,6 +5,9 @@ pub(super) fn emit(root: &Path, check: bool) -> Result<(), Box<dyn std::error::E
     let error = thinkthen::native::abi_error();
     let code = serde_json::to_string(error.code().as_str())?;
     let message = serde_json::to_string(error.message())?;
+    let closed = thinkthen::native::closed_client_error();
+    let closed_code = serde_json::to_string(closed.code().as_str())?;
+    let closed_message = serde_json::to_string(closed.message())?;
     let outputs = [
         (
             "sdk/python/thinkthen/_contract.py",
@@ -25,9 +28,9 @@ pub(super) fn emit(root: &Path, check: bool) -> Result<(), Box<dyn std::error::E
             ),
         ),
         (
-            "sdk/java/library/src/main/java/io/thinkthen/internal/Contract.java",
+            "sdk/java/library/src/main/java/dev/thinkthen/internal/Contract.java",
             format!(
-                "// Generated native requirement. Do not edit.\npackage io.thinkthen.internal;\nfinal class Contract {{\n    private Contract() {{}}\n    static final int ABI_VERSION = {version};\n    static final String ABI_CODE = {code};\n    static final String ABI_MESSAGE = {message};\n}}\n"
+                "// Generated native requirement. Do not edit.\npackage dev.thinkthen.internal;\nfinal class Contract {{\n    private Contract() {{}}\n    static final int ABI_VERSION = {version};\n    static final String ABI_CODE = {code};\n    static final String ABI_MESSAGE = {message};\n    static final String CLOSED_CODE = {closed_code};\n    static final String CLOSED_MESSAGE = {closed_message};\n}}\n"
             ),
         ),
         (
@@ -242,7 +245,7 @@ fn csharp_codes(domains: &[Domain]) -> Result<String, Box<dyn std::error::Error>
         .ok_or("missing codes")?
         .entries;
     let mut output = String::from(
-        "[System.Text.Json.Serialization.JsonConverter(typeof(ErrorCodeConverter))]\npublic enum ErrorCode\n{\n",
+        "/// <summary>Stable error codes from the shared engine registry.</summary>\n[System.Text.Json.Serialization.JsonConverter(typeof(ErrorCodeConverter))]\npublic enum ErrorCode\n{\n",
     );
     for (value, name) in codes {
         let pascal: String = name
@@ -257,6 +260,10 @@ fn csharp_codes(domains: &[Domain]) -> Result<String, Box<dyn std::error::Error>
                     + chars.as_str()
             })
             .collect();
+        writeln!(
+            output,
+            "    /// <summary>The shared `{name}` error.</summary>"
+        )?;
         writeln!(output, "    {pascal} = {value},")?;
     }
     output.push_str("}\n");

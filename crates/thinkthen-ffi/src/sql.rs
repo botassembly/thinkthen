@@ -11,30 +11,45 @@ use crate::{
 use std::{ffi::c_void, ptr, time::Duration};
 use thinkthen::{Request, native};
 use thinkthen_sql::{SqlCall, SqlEvent, SqlRecord};
-/// No event arrived during this bounded SQL wait.
+/// thinkthen_sql_call_poll's timeout passed with nothing to report; poll again.
 pub const THINKTHEN_PENDING: i32 = 3;
-/// One statement's driver; no database handle enters the engine.
+/// A database extension's call for one statement; free it with thinkthen_sql_call_free.
 #[derive(Debug)]
 pub struct SqlHandle {
     call: SqlCall,
     error_reported: bool,
 }
-/// Counted input copied before a database cursor advances.
+/// One database row's input for thinkthen_sql_call_send_chunk; copied before return.
 #[repr(C)]
 #[derive(Debug)]
 pub struct SqlInput {
-    /// Generated record kind; missing and invalid need no byte view.
+    /// How to read data, a thinkthen_record_kind; missing and invalid rows need no data.
     pub kind: u32,
-    /// Readable bytes, or NULL at zero length.
+    /// The row's bytes; NULL only when len is 0.
     pub data: *const u8,
-    /// Byte length without a terminator.
+    /// The byte length; not NUL-terminated.
     pub len: usize,
 }
-/// Read native interrupt state without throwing, unwinding or reentering.
+/// A database's interrupt check: returns nonzero to stop the call. It must not throw,
+/// unwind, long-jump or call back into this library.
 pub type InterruptProbe = Option<unsafe extern "C" fn(*mut c_void) -> u8>;
-/// Admit SQL settings and optional administrator policy before resolving keys.
+/// Open a client for a database extension from settings JSON and the administrator's allowed
+/// backends and models.
+///
+/// allowed is JSON, or empty for no limit. Returns THINKTHEN_OK with *out set, or a negative
+/// code with *out set to NULL: -THINKTHEN_CODE_USAGE_SQL_POLICY for a policy that is not valid,
+/// -THINKTHEN_CODE_USAGE_SQL_SELECTION when it does not allow the chosen backend and model,
+/// another usage code for settings that are not valid, or -THINKTHEN_CODE_USAGE_ABI when the
+/// text is not UTF-8. The caller owns *out and frees it with thinkthen_client_free; an old
+/// handle in *out is not freed.
 /// # Safety
-/// Counted inputs are readable; out/error are distinct empty writable slots.
+/// Any thread may call this. settings points to len readable bytes, or to a NUL-terminated
+/// string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. allowed points to
+/// allowed_len readable bytes, or to a NUL-terminated string when allowed_len is
+/// THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is NULL or
+/// initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+/// passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
     settings: *const u8,
@@ -56,15 +71,25 @@ pub unsafe extern "C" fn thinkthen_sql_client_open_with_policy(
             let engine = crate::engine(native::sql_settings_with_policy(
                 text(settings, len)?,
                 policy,
+                |name| std::env::var(name).ok(),
             )?)?;
             out.write(Box::into_raw(Box::new(ClientHandle(engine))));
             Ok(OK)
         })
     }
 }
-/// Admit SQL settings without an administrator backend/model restriction.
+/// Open a client for a database extension from settings JSON, with no administrator limit.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+/// for settings that are not valid, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+/// The caller owns *out and frees it with thinkthen_client_free; an old handle in *out is not
+/// freed.
 /// # Safety
-/// Counted settings are readable; out/error are distinct empty writable slots.
+/// Any thread may call this. settings points to len readable bytes, or to a NUL-terminated
+/// string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable.
+/// error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+/// code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+/// it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_client_open(
     settings: *const u8,
@@ -82,9 +107,18 @@ pub unsafe extern "C" fn thinkthen_sql_client_open(
         })
     }
 }
-/// Open a SQL call from a copied typed question snapshot.
+/// Open a database call that asks question about each chunk of rows.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+/// -THINKTHEN_CODE_USAGE_QUESTION for an incomplete question, -THINKTHEN_CODE_USAGE_NAME for a
+/// bad name, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and
+/// frees it with thinkthen_sql_call_free; an old handle in *out is not freed.
 /// # Safety
-/// Handles are live; output/error are distinct empty writable slots.
+/// Any thread may call this while no thread changes question. name is NULL or points to a
+/// readable thinkthen_text. out is writable. error is NULL or initialized with
+/// THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+/// frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+/// its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_open_question(
     client: *const ClientHandle,
@@ -97,7 +131,7 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_question(
     unsafe {
         operation(error, || {
             out.write(ptr::null_mut());
-            let mut request = Request::new((*question).0.build()?);
+            let mut request = Request::new((*question).build()?);
             if !name.is_null() {
                 request = request.named(text((*name).data, (*name).len)?)?;
             }
@@ -109,10 +143,18 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_question(
         })
     }
 }
-/// Admit a structured SQL question with the shared per-function contract.
-/// This consumes a question value, never a settings envelope or file reference.
+/// Read one question from a database function's JSON argument.
+///
+/// Returns THINKTHEN_OK with *out set to a new question, or a negative code with *out set to
+/// NULL: -THINKTHEN_CODE_USAGE_QUESTION when the JSON is not a valid question, or
+/// -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+/// thinkthen_question_free; an old handle in *out is not freed.
 /// # Safety
-/// Counted input is readable; output/error are distinct empty writable slots.
+/// Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+/// when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_question_from_json(
     data: *const u8,
@@ -125,16 +167,24 @@ pub unsafe extern "C" fn thinkthen_sql_question_from_json(
         operation(error, || {
             out.write(ptr::null_mut());
             let question = native::sql_question(text(data, len)?)?;
-            out.write(Box::into_raw(Box::new(QuestionHandle(
+            out.write(Box::into_raw(Box::new(QuestionHandle::new(
                 native::QuestionBuilder::snapshot(&question),
             ))));
             Ok(OK)
         })
     }
 }
-/// Admit SQL's optional cut or paired band without overriding conflicting inputs.
+/// Set a database function's optional cut, or its band from low to high.
+///
+/// Each pointer may be NULL to leave that value out; low and high come together. Returns
+/// THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_THRESHOLD with the question unchanged for values that
+/// are out of range, conflict, or do not fit the function.
 /// # Safety
-/// Builder/error are exclusive; each non-NULL number pointer is readable.
+/// One thread at a time may call this on a question; other questions may be used on other
+/// threads. question is a live question. Each non-NULL pointer points to a readable double.
+/// error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+/// code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+/// it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_question_set_threshold(
     question: *mut QuestionHandle,
@@ -147,7 +197,7 @@ pub unsafe extern "C" fn thinkthen_sql_question_set_threshold(
     unsafe {
         operation(error, || {
             native::sql_threshold(
-                &mut (*question).0,
+                &mut (*question).builder,
                 cut.as_ref().copied(),
                 low.as_ref().copied(),
                 high.as_ref().copied(),
@@ -156,9 +206,18 @@ pub unsafe extern "C" fn thinkthen_sql_question_set_threshold(
         })
     }
 }
-/// Open an explicit canonical JSON request without an argument translation layer.
+/// Open a database call from request JSON.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+/// for a request that is not valid, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+/// The caller owns *out and frees it with thinkthen_sql_call_free; an old handle in *out is not
+/// freed.
 /// # Safety
-/// Client/input remain live; output/error are distinct empty writable slots.
+/// Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+/// when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_open_json(
     client: *const ClientHandle,
@@ -180,9 +239,16 @@ pub unsafe extern "C" fn thinkthen_sql_call_open_json(
         })
     }
 }
-/// Copy one current chunk after NEEDS_INPUT. Bad host text becomes a failed row.
+/// Send count database rows to a call.
+///
+/// Send only after thinkthen_sql_call_poll returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK,
+/// or -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input or a record is
+/// malformed. A value that is not valid text fails as its own row.
 /// # Safety
-/// The sole driver owns call/error. The array lends count readable records.
+/// One database thread drives call. records points to count readable records whose bytes are
+/// copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+/// return it holds the code and message; passing it again frees what it held, so a reused error
+/// leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_send_chunk(
     call: *mut SqlHandle,
@@ -193,9 +259,16 @@ pub unsafe extern "C" fn thinkthen_sql_call_send_chunk(
     // SAFETY: the driver retains every borrowed view for the shared send operation.
     unsafe { send_chunk(call, records, count, error, false) }
 }
-/// Send PostgreSQL input with shared zero-byte JSON representation admission.
+/// Send count PostgreSQL rows to a call, refusing a zero byte in JSON as PostgreSQL does.
+///
+/// Send only after thinkthen_sql_call_poll returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK,
+/// or -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input or a record is
+/// malformed. A value that is not valid text fails as its own row.
 /// # Safety
-/// The sole driver owns the call/error and borrows count readable input records.
+/// One database thread drives call. records points to count readable records whose bytes are
+/// copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+/// return it holds the code and message; passing it again frees what it held, so a reused error
+/// leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_send_chunk_postgres(
     call: *mut SqlHandle,
@@ -250,18 +323,29 @@ unsafe fn send_chunk(
         })
     }
 }
-/// End the source and flush its final partial batch.
+/// Say no more rows are coming, and send the last partial batch.
+///
+/// It returns at once.
 /// # Safety
-/// The sole driver owns a live call with no concurrent free.
+/// One database thread drives call. call is live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_end_input(call: *mut SqlHandle) {
     // SAFETY: caller grants exclusive access.
     let _ = crate::exports::guarded(|| unsafe { (*call).call.end_input() });
 }
-/// Poll on the database thread and probe interruption around the wait.
+/// Wait for the next row, request for input, or end, on the database thread.
+///
+/// Waits at most timeout_ms, calling interrupted(context) around the wait; when it returns
+/// nonzero the call stops with -THINKTHEN_CODE_LOCAL_CANCELLED. Returns THINKTHEN_OK with the
+/// next row in *out, THINKTHEN_NEEDS_INPUT, THINKTHEN_END, or a negative code for the call as a
+/// whole. A failed record is THINKTHEN_OK with a failed row. *out is overwritten, not freed, so
+/// free it with thinkthen_row_free before polling again.
 /// # Safety
-/// The sole driver owns call, sized row/error and optional callback context.
-/// The probe cannot throw, unwind, longjmp or reenter.
+/// One database thread drives call. interrupted is NULL or a function that returns without
+/// throwing, unwinding, long-jumping or calling back into this library. out is initialized with
+/// THINKTHEN_ROW_INIT. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+/// return it holds the code and message; passing it again frees what it held, so a reused error
+/// leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_poll(
     call: *mut SqlHandle,
@@ -274,9 +358,20 @@ pub unsafe extern "C" fn thinkthen_sql_call_poll(
     // SAFETY: the caller grants the same ownership as the shared polling operation.
     unsafe { poll(call, timeout_ms, interrupted, context, out, error, false) }
 }
-/// Poll a PostgreSQL row after shared zero-byte representation admission.
+/// Wait for the next row as thinkthen_sql_call_poll does, refusing text PostgreSQL cannot
+/// store.
+///
+/// Waits at most timeout_ms, calling interrupted(context) around the wait; when it returns
+/// nonzero the call stops with -THINKTHEN_CODE_LOCAL_CANCELLED. Returns THINKTHEN_OK with the
+/// next row in *out, THINKTHEN_NEEDS_INPUT, THINKTHEN_END, or a negative code for the call as a
+/// whole. A failed record is THINKTHEN_OK with a failed row. *out is overwritten, not freed, so
+/// free it with thinkthen_row_free before polling again.
 /// # Safety
-/// The sole driver owns call and supported row/error outputs and borrows the probe.
+/// One database thread drives call. interrupted is NULL or a function that returns without
+/// throwing, unwinding, long-jumping or calling back into this library. out is initialized with
+/// THINKTHEN_ROW_INIT. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+/// return it holds the code and message; passing it again frees what it held, so a reused error
+/// leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_poll_postgres(
     call: *mut SqlHandle,
@@ -331,10 +426,16 @@ unsafe fn poll(
         })
     }
 }
-/// Copy a selected PostgreSQL id, or replace an unrepresentable id with a failed row.
-/// A NULL view preserves the engine id; a present JSON null remains an explicit id.
+/// Give a PostgreSQL row the id the query selected.
+///
+/// id NULL keeps the row's id. An id PostgreSQL cannot store turns the row into a failed row.
+/// Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_ABI when row did not come from this library.
+/// The row is changed in place; free it with thinkthen_row_free.
 /// # Safety
-/// Row/error are live exclusive supported outputs; an optional id view is readable.
+/// One database thread drives call. row is a row this library wrote. id is NULL or points to a
+/// readable thinkthen_text. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
     row: *mut HostRow,
@@ -371,9 +472,11 @@ pub unsafe extern "C" fn thinkthen_sql_row_postgres_id(
         })
     }
 }
-/// Cancel and free without joining the backend worker.
+/// Cancel and free a database call.
+///
+/// Free a database call. NULL is ignored. It does not wait for a backend request in flight.
 /// # Safety
-/// NULL or a unique live owner after driver operations finish.
+/// Call this once, after every other use of call has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
     let _ = crate::exports::guarded(|| {
@@ -384,9 +487,11 @@ pub unsafe extern "C" fn thinkthen_sql_call_free(call: *mut SqlHandle) {
     });
 }
 
-/// Request cancellation on the statement's owning database thread.
+/// Ask a database call to stop.
+///
+/// It returns at once.
 /// # Safety
-/// The sole driver owns the live call with no concurrent operation or free.
+/// One database thread drives call. call is live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_sql_call_cancel(call: *mut SqlHandle) {
     // SAFETY: caller retains the live statement handle.

@@ -1,0 +1,12 @@
+{
+  "question": "What is the message about?",
+  "choices": [
+    "billing",
+    "shipping",
+    "other"
+  ],
+  "records": [
+    "Please refund my order."
+  ],
+  "answers": "One choice per record, in record order."
+}

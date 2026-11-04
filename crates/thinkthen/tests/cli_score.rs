@@ -56,8 +56,8 @@ fn level_arguments_print_the_number_or_backend_failure() {
                 assert!((answer - expected).abs() < 1e-12);
             }
             None => {
-                assert_eq!(output.status.code(), Some(6));
-                assert_eq!(output.stdout, b"[1] failed\n");
+                assert_eq!(output.status.code(), Some(4));
+                assert!(output.stdout.is_empty());
                 assert_eq!(reported(&output), "backend.reply");
             }
         }
@@ -73,7 +73,7 @@ fn details_and_record_modes_print_score_rows() {
     for extra in [
         &["--json"][..],
         &["--from", "lines", "--json"][..],
-        &["--from", "jsonl", "--json", "--evidence", "/body"][..],
+        &["--from", "jsonl", "--json", "--field", "/body"][..],
     ] {
         let server = Loopback::answering(
             |_| json!({"type": "score", "probabilities": {"0": 0.2, "1": 0.8}}),
@@ -105,7 +105,14 @@ fn invalid_levels_exit_two_and_send_nothing() {
         let server = Loopback::noul(0.9).unwrap();
         let output = run(&server, args, "now");
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(reported(&output), "usage.question");
+        assert_eq!(
+            reported(&output),
+            if args.is_empty() {
+                "usage.option"
+            } else {
+                "usage.question"
+            }
+        );
         assert_eq!(server.count(), 0);
     }
 }

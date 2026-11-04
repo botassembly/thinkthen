@@ -1,0 +1,14 @@
+decide: true
+choose: billing
+tag: ["billing", "shipping"]
+score: 0.05
+filter: Please refund my order.
+filter: I was charged twice for one invoice.
+rank: 1 #<data ThinkThen::RankRow item="I was charged twice for one invoice.", row=#<ThinkThen::Answered 1>>
+rank: 2 #<data ThinkThen::RankRow item="Where is my parcel?", row=#<ThinkThen::Answered 2>>
+rank: 3 #<data ThinkThen::RankRow item="Please refund my order.", row=#<ThinkThen::Answered 3>>
+find: Please refund my order.
+recognize: person Morgan
+recognize: organization Example Group
+relate: Morgan works_for Example Group
+annotate: true billing 0.05

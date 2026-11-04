@@ -37,9 +37,7 @@ fn run(server: &Loopback, extra: &[&str], input: &str) -> Output {
 
 #[test]
 fn the_command_prints_each_matching_label_and_always_exits_zero() {
-    for (billing, shipping, expected) in
-        [(0.1, 0.2, "[1]\n"), (0.5, 0.9, "[1]\tbilling\tshipping\n")]
-    {
+    for (billing, shipping, expected) in [(0.1, 0.2, "\n"), (0.5, 0.9, "billing\tshipping\n")] {
         let server = Loopback::answering(move |q| {
             let p = if q["instructions"]
                 .as_str()
@@ -70,7 +68,7 @@ fn details_and_record_streams_print_json_rows_without_a_scalar_probability() {
             2,
         ),
         (
-            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
+            vec!["--from", "jsonl", "--json", "--field", "/body"],
             "{\"body\":\"message\"}\n",
             1,
         ),
@@ -101,7 +99,7 @@ fn a_threshold_band_exits_two_without_a_send() {
     let server = Loopback::noul(0.9).unwrap();
     let output = run(&server, &["--threshold", "0.2:0.8"], "message");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.question");
+    assert_eq!(support::reported(&output), "usage.option");
     assert!(output.stdout.is_empty());
     assert_eq!(server.count(), 0);
 }

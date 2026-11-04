@@ -79,13 +79,7 @@ fn json_rows_keep_the_same_typed_contract_on_both_wire_formats() {
         let server = backend(name, 0.87654321);
         let output = execute(
             selected(name, &server).args([
-                "decide",
-                "Ready?",
-                "--from",
-                "jsonl",
-                "--evidence",
-                "/body",
-                "--json",
+                "decide", "Ready?", "--from", "jsonl", "--field", "/body", "--json",
             ]),
             b"{\"id\":42,\"body\":\"one\"}\n{\"id\":\"two\",\"body\":\"two\"}\n",
         );
@@ -177,7 +171,7 @@ fn all_failed_rows_are_a_completed_call_and_never_leak_reply_keys() {
             selected(name, &server).args(["decide", "Ready?", "--json", "--verbose"]),
             b"evidence",
         );
-        assert_eq!(output.status.code(), Some(6), "{name}: {output:?}");
+        assert_eq!(output.status.code(), Some(4), "{name}: {output:?}");
         let actual = rows(&output);
         assert_eq!(actual.len(), 1);
         assert_eq!(actual[0]["status"], "failed");
@@ -348,7 +342,7 @@ fn input_files_and_stdin_keep_one_sequence_and_original_identifiers() {
             "--backend",
             "stub",
             "--json",
-            "--evidence",
+            "--field",
             "/body",
             "--from",
             "jsonl",
@@ -659,7 +653,7 @@ fn generated_manual_and_shell_completions_share_command_options() {
     let text = String::from_utf8(manual.stdout).unwrap();
     assert!(text.contains(".TH"));
     assert!(text.contains("backend"));
-    assert!(text.contains("evidence"));
+    assert!(text.contains("field"));
     for shell in ["bash", "zsh", "fish", "elvish", "powershell"] {
         let completion = execute(support::command().args(["completions", shell]), b"");
         assert!(completion.status.success(), "{shell}: {completion:?}");

@@ -3,30 +3,59 @@ use super::{
     input::Input,
     options::{self, Output, usage},
 };
-use crate::runs::{RunCompletion, execute, load};
+use crate::runs::{RunCompletion, execute, load, names_entry};
 use crate::{Cancel, Error};
 use clap::ArgMatches;
 use std::io::{self, Write};
 #[cfg(not(windows))]
 use std::process::ExitStatus;
 
-pub(super) fn run(
-    args: &ArgMatches,
-    mut input: Input,
-    output: &Output,
-    cancel: &Cancel,
-) -> Result<u8, Error> {
+/// The toolbox and entry a run names.
+pub(super) struct Target {
+    directory: std::path::PathBuf,
+    toolbox: String,
+    entry: Option<String>,
+}
+
+/// Read `run TOOLBOX [NAME] [FILE...]`, returning the target and its input files.
+///
+/// After a toolbox file or folder, the next word is the entry name when
+/// `names_entry` says so; `--entry NAME` is the same and leaves every word as input.
+pub(super) fn target(args: &ArgMatches) -> Result<(Target, Vec<String>), Error> {
     let directory = std::env::current_dir()
         .map_err(|_| super::local("the current directory could not be read"))?;
     let toolbox = args
         .get_one::<String>("question")
-        .ok_or_else(|| usage("toolbox", "a toolbox", "absent argument"))?;
-    let entry = load(
-        &directory,
-        toolbox,
-        options::value(args, "entry").as_deref(),
-    )?
-    .map_requests(|request| super::invocation::overrides(request, args))?;
+        .ok_or_else(|| usage("toolbox", "a toolbox", "absent argument"))?
+        .clone();
+    let mut files = super::input::files(args);
+    let mut entry = options::explicit(args, "entry");
+    if entry.is_none()
+        && files
+            .first()
+            .is_some_and(|word| names_entry(&directory, &toolbox, word))
+    {
+        entry = Some(files.remove(0));
+    }
+    Ok((
+        Target {
+            directory,
+            toolbox,
+            entry,
+        },
+        files,
+    ))
+}
+
+pub(super) fn run(
+    args: &ArgMatches,
+    target: &Target,
+    mut input: Input,
+    output: &Output,
+    cancel: &Cancel,
+) -> Result<u8, Error> {
+    let entry = load(&target.directory, &target.toolbox, target.entry.as_deref())?
+        .map_requests(|request| super::invocation::overrides(request, args))?;
     let shells: Vec<_> = entry.shell_steps().collect();
     if !shells.is_empty() && !args.get_flag("allow-shell") {
         let commands = shells
@@ -65,7 +94,7 @@ pub(super) fn run(
     if let Some(request) = entry.request() {
         let request = request.clone();
         return if input.table() {
-            super::table::run(&input, args, &request, &engine, cancel)
+            super::table::run(&input, args, &request, &engine, cancel, output.quiet)
         } else {
             super::execute::stream(input, output, &request, &engine, cancel)
         };
@@ -84,17 +113,29 @@ pub(super) fn run(
             };
             let text = String::from_utf8(bytes)
                 .map_err(|_| super::local("input could not be read as UTF-8"))?;
+            // Each step reads exactly one JSON value per line.
             let value = if input.format == super::input::Format::Jsonl {
-                text
+                super::field(&text).to_owned()
             } else {
-                serde_json::to_string(super::evidence(&text))
+                serde_json::to_string(super::field(&text))
                     .map_err(|_| super::local("input could not be encoded"))?
             };
             Ok(Some(value))
         },
         cancel.clone(),
     )?;
+    let final_shell = entry.final_shell();
     let result = execute(&entry, &engine, cancel.clone(), receiver, |line| {
+        if output.quiet {
+            return Ok(());
+        }
+        // The last shell step's output belongs to the caller, unchanged.
+        if final_shell {
+            return io::stdout()
+                .lock()
+                .write_all(line.as_bytes())
+                .map_err(|error| super::output_error(error, cancel));
+        }
         // Shell outputs remain arbitrary JSON; final typed rows use command rendering.
         let mut value: serde_json::Value = serde_json::from_str(line)
             .map_err(|_| super::local("the run output could not be decoded"))?;

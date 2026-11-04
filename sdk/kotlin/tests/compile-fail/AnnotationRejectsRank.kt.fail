@@ -1,3 +1,3 @@
 package consumer.rejected
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 fun rejectedRank() { AnnotationQuestions(mapOf("rank" to Rank("Priority?",listOf("low","high")))) }

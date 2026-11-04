@@ -1,0 +1,22 @@
+#!/bin/sh
+# Focused public Python answer checks, using the package's normal wheel backend.
+set -eu
+cd "$(dirname "$0")/../.."
+exec uv run --offline --no-project --python 3.10 \
+  --with 'maturin>=1.5,<2' --with 'pytest>=8,<9' \
+  --with 'ruff>=0.11,<1' --with 'mypy>=1.19,<2' \
+  --with 'pandas>=2.2' --with pandas-stubs --with 'polars>=1.0' -- sh -eu <<'CHECK'
+root=$PWD
+scratch=$(mktemp -d)
+trap 'status=$?; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
+mkdir "$scratch/wheels"
+(cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")
+python -m venv "$scratch/venv"
+uv pip install --offline --python "$scratch/venv/bin/python" "$scratch"/wheels/*.whl 'pytest>=8,<9' 'pandas>=2.2' 'polars>=1.0'
+cargo build -p loopback --bin loopback --locked
+export THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-$root/target}/debug/loopback"
+export THINKTHEN_CASES="$root/conformance"
+unset THINKTHEN_API_KEY OPENAI_API_KEY PYTHONPATH
+cd "$scratch"
+"$scratch/venv/bin/python" -m pytest "$root/sdk/python/tests/test_answer_values.py" -q --tb=short
+CHECK

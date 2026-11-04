@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // A test never consults the caller's backend settings or credentials.
-for (const name of ["OPENAI_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_BATCH", "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"]) delete process.env[name];
+for (const name of ["THINKTHEN_BACKEND", "OPENAI_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_BATCH", "HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"]) delete process.env[name];
 process.env.THINKTHEN_API_KEY = "sk-test-0123456789";
 export const sdk = await import(pathToFileURL(process.env.THINKTHEN_NODE_PACKAGE).href);
 

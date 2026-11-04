@@ -100,7 +100,8 @@
             "kinds": {
               "person": 1.0,
               "none of these": 0.0
-            }
+            },
+            "text": "Ada"
           }
         ]
       }

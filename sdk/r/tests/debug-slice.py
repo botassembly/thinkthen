@@ -21,6 +21,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-r-debug-") as temporary:
     for name in ("DESCRIPTION", "NAMESPACE", "LICENSE"):
         shutil.copy2(ROOT / "sdk/r" / name, stage / name)
     shutil.copytree(ROOT / "sdk/r/R", stage / "R")
+    shutil.copytree(ROOT / "sdk/r/man", stage / "man")
     libraries = stage / "inst/libs"
     libraries.mkdir(parents=True)
     shutil.copy2(ROOT / "sdk/r/src/entrypoint.c", scratch / "entrypoint.c")

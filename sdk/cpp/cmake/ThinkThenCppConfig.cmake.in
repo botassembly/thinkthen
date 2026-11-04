@@ -4,3 +4,15 @@ find_dependency(ThinkThenC @PROJECT_VERSION@ CONFIG REQUIRED)
 if(NOT TARGET ThinkThen::Cpp)
     include("${CMAKE_CURRENT_LIST_DIR}/ThinkThenCppTargets.cmake")
 endif()
+
+# The JSON adapter is optional; ordinary consumers acquire no JSON dependency.
+if("Nlohmann" IN_LIST ThinkThenCpp_FIND_COMPONENTS)
+    find_dependency(nlohmann_json 3.11.3 CONFIG REQUIRED)
+    if(NOT TARGET ThinkThen::CppNlohmann)
+        add_library(ThinkThen::CppNlohmann INTERFACE IMPORTED)
+        set_target_properties(ThinkThen::CppNlohmann PROPERTIES
+            INTERFACE_LINK_LIBRARIES "ThinkThen::Cpp;nlohmann_json::nlohmann_json")
+    endif()
+    set(ThinkThenCpp_Nlohmann_FOUND TRUE)
+endif()
+check_required_components(ThinkThenCpp)

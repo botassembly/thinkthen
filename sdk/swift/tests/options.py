@@ -18,6 +18,7 @@ temporary = tempfile.TemporaryDirectory(prefix="thinkthen-swift-signatures-")
 source = Path(temporary.name) / "Readme.swift"
 # Feature: Swift required domains and numeric-only thresholds are compile-time contracts.
 calls = {
+    "single refuses array": ('client.decide("Ready?", record: [Record.text("a"), Record.text("b")])', "Record"),
     "annotations reject rank": ('client.annotate(AnnotationQuestions(["rank": .rank(RankQuestion("Best?", levels: ["low", "high"]))]), record: .text("a"))', "rank"),
     "annotations reject general toolbox": ('client.annotate(Toolbox([:]), record: .text("a"))', "Toolbox"),
     "choose requires choices": ('client.choose("Topic?", record: .text("a"))', "choices"),

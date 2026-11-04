@@ -17,7 +17,7 @@ output.mkdir(parents=True, exist_ok=True)
 version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
 platforms = tuple((row[4], row[1], 'libthinkthen_ffi.' + row[5]) for row in HOSTS.values())
 host = current()['ruby']
-if os.environ.get("LLVM_PROFILE_FILE"):
+if os.environ.get("THINKTHEN_RUBY_SOURCE_NATIVE") == "1" or os.environ.get("LLVM_PROFILE_FILE"):
     subprocess.run(["cargo", "build", "--offline", "--locked", "-p", "thinkthen-ffi"], cwd=ROOT, check=True)
     platforms = tuple(item for item in platforms if item[0] == host)
     target = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))

@@ -1,18 +1,125 @@
-# ThinkThen in JavaScript and TypeScript
+# JavaScript and TypeScript functions that answer questions about text
 
-[Where record text goes](service.md) describes the default service and connection settings.
+ThinkThen is a classifier you call like a function: it reads text, answers one bounded question, and returns a typed value. `await` gives you the answer, ready for an `if`.
 
-ThinkThen judges evidence with ten functions. Use Node.js 22.12 or later and an ESM project. Install the supplied 0.2.0 package archive; replace its path with the supplied filename:
+Run `npm install thinkthen@0.2.0` in a Node.js 22.12 or later project. The package runs on Linux (x64 or Arm64, with glibc), macOS on Apple silicon and Windows x64, and carries its native engine and TypeScript types. It is an ES module: `import` it, or `require` it on Node.js 22.12 and later. Every example below runs as written in a `.mjs` file with `node example.mjs`. In TypeScript, each answer gets its type from the call.
 
-Run `npm init -y`, then `npm pkg set type=module`, then `npm install /path/to/thinkthen-0.2.0.tgz`.
+## Ask a question
 
-The package includes the native engine and TypeScript declarations. Once 0.2.0 is published, `npm install thinkthen@0.2.0` installs it from the package index. The examples below also run as JavaScript in a `.mjs` file unless they use `as const` or are labeled TypeScript. Run JavaScript with `node example.mjs`. Compile TypeScript with your project's usual compiler and NodeNext module resolution.
+```js
+import { ThinkThen, UnsureError } from "thinkthen";
 
-Set `THINKTHEN_API_KEY` through your environment or secret manager before creating a normal client. Keep keys out of scripts, output and reports. `new ThinkThen()` selects the default backend. `new ThinkThen({backend: "stub"})` needs no key or network and produces deterministic synthetic answers for installation checks.
+const tt = new ThinkThen();
+try {
+  const isRefund = await tt.decide(
+    "Does the customer request a refund?",
+    "Please refund my order.",
+    { threshold: { low: 0.2, high: 0.8 } },
+  );
+  console.log(isRefund ? "refund queue" : "inbox");
+} catch (error) {
+  if (!(error instanceof UnsureError)) throw error;
+  console.log("a person reads it", error.probability);
+} finally {
+  await tt.close();
+}
+```
 
-A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
+<!-- output: capture -->
 
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Both calls use the stub backend. Keep every collection outcome, including answered false and failed rows.
+`isRefund` is a `boolean`. Set `THINKTHEN_API_KEY` in the environment first; the client reads it from there. [Where record text goes](service.md) covers keys, backends and connection settings.
+
+## Handle not sure and failures
+
+Awaiting a call gives its answer or throws:
+
+| Thrown | When | What it carries |
+| --- | --- | --- |
+| `UnsureError` | The probability falls inside the not-sure band | `probability`, `row` |
+| `RecordError` | ThinkThen could not judge the record | `code`, `message`, `row`, `rows` |
+| `UsageError` | The call itself is wrong, such as an array passed to a one-record call | `code`, `message` |
+| `BackendError` | The backend service failed | `code`, `message`, `httpStatus` when the service sent one |
+| `CancelledError` | Your `AbortSignal` fired | `code` `local.cancelled`, `cause` |
+
+Send not sure to a person. Let the others stop your program, or catch `ThinkThenError`, the parent of every class except `UnsureError`. Not sure is not a failure.
+
+To read the probability and details without a throw, call `.row()` on the same call. It makes no second request.
+
+```js
+import { ThinkThen } from "thinkthen";
+
+const tt = new ThinkThen();
+try {
+  const refundCheck = await tt.decide(
+    "Does the customer request a refund?",
+    { id: "a2", text: "Where is my parcel?" },
+    { field: "/text", threshold: { low: 0.3, high: 0.7 } },
+  ).row();
+  if (refundCheck.status === "answered") {
+    console.log(refundCheck.id, refundCheck.answer ? "refund queue" : "inbox", refundCheck.probability);
+  } else if (refundCheck.status === "unsure") {
+    console.log(refundCheck.id, "a person reads it", refundCheck.probability);
+  } else {
+    console.error(refundCheck.id, refundCheck.error.code, refundCheck.error.message);
+  }
+} finally {
+  await tt.close();
+}
+```
+
+<!-- output: capture -->
+
+A row has `status` (`answered`, `unsure` or `failed`), `function`, `position`, `id` when the record has one, and `source`. Only an answered row has `answer`; only a failed row has `error`. TypeScript makes you check `status` before reading either.
+
+`threshold` sets when an answer counts. A number is a cut: yes at or above it, no below. `{ low, high }` is a band: no below `low`, not sure from `low` up to `high`, yes at or above `high`. The default is a cut at 0.5, so decide is never not sure until you set a band. Choose takes either form and is not sure unless its best choice reaches the upper cut. Tag, find, recognize and relate take only a number.
+
+## Judge many messages at once
+
+Each function has a `Stream` form that takes many records and yields one row per record, with its `position` from 1. Pass the whole collection to one stream so the engine can batch it.
+
+```js
+import { ThinkThen } from "thinkthen";
+
+const messages = [
+  { id: "a1", text: "Please refund my order." },
+  { id: "a2", text: "Where is my parcel?" },
+  { id: "a3", text: "I was charged twice for one invoice." },
+];
+const tt = new ThinkThen();
+try {
+  const refundChecks = tt.decideStream("Does the customer request a refund?", messages, {
+    field: "/text",
+    threshold: { low: 0.3, high: 0.7 },
+  });
+  for await (const refundCheck of refundChecks) {
+    if (refundCheck.status === "answered") {
+      console.log(refundCheck.id, refundCheck.answer ? "refund queue" : "inbox", refundCheck.probability);
+    } else if (refundCheck.status === "unsure") {
+      console.log(refundCheck.id, "a person reads it", refundCheck.probability);
+    } else {
+      console.error(refundCheck.id, refundCheck.error.code, refundCheck.error.message);
+    }
+  }
+} finally {
+  await tt.close();
+}
+```
+
+<!-- output: capture -->
+
+A stream keeps going past a not-sure or failed record, so check each row's `status`. To stop at the first one instead, read each row with `answer(row)`, exported from `thinkthen`: it returns the answer or throws `UnsureError` or `RecordError`. `for await` closes the stream when the loop ends or breaks; `.toArray()` collects every row. Streams take arrays, iterables and async iterables.
+
+## Judge a file of records
+
+Create `records.jsonl` with one JSON value per line:
+
+```text
+{"id":"a1","text":"Please refund my order."}
+{"id":"a2","text":"Where is my parcel?"}
+null
+{"id":"a3"}
+{"id":"a4","text":null}
+```
 
 ```js
 import { readFile } from "node:fs/promises";
@@ -20,246 +127,227 @@ import { ThinkThen } from "thinkthen";
 
 const records = (await readFile("records.jsonl", "utf8"))
   .split(/\r?\n/).filter(line => line.trim()).map(line => JSON.parse(line));
-const client = new ThinkThen({ backend: "stub" });
+const tt = new ThinkThen();
 try {
-  const array = await client.decide("Does the customer request a refund?", ["first", "second"]);
-  console.log("array", array.status);
-  for await (const row of client.decideStream("Does the customer request a refund?", records, { evidence: "/text" })) {
-    const message = row.status === "failed" ? row.error.message : "";
-    console.log(row.position, row.status, row.status === "answered" ? row.answer : null, message);
-  }
-} finally {
-  await client.close();
-}
-```
-
-`decide`, `choose`, `tag`, `score`, `find`, `recognize`, `relate` and `annotate` return promises for one row. Their `Stream` counterparts, `filterStream` and `rankStream` return async iterators for many records. Await single-record calls. Rows need no closing. `for await` closes a stream after completion or an early break. Close manual iteration with `await stream.return()` in `finally`.
-
-Use a normal client for meaningful judgments. Reuse a client and close it in `finally`. Client settings include `apiKey`, `batch`, and `retry` with `maxRetries`, `initialBackoffMs` and `attemptTimeoutMs`. Prefer environment keys to literal `apiKey` values.
-
-## Records and rows
-
-A record is a string or JSON-compatible value. An array passed to a single-record call is one JSON-array record. Object records can carry a string, safe integer or bigint `id`. Use bigint for IDs outside JavaScript's safe integer range. Other fields must be JSON-compatible. The SDK preserves bigint IDs, so ordinary `JSON.stringify` needs your own bigint conversion if you export such rows.
-
-Use `evidence: "/text"` or `evidence: ["text"]` to select a field. The string form is a JSON Pointer: `/` separates keys, `~1` means a literal slash, and `~0` means a literal tilde. A key path can mix strings and array indexes. Without a selector, ThinkThen uses the whole record.
-
-```js
-const row = await client.decide(
-  "Does the customer request a refund?",
-  { id: "a1", text: "Please refund my order." },
-  { evidence: ["text"], threshold: { low: 0.2, high: 0.8 } },
-);
-if (row.status === "answered") {
-  console.log(row.id, row.answer, row.probability);
-} else if (row.status === "unsure") {
-  console.log("unsure", row.probability);
-} else {
-  throw new Error(`${row.error.code}: ${row.error.message}`);
-}
-```
-
-An evidence key path selects one nested value; `["subject", "body"]` means a body inside subject, not two sibling fields. To judge several fields together, use `{id: "a1", evidence: {subject: "Invoice refund", body: "Please refund my order."}}` and `evidence: ["evidence"]`. The selected object contains both fields, and the outer ID remains on the result.
-
-Rows carry `function`, `position`, optional `id`, `source` and a discriminated `status`. Positions start at 1. An answered row has `answer`; an unsure row has no answer; a failed row has `error`. Narrow on status before accessing these fields. `probability` and `detail` appear where the function supplies them. `source` identifies the exact question execution. Types are readonly.
-
-A rank row's `answer` is its rank and `position` is its input order.
-
-A numeric decide or filter threshold yields true at or above the cut and false below it. `{low, high}` yields false below the lower bound, unsure inside the band and true at or above the upper bound. Choose accepts the same forms but yields unsure unless the winning choice reaches the upper cut. Tag, find, recognize and relate accept only numeric cuts.
-
-Preserve the original ID when judging one text. Pass `{id: originalId, text}` with `evidence: ["text"]`, just as you do in a batch. Passing only the text string loses its ID. Keep IDs as strings when exporting evidence for another program; JSON has no bigint type. Positions identify input order within one call and cannot replace source IDs across calls or ranks.
-
-The following application helper stops on a failed row or a failed annotation entry. It returns unsure outcomes for the caller to report. Define it once before the later examples:
-
-```js
-function stopOnFailure(row) {
-  if (row.status === "failed") {
-    throw new Error(`${row.error.code}: ${row.error.message}`);
-  }
-  if (row.function === "annotate" && row.status === "answered") {
-    for (const outcome of Object.values(row.answer)) {
-      if (outcome.status === "failed") {
-        throw new Error(`${outcome.error.code}: ${outcome.error.message}`);
-      }
+  for await (const refundCheck of tt.decideStream("Does the customer request a refund?", records, { field: "/text" })) {
+    if (refundCheck.status === "answered") {
+      console.log(refundCheck.position, "answered", refundCheck.answer);
+    } else if (refundCheck.status === "unsure") {
+      console.log(refundCheck.position, "unsure", refundCheck.probability);
+    } else {
+      console.log(refundCheck.position, "failed", refundCheck.error.code, refundCheck.error.message);
     }
   }
-  return row;
+} finally {
+  await tt.close();
 }
 ```
+
+<!-- output: capture -->
+
+Look for one line per record, numbered from 1, with the failures in place. A `null` record, a record without `text` and a `text` that is `null` all fail with `record.missing` and send nothing to the backend.
+
+## Records
+
+A record is a string or a JSON value. `field` picks the part to judge: a JSON Pointer such as `"/text"` (`~1` is a literal slash, `~0` a literal tilde), or a key path such as `["text"]`. Without it, ThinkThen judges the whole record. A pointer picks one value; to judge two fields together, nest them, as in `{ id: "a1", message: { subject: "Invoice", body: "Please refund my order." } }` with `field: "/message"`.
+
+Give object records an `id`: a string, a safe integer or a `bigint`. Rows carry it back, so keep it to join answers to your data; `position` only counts within one call. `JSON.stringify` cannot write a `bigint`, so convert those ids before you save rows.
+
+A one-record call rejects an array or any other iterable, and a stream rejects a string, with `UsageError` code `usage.record-kind`. `null` and `undefined` records, and a selected value that is `null`, fail with `record.missing`.
 
 ## The ten functions
 
-Each call below invokes a separate function. List options belong to the function call. TypeScript preserves literal choices when you use `as const`.
+Each function below uses the support inbox. Any call that is not sure throws `UnsureError`, which ends this script at the `catch`.
 
 ```js
-import { ThinkThen, defineToolbox } from "thinkthen";
+import { ThinkThen, UnsureError, answer } from "thinkthen";
 
-const text = "Morgan works for Example Group.\nPlease refund my order.";
-const record = { id: "a1", text };
-const evidence = { evidence: ["text"] };
-const records = [record, { id: "a2", text: "Where is my parcel?" }];
-const rules = [{ name: "works_for", source: "person", target: "organization" }];
-const questions = defineToolbox({
-  refund: { function: "decide", question: "Does the customer request a refund?" },
-  topic: { function: "choose", question: "What is the message about?", choices: ["billing", "shipping", "other"] },
-  urgency: { function: "score", question: "How urgent is the request?", levels: ["routine", "urgent"] },
-});
-const client = new ThinkThen();
+const refund = "Please refund my order.";
+const note = "Morgan works for Example Group.\nPlease refund my order.\n";
+const messages = [
+  { id: "a1", text: "Please refund my order." },
+  { id: "a2", text: "Where is my parcel?" },
+  { id: "a3", text: "I was charged twice for one invoice." },
+];
+const asksRefund = "Does the customer request a refund?";
+const topics = ["billing", "shipping", "other"];
+const urgency = ["routine", "urgent"];
+
+const tt = new ThinkThen();
 try {
-  const decision = stopOnFailure(await client.decide("Does the customer request a refund?", record, evidence));
-  const choice = stopOnFailure(await client.choose("What is the message about?", record, { ...evidence, choices: ["billing", "shipping", "other"] }));
-  const tags = stopOnFailure(await client.tag("Which topics appear?", record, { ...evidence, labels: ["billing", "shipping"] }));
-  const score = stopOnFailure(await client.score("How urgent is the request?", record, { ...evidence, levels: ["routine", "urgent"] }));
-  const found = stopOnFailure(await client.find("Which line states the requested action?", record, evidence));
-  const names = stopOnFailure(await client.recognize(["person", "organization"], record, evidence));
-  const relations = stopOnFailure(await client.relate(rules, record, evidence));
-  const annotation = stopOnFailure(await client.annotate(questions, record, evidence));
-  for await (const result of client.filterStream("Does the customer request a refund?", records, { evidence: ["text"] })) {
-    stopOnFailure(result.row);
-    console.log(result.item.id, result.kept, result.row.status);
+  const isRefund = await tt.decide(asksRefund, refund);
+  console.log("decide:", isRefund);
+
+  const topic = await tt.choose("What is the message about?", refund, { choices: topics });
+  console.log("choose:", topic);
+
+  const mentioned = await tt.tag("Which topics appear?",
+    "I was charged twice and my parcel is late again.", { labels: ["billing", "shipping"] });
+  console.log("tag:", mentioned.join(", "));
+
+  const howUrgent = await tt.score("How urgent is the request?", refund, { levels: urgency });
+  console.log("score:", howUrgent);
+
+  const refundRequests = await tt.filter(asksRefund, messages, { field: "/text" }).toArray();
+  console.log("filter:", refundRequests.map(message => message.id).join(", "));
+
+  for await (const urgencyRank of tt.rankStream("How urgent is the request?", messages,
+    { levels: urgency, field: "/text" })) {
+    console.log("rank:", answer(urgencyRank), urgencyRank.id);
   }
-  for await (const row of client.rankStream("How urgent is the request?", records, { levels: ["routine", "urgent"], evidence: ["text"], top: 5 })) {
-    stopOnFailure(row);
-    if (row.status === "answered") console.log(row.id, row.answer);
+
+  const actionLine = await tt.find("Which line states the requested action?", note);
+  console.log("find:", actionLine ? actionLine.text : "no line answers it");
+
+  const triage = await tt.annotate({
+    refund: { function: "decide", question: asksRefund },
+    topic: { function: "choose", question: "What is the message about?", choices: topics },
+    urgency: { function: "score", question: "How urgent is the request?", levels: urgency },
+  }, refund);
+  for (const [question, outcome] of Object.entries(triage)) {
+    console.log("annotate:", question, answer(outcome));
   }
+
+  const names = await tt.recognize(["person", "organization"], "Morgan works for Example Group.");
+  for (const name of names) console.log("recognize:", name.kind, name.text);
+
+  const employers = await tt.relate(
+    [{ name: "works_for", source: "person", target: "organization" }], note);
+  for (const link of employers) console.log("relate:", link.source.text, link.relation, link.target.text);
+} catch (error) {
+  if (!(error instanceof UnsureError)) throw error;
+  console.log("not sure:", error.row.function, error.probability);
 } finally {
-  await client.close();
+  await tt.close();
 }
 ```
 
-| Function | Answer when answered |
+<!-- output: capture -->
+
+| Function | `await` gives |
 | --- | --- |
-| decide | Boolean |
-| filterStream | Each item has the original `item`, a boolean `kept`, and its outcome `row` |
-| choose | One choice string |
-| tag | Array of matching labels, possibly empty |
-| score | Number from 0 to 1 on the ordered scale |
-| rankStream | Rank starting at 1, highest score first |
-| find | `{text, start, end}`, or `null` |
-| recognize | Array of names with `text`, `start`, `end`, `kind` and `probability` |
-| relate | Array of relations with `source`, `target`, `relation`, `probability` and optional `symmetric` |
-| annotate | Object mapping question names to typed outcomes |
+| decide | `true` or `false` |
+| choose | one of your choices, typed as their union |
+| tag | an array of the labels that fit, possibly empty |
+| score | a number from 0 to 1 along your levels, lowest first |
+| filter | the records that pass, unchanged |
+| rank | `rankStream` only: each row's answer is its rank, 1 for highest |
+| find | `{ text, start, end }` for the line that answers, or `null` |
+| annotate | each named question's outcome; read each with `answer(outcome)` |
+| recognize | an array of `{ text, kind, start, end, probability }` |
+| relate | an array of `{ source, target, relation, probability }`, with `symmetric` on undirected rules |
 
-Choose requires distinct choices. Score and rank require distinct levels ordered from lowest to highest. Score is the probability-weighted scale position. Rank reads the whole collection before emitting ranked answers; `top` limits answered ranks and retains failed records. Find chooses one whole nonblank line, so preserve line breaks in evidence. Spans use JavaScript UTF-16 offsets with an inclusive start and exclusive end: `text.slice(span.start, span.end)`. Relation source and target are named spans. A rule can add `phrase` for wording and `symmetric: true` for an undirected relation.
+- **filter** yields only the records answered yes, as the objects you passed in. Not-sure records are left out. If any record fails, the kept records still arrive first, then the loop throws one `RecordError` whose `rows` lists every failed record. Use `filterStream` for every row as `{ item, row, kept }`.
+- **rank** reads the whole collection before it yields. `top` limits how many ranks it returns; failed records still come back.
+- **choose** needs distinct choices; **score** and **rank** need distinct levels ordered from lowest to highest.
+- **find** picks one whole line, so keep the line breaks. Spans use JavaScript string offsets: `text.slice(start, end)`.
+- **annotate** answers when the record is judged, but each question inside it can still be not sure or fail. `answer(outcome)` gives that question's answer or throws `UnsureError` or `RecordError`, as a one-record call does. Rank cannot be one of its questions.
+- **relate** finds the names itself. On its row from `.row()`, `detail.names` lists every name it found, including names with no relation. A rule can add `phrase` for its wording and `symmetric: true` for a relation that reads both ways.
 
-Toolbox entries can contain every per-record function, including filter, find, recognize and relate. Rank cannot be an annotation entry. Inspect each nested outcome: an outer annotation row can be answered while an entry is failed or unsure. Entries can select their own evidence; otherwise they use the selector passed to annotate. `defineToolbox` takes a snapshot and preserves TypeScript inference. It does not execute shell commands.
+## Say what the answers mean
 
-You can pass a typed question object instead of a question string. For example, `client.decide(questions.refund, text)` uses a saved decide definition. Recognize objects use `{function: "recognize", kinds: [...]}` and relate objects use `{function: "relate", rules: [...]}`. Annotation takes the named questions object directly.
-
-A saved filter definition has type `FilterQuestion`, with `function: "filter"`; a decide definition is a different function. This TypeScript example preserves the original item and live kept flag beside its row:
-
-```typescript
-import type { FilterQuestion } from "thinkthen";
-const refundFilter: FilterQuestion = {
-  function: "filter", question: "Does the customer request a refund?", evidence: ["text"],
-};
-const filterOutcomes = await client.filterStream(refundFilter, records).toArray();
-for (const item of filterOutcomes) {
-  console.log(item.row.id, item.kept, item.row.status);
-}
-```
-
-Export the complete `FilterItem` if you need its `kept` flag and original `item`; exporting only `item.row` omits those wrapper fields. Keep false, unsure and failed outcomes in saved results and inspect statuses before starting another call.
-
-Write an unambiguous question before defining a toolbox entry. Name the evidence field, allowed values and any date rule you intend; phrases such as “currently available” leave those choices implicit. Reuse that definition across single-record and stream calls.
-
-## Streams, files and batching
-
-Streams accept either an iterable or an async iterable. `.toArray()` collects the stream in memory.
+`yesMeans` and `noMeans` tell decide and filter what each answer stands for. `descriptions` does the same for the choices of choose, the labels of tag and the levels of score and rank; a key that is not one of them is refused.
 
 ```js
-import { readFile, writeFile } from "node:fs/promises";
+import { ThinkThen, UnsureError } from "thinkthen";
 
-const records = (await readFile("messages.jsonl", "utf8"))
-  .split(/\r?\n/).filter(line => line.trim()).map(line => JSON.parse(line));
-const outcomes = [];
+const tt = new ThinkThen();
 try {
-  for await (const row of client.annotateStream(questions, records, { evidence: ["text"] })) {
-    outcomes.push(row);
-  }
+  const topic = await tt.choose("What is the message about?", "I was charged twice for one invoice.", {
+    choices: ["billing", "shipping", "other"],
+    descriptions: { billing: "charges, invoices and refunds", shipping: "parcels and delivery" },
+  });
+  const isRefund = await tt.decide("Does the customer request a refund?", "I was charged twice for one invoice.", {
+    yesMeans: "the customer wants money back",
+    noMeans: "the customer wants something else",
+  });
+  console.log(topic, isRefund ? "refund queue" : "inbox");
+} catch (error) {
+  if (!(error instanceof UnsureError)) throw error;
+  console.log("a person reads it", error.row.function, error.probability);
 } finally {
-  const json = JSON.stringify(outcomes, (_key, value) =>
-    typeof value === "bigint" ? value.toString() : value);
-  await writeFile("outcomes.json", json + "\n");
+  await tt.close();
 }
-console.log("rows:", outcomes.length, "IDs:", outcomes.map(row => row.id));
-for (const row of outcomes) stopOnFailure(row);
 ```
 
-Rows and nested outcomes are plain JSON-compatible objects, apart from bigint IDs. `JSON.stringify` preserves their statuses, IDs, answers, errors and full-precision probabilities. The replacer above exports bigint IDs as decimal strings. `JSON.parse` reads the exported evidence back; it does not reconstruct bigint values automatically. The `finally` block saves every consumed row, including its ID, even if a call-level error interrupts traversal. After saving, the example checks all outer and nested failures before later work starts. Do not replace IDs with enumeration indexes or save only positive answers. Do not replace structured answers with display strings or drop failed and unsure statuses from evidence.
-
-Plan the work before making calls when your task has a call or request-body budget. Count input records and named questions, select only the evidence fields each question needs, and estimate how much text will repeat across questions. Use one `annotateStream` for questions over the same collection. Keep full text for find, recognize and relate when it is needed to answer the question. Save completed evidence and stop after a failure; do not spend the remaining budget retrying the same request without understanding its error. Task budgets come from the task and are separate from engine batching settings.
-
-Use one stream over the whole collection to let the engine batch questions. Avoid a loop that awaits one call per record. Arrays supply finite collections; iterables supply records incrementally. `batch` controls request packing, and the engine also applies request size and backend limits. A row can require several backend questions, so batch size does not equal network request count.
-
-The SDK does not parse CSV or XLSX itself. Read the supplied table with your application's table library, convert each data row to an object, and pass the objects to `annotateStream`. Keep a stable `id` to join results back to the original rows. Reuse the same toolbox and batch the collection. Export results with your table library. There is no SDK equivalent of a shell toolbox run.
-
-Top-level exports such as `decide` and `annotateStream` use shared default settings. An explicit `ThinkThen` client gives your application clear resource ownership. Projects configured for explicit resource management can also use `await using` for clients and streams.
+<!-- output: capture -->
 
 ## Save and load questions
 
-A saved toolbox uses named question entries. Save this as `toolbox.json`:
+A toolbox saves named questions for reuse here, in another language or in the command. Save this as `toolbox.json`:
 
 ```json
-{"entries":{"ready":{"question":{"function":"filter","question":"Does the customer request a refund?","evidence":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"evidence":"/text"}}}}
+{"entries":{"refund":{"question":{"function":"filter","question":"Does the customer request a refund?","field":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"]}}}}
 ```
 
-Load the entries once, select a typed question and pass the whole collection to its matching call. Saving the toolbox preserves question definitions and their evidence selectors. SDK toolboxes contain questions; command shell steps and runs belong to the command's richer saved-run format.
-
 ```js
-import { readFile, writeFile } from "node:fs/promises";
-import { ThinkThen, parseToolbox, serializeToolbox } from "thinkthen";
+import { ThinkThen, UnsureError, loadToolbox } from "thinkthen";
 
-const box = parseToolbox(await readFile("toolbox.json", "utf8"));
-await writeFile("toolbox-copy.json", serializeToolbox(box), "utf8");
-const ready = box.ready;
-const topic = box.topic;
-if (ready?.function !== "filter" || topic?.function !== "choose") {
-  throw new Error("toolbox needs ready/filter and topic/choose questions");
+const box = await loadToolbox("toolbox.json");
+if (box.refund?.function !== "filter" || box.topic?.function !== "choose") {
+  throw new Error("toolbox.json needs refund as a filter and topic as a choose question");
 }
-const client = new ThinkThen({ backend: "stub" });
+const messages = [
+  { id: "a1", text: "Please refund my order." },
+  { id: "a2", text: "Where is my parcel?" },
+  { id: "a3", text: "I was charged twice for one invoice." },
+];
+const tt = new ThinkThen();
 try {
-  const filtered = await client.filterStream(ready, records).toArray();
-  for (const item of filtered) stopOnFailure(item.row);
-  const kept = filtered.filter(item => item.kept).map(item => item.item);
-  const rows = await client.annotateStream({ topic }, kept).toArray();
-  for (const row of rows) {
-    stopOnFailure(row);
-    console.log(row.id, row.answer);
+  for await (const refundRequest of tt.filter(box.refund, messages)) {
+    try {
+      const topic = await tt.choose(box.topic, refundRequest.text);
+      console.log(refundRequest.id, topic);
+    } catch (error) {
+      if (!(error instanceof UnsureError)) throw error;
+      console.log(refundRequest.id, "a person reads it");
+    }
   }
 } finally {
-  await client.close();
+  await tt.close();
 }
 ```
 
-`parseToolbox` returns a read-only named question map. Narrow a loaded entry's `function` discriminator before passing it to the matching method. Filter results carry `item`, `kept` and `row`; selecting kept items is ordinary JavaScript collection code. Annotation takes a named questions object and `annotateStream` processes its collection.
+<!-- output: capture -->
 
-Call `relate` or `relateStream` alone when you need names and relations from the same evidence. After narrowing to a row with details, `row.detail.names` contains all admitted recognized names, including names with no returned relation. `row.detail.pairs` contains scored relation pairs and `row.answer` contains accepted relations. There is no need for a preceding recognize call.
+Look for one line per kept record: its id and the topic choose picked.
 
-## Failures and cancellation
+Check each entry's `function` before you pass it, as the `if` does; TypeScript then knows which call it fits. A saved question carries its own options, such as `field` and `choices`, so the call takes only the record. `defineToolbox({...})` builds the same named questions in code, and `serializeToolbox(box)` turns them back into JSON text.
 
-A bad record or backend answer returns a failed row. Even a single-record call resolves to that row. Save returned rows for diagnosis, then use `stopOnFailure` before acting on answers or starting another call. A thrown error exits the loop, closes its stream and skips subsequent calls unless your application catches it. Preserve the error in your report and stop the workload when a task requires a stop after failure. Call-level problems reject promises or stream reads with `ThinkThenError` subclasses, including `UsageError`, `BackendError` and `CancelledError`. These expose a stable `code`, the library message and optional `httpStatus`. Your input iterator can also throw its own error.
+## Call without a client
 
-Pass an `AbortSignal` to any call. `abort()` stops the operation and reading it rejects with `CancelledError`, whose code is `local.cancelled`. The abort reason becomes the error's `cause`.
+The package also exports each function, such as `decide` and `filter`. With no default client set, each call opens a client for the default backend and closes it afterwards. `setDefaultClient(tt)` sends them through your client, which they never close; `setDefaultClient(undefined)` resets it. A client you create and close yourself makes ownership plain, so prefer it in applications.
+
+## Cancel a call
+
+Pass an `AbortSignal` as `signal` to any call. Aborting stops the call, and the pending `await` throws `CancelledError`, named `AbortError`, with code `local.cancelled` and the abort reason as its `cause`. Rows you already read stay yours.
 
 ```js
-import { CancelledError } from "thinkthen";
+import { ThinkThen, CancelledError } from "thinkthen";
 
+const messages = [
+  { id: "a1", text: "Please refund my order." },
+  { id: "a2", text: "Where is my parcel?" },
+  { id: "a3", text: "I was charged twice for one invoice." },
+];
 const controller = new AbortController();
-const onInterrupt = () => controller.abort();
-process.once("SIGINT", onInterrupt);
+const stop = () => controller.abort();
+process.once("SIGINT", stop);
+const tt = new ThinkThen();
 try {
-  for await (const row of client.decideStream("Does the customer request a refund?", records, {
-    evidence: ["text"], signal: controller.signal,
-  })) {
-    stopOnFailure(row);
-    console.log(row.id, row.status);
-  }
+  const refundRequests = tt.filter("Does the customer request a refund?", messages, {
+    field: "/text", signal: controller.signal,
+  });
+  for await (const refundRequest of refundRequests) console.log("refund request", refundRequest.id);
 } catch (error) {
-  if (error instanceof CancelledError) console.error("cancelled", error.code);
-  else throw error;
+  if (!(error instanceof CancelledError)) throw error;
+  console.error("cancelled", error.code);
 } finally {
-  process.removeListener("SIGINT", onInterrupt);
+  process.removeListener("SIGINT", stop);
+  await tt.close();
 }
 ```
 
-Closing the client closes its outstanding streams. Results already consumed before cancellation remain in your application.
+<!-- output: capture -->
+
+Closing a client also closes its open streams. Client options include `batch` for records per request, and `retry` with `maxRetries`, `initialBackoffMs` and `attemptTimeoutMs`.

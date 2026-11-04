@@ -10,21 +10,56 @@
 #include <string_view>
 #include <system_error>
 #include <type_traits>
+#include <vector>
 namespace thinkthen { inline namespace v0_2 {
-class error : public std::runtime_error {
-    errc code_;
+/// A failed filter input retained after the kept records have been delivered.
+struct failed_row {
+    /** One-based input position. */ std::uint64_t position;
+    /** Original id, encoded as JSON. */ std::string id_json;
+    /** The engine failure code. */ std::error_code code;
+    /** The engine failure message. */ std::string message;
+    /** HTTP status when the failure came with one. */ std::optional<std::uint16_t> http_status;
+    /** Encoding of the failed original input. */ thinkthen_record_kind record_kind;
+    /** Original input bytes; empty for a missing input. */ std::string record;
+};
+/// The standard category for every engine error code.
+[[nodiscard]] const std::error_category& category() noexcept;
+/// A native failure, with the engine's message and standard error code.
+class error : public std::system_error {
+    std::string message_;
     std::optional<std::uint16_t> http_status_;
+    std::vector<failed_row> failed_rows_;
 public:
-    error(errc code, std::string message, std::optional<std::uint16_t> http = {})
-        : std::runtime_error(std::move(message)), code_(code), http_status_(http) {}
-    errc code() const noexcept { return code_; }
-    std::optional<std::uint16_t> http_status() const noexcept { return http_status_; }
-    std::int32_t raw_code() const noexcept { return static_cast<std::int32_t>(code_); }
-    std::string_view family() const noexcept {
+    /// Copy an engine failure and, for filter, the failed inputs.
+    error(errc code, std::string message, std::optional<std::uint16_t> http = {}, std::vector<failed_row> rows = {})
+        : std::system_error(std::error_code(static_cast<int>(code), category()), message), message_(std::move(message)),
+          http_status_(http), failed_rows_(std::move(rows)) {}
+    /// Read the engine message without a category or code appended.
+    [[nodiscard]] const char* what() const noexcept override { return message_.c_str(); }
+    /// Read the backend HTTP status, if supplied.
+    [[nodiscard]] std::optional<std::uint16_t> http_status() const noexcept { return http_status_; }
+    /// Read all failed filter inputs after the kept records were delivered.
+    [[nodiscard]] const std::vector<failed_row>& failed_rows() const noexcept { return failed_rows_; }
+    /// Read the numeric code, including a code unknown to these headers.
+    [[nodiscard]] std::int32_t raw_code() const noexcept { return code().value(); }
+    /// Read the engine code family, or an empty view for an unknown code.
+    [[nodiscard]] std::string_view family() const noexcept {
         const auto* family = thinkthen_code_family(raw_code());
         return family ? std::string_view{family} : std::string_view{};
     }
-    bool unknown_code() const noexcept { return !detail::known_code(raw_code()); }
+    /// Test whether this header knows the code.
+    [[nodiscard]] bool unknown_code() const noexcept { return !detail::known_code(raw_code()); }
+};
+/// Reading a not-sure answer throws this exception, which is not an engine failure.
+class unsure : public std::exception {
+    std::optional<double> probability_;
+public:
+    /// Retain the probability supplied by the not-sure row.
+    explicit unsure(std::optional<double> probability) noexcept : probability_(probability) {}
+    /// Describe the not-sure state without inventing an engine error code.
+    [[nodiscard]] const char* what() const noexcept override { return "the answer is not sure"; }
+    /// Read the probability that accompanied the not-sure answer.
+    [[nodiscard]] std::optional<double> probability() const noexcept { return probability_; }
 };
 namespace detail {
 [[noreturn]] inline void incompatible() { throw error(errc::usage_abi, THINKTHEN_ABI_ERROR_MESSAGE); }
@@ -32,11 +67,11 @@ inline void check_abi() {
     if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) incompatible();
 }
 }
-inline const std::error_category& category() noexcept {
+[[nodiscard]] inline const std::error_category& category() noexcept {
     struct codes final : std::error_category {
-        const char* name() const noexcept override { return "thinkthen"; }
-        std::string message(int code) const override {
-            detail::check_abi();
+        [[nodiscard]] const char* name() const noexcept override { return "thinkthen"; }
+        [[nodiscard]] std::string message(int code) const override {
+            if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) return THINKTHEN_ABI_ERROR_MESSAGE;
             const auto* text = thinkthen_code_name(code);
             return text ? text : THINKTHEN_ABI_ERROR_MESSAGE;
         }
@@ -44,18 +79,19 @@ inline const std::error_category& category() noexcept {
     static codes value;
     return value;
 }
-inline std::error_code make_error_code(errc code) noexcept { return {static_cast<int>(code), category()}; }
+/// Convert a registry code to the standard error-code representation.
+[[nodiscard]] inline std::error_code make_error_code(errc code) noexcept { return {static_cast<int>(code), category()}; }
 namespace detail {
-inline const std::uint8_t* bytes(std::string_view text) { return reinterpret_cast<const std::uint8_t*>(text.data()); }
+[[nodiscard]] inline const char* bytes(std::string_view text) { return text.data(); }
 inline thinkthen_text view(std::string_view text) { return {bytes(text), text.size()}; }
-inline std::string copy(thinkthen_text text) {
+[[nodiscard]] inline std::string copy(thinkthen_text text) {
     return text.len ? std::string(reinterpret_cast<const char*>(text.data), text.len) : std::string{};
 }
 inline errc code(std::int32_t value) {
     return static_cast<errc>(value);
 }
 inline error failure(const thinkthen_error& value) {
-    return error(code(value.code), copy({value.message.data, value.message.len}),
+    return error(code(value.code), copy({reinterpret_cast<const char *>(value.message.data), value.message.len}),
         value.http_status ? std::optional<std::uint16_t>{value.http_status} : std::nullopt);
 }
 struct diagnostic {
@@ -66,7 +102,7 @@ struct diagnostic {
     diagnostic& operator=(const diagnostic&) = delete;
 };
 inline void check(std::int32_t result, const diagnostic& d) {
-    if (result == THINKTHEN_ERROR) throw failure(d.value);
+    if (result < 0) throw failure(d.value);
 }
 template<class F, class... Args> inline void invoke(F f, Args... args) {
     check_abi();

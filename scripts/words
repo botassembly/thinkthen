@@ -11,7 +11,7 @@ import sys
 root = pathlib.Path(__file__).resolve().parent.parent
 paths = subprocess.check_output(["git", "ls-files", "--stage", "-z"], cwd=root).split(b"\0")
 forbidden = re.compile(
-    r"legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project|pm\.ticket=[0-9]+",
+    r"\b(?:legacy|rebuild|rearchitect|old repo|old code|earlier repo|earlier code|old project|earlier project|pm\.ticket=[0-9]+)\b",
     re.IGNORECASE,
 )
 if len(sys.argv) > 2:
@@ -46,8 +46,19 @@ for entry in paths:
         continue
     for number, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), 1):
         # Microsoft names this CRT library and its stem in linker inputs.
+        # npm package identities are fixed upstream, not project history.
+        if path.as_posix() == "site/package-lock.json":
+            line = line.replace("character-entities-legacy", "character-entities")
         checked = re.sub(r"\blegacy_stdio_definitions(?:\.lib)?\b", "", line)
-        if forbidden.search(checked) or (private is not None and private.search(checked)):
+        private_checked = checked
+        # The maker credit is approved only in these three public documents.
+        if path.as_posix() in {
+            'site/src/components/Footer.astro',
+            'site/src/content/docs/about.mdx',
+            'site/src/content/docs/blog/introducing-thinkthen.mdx',
+        }:
+            private_checked = re.sub('GenomOncology', '', private_checked, flags=re.IGNORECASE)
+        if forbidden.search(checked) or (private is not None and private.search(private_checked)):
             print(f"{path}:{number}: forbidden private or implementation reference", file=sys.stderr)
             failed = True
 sys.exit(1 if failed else 0)

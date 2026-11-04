@@ -80,7 +80,7 @@ impl From<RelationRule> for RuleWire {
 #[schemars(with = "RelateWire")]
 pub struct Relate {
     pub(crate) inner: crate::core::Relate,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Relate {
     /// Admit a nonempty list of typed rules.
@@ -89,7 +89,7 @@ impl Relate {
     pub fn new(rules: impl IntoIterator<Item = RelationRule>) -> Result<Self, Error> {
         Ok(Self {
             inner: crate::core::Relate::new(rules.into_iter().map(|rule| rule.0).collect())?,
-            evidence: None,
+            field: None,
         })
     }
     /// Set a numeric cut.
@@ -98,16 +98,16 @@ impl Relate {
         self.inner.threshold = cut.into();
         self
     }
-    /// Select evidence with an admitted JSON Pointer.
+    /// Select field with an admitted JSON Pointer.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
         self
     }
-    /// The admitted evidence pointer.
+    /// The admitted field pointer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -125,10 +125,10 @@ pub(crate) struct RelateWire {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<RelateWire> for Relate {
     type Error = Error;
@@ -142,7 +142,7 @@ impl TryFrom<RelateWire> for Relate {
                 .map(RelationRule::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
         )?;
-        question.evidence = admit_evidence(value.evidence)?;
+        question.field = admit_field(value.field)?;
         question.inner.threshold = threshold;
         Ok(question)
     }
@@ -158,7 +158,7 @@ impl From<Relate> for RelateWire {
                 .map(Into::into)
                 .collect(),
             threshold: value.inner.threshold.into(),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }

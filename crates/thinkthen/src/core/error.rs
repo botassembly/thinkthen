@@ -143,7 +143,7 @@ impl Serialize for Error {
 // Schema derives emit JSON metadata maps in sibling impls, scoped to these values.
 #[allow(
     clippy::disallowed_types,
-    reason = "schema derivation builds metadata; evidence remains typed"
+    reason = "schema derivation builds metadata; field remains typed"
 )]
 mod wire {
     #[derive(serde::Serialize, schemars::JsonSchema)]

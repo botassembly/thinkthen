@@ -77,8 +77,11 @@ Datum tt_json_value(JsonbValue *value, Oid type, bool *is_null)
         int column;
         for (column = 0; column < description->natts; column++) {
             Form_pg_attribute attribute = TupleDescAttr(description, column);
-            JsonbValue *field = tt_field(object, NameStr(attribute->attname));
-            if (field == NULL && !strcmp(NameStr(attribute->attname), "either")) {
+            const char *name = NameStr(attribute->attname);
+            /* SQL spans say start_offset and end_offset, since end is reserved. */
+            JsonbValue *field = tt_field(object, !strcmp(name, "start_offset") ? "start"
+                : !strcmp(name, "end_offset") ? "end" : name);
+            if (field == NULL && !strcmp(name, "either")) {
                 values[column] = BoolGetDatum(false);
                 nulls[column] = false;
             } else values[column] = tt_json_value(field, attribute->atttypid, &nulls[column]);
@@ -91,6 +94,97 @@ Datum tt_json_value(JsonbValue *value, Oid type, bool *is_null)
         : JsonbToCString(NULL, &JsonbValueToJsonb(value)->root, 0);
     getTypeInputInfo(type, &input, &parameter);
     return OidInputFunctionCall(input, contents, parameter, -1);
+}
+
+static bool is_container(JsonbIteratorToken token)
+{
+    return token == WJB_BEGIN_ARRAY || token == WJB_BEGIN_OBJECT || token == WJB_END_ARRAY || token == WJB_END_OBJECT;
+}
+
+/* Copy one engine answer, renaming span keys as the typed span columns name them. */
+static void push_answer(JsonbParseState **state, JsonbValue *value)
+{
+    JsonbIterator *iterator;
+    JsonbIteratorToken token;
+    JsonbValue item;
+    if (value->type != jbvBinary) {
+        pushJsonbValue(state, WJB_VALUE, value);
+        return;
+    }
+    iterator = JsonbIteratorInit(value->val.binary.data);
+    while ((token = JsonbIteratorNext(&iterator, &item, false)) != WJB_DONE) {
+        if (token == WJB_KEY && item.val.string.len == 5 && !memcmp(item.val.string.val, "start", 5)) {
+            item.val.string.val = (char *)"start_offset";
+            item.val.string.len = 12;
+        } else if (token == WJB_KEY && item.val.string.len == 3 && !memcmp(item.val.string.val, "end", 3)) {
+            item.val.string.val = (char *)"end_offset";
+            item.val.string.len = 10;
+        }
+        pushJsonbValue(state, token, is_container(token) ? NULL : &item);
+    }
+}
+
+/* Annotate's answer maps each question to its bare answer, null unless answered. */
+static Jsonb *bare_answers(Jsonb *outcomes)
+{
+    JsonbParseState *state = NULL;
+    JsonbIterator *iterator = JsonbIteratorInit(&outcomes->root);
+    JsonbIteratorToken token;
+    JsonbValue item;
+    JsonbValue missing = {.type = jbvNull};
+    JsonbValue *result = NULL;
+    while ((token = JsonbIteratorNext(&iterator, &item, true)) != WJB_DONE) {
+        if (token == WJB_VALUE) {
+            Jsonb *child = item.type == jbvBinary ? JsonbValueToJsonb(&item) : NULL;
+            JsonbValue *status = tt_field(child, "status");
+            JsonbValue *answer = tt_field(child, "answer");
+            bool answered = status != NULL && status->type == jbvString && status->val.string.len == 8
+                && !memcmp(status->val.string.val, "answered", 8);
+            push_answer(&state, answered && answer != NULL ? answer : &missing);
+        } else result = pushJsonbValue(&state, token, is_container(token) ? NULL : &item);
+    }
+    return JsonbValueToJsonb(result);
+}
+
+static JsonbValue *binary(JsonbValue *slot, Jsonb *value)
+{
+    if (value == NULL) return NULL;
+    slot->type = jbvBinary;
+    slot->val.binary.data = &value->root;
+    slot->val.binary.len = VARSIZE(value) - VARHDRSZ;
+    return slot;
+}
+
+/* Keep the first failure for the statement-level errors tt_finish raises. */
+static void record_outcome(TtOwner *owner, const thinkthen_row *row, Jsonb *error)
+{
+    const char *family = thinkthen_code_family(row->error_code);
+    JsonbValue *message = tt_field(error, "message");
+    owner->rows++;
+    if (row->status != THINKTHEN_STATUS_FAILED) return;
+    owner->failed++;
+    if (family != NULL && !strcmp(family, "backend")) owner->backend_failed++;
+    if (owner->failed > 1) return;
+    owner->first_failed_code = row->error_code;
+    owner->first_failed_position = row->position;
+    owner->first_failed_message = message != NULL && message->type == jbvString
+        ? MemoryContextStrdup(owner->id_context, pnstrdup(message->val.string.val, message->val.string.len))
+        : MemoryContextStrdup(owner->id_context, thinkthen_code_name(row->error_code));
+}
+
+void tt_finish(TtOwner *owner)
+{
+    char *message;
+    /* A dead backend raises its error, as the command exits 4, not a page of failures. */
+    if (owner->rows > 0 && owner->backend_failed == owner->rows)
+        tt_raise(owner->first_failed_code, owner->first_failed_message, NULL);
+    if (owner->function != THINKTHEN_FUNCTION_FILTER || owner->failed == 0 || owner->keep_failures)
+        return;
+    message = psprintf("%llu of %llu records failed; the first, at position %llu, failed with %s: %s",
+        (unsigned long long)owner->failed, (unsigned long long)owner->rows,
+        (unsigned long long)owner->first_failed_position,
+        thinkthen_code_name(owner->first_failed_code), owner->first_failed_message);
+    tt_raise(owner->first_failed_code, message, "Pass failures => 'row' to return the failed rows with the kept rows.");
 }
 
 void tt_emit(TtOwner *owner, ReturnSetInfo *result)
@@ -106,6 +200,8 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
     Datum *values = palloc0(sizeof(Datum) * result->setDesc->natts);
     bool *nulls = palloc(sizeof(bool) * result->setDesc->natts);
     const char *status;
+    bool answered;
+    bool annotate = owner->function == THINKTHEN_FUNCTION_ANNOTATE;
     int column;
     if (owner->ids != NULL) {
         TtId *selected = hash_search(owner->ids, &row->position, HASH_FIND, NULL);
@@ -119,36 +215,46 @@ void tt_emit(TtOwner *owner, ReturnSetInfo *result)
     source = tt_json(&row->source);
     detail = tt_json(&row->detail);
     id = tt_json(&row->id);
-    status = row->status == THINKTHEN_STATUS_ANSWERED ? "answered" :
+    /* The id conversion above may turn an answered row into a failed one. */
+    answered = row->status == THINKTHEN_STATUS_ANSWERED;
+    status = answered ? "answered" :
         row->status == THINKTHEN_STATUS_UNSURE ? "unsure" : row->status == THINKTHEN_STATUS_FAILED ? "failed" : NULL;
     if (status == NULL || row->function != owner->function
         || (row->status == THINKTHEN_STATUS_FAILED && thinkthen_code_name(row->error_code) == NULL))
         ereport(ERROR, (errcode(tt_sqlstate(THINKTHEN_CODE_USAGE_ABI)), errmsg("%s", THINKTHEN_ABI_ERROR_MESSAGE), errdetail_internal("%s", THINKTHEN_ABI_ERROR_CODE)));
-    for (column = 0; column < result->setDesc->natts; column++) {
-        Form_pg_attribute attribute = TupleDescAttr(result->setDesc, column);
-        const char *name = NameStr(attribute->attname);
-        JsonbValue *value = NULL;
-        nulls[column] = false;
-        if (!strcmp(name, "position")) values[column] = Int64GetDatum(row->position);
-        else if (!strcmp(name, "probability")) {
-            nulls[column] = isnan(row->probability);
-            values[column] = Float8GetDatum(row->probability);
-        } else if (!strcmp(name, "rank")) {nulls[column] = row->status != THINKTHEN_STATUS_ANSWERED; values[column] = Int64GetDatum(row->rank);}
-        else if (!strcmp(name, "id")) {nulls[column] = id == NULL; if (id != NULL) values[column] = JsonbPGetDatum(id);}
-        else if (!strcmp(name, "kept")) values[column] = BoolGetDatum(row->status == THINKTHEN_STATUS_ANSWERED && row->answer_bool);
-        else {
-            if (!strcmp(name, "status")) {scalar.type = jbvString; scalar.val.string.val = (char *)status; scalar.val.string.len = strlen(status); value = &scalar;}
-            else if (!strcmp(name, "source")) {if (source) {scalar.type = jbvBinary; scalar.val.binary.data = &source->root; scalar.val.binary.len = VARSIZE(source) - VARHDRSZ; value = &scalar;}}
-            else if (!strcmp(name, "detail")) {if (detail) {scalar.type = jbvBinary; scalar.val.binary.data = &detail->root; scalar.val.binary.len = VARSIZE(detail) - VARHDRSZ; value = &scalar;}}
-            else if (!strcmp(name, "error_code")) value = tt_field(error, "code");
-            else if (!strcmp(name, "error_message")) value = tt_field(error, "message");
-            else if (!strcmp(name, "error_http_status")) value = tt_field(error, "http_status");
-            else if (!strncmp(name, "found_", 6)) value = tt_field(answer, name + 6);
-            else if (answer) {scalar.type = jbvBinary; scalar.val.binary.data = &answer->root; scalar.val.binary.len = VARSIZE(answer) - VARHDRSZ; value = &scalar;}
-            values[column] = tt_json_value(value, attribute->atttypid, &nulls[column]);
+    record_outcome(owner, row, error);
+    /* Filter returns kept rows, and failed rows only when the caller asks. */
+    if (owner->function != THINKTHEN_FUNCTION_FILTER || (answered && row->answer_bool)
+        || (row->status == THINKTHEN_STATUS_FAILED && owner->keep_failures)) {
+        for (column = 0; column < result->setDesc->natts; column++) {
+            Form_pg_attribute attribute = TupleDescAttr(result->setDesc, column);
+            const char *name = NameStr(attribute->attname);
+            JsonbValue *value = NULL;
+            nulls[column] = false;
+            if (!strcmp(name, "position")) values[column] = Int64GetDatum(row->position);
+            else if (!strcmp(name, "probability")) {
+                nulls[column] = isnan(row->probability);
+                values[column] = Float8GetDatum(row->probability);
+            } else if (!strcmp(name, "id")) {nulls[column] = id == NULL; if (id != NULL) values[column] = JsonbPGetDatum(id);}
+            else if (!strcmp(name, "answer") && owner->function == THINKTHEN_FUNCTION_RANK) {
+                nulls[column] = !answered;
+                values[column] = Int64GetDatum(row->rank);
+            } else if (!strcmp(name, "answer") && annotate) {
+                nulls[column] = !answered || answer == NULL;
+                if (!nulls[column]) values[column] = JsonbPGetDatum(bare_answers(answer));
+            } else {
+                if (!strcmp(name, "status")) {scalar.type = jbvString; scalar.val.string.val = (char *)status; scalar.val.string.len = strlen(status); value = &scalar;}
+                else if (!strcmp(name, "source")) value = binary(&scalar, source);
+                else if (!strcmp(name, "detail")) value = binary(&scalar, annotate && answered ? answer : detail);
+                else if (!strcmp(name, "error_code")) value = tt_field(error, "code");
+                else if (!strcmp(name, "error_message")) value = tt_field(error, "message");
+                else if (!strcmp(name, "error_http_status")) value = tt_field(error, "http_status");
+                else value = binary(&scalar, answer);
+                values[column] = tt_json_value(value, attribute->atttypid, &nulls[column]);
+            }
         }
+        tuplestore_putvalues(result->setResult, result->setDesc, values, nulls);
     }
-    tuplestore_putvalues(result->setResult, result->setDesc, values, nulls);
     if (owner->ids != NULL) {
         TtId *selected = hash_search(owner->ids, &row->position, HASH_FIND, NULL);
         if (selected != NULL) pfree((void *)selected->value.data);

@@ -7,4 +7,4 @@ SELECT 'rank' AS check_name, * FROM thinkthen_rank('SELECT ''Please refund the d
 SELECT 'find' AS check_name, * FROM thinkthen_find('SELECT ''Please refund the duplicate charge.'' AS record', 'When is the meeting?');
 SELECT 'annotate' AS check_name, * FROM thinkthen_annotate('SELECT ''Please refund the duplicate charge.'' AS record') WHERE toolbox = '{"refund":{"function":"decide","question":"Does the customer request a refund?"}}';
 SELECT 'recognize' AS check_name, * FROM thinkthen_recognize('SELECT ''Ada works for Acme.'' AS record') WHERE kinds = '["person","organization"]';
-SELECT 'relate' AS check_name, * FROM thinkthen_relate('SELECT ''Ada works for Acme.'' AS record') WHERE rules = '[{"name":"works_for","source":"person","target":"organization"}]';
+SELECT 'relate' AS check_name, * FROM thinkthen_relate('SELECT ''Ada works for Acme.'' AS record') WHERE rules = '[{"relation":"works_for","source":"person","target":"organization"}]';

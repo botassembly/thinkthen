@@ -1,0 +1,153 @@
+---
+title: R SDK
+description: "R SDK: ask the ten ThinkThen questions from R and get plain R vectors back, with NA for not sure."
+goal: The reader runs a first decide in R, installs the SDK, handles not sure and failures, and finds the R call for each of the ten functions.
+reader: An R developer who wants to ask questions about text from code or a data frame
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "R"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The R SDK gives R the ten functions, from `tt_decide()` to `tt_annotate()`; each takes your texts and gives back a plain R vector with one answer per text, such as `TRUE` or `FALSE` from decide, or `NA` when it is not sure.
+
+<Example id="functions/decide/r" title="refund.R" />
+
+`TRUE` means yes: the message asks for a refund.
+
+Install it (<Fact k="languages.r.requires" />):
+
+<InstallLine k="languages.r.install" lang="r" />
+
+The client uses the key from the [Quickstart](/quickstart/).
+
+## Handle not sure and failures
+
+Set a low bar and a high bar with `threshold = c(0.2, 0.8)`. Between them, decide is not sure, and the answer is `NA`. `if (NA)` stops with an error, so not sure never passes for no. When ThinkThen can't judge a text, such as a blank one, the call raises a `thinkthen_failed_rows` error instead of answering.
+
+<Example id="sdks/r/unsure" title="unsure.R" />
+
+A double charge might be a refund request, or might not, so the answer is `NA`: send it to a person. The blank text can't be judged, so the call raises, and the error's `code` is `record.empty`.
+
+Test `is.na()` before you branch on an answer. The error is raised only after every other text is judged; its `failed_rows` lists the texts that failed, and `rows` holds every outcome already paid for. Every ThinkThen error inherits `thinkthen_error` and carries a `code`; [Troubleshooting](/reference/troubleshooting/) lists each one.
+
+## The ten functions
+
+Each function takes the texts first, as a character vector, a list or a data frame, and answers each text in input order. Name `question =` so a swapped call can't ask the wrong question. Every program reads the same support-inbox messages as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about each text</summary>
+
+<Example id="functions/decide/r" title="decide.R" />
+
+Yes: the message asks for a refund. `tt_decide()` also takes `threshold`, one bar or a low and a high bar, and `yes_means` and `no_means`, which say in words what each answer means. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/r" title="choose.R" />
+
+A refund is about billing. The answer is one of your choices, or `NA` when not sure. `descriptions` says what each choice means, and `threshold` sets the bar. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the texts that answer yes</summary>
+
+<Example id="functions/filter/r" title="filter.R" />
+
+The parcel question is left out. `tt_filter()` gives back your own texts, in the form you passed, and leaves out the ones it is not sure about. If any text fails, it raises `thinkthen_failed_rows` after judging the rest, and the error's `kept` holds the kept texts. `tt_keep()` gives the same answer as `TRUE`, `FALSE` or `NA` for each text, for `dplyr::filter()`. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/r" title="tag.R" />
+
+The message is about both billing and shipping. `tt_tag()` gives a list with one character vector per text, so `[[1]]` takes the first. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/r" title="score.R" />
+
+The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every text, highest first</summary>
+
+<Example id="functions/rank/r" title="rank.R" />
+
+The double charge is the most urgent. Each text gets its rank, starting at 1, in input order, so `messages[order(urgency_rank)]` puts the most urgent first. With `top = 2`, ranks past the first two are `NA`. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/r" title="find.R" />
+
+The second line states the action. The answer has `$text`, `$start` and `$end`, counted in characters from 1 with the end included, so `substr(text, action$start, action$end)` gives the line. `$text` is `NA` when no line answers. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/r" title="recognize.R" />
+
+`tt_recognize()` gives a list with the names found in each text. Each name has `$text`, `$kind`, `$start`, `$end` and `$probability`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/r" title="relate.R" />
+
+`tt_rule()` names the kind of name at each end and the relation between them; `rules` takes one rule or a `list()` of them. Relate finds its own names, so it needs no recognize call first. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each text</summary>
+
+<Example id="functions/annotate/r" title="annotate.R" />
+
+`tt_annotate()` gives a tibble with one column per question, each of its own type, and `NA` where a question is not sure. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+`field = "/text"` judges the `text` column of a data frame, or the `text` field of each list. Each function has a `_rows` twin, such as `tt_decide_rows()`, that gives every outcome with its status and probability, and `tt_bind()` adds those to a copy of your data frame. `tt_client()` makes your own client, and Esc or Ctrl-C cancels a running call. The [R API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/r/API.md) lists every function and argument.

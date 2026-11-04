@@ -1,0 +1,22 @@
+[
+  {
+    "theme": "bug",
+    "answers": 1
+  },
+  {
+    "theme": "praise",
+    "answers": 2
+  },
+  {
+    "theme": "price",
+    "answers": 1
+  },
+  {
+    "theme": "shipping",
+    "answers": 1
+  },
+  {
+    "theme": "support",
+    "answers": 1
+  }
+]

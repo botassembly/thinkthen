@@ -2,11 +2,13 @@
 # Build one native package from prepared dependencies and a matching Rust archive.
 set -eu
 cd "$(dirname "$0")/../.."
+duckdb_version=$(python3 scripts/duckdb_release.py --version)
+extension_version=$(python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_metadata import version; print(version())')
 . scripts/native-build-env
 : "${THINKTHEN_DUCKDB_DEPS:?Set the prepared DuckDB dependency directory}"
 : "${THINKTHEN_SQL_ARCHIVE:?Set the matching PIC Rust archive}"
 : "${THINKTHEN_DUCKDB_OUTPUT:?Set the staging directory}"
-source=$THINKTHEN_DUCKDB_DEPS/duckdb-1.4.3
+source=$THINKTHEN_DUCKDB_DEPS/duckdb-$duckdb_version
 case $(uname -s) in
     Darwin) native="c;m;iconv;System;c;m;$(scripts/native-frameworks --cmake)" ;;
     Linux) native='c;m;rt;pthread;gcc_s;util;rt;pthread;m;dl;c' ;;
@@ -36,6 +38,6 @@ printf '%s' "$platform" > "$build/platform"
 printf '\000' > "$build/null"
 cmake -DEXTENSION="$THINKTHEN_DUCKDB_OUTPUT/thinkthen.duckdb_extension" \
     -DNULL_FILE="$build/null" -DPLATFORM_FILE="$build/platform" \
-    -DVERSION_FIELD=v1.4.3 -DABI_TYPE=CPP -P "$source/scripts/append_metadata.cmake"
+    -DVERSION_FIELD=v$duckdb_version -DEXTENSION_VERSION="$extension_version" -DABI_TYPE=CPP -P "$source/scripts/append_metadata.cmake"
 python3 scripts/package_inventory.py stage duckdb "$THINKTHEN_DUCKDB_OUTPUT"
 python3 scripts/package_inventory.py duckdb-terms "$source" "$THINKTHEN_DUCKDB_OUTPUT"

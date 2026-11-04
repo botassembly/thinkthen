@@ -71,6 +71,8 @@ mod output {
     /// Backend kind probabilities for one decoded name, including dropped names.
     #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
     pub(crate) struct KindDetail {
+        /// The original proposed name text.
+        pub(crate) text: String,
         /// Inclusive Unicode scalar offset.
         pub(crate) start: usize,
         /// Exclusive Unicode scalar offset.
@@ -138,13 +140,13 @@ struct Piece {
     mark: bool,
 }
 
-fn pieces(evidence: &str) -> Vec<Piece> {
+fn pieces(field: &str) -> Vec<Piece> {
     use unicode_general_category::{GeneralCategory as Category, get_general_category};
 
     let mut result: Vec<Piece> = Vec::new();
     let mut prefix = true;
     let mut word = false;
-    for (offset, (byte, ch)) in evidence.char_indices().enumerate() {
+    for (offset, (byte, ch)) in field.char_indices().enumerate() {
         if prefix
             && matches!(
                 ch,
@@ -217,16 +219,16 @@ fn pieces(evidence: &str) -> Vec<Piece> {
     clippy::indexing_slicing,
     reason = "piece indices come from decoding this same piece vector"
 )]
-fn snippet(evidence: &str, pieces: &[Piece], first: usize, last: usize) -> String {
+fn snippet(field: &str, pieces: &[Piece], first: usize, last: usize) -> String {
     let left = pieces[first.saturating_sub(6)].byte_start;
     let right = pieces[(last + 6).min(pieces.len() - 1)].byte_end;
     let start = pieces[first].byte_start;
     let end = pieces[last].byte_end;
     format!(
         "{}[[{}]]{}",
-        &evidence[left..start],
-        &evidence[start..end],
-        &evidence[end..right]
+        &field[left..start],
+        &field[start..end],
+        &field[end..right]
     )
 }
 
@@ -311,9 +313,9 @@ fn choices(answers: &[Result<AskAnswer, Error>]) -> Result<Vec<Vec<Probability>>
 }
 
 impl Recognize {
-    pub(crate) fn initial(&self, evidence: &str) -> Vec<Ask> {
-        let state: std::sync::Arc<str> = evidence.into();
-        let pieces = pieces(evidence);
+    pub(crate) fn initial(&self, field: &str) -> Vec<Ask> {
+        let state: std::sync::Arc<str> = field.into();
+        let pieces = pieces(field);
         let target = if self.kinds.is_empty() {
             "a proper name of a particular person, organization, place, product, work, event or other thing".to_owned()
         } else {
@@ -331,7 +333,7 @@ impl Recognize {
             .enumerate()
             .map(|(i, _)| Ask::Choice {
                 instructions: super::quoted(
-                    &snippet(evidence, &pieces, i, i),
+                    &snippet(field, &pieces, i, i),
                     &format!(
                         "What position does the [[ ]] piece have in {target}? Other names and ordinary words count as OUT. Dates, numbers and marks count as OUT when they are not part of the name's spelling. A category word before a name is OUT when it only describes the kind of thing named; include it only when it belongs to the proper name itself."
                     ),
@@ -345,12 +347,8 @@ impl Recognize {
             .collect()
     }
 
-    fn decoded(
-        &self,
-        evidence: &str,
-        answers: &[Result<AskAnswer, Error>],
-    ) -> Result<Decoded, Error> {
-        let pieces = pieces(evidence);
+    fn decoded(&self, field: &str, answers: &[Result<AskAnswer, Error>]) -> Result<Decoded, Error> {
+        let pieces = pieces(field);
         let probabilities = choices(answers)?;
         let weights = probabilities
             .iter()
@@ -380,14 +378,14 @@ impl Recognize {
 
     pub(crate) fn kinds(
         &self,
-        evidence: &str,
+        field: &str,
         answers: &[Result<AskAnswer, Error>],
     ) -> Result<Vec<Ask>, Error> {
-        let (pieces, _, spans) = self.decoded(evidence, answers)?;
+        let (pieces, _, spans) = self.decoded(field, answers)?;
         if self.kinds.is_empty() {
             return Ok(Vec::new());
         }
-        let state: std::sync::Arc<str> = evidence.into();
+        let state: std::sync::Arc<str> = field.into();
         let mut options = self.kinds.clone();
         options.push(
             option("none of these").description("The marked words are not a proper name, merely describe a category, or name something outside the listed kinds."),
@@ -396,7 +394,7 @@ impl Recognize {
             .into_iter()
             .map(|span| Ask::Choice {
                 instructions: super::quoted(
-                    &snippet(evidence, &pieces, span.first, span.last),
+                    &snippet(field, &pieces, span.first, span.last),
                     "Consider what the words marked [[ ]] refer to in this text. Which listed kind of name fits them? Select none of these if the words are not a proper name, or if none of the listed kinds describes what they name. A word that merely names a category is not a proper name, even when that category is a listed kind. Select none of these for such a word.",
                 ),
                 options: options.clone(),
@@ -411,11 +409,11 @@ impl Recognize {
     )]
     pub(crate) fn finish(
         &self,
-        evidence: &str,
+        field: &str,
         boundary: &[Result<AskAnswer, Error>],
         kind_answers: &[Result<AskAnswer, Error>],
     ) -> Result<(Vec<Name>, RecognizeDetail), Error> {
-        let (pieces, probabilities, spans) = self.decoded(evidence, boundary)?;
+        let (pieces, probabilities, spans) = self.decoded(field, boundary)?;
         let kinds = choices(kind_answers)?;
         let mut detail = RecognizeDetail {
             pieces: pieces
@@ -445,6 +443,7 @@ impl Recognize {
                 let mut labels: Vec<_> = self.kinds.iter().map(ChoiceOption::label).collect();
                 labels.push("none of these");
                 detail.names.push(KindDetail {
+                    text: field.chars().skip(start).take(end - start).collect(),
                     start,
                     end,
                     kinds: labels
@@ -462,7 +461,7 @@ impl Recognize {
             let p = probability(span.p * kind_p);
             if self.threshold.verdict(p) == Verdict::Yes {
                 names.push(Name {
-                    text: evidence.chars().skip(start).take(end - start).collect(),
+                    text: field.chars().skip(start).take(end - start).collect(),
                     start,
                     end,
                     kind,
@@ -495,7 +494,7 @@ impl super::Function for Recognize {
         record: &crate::core::AdmittedRecord,
         _limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        Ok(self.initial(record.evidence()))
+        Ok(self.initial(record.field()))
     }
     fn followup_record(
         context: crate::core::FunctionAnswers<'_, Self>,
@@ -504,11 +503,11 @@ impl super::Function for Recognize {
         let question = context.question();
         let record = context.record();
         let answers = context.answers();
-        let evidence = record.evidence();
-        if answers.len() > pieces(evidence).len() {
+        let field = record.field();
+        if answers.len() > pieces(field).len() {
             Ok(Vec::new())
         } else {
-            question.kinds(evidence, answers)
+            question.kinds(field, answers)
         }
     }
     fn read_record(
@@ -518,11 +517,11 @@ impl super::Function for Recognize {
         let question = context.question();
         let record = context.record();
         let answers = context.answers();
-        let evidence = record.evidence();
-        let count = pieces(evidence).len();
+        let field = record.field();
+        let count = pieces(field).len();
         let (boundary, kinds) = answers.split_at(count);
         question
-            .finish(evidence, boundary, kinds)
+            .finish(field, boundary, kinds)
             .map(|(names, detail)| Outcome::Answered {
                 answer: Answer::Names(names),
                 p: None,

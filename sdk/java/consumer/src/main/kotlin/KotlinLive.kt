@@ -1,4 +1,4 @@
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 
@@ -12,8 +12,8 @@ fun main() = runBlocking {
         println(client.filter("Does this state employment?",listOf(text,"A parcel arrived.")).toList())
         println(client.rank("How clearly is employment stated?",listOf(text,"A parcel arrived."),listOf("unclear","clear")).toList())
         println(client.find("Who works for Acme?",text))
-        println(client.toolbox(AnnotationQuestions(mapOf("employment" to Decide("Does this state employment?")))).annotate(text))
+        println(client.annotate(AnnotationQuestions(mapOf("employment" to Decide("Does this state employment?"))),text))
         println(client.recognize(text,listOf("person","company")))
-        println(client.relate(text,listOf(RelationRule("works_for","person","company"))))
+        println(client.relate(text,listOf(RelationRule("person","company","works_for"))))
     }
 }

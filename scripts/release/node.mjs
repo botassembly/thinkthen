@@ -4,16 +4,19 @@ import { ThinkThen } from 'thinkthen';
 
 for (const fixture of JSON.parse(await readFile(process.argv[2], 'utf8'))) {
   const { question, records, name: executionName } = fixture.request;
-  const { function: name, questions, evidence } = question;
+  const { function: name, questions, field } = question;
   const hostQuestion = hostValue(question);
   const value = name === 'annotate' ? hostQuestion.questions : hostQuestion;
-  const options = { ...(name === 'annotate' && evidence !== undefined ? {evidence} : {}),
+  const options = { ...(name === 'annotate' && field !== undefined ? {field} : {}),
     ...(executionName === undefined ? {} : {name: executionName}) };
   const client = new ThinkThen(fixture.client);
   let actual;
   try {
     const items = await client[`${name}Stream`](value, records, options).toArray();
-    actual = name === 'filter' ? items.map(item => item.row) : items;
+    actual = name === 'filter' ? items.map(item => item.row) : name === 'rank' ? items.map(({item, ...row}) => {
+      assert.deepEqual(item, records[row.position - 1]);
+      return row;
+    }) : items;
     if (name === 'filter') for (const item of items) {
       assert.equal(item.item, records[item.row.position - 1]);
       assert.equal(item.kept, item.row.status === 'answered' && item.row.answer === true);
@@ -25,12 +28,12 @@ for (const fixture of JSON.parse(await readFile(process.argv[2], 'utf8'))) {
     if (name === 'annotate' && row.status === 'answered') {
       for (const [entry, outcome] of Object.entries(row.answer)) {
         if (['find', 'recognize', 'relate'].includes(outcome.function)) {
-          projectOffsets(outcome, selectedText(record, questions[entry].evidence ?? evidence));
+          projectOffsets(outcome, selectedText(record, questions[entry].field ?? field));
         }
       }
     } else if (['find', 'recognize', 'relate'].includes(name)) {
-      projectOffsets(row.answer, selectedText(record, evidence));
-      projectOffsets(row.detail, selectedText(record, evidence));
+      projectOffsets(row.answer, selectedText(record, field));
+      projectOffsets(row.detail, selectedText(record, field));
     }
   }
   assert.deepEqual(actual, hostValue(expected), name);

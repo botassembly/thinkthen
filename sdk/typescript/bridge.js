@@ -4,11 +4,11 @@ import { fileURLToPath } from "node:url";
 import { ABI_VERSION, ABI_VERSION_EXPORT, ABI_EXPORTS, ABI_CODE, ABI_MESSAGE } from "./contract.js";
 import { ERROR_CODES } from "./errors.js";
 /** @typedef {import('./index.d.ts').ErrorCode} ErrorCode */
-/** @typedef {(data: string, text: boolean, invalid?: boolean, idKind?: string, idValue?: string) => void} Reply */
+/** @typedef {(data: string, text: boolean, invalid?: boolean, idKind?: string, idValue?: string, missing?: boolean) => void} Reply */
 /** @typedef {(error: Error | null, kind: string, data: string, reply: Reply) => void} Callback */
 /** @typedef {{cancel(): void, close(): void, reference(): void, unreference(): void}} Operation */
 /** @typedef {{start(request: string, callback: Callback): Operation, startFinite(request: string, callback: Callback): Operation, close(): void}} NativeClient */
-/** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
+/** @typedef {{Client: new (settings: string) => NativeClient, parseToolbox(json: string): string, serializeToolbox(json: string): string, rejectRecordKind(): never, rejectCancellation(): never, rejectSettingsConversion(): never, rejectQuestionConversion(): never}} Native */
 export const RULE_FIELDS = Object.freeze({ name: "relation", phrase: "reads", symmetric: "either" });
 export class ThinkThenError extends Error {
   /** @param {{code: ErrorCode, message: string, httpStatus?: number}} error @param {ErrorOptions} [options] */
@@ -150,7 +150,7 @@ export function hostValue(value) {
 /** @param {unknown} value @returns {unknown} */
 export function snapshot(value) { return hostSnapshot(JSON.parse(encode(value))); }
 /** @param {unknown} value @returns {unknown} */
-function hostSnapshot(value) {
+export function hostSnapshot(value) {
   if (value !== null && typeof value === "object") {
     for (const item of Object.values(value)) hostSnapshot(item);
     Object.freeze(value);
@@ -158,8 +158,15 @@ function hostSnapshot(value) {
   return value;
 }
 
-/** @param {import('./index.d.ts').RecordInput} record @returns {{data: string, idKind?: string, idValue?: string}} */
+/** @param {import('./index.d.ts').RecordInput} record @returns {{data: string, idKind?: string, idValue?: string, missing?: boolean}} */
 export function encodeRecord(record) {
+  if (record === undefined) return {data: "null", missing: true};
   const converted = jsonValue(record, true);
   return {data: JSON.stringify(converted.value), ...(converted.id === undefined ? {} : {idKind: "integer", idValue: converted.id.toString()})};
+}
+
+/** Refuse a collection supplied in a scalar slot, or a scalar in a stream slot. @returns {never} */
+export function rejectRecordKind() {
+  try { return loadNative().rejectRecordKind(); }
+  catch (error) { throw nativeError(error); }
 }

@@ -9,5 +9,8 @@
 
 /sdk/typescript/errors.js
 /sdk/typescript/errors.d.ts
+/sdk/typescript/platforms.js
 
 /sdk/typescript/node_modules/
+# Function cell route scaffolds are regenerated from the matrix.
+/site/src/content/docs/function-cells/

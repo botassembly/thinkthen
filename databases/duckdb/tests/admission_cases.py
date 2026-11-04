@@ -12,7 +12,7 @@ def cases(root, surface):
     fixtures = json.loads((root / 'conformance/public-contract/usage-admission.json').read_text())
     reasons = {
         'Integer score levels': 'native levels convert or reject members before canonical JSON admission',
-        'TypeScript saved toolbox array evidence': 'SQL has no saved toolbox entries envelope',
+        'TypeScript saved toolbox array field': 'SQL has no saved toolbox entries envelope',
         'SQLite wrong-type settings': 'native setting values reject strings before canonical settings JSON admission',
         'R tags in a serialized question': 'native tag arguments expose labels and cannot carry an unknown JSON field',
         'Malformed relation rule source': 'native rule composites convert or reject source before canonical JSON admission',

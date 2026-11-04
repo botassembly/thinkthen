@@ -1,0 +1,3 @@
+a1	true
+a2	false
+a3	true

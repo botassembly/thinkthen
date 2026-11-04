@@ -1,0 +1,4 @@
+                                message  refund     topic  urgency
+0               Please refund my order.    True   billing     0.05
+1                   Where is my parcel?   False  shipping     0.14
+2  I was charged twice for one invoice.    True   billing     0.45

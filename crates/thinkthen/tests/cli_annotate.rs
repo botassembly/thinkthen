@@ -23,6 +23,8 @@ fn single_record_annotations_use_selected_adapter_and_preserve_entry_failure() {
         .unwrap();
     assert_eq!(rejected.status.code(), Some(2));
     assert_eq!(support::reported(&rejected), "usage.key-missing");
+    let field = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(field.path(), "evidence").unwrap();
     for (probability, expected_code, expected_status) in [(0.9, 0, "answered"), (2.0, 6, "failed")]
     {
         let server = Loopback::start(move |_| {
@@ -37,6 +39,7 @@ fn single_record_annotations_use_selected_adapter_and_preserve_entry_failure() {
             .arg(definition)
             .args(["--from", "text", "--json"])
             .args(["--backend", "openai", "--url", server.base()])
+            .arg(field.path())
             .env("OPENAI_API_KEY", KEY)
             .output()
             .unwrap();
@@ -130,7 +133,7 @@ fn flags_override_toolbox_settings_and_entry_failure_sets_exit_code() {
             "--json",
             "--model",
             "flag",
-            "--evidence",
+            "--field",
             "/selected",
             "--batch",
             "3",
@@ -181,7 +184,7 @@ fn annotation_admission_preserves_shared_error_codes_before_backend_requests() {
             "usage.threshold",
         ),
         (
-            r#"{"a":{"function":"decide","question":"A?","evidence":"invalid"}}"#,
+            r#"{"a":{"function":"decide","question":"A?","field":"invalid"}}"#,
             "usage.pointer",
         ),
         (
@@ -203,9 +206,12 @@ fn annotation_admission_preserves_shared_error_codes_before_backend_requests() {
         assert_eq!(server.count(), 0);
     }
     let file = toolbox(r#"{"a":{"function":"decide","question":"A?","threshold":0.5}}"#);
+    let field = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(field.path(), "evidence").unwrap();
     let output = support::command()
         .arg("annotate")
         .arg(file.path())
+        .arg(field.path())
         .args(["--from", "text", "--json", "--url", server.base()])
         .env("THINKTHEN_API_KEY", KEY)
         .output()

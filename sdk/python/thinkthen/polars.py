@@ -1,4 +1,4 @@
-"""Materialize native Polars Struct columns at an eager boundary."""
+"""Return native answer columns or explicit outcome details at an eager boundary."""
 
 from __future__ import annotations
 
@@ -171,19 +171,61 @@ def series(
 
 
 @pl.api.register_series_namespace("thinkthen")
-class ThinkThenNamespace(ColumnMethods[pl.Series]):
+class ThinkThenNamespace(ColumnMethods[pl.Series, pl.Series, pl.Series]):
+    _value: pl.Series
+
     def _records(self) -> Iterable[Any]:
         for value in self._value:
             yield value.to_list() if isinstance(value, pl.Series) else value
+
+    def _answers(self, function: str, rows: list[Any], question: object) -> pl.Series:
+        outcomes = series(rows, function, question)
+        answers = outcomes.struct.field("answer")
+        if function == "annotate":
+            answers = pl.DataFrame(
+                [
+                    answers.struct.field(name).struct.field("answer").alias(name)
+                    for name in annotation_definitions(question, rows)
+                ]
+            ).to_struct()
+            answers = pl.select(
+                pl.when(outcomes.struct.field("answer").is_not_null())
+                .then(answers)
+                .otherwise(None)
+            ).to_series()
+        # Rank/top and any reordered outcomes are aligned to the input positions.
+        positions = {row.position - 1: index for index, row in enumerate(rows)}
+        order = pl.Series(
+            [positions.get(index) for index in range(len(self._value))], dtype=pl.Int64
+        )
+        return answers.gather(order).rename(self._value.name)
+
+    def _kept(self, rows: list[Any]) -> pl.Series:
+        return self._value.gather([row.position - 1 for row in rows if row.kept])
 
     def _frame(self, function: str, rows: list[Any], question: object) -> pl.Series:
         return series(rows, function, question, self._value.dtype)
 
 
 @pl.api.register_dataframe_namespace("thinkthen")
-class ThinkThenFrameNamespace(ColumnMethods[pl.DataFrame]):
+class ThinkThenFrameNamespace(ColumnMethods[pl.Series, pl.DataFrame, pl.DataFrame]):
+    _value: pl.DataFrame
+
     def _records(self) -> Iterable[Any]:
         yield from self._value.iter_rows(named=True)
+
+    def _answers(self, function: str, rows: list[Any], question: object) -> pl.Series:
+        # The same answer projection applies to columns and whole records.
+        source = self._value.to_struct("answer")
+        return ThinkThenNamespace(source)._answers(function, rows, question)
+
+    def _kept(self, rows: list[Any]) -> pl.DataFrame:
+        kept = {row.position - 1 for row in rows if row.kept}
+        return self._value.filter(
+            pl.Series(
+                [index in kept for index in range(len(self._value))], dtype=pl.Boolean
+            )
+        )
 
     def _frame(self, function: str, rows: list[Any], question: object) -> pl.DataFrame:
         source: pl.DataFrame = self._value

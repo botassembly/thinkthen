@@ -17,20 +17,20 @@ func TestFiniteInvalidRecordKeepsNeighborBatch(t *testing.T) {
 	}
 	b := startBackend(t, fixture)
 	batch := 32
-	c := apiClientFor(t, tt.Config{Backend: tt.SystemOne, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: &batch})
+	c := apiClientFor(t, tt.Config{Backend: tt.SystemOne, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: batch})
 	rows := collect(t, c.DecideAll(context.Background(), tt.NewDecide("Ready?"), tt.Records(tt.Text("alpha"), tt.RawJSON([]byte("{bad")), tt.Text("beta"))))
 	if len(rows) != 3 {
 		t.Fatal("finite records disappeared")
 	}
 	for i, row := range rows {
-		if row.Position() != uint64(i+1) {
+		if row.Position() != i+1 {
 			t.Fatal("slot order changed")
 		}
 		if i == 1 {
 			if row.Status() != tt.Failed {
 				t.Fatal("invalid slot not failed")
 			}
-		} else if v, ok := row.Value(); !ok || !v {
+		} else if v, ok := valueOf(row); !ok || !v {
 			t.Fatal("valid neighbor failed")
 		}
 	}

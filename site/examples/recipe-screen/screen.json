@@ -1,0 +1,15 @@
+{
+  "field": "/text",
+  "questions": {
+    "empirical": {
+      "function": "decide",
+      "question": "Does the abstract report an empirical study with data?",
+      "threshold": {"low": 0.3, "high": 0.7}
+    },
+    "topic": {
+      "function": "decide",
+      "question": "Is the study about software testing?",
+      "threshold": {"low": 0.3, "high": 0.7}
+    }
+  }
+}

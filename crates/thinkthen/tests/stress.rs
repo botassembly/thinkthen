@@ -121,7 +121,7 @@ fn spawn_command(
             question,
             "--from",
             "jsonl",
-            "--evidence",
+            "--field",
             "/body",
             "--json",
             "--backend",

@@ -11,7 +11,7 @@ int32_t test_run_missing(thinkthen_row *out, thinkthen_error *error) {
     assert(thinkthen_settings_new(&settings, &setup) == THINKTHEN_OK);
     assert(thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &setup) == THINKTHEN_OK);
     assert(thinkthen_client_open(settings, &client, &setup) == THINKTHEN_OK);
-    assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const uint8_t *)"Ready?", 6, &question, &setup) == THINKTHEN_OK);
+    assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6, &question, &setup) == THINKTHEN_OK);
     int32_t result = thinkthen_run_one(client, question, NULL, 0, THINKTHEN_RECORD_MISSING, out, error);
     thinkthen_question_free(question);
     thinkthen_client_free(client);

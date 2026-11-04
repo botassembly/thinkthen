@@ -3,6 +3,7 @@
     clippy::disallowed_types,
     reason = "schema derives construct metadata; result values are typed"
 )]
+mod answer;
 mod functions;
 mod values;
 use super::{
@@ -10,6 +11,7 @@ use super::{
     questions::{self, FunctionName},
     records::RecordId,
 };
+pub use answer::{Annotations, NoAnswer};
 use functions::{labels, levels};
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU64;
@@ -17,6 +19,10 @@ pub use values::*;
 
 pub(crate) mod sealed {
     pub trait Sealed {}
+    /// The plain text a row prints for its answer.
+    pub trait Text {
+        fn text(&self, out: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+    }
 }
 pub(crate) trait Decode: Function {
     fn answer(value: crate::core::Answer) -> Result<Self::Answer, Error>;
@@ -42,6 +48,8 @@ pub trait Function:
     /// The answer returned by this function.
     type Answer: Clone
         + std::fmt::Debug
+        + PartialEq
+        + sealed::Text
         + Serialize
         + serde::de::DeserializeOwned
         + schemars::JsonSchema
@@ -50,6 +58,7 @@ pub trait Function:
     /// The function's optional backend detail.
     type Detail: Clone
         + std::fmt::Debug
+        + PartialEq
         + Serialize
         + serde::de::DeserializeOwned
         + schemars::JsonSchema
@@ -60,7 +69,9 @@ pub trait Function:
 }
 super::abi::discriminators! {
     /// The result status, independent of the backend.
-    #[non_exhaustive]
+    ///
+    /// The set is closed, so a `match` with one arm for each status compiles
+    /// without a catch-all arm, and the compiler flags a missed not-sure case.
     #[derive(Debug,Clone,Copy,PartialEq,Eq,Serialize,Deserialize,schemars::JsonSchema)]
     #[serde(rename_all="lowercase")]
     pub enum Status {
@@ -73,8 +84,9 @@ super::abi::discriminators! {
     }
 }
 /// A status-specific answer with no untyped payload.
-#[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+///
+/// The set is closed: an exhaustive `match` needs no catch-all arm.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(
     tag = "status",
     rename_all = "lowercase",
@@ -140,7 +152,7 @@ impl<A, D> Outcome<A, D> {
 }
 /// The execution question and attempted route, including on failed rows.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Source {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -171,8 +183,13 @@ impl Source {
         &self.model
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct FunctionTag<F>(std::marker::PhantomData<F>);
+impl<F: Function> std::fmt::Debug for FunctionTag<F> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&F::NAME, formatter)
+    }
+}
 impl<F: Function> Serialize for FunctionTag<F> {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         F::NAME.serialize(s)
@@ -208,8 +225,19 @@ pub struct Row<F: Function> {
     #[serde(skip_serializing_if = "Option::is_none")]
     id: Option<RecordId>,
     source: Source,
+    #[serde(skip)]
+    #[schemars(skip)]
+    original: Option<Box<super::records::Record>>,
     #[serde(flatten)]
     outcome: Outcome<F::Answer, F::Detail>,
+}
+impl Row<questions::Rank> {
+    /// The owned original input retained with this ranked result.
+    /// Deserialized rows do not carry an original input.
+    #[must_use]
+    pub fn record(&self) -> Option<&super::records::Record> {
+        self.original.as_deref()
+    }
 }
 impl<F: Function> Row<F> {
     pub(crate) fn new(
@@ -223,8 +251,13 @@ impl<F: Function> Row<F> {
             position,
             id,
             source,
+            original: None,
             outcome,
         }
+    }
+    pub(crate) fn with_original(mut self, original: Option<super::records::Record>) -> Self {
+        self.original = original.map(Box::new);
+        self
     }
     /// The stable function discriminator.
     #[must_use]
@@ -273,16 +306,6 @@ impl<F: Function> Row<F> {
             _ => None,
         }
     }
-    /// Choose to return a record failure as an error. Unsure remains no answer.
-    /// # Errors
-    /// Returns this record's error for a failed outcome.
-    pub fn into_result(self) -> Result<Option<F::Answer>, Error> {
-        match self.outcome {
-            Outcome::Answered { answer, .. } => Ok(Some(answer)),
-            Outcome::Unsure { .. } => Ok(None),
-            Outcome::Failed { error } => Err(error),
-        }
-    }
     pub(crate) fn from_outcome(
         position: NonZeroU64,
         id: Option<RecordId>,
@@ -294,6 +317,14 @@ impl<F: Function> Row<F> {
     {
         let outcome = admit_outcome::<F>(outcome)?;
         Ok(Self::new(position, id, source, outcome))
+    }
+}
+impl<F: Function> PartialEq for Row<F> {
+    fn eq(&self, other: &Self) -> bool {
+        self.position == other.position
+            && self.id == other.id
+            && self.source == other.source
+            && self.outcome == other.outcome
     }
 }
 impl Row<questions::Filter> {

@@ -1,0 +1,33 @@
+---
+// No syntax highlighter: tabs, JSON spacing and blank lines are captured bytes.
+import { outputNotice, outputHtml } from '../lib/examples.mjs';
+interface Props { text: string; stream: 'stdout' | 'stderr' }
+const { text, stream } = Astro.props;
+---
+<div class="captured-output" data-captured-stream={stream}>
+  {outputNotice(text) && <p class="empty-output">{outputNotice(text)}</p>}
+  <pre><code set:html={outputHtml(text)} /><button type="button" aria-label="Copy output" data-copy-output>Copy</button></pre>
+</div>
+<script>
+  import { copyText } from '../lib/clipboard.mjs';
+  document.addEventListener('click', async (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-copy-output]');
+    if (!button) return;
+    try {
+      await copyText(button.parentElement!.querySelector('code')!.textContent ?? '');
+      button.dataset.state = 'copied';
+      button.setAttribute('aria-label', 'Output copied');
+    } catch {
+      button.dataset.state = 'failed';
+      button.setAttribute('aria-label', 'Copy failed');
+    } finally { button.focus({ preventScroll: true }); }
+  });
+</script>
+<style>
+  .captured-output { position: relative; margin: 0; }
+  .empty-output { margin: 0; color: var(--sl-color-gray-3); font-size: var(--sl-text-sm); }
+  pre { position: relative; min-block-size: 46px; margin: 0; padding: 0.5rem 3.5rem 0.5rem 0.75rem; border: 1px solid var(--sl-color-gray-5); background: var(--sl-color-bg-inline-code); }
+  code { white-space: break-spaces; overflow-wrap: anywhere; font: inherit; }
+  button { position: absolute; inset-block-start: 0; inset-inline-end: 0; min-width: 44px; min-height: 44px; font-size: var(--sl-text-xs); cursor: pointer; border: 0; background: var(--sl-color-bg); color: var(--sl-color-text); }
+  button:focus-visible { outline: 2px solid var(--sl-color-text-accent); outline-offset: -2px; }
+</style>

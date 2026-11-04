@@ -1,0 +1,10 @@
+#!/bin/sh
+# Prepare the shared fixture assets and run the installed PostgreSQL gate on a Linux builder.
+set -eu
+cd "$(dirname "$0")/../../.."
+. scripts/native-tools-env
+scripts/postgres-prepare
+scripts/native-prepare >/dev/null
+scripts/native-test-assets prepare
+eval "$(scripts/native-test-assets env)"
+exec scripts/postgres-gate "${1:-all}"

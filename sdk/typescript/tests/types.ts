@@ -1,13 +1,13 @@
 import {
   ThinkThen, UsageError, CancelledError, decide, choose, tag, score, find,
-  recognize, relate, defineToolbox, type AnyRow, type RowErrorCode,
+  recognize, relate, defineToolbox, answer, type AnyRow, type RowErrorCode,
   type ErrorCode, type ChooseRow, type RecognizeDetail,
 } from "../index.js";
 
 // Feature: required lists and native TypeScript inference.
 const client = new ThinkThen({ backend: "openai", apiKey: "test-only", batch: 3,
   retry: { maxRetries: 1, initialBackoffMs: 1, attemptTimeoutMs: 500 } });
-const selected = await choose("Team?", "Refund", { choices: ["billing", "shipping"] });
+const selected = await choose("Team?", "Refund", { choices: ["billing", "shipping"] }).row();
 const exact: ChooseRow<"billing" | "shipping"> = selected;
 if (selected.status === "answered") {
   const answer: "billing" | "shipping" = selected.answer;
@@ -19,7 +19,7 @@ if (selected.status === "answered") {
   selected.answer = "billing";
   void outside;
 }
-const tagged = await tag("Topics?", "Refund", { labels: ["billing", "shipping"] });
+const tagged = await tag("Topics?", "Refund", { labels: ["billing", "shipping"] }).row();
 if (tagged.status === "answered") {
   const labels: readonly ("billing" | "shipping")[] = tagged.answer;
   void labels;
@@ -45,7 +45,7 @@ find("Who?", "Ada", { threshold: { low: 0.2, high: 0.8 } });
 recognize(["person"], "Ada", { threshold: { low: 0.2, high: 0.8 } });
 // @ts-expect-error relate takes a numeric threshold
 relate([{ name: "knows", source: "person", target: "person" }], "Ada", { threshold: { low: 0.2, high: 0.8 } });
-await decide("Ready?", "yes", { threshold: { low: 0.2, high: 0.8 }, evidence: ["body", 0] });
+await decide("Ready?", "yes", { threshold: { low: 0.2, high: 0.8 }, field: ["body", 0] });
 // @ts-expect-error threshold strings are removed
 decide("Ready?", "yes", { threshold: "0.2:0.8" });
 // @ts-expect-error on is removed
@@ -112,12 +112,12 @@ const toolbox = defineToolbox({
   names: { function: "recognize", kinds: ["person"] },
   urgency: { function: "score", question: "Urgent?", levels: ["low", "high"] },
 });
-const fromEntry: ChooseRow<"billing" | "shipping"> = await client.choose(toolbox.topic, "Refund");
+const fromEntry: ChooseRow<"billing" | "shipping"> = await client.choose(toolbox.topic, "Refund").row();
 // @ts-expect-error a selected question carries its own lists
 client.choose(toolbox.topic, "Refund", { choices: ["other"] });
 // @ts-expect-error wrong function question
 client.decide(toolbox.topic, "Refund");
-const annotation = await client.annotate(toolbox, "Refund");
+const annotation = await client.annotate(toolbox, "Refund").row();
 if (annotation.status === "answered" && annotation.answer.topic.status === "answered") {
   const answer: "billing" | "shipping" = annotation.answer.topic.answer;
   // @ts-expect-error child outcomes omit position
@@ -158,3 +158,35 @@ await client.decide("Ready?", "message", {name:"triage"});
 await client.decide("Ready?", {id: 18446744073709551615n, body: "same"});
 // @ts-expect-error usage error constructors preserve their code family
 new UsageError({code:"backend.transport",message:"wrong family"});
+
+const directAnswer: boolean = await decide("Ready?", "evidence");
+const typedAnswer: "billing" | "shipping" = await choose("Team?", "evidence", {choices:["billing", "shipping"]});
+const metadata = await decide("Ready?", "evidence").row();
+// @ts-expect-error a single call cannot silently judge an array as one record
+decide("Ready?", ["first", "second"]);
+// @ts-expect-error a stream cannot silently consume a string character by character
+client.decideStream("Ready?", "evidence");
+void [directAnswer, typedAnswer, metadata];
+
+if (metadata.status === "answered") {
+  const probabilityOfYes: number = metadata.probability;
+  void probabilityOfYes;
+}
+
+await decide("Ready?", "evidence", {yesMeans:"Prepared",noMeans:"Not prepared"});
+await choose("Team?", "evidence", {choices:["billing","shipping"], descriptions:{billing:"Payment issues"}});
+// @ts-expect-error descriptions must refer to an allowed choice
+choose("Team?", "evidence", {choices:["billing","shipping"], descriptions:{other:"Not allowed"}});
+
+const entries = await client.annotate(toolbox, "evidence");
+const entryAnswer: "billing" | "shipping" = answer(entries.topic);
+const scoreAnswer: number = answer(entries.urgency);
+// @ts-expect-error entry extraction preserves the declared choice domain
+const wrongEntry: "other" = answer(entries.topic);
+void [entryAnswer, scoreAnswer, wrongEntry];
+
+for await (const row of client.rankStream("Priority?", records, {levels:["low","high"],field:"/body"})) {
+  const original: typeof records[number] | undefined = row.item;
+  const applicationField: number | undefined = row.item?.appField;
+  void [original, applicationField];
+}

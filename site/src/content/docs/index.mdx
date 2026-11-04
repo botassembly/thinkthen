@@ -1,0 +1,35 @@
+---
+title: ThinkThen
+description: ThinkThen answers questions about text, such as whether a customer asks for a refund, with answers your script or program can act on.
+goal: A newcomer learns what ThinkThen is, sees one real answer, finds the function that fits their question, and goes to the Quickstart.
+reader: A developer or agent who heard of ThinkThen and wants to know whether it fits a job
+kind: index
+verified: 2026-11-03
+tableOfContents: false
+---
+import Example from '../../components/Example.astro';
+
+ThinkThen answers a question about a piece of text, such as whether a customer's message asks for a refund. It gives an answer your script or program can act on: yes or no, one of your choices, a score, or not sure when the text could go either way.
+
+This message asks for a refund, so the answer is `true`:
+
+<Example id="start/decide-yes" />
+
+## Pick the function that fits your question
+
+- [decide](/functions/decide/): yes, no or not sure.
+- [choose](/functions/choose/): one of your choices, or not sure.
+- [filter](/functions/filter/): keeps the lines that answer yes.
+- [tag](/functions/tag/): every label that fits.
+- [score](/functions/score/): a number from 0 to 1 along your levels.
+- [rank](/functions/rank/): your lines in order along your levels.
+- [find](/functions/find/): the one line that answers, or none.
+- [recognize](/functions/recognize/): the names of the kinds you ask for.
+- [relate](/functions/relate/): how those names connect.
+- [annotate](/functions/annotate/): several questions about each line at once.
+
+The same ten functions work from the command line, from thirteen programming languages, and inside DuckDB, SQLite and PostgreSQL.
+
+## Start
+
+[Quickstart](/quickstart/): install ThinkThen and ask your first question in four steps.

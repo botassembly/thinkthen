@@ -4,7 +4,7 @@
 #include <iterator>
 namespace thinkthen { inline namespace v0_2 {
 namespace detail {
-inline record borrowed(const owned_record& r) {
+[[nodiscard]] inline record borrowed(const owned_record& r) {
     return std::visit([](const auto& value) -> record {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, owned_text>) return text{value.value};
@@ -12,7 +12,7 @@ inline record borrowed(const owned_record& r) {
         else return missing_record{};
     }, r);
 }
-inline owned_record owned(record r) {
+[[nodiscard]] inline owned_record owned(record r) {
     return std::visit([](const auto& value) -> owned_record {
         using T = std::decay_t<decltype(value)>;
         if constexpr (std::is_same_v<T, text>) return owned_text{std::string(value.value)};
@@ -42,6 +42,15 @@ inline thinkthen_record_input input(const owned_record& r) {
     return input(borrowed(r));
 }
 
+template<class Iterator> std::vector<owned_record> own_records(Iterator first, Iterator last) {
+    std::vector<owned_record> records;
+    for (; first != last; ++first) {
+        if constexpr (std::is_convertible_v<decltype(*first), std::string_view>) records.emplace_back(owned_text{std::string(std::string_view(*first))});
+        else records.emplace_back(*first);
+    }
+    return records;
+}
+
 struct call_state {
     thinkthen_call* call;
     explicit call_state(thinkthen_call* value) : call(value) {}
@@ -50,18 +59,21 @@ struct call_state {
     call_state& operator=(const call_state&) = delete;
 };
 }
-class cancel_handle {
+/// A weak cancellation handle that can be used safely from another thread.
+class [[nodiscard]] cancel_handle {
     std::weak_ptr<detail::call_state> state_;
     explicit cancel_handle(const std::shared_ptr<detail::call_state>& state) : state_(state) {}
     template<class Q> friend class stream;
 public:
+    /// Construct an inactive handle; cancellation has no effect.
     cancel_handle() = default;
+    /// Ask the native call to stop; repeated requests are harmless.
     void request_cancel() const noexcept {
         if (auto state = state_.lock()) thinkthen_call_cancel(state->call);
     }
-    void cancel() const noexcept { request_cancel(); }
 };
-template<class Q> class stream {
+/// A move-only, single-pass stream in engine order; rank puts successful ranks first.
+template<class Q> class [[nodiscard]] stream {
     std::shared_ptr<detail::call_state> state_;
     record_source source_;
     bool started_ = false;
@@ -71,7 +83,7 @@ template<class Q> class stream {
         owner.release();
     }
     friend class client;
-    std::optional<row<Q>> pull() {
+    [[nodiscard]] std::optional<row<Q>> pull() {
         if (!state_) return std::nullopt;
         auto state = state_;
         try {
@@ -101,8 +113,10 @@ template<class Q> class stream {
 public:
     stream(const stream&) = delete;
     stream& operator=(const stream&) = delete;
+    /// Transfer the stream and its native call.
     stream(stream&& other) noexcept : state_(std::move(other.state_)), source_(std::move(other.source_)),
         started_(other.started_) { other.started_ = false; }
+    /// Close the current call and take ownership of another stream.
     stream& operator=(stream&& other) noexcept {
         if (this != &other) {
             close(); state_ = std::move(other.state_); source_ = std::move(other.source_);
@@ -110,40 +124,132 @@ public:
         }
         return *this;
     }
+    /// Cancel and release any unread native call.
     ~stream() { close(); }
+    /// Cancel and release this call.
     void close() noexcept {
         if (state_) thinkthen_call_cancel(state_->call);
         state_.reset(); source_ = {};
     }
-    thinkthen::cancel_handle cancel_handle() const noexcept { return thinkthen::cancel_handle(state_); }
-    std::optional<row<Q>> next() { return pull(); }
+    /// Obtain a handle that cancels without owning the stream.
+    [[nodiscard]] thinkthen::cancel_handle cancel_handle() const noexcept { return thinkthen::cancel_handle(state_); }
+    /// Pull one row, or nullopt after input is drained.
+    [[nodiscard]] std::optional<row<Q>> next() { return pull(); }
+    /// A single-pass iterator over typed rows.
     class iterator {
         stream* stream_ = nullptr;
         std::optional<row<Q>> current_;
         explicit iterator(stream* value) : stream_(value), current_(value->pull()) { if (!current_) stream_ = nullptr; }
         friend class stream;
     public:
+        /// Standard single-pass iterator category.
         using iterator_category = std::input_iterator_tag;
+        /// Owned value produced by this iterator.
         using value_type = row<Q>;
+        /// Iterator difference type.
         using difference_type = std::ptrdiff_t;
+        /// Borrowed value valid until increment.
         using reference = const row<Q>&;
+        /// Borrowed pointer valid until increment.
         using pointer = const row<Q>*;
+        /// Construct the end sentinel.
         iterator() = default;
+        /// Read the current value.
         reference operator*() const { return *current_; }
+        /// Read the current value through a pointer.
         pointer operator->() const { return &*current_; }
+        /// Pull the next value.
         iterator& operator++() { current_ = stream_->pull(); if (!current_) stream_ = nullptr; return *this; }
+        /// Pull the next value and return the previous iterator.
         iterator operator++(int) { auto old = *this; ++*this; return old; }
+        /// Compare iterator positions with the end sentinel.
         friend bool operator==(const iterator& a, const iterator& b) { return a.stream_ == b.stream_; }
+        /// Test whether iterator positions differ.
         friend bool operator!=(const iterator& a, const iterator& b) { return !(a == b); }
     };
-    iterator begin() {
+    /// Begin iteration; a stream can be iterated only once.
+    [[nodiscard]] iterator begin() {
         if (!state_) return {};
         if (started_) throw std::logic_error("a stream can be iterated only once");
         started_ = true;
         return iterator(this);
     }
-    iterator end() const { return {}; }
+    /// Return the end sentinel.
+    [[nodiscard]] iterator end() const { return {}; }
 };
+/// A stream of kept records. Failures are reported together after input is drained.
+class [[nodiscard]] kept_stream {
+    stream<filter> rows_;
+    std::vector<failed_row> failures_;
+    bool started_ = false;
+public:
+    /// Take ownership of a full filter row stream.
+    explicit kept_stream(stream<filter> rows) : rows_(std::move(rows)) {}
+    kept_stream(kept_stream&&) noexcept = default;
+    kept_stream& operator=(kept_stream&&) noexcept = default;
+    /// Stop this stream and release its native call.
+    void close() noexcept { rows_.close(); }
+    /// Obtain a handle that can cancel from another thread.
+    [[nodiscard]] thinkthen::cancel_handle cancel_handle() const noexcept { return rows_.cancel_handle(); }
+    /// Pull the next kept record; throw one aggregate failure at the end.
+    [[nodiscard]] std::optional<owned_record> next() {
+        while (auto current = rows_.next()) {
+            if (current->failed()) {
+                const auto& failure = *current->failure();
+                failed_row failed{current->position(), std::string(current->id_json()), failure.code(), failure.what(), failure.http_status(), THINKTHEN_RECORD_MISSING, {}};
+                std::visit([&](const auto& item) {
+                    using T = std::decay_t<decltype(item)>;
+                    if constexpr (std::is_same_v<T, owned_text>) { failed.record_kind = THINKTHEN_RECORD_TEXT; failed.record = item.value; }
+                    else if constexpr (std::is_same_v<T, owned_json_text>) { failed.record_kind = detail::record_encoding::invalid(item) ? THINKTHEN_RECORD_INVALID : THINKTHEN_RECORD_JSON; failed.record = item.value; }
+                }, current->item());
+                failures_.push_back(std::move(failed));
+            } else if (current->kept()) return current->item();
+        }
+        if (!failures_.empty()) {
+            auto failures = std::move(failures_);
+            const auto first = failures.front();
+            throw error(static_cast<errc>(first.code.value()), first.message, first.http_status, std::move(failures));
+        }
+        return std::nullopt;
+    }
+    /// A single-pass iterator over kept records.
+    class iterator {
+        kept_stream* stream_ = nullptr;
+        std::optional<owned_record> current_;
+    public:
+        /// Standard single-pass iterator category.
+        using iterator_category = std::input_iterator_tag;
+        /// Owned value produced by this iterator.
+        using value_type = owned_record;
+        /// Iterator difference type.
+        using difference_type = std::ptrdiff_t;
+        /// Borrowed value valid until increment.
+        using reference = const owned_record&;
+        /// Borrowed pointer valid until increment.
+        using pointer = const owned_record*;
+        /// Construct the end sentinel.
+        iterator() = default;
+        /// Start reading kept records from this stream.
+        explicit iterator(kept_stream* stream) : stream_(stream), current_(stream->next()) { if (!current_) stream_ = nullptr; }
+        /// Read the current value.
+        reference operator*() const { return *current_; }
+        /// Read the current value through a pointer.
+        pointer operator->() const { return &*current_; }
+        /// Pull the next value.
+        iterator& operator++() { current_ = stream_->next(); if (!current_) stream_ = nullptr; return *this; }
+        /// Pull the next value and return the previous iterator.
+        iterator operator++(int) { auto old = *this; ++*this; return old; }
+        /// Compare iterator positions with the end sentinel.
+        friend bool operator==(const iterator& a, const iterator& b) { return a.stream_ == b.stream_; }
+        /// Test whether iterator positions differ.
+        friend bool operator!=(const iterator& a, const iterator& b) { return !(a == b); }
+    };
+    /// Begin iteration; a stream can be iterated only once.
+    [[nodiscard]] iterator begin() { if (started_) throw std::logic_error("a stream can be iterated only once"); started_ = true; return iterator(this); }
+    /// Return the end sentinel.
+    [[nodiscard]] iterator end() const { return {}; }
+};
+/// An owned native client; calls opened from it keep their own native state.
 class client {
     detail::owner<thinkthen_client, thinkthen_client_free> value_{nullptr, thinkthen_client_free};
     void live() const { if (!value_) throw std::logic_error("the client was moved from"); }
@@ -168,14 +274,16 @@ class client {
         auto rows = start(question, std::vector<owned_record>{detail::owned(r)}, name);
         auto value = rows.next();
         if (!value || rows.next()) detail::incompatible();
+        if (value->failure() && value->failure()->code() == make_error_code(errc::record_empty)) throw *value->failure();
         return std::move(*value);
     }
 public:
+    /// Open a client with engine-validated settings and defaults.
     explicit client(const settings& settings = {}) {
         detail::check_abi();
         detail::owner<thinkthen_settings, thinkthen_settings_free> s(
             detail::get<thinkthen_settings*>(thinkthen_settings_new), thinkthen_settings_free);
-        detail::invoke(thinkthen_settings_set_backend, s.get(), static_cast<std::uint32_t>(settings.backend));
+        if (settings.backend) detail::invoke(thinkthen_settings_set_backend, s.get(), static_cast<thinkthen_backend>(*settings.backend));
         if (settings.model) detail::invoke(thinkthen_settings_set_model, s.get(), detail::bytes(*settings.model), settings.model->size());
         if (settings.url) detail::invoke(thinkthen_settings_set_url, s.get(), detail::bytes(*settings.url), settings.url->size());
         if (settings.api_key.value_) detail::invoke(thinkthen_settings_copy_api_key, s.get(), settings.api_key.value_.get());
@@ -192,16 +300,176 @@ public:
     client& operator=(const client&) = delete;
     client(client&&) noexcept = default;
     client& operator=(client&&) noexcept = default;
-#define THINKTHEN_CPP_FUNCTION(Q) \
-    row<thinkthen::Q> Q(const thinkthen::Q& question, record r, std::optional<std::string_view> name = {}) const { return one(question, r, name); } \
-    stream<thinkthen::Q> Q##_each(const thinkthen::Q& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); } \
-    stream<thinkthen::Q> Q##_each(const thinkthen::Q& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
-    THINKTHEN_CPP_FUNCTION(decide) THINKTHEN_CPP_FUNCTION(choose)
-    THINKTHEN_CPP_FUNCTION(tag) THINKTHEN_CPP_FUNCTION(score)
-    THINKTHEN_CPP_FUNCTION(filter) THINKTHEN_CPP_FUNCTION(rank)
-    THINKTHEN_CPP_FUNCTION(find) THINKTHEN_CPP_FUNCTION(recognize)
-    THINKTHEN_CPP_FUNCTION(relate) THINKTHEN_CPP_FUNCTION(annotate)
-#undef THINKTHEN_CPP_FUNCTION
+    /// Judge one record with a decide question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::decide> decide(const thinkthen::decide& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::decide> decide(const thinkthen::decide& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every decide row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::decide> decide_each(const thinkthen::decide& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::decide> decide_each(const thinkthen::decide& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::decide> decide_each(const thinkthen::decide& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return decide_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::decide> decide_each(const thinkthen::decide& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a choose question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::choose> choose(const thinkthen::choose& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::choose> choose(const thinkthen::choose& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every choose row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::choose> choose_each(const thinkthen::choose& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::choose> choose_each(const thinkthen::choose& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::choose> choose_each(const thinkthen::choose& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return choose_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::choose> choose_each(const thinkthen::choose& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a tag question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::tag> tag(const thinkthen::tag& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::tag> tag(const thinkthen::tag& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every tag row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::tag> tag_each(const thinkthen::tag& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::tag> tag_each(const thinkthen::tag& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::tag> tag_each(const thinkthen::tag& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return tag_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::tag> tag_each(const thinkthen::tag& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a score question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::score> score(const thinkthen::score& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::score> score(const thinkthen::score& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every score row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::score> score_each(const thinkthen::score& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::score> score_each(const thinkthen::score& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::score> score_each(const thinkthen::score& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return score_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::score> score_each(const thinkthen::score& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a filter question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::filter> filter(const thinkthen::filter& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::filter> filter(const thinkthen::filter& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every filter row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::filter> filter_rows_each(const thinkthen::filter& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::filter> filter_rows_each(const thinkthen::filter& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::filter> filter_rows_each(const thinkthen::filter& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return filter_rows_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::filter> filter_rows_each(const thinkthen::filter& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a rank question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::rank> rank(const thinkthen::rank& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::rank> rank(const thinkthen::rank& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream successful rows in rank order, followed by failed rows in input order.
+    [[nodiscard]] stream<thinkthen::rank> rank_each(const thinkthen::rank& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::rank> rank_each(const thinkthen::rank& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::rank> rank_each(const thinkthen::rank& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return rank_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range, yielding rank order while preserving input positions.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::rank> rank_each(const thinkthen::rank& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a find question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::find> find(const thinkthen::find& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::find> find(const thinkthen::find& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every find row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::find> find_each(const thinkthen::find& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::find> find_each(const thinkthen::find& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::find> find_each(const thinkthen::find& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return find_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::find> find_each(const thinkthen::find& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a recognize question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::recognize> recognize(const thinkthen::recognize& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::recognize> recognize(const thinkthen::recognize& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every recognize row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::recognize> recognize_each(const thinkthen::recognize& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::recognize> recognize_each(const thinkthen::recognize& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::recognize> recognize_each(const thinkthen::recognize& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return recognize_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::recognize> recognize_each(const thinkthen::recognize& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a relate question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::relate> relate(const thinkthen::relate& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::relate> relate(const thinkthen::relate& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every relate row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::relate> relate_each(const thinkthen::relate& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::relate> relate_each(const thinkthen::relate& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::relate> relate_each(const thinkthen::relate& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return relate_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::relate> relate_each(const thinkthen::relate& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Judge one record with a annotate question. Blank field throws record.empty.
+    [[nodiscard]] row<thinkthen::annotate> annotate(const thinkthen::annotate& question, record input, std::optional<std::string_view> name = {}) const { return one(question, input, name); }
+    /// Judge one text record; strings are copied before the call returns.
+    [[nodiscard]] row<thinkthen::annotate> annotate(const thinkthen::annotate& question, std::string_view input, std::optional<std::string_view> name = {}) const { return one(question, text{input}, name); }
+    /// Stream every annotate row in input order, including not-sure and failed rows.
+    [[nodiscard]] stream<thinkthen::annotate> annotate_each(const thinkthen::annotate& question, record_source source, std::optional<std::string_view> name = {}) const { return start(question, std::move(source), name); }
+    /// Judge owned records; the returned stream owns its inputs.
+    [[nodiscard]] stream<thinkthen::annotate> annotate_each(const thinkthen::annotate& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return start(question, std::move(records), name); }
+    /// Judge a collection of strings, copying each text into the stream.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] stream<thinkthen::annotate> annotate_each(const thinkthen::annotate& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return annotate_each(question, records.begin(), records.end(), name); }
+    /// Judge an iterator range of strings or owned records in input order.
+    template<class Iterator>
+    [[nodiscard]] stream<thinkthen::annotate> annotate_each(const thinkthen::annotate& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const {
+        return start(question, detail::own_records(first, last), name);
+    }
+    /// Stream kept filter records, then report all failed inputs in one error.
+    [[nodiscard]] kept_stream filter_each(const thinkthen::filter& question, record_source source, std::optional<std::string_view> name = {}) const { return kept_stream(filter_rows_each(question, std::move(source), name)); }
+    /// Filter an owned collection, retaining the original encoding of each kept input.
+    [[nodiscard]] kept_stream filter_each(const thinkthen::filter& question, std::vector<owned_record> records, std::optional<std::string_view> name = {}) const { return kept_stream(filter_rows_each(question, std::move(records), name)); }
+    /// Filter a collection of strings, copying the inputs.
+    template<class T, std::enable_if_t<std::is_convertible_v<T, std::string_view>, int> = 0>
+    [[nodiscard]] kept_stream filter_each(const thinkthen::filter& question, const std::vector<T>& records, std::optional<std::string_view> name = {}) const { return kept_stream(filter_rows_each(question, records, name)); }
+    /// Filter an iterator range of strings or owned records.
+    template<class Iterator>
+    [[nodiscard]] kept_stream filter_each(const thinkthen::filter& question, Iterator first, Iterator last, std::optional<std::string_view> name = {}) const { return kept_stream(filter_rows_each(question, first, last, name)); }
 };
 }}
 #endif

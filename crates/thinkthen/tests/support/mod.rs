@@ -16,8 +16,17 @@ use std::process::Stdio;
 use std::process::{Command, Output};
 
 /// A command with isolated settings and credentials that retains coverage output.
+#[allow(
+    dead_code,
+    reason = "Library tests isolate their own test binary instead."
+)]
 pub(crate) fn command() -> Command {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+    isolated(env!("CARGO_BIN_EXE_thinkthen"))
+}
+
+/// A process with isolated settings and credentials that retains coverage output.
+pub(crate) fn isolated(program: impl AsRef<std::ffi::OsStr>) -> Command {
+    let mut command = Command::new(program);
     command.env_clear();
     for name in [
         "PATH",

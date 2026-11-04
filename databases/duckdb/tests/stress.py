@@ -8,7 +8,7 @@ import sys
 from typed_api import Host, literal, read_line
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from stress import check_round, environment, report, settings, workload
+from stress import check_round, environment, report, settings, statement_failure, workload
 
 
 def statement(count, prefix='', basis=0):
@@ -42,7 +42,7 @@ def round_rows(host, case, round_index):
         host.process.stdin.flush()
         results = [json.loads(read_line(host.process.stdout)) for _ in range(2)]
     for prefix, result in zip(prefixes, results):
-        yield prefix, decode(result)
+        yield prefix, statement_failure(case, result['error']) if 'error' in result else decode(result)
 
 
 def main():

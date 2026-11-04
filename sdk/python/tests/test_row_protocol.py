@@ -34,7 +34,7 @@ def test_rows_name_the_matching_stream_when_used_as_context_managers(
         backend(tmp_path, yes()) as server,
         tt.Client(backend="stub", url=server.url) as selected,
     ):
-        call = getattr(selected, function)
+        call = getattr(selected, "filter_rows" if function == "filter" else function)
         if function == "annotate":
             row = call(
                 tt.AnnotationQuestions({"ready": tt.DecideQuestion("Ready?")}), "body"
@@ -48,23 +48,12 @@ def test_rows_name_the_matching_stream_when_used_as_context_managers(
             row = call("body", **options)
         else:
             row = call("Ready?", "body", **options)
-        stream_name = (
-            function if function in {"filter", "rank"} else function + "_stream"
+        stream_name = {"filter": "filter_rows", "rank": "rank"}.get(
+            function, function + "_stream"
         )
         with pytest.raises(TypeError) as failure, cast(Any, row):
             raise AssertionError("a row must not enter a with block")
         assert str(failure.value) == (
             f"this is one {function} row; use {stream_name}(...) for a stream"
         )
-        assert server.count() == 0
-
-
-def test_single_call_keeps_a_json_array_as_one_record(tmp_path: Path) -> None:
-    with (
-        backend(tmp_path, yes()) as server,
-        tt.Client(backend="stub", url=server.url) as selected,
-    ):
-        row = selected.decide("Ready?", ["first", "second"])
-        assert isinstance(row, tt.DecideRow)
-        assert row.status is tt.Status.ANSWERED and row.position == 1
         assert server.count() == 0

@@ -24,6 +24,7 @@ def shared_entry_forms(directory: Path) -> None:
     case = json.loads(path.read_text())
     question = admitted(case["request"]["question"])
     records = case["request"]["records"]
+    single_record = {"items": records[0]}
 
     def check(rows: list[Any]) -> None:
         assert_expected(
@@ -32,10 +33,10 @@ def shared_entry_forms(directory: Path) -> None:
 
     async def asynchronous(settings: dict[str, Any]) -> None:
         async with tt.AsyncClient(**settings) as client:
-            check([await client.decide(question, records[0])])
+            check([await client.decide(question, single_record)])
             async with client.decide_stream(question, records) as stream:
                 check([row async for row in stream])
-            check([await aio.decide(question, records[0], client=client)])
+            check([await aio.decide(question, single_record, client=client)])
             async with aio.decide_stream(question, records, client=client) as stream:
                 check([row async for row in stream])
 
@@ -47,7 +48,7 @@ def shared_entry_forms(directory: Path) -> None:
                 "api_key": "synthetic",
             }
             with tt.Client(**settings) as client:
-                check([tt.decide(question, records[0], client=client)])
+                check([tt.decide(question, single_record, client=client)])
                 with tt.decide_stream(question, records, client=client) as stream:
                     check(list(stream))
             asyncio.run(asynchronous(settings))

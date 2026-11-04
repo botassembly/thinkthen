@@ -2,12 +2,14 @@
 """Exercise final artifact identity, target routing and consumer continuation."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import runpy
 import subprocess
 import sys
 import tarfile
 import tempfile
+import textwrap
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +17,97 @@ from release_workflow import ROOT, version
 
 
 class PlatformRelease(unittest.TestCase):
+    def test_homebrew_trusts_only_rehearsal_formula_before_loading_and_cleans_up(self):
+        for failure in ('none', 'cache', 'install', 'test', 'uninstall', 'preexisting'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                work = Path(temporary)
+                packages, release, scratch = work / 'packages', work / 'release', work / 'scratch'
+                (packages / 'homebrew').mkdir(parents=True)
+                release.mkdir()
+                scratch.mkdir()
+                formula = packages / 'homebrew/thinkthen.rb'
+                formula.write_bytes(b'unchanged generated release formula\n')
+                archive = release / f'thinkthen-{version()}-macos-arm64.tar.gz'
+                archive.write_bytes(b'unchanged qualified command archive')
+                global_config = work / 'caller-config/homebrew'
+                global_config.mkdir(parents=True)
+                sentinel = global_config / 'trust.json'
+                sentinel.write_text('unrelated caller trust')
+                if failure == 'preexisting':
+                    (work / 'installed').mkdir()
+                    (work / 'installed/caller-file').write_text('caller installation')
+                bin_dir = work / 'bin'
+                bin_dir.mkdir()
+                executable = bin_dir / 'brew'
+                executable.write_text('#!' + sys.executable + '\n' + textwrap.dedent('''
+                    import json, os, shutil, sys
+                    from pathlib import Path
+                    root = Path(os.environ['BREW_FIXTURE'])
+                    args = sys.argv[1:]
+                    tap, name = 'botassembly/release-check', 'botassembly/release-check/thinkthen'
+                    config = Path(os.environ['XDG_CONFIG_HOME']) / 'homebrew/trust.json'
+                    with (root / 'calls').open('a') as log:
+                        log.write(json.dumps({'args': args, 'config': str(config), 'cache': os.environ['HOMEBREW_CACHE'],
+                                              'developer': os.environ.get('HOMEBREW_DEVELOPER')}) + '\\n')
+                    assert not os.environ.get('HOMEBREW_NO_REQUIRE_TAP_TRUST')
+                    repository = root / 'tap'
+                    if args == ['tap-new', '--no-git', tap]:
+                        (repository / 'Formula').mkdir(parents=True)
+                    elif args == ['--repository', tap]: print(repository)
+                    elif args == ['trust', '--formula', name]:
+                        config.parent.mkdir(parents=True, exist_ok=True)
+                        config.write_text(json.dumps([name]))
+                    elif args == ['--cache', '--formula', name]:
+                        if not config.is_file() or config.read_text() != json.dumps([name]):
+                            print('refuse to load untrusted formula ' + name, file=sys.stderr)
+                            sys.exit(41)
+                        assert (repository / 'Formula/thinkthen.rb').read_bytes() == b'unchanged generated release formula\\n'
+                        if os.environ['BREW_FAILURE'] == 'cache': sys.exit('seeded cache failure')
+                        print(Path(os.environ['HOMEBREW_CACHE']) / 'exact-release.tar.gz')
+                    elif args == ['install', '--formula', name]:
+                        assert (Path(os.environ['HOMEBREW_CACHE']) / 'exact-release.tar.gz').read_bytes() == b'unchanged qualified command archive'
+                        (root / 'installed').mkdir()
+                        if os.environ['BREW_FAILURE'] == 'install': sys.exit('seeded install failure')
+                    elif args == ['--cellar', name]: print(root / 'installed')
+                    elif args == ['test', name]:
+                        assert (root / 'installed').is_dir()
+                        if os.environ['BREW_FAILURE'] == 'test': sys.exit('seeded test failure')
+                    elif args == ['uninstall', '--formula', name]:
+                        shutil.rmtree(root / 'installed')
+                        if os.environ['BREW_FAILURE'] == 'uninstall': sys.exit('seeded uninstall failure')
+                    elif args == ['untap', tap]: shutil.rmtree(repository)
+                    else: raise AssertionError(args)
+                '''))
+                executable.chmod(0o755)
+                env = dict(os.environ, PATH=str(bin_dir) + os.pathsep + os.environ['PATH'],
+                           XDG_CONFIG_HOME=str(global_config.parent), BREW_FIXTURE=str(work), BREW_FAILURE=failure)
+                result = subprocess.run([sys.executable, '-c',
+                    'import runpy,sys; from pathlib import Path; sys.path.insert(0,str(Path(sys.argv[1]).parent)); '
+                    'runpy.run_path(sys.argv[1])["brew"](*map(Path,sys.argv[2:]))',
+                    ROOT / 'scripts/release-platform-check', packages, release, scratch],
+                    env=env, text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, failure == 'none', result.stderr)
+                if failure == 'preexisting':
+                    self.assertIn('requires an absent installation', result.stderr)
+                    self.assertEqual((work / 'installed/caller-file').read_text(), 'caller installation')
+                elif failure != 'none': self.assertIn('seeded ' + failure + ' failure', result.stderr)
+                calls = [json.loads(line) for line in (work / 'calls').read_text().splitlines()]
+                commands = [call['args'] for call in calls]
+                self.assertIn(['trust', '--formula', 'botassembly/release-check/thinkthen'], commands)
+                self.assertLess(commands.index(['trust', '--formula', 'botassembly/release-check/thinkthen']),
+                                commands.index(['--cache', '--formula', 'botassembly/release-check/thinkthen']))
+                self.assertEqual(commands[-1], ['untap', 'botassembly/release-check'])
+                self.assertFalse((work / 'tap').exists())
+                self.assertEqual((work / 'installed').exists(), failure == 'preexisting')
+                self.assertEqual(sentinel.read_text(), 'unrelated caller trust')
+                for call in calls:
+                    self.assertTrue(Path(call['config']).is_relative_to(scratch))
+                    self.assertFalse(Path(call['config']).parent.parent.exists())
+                    self.assertEqual(Path(call['cache']), scratch / 'brew-cache')
+                    self.assertEqual(call['developer'], '1')
+                self.assertEqual(formula.read_bytes(), b'unchanged generated release formula\n')
+                self.assertEqual(archive.read_bytes(), b'unchanged qualified command archive')
+
     def test_rejects_unqualified_artifact_before_any_consumer(self):
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
@@ -28,7 +121,7 @@ class PlatformRelease(unittest.TestCase):
             with tarfile.open(archive, 'w:gz') as packed:
                 packed.add(metadata, arcname='source.json')
             (release / 'SHA256SUMS').write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
-            command = [sys.executable, ROOT / 'scripts/release-platform-check', release, 'current', work / 'scratch']
+            command = [sys.executable, ROOT / 'scripts/release-platform-check', '--homebrew-only', release, 'current', work / 'scratch']
             result = subprocess.run(list(map(str, command)), text=True, capture_output=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('registry source differs', result.stderr)
@@ -37,6 +130,18 @@ class PlatformRelease(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('checksum differs', result.stderr)
             self.assertNotIn('release platform prepare', result.stdout)
+
+    def test_homebrew_only_keeps_artifact_admission_and_skips_other_consumers(self):
+        entry = runpy.run_path(str(ROOT / 'scripts/release-platform-check'))
+        seen = []
+        def admit(*_):
+            seen.append('admit')
+            return Path('admitted packages')
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(entry['main'].__globals__,
+                admit=admit, brew=lambda *_: seen.append('brew')), patch('platform.system', return_value='Darwin'), \
+                patch.object(sys, 'argv', ['release-platform-check', '--homebrew-only', 'release', 'sha', temporary + '/scratch']):
+            entry['main']()
+        self.assertEqual(seen, ['admit', 'brew'])
 
     def test_every_registry_consumer_runs_after_a_failed_npm_install(self):
         import release_registry_check as check
@@ -122,11 +227,13 @@ class PlatformRelease(unittest.TestCase):
 
     def test_windows_frame_closure_refuses_changed_cached_inputs(self):
         import release_windows_frames as frames
+        import release_python_dependencies as runtime
         import zipfile
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
             catalog = work / 'pins.json'
-            with patch.object(frames, 'TOOLS', work), patch.object(frames, 'HASHES', catalog), \
+            with patch.object(runtime, 'inputs', return_value={}), \
+                    patch.object(frames, 'TOOLS', work), patch.object(frames, 'HASHES', catalog), \
                     patch.object(frames, 'PINS', {'windows_python_frames': {'example': 'https://example.invalid/example-1.0-py3-none-any.whl'}}):
                 # This fixture wheel has no executable payload; it tests the
                 # offline closure's cache admission before any package build.

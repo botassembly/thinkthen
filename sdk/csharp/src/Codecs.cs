@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -26,11 +25,12 @@ internal static class Json
         NativeError error = NativeError.Empty;
         int result = settings ? Native.SettingsConversionError(ref error) : Native.QuestionConversionError(ref error);
         try { Check(result, error); }
-        catch (ThinkThenException failure) { return new(new(failure.Code, failure.Message, failure.HttpStatus), cause); }
+        catch (ThinkThenException failure) { return new(new(failure.ErrorCode, failure.Message, failure.HttpStatus), cause); }
         throw Abi();
     }
     internal static string HostText(string value, bool settings = false)
     {
+        ArgumentNullException.ThrowIfNull(value);
         try { _ = new UTF8Encoding(false, true).GetByteCount(value); return value; }
         catch (Exception cause) when (cause is EncoderFallbackException or ArgumentNullException) { throw Conversion(cause, settings); }
     }
@@ -50,23 +50,33 @@ internal static class Json
         throw Abi();
     }
 }
+/// <summary>Looks up error families from the shared engine registry.</summary>
 public static class ErrorCodes
 {
+    /// <summary>Gets this code's family from the shared engine.</summary>
     public static ErrorFamily Family(this ErrorCode code) => (Marshal.PtrToStringUTF8(Native.CodeFamily((int)code))) switch
     { "usage" => ErrorFamily.Usage, "record" => ErrorFamily.Record, "backend" => ErrorFamily.Backend,
       "local" => ErrorFamily.Local, "internal" => ErrorFamily.Internal, _ => throw Json.Abi() };
 }
+/// <summary>Serializes shared error codes by their stable wire name.</summary>
 public sealed class ErrorCodeConverter : JsonConverter<ErrorCode>
 {
+    /// <summary>Serializes shared error codes by their stable wire name.</summary>
     public ErrorCodeConverter() { }
+    /// <inheritdoc/>
     public override ErrorCode Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) => Json.Code(reader.GetString()!);
+    /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, ErrorCode value, JsonSerializerOptions options) =>
         writer.WriteStringValue(Contract.CodeName((int)value) ?? throw Json.Abi());
 }
+/// <summary>Serializes backend names using the engine registry.</summary>
 public sealed class BackendConverter : JsonConverter<Backend>
 {
+    /// <summary>Serializes backend names using the engine registry.</summary>
     public BackendConverter() { }
+    /// <inheritdoc/>
     public override Backend Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) => Json.Backend(reader.GetString()!);
+    /// <inheritdoc/>
     public override void Write(Utf8JsonWriter writer, Backend value, JsonSerializerOptions options) =>
         writer.WriteStringValue(Contract.BackendName((int)value) ?? throw Json.Abi());
 }
@@ -76,7 +86,7 @@ internal partial class ContractJson : JsonSerializerContext { }
 
 internal static class Codecs
 {
-    internal static Row<A,D> Row<A,D>(uint function, uint status, int errorCode, ulong position, double probability, byte[] id,
+    internal static Row<TAnswer,TDetail> Row<TAnswer,TDetail>(uint function, uint status, int errorCode, ulong position, double probability, byte[] id,
         byte[] answer, byte[] detail, byte[] source, byte[] error, string expectedFunction)
     {
         try
@@ -100,14 +110,14 @@ internal static class Codecs
                 Json.Backend(route.GetProperty("backend").GetString()!), route.GetProperty("model").GetString()!,
                 route.TryGetProperty("name", out var name) ? name.GetString() : null);
             RecordId? typedId = id.Length == 0 ? null : Id(value.GetProperty("id"));
-            D? typedDetail = detail.Length == 0 ? default : Detail<D>(expectedFunction, value.GetProperty("detail"));
+            TDetail? typedDetail = detail.Length == 0 ? default : Detail<TDetail>(expectedFunction, value.GetProperty("detail"));
             var kind = (Function)function;
-            Row<A,D> result = status switch
+            Row<TAnswer,TDetail> result = status switch
             {
-                1 => new Answered<A,D>(kind, position, typedId, typedSource,
-                    Answer<A>(expectedFunction, value.GetProperty("answer")), double.IsNaN(probability) ? null : probability, typedDetail),
-                2 => new Unsure<A,D>(kind, position, typedId, typedSource, probability, typedDetail),
-                3 => new Failed<A,D>(kind, position, typedId, typedSource, Error(value.GetProperty("error"))),
+                1 => new Answered<TAnswer,TDetail>(kind, position, typedId, typedSource,
+                    Answer<TAnswer>(expectedFunction, value.GetProperty("answer")), double.IsNaN(probability) ? null : probability, typedDetail),
+                2 => new Unsure<TAnswer,TDetail>(kind, position, typedId, typedSource, probability, typedDetail),
+                3 => new Failed<TAnswer,TDetail>(kind, position, typedId, typedSource, Error(value.GetProperty("error"))),
                 _ => throw Json.Abi()
             };
             return result with { Canonical = value.Clone() };
@@ -131,52 +141,52 @@ internal static class Codecs
     private static Relation Relation(JsonElement value) => new(Mention(value.GetProperty("source")),
         Mention(value.GetProperty("target")), value.GetProperty("relation").GetString()!, value.GetProperty("probability").GetDouble(),
         value.TryGetProperty("either", out var either) && either.GetBoolean());
-    private static ImmutableDictionary<string,double> Map(JsonElement value) => value.EnumerateObject()
-        .ToImmutableDictionary(pair => pair.Name, pair => pair.Value.GetDouble());
+    private static ValueMap<string,double> Map(JsonElement value) => value.EnumerateObject()
+        .ToValueMap(pair => pair.Name, pair => pair.Value.GetDouble());
     private static BoundaryTag Boundary(string name) => name switch
     { "BEGIN" => BoundaryTag.Begin, "END" => BoundaryTag.End, "INSIDE" => BoundaryTag.Inside,
         "OUT" => BoundaryTag.Out, "SINGLE" => BoundaryTag.Single, _ => throw Json.Abi() };
-    private static A Answer<A>(string function, JsonElement value)
+    private static TAnswer Answer<TAnswer>(string function, JsonElement value)
     {
         object? answer = function switch
         {
             "decide" or "filter" => value.GetBoolean(),
             "choose" => value.GetString(),
-            "tag" => value.EnumerateArray().Select(item => item.GetString()!).ToImmutableArray(),
+            "tag" => value.EnumerateArray().Select(item => item.GetString()!).ToValueList(),
             "score" => value.GetDouble(),
             "rank" => value.GetInt64(),
             "find" => value.ValueKind == JsonValueKind.Null ? null : Span(value),
-            "recognize" => value.EnumerateArray().Select(Entity).ToImmutableArray(),
-            "relate" => value.EnumerateArray().Select(Relation).ToImmutableArray(),
-            "annotate" => value.EnumerateObject().ToImmutableDictionary(pair => pair.Name, pair => Entry(pair.Value)),
+            "recognize" => value.EnumerateArray().Select(Entity).ToValueList(),
+            "relate" => value.EnumerateArray().Select(Relation).ToValueList(),
+            "annotate" => value.EnumerateObject().ToValueMap(pair => pair.Name, pair => Entry(pair.Value)),
             _ => throw Json.Abi()
         };
-        return (A)answer!;
+        return (TAnswer)answer!;
     }
-    private static D? Detail<D>(string function, JsonElement value)
+    private static TDetail? Detail<TDetail>(string function, JsonElement value)
     {
         object detail = function switch
         {
             "choose" or "tag" => new LabelsDetail(Map(value.GetProperty("labels"))),
-            "score" or "rank" => new LevelsDetail(value.GetProperty("levels").EnumerateArray().Select(item => item.GetDouble()).ToImmutableArray()),
+            "score" or "rank" => new LevelsDetail(value.GetProperty("levels").EnumerateArray().Select(item => item.GetDouble()).ToValueList()),
             "recognize" => new RecognizeDetail(value.GetProperty("pieces").EnumerateArray().Select(item =>
-                new PieceDetail(Span(item), item.GetProperty("tags").EnumerateObject().ToImmutableDictionary(pair => Boundary(pair.Name), pair => pair.Value.GetDouble()))).ToImmutableArray(),
-                value.GetProperty("names").EnumerateArray().Select(item => new KindDetail(item.GetProperty("start").GetInt32(), item.GetProperty("end").GetInt32(), Map(item.GetProperty("kinds")))).ToImmutableArray()),
-            "relate" => new RelateDetail(value.GetProperty("names").EnumerateArray().Select(Entity).ToImmutableArray(), value.GetProperty("pairs").EnumerateArray().Select(Relation).ToImmutableArray()),
+                new PieceDetail(Span(item), item.GetProperty("tags").EnumerateObject().ToValueMap(pair => Boundary(pair.Name), pair => pair.Value.GetDouble()))).ToValueList(),
+                value.GetProperty("names").EnumerateArray().Select(item => new KindDetail(item.GetProperty("text").GetString()!, item.GetProperty("start").GetInt32(), item.GetProperty("end").GetInt32(), Map(item.GetProperty("kinds")))).ToValueList()),
+            "relate" => new RelateDetail(value.GetProperty("names").EnumerateArray().Select(Entity).ToValueList(), value.GetProperty("pairs").EnumerateArray().Select(Relation).ToValueList()),
             _ => throw Json.Abi()
         };
-        return (D)detail;
+        return (TDetail)detail;
     }
-    private static EntryOutcome<A,D> Outcome<A,D>(string function, JsonElement value)
+    private static EntryOutcome<TAnswer,TDetail> Outcome<TAnswer,TDetail>(string function, JsonElement value)
     {
         ValidateOutcome(value);
         double? probability = value.TryGetProperty("probability", out var p) ? p.GetDouble() : null;
-        D? detail = value.TryGetProperty("detail", out var d) ? Detail<D>(function, d) : default;
+        TDetail? detail = value.TryGetProperty("detail", out var d) ? Detail<TDetail>(function, d) : default;
         return value.GetProperty("status").GetString() switch
         {
-            "answered" => new EntryAnswered<A,D>(Answer<A>(function, value.GetProperty("answer")), probability, detail),
-            "unsure" when probability is double number => new EntryUnsure<A,D>(number, detail),
-            "failed" => new EntryFailed<A,D>(Error(value.GetProperty("error"))),
+            "answered" => new EntryAnswered<TAnswer,TDetail>(Answer<TAnswer>(function, value.GetProperty("answer")), probability, detail),
+            "unsure" when probability is double number => new EntryUnsure<TAnswer,TDetail>(number, detail),
+            "failed" => new EntryFailed<TAnswer,TDetail>(Error(value.GetProperty("error"))),
             _ => throw Json.Abi()
         };
     }
@@ -197,11 +207,11 @@ internal static class Codecs
         "decide" => new DecideEntry(Outcome<bool,NoDetail>("decide", value)),
         "filter" => new FilterEntry(Outcome<bool,NoDetail>("filter", value)),
         "choose" => new ChooseEntry(Outcome<string,LabelsDetail>("choose", value)),
-        "tag" => new TagEntry(Outcome<ImmutableArray<string>,LabelsDetail>("tag", value)),
+        "tag" => new TagEntry(Outcome<ValueList<string>,LabelsDetail>("tag", value)),
         "score" => new ScoreEntry(Outcome<double,LevelsDetail>("score", value)),
         "find" => new FindEntry(Outcome<TextSpan?,NoDetail>("find", value)),
-        "recognize" => new RecognizeEntry(Outcome<ImmutableArray<Entity>,RecognizeDetail>("recognize", value)),
-        "relate" => new RelateEntry(Outcome<ImmutableArray<Relation>,RelateDetail>("relate", value)),
+        "recognize" => new RecognizeEntry(Outcome<ValueList<Entity>,RecognizeDetail>("recognize", value)),
+        "relate" => new RelateEntry(Outcome<ValueList<Relation>,RelateDetail>("relate", value)),
         _ => throw Json.Abi()
     };
 }

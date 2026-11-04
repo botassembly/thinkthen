@@ -1,11 +1,11 @@
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.util.List;
 
 public final class JavaLive {
     private JavaLive() {}
     public static void report(String function, Row<?,?> row) {
         System.out.println(function + " " + ConformanceCases.row(row));
-        row.raiseForStatus();
+        row.throwIfFailed();
     }
     public static void main(String[] args) {
         String text = "Ada works for Acme.";
@@ -14,7 +14,7 @@ public final class JavaLive {
             report("choose",client.choose("What topic is stated?",text,List.of("employment","delivery")));
             report("tag",client.tag("Which topics are stated?",text,List.of("employment","delivery")));
             report("score",client.score("How clearly is employment stated?",text,List.of("unclear","clear")));
-            try (var rows = client.filter("Does this state employment?",List.of(text,"A parcel arrived."))) { rows.forEach(item -> report("filter",item.row())); }
+            try (var rows = client.filterRows("Does this state employment?",List.of(text,"A parcel arrived."))) { rows.forEach(item -> report("filter",item.row())); }
             try (var rows = client.rank("How clearly is employment stated?",List.of(text,"A parcel arrived."),List.of("unclear","clear"))) { rows.forEach(item -> report("rank",item.row())); }
             report("find",client.find("Who works for Acme?",text));
             var questions = AnnotationQuestions.builder().put("employment",DecideQuestion.of("Does this state employment?")).build();

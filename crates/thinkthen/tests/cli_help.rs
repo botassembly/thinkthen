@@ -29,7 +29,7 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
         let help = String::from_utf8(output.stdout).unwrap();
         for current in [
             "--backend",
-            "--evidence",
+            "--field",
             "--from",
             "--json",
             "THINKTHEN_API_KEY",
@@ -59,8 +59,10 @@ fn help_lists_current_options_without_retired_flags_or_settings() {
             }
         }
         for retired in [
+            "--backend stub",
+            "--evidence",
+            "THINKTHEN_EVIDENCE",
             "--on",
-            "--details",
             "--adapter",
             "--input",
             "--lines",
@@ -87,14 +89,14 @@ fn single_column_diagnostic_names_the_current_evidence_option() {
     let output = support::command()
         .args(["decide", "Ready?", "--backend", "stub"])
         .arg(&input)
-        .args(["--column", "Body", "--into", "ready", "--evidence", "/Body"])
+        .args(["--column", "Body", "--into", "ready", "--field", "/Body"])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2), "{output:?}");
     assert!(output.stdout.is_empty());
     let diagnostic = String::from_utf8(output.stderr).unwrap();
-    assert!(diagnostic.contains("usage.question"), "{diagnostic}");
-    assert!(diagnostic.contains("omit --evidence"), "{diagnostic}");
+    assert!(diagnostic.contains("usage.option"), "{diagnostic}");
+    assert!(diagnostic.contains("omit --field"), "{diagnostic}");
     assert!(!diagnostic.contains("--on"), "{diagnostic}");
     assert!(!diagnostic.contains("--details"), "{diagnostic}");
     assert!(!directory.path().join("requests.thinkthen.csv").exists());

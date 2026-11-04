@@ -29,13 +29,36 @@ pub(super) struct Input {
     current: Option<(Box<dyn BufRead + Send>, Format, String)>,
     pub origin: String,
     pub format: Format,
+    pub selection: Vec<crate::Pointer>,
+    literal: bool,
 }
 impl Input {
     pub(super) fn resolve(function: &str, args: &ArgMatches) -> Result<Self, Error> {
-        let mut files = args
-            .get_many::<String>("files")
-            .map(|v| v.cloned().collect::<Vec<_>>())
-            .unwrap_or_default();
+        if let Some(text) = args.get_one::<String>("text") {
+            // Explicit literal input fixes framing to one text record, ahead
+            // of inherited THINKTHEN_FROM, without opening a file or stdin.
+            let origin = "--text".to_owned();
+            return Ok(Self {
+                sources: vec![(origin.clone(), Format::Text)],
+                pending: VecDeque::new(),
+                current: Some((
+                    Box::new(io::Cursor::new(text.as_bytes().to_vec())),
+                    Format::Text,
+                    origin,
+                )),
+                origin: String::new(),
+                format: Format::Text,
+                selection: super::question_options::field(args)?,
+                literal: true,
+            });
+        }
+        Self::from_files(function, args, files(args))
+    }
+    pub(super) fn from_files(
+        function: &str,
+        args: &ArgMatches,
+        mut files: Vec<String>,
+    ) -> Result<Self, Error> {
         if files.is_empty() {
             files.push("-".into());
         }
@@ -59,14 +82,16 @@ impl Input {
                 (path, selected.or(inferred).unwrap_or(default))
             })
             .collect();
-        if value(args, "evidence").is_some()
+        let selection = super::question_options::field(args)?;
+        let selected_field = !selection.is_empty();
+        if selected_field
             && sources
                 .iter()
-                .any(|(_, format)| matches!(format, Format::Text | Format::Lines))
+                .any(|(_, format)| matches!(format, Format::Lines))
         {
             return Err(usage(
-                "evidence",
-                "JSONL or table framing; omit --evidence for text",
+                "field",
+                "JSON or table framing; omit --field for lines",
                 "text framing",
             ));
         }
@@ -84,6 +109,8 @@ impl Input {
             current: None,
             origin: String::new(),
             format: default,
+            selection,
+            literal: false,
         })
     }
     pub(super) fn table(&self) -> bool {
@@ -155,14 +182,43 @@ impl Input {
             if format != Format::Text && bytes.iter().all(u8::is_ascii_whitespace) {
                 continue;
             }
-            let record = if format == Format::Jsonl {
+            let record = if format == Format::Jsonl
+                || (format == Format::Text && !self.selection.is_empty())
+            {
                 std::str::from_utf8(&bytes).map_or_else(|_| Record::invalid(), Record::from_json)
             } else {
-                std::str::from_utf8(&bytes)
-                    .map_or_else(|_| Record::invalid(), |s| Record::text(super::evidence(s)))
+                std::str::from_utf8(&bytes).map_or_else(
+                    |_| Record::invalid(),
+                    |s| Record::text(if self.literal { s } else { super::field(s) }),
+                )
             };
-            return Ok(Some((record, bytes)));
+            return Ok(Some((record.select_field(self.selection.clone()), bytes)));
         }
+    }
+}
+
+/// The positional input files, in order.
+pub(super) fn files(args: &ArgMatches) -> Vec<String> {
+    args.get_many::<String>("files")
+        .map(|v| v.cloned().collect())
+        .unwrap_or_default()
+}
+
+/// Source boundaries retain the file for each original record position.
+#[derive(Default)]
+pub(super) struct Origins(Vec<(u64, String)>);
+impl Origins {
+    pub(super) fn record(&mut self, position: u64, path: String) {
+        if self.0.last().is_none_or(|(_, previous)| previous != &path) {
+            self.0.push((position, path));
+        }
+    }
+    pub(super) fn at(&self, position: u64) -> &str {
+        self.0
+            .iter()
+            .rev()
+            .find(|(first, _)| *first <= position)
+            .map_or("stdin", |(_, path)| path.as_str())
     }
 }
 
@@ -170,7 +226,7 @@ impl Input {
 pub(super) struct StreamInput {
     receiver: std::sync::mpsc::Receiver<Result<FramedRecord, Error>>,
     cancel: crate::Cancel,
-    origins: Vec<(u64, String)>,
+    origins: Origins,
     read: u64,
     pub format: Format,
 }
@@ -196,7 +252,7 @@ impl StreamInput {
         Ok(Self {
             receiver,
             cancel,
-            origins: Vec::new(),
+            origins: Origins::default(),
             read: 0,
             format,
         })
@@ -225,21 +281,11 @@ impl StreamInput {
         };
         self.read += 1;
         self.format = format;
-        if self
-            .origins
-            .last()
-            .is_none_or(|(_, previous)| previous != &path)
-        {
-            self.origins.push((self.read, path));
-        }
+        self.origins.record(self.read, path);
         Ok(InputEvent::Record(record, bytes))
     }
     pub(super) fn origin(&self, position: u64) -> &str {
-        self.origins
-            .iter()
-            .rev()
-            .find(|(first, _)| *first <= position)
-            .map_or("stdin", |(_, path)| path.as_str())
+        self.origins.at(position)
     }
 }
 

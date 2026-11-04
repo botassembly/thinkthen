@@ -72,9 +72,13 @@ def test_record_conversion_failures_keep_positions_without_backend_requests(
         client = tt.Client(
             backend=tt.Backend(backend), url=server.url, api_key="synthetic", batch=1
         )
-        single = client.decide("Ready?", invalid_value(kind))
-        assert single.status == "failed" and single.position == 1
-        assert single.error is not None and single.error.code == "record.invalid"
+        if kind == "cycle":
+            with pytest.raises(TypeError, match="decide_stream"):
+                client.decide("Ready?", invalid_value(kind))
+        else:
+            single = client.decide("Ready?", invalid_value(kind))
+            assert single.status == "failed" and single.position == 1
+            assert single.error is not None and single.error.code == "record.invalid"
         assert server.count() == 0
         with client.decide_stream(
             "Ready?", [invalid_value(kind), "evidence"]

@@ -76,7 +76,7 @@ fn each_record_prints_one_row() {
             &["refund one", "parcel two", "refund three"],
         ),
         (
-            &["--from", "jsonl", "--json", "--evidence", "/body"],
+            &["--from", "jsonl", "--json", "--field", "/body"],
             b"{\"id\":\"a\",\"body\":\"refund\"}\r\n{\"body\":\"parcel\"}\n",
             vec![yes(json!("a")), no(json!(2))],
             &["refund", "parcel"],
@@ -89,7 +89,7 @@ fn each_record_prints_one_row() {
         ),
         (&["--from", "lines", "--json"], b"", vec![], &[]),
     ];
-    for (args, input, expected, evidence) in cases {
+    for (args, input, expected, field) in cases {
         let server = Loopback::refunds().unwrap();
         let output = run(&server, args, None, input);
         assert_eq!(rows(&output), expected, "{args:?}");
@@ -104,7 +104,7 @@ fn each_record_prints_one_row() {
             })
             .map(|question| question["instructions"].as_str().unwrap().to_owned())
             .collect();
-        let mut quoted: Vec<String> = evidence
+        let mut quoted: Vec<String> = field
             .iter()
             .map(|text| {
                 format!(
@@ -163,7 +163,7 @@ fn record_failures_keep_their_codes_and_exit_six() {
         .unwrap();
         let output = run(
             &server,
-            &["--from", "jsonl", "--json", "--evidence", "/body"],
+            &["--from", "jsonl", "--json", "--field", "/body"],
             None,
             input,
         );
@@ -229,7 +229,7 @@ fn a_usage_error_exits_2_and_sends_nothing() {
             None,
         ),
         (
-            &["--from", "jsonl", "--json", "--evidence", "body"],
+            &["--from", "jsonl", "--json", "--field", "body"],
             Some("usage.pointer"),
         ),
         (
@@ -308,5 +308,57 @@ fn record_byte_limit_returns_before_the_input_pipe_closes() {
         let error = String::from_utf8(output.stderr).unwrap();
         assert!(error.contains("usage.question"), "{error}");
         assert!(error.contains("record exceeds the 64 MiB limit"), "{error}");
+    }
+}
+
+#[test]
+fn field_selects_records_and_the_previous_option_is_not_an_alias() {
+    let server = Loopback::noul(0.9).unwrap();
+    let input = b"{\"body\":\"refund\",\"evidence\":\"unrelated user data\"}\n";
+    let output = run(
+        &server,
+        &["--from", "jsonl", "--json", "--field", "/body"],
+        None,
+        input,
+    );
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(rows(&output)[0]["answer"], true);
+    let sent = server.requests()[0].json().unwrap();
+    assert!(sent.to_string().contains("refund"));
+    assert!(!sent.to_string().contains("unrelated user data"));
+    let old = run(
+        &server,
+        &["--from", "jsonl", "--evidence", "/body"],
+        None,
+        input,
+    );
+    assert_eq!(old.status.code(), Some(2), "{old:?}");
+    assert_eq!(server.count(), 1, "the old option must not call a backend");
+}
+
+#[test]
+fn field_environment_selects_records_and_the_previous_setting_is_ignored() {
+    let file = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(
+        file.path(),
+        "{\"body\":\"refund\",\"evidence\":\"caller field\"}\n",
+    )
+    .unwrap();
+    for selected in [true, false] {
+        let server = Loopback::noul(0.9).unwrap();
+        let mut command = support::command();
+        command
+            .args(["decide", "Ready?", "--from", "jsonl", "--json"])
+            .arg(file.path())
+            .env("THINKTHEN_BASE_URL", server.base())
+            .env("THINKTHEN_API_KEY", KEY)
+            .env("THINKTHEN_EVIDENCE", "invalid old pointer");
+        if selected {
+            command.env("THINKTHEN_FIELD", "/body");
+        }
+        let output = command.output().unwrap();
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        let sent = server.requests()[0].json().unwrap().to_string();
+        assert_eq!(sent.contains("caller field"), !selected);
     }
 }

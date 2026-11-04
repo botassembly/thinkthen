@@ -1,0 +1,103 @@
+---
+title: filter
+description: filter asks a yes-or-no question about every line and keeps only the lines that answer yes, dropping the no and the not sure.
+goal: A newcomer with a file of messages leaves able to keep the lines that answer yes, see which lines were not sure, see the chance of yes for each line, move the bar, branch a script on whether any line was kept, and keep the yes rows of a CSV file.
+reader: Someone at the command line who wants to keep only the lines of a file that match a meaning
+kind: how-to
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "filter: keep the lines that answer yes"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
+
+filter asks one yes-or-no question about every line of its input and prints the lines that answer yes, exactly as they came in. It drops the lines that answer no, and, when you set a low and a high bar, the lines it is not sure about.
+
+<Example id="functions/filter/command" />
+
+<ExampleFile id="functions/filter/command" file="messages.txt" />
+
+The refund request and the double charge answer yes, so filter prints them. The parcel question answers no, so filter drops it.
+
+## Not sure
+
+Set a low bar and a high bar. filter keeps a line at or above the high bar, and drops it below the low bar or in between, where it is not sure.
+
+<Example id="filter-unsure" />
+
+Only the refund request is kept. The double charge falls between the bars, so filter is not sure and drops it. Send not sure to a person. Never treat it as a no.
+
+## See why
+
+<details class="example-disclosure">
+<summary>See why</summary>
+
+`--json` prints one line of details for every input line, kept or not. This `jq` keeps three of them.
+
+<Example id="filter-why" />
+
+`status` says whether filter answered or was not sure, and `kept` says whether it printed the line. [JSON output](/reference/json-output/) lists every field, including `probability`, the chance of yes.
+
+</details>
+
+## Move the bar
+
+<details class="example-disclosure">
+<summary>Move the bar</summary>
+
+With one bar, `--threshold`, filter keeps a line at or above it and drops the rest. Raise the bar to 0.8 and the double charge, at 0.7, is dropped.
+
+<Example id="filter-bar" />
+
+The default bar is 0.5. Lower it to keep more lines. Raise it to keep only the clear ones.
+
+</details>
+
+## Use the answer in a script
+
+<details class="example-disclosure">
+<summary>Use the answer in a script</summary>
+
+`--check` turns the answer into the exit code: 0 when filter keeps at least one line.
+
+<Example id="filter-script" />
+
+| Answer | Exit code with `--check` |
+|---|---|
+| at least one line kept | 0 |
+| none kept, none not sure | 1 |
+| none kept, at least one not sure | 3 |
+
+Without `--check`, filter exits 0 whenever it answers. [Exit codes](/command-line/exit-codes/) lists every code.
+
+</details>
+
+## Keep the yes rows of a CSV file
+
+<details class="example-disclosure">
+<summary>Keep the yes rows of a CSV file</summary>
+
+<ExampleFile id="filter-into" file="messages.csv" />
+
+<Example id="filter-into" />
+
+`--column` names the column to read, and `--into` names the new answer column. filter writes only the rows it keeps. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+
+</details>
+
+## Options
+
+<details class="example-disclosure">
+<summary>Options</summary>
+
+<FunctionOptions name="filter" />
+
+</details>
+
+If filter can't answer a line, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+
+**In code:** [Python](/sdks/python/#filter) · [TypeScript](/sdks/typescript/#filter) · [Go](/sdks/go/#filter) · [Java](/sdks/java/#filter) · [Kotlin](/sdks/kotlin/#filter) · [C#](/sdks/csharp/#filter) · [R](/sdks/r/#filter) · [Ruby](/sdks/ruby/#filter) · [Rust](/sdks/rust/#filter) · [Swift](/sdks/swift/#filter) · [Zig](/sdks/zig/#filter) · [C](/sdks/c/#filter) · [C++](/sdks/cpp/#filter) · [DuckDB](/sdks/duckdb/#filter) · [SQLite](/sdks/sqlite/#filter) · [PostgreSQL](/sdks/postgresql/#filter)
+
+Next: [tag](/functions/tag/) gives a text every label that fits.

@@ -4,18 +4,30 @@ from pathlib import Path
 import subprocess
 import sys
 
+check_checksum = sys.argv[1:2] == ["--checksum"]
+if check_checksum:
+    del sys.argv[1]
 cache = Path(sys.argv[1]) / "thinkthen" / "native"
 command = sys.argv[2:]
 subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
 assets = [path for path in cache.glob("*/*") if path.is_file()]
 assert assets, f"consumer loaded no cached native engine in {cache}"
+# A second process must load the already published cache before tampering.
+subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
 
-def rejected():
+def rejected(diagnostic="cache owner or permissions"):
     result = subprocess.run(command, capture_output=True, text=True)
     assert result.returncode != 0, "consumer loaded an unsafe cached engine"
-    assert "cache owner or permissions" in (result.stdout + result.stderr).lower(), result.stdout + result.stderr
+    assert diagnostic in (result.stdout + result.stderr).lower(), result.stdout + result.stderr
 
 for asset in assets:
+    if check_checksum:
+        original = asset.read_bytes()
+        try:
+            asset.write_bytes(b"corrupt cached engine")
+            rejected("checksum mismatch")
+        finally:
+            asset.write_bytes(original)
     for path in (asset, asset.parent, cache):
         mode = path.stat().st_mode & 0o777
         try:
@@ -33,3 +45,5 @@ for asset in assets:
         saved.rename(asset)
 subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
 print("Installed consumer rejects writable and linked native cache entries")
+if check_checksum:
+    print("Installed consumer loads cold/warm cache and rejects corrupt engine bytes")

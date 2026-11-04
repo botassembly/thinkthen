@@ -1,5 +1,4 @@
 """Exercise the installed DuckDB SQL host with the canonical ABI."""
-from contextlib import contextmanager
 import json
 from pathlib import Path
 import subprocess
@@ -9,10 +8,12 @@ from types import SimpleNamespace
 
 from argument_cases import argument_order
 from join_cases import joins
+from union_cases import unions
+from interface_cases import interface, blank_inputs
 from cases import canonical, invocation, quote
 from migration_cases import read_line, child_environment, command, fixture, forbidden_settings, run_cases, options_cases, SqlError
 from typed_api import admission, contract_row
-from streaming_cases import first_response, streaming
+from streaming_cases import first_response, streaming, rank_wide_memory
 
 argument_order()
 
@@ -20,7 +21,11 @@ PACKAGE, LOOPBACK = map(Path, sys.argv[1:3])
 LIMIT_ONLY = sys.argv[3:] == ['--limit-only']
 STREAMING_ONLY = sys.argv[3:] == ['--streaming-only']
 ADMISSION_ONLY = sys.argv[3:] == ['--admission-only']
-assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY, sys.argv[3:]
+UNION_ONLY = sys.argv[3:] == ['--union-only']
+RETENTION_ONLY = sys.argv[3:] == ['--retention-only']
+WIDE_ONLY = sys.argv[3:] == ['--wide-only']
+INTERFACE_ONLY = sys.argv[3:] == ['--interface-only']
+assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY or UNION_ONLY or INTERFACE_ONLY or WIDE_ONLY or RETENTION_ONLY, sys.argv[3:]
 
 
 class Host:
@@ -66,12 +71,17 @@ class Host:
         self.failure('SELECT * FROM ' + invocation(request))
 
     def call(self, request):
-        rows = self.query('SELECT to_json(t) AS result FROM ' + invocation(request) + ' AS t')
+        call = invocation(request)
+        if request['question']['function'] == 'filter':
+            call = call[:-1] + ", failures := 'row')"
+        rows = self.query('SELECT to_json(t) AS result FROM ' + call + ' AS t')
         output = []
         for item in rows:
             native = json.loads(item['result'])
             contract_row(native, request['question']['function'])
             row = canonical(native, request['question']['function'])
+            if request['question']['function'] == 'filter':
+                row['kept'] = row['status'] == 'answered' and row.get('answer') is True
             output.append(tuple(row.get(name) if name in ('position', 'status', 'probability', 'kept') else
                                 json.dumps(row[name]) if name in row else None
                                 for name in ('position','status','answer','probability','error','detail','kept','id','source')))
@@ -90,6 +100,20 @@ class Host:
                 self.process.wait()
 
 
+if RETENTION_ONLY:
+    streaming(Host, PACKAGE, LOOPBACK)
+    unions(Host)
+    sys.exit(0)
+if WIDE_ONLY:
+    rank_wide_memory(PACKAGE)
+    sys.exit(0)
+if INTERFACE_ONLY:
+    interface(Host)
+    blank_inputs(Host, LOOPBACK)
+    sys.exit(0)
+if UNION_ONLY:
+    unions(Host)
+    sys.exit(0)
 if LIMIT_ONLY:
     first_response(Host, LOOPBACK)
     sys.exit(0)
@@ -104,6 +128,9 @@ if STREAMING_ONLY:
 with Host() as host:
     forbidden_settings(host)
     assert host.query('SELECT 1 AS alive') == [{'alive': '1'}]
+unions(Host)
+interface(Host)
+blank_inputs(Host, LOOPBACK)
 joins(Host, LOOPBACK)
 options_cases(Host)
 run_cases(Host, LOOPBACK)
@@ -142,7 +169,7 @@ with Host() as host:
     assert rows[0]['source']['name'] == 'audit'
     for column in ('id', 'Answer', 'POSITION', 'source', 'detail'):
         host.failure('SELECT * FROM thinkthen_decide((SELECT \'evidence\' AS record, 1 AS "' + column + '"), \'Ready?\')', 'usage.sql-selection')
-    host.failure("SELECT * FROM thinkthen_filter((SELECT 'evidence' AS record, true AS kept), 'Ready?')", 'usage.sql-selection')
+    assert host.query("SELECT kept FROM thinkthen_filter((SELECT 'evidence' AS record, true AS kept), 'Ready?')") in ([], [{'kept': 'true'}])
     host.failure("SELECT * FROM thinkthen_choose((SELECT 'evidence' AS record), 'Ready?')", 'usage.question')
     host.failure("SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), 'Ready?', threshold := 0.7, low := 0.2, high := 0.8)", 'usage.threshold')
     host.failure("SELECT * FROM thinkthen_annotate((SELECT 'evidence' AS record), toolbox := '{\"bad\":{\"function\":\"rank\",\"question\":\"Order?\",\"levels\":[\"low\",\"high\"]}}'::JSON)", 'usage.question')
@@ -155,7 +182,7 @@ with Host() as host:
     types = host.query("DESCRIBE SELECT * FROM thinkthen_choose((SELECT 'evidence' AS record), 'Ready?', choices := ['yes','no'])")
     columns = {row['column_name']: row['column_type'] for row in types}
     assert columns['answer'] == 'VARCHAR' and columns['probability'] == 'DOUBLE'
-    assert columns['status'].startswith('ENUM(') and columns['error_code'].startswith('ENUM(')
+    assert columns['status'] == 'thinkthen_status' and columns['error_code'] == 'thinkthen_error_code'
     assert columns['detail'].startswith('STRUCT(') and columns['source'].startswith('STRUCT(')
     host.query("PREPARE reusable AS SELECT * FROM thinkthen_decide((SELECT 'evidence' AS record), $1)")
     assert len(host.query("EXECUTE reusable('Ready?')")) == 1

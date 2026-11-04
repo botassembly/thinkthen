@@ -42,10 +42,10 @@ def ruby_conversion_contract
       error = raises(ThinkThen::UsageError) { client.decide("Ready?", "record", threshold: threshold) }
       equal(:"usage.threshold", error.code, "nonfinite numeric threshold uses engine admission")
     end
-    raises(TypeError) { client.rank("Urgency?", "record", levels: %w[low high], top: 1.5) }
+    raises(ThinkThen::UsageError) { client.rank("Urgency?", ["record"], levels: %w[low high], top: 1.5) }
     token = ThinkThen::CancelToken.new
     token.cancel
-    raises(ThinkThen::Cancelled) { client.decide_each("Ready?", ["record"], cancel: token).to_a }
+    raises(ThinkThen::CancelledError) { client.decide_each("Ready?", ["record"], cancel: token).to_a }
   end
 end
 
@@ -95,13 +95,18 @@ def ruby_saved_calls
                  typed_question(definition)
                end
     ThinkThen::Client.open(backend: :stub) do |client|
-      single = client.public_send(function, question, record)
       stream = client.public_send("#{function}_each", question, [record]).to_a
       equal(1, stream.length, "saved #{function} returns one row")
       if function == "filter"
-        assert(single.item.equal?(record), "saved filter retains original item")
-        single, expected = single.row, stream.first.row
+        actual = client.filter(question, [record]).to_a
+        expected = stream.first.kept? ? [record] : []
+        equal(expected, actual, "saved filter keeps the original record")
+        next
+      elsif function == "rank"
+        equal([record], client.rank(question, [record]).map(&:item), "saved rank copies the original record")
+        next
       else
+        single = client.public_send(function, question, record)
         expected = stream.first
       end
       equal(expected.to_h, single.to_h, "saved #{function} maps the same question and record")

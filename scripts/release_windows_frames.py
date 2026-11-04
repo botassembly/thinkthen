@@ -12,9 +12,12 @@ HASHES = Path(__file__).with_name('release-python-hashes.json')
 
 
 def inputs():
+    from release_python_dependencies import inputs as runtime_inputs
     catalog = json.loads(HASHES.read_text(encoding='utf-8'))
     return {name: {'url': url, 'sha256': catalog[name][urlparse(url).path.rsplit('/', 1)[-1]]}
-            for name, url in PINS['windows_python_frames'].items()}
+            for name, url in PINS['windows_python_frames'].items()} | {
+                name: {'url': entry['url'], 'sha256': entry['sha256']}
+                for name, entry in runtime_inputs().items()}
 
 
 def location():

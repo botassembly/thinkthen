@@ -1,0 +1,276 @@
+# Getting data in and out. Source: product (--from values, table options), cases (spreadsheet tasks).
+- id: csv-column
+  question: How do I add an answer column to a CSV file?
+  source: product
+  frequency: --column, --into and --output in the help; the spreadsheet cases
+  rank: 21
+  page: /your-data/
+  reference: /reference/options/
+- id: jsonl-field
+  question: How do I judge one field of a JSON Lines file?
+  source: product
+  frequency: --field in every command's help
+  rank: 22
+  page: /your-data/
+  reference: /reference/options/
+- id: xlsx
+  question: Can ThinkThen read and write Excel xlsx files?
+  source: product
+  frequency: xlsx is one of six --from values
+  rank: 23
+  page: /your-data/
+  reference: /reference/options/
+- id: two-fields
+  question: How do I ask about two fields of a JSON record together?
+  source: product
+  frequency: --field selects one value; multi-field records are common
+  rank: 31
+  page: /your-data/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Your data
+  reference_title: Command options
+  reader: A developer whose field is split across fields such as subject and body
+  answer: |
+    Build one object that holds the fields, then point `--field` at it. Here `jq` turns `subject` and `body` into a `message` object, and ThinkThen {version} judges that object with `--field /message` while the row keeps the record's `id`.
+  why: |
+    `--field` takes one JSON Pointer, and a pointer selects one value. That value can be an object, so putting both fields under one key sends them to the model together. The top-level `id` stays outside the field and comes back on the row.
+  limits: |
+    A spreadsheet does this with a repeated `--column`, which sends an object keyed by column name. Every field you add makes the request larger, and one record's question must fit the backend's request limit. The model reads the subject and the body as one message and judges the whole request.
+  examples:
+    - id: ans-two-fields
+      says: "The first `jq -c` builds a `message` object from `subject` and `body` for each record. ThinkThen judges that object, and the last `jq` keeps three fields of each row:"
+  explain:
+    id: The record's own `id`, kept outside the field.
+    answer: Yes or no for the question.
+    probability: The probability of yes, from 0 to 1. The default cut is 0.5.
+- id: tsv
+  question: How do I run ThinkThen on a TSV file?
+  source: product
+  frequency: tsv is one of six --from values
+  rank: 36
+  page: /your-data/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Your data
+  reference_title: Command options
+  reader: A developer or analyst with tab-separated data
+  answer: |
+    Treat it like a CSV file: name the field column with `--column` and the new answer column with `--into`. A `.tsv` file selects the framing; on standard input, add `--from tsv`. ThinkThen {version} writes the table back as TSV with the answer column added.
+  why: |
+    TSV is one of three table framings, with CSV and xlsx. Each line after the header is a record. ThinkThen keeps every input row in order and adds one answer column. `--details` would also add its status, probability, error, detail and source columns; without it, the table here has three columns, so `cut` shows them all.
+  limits: |
+    Table input takes no `--json`. An `--into` name that already exists in the header stops the command. Given a file argument instead of standard input, ThinkThen writes `NAME.thinkthen.tsv` beside it.
+  examples:
+    - id: ans-tsv
+      says: "Judge the `text` column of a TSV file read from standard input. `cut -f 1-5` keeps up to five columns; the result has three, `id`, `text` and `refund`:"
+  explain:
+    refund: "The answer column that `--into` named: `TRUE` or `FALSE`."
+- id: in-place
+  question: How do I update a spreadsheet in place with ThinkThen?
+  source: product
+  frequency: --in-place in every function's help
+  rank: 37
+  page: /your-data/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Your data
+  reference_title: Command options
+  reader: A developer or analyst who wants answer columns added to the original file
+  answer: |
+    Add `--in-place`. ThinkThen {version} adds the answer column to the source file and keeps the original beside it as `NAME.backup.csv`. It prints the file's name, and names the backup on standard error.
+  why: |
+    Without `--in-place` or `--output`, a file input produces a new file beside it, `NAME.thinkthen.csv`. `--in-place` replaces the source instead, after it saves the backup, so the original data is never lost. Each question adds one answer column; `--details` also adds its status, probability, error, detail and source columns, such as `refund_status`.
+  limits: |
+    A second run with the same `--into` stops with a usage error, because that column now exists; pick a new name. A failure that stops the call, or an interrupt, leaves the source unchanged. Every run costs requests, so keep the backup until you have checked the answers.
+  examples:
+    - id: ans-in-place
+      says: "Add the `refund` answer column to `messages.csv` in place:"
+    - id: ans-in-place-ls
+      says: "List the folder afterwards. `messages.backup.csv` holds the original file:"
+    - id: ans-in-place-file
+      says: "Show the updated `messages.csv`. Its header is now `id,text,refund`; without `--details`, no status column is added:"
+  explain:
+    "thinkthen: backup:": The name of the backup of the original file, printed on standard error.
+    refund: The new answer column, now in the source file.
+- id: many-files
+  question: How do I run ThinkThen over several files at once?
+  source: product
+  frequency: every function takes FILE... in its help
+  rank: 38
+  page: /your-data/
+  reference: /reference/commands/decide/
+  answers_page: true
+  page_title: Your data
+  reference_title: thinkthen decide
+  reader: A developer with records split across files
+  answer: |
+    Pass every file after the question. ThinkThen {version} reads them in order as one stream, so `position` keeps counting across files and one command batches all the records.
+  why: |
+    Each function takes `[FILE]...`. The files' records join one input stream, in the order given, so positions run 1, 2, 3 and then 4 for the second file's first record. Use `-` among the files to include standard input.
+  limits: |
+    All files use one framing; a `.jsonl` extension or `--from` sets it. When a row fails, the command names the input file and position on standard error. Records from all the files share requests, up to `--batch` records in each.
+  examples:
+    - id: ans-many-files
+      says: "Judge two JSON Lines files in one command. `jq` keeps three fields of each row:"
+  explain:
+    position: The record's place in the combined input, counting across files.
+    id: The record's own `id`; `b1` is the first record of `more.jsonl`.
+    answer: Yes or no for the question.
+- id: output-json
+  question: How do I get every field of a ThinkThen answer as JSON?
+  source: product
+  frequency: --json and --format in every command's help
+  rank: 24
+  page: /your-data/
+  reference: /reference/rows/
+- id: field-piped
+  question: Why does a JSON pointer fail on piped JSON records?
+  source: cases
+  frequency: found while writing the docs; JSON piped into a command is a common case
+  rank: 61
+  page: /your-data/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Your data
+  reference_title: Command options
+  reader: A developer who piped JSON records into ThinkThen and got answers about the raw JSON
+  answer: |
+    Without `--from`, `decide` reads standard input as one record, and `--field` parses it as one JSON value, so several JSON records fail with `record.json`. Add `--from jsonl`. ThinkThen {version} then reads one JSON record per line, the pointer selects the field, and the row keeps the record's `id`.
+  why: |
+    A file named `.jsonl` is JSON Lines by its name, but a pipe has no name, so `decide` reads it as one record. With a field pointer, that record must be one JSON value: one JSON object piped without `--from` works, but several lines of JSON do not parse as one value. Select JSON Lines framing so each line is a record and the pointer can address its field.
+  limits: |
+    A pointer that selects nothing fails only that record, with [`record.missing`](/reference/errors/record-missing/); the other records still get answers. `filter`, `rank` and `annotate` read a pipe as lines, and refuse `--field` with a usage error and exit code 2 until you add `--from jsonl`. The model reads exactly the text it is sent, so select `--from jsonl` before using a field pointer on a pipe of several records.
+  examples:
+    - id: ans-field-piped
+      says: "Pipe two JSON records without `--from`. ThinkThen reads standard input as one record, which is not one JSON value, so the record fails with `record.json` and the command exits 6:"
+    - id: ans-field-piped-missing
+      says: "Add `--from jsonl`. Now the pointer is used, and a pointer that selects nothing fails the record:"
+    - id: ans-field-piped-text
+      says: "With `--from jsonl` and the right pointer, the record is judged and the row keeps its `id`:"
+  explain:
+    id: The record's `id`; `null` when the input is not one JSON value.
+    status: "`answered`, or `failed` when the input is not JSON or the pointer selects nothing."
+    error: The error code of the failed row.
+- id: record-id
+  question: How does ThinkThen know the id of each record?
+  source: product
+  frequency: every row carries `id` and `position`
+  rank: 62
+  page: /your-data/
+  reference: /reference/rows/
+  answers_page: true
+  page_title: Your data
+  reference_title: Result rows
+  reader: A developer joining ThinkThen rows back to their own records
+  answer: |
+    A JSON record's top-level `id` field is its id, and ThinkThen {version} copies it onto the row. Every row also has `position`, the record's place in the input from 1. A record without an `id` gets `null`.
+  why: |
+    The row keeps the `id` as it was, string or number, so you can join rows to records without a lookup by position. Position always exists, so it is the key when records have no ids.
+  limits: |
+    Text and lines records have no id; use `position`. Spreadsheet rows keep their own columns beside the answer columns instead. The id and the position do not depend on the backend or on the answer.
+  examples:
+    - id: ans-record-id
+      says: "Three records: one with a string `id`, one without, one with a number. `jq` keeps `position` and `id`:"
+  explain:
+    position: The record's place in the input, from 1.
+    id: "The record's `id` as it was: a string, `null` when absent, or a number."
+- id: rows-to-csv
+  question: How do I export ThinkThen JSON rows to a CSV file?
+  source: cases
+  frequency: rows often end in a spreadsheet
+  rank: 63
+  page: /your-data/
+  reference: /reference/rows/
+  answers_page: true
+  page_title: Your data
+  reference_title: Result rows
+  reader: An analyst who ran ThinkThen on JSON Lines and wants a spreadsheet
+  answer: |
+    Pipe the `--json` rows through `jq -r` with `@csv`, naming the fields you want in order. Each ThinkThen {version} row becomes one CSV line.
+  why: |
+    `--json` writes one JSON row per record. `jq -s` reads the rows into one list, so the program can print the header once and then one line per row. `@csv` quotes each value by CSV rules, and the fields come out in the order you name them.
+  limits: |
+    `jq -s` holds every row in memory before it writes, which is fine for thousands of rows; for a very large run, drop `-s` and write the header line yourself. For a CSV input, ThinkThen writes the answer columns into the table directly; see [Your data](/your-data/).
+  examples:
+    - id: ans-rows-to-csv
+      says: "Write a header and one CSV line per row to `refunds.csv`. `tee` also shows the file:"
+  explain:
+    id: The record's id.
+    status: Whether the record was answered.
+    answer: "`true` or `false`."
+    probability: The probability of yes, from 0 to 1.
+- id: filter-records
+  question: How do I get the whole record back from ThinkThen filter?
+  source: product
+  frequency: filter is used as a grep over records
+  rank: 65
+  page: /functions/filter/
+  reference: /reference/commands/filter/
+  answers_page: true
+  page_title: "filter: keep the records that answer yes"
+  reference_title: thinkthen filter
+  reader: A developer who wants the kept records, with every field, not answer rows
+  answer: |
+    Leave out `--json`. In text output, ThinkThen {version} filter prints each kept record exactly as it came in, every field included, so the output is a smaller copy of the input.
+  why: |
+    filter's text output is the records that answered yes, one per line, unchanged. The `--field` pointer chooses what the model reads; it does not trim what filter prints.
+  limits: |
+    Text output drops the no, not sure and failed records without a trace. Use `--json` when you must know what was dropped; its rows carry the `id` and `position`, not the record.
+  examples:
+    - id: ans-filter-records
+      says: "Keep the records that ask for a refund, with a cut of 0.3. The output is JSON Lines, one kept record per line:"
+  explain:
+    text: The field the model read, unchanged.
+    customer: A field the model never read. It comes back because filter prints the whole record.
+- id: json-on-table
+  question: Why does --json fail on a CSV file in ThinkThen?
+  source: product
+  frequency: the usage.option error for table framing
+  rank: 67
+  page: /your-data/
+  reference: /reference/errors/usage-option/
+  answers_page: true
+  page_title: Your data
+  reference_title: usage.option error
+  reader: A developer who added --json to a spreadsheet command and got exit code 2
+  answer: |
+    A CSV, TSV or xlsx input comes back as a table with answer columns, so ThinkThen {version} refuses `--json` on it with `usage.option` and exit code 2, before it judges anything. Remove `--json` to get the table.
+  why: |
+    Table framing writes the input table back with new columns. JSON rows would drop the table's own columns, so the two outputs do not mix.
+  limits: |
+    For JSON rows from a spreadsheet, convert it to JSON Lines first and select the column with `--field`. The check runs before any request, so nothing is sent and nothing is spent.
+  examples:
+    - id: ans-json-on-table
+      says: "Ask for JSON rows from a CSV file. The command stops with exit code 2:"
+  explain:
+    usage.option: The error code. A usage error stops the command before it judges any record.
+    received JSON row output: "What the command refused: JSON rows for a table input."
+- id: output-exists
+  question: Why does ThinkThen say the output already exists?
+  source: product
+  frequency: every second run of a spreadsheet command meets it
+  rank: 68
+  page: /your-data/
+  reference: /reference/errors/usage-question/
+  answers_page: true
+  page_title: Your data
+  reference_title: usage.question error
+  reader: A user who ran a spreadsheet command twice and got exit code 2
+  answer: |
+    ThinkThen {version} never overwrites a file. A spreadsheet command writes `NAME.thinkthen.csv` beside the input, and when that file exists the next run stops with `usage.question` and exit code 2. Name a new file with `--output`, or delete the old one.
+  why: |
+    Refusing to overwrite keeps the answers of an earlier run, which may have been paid for. `--output` names any path that does not exist yet.
+  limits: |
+    `--in-place` is the one way to change an existing file, and it saves a backup first. The earlier answers cost requests, so keep them until you have checked the new run.
+  examples:
+    - id: ans-output-exists
+      says: "The first run writes the answers to a new file beside the input and prints its name:"
+    - id: ans-output-exists-again
+      says: "The same command again stops with exit code 2, because that file now exists:"
+    - id: ans-output-exists-new
+      says: "Name a new file with `--output`:"
+  explain:
+    messages.thinkthen.csv: The file the first run wrote beside `messages.csv`.
+    output already exists: Why the second run stopped.
+    refunds-2.csv: The file that `--output` named.

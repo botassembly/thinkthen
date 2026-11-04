@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""Check every Python example in the docs for named answers and mypy --strict.
+
+Usage: python-docs-check [--names-only] [FILE ...]
+
+Ian's slide rule of 2026-09-26, extended to the docs on 2026-11-02
+(sdlc/decisions/2026-11-02-python-and-command-interface.md, item 5): each
+example stores each ThinkThen answer under a name for its meaning, then uses
+that name. With no FILE, the check reads every ```python fence in docs/ and
+sdk/python/README.md. A FILE ending in .py is one whole example.
+
+The name check fails on:
+
+- direct: a print or assert whose statement holds a ThinkThen call.
+- unnamed: a ThinkThen call whose answer goes into no name. `x = list(call)`,
+  `for x in call` and `with call as x` all name it.
+- generic: an answer stored as `row`, `rows`, `result`, `answers` or another
+  name that says nothing about its meaning.
+- is-true: `is True`, `is False` or `== True` on an answer; a result stands for
+  its answer, so `if is_refund:` reads it.
+- ceremony: `raise_for_error()`; using a failed answer already raises.
+
+Then each example, written as its own module, must pass mypy --strict against
+the package source in sdk/python. Run it with mypy, pandas, pandas-stubs and
+polars installed, as scripts/python-gate does. --names-only skips mypy.
+Prints one line per fault and exits 1 if any.
+"""
+import ast
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+FUNCS = {"decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"}
+GENERIC = {"a", "ans", "answer", "answers", "data", "decision", "decisions", "got", "out",
+           "outcome", "output", "outputs", "r", "res", "resp", "response", "result", "results",
+           "ret", "row", "rows", "rv", "tmp", "v", "val", "value", "values", "verdict", "x", "y"}
+FENCE = re.compile(r"^```python\n(.*?)\n```", re.S | re.M)
+
+
+def problems(code):
+    """Inspect Python expressions, excluding comments and string contents."""
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as error:
+        return [("syntax", str(error))]
+    parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
+    receivers = {"tt", "client", "aio", "thinkthen"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            receivers.update(alias.asname or alias.name for alias in node.names
+                             if alias.name in {"thinkthen", "thinkthen.aio"})
+        if isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                call = item.context_expr
+                if (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                        and call.func.attr in {"Client", "AsyncClient"}
+                        and isinstance(item.optional_vars, ast.Name)):
+                    receivers.add(item.optional_vars.id)
+
+    def answer_call(node):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            return False
+        function = node.func.attr.removesuffix("_stream").removesuffix("_rows")
+        owner = node.func.value
+        return function in FUNCS and (
+            isinstance(owner, ast.Name) and owner.id in receivers
+            or isinstance(owner, ast.Attribute) and owner.attr == "thinkthen")
+
+    def names(target):
+        return [node.id for node in ast.walk(target) if isinstance(node, ast.Name)]
+
+    answer_names = set()
+    found = []
+    reported = set()
+
+    def report(rule, node):
+        key = (rule, node.lineno)
+        if key not in reported:
+            reported.add(key)
+            found.append((rule, " ".join((ast.get_source_segment(code, node) or "").split())))
+
+    # Carry answer identity through assignment and iteration, including aliases.
+    changed = True
+    while changed:
+        changed = False
+        for node in ast.walk(tree):
+            pairs = []
+            if isinstance(node, ast.Assign):
+                pairs = [(target, node.value) for target in node.targets]
+            elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                pairs = [(node.target, node.value)]
+            elif isinstance(node, (ast.For, ast.AsyncFor)):
+                pairs = [(node.target, node.iter)]
+            elif isinstance(node, (ast.With, ast.AsyncWith)):
+                pairs = [(item.optional_vars, item.context_expr) for item in node.items
+                         if item.optional_vars is not None]
+            for target, value in pairs:
+                if any(answer_call(child) or isinstance(child, ast.Name) and child.id in answer_names
+                       for child in ast.walk(value)):
+                    for name in names(target):
+                        if name not in answer_names:
+                            answer_names.add(name)
+                            changed = True
+                        if name.lower() in GENERIC:
+                            report("generic", node)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Compare):
+            operands = [node.left, *node.comparators]
+            if any(isinstance(value, ast.Constant) and isinstance(value.value, bool) for value in operands):
+                report("is-true", node)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "raise_for_error":
+            report("ceremony", node)
+        if not answer_call(node):
+            continue
+        current = node
+        named = False
+        while current in parents:
+            parent = parents[current]
+            if isinstance(parent, ast.Assert) or (isinstance(parent, ast.Call)
+                    and isinstance(parent.func, ast.Name) and parent.func.id in {"print", "pprint"}):
+                report("direct", parent)
+                named = True
+                break
+            if (isinstance(parent, (ast.Assign, ast.AnnAssign)) and current is parent.value
+                    or isinstance(parent, (ast.For, ast.AsyncFor)) and current is parent.iter
+                    or isinstance(parent, ast.withitem) and current is parent.context_expr
+                    and parent.optional_vars is not None):
+                named = True
+                break
+            current = parent
+        if not named:
+            report("unnamed", node)
+    return found
+
+
+def examples(paths):
+    """Each example as (label, code)."""
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        label = str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
+        if path.suffix == ".py":
+            yield label, text
+            continue
+        for block in FENCE.finditer(text):
+            yield "%s:%d" % (label, text.count("\n", 0, block.start()) + 2), block.group(1)
+
+
+def typecheck(found):
+    """Run mypy --strict on each example as its own module; return the fault count."""
+    with tempfile.TemporaryDirectory(prefix="python-docs-") as folder:
+        files = {}
+        for number, (label, code) in enumerate(found, 1):
+            module = Path(folder) / ("example_%02d.py" % number)
+            module.write_text(code + "\n", encoding="utf-8")
+            files[module.name] = label
+        environment = dict(os.environ, MYPYPATH=str(ROOT / "sdk/python"))
+        result = subprocess.run(
+            [sys.executable, "-m", "mypy", "--strict", "--no-incremental", "--python-version", "3.10",
+             "--enable-incomplete-feature=TypeForm", "--cache-dir", os.path.join(folder, ".cache"),
+             *sorted(files)], cwd=folder, env=environment, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    faults = 0
+    for line in result.stdout.splitlines():
+        match = re.match(r"(example_\d+\.py):(\d+): (error: .*)", line)
+        if match:
+            faults += 1
+            print("%s: mypy line %s: %s" % (files[match.group(1)], match.group(2), match.group(3)))
+    if result.returncode and not faults:
+        print(result.stdout.strip() or "mypy failed with no output")
+        faults = 1
+    return faults
+
+
+def main(argv):
+    names_only = "--names-only" in argv
+    paths = [Path(arg).resolve() for arg in argv if arg != "--names-only"]
+    if not paths:
+        paths = sorted((ROOT / "docs").rglob("*.md")) + [ROOT / "sdk/python/README.md"]
+    found = list(examples(paths))
+    bad = 0
+    for label, code in found:
+        for rule, statement in problems(code):
+            bad += 1
+            print("%s: %s: %s" % (label, rule, statement))
+    if not names_only and found:
+        bad += typecheck(found)
+    print("%d Python examples, %d faults" % (len(found), bad))
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

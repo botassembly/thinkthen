@@ -52,6 +52,9 @@ internal struct NativeRow
     internal static NativeRow Empty => new() { StructSize = (uint)Marshal.SizeOf<NativeRow>() };
 }
 
+[StructLayout(LayoutKind.Sequential)]
+internal struct NativeRecordView { internal uint Kind; internal Buffer Bytes; }
+
 internal static partial class Native
 {
     private const string Library = "thinkthen_ffi";
@@ -162,6 +165,9 @@ internal static partial class Native
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_row_free")]
     internal static partial void RowFree(ref NativeRow row);
+    [UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+    [LibraryImport(Library, EntryPoint = "thinkthen_row_original")]
+    internal static partial int RowOriginal(ref NativeRow row, out NativeRecordView original, ref NativeError error);
     [System.Runtime.InteropServices.UnmanagedCallConv(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
     [LibraryImport(Library, EntryPoint = "thinkthen_question_from_json")]
     internal static partial int QuestionFromJson([In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] byte[] data, nuint length, out nint question, ref NativeError error);

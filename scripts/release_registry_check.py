@@ -1,12 +1,13 @@
 """Install universal packages using the ordinary package managers and shared cases."""
-from csharp_dependencies import prepared_feed
-from jvm_repository import consumer as stage_jvm_consumer
+from csharp_dependencies import prepared_feed, package_id
+from jvm_repository import consumer as stage_jvm_consumer, seed
 import os
 import json
 import hashlib
 from xml.sax.saxutils import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from release_python_dependencies import wheelhouse
 import shutil
 import sys
 import threading
@@ -109,21 +110,47 @@ def install_dotnet(packages, scratch):
     config.write_text(f'<configuration><packageSources><clear/><add key="local" value="{escape(str(packages / "nuget"), {chr(34): "&quot;"})}"/><add key="prepared" value="{escape(str(prepared_feed()), {chr(34): "&quot;"})}"/></packageSources></configuration>', encoding='utf-8')
     run('dotnet', 'build', project, '--configfile', config, '--artifacts-path', scratch / 'dotnet-artifacts',
         '-o', scratch / 'dotnet-bin', env=isolated)
+    verify_nuget(packages / 'nuget', Path(isolated['NUGET_PACKAGES']))
     run('dotnet', scratch / 'dotnet-bin/Consumer.dll', ROOT / 'construction/stub.json', '--stub-only', env=isolated)
+
+
+def legacy_jvm_consumer(consumer):
+    """Resolve the old Java name alongside the current Kotlin dependency."""
+    stage_jvm_consumer(ROOT, consumer)
+    pom = consumer / 'pom.xml'
+    # Existing Java callers keep their old coordinate and Maven follows the
+    # published relocation. Kotlin still resolves its ordinary Java dependency.
+    pom.write_text(pom.read_text().replace('</dependencies>',
+        '<dependency><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId>' +
+        f'<version>{version()}</version></dependency></dependencies>'))
+    return pom
+
+
+def maven_feed(packages, scratch):
+    """Expose only prepared third-party artifacts and this release's packages."""
+    feed = seed(Path.home() / '.local/share/thinkthen-build-tools/jvm/m2', scratch / 'maven-feed')
+    shutil.copytree(packages / 'maven', feed, dirs_exist_ok=True)
+    settings = scratch / 'maven-settings.xml'
+    settings.write_text('<settings><mirrors><mirror><id>release</id><mirrorOf>*</mirrorOf><url>' +
+                        feed.as_uri() + '</url></mirror></mirrors></settings>')
+    return feed, settings
 
 
 def install_jvm(packages, scratch):
     isolated = environment(scratch)
-    # Maven install has compiled the current Java/Kotlin libraries. Use the public
-    # consumer with a private local repository containing the packaged coordinates.
+    # A file-only mirror keeps the release offline while Maven resolves the
+    # delivered coordinates into a genuinely empty consumer cache.
     consumer = scratch / 'java-consumer'
-    stage_jvm_consumer(ROOT, consumer)
-    pom = consumer / 'pom.xml'
-    repository = scratch / 'm2'
-    shutil.copytree(packages / 'maven', repository, dirs_exist_ok=True)
+    pom = legacy_jvm_consumer(consumer)
+    _, settings = maven_feed(packages, scratch)
+    repository = scratch / 'maven-consumer-cache'
     classpath = scratch / 'jvm-classpath'
-    run('mvn', '-o', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', pom,
+    run('mvn', '-B', '-q', '-s', settings, '-Dmaven.repo.local=' + str(repository), '-f', pom,
         'package', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath), env=isolated)
+    for jar in (packages / 'maven').glob('**/*.jar'):
+        resolved = repository / jar.relative_to(packages / 'maven')
+        if not jar.name.endswith(('-javadoc.jar', '-sources.jar')):
+            assert resolved.read_bytes() == jar.read_bytes(), 'Maven resolved a different package: ' + jar.name
     jars = [consumer / 'target/classes', classpath.read_text(encoding='utf-8').strip()]
     for main in ('ConsumerCases', 'KotlinCasesKt'):
         run('java', java_arguments(scratch / 'jvm-consumer.args', '--enable-native-access=ALL-UNNAMED',
@@ -132,13 +159,22 @@ def install_jvm(packages, scratch):
         '-cp', os.pathsep.join(map(str, jars)), 'JavaApiCases', '--stub-only'), env=isolated)
 
 
+def verify_nuget(packages, cache):
+    """Refuse a same-version package restored from any older build."""
+    package, = Path(packages).glob('*.nupkg')
+    identity = package_id().lower()
+    restored = Path(cache) / identity / version() / (identity + '.' + version() + '.nupkg')
+    if restored.read_bytes() != package.read_bytes():
+        raise ValueError('NuGet resolved a different ThinkThen package with the same version')
+
+
 
 def install_python(packages, scratch):
     isolated = environment(scratch)
     home = scratch / 'python-consumer'
     run(sys.executable, '-m', 'venv', home, env=isolated)
     python = home / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', packages / 'pypi',
+    run(python, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', packages / 'pypi', '--find-links', wheelhouse(packages),
         'thinkthen==' + version(), env=isolated)
     run(python, ROOT / 'scripts/release/python.py', ROOT / 'construction/stub.json', env=isolated)
 

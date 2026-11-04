@@ -44,11 +44,9 @@ INPUTS = {
     'pillar_1.11.1.zip': ('https://packagemanager.posit.co/cran/2026-10-28/bin/windows/contrib/4.6/pillar_1.11.1.zip', 'f498fec06bc591beba4ba774cbffd135c431eb8c54b9643013ebb062d0f81c35'),
     'pkgconfig_2.0.3.zip': ('https://packagemanager.posit.co/cran/2026-10-28/bin/windows/contrib/4.6/pkgconfig_2.0.3.zip', 'caa7d46b83e6638ac274f8d4dac33240082275323789693da21e14860e128553'),
     'utf8_1.2.6.zip': ('https://packagemanager.posit.co/cran/2026-10-28/bin/windows/contrib/4.6/utf8_1.2.6.zip', 'bb8e797f679161b2dcce0fac934330ec9cf48332fb598838c3b4b39df18c326d'),
+    'withr_3.0.3.zip': ('https://packagemanager.posit.co/cran/2026-10-28/bin/windows/contrib/4.6/withr_3.0.3.zip', '85e7a7fd4dd9c630000a0d6a803634e7a8d9bc59398f5ee3edcf46dfea5483a0'),
     'ffi-1.17.4-x64-mingw-ucrt.gem': ('https://rubygems.org/downloads/ffi-1.17.4-x64-mingw-ucrt.gem', 'f6ff9618cfccc494138bddade27aa06c74c6c7bc367a1ea1103d80c2fcb9ed35'),
-    'duckdb-cli.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/duckdb_cli-windows-amd64.zip', '6af7c45f38d764d1c8345f1cb1b1f2d07d779e11125ddf5dca7f2dfdf50efc7e'),
-    'duckdb-lib.zip': ('https://github.com/duckdb/duckdb/releases/download/v1.4.3/libduckdb-windows-amd64.zip', '4b26f7febc5e300c642d1a45d2fbc3ab51fd3c80e5f82023c90a3260a4949e13'),
     'jansson-2.14.1.tar.gz': ('https://github.com/akheron/jansson/releases/download/v2.14.1/jansson-2.14.1.tar.gz', '2521cd51a9641d7a4e457f7215a4cd5bb176f690bc11715ddeec483e85d9e2b3'),
-    'duckdb-1.4.3.tar.gz': ('https://codeload.github.com/duckdb/duckdb/tar.gz/refs/tags/v1.4.3', 'b6a2afd09d9cf07e50d5cd07077df7f7697b61cca2eb00754f5adf89a1ae6c64'),
     'sqlite-amalgamation-3410000.zip': ('https://www.sqlite.org/2023/sqlite-amalgamation-3410000.zip', '146ce189b67fdbefbf2d72cdc81e198d07ff643614cc9102e9bf063255e8e7e1'),
 }
 
@@ -65,14 +63,12 @@ def inputs():
         if name in checked_r:
             continue
         fetch(url, WINDOWS / name, digest)
-    for name in ('duckdb-cli', 'duckdb-lib'):
-        with zipfile.ZipFile(WINDOWS / (name + '.zip')) as archive: archive.extractall(WINDOWS / name)
-    for name in ('jansson-2.14.1', 'duckdb-1.4.3'):
-        destination = WINDOWS if name.startswith('jansson') else TOOLS / 'duckdb/1.4.3'
-        destination.mkdir(parents=True, exist_ok=True)
-        if not (destination / name).exists():
-            with tarfile.open(WINDOWS / (name + '.tar.gz')) as archive:
-                archive.extractall(destination, filter='data')
+    from duckdb_release import prepare_source as prepare_duckdb_source
+    prepare_duckdb_source()
+    name = 'jansson-2.14.1'
+    if not (WINDOWS / name).exists():
+        with tarfile.open(WINDOWS / (name + '.tar.gz')) as archive:
+            archive.extractall(WINDOWS, filter='data')
     with zipfile.ZipFile(WINDOWS / 'sqlite-amalgamation-3410000.zip') as archive:
         folder = TOOLS / 'sqlite-3.41.0'
         folder.mkdir(exist_ok=True)

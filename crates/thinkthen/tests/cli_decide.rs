@@ -72,9 +72,13 @@ fn details_print_the_row_as_json() {
 fn the_url_option_beats_the_environment() {
     let server = Loopback::noul(0.9).unwrap();
     let mut command = support::command();
+    let source = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(source.path(), "evidence").unwrap();
     let output = command
         .args(["decide", "Is it?", "--url", server.base()])
+        .arg(source.path())
         .env("THINKTHEN_BASE_URL", "http://127.0.0.1:9/v1")
+        .env("THINKTHEN_URL", "http://127.0.0.1:9/v1")
         .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::null())
         .output()
@@ -131,7 +135,7 @@ fn a_missing_key_exits_2_and_sends_nothing() {
 }
 
 #[test]
-fn a_backend_failure_exits_6_and_never_prints_the_key() {
+fn a_backend_failure_exits_4_and_never_prints_the_key() {
     let server =
         Loopback::start(|_| Reply::json(401, &json!({"error": format!("bad key {KEY}")}))).unwrap();
     for args in [
@@ -139,7 +143,7 @@ fn a_backend_failure_exits_6_and_never_prints_the_key() {
         &["decide", "Is it?", "--json"][..],
     ] {
         let output = run(&server, args, Some(KEY));
-        assert_eq!(output.status.code(), Some(6), "{args:?}");
+        assert_eq!(output.status.code(), Some(4), "{args:?}");
         assert_eq!(reported(&output), "backend.status");
         if args.contains(&"--json") {
             assert_eq!(
@@ -147,9 +151,21 @@ fn a_backend_failure_exits_6_and_never_prints_the_key() {
                 "backend.status"
             );
         } else {
-            assert_eq!(output.stdout, b"[1] failed\n");
+            assert!(output.stdout.is_empty());
         }
         assert!(!text(&output.stdout).contains(KEY));
         assert!(!text(&output.stderr).contains(KEY));
+    }
+}
+
+#[test]
+fn empty_text_is_usage_and_never_calls_the_backend() {
+    for input in [b"".as_slice(), b" \r\n\t", "\u{2003}\u{a0}".as_bytes()] {
+        let server = Loopback::noul(0.9).unwrap();
+        let output = run_on(&server, &["decide", "Ready?"], Some(KEY), input);
+        assert_eq!(output.status.code(), Some(2), "{output:?}");
+        assert!(output.stdout.is_empty());
+        assert!(!output.stderr.is_empty());
+        assert_eq!(server.count(), 0);
     }
 }

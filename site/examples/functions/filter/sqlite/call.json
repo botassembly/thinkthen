@@ -1,0 +1,5 @@
+{
+  "anchor": "WHERE msg_id IN (SELECT id FROM thinkthen_filter(",
+  "before": 0,
+  "after": 2
+}

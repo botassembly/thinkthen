@@ -149,14 +149,15 @@ def request_stream(
                 }
             ),
             records,
-            evidence=definition.get("evidence"),
+            field=definition.get("field"),
             name=request.get("name"),
             cancel=cancel,
         )
     question = admitted(definition)
     if function in {"filter", "rank"}:
+        method = "filter_rows" if function == "filter" else function
         return cast(
-            tt.RowStream[Any], getattr(client, function)(question, records, **options)
+            tt.RowStream[Any], getattr(client, method)(question, records, **options)
         )
     if function in {"recognize", "relate"}:
         return cast(

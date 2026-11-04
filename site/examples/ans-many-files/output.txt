@@ -1,0 +1,20 @@
+{
+  "position": 1,
+  "id": "a1",
+  "answer": true
+}
+{
+  "position": 2,
+  "id": "a2",
+  "answer": false
+}
+{
+  "position": 3,
+  "id": "a3",
+  "answer": true
+}
+{
+  "position": 4,
+  "id": "b1",
+  "answer": false
+}

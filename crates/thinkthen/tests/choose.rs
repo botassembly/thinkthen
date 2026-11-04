@@ -22,29 +22,35 @@ fn the_largest_probability_wins_with_first_option_breaking_ties() {
         (
             json!({"z": 0.2, "a": 0.8}),
             ["z", "a"],
-            "0.5",
+            Threshold::cut(0.5).unwrap(),
             Some("a"),
             0.8,
         ),
         (
             json!({"z": 0.5, "a": 0.5}),
             ["z", "a"],
-            "0.5",
+            Threshold::cut(0.5).unwrap(),
             Some("z"),
             0.5,
         ),
         (
             json!({"z": 0.5, "a": 0.5}),
             ["a", "z"],
-            "0.5",
+            Threshold::cut(0.5).unwrap(),
             Some("a"),
             0.5,
         ),
-        (json!({"z": 0.3, "a": 0.7}), ["z", "a"], "0.8", None, 0.7),
+        (
+            json!({"z": 0.3, "a": 0.7}),
+            ["z", "a"],
+            Threshold::cut(0.8).unwrap(),
+            None,
+            0.7,
+        ),
         (
             json!({"z": 0.2, "a": 0.8}),
             ["z", "a"],
-            "0.2:0.8",
+            Threshold::band(0.2, 0.8).unwrap(),
             Some("a"),
             0.8,
         ),
@@ -52,9 +58,7 @@ fn the_largest_probability_wins_with_first_option_breaking_ties() {
         let server =
             Loopback::answering(move |_| json!({"type": "choice", "probabilities": probabilities}))
                 .unwrap();
-        let question = Choose::new("Which?", labels)
-            .unwrap()
-            .threshold(threshold.parse::<Threshold>().unwrap());
+        let question = Choose::new("Which?", labels).unwrap().threshold(threshold);
         let row = engine(&server)
             .run(&question, Record::text("evidence"))
             .unwrap();

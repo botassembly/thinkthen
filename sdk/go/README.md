@@ -1,44 +1,65 @@
-# ThinkThen for Go
+# Go SDK
 
-Enable cgo and install a C compiler. Run `go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0`.
+The Go SDK asks questions about text from your Go code. Its first function, decide, answers a yes-or-no question with yes (`true`), no (`false`) or not sure.
 
-The example uses the stub backend and needs no key or service.
+Install it with Go 1.23 or later, cgo and a C compiler: `go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0`. The module carries its own engine. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
+
+## Ask a question
+
+Ask whether a support message requests a refund:
 
 ```go
 package main
 
 import (
-    "context"
-    "fmt"
-    "log"
+	"context"
+	"errors"
+	"fmt"
+	"log"
 
-    thinkthen "github.com/botassembly/thinkthen/sdk/go/thinkthen"
+	tt "github.com/botassembly/thinkthen/sdk/go/thinkthen"
 )
 
 func main() {
-    client, err := thinkthen.New(thinkthen.Config{Backend: thinkthen.Stub})
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer client.Close()
+	client, err := tt.New(tt.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
 
-    row, err := client.Decide(context.Background(),
-        thinkthen.NewDecide("Does the message request a refund?"),
-        thinkthen.Text("Please refund this order."))
-    if err != nil {
-        log.Fatal(err)
-    }
-    if refund, ok := row.Value(); ok {
-        fmt.Println(refund)
-    }
+	refundQuestion := tt.NewDecide("Does the customer request a refund?")
+	isRefund, err := tt.Answer(client.Decide(context.Background(),
+		refundQuestion, tt.Text("Please refund my order.")))
+	switch {
+	case errors.Is(err, tt.ErrUnsure):
+		fmt.Println("not sure: send to a person")
+	case err != nil:
+		log.Fatal(err)
+	default:
+		fmt.Println(isRefund)
+	}
 }
 ```
 
-`Error.Code().Family()` returns the engine’s error family. `errors.Is(err, thinkthen.ErrUsage)` matches usage errors. Unknown code families return an empty string.
+Output:
 
-[API reference](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/go/thinkthen).
+```text
+true
+```
 
-For a system library on Linux or macOS, extract the matching [C archive](../c/README.md) into `thinkthen` and install pkg-config. Save the example as `main.go` in your Go module, then run:
+`true` means yes: the message asks for a refund.
+
+## Not sure and failures
+
+`tt.Answer` gives the answer in one step. It returns `tt.ErrUnsure` when decide is not sure, and the error when ThinkThen could not judge the message, so neither one reads as `false`. decide is not sure only when you set a low and a high bar, as in `tt.NewDecide("Does the customer request a refund?").WithThreshold(tt.Band(0.2, 0.8))`. Between the bars, the program above prints its not-sure line, so a person can read the message.
+
+## Next
+
+The [Go SDK page](https://thinkthen.dev/sdks/go/) shows all ten functions. The [Go guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/go.md) and the [API reference](https://pkg.go.dev/github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0) cover every option.
+
+## Link an installed C library instead
+
+On Linux or macOS, extract the matching [C archive](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) into `thinkthen` and install pkg-config. Save the example as `main.go` in your Go module, then run:
 
 ```sh
 export PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -50,4 +71,4 @@ go build -tags thinkthen_system -o example .
 ./example
 ```
 
-The `thinkthen_system` tag uses pkg-config to link the installed library. The loader uses the platform's library path when the program runs.
+The `thinkthen_system` tag links the installed library through pkg-config, and the program finds it on the library path when it runs. Windows does not support this tag.

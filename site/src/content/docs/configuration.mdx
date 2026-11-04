@@ -1,0 +1,97 @@
+---
+title: Configuration
+description: Choose the model service that answers your questions, Jev on System One by default, OpenAI, or your own server, and set its key with a THINKTHEN_ variable or an option.
+goal: A developer picks the model service that fits what they have, sets its key and model, checks which model answered, and points ThinkThen at their own server if they run one.
+reader: A developer setting up ThinkThen, or moving it to OpenAI or to their own server
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../components/Example.astro';
+
+ThinkThen sends each question and its text to a model service, which answers it and bills your account. You choose the service, the model and the key with options on each command or with `THINKTHEN_` environment variables.
+
+| What you have | What to set |
+|---|---|
+| A TypeSafe account, or no account yet | `THINKTHEN_API_KEY`. This is the default. |
+| An OpenAI account | `OPENAI_API_KEY` and `THINKTHEN_BACKEND=openai` |
+| A gateway or a model server of your own | `THINKTHEN_URL`, `THINKTHEN_MODEL` and the key it expects |
+
+An option on the command line wins over its variable. `--backend openai` on one command, for example, uses OpenAI for that command only.
+
+## Jev on System One, the default
+
+ThinkThen asks Jev, model `jev-1.13.0`, through TypeSafe's System One service at `https://api.typesafe.ai/v1`. You need a TypeSafe account, and each call counts against it.
+
+1. Sign in to the [TypeSafe console](https://console.typesafe.ai/).
+2. Create a key on its [keys page](https://console.typesafe.ai/keys).
+3. Set the key in your shell:
+
+```sh
+export THINKTHEN_API_KEY='your key'
+```
+
+ThinkThen reads this key from `THINKTHEN_API_KEY` and from no other variable.
+
+To check which service and model answered, ask for the details with `--json` and keep the `source`:
+
+<Example id="start/which-model" />
+
+There is no config file.
+
+## OpenAI
+
+The `openai` backend calls OpenAI's decisions API at `https://api.openai.com/v1`. Its default model is `gpt-6-luna`. Each call counts against your OpenAI account.
+
+1. Create a key on your OpenAI account's API keys page.
+2. Set the key, and choose OpenAI for every command in this shell:
+
+```sh
+export OPENAI_API_KEY='your key'
+export THINKTHEN_BACKEND=openai
+```
+
+To use OpenAI for one command only, leave out `THINKTHEN_BACKEND` and add `--backend openai` to that command. To use another OpenAI model, set `THINKTHEN_MODEL` or add `--model NAME`.
+
+## Your own server
+
+`--url` sends the same requests to another address, such as a gateway or a model you host. `--model` names the model that server should use. The server must speak the API of the backend you point at it:
+
+| Backend | Request it sends | Key it sends |
+|---|---|---|
+| `systemone` | `POST URL/systemone` | `THINKTHEN_API_KEY` |
+| `openai` | `POST URL/decisions` | `OPENAI_API_KEY` |
+
+Each request is JSON, with the key as a bearer token in the `authorization` header. ThinkThen doesn't call a chat or completions endpoint.
+
+To point System One at your server for every command in this shell:
+
+```sh
+export THINKTHEN_API_KEY='your server key'
+export THINKTHEN_URL=https://models.example.com/v1
+export THINKTHEN_MODEL=my-model
+```
+
+Three rules apply to the address:
+
+- It must use HTTPS, or plain HTTP to `localhost`, `127.0.0.1` or `[::1]`. Any other `http://` address stops with `usage.url` before a request is sent.
+- `THINKTHEN_URL` works for both backends. `THINKTHEN_BASE_URL` also sets the System One address, and `THINKTHEN_URL` or `--url` wins over it.
+- If your server's certificate comes from your own certificate authority, set `THINKTHEN_CA_FILE` to that authority's PEM file. ThinkThen trusts it as well as your system's certificates.
+
+The `source` in `--json` names the backend and model, so the check above shows the route each answer took.
+
+## Every model setting
+
+| Option | Variable | Default |
+|---|---|---|
+| `--backend NAME` | `THINKTHEN_BACKEND` | `systemone` |
+| `--model MODEL` | `THINKTHEN_MODEL` | `jev-1.13.0`, or `gpt-6-luna` for `openai` |
+| `--url URL` | `THINKTHEN_URL` | The backend's own address |
+| none | `THINKTHEN_API_KEY` | The System One key |
+| none | `OPENAI_API_KEY` | The OpenAI key |
+| none | `THINKTHEN_CA_FILE` | Your system's certificates only |
+
+Keys come only from these variables. Keep them in your shell or a secret manager, never in a script or a toolbox file. If the key is missing or blank, ThinkThen stops with `usage.key-missing` and exit code 2 before it sends anything; [Troubleshooting](/reference/troubleshooting/) lists that error and the others.
+
+A bar you tuned on one model belongs to that model. If you change the model, check your bars again on your own messages.
+
+[Options](/reference/options/) lists every other setting.

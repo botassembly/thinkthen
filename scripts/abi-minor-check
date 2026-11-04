@@ -57,9 +57,19 @@ def fixture(engine, output, rows=False, children=False):
                                'THINKTHEN_FIXTURE_API ' + declaration + ' { ' + body + ' }', source)
         assert count == 1, name
     if rows:
+        payload = json.dumps({'code': 'future.code', 'message': 'the record is missing'})
         source = source.replace('return fixture_function(call, out, error);',
             'int32_t result = fixture_function(call, out, error); '
-            'if (result == THINKTHEN_OK && out->status == THINKTHEN_STATUS_FAILED) out->error_code = 2147483647; return result;')
+            'if (result == THINKTHEN_OK && out->status == THINKTHEN_STATUS_FAILED) { '
+            'out->error_code = 2147483647; '
+            '((void (*)(thinkthen_buffer*))resolve("thinkthen_buffer_free"))(&out->error); '
+            'static const char failure[] = ' + json.dumps(payload) + '; '
+            'out->error.len = sizeof(failure) - 1; out->error.data = malloc(out->error.len); '
+            'if (!out->error.data) abort(); memcpy(out->error.data, failure, out->error.len); } return result;')
+        source = source.replace('fixture_function(row);',
+            'if (row->error_code == 2147483647) { free(row->error.data); '
+            'row->error.data = NULL; row->error.len = 0; } fixture_function(row);')
+        source = '#include <string.h>\n' + source
     if children:
         payload = json.dumps({'future': {'function': 'decide', 'status': 'failed',
             'error': {'code': 'future.problem', 'message': 'future child message'}}})

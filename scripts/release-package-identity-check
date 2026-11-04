@@ -1,0 +1,16 @@
+#!/bin/sh
+# Check release packaging without building release engines or platform archives.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+python3 -c 'import ast; from pathlib import Path; ast.parse(Path("scripts/release-candidate").read_text())'
+. scripts/zig-env
+zig version
+python3 scripts/release-package-text-test PackageText.test_maven_jars PackageText.test_nuget_cold_restore
+python3 scripts/release-script-test ReleaseScripts.test_nuget_same_version_stale_package_is_refused
+python3 scripts/release-floor-inputs-test
+python3 scripts/release-tool-installation-test
+ruff check --select F401,F841,ERA,BLE,E722,S110 scripts/release_registry.py scripts/csharp_dependencies.py scripts/duckdb_release.py scripts/release-package-text-test scripts/release_workflow_prepare.py scripts/release_windows_host.py scripts/release_windows.py scripts/registry-site-check
+ruff check --select F401,F841,ERA,E722,S110 scripts/release_registry_check.py scripts/release_windows_native.py
+scripts/duckdb-release-check
+git diff --check

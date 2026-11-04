@@ -1,67 +1,65 @@
-# ThinkThen for C
+# C SDK
 
-Download the matching C archive from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. The package requires a C11 compiler and pkg-config. Save the example as `example.c`, then compile and run it:
+The C SDK asks questions about text from your C code. Its first function, `thinkthen_decide`, answers a yes-or-no question with yes (`true`), no (`false`) or not sure.
+
+Download the C archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) and extract it into `thinkthen`. It holds the header, the library and the engine, so keep them together. You need a C11 compiler and pkg-config. Save the program below as `example.c`, then compile and run it:
 
 ```sh
-cc -std=c11 example.c -o example $(PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig" pkg-config --cflags --libs thinkthen-c)
-case "$(uname -s)" in
-    Linux) export LD_LIBRARY_PATH="$PWD/thinkthen/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;;
-    Darwin) export DYLD_LIBRARY_PATH="$PWD/thinkthen/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" ;;
-esac
+export PKG_CONFIG_PATH="$PWD/thinkthen/lib/pkgconfig"
+cc -std=c11 -Wall -Wextra -Werror example.c -o example \
+    $(pkg-config --cflags --libs thinkthen-c) \
+    -Wl,-rpath,"$PWD/thinkthen/lib"
 ./example
 ```
 
-The loader uses `LD_LIBRARY_PATH` on Linux and `DYLD_LIBRARY_PATH` on macOS to find the installed shared library. Keep the selected variable set when running the program.
+The `-rpath` flag tells the program where to find the library, because the pkg-config file names no run-time path. The client reads your key from `THINKTHEN_API_KEY`. [Configuration](https://thinkthen.dev/configuration/) shows how to get one.
 
-The example uses the stub backend and needs no key or service.
+## Ask a question
+
+Ask whether a support message requests a refund:
 
 ```c
 #include <thinkthen.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+static void report(const thinkthen_error *error) {
+    fprintf(stderr, "%s: ", thinkthen_code_name(error->code));
+    fwrite(error->message.data, 1, error->message.len, stderr);
+    fputc('\n', stderr);
+}
+
 int main(void) {
-    thinkthen_settings *settings = NULL;
-    thinkthen_question *question = NULL;
     thinkthen_client *client = NULL;
-    thinkthen_error error = {.struct_size = sizeof error};
-    thinkthen_row row = {.struct_size = sizeof row};
-    int result = EXIT_FAILURE;
-    if (!thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version())) {
-        fputs(THINKTHEN_ABI_ERROR_MESSAGE "\n", stderr);
-        return result;
-    }
-    if (thinkthen_settings_new(&settings, &error) != THINKTHEN_OK) goto cleanup;
-    if (thinkthen_settings_set_backend(settings, THINKTHEN_BACKEND_STUB, &error) != THINKTHEN_OK)
-        goto cleanup;
-    if (thinkthen_client_open(settings, &client, &error) != THINKTHEN_OK) goto cleanup;
-    const uint8_t wording[] = "Ready?";
-    if (thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, wording, sizeof wording - 1,
-                               &question, &error) != THINKTHEN_OK) goto cleanup;
-    const uint8_t evidence[] = "evidence";
-    if (thinkthen_run_one(client, question, evidence, sizeof evidence - 1,
-                          THINKTHEN_RECORD_TEXT, &row, &error) != THINKTHEN_OK) goto cleanup;
-    if (row.status == THINKTHEN_STATUS_ANSWERED)
-        puts(row.answer_bool ? "yes" : "no");
-    else if (row.status == THINKTHEN_STATUS_UNSURE)
-        puts("not sure");
-    else {
-        fprintf(stderr, "%s\n", thinkthen_code_name(row.error_code));
-        goto cleanup;
-    }
-    result = EXIT_SUCCESS;
-cleanup:
-    if (error.code) {
-        fwrite(error.message.data, 1, error.message.len, stderr);
-        fputc('\n', stderr);
-    }
-    thinkthen_row_free(&row);
+    thinkthen_error error = THINKTHEN_ERROR_INIT;
+    bool is_refund = false;
+    int rc = thinkthen_client_open(NULL, &client, &error);
+    if (rc == THINKTHEN_OK)
+        rc = thinkthen_decide(client, "Does the customer request a refund?",
+                              "Please refund my order.",
+                              THINKTHEN_NUL_TERMINATED, &is_refund, &error);
+    if (rc == THINKTHEN_OK)
+        puts(is_refund ? "true" : "false");
+    else
+        report(&error);
     thinkthen_error_free(&error);
-    thinkthen_question_free(question);
     thinkthen_client_free(client);
-    thinkthen_settings_free(settings);
-    return result;
+    return rc == THINKTHEN_OK ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 ```
 
-[API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen-ffi/include/thinkthen.h).
+Output:
+
+```text
+true
+```
+
+`true` means yes: the message asks for a refund.
+
+## Not sure and failures
+
+`thinkthen_decide` returns `THINKTHEN_OK` and writes `is_refund` only when there is an answer. When ThinkThen could not judge the message, it returns a negative code and leaves `is_refund` alone, so a failure never reads as no; `report` prints the code's name, such as `record.empty`, and its message. decide is not sure only when you set a low and a high bar: build the question with `thinkthen_question_new`, set the bars with `thinkthen_question_set_band`, and ask it with `thinkthen_run_one`, which returns `THINKTHEN_UNSURE` between them. Send those messages to a person.
+
+## Next
+
+The [C SDK page](https://thinkthen.dev/sdks/c/) shows all ten functions. The [C and C++ guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/c-cpp.md) and the [header](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen-ffi/include/thinkthen.h) cover every option.

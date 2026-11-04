@@ -1,0 +1,51 @@
+---
+title: Screen papers for a review
+description: Ask each inclusion criterion of a literature review as a yes-or-no question about every abstract, then include, exclude or send each paper to a person.
+goal: A researcher leaves with every abstract marked include, exclude or person, from one question per criterion and a routing rule they wrote.
+reader: A researcher or analyst screening paper abstracts against fixed criteria
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, every abstract is marked include, exclude or person, and the papers ThinkThen is not sure about wait for a person to read.
+
+## 1. Put the abstracts in a file
+
+Write one paper per line as JSON, each with an `id` and the abstract in `text`:
+
+<ExampleFile id="howto-screen-ask" file="papers.jsonl" />
+
+## 2. Write each criterion as a question
+
+Each criterion of the review becomes one yes-or-no question in a [toolbox](/command-line/toolboxes/). Each has a low and a high bar, so an abstract that doesn't settle the question comes back not sure.
+
+<ExampleFile id="howto-screen-ask" file="screen.json" />
+
+## 3. Ask every criterion about every paper
+
+[annotate](/functions/annotate/) asks both questions about each abstract. `--into screen` adds the answers to each line:
+
+<Example id="howto-screen-ask" />
+
+The first paper is a randomized trial in lung cancer. The second is neither. The third says patients were assigned to a schedule but not how, so the model is not sure it is randomized.
+
+## 4. Include, exclude or send to a person
+
+Your code decides the route, in `screen.jq`. A paper that fails any criterion is excluded. A paper that meets every criterion is included. Anything else, a not-sure answer or a failed one, goes to a person.
+
+<ExampleFile id="howto-screen-route" file="screen.jq" />
+
+<Example id="howto-screen-route" />
+
+The first paper is included, the second is excluded, and the third goes to a person.
+
+## Check the result
+
+- Screen a sample by hand, excluded papers included, and count where you and the model disagree on each criterion. A criterion with many disagreements needs a clearer question. [Measure answers against your own labels](/how-tos/measure-answers-against-your-own-labels/) shows the counts.
+- Every paper sent to a person needs a person's decision before the review uses it.
+
+## Next
+
+[Find the same company in two lists](/how-tos/find-the-same-company-in-two-lists/) asks a question about pairs of lines.

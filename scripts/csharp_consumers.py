@@ -58,36 +58,70 @@ def negative(stage):
         print('C# rejected invalid consumer:', case.name, flush=True)
 
 
-def stub_example(example):
-    return example.replace(
-        "new ThinkThenClient()",
-        "new ThinkThenClient(new ThinkThenOptions { Backend = Backend.Stub })")
+def example_environment():
+    environment = dict(os.environ, THINKTHEN_BACKEND='stub')
+    for name in ('THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL',
+                 'THINKTHEN_URL', 'THINKTHEN_BATCH'):
+        environment.pop(name, None)
+    return environment
+
+
+def example(stage, folder, code, toolbox=None):
+    reference = project(folder, 'Example')
+    (folder / 'Program.cs').write_text(code + '\n')
+    configuration = config(stage, folder)
+    if toolbox is not None:
+        (folder / 'toolbox.json').write_text(toolbox + '\n')
+    run('dotnet', 'restore', reference, '--configfile', configuration)
+    result = subprocess.run(['dotnet', 'run', '--no-restore', '--project', str(reference)],
+                            env=example_environment(),
+                            cwd=folder, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if result.returncode:
+        raise RuntimeError(result.stdout)
+    if result.stdout:
+        print(result.stdout, end='', flush=True)
 
 
 def readme(stage):
-    examples = re.findall(r'```csharp\n(.*?)\n```', (ROOT / 'sdk/csharp/README.md').read_text(), re.S)
+    text = (ROOT / 'sdk/csharp/README.md').read_text()
+    examples = list(re.finditer(r'```csharp\n(.*?)\n```', text, re.S))
     if not examples:
         raise RuntimeError('C# README contains no examples')
-    for number, example in enumerate(examples, 1):
-        folder = stage / ('readme-' + str(number))
-        reference = project(folder, 'Example')
-        example = stub_example(example)
-        (folder / 'Program.cs').write_text(example + '\n')
-        configuration = config(stage, folder)
-        run('dotnet', 'restore', reference, '--configfile', configuration)
-        run('dotnet', 'run', '--no-restore', '--project', reference)
+    for number, block in enumerate(examples, 1):
+        example(stage, stage / ('readme-' + str(number)), block[1])
         print('C# README example passed:', number, flush=True)
 
 
-def guide(stage):
-    folder = stage / 'guide'
-    reference = project(folder, 'Example')
-    helper = ROOT / 'scripts/surface-example'
-    run(sys.executable, helper, 'prepare', 'csharp', folder)
-    configuration = config(stage, folder)
-    run('dotnet', 'restore', reference, '--configfile', configuration)
-    subprocess.run([sys.executable, str(helper), 'check', 'csharp', 'dotnet', 'run',
-                    '--no-restore', '--project', str(reference)], cwd=folder, check=True)
+def guide(stage, rank_only=False):
+    if not rank_only:
+        folder = stage / 'guide'
+        reference = project(folder, 'Example')
+        helper = ROOT / 'scripts/surface-example'
+        run(sys.executable, helper, 'prepare', 'csharp', folder)
+        configuration = config(stage, folder)
+        run('dotnet', 'restore', reference, '--configfile', configuration)
+        subprocess.run([sys.executable, str(helper), 'check', 'csharp', 'dotnet', 'run',
+                        '--no-restore', '--project', str(reference)], cwd=folder,
+                       env=example_environment(), check=True)
+    text = (ROOT / 'docs/surfaces/csharp.md').read_text()
+    snippets = list(re.finditer(r'```csharp\n(.*?)\n```', text, re.S))
+    client = re.search(r'^using ThinkThen;.*?^await using var client.*?;$', snippets[0][1], re.S | re.M)
+    if client is None:
+        raise RuntimeError('C# guide must state the client context for its snippets')
+    messages = next(block[1] for block in snippets if re.match(r'string\[\] messages\s*=', block[1]))
+    toolbox = next(block for block in re.findall(r'```json\n(.*?)\n```', text, re.S) if '"entries"' in block)
+    for number, block in enumerate(snippets, 1):
+        if rank_only and 'client.RankAsync(' not in block[1]:
+            continue
+        if 'records.jsonl' in block[1]:
+            continue  # The unchanged six-record check above owns this example.
+        destination = stage / ('guide-snippet-' + str(number))
+        code = block[1]
+        if not re.search(r'^using [\w.]+;', code, re.M):
+            code = client[0] + '\n' + ('' if code == messages else messages + '\n') + code
+        example(stage, destination, code, toolbox=toolbox)
+        # A saved toolbox is input to the final snippet, not C# source.
+        print('C# guide snippet passed:', number, flush=True)
 
 
 def metadata(stage):
@@ -121,10 +155,21 @@ def abi(stage):
 
 if __name__ == '__main__':
     stage = Path(sys.argv[2]).resolve()
-    if sys.argv[1] == 'readme':
+    if sys.argv[1] == 'examples':
         readme(stage)
+        guide(stage)
+    elif sys.argv[1] == 'readme':
+        readme(stage)
+    elif sys.argv[1] == 'guide-rank':
+        guide(stage, rank_only=True)
+    elif sys.argv[1] == 'metadata':
+        metadata(stage)
     elif sys.argv[1] == 'abi':
         abi(stage)
+    elif sys.argv[1] == 'interface':
+        negative(stage)
+    elif sys.argv[1] == 'metadata':
+        metadata(stage)
     else:
         negative(stage)
         readme(stage)

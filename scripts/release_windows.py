@@ -1,4 +1,5 @@
 """Build the Windows x86-64 distribution with a prepared MSVC cross toolchain."""
+from duckdb_release import VERSION as DUCKDB_VERSION
 import hashlib
 import fcntl
 import importlib.util
@@ -10,7 +11,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import tomllib
 import zipfile
@@ -270,7 +270,7 @@ def windows_requirements(out):
                    cpp='C++17 compiler; bundled nlohmann_json headers; standard C++ runtime thereafter',
                    swift='Swift >=6.3 Windows toolchain',
                    sqlite='SQLite >=3.41 with extension loading enabled',
-                   duckdb='Official DuckDB 1.4.3 Windows x86-64')
+                   duckdb=f'Official DuckDB {DUCKDB_VERSION} Windows x86-64')
     (out / 'requirements.json').write_text(json.dumps({name: {'runtime': value, 'platform': 'windows-x86_64'}
         for name, value in runtime.items()}, indent=2) + '\n')
 
@@ -298,7 +298,7 @@ def finish_readmes(out, packages, *, root=ROOT):
         FLOORS['windows']['support'], '',
         'This candidate is unpublished. Use the bundled package files. Put each ordinary runtime from requirements.json on PATH before installing its package. PostgreSQL is Linux only.', '',
         'Extract the command ZIP and run `thinkthen.exe decide --backend stub "Ready?"` with text on standard input. The stub needs no key or network.', '',
-        'Install the Python wheel with `py -m pip install --no-index python\\thinkthen-*.whl` after selecting the concrete bundled filename. Install the npm archive with `npm install --offline --ignore-scripts .\\typescript\\thinkthen-*.tgz` after selecting its concrete filename.', '',
+        'Install the Python wheel with `py -m pip install --no-index --find-links prerequisites\\python-frames-windows\\wheels python\\thinkthen-*.whl` after selecting the concrete bundled filename. Install the npm archive with `npm install --offline --ignore-scripts .\\typescript\\thinkthen-*.tgz` after selecting its concrete filename.', '',
         'Install the R binary with `install.packages("r/thinkthen_VERSION.zip", repos=NULL, type="win.binary")`, replacing VERSION with the bundled version. Install the bundled prerequisite ZIPs in prerequisites/r/install-order.txt order first. The optional tibble, dplyr and data.table packages use their ordinary R installers.', '',
         'Install the Ruby gems with `gem install --local --no-document` using the bundled ffi dependency and ThinkThen gem. Use the NuGet file as a local source for dotnet. Java and Kotlin include their runtime JAR dependencies beside the package.', '',
         'The C package supplies include/thinkthen.h, lib/thinkthen_ffi.lib and bin/thinkthen_ffi.dll. Link the import library and keep the DLL beside the consuming executable. C++ additionally needs the supplied nlohmann_json headers. Go, Zig and Swift packages include the Windows DLL for their ordinary build tools.', '',

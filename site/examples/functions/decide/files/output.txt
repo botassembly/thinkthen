@@ -1,0 +1,3 @@
+messages.thinkthen.csv
+message,is_refund
+Please refund my order.,TRUE

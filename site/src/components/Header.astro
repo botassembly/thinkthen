@@ -1,0 +1,81 @@
+---
+// Starlight's top bar, with a responsive copy control left of search. It copies this page's Markdown
+// twin; CopyMarkdown.astro holds the script that both copy controls share.
+import config from 'virtual:starlight/user-config';
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
+import Search from '@astrojs/starlight/components/Search.astro';
+import SiteTitle from '@astrojs/starlight/components/SiteTitle.astro';
+import SocialIcons from '@astrojs/starlight/components/SocialIcons.astro';
+import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
+import CopyMarkdown from './CopyMarkdown.astro';
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <div class="middle-group sl-flex print:hidden">
+    <CopyMarkdown variant="icon" />
+    {config.pagefind && <Search />}
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+
+<style>
+  .header {
+    display: flex;
+    gap: var(--sl-nav-gap);
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+  }
+  .title-wrapper {
+    overflow: clip;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    min-width: 0;
+  }
+  .middle-group {
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .middle-group :global(button[data-open-modal]) { min-inline-size: 44px; min-block-size: 44px; }
+  @media (max-width: 49.99rem) {
+    .header { gap: 0.25rem; }
+    .title-wrapper { flex: 0 1 6rem; }
+    .middle-group { gap: 0.125rem; flex-shrink: 0; }
+  }
+  .right-group,
+  .social-icons {
+    gap: 1rem;
+    align-items: center;
+  }
+  .social-icons::after {
+    content: '';
+    height: 2rem;
+    border-inline-end: 1px solid var(--sl-color-gray-5);
+  }
+  @media (min-width: 50rem) {
+    .header {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+    }
+    .middle-group {
+      justify-content: flex-end;
+      padding-inline-end: 0.5rem;
+    }
+    /* A compact search box: the title and the page get the room. */
+    .middle-group :global(site-search) {
+      inline-size: 13rem;
+    }
+    .middle-group :global(button[data-open-modal]) {
+      max-inline-size: 13rem;
+    }
+  }
+</style>

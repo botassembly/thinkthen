@@ -5,7 +5,10 @@ require "thinkthen"
 test = JSON.parse(File.read(ENV.fetch("THINKTHEN_STRESS_CASE")))
 settings = test.fetch("client").transform_keys(&:to_sym)
 settings[:backend] = settings.fetch(:backend).to_sym
-settings[:retry] = ThinkThen::Retry.new(**settings.fetch(:retry).transform_keys(&:to_sym))
+policy = settings.fetch(:retry).transform_keys(&:to_sym)
+policy[:initial_backoff] = policy.delete(:initial_backoff_ms) / 1000.0 if policy.key?(:initial_backoff_ms)
+policy[:attempt_timeout] = policy.delete(:attempt_timeout_ms) / 1000.0 if policy.key?(:attempt_timeout_ms)
+settings[:retry] = ThinkThen::Retry.new(**policy)
 count = test.fetch("records")
 widths = {}
 failed = 0
@@ -19,7 +22,7 @@ ThinkThen::Client.open(**settings) do |client|
       raise "input read ahead exceeded the engine bound" if test["read_ahead_limit"] && pulled > test["read_ahead_limit"]
       {"id" => "record-#{i}", "body" => "record #{i}"}
     end
-    rows = client.decide_each("Ready?", held_records, evidence: "/body")
+    rows = client.decide_each("Ready?", held_records, field: "/body")
     worker = Thread.new do
       begin
         rows.each { raise "held stream published a row" }
@@ -39,7 +42,7 @@ ThinkThen::Client.open(**settings) do |client|
         Thread.new do
           offset = test.fetch("identifier_base") + (round * test.fetch("concurrency") + index) * count
           received = failures = 0
-          client.decide_each("Ready?", records.call(offset), evidence: "/body") do |row|
+          client.decide_each("Ready?", records.call(offset), field: "/body") do |row|
             widths[row.id.length] = true
             received += 1
             raise "position or ID changed" unless row.position == received && row.id == "record-#{offset + received - 1}"

@@ -1,0 +1,9 @@
+1	answered	storage
+2	answered	performance
+3	answered	security
+4	answered	storage
+5	answered	performance
+--- counts
+{"kind":"performance","alerts":2}
+{"kind":"security","alerts":1}
+{"kind":"storage","alerts":2}

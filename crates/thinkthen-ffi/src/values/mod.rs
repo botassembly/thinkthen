@@ -25,10 +25,15 @@ enum Owned {
     Row(AnyRow),
     Entry(AnnotationEntry),
 }
-/// An independent typed snapshot; every returned view borrows this owner.
+/// A copy of a row's answer, read with the thinkthen_value_* functions. Views it writes
+/// borrow from it. Free it with thinkthen_value_free.
 #[derive(Debug)]
 pub struct ValueHandle(Owned, Option<crate::original::Original>);
 impl ValueHandle {
+    /// Own one engine row directly, as the one-call functions return it.
+    pub(crate) fn from_any(row: AnyRow) -> Self {
+        Self(Owned::Row(row), None)
+    }
     unsafe fn from_row(row: *const HostRow) -> Result<Self, Error> {
         /* SAFETY: only the supported prefix is read after size validation. */
         unsafe {
@@ -75,7 +80,12 @@ impl ValueHandle {
             .map(|value| {
                 Self(
                     Owned::Row(value),
-                    if row.function == thinkthen::FunctionName::Filter.abi() {
+                    if [
+                        thinkthen::FunctionName::Filter.abi(),
+                        thinkthen::FunctionName::Rank.abi(),
+                    ]
+                    .contains(&row.function)
+                    {
                         unsafe { row.source.original().cloned() }
                     } else {
                         None
@@ -102,7 +112,7 @@ impl ValueHandle {
     }
     fn typed<F: Function>(&self) -> Result<&Outcome<F::Answer, F::Detail>, Error> {
         if self.function()? != F::NAME {
-            return Err(native::abi_error());
+            return Err(native::argument_error(thinkthen::Code::UsageFunction));
         }
         match &self.0 {
             Owned::Row(row) => {
@@ -143,6 +153,7 @@ impl ValueHandle {
     fn answer<F: Function>(&self) -> Result<&F::Answer, Error> {
         match self.typed::<F>()? {
             Outcome::Answered { answer, .. } => Ok(answer),
+            Outcome::Failed { error } => Err(error.clone()),
             _ => Err(native::abi_error()),
         }
     }
@@ -188,6 +199,28 @@ pub(crate) unsafe fn project<T>(
     /* SAFETY: each export lends exclusive writable output slots until return. */
     unsafe {
         crate::exports::operation(error, || {
+            out.write(read()?);
+            Ok(crate::exports::OK)
+        })
+    }
+}
+
+// Answer access is distinct from metadata/detail inspection: unsure never writes an answer.
+pub(crate) unsafe fn answer_project<T>(
+    value: *const ValueHandle,
+    out: *mut T,
+    error: *mut crate::HostError,
+    read: impl FnOnce() -> Result<T, Error>,
+) -> i32 {
+    /* SAFETY: the live value is borrowed and output slots are exclusive. */
+    unsafe {
+        crate::exports::operation(error, || {
+            if (*value).status()? == thinkthen::results::Status::Unsure {
+                return Ok(crate::THINKTHEN_UNSURE);
+            }
+            if let Some(error) = (*value).error()? {
+                return Err(error.clone());
+            }
             out.write(read()?);
             Ok(crate::exports::OK)
         })

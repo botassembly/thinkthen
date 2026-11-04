@@ -39,6 +39,7 @@ for (const file of manifest.cases) {
         for (const [index, row] of rows.entries()) {
           assert.equal(row.function, name);
           assertRow(row, expected[index], selected, settings.model);
+          if (name === "rank") assert.deepEqual(row.item, fixture.request.records[row.position - 1]);
           if (name === "filter") {
             assert.equal(items[index].item, fixture.request.records[row.position - 1]);
             assert.equal(items[index].kept, row.status === "answered" && row.answer === true);
@@ -172,7 +173,7 @@ test("shared case through standalone exports", async () => {
   process.env.THINKTHEN_BASE_URL = server.url;
   try {
     const request = fixture.request;
-    const single = await sdk.decide(request.question, request.records[0]);
+    const single = await sdk.decide(request.question, request.records[0]).row();
     const rows = await sdk.decideStream(request.question, request.records).toArray();
     for (const row of [single, ...rows]) {
       assert.deepEqual(normalize(hostValue(row)), expectedRows(fixture)[0]);

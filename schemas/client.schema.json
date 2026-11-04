@@ -12,8 +12,7 @@
       "writeOnly": true
     },
     "backend": {
-      "$ref": "#/$defs/BackendName",
-      "default": "systemone"
+      "$ref": "#/$defs/BackendName"
     },
     "batch": {
       "anyOf": [

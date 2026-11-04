@@ -1,0 +1,3 @@
+{"id":"a1","refund":true,"topic":"billing","urgency":0.05}
+{"id":"a2","refund":false,"topic":"shipping","urgency":0.14}
+{"id":"a3","refund":true,"topic":"billing","urgency":0.45}

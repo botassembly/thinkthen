@@ -1,6 +1,6 @@
-import io.thinkthen.Backend;
-import io.thinkthen.ThinkThen;
-import io.thinkthen.ThinkThenException;
+import dev.thinkthen.Backend;
+import dev.thinkthen.ThinkThen;
+import dev.thinkthen.ThinkThenException;
 
 /** Run in a fresh JVM with the shared incompatible-ABI engine packaged in the JAR. */
 public final class JavaAbiRefusalCases {

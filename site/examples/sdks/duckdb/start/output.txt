@@ -1,0 +1,8 @@
+┌────────┬───────────┬──────────────────┐
+│ msg_id │ is_refund │      status      │
+│ int32  │  boolean  │ thinkthen_status │
+├────────┼───────────┼──────────────────┤
+│      1 │ true      │ answered         │
+│      2 │ false     │ answered         │
+│      3 │ true      │ answered         │
+└────────┴───────────┴──────────────────┘

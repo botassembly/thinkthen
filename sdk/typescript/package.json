@@ -1,7 +1,7 @@
 {
   "name": "thinkthen",
   "version": "0.2.0",
-  "description": "Ten functions that judge evidence by meaning",
+  "description": "Ten functions that judge records by meaning",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -21,7 +21,10 @@
     "index.d.ts",
     "thinkthen.node",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "answers.js",
+    "platform.js",
+    "platforms.js"
   ],
   "engines": {
     "node": ">=22.12"
@@ -39,7 +42,8 @@
     "directory": "sdk/typescript"
   },
   "scripts": {
-    "prepack": "python3 ../../scripts/typescript-prepare"
+    "prepack": "python3 ../../scripts/typescript-prepare",
+    "preinstall": "node platform.js"
   },
   "sideEffects": false,
   "os": [

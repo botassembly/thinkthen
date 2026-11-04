@@ -24,7 +24,7 @@ class StrictGate(unittest.TestCase):
             source = root / 'source'
             (source / 'scripts').mkdir(parents=True)
             shutil.copy2(ROOT / 'scripts/words', source / 'scripts/words')
-            (source / 'README.md').write_text('Public product text\n')
+            (source / 'README.md').write_text('Public product text\nCodeUsageThreshold Code = C.THINKTHEN_CODE_USAGE_THRESHOLD\n')
             (source / 'sdlc').mkdir()
             (source / 'sdlc/private').write_text('ExampleConfidential\n')
             (source / 'AGENTS.md').write_text('ExampleConfidential\n')
@@ -37,10 +37,42 @@ class StrictGate(unittest.TestCase):
             patterns.write_text('ExampleConfidential')
             clean = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
             self.assertEqual(clean.returncode, 0, clean.stderr)
+            (source / 'README.md').write_text('This came from old ' 'code.\n')
+            history = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
+            self.assertNotEqual(history.returncode, 0, 'candidate accepted implementation history')
+            self.assertIn('README.md:1:', history.stderr)
             (source / 'README.md').write_text('ExampleConfidential\n')
             exposed = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
             self.assertNotEqual(exposed.returncode, 0)
             self.assertIn('README.md:1:', exposed.stderr)
+
+            maker = 'Genom' + 'Oncology'
+            patterns.write_text(maker + '|ExampleConfidential')
+            (source / 'README.md').write_text('Public product text\n')
+            credits = ('site/src/components/Footer.astro',
+                       'site/src/content/docs/about.mdx',
+                       'site/src/content/docs/blog/introducing-thinkthen.mdx')
+            for name in credits:
+                path = source / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('Made by ' + maker + '\nhttps://www.' + maker.lower()
+                                + '.com/\n/brand/' + maker.lower() + '-logo-light.png\n'
+                                + '/brand/' + maker.lower() + '-logo-dark.png\n')
+            subprocess.run(['git', 'add', '.'], cwd=source, check=True)
+            approved = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
+            self.assertEqual(approved.returncode, 0, approved.stderr)
+            for spelling in (maker, maker.lower()):
+                (source / 'README.md').write_text(spelling + '\n')
+                elsewhere = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
+                self.assertNotEqual(elsewhere.returncode, 0)
+                self.assertIn('README.md:1:', elsewhere.stderr)
+            (source / 'README.md').write_text('Public product text\n')
+            footer = source / credits[0]
+            for forbidden_text in ('ExampleConfidential', 'old ' + 'code'):
+                footer.write_text('Made by ' + maker + '; ' + forbidden_text + '\n')
+                rejected = subprocess.run([source / 'scripts/words', patterns], env=env, capture_output=True, text=True)
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertIn(credits[0] + ':1:', rejected.stderr)
 
     def test_candidate_refuses_a_platform_that_omits_required_linux_stages(self):
         with tempfile.TemporaryDirectory(prefix='gate-platform-') as temporary:

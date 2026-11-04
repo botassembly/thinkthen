@@ -81,8 +81,8 @@ impl super::Function for Find {
         record: &crate::core::AdmittedRecord,
         limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        let evidence = record.evidence();
-        let units = units(evidence);
+        let field = record.field();
+        let units = units(field);
         if let Some(limit) = limits.options.map(std::num::NonZeroUsize::get)
             && units.len() >= limit
         {
@@ -127,8 +127,8 @@ impl super::Function for Find {
         let question = context.question();
         let record = context.record();
         let answers = context.answers();
-        let evidence = record.evidence();
-        let units = units(evidence);
+        let field = record.field();
+        let units = units(field);
         if units.is_empty() {
             return Outcome::Answered {
                 answer: Answer::Found(None),

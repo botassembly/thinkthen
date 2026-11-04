@@ -1,0 +1,10 @@
+{
+  "id": "a1",
+  "answer": true,
+  "probability": 0.99
+}
+{
+  "id": "a2",
+  "answer": false,
+  "probability": 0.02
+}

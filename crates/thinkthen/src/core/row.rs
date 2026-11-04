@@ -1,7 +1,7 @@
 //! One record's result.
 
 // Schema derives generate sibling impls using JSON maps for metadata.
-// This module holds result values; evidence parsing stays in function modules.
+// This module holds result values; field parsing stays in function modules.
 #![allow(
     clippy::disallowed_types,
     reason = "generated result schemas build metadata; values remain typed"

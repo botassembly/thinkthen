@@ -1,0 +1,22 @@
+{
+  "entries": {
+    "triage": {
+      "run": [
+        {
+          "question": {
+            "function": "filter",
+            "question": "Does the customer request a refund?",
+            "field": "/text"
+          }
+        },
+        {
+          "shell": [
+            "sh",
+            "-c",
+            "cat > /dev/null; for v in THINKTHEN_API_KEY OPENAI_API_KEY; do if printenv $v > /dev/null; then s=true; else s=false; fi; echo \"{\\\"variable\\\":\\\"$v\\\",\\\"visible\\\":$s}\"; done"
+          ]
+        }
+      ]
+    }
+  }
+}

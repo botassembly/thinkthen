@@ -1,0 +1,4 @@
+Customer called about a late parcel.
+Refund issued for order 1182.
+Customer asked to cancel and get their money back.
+Updated the shipping address on file.

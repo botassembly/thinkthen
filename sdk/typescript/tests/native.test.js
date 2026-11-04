@@ -95,7 +95,7 @@ test("break and repeated disposal release one iterator and preserve other client
     await stream.return();
     await stream[Symbol.asyncDispose]();
     assert.equal(returned, 1);
-    const independent = await client.decide("Ready?", "still open");
+    const independent = await client.decide("Ready?", "still open").row();
     assert.equal(independent.function, "decide");
     await client.close();
     await client.close();

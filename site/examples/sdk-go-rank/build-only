@@ -1,0 +1,1 @@
+go.mod: its replace line points at the Go package staged from this commit; go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0 writes the reader's own go.mod

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any, Generic, TypeVar, cast
 
 import pandas as pd
 
@@ -77,21 +77,49 @@ def _missing(value: object) -> bool:
     return bool(pd.isna(cast(Any, value))) if pd.api.types.is_scalar(value) else False
 
 
-@pd.api.extensions.register_series_accessor("thinkthen")
-class ThinkThenAccessor(ColumnMethods[pd.DataFrame]):
+P = TypeVar("P", "pd.Series[Any]", pd.DataFrame)
+
+
+class _PandasAccessor(ColumnMethods["pd.Series[Any]", pd.DataFrame, P], Generic[P]):
     def _missing(self, value: object) -> bool:
         return _missing(value)
 
     def _records(self) -> Iterable[Any]:
         yield from self._value
 
+    def _answers(
+        self, function: str, rows: list[Any], question: object
+    ) -> pd.Series[Any]:
+        values: list[Any] = [None] * len(self._value)
+        for row in rows:
+            answer = row.answer
+            if function == "annotate" and answer is not None:
+                answer = {name: child.answer for name, child in answer.items()}
+            values[row.position - 1] = pd.NA if answer is None else answer
+        return pd.Series(
+            values,
+            index=self._value.index,
+            name=self._value.name if isinstance(self._value, pd.Series) else "answer",
+            dtype=_answer_dtype(function),
+        )
+
+    def _kept(self, rows: list[Any]) -> P:
+        return cast(
+            P, self._value.iloc[[row.position - 1 for row in rows if row.kept]].copy()
+        )
+
     def _frame(self, function: str, rows: list[Any], question: object) -> pd.DataFrame:
         index = self._value.index.take([row.position - 1 for row in rows])
         return frame(rows, index, function)
 
 
+@pd.api.extensions.register_series_accessor("thinkthen")
+class ThinkThenAccessor(_PandasAccessor["pd.Series[Any]"]):
+    pass
+
+
 @pd.api.extensions.register_dataframe_accessor("thinkthen")
-class ThinkThenFrameAccessor(ThinkThenAccessor):
+class ThinkThenFrameAccessor(_PandasAccessor[pd.DataFrame]):
     def _records(self) -> Iterable[Any]:
         yield from self._value.to_dict(orient="records")
 

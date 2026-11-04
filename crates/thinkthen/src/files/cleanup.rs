@@ -31,7 +31,7 @@ fn paths() -> MutexGuard<'static, Paths> {
 ///
 /// # Errors
 /// Returns the first removal error after attempting every owned path.
-pub fn force_cleanup() -> Result<(), Error> {
+pub(crate) fn force_cleanup() -> Result<(), Error> {
     let mut paths = paths();
     paths.stopped = true;
     let mut failure = None;

@@ -6,7 +6,7 @@ static void admission_error(const thinkthen_error *error) {
 }
 
 static void admission(const char *boundary, const char *json) {
-    const uint8_t *data = (const uint8_t *)json;
+    const char *data = json;
     const size_t size = strlen(json);
     thinkthen_error error = {.struct_size = sizeof error};
     int32_t status = THINKTHEN_OK;
@@ -39,7 +39,7 @@ static void admission(const char *boundary, const char *json) {
         thinkthen_client_free(client);
         thinkthen_settings_free(settings);
     }
-    assert(status == THINKTHEN_ERROR);
+    assert(status < 0);
     admission_error(&error);
     thinkthen_error_free(&error);
 }

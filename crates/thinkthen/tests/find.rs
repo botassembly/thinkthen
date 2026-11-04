@@ -71,7 +71,7 @@ fn finds_one_nonblank_line_with_scalar_offsets_and_settled_ties() {
             "é🦀\r\n \n 答🙂 \r\n",
             json!({"u1":0.1,"u2":0.9,"none":0.0}),
             "0.5",
-            json!({"text":" 答🙂 ","start":6,"end":10}),
+            json!({"text":" 答🙂 ","start":10,"end":19}),
             "answered",
             0.9,
         ),
@@ -118,8 +118,8 @@ fn empty_and_oversized_texts_need_no_request_and_preserve_record_order() {
         .map(|row| row.unwrap())
         .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
     assert_eq!(rows[0]["position"], 1);
-    assert_eq!(rows[0]["status"], "answered");
-    assert_eq!(rows[0]["answer"], Value::Null);
+    assert_eq!(rows[0]["status"], "failed");
+    assert_eq!(rows[0]["error"]["code"], "record.empty");
     assert_eq!(rows[1]["error"]["code"], "record.too-large");
     assert_eq!(server.count(), 0);
 }

@@ -1,0 +1,56 @@
+---
+title: JSON Lines
+description: Judge one field of each JSON object with --field, and add each answer to its object with --into, including not sure and failed lines.
+goal: The reader judges the right field of each JSON object and gets the objects back with an answer field.
+reader: A command-line user with messages stored as JSON Lines
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+JSON Lines is a file with one JSON object on each line. ThinkThen judges each object on its own, and each answer starts with the object's `id`, so you can match the answers to your messages.
+
+<ExampleFile id="decide-lines" file="messages.jsonl" />
+
+<Example id="decide-lines" />
+
+`a1` and `a3` ask for a refund, and `a2` asks about a delivery. A file whose name ends in `.jsonl` is read as JSON Lines. From a pipe, add `--from jsonl`.
+
+## Pick the field to judge
+
+`--field /text` judges the `text` field of each object, as above. The field name starts with `/`, and `/message/body` reaches a field inside another one. `THINKTHEN_FIELD` sets the same thing for every command in your shell.
+
+With no `--field`, ThinkThen judges the whole object, minus its `id`. Repeat `--field` to judge several fields together, such as `--field /subject --field /body`.
+
+An object without an `id` is still judged, and its answer starts with its place in the input instead, counting from 1.
+
+## Add the answer to each object
+
+`--into` names a new field. Each object comes back unchanged, with its answer in that field, in the order of the file.
+
+<ExampleFile id="jsonl-into" file="messages.jsonl" />
+
+<Example id="jsonl-into" />
+
+Each message keeps its `id` and `text`, and gains `is_refund`.
+
+filter with `--into` gives back only the objects that answer yes. When some lines were not sure or failed, it then prints one line on standard error that counts each, so a not sure line never drops out unseen. `--quiet` hides that count, and the objects, but still prints each failure's error with its `id` and file.
+
+Every line must be a JSON object that doesn't already hold the new field; otherwise the command names the line, stops with exit code 2, and asks nothing.
+
+## Find the not sure and failed lines
+
+A not sure answer writes `"unsure"` in the field. A line that fails writes `null`, its error goes to standard error, and the command exits 6.
+
+<ExampleFile id="jsonl-into-notsure" file="messages.jsonl" />
+
+<Example id="jsonl-into-notsure" />
+
+The chance that `a3` asks for a refund falls between the low bar of 0.2 and the high bar of 0.8, so it is not sure. `a4` has no `text` field, so it fails. Send both to a person; never treat either as a no. [Exit codes](/command-line/exit-codes/) lists what each code means.
+
+`--into` can't be combined with `--json`, `--check`, `--output`, `--in-place` or `--details`. For every detail of each answer, leave out `--into` and add `--json`; [JSON output](/reference/json-output/) lists its fields.
+
+## Next
+
+[Exit codes](/command-line/exit-codes/) lets a script act on the answer.

@@ -1,0 +1,5 @@
+{
+  "anchor": "relations = tt.relate(message, rules=rules)",
+  "before": 0,
+  "after": 2
+}

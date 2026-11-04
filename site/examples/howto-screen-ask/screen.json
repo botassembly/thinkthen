@@ -1,0 +1,15 @@
+{
+  "field": "/text",
+  "questions": {
+    "trial": {
+      "function": "decide",
+      "question": "Is this a randomized controlled trial?",
+      "threshold": {"low": 0.3, "high": 0.7}
+    },
+    "lung": {
+      "function": "decide",
+      "question": "Does the study enroll lung cancer patients?",
+      "threshold": {"low": 0.3, "high": 0.7}
+    }
+  }
+}

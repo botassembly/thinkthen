@@ -1,0 +1,207 @@
+---
+title: Installation
+description: Install the thinkthen command on macOS, Linux or Windows with one line, Homebrew, Cargo or a download, then upgrade it, remove it, and add shell completions and the manual page.
+goal: A developer installs the thinkthen command the way that suits their machine, checks it runs, and later upgrades or removes it, with shell completions and the manual page if they want them.
+reader: A developer on macOS, Linux or Windows who wants the thinkthen command on PATH
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+Install the `thinkthen` command on macOS, Linux or Windows, then check that it runs. Each SDK page has its own install line.
+
+## Install with one line
+
+On macOS or Linux:
+
+<InstallLine k="install.installer" />
+
+In Windows PowerShell:
+
+<InstallLine k="install.installerWindows" lang="powershell" />
+
+The installer downloads the newest release, checks its checksum, and puts `thinkthen` in `.local/bin` in your home folder. It adds that folder to your `PATH` for new terminals, and prints the line to run in the current one.
+
+To install somewhere else, set `THINKTHEN_INSTALL_DIR` to the folder first. To leave your shell profile alone, set `THINKTHEN_NO_MODIFY_PATH=1`.
+
+## Check that it runs
+
+Open a new terminal and run:
+
+<Example id="version" />
+
+If the shell answers `command not found`, the folder that holds `thinkthen` isn't on your `PATH`. Run the line the installer printed, or open a new terminal.
+
+ThinkThen runs on <Fact k="floors.macos" />, on Linux x86-64 and arm64 with <Fact k="floors.linux" />, and on <Fact k="floors.windows" />.
+
+## Install with Homebrew
+
+On macOS on Apple silicon, or on Linux:
+
+<InstallLine k="install.brew" />
+
+Homebrew also installs the manual page.
+
+## Install with Cargo
+
+With Rust <Fact k="rustVersion" /> or later, on any platform:
+
+<InstallLine k="install.cargo" />
+
+Cargo builds the command from source and puts it in `~/.cargo/bin`.
+
+## Download a release file
+
+The [<Fact k="version" /> release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) holds one file for each platform, and a `SHA256SUMS` file to check them with:
+
+- `thinkthen-0.2.0-linux-x86_64.tar.gz`
+- `thinkthen-0.2.0-linux-arm64.tar.gz`
+- `thinkthen-0.2.0-macos-arm64.tar.gz`
+- `thinkthen-0.2.0-windows-x86_64.zip`
+
+Each file holds the command, its manual page `thinkthen.1`, and its licenses. The command isn't signed, so check the download before you run it.
+
+### Linux
+
+These steps download the x86-64 file, check it, unpack it, and put `thinkthen` on your `PATH` for this shell. On arm64, write `arm64` in place of `x86_64`.
+
+```sh
+v=0.2.0
+url=https://github.com/botassembly/thinkthen
+url=$url/releases/download/v$v
+file=thinkthen-$v-linux-x86_64.tar.gz
+curl -fsSLO "$url/$file"
+curl -fsSLO "$url/SHA256SUMS"
+sha256sum --check --ignore-missing SHA256SUMS
+mkdir "thinkthen-$v"
+tar -xzf "$file" -C "thinkthen-$v"
+export PATH="$PWD/thinkthen-$v:$PATH"
+```
+
+The check prints the file name and `OK`. Anything else means the download is damaged or altered, so download it again. To find `thinkthen` in new shells, add its folder to `PATH` in your shell profile.
+
+### macOS
+
+In Terminal:
+
+```sh
+v=0.2.0
+url=https://github.com/botassembly/thinkthen
+url=$url/releases/download/v$v
+file=thinkthen-$v-macos-arm64.tar.gz
+curl -fsSLO "$url/$file"
+curl -fsSLO "$url/SHA256SUMS"
+grep " $file\$" SHA256SUMS | shasum -a 256 --check
+mkdir "thinkthen-$v"
+tar -xzf "$file" -C "thinkthen-$v"
+export PATH="$PWD/thinkthen-$v:$PATH"
+```
+
+The check prints the file name and `OK`. If macOS then blocks `thinkthen` because it isn't signed, clear the download mark from the folder:
+
+```sh
+xattr -dr com.apple.quarantine "thinkthen-$v"
+```
+
+### Windows
+
+Download the zip and `SHA256SUMS` into one folder. In PowerShell, in that folder, check the zip:
+
+```powershell
+$zip = 'thinkthen-0.2.0-windows-x86_64.zip'
+$sums = Get-Content .\SHA256SUMS
+$line = $sums | Where-Object { $_.EndsWith(" $zip") }
+$want = "$line".Split(' ')[0]
+$got = (Get-FileHash $zip -Algorithm SHA256).Hash
+if ($want -and $got -eq $want) { 'OK' } else { 'No match' }
+```
+
+On `No match`, download the zip again. On `OK`, unpack it and put it on your `PATH` for this session:
+
+```powershell
+Unblock-File $zip
+Expand-Archive $zip .\thinkthen-0.2.0
+$env:Path = "$PWD\thinkthen-0.2.0;$env:Path"
+```
+
+`Unblock-File` clears the download mark. Windows policy can still block a command that isn't signed.
+
+## Check where a download came from
+
+A checksum shows a file arrived whole. To check that it also came from the ThinkThen release build, use the [GitHub command line tool](https://cli.github.com/manual/gh_attestation_verify):
+
+```sh
+gh attestation verify FILE \
+  --repo botassembly/thinkthen \
+  --signer-workflow \
+botassembly/thinkthen/.github/workflows/release-prepare.yml
+```
+
+Write the path to your download in place of `FILE`. Use the file only when the command reports success.
+
+## Upgrade
+
+Upgrade the same way you installed:
+
+- **One-line installer:** run it again. It replaces the command with the newest release.
+- **Homebrew:** `brew upgrade thinkthen`.
+- **Cargo:** run `cargo install thinkthen --version` with the new version number.
+- **Download:** download the new file, check it, and unpack it in place of the old folder.
+
+## Uninstall
+
+- **One-line installer on macOS or Linux:** delete `thinkthen` and `thinkthen.install.json` from `~/.local/bin`, or from the folder you chose. Then delete the line that ends in `# thinkthen PATH` from your shell profile. `thinkthen.install.json` lists the profiles the installer changed.
+- **One-line installer on Windows:** delete `thinkthen.exe` and `thinkthen.install.json` from `.local\bin` in your home folder, then remove that folder from your user `Path` in the Environment Variables settings.
+- **Homebrew:** `brew uninstall thinkthen`.
+- **Cargo:** `cargo uninstall thinkthen`.
+- **Download:** delete the folder you unpacked.
+
+## Add shell completions
+
+`thinkthen completions SHELL` prints a script that lets your shell finish ThinkThen commands when you press Tab. It works for `bash`, `elvish`, `fish`, `powershell` and `zsh`. These are the first lines of the bash script:
+
+<Example id="completions" />
+
+Save the script where your shell loads it. For bash:
+
+```sh
+dir=~/.local/share/bash-completion/completions
+mkdir -p "$dir"
+thinkthen completions bash > "$dir/thinkthen"
+```
+
+For zsh, save it in a folder on your `fpath`:
+
+```sh
+mkdir -p ~/.zfunc
+thinkthen completions zsh > ~/.zfunc/_thinkthen
+```
+
+Then add `fpath=(~/.zfunc $fpath)` to `~/.zshrc`, above the line that runs `compinit`.
+
+For fish:
+
+```sh
+dir=~/.config/fish/completions
+mkdir -p "$dir"
+thinkthen completions fish > "$dir/thinkthen.fish"
+```
+
+Open a new terminal to use them.
+
+## Read the manual page
+
+Homebrew installs the manual page, so `man thinkthen` works. The download files hold it as `thinkthen.1`. After the one-line installer or Cargo, write it yourself:
+
+```sh
+thinkthen man > thinkthen.1
+man ./thinkthen.1
+```
+
+To read it with `man thinkthen` from any folder, copy `thinkthen.1` into a `man1` folder on your `MANPATH`.
+
+## Next
+
+[Quickstart](/quickstart/): set your key and ask your first question.

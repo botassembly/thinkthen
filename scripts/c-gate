@@ -9,7 +9,7 @@ case "$build_target" in
   /*) ;;
   *) build_target="$PWD/$build_target" ;;
 esac
-for consumer in c-consumer typed-consumer typed-projections typed-sql; do
+for consumer in c-consumer typed-consumer typed-projections typed-sql interface; do
     case "$consumer" in c-consumer) source=consumer ;; *) source=$consumer ;; esac
     cc -std=c11 -Wall -Wextra -Werror -UNDEBUG -pthread \
       -I crates/thinkthen-ffi/include "crates/thinkthen-ffi/tests/$source.c" \

@@ -1,0 +1,6 @@
+shape: (2,)
+Series: 'message' [str]
+[
+	"Please refund my order."
+	"I was charged twice for one in…
+]

@@ -1,0 +1,27 @@
+#!/bin/sh
+# Build ordinary debug native code once and test the installed C# package.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+export RUSTUP_TOOLCHAIN=$(python3 -c 'import tomllib; print(tomllib.load(open("rust-toolchain.toml", "rb"))["toolchain"]["channel"])')
+export CARGO_NET_OFFLINE=true
+cargo fmt --all -- --check
+cargo build -p thinkthen-ffi -p loopback --lib --bin loopback --locked
+scripts/contract-schema-check
+native=${CARGO_TARGET_DIR:-$PWD/target}/debug
+case "$native" in /*) ;; *) native="$PWD/$native" ;; esac
+case $(uname -s) in
+    Darwin) engine="$native/libthinkthen_ffi.dylib" ;;
+    Linux) engine="$native/libthinkthen_ffi.so" ;;
+    *) echo 'C# interface gate requires Linux or macOS' >&2; exit 2 ;;
+esac
+stage=$(mktemp -d)
+trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$stage"; exit "$gate_status"' EXIT
+trap 'exit 1' HUP INT TERM
+scripts/native-fixtures --engine "$engine" --output "$stage/abi"
+for kind in invalid-json unanswered-answer unknown-function; do
+    scripts/abi-minor-check --native "$engine" --malformed-row "$kind" --output "$stage/malformed/$kind"
+done
+export THINKTHEN_LOOPBACK="$native/loopback" THINKTHEN_NATIVE_LIBRARY="$engine"
+export THINKTHEN_NATIVE_FIXTURES="$stage/abi" THINKTHEN_MALFORMED_ROW_FIXTURES="$stage/malformed"
+scripts/csharp-gate --source

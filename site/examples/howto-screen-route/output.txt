@@ -1,0 +1,3 @@
+p1 include
+p2 exclude
+p3 person

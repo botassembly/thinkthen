@@ -38,7 +38,7 @@ func stressInputStreaming() async throws {
   }
   precondition(generation.produced.withLock { $0 } == 0)
   let client = try Client(.init(backend: .stub, batch: 1))
-  let rows = client.decide("Ready?", records: source, options: .init(evidence: "/body"))
+  let rows = client.decide("Ready?", records: source, options: .init(field: "/body"))
   precondition(generation.produced.withLock { $0 } == 0)
   let first = try await rows.makeAsyncIterator().next()
   precondition(first?.id == .string("record-10000000") && first?.position == 1)
@@ -51,7 +51,7 @@ func stress(_ args: [String]) async throws {
   let client = try Client(
     decoded(Settings.self, JSONSerialization.jsonObject(with: Data(args[2].utf8))))
   let count = Int(args[3])!
-  let question = DecideQuestion("Ready?", options: .init(evidence: "/body"))
+  let question = DecideQuestion("Ready?", options: .init(field: "/body"))
   let cancel = args[1] == "stress-cancel"
   let workers = cancel ? 1 : Int(args[7])!
   var failures = 0
@@ -74,7 +74,7 @@ func stress(_ args: [String]) async throws {
       do {
         try await task.value
         preconditionFailure("held stream completed")
-      } catch { try requireError(error, equals: .cancelled) }
+      } catch { guard error is CancellationError else { throw error } }
     } else {
       try await withThrowingTaskGroup(of: (Int, UInt64).self) { group in
         for worker in 0..<workers {
@@ -88,7 +88,7 @@ func stress(_ args: [String]) async throws {
             {
               received += 1
               if case .string(let id) = row.id { mask |= UInt64(1) << id.count }
-              precondition(row.position == UInt64(received))
+              precondition(row.position == received)
               precondition(row.id == .string("record-\(offset + received - 1)"))
               switch row.outcome {
               case .answered(let answer, let probability, _):

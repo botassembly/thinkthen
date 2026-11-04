@@ -53,7 +53,7 @@ class PackageText(unittest.TestCase):
         self.native.write_bytes(b'qualified engine fixture')
 
     def test_universal_npm(self):
-        scratch, notices, native = self.scratch, self.notices, self.native
+        scratch, notices = self.scratch, self.notices
         packages = {}
         for target in ('linux-x86_64', 'windows-x86_64'):
             folder = scratch / target
@@ -106,7 +106,7 @@ class PackageText(unittest.TestCase):
         print('Linux and Windows PyPI wheels carry only the trimmed registry guide', flush=True)
 
     def test_ruby_gem(self):
-        scratch, notices, native = self.scratch, self.notices, self.native
+        scratch = self.scratch
         folder = scratch / 'inputs'
         folder.mkdir()
         gem_source = scratch / 'gem-source'
@@ -138,7 +138,72 @@ class PackageText(unittest.TestCase):
                 assert contents(jar)['META-INF/README.md'] == released_readme(name)
                 documentation = contents(jar.with_name(jar.stem + '-javadoc.jar'))['index.html']
                 assert b'INSTALL.md gives offline' not in documentation
+                if name == 'java':
+                    pages = contents(jar.with_name(jar.stem + '-javadoc.jar'))
+                    # Discover the package from the compiled sources so the package
+                    # rename and this archive check have only one owner.
+                    source = next((ROOT / 'sdk/java/library/src/main/java').rglob('ThinkThen.java'))
+                    import re
+                    package = re.search(r'package ([\w.]+);', source.read_text())[1].replace('.', '/')
+                    page, = [name for name in pages if name.endswith(package + '/ThinkThen.html')]
+                    assert b'Builder' in pages[page]
+                    assert any(name.endswith(package + '/ThinkThen.Builder.html') for name in pages)
+        import xml.etree.ElementTree as ET
+        relocation = next(output.glob('**/thinkthen-jvm/' + version() + '/*.pom'))
+        document = ET.parse(relocation)
+        namespace = {'m': 'http://maven.apache.org/POM/4.0.0'}
+        assert document.findtext('m:distributionManagement/m:relocation/m:artifactId', namespaces=namespace) == 'thinkthen-java'
+        from release_registry_check import legacy_jvm_consumer, maven_feed
+        pom = legacy_jvm_consumer(scratch / 'consumer')
+        feed, settings = maven_feed(scratch, scratch)
+        cache = scratch / 'cold-maven'
+        arguments = ['mvn', '-B', '-q', '-s', settings, '-f', pom, 'dependency:build-classpath']
+        classpath = scratch / 'resolved-classpath'
+        run(*arguments, '-Dmaven.repo.local=' + str(cache), '-Dmdep.outputFile=' + str(classpath))
+        assert jar.exists()
+        for name in ('java', 'kotlin'):
+            original = next(output.glob(f'**/thinkthen-{name}-{version()}.jar'))
+            restored = cache / original.relative_to(output)
+            assert restored.read_bytes() == original.read_bytes()
+        # The old name must fail in a fresh cache when its POM is not published.
+        (feed / relocation.relative_to(output)).unlink()
+        with self.assertRaises(subprocess.CalledProcessError):
+            run(*arguments, '-Dmaven.repo.local=' + str(scratch / 'missing-relocation-cache'),
+                '-Dmdep.outputFile=' + str(scratch / 'missing-classpath'), stderr=subprocess.STDOUT)
         print('Compiled Maven archives carry the trimmed guides inside META-INF and documentation', flush=True)
+
+    def test_nuget_cold_restore(self):
+        from csharp_dependencies import package_id, prepared_feed
+        from release_registry import nuget
+        from release_registry_check import verify_nuget
+        from release_readme import update_zip
+        scratch = self.scratch
+        current = scratch / 'nuget'
+        current.mkdir()
+        nuget({'linux-x86_64': self.native}, current, scratch, {'linux-x86_64': self.notices})
+        package, = current.glob('*.nupkg')
+        stale = scratch / 'stale-feed'
+        stale.mkdir()
+        shutil.copy2(package, stale / package.name)
+        update_zip(stale / package.name, 'stale-package-marker', b'older bytes with the same version')
+        consumer = scratch / 'Consumer.csproj'
+        consumer.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework>'
+                            '</PropertyGroup><ItemGroup><PackageReference Include="' + package_id() +
+                            '" Version="' + version() + '" /></ItemGroup></Project>')
+        for name, feed in [('stale', stale), ('fresh', current)]:
+            isolated = environment(scratch / name)
+            run('dotnet', 'restore', consumer, '--source', feed, '--source', prepared_feed(),
+                '--packages', isolated['NUGET_PACKAGES'], '--force', env=isolated)
+            if name == 'stale':
+                # Reproduce the old producer's shared-cache mistake: changing
+                # the feed to the current archive still selects cached bytes.
+                run('dotnet', 'restore', consumer, '--source', current, '--source', prepared_feed(),
+                    '--packages', isolated['NUGET_PACKAGES'], '--force', env=isolated)
+                with self.assertRaisesRegex(ValueError, 'same version'):
+                    verify_nuget(current, Path(isolated['NUGET_PACKAGES']))
+            else:
+                verify_nuget(current, Path(isolated['NUGET_PACKAGES']))
+        print('NuGet actual restores reject stale same-version bytes and accept the current package', flush=True)
 
     def test_source_tags(self):
         scratch, notices, native = self.scratch, self.notices, self.native
@@ -160,7 +225,7 @@ class PackageText(unittest.TestCase):
         print('Go and Swift tag archive carries trimmed guides, generated files and licenses', flush=True)
 
     def test_draft_assets(self):
-        scratch, notices, native = self.scratch, self.notices, self.native
+        scratch = self.scratch
         package = scratch / 'cpp'
         adapter = package / 'cpp/dependencies/nlohmann-json'
         (adapter / 'include/nlohmann').mkdir(parents=True)
@@ -193,14 +258,14 @@ class PackageText(unittest.TestCase):
         print('Draft dry run includes both installers and the optional C++ headers with terms', flush=True)
 
     def test_plain_npm_pack(self):
-        scratch, notices, native = self.scratch, self.notices, self.native
+        scratch = self.scratch
         # Plain npm pack must generate declarations in a clean source tree.
         source = scratch / 'npm-source'
-        for name in ('sdk/typescript', 'scripts/typescript-prepare', 'schemas/contract.json'):
+        for name in ('sdk/typescript', 'scripts', 'schemas/contract.json'):
             path = ROOT / name
             destination = source / name
             destination.parent.mkdir(parents=True, exist_ok=True)
-            if path.is_dir(): shutil.copytree(path, destination, ignore=shutil.ignore_patterns('node_modules', 'errors.js', 'errors.d.ts', '*.tgz'))
+            if path.is_dir(): shutil.copytree(path, destination, ignore=shutil.ignore_patterns('node_modules', '__pycache__', 'errors.js', 'errors.d.ts', '*.tgz'))
             else: shutil.copy2(path, destination)
         output = scratch / 'plain-npm'
         output.mkdir()
@@ -211,7 +276,6 @@ class PackageText(unittest.TestCase):
         print('Plain npm pack regenerates the public JavaScript and TypeScript error registry', flush=True)
 
     def test_cargo_crate(self):
-        scratch, notices, native = self.scratch, self.notices, self.native
         listing = run('cargo', 'package', '-p', 'thinkthen', '--list', '--offline', '--allow-dirty', cwd=ROOT).splitlines()
         manifest = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())
         assert 'LICENSE' in listing

@@ -1,0 +1,11 @@
+CREATE SCHEMA
+CREATE EXTENSION
+CREATE TABLE
+INSERT 0 6
+ msg_id | is_refund |  status  
+--------+-----------+----------
+ 1      | t         | answered
+ 2      | f         | answered
+ 3      | t         | answered
+(3 rows)
+

@@ -1,0 +1,16 @@
+[
+  {
+    "text": "Morgan",
+    "start": 0,
+    "end": 6,
+    "kind": "person",
+    "probability": 1.0
+  },
+  {
+    "text": "Example Group",
+    "start": 17,
+    "end": 30,
+    "kind": "organization",
+    "probability": 0.9702
+  }
+]

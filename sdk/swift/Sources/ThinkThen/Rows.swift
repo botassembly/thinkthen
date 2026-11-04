@@ -1,6 +1,17 @@
 import Foundation
 import Synchronization
 
+// Preserve the source sequence's laziness without requiring its iterator to be Sendable.
+struct TextRecords<Base: Sequence & Sendable>: Sequence, Sendable where Base.Element == String {
+  let base: Base
+  init(_ base: Base) { self.base = base }
+  struct Iterator: IteratorProtocol {
+    var base: Base.Iterator
+    mutating func next() -> Record? { base.next().map(Record.text) }
+  }
+  func makeIterator() -> Iterator { Iterator(base: base.makeIterator()) }
+}
+
 protocol RecordSource: Sendable {
   var finiteRecords: [Record]? { get }
   func next() async throws -> Record?
@@ -85,7 +96,7 @@ final class Driver<A: Sendable>: Sendable {
     defer { state.withLock { state in state.busy = false } }
     return try await withTaskCancellationHandler {
       do {
-        if state.withLock({ $0.cancelled }) || Task.isCancelled { throw ThinkThenError.cancelled }
+        if state.withLock({ $0.cancelled }) || Task.isCancelled { throw CancellationError() }
         let native: NativeCall
         if let call = state.withLock({ $0.call }) {
           native = call
@@ -129,7 +140,7 @@ final class Driver<A: Sendable>: Sendable {
               guard case .input = event else { return event }
               let pump = state.withLock { state in
                 if let pump = state.pump { return pump }
-                let pump = InputPump(source: source) { [weak native] in native?.wake() }
+                let pump = InputPump(source: source) { [native] in native.wake() }
                 state.pump = pump
                 if state.cancelled { pump.cancel() }
                 return pump
@@ -142,7 +153,7 @@ final class Driver<A: Sendable>: Sendable {
               if request { pump.request() }
               if let result = pump.take() {
                 state.withLock { $0.inputPending = false }
-                if state.withLock({ $0.cancelled }) { throw ThinkThenError.cancelled }
+                if state.withLock({ $0.cancelled }) { throw CancellationError() }
                 if let record = try result.get() {
                   if retainItems {
                     state.withLock {
@@ -159,7 +170,7 @@ final class Driver<A: Sendable>: Sendable {
               }
             }
           }
-          if Task.isCancelled || state.withLock({ $0.cancelled }) { throw ThinkThenError.cancelled }
+          if Task.isCancelled || state.withLock({ $0.cancelled }) { throw CancellationError() }
           switch event {
           case .input: continue
           case .row(let wire):
@@ -222,26 +233,56 @@ private final class Traversal<A: Sendable>: Sendable {
     }
   }
 }
+/// A lazy, single-pass stream. Releasing its iterator stops native work.
 public final class Rows<Element: Sendable>: AsyncSequence, Sendable {
-  public typealias Failure = ThinkThenError
-  private let traversal: Traversal<Element>
-  init(make: @escaping @Sendable () -> Driver<Element>) { traversal = Traversal(make) }
-  public final class AsyncIterator: AsyncIteratorProtocol, Sendable {
-    public typealias Failure = ThinkThenError
-    private let driver: Driver<Element>?
-    fileprivate init(_ driver: Driver<Element>?) { self.driver = driver }
-    public func next() async throws(ThinkThenError) -> Element? {
-      guard let driver else { throw .iteration(.alreadyIterated) }
-      do { return try await driver.next() } catch { throw typedError(error) }
-    }
-    public func next(isolation actor: isolated (any Actor)?) async throws(ThinkThenError)
-      -> Element?
-    { try await next() }
-    deinit { driver?.cancel() }
+  /// The stream may throw a native error or CancellationError.
+  public typealias Failure = any Error
+  private let iterator: @Sendable () -> AsyncIterator
+  private let cancellation: @Sendable () -> Void
+  init(make: @escaping @Sendable () -> Driver<Element>) {
+    let traversal = Traversal(make)
+    iterator = { AsyncIterator(traversal.claim()) }
+    cancellation = { traversal.cancel() }
   }
-  public func makeAsyncIterator() -> AsyncIterator { AsyncIterator(traversal.claim()) }
-  public func cancel() { traversal.cancel() }
-  public func collect() async throws(ThinkThenError) -> [Element] {
+  init(iterator: @escaping @Sendable () -> AsyncIterator, cancel: @escaping @Sendable () -> Void) {
+    self.iterator = iterator
+    cancellation = cancel
+  }
+  /// The typed AsyncIterator value exchanged with the engine.
+  public final class AsyncIterator: AsyncIteratorProtocol, Sendable {
+    /// The stream may throw a native error or CancellationError.
+    public typealias Failure = any Error
+    private let advance: @Sendable () async throws -> Element?
+    private let cancellation: @Sendable () -> Void
+    fileprivate init(_ driver: Driver<Element>?) {
+      advance = {
+        guard let driver else { throw ThinkThenError.iteration(.alreadyIterated) }
+        return try await driver.next()
+      }
+      cancellation = { driver?.cancel() }
+    }
+    init(
+      next: @escaping @Sendable () async throws -> Element?, cancel: @escaping @Sendable () -> Void
+    ) {
+      advance = next
+      cancellation = cancel
+    }
+    /// Read the next element, return nil at the end, or throw the stream error.
+    public func next() async throws -> Element? {
+      do { return try await advance() } catch { throw typedError(error) }
+    }
+    /// Read the next element, return nil at the end, or throw the stream error.
+    public func next(isolation actor: isolated (any Actor)?) async throws -> Element? {
+      try await next()
+    }
+    deinit { cancellation() }
+  }
+  /// Claim the single traversal; a second traversal throws an iteration error.
+  public func makeAsyncIterator() -> AsyncIterator { iterator() }
+  /// Stop pending input and native work; the next read throws CancellationError.
+  public func cancel() { cancellation() }
+  /// Read the remaining stream into an array, preserving any iteration error.
+  public func collect() async throws -> [Element] {
     let iterator = makeAsyncIterator()
     var output: [Element] = []
     while let element = try await iterator.next() { output.append(element) }

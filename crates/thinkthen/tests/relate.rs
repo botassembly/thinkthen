@@ -106,6 +106,11 @@ fn rules_ask_only_allowed_unique_pairs_and_keep_cut_inclusive() {
             .map(|row| row.unwrap())
             .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
         let row = &rows[0];
+        if text.is_empty() {
+            assert_eq!(row["error"]["code"], "record.empty");
+            assert_eq!(server.count(), 0);
+            continue;
+        }
         assert_eq!(row["status"], "answered", "{row}");
         assert!(row.get("probability").is_none());
         assert_eq!(row["answer"].as_array().unwrap().len(), kept);
@@ -311,7 +316,7 @@ fn failed_relation_round_has_no_partial_answer() {
 
 #[test]
 fn annotation_rounds_keep_each_selected_text_and_failure_separate() {
-    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"decision":{"function":"decide","question":"Is hiring stated?","evidence":"/decision"},"names":{"function":"recognize","kinds":["person","company"],"evidence":"/names"},"relations":{"function":"relate","rules":[{"relation":"works_for","source":"person","target":"company"}],"evidence":"/relations"},"missing":{"function":"relate","rules":[{"relation":"near","source":"person","target":"company"}],"evidence":"/absent"}}}"#).unwrap();
+    let toolbox = serde_json::from_str::<Annotate>(r#"{"questions":{"decision":{"function":"decide","question":"Is hiring stated?","field":"/decision"},"names":{"function":"recognize","kinds":["person","company"],"field":"/names"},"relations":{"function":"relate","rules":[{"relation":"works_for","source":"person","target":"company"}],"field":"/relations"},"missing":{"function":"relate","rules":[{"relation":"near","source":"person","target":"company"}],"field":"/absent"}}}"#).unwrap();
     let server = Loopback::answering(|q| {
         let words = q["instructions"].as_str().unwrap();
         if q.get("criteria").is_none() {
@@ -338,11 +343,11 @@ fn annotation_rounds_keep_each_selected_text_and_failure_separate() {
     let relation = &entries["relations"]["answer"][0];
     assert_eq!(
         relation["source"],
-        json!({"text":"Áda", "start":2, "end":5, "kind":"person"})
+        json!({"text":"Áda", "start":3, "end":7, "kind":"person"})
     );
     assert_eq!(
         relation["target"],
-        json!({"text":"Acme", "start":13, "end":17, "kind":"company"})
+        json!({"text":"Acme", "start":15, "end":19, "kind":"company"})
     );
 }
 

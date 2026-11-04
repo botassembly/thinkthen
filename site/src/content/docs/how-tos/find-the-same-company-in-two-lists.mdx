@@ -1,0 +1,45 @@
+---
+title: Find the same company in two lists
+description: Ask whether two entries name the same company, for each pair from two lists, and split the pairs into matches, non-matches and pairs for a person.
+goal: A developer joining two lists of companies leaves with the pairs that match, the pairs that don't, and the unclear pairs in a file for a person.
+reader: A developer cleaning or joining two lists of companies whose names and addresses are spelled differently
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, you have the pairs that name the same company in one file, and the pairs ThinkThen is not sure about in another for a person.
+
+## 1. Put the candidate pairs in a file
+
+Build the pairs with ordinary code first, such as entries that share a city or a postcode. Each pair is one question, so asking about every possible pair costs far more.
+
+Write one pair per line, with both sides under one field, `pair`, so the model reads them together:
+
+<ExampleFile id="howto-match-ask" file="pairs.jsonl" />
+
+## 2. Ask whether each pair names the same company
+
+`--field /pair` sends both sides as one text. The low and high bars send an unclear pair to not sure, and `--into same` adds the answer to each line:
+
+<Example id="howto-match-ask" />
+
+The first and third pairs spell one company two ways. The second names two companies. The fourth shares a name but not a city, so the model is not sure.
+
+## 3. Keep the matches and set aside the unclear pairs
+
+`same.jsonl` gets the matches, ready to join. `person.jsonl` gets the not-sure and failed pairs:
+
+<Example id="howto-match-person" />
+
+The Contoso pair is the one a person decides. Never count a not-sure or failed pair as a match or a non-match by default.
+
+## Check the result
+
+- Label a sample of pairs yourself and compare, as [Measure answers against your own labels](/how-tos/measure-answers-against-your-own-labels/) shows.
+- A wrong yes merges two different companies. If you find one, widen the gap between the bars, so more pairs go to a person.
+
+## Next
+
+[Break a problem into decisions](/how-tos/break-a-problem-into-decisions/) shows how to split a larger job into questions like this one.

@@ -5,7 +5,7 @@ use crate::core::probability::Probability;
 /// One question for the model. Adapters turn asks into request bodies.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Ask {
-    /// A question whose request carries this shared evidence.
+    /// A question whose request carries this shared field.
     WithState {
         /// The exact text shared by the request's questions.
         state: std::sync::Arc<str>,
@@ -14,14 +14,14 @@ pub(crate) enum Ask {
     },
     /// A question choosing among options in caller order.
     Choice {
-        /// The question with its quoted evidence.
+        /// The question with its quoted field.
         instructions: String,
         /// The ordered options and descriptions.
         options: Vec<ChoiceOption>,
     },
     /// A yes or no question.
     YesNo {
-        /// The question, with its evidence quoted in it.
+        /// The question, with its field quoted in it.
         instructions: String,
         /// What a yes means, if the question says.
         yes: Option<String>,
@@ -30,7 +30,7 @@ pub(crate) enum Ask {
     },
     /// A number on an ordered scale.
     Scale {
-        /// The question, with its evidence quoted in it.
+        /// The question, with its field quoted in it.
         instructions: String,
         /// The levels, from lowest to highest.
         levels: Vec<String>,
@@ -154,51 +154,4 @@ pub(crate) fn admit_name(name: &str) -> Result<(), crate::core::Error> {
     Ok(())
 }
 
-/// One option in a choice question.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-pub(crate) struct ChoiceOption {
-    label: String,
-    description: Option<String>,
-}
-
-impl ChoiceOption {
-    /// An option with a nonblank label.
-    ///
-    /// # Errors
-    /// Returns `usage.question` for a blank label or one containing U+0000.
-    pub(crate) fn new(label: impl Into<String>) -> Result<Self, crate::core::Error> {
-        let label = label.into();
-        admit_name(&label)?;
-        if label.trim().is_empty() {
-            return Err(crate::core::Error::new(
-                crate::core::ErrorKind::Question,
-                crate::core::diagnostic::requirement("label", "nonblank text", "blank text"),
-            ));
-        }
-        Ok(Self {
-            label,
-            description: None,
-        })
-    }
-
-    /// Describe when this option fits.
-    #[must_use]
-    pub(crate) fn description(self, description: impl Into<String>) -> Self {
-        Self {
-            description: Some(description.into()),
-            ..self
-        }
-    }
-
-    /// The option's label.
-    #[must_use]
-    pub(crate) fn label(&self) -> &str {
-        &self.label
-    }
-
-    /// The optional description.
-    #[must_use]
-    pub(crate) fn description_text(&self) -> Option<&str> {
-        self.description.as_deref()
-    }
-}
+pub(crate) use crate::core::questions::AnswerOption as ChoiceOption;

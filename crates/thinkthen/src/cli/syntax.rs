@@ -6,6 +6,12 @@ use clap::error::{ContextKind, ContextValue, ErrorKind};
 pub(super) fn parse() -> ArgMatches {
     let color = options::diagnostic_color();
     let mut command = grammar::command().color(color);
+    if std::env::args_os().len() == 1 {
+        use std::io::Write;
+        let _ = command.print_help();
+        let _ = writeln!(std::io::stdout().lock());
+        std::process::exit(0);
+    }
     match command.try_get_matches_from_mut(std::env::args_os()) {
         Ok(matches) => matches,
         Err(error)
@@ -16,17 +22,22 @@ pub(super) fn parse() -> ArgMatches {
         {
             error.exit()
         }
+        Err(mut error)
+            if matches!(
+                error.kind(),
+                ErrorKind::MissingRequiredArgument
+                    | ErrorKind::TooFewValues
+                    | ErrorKind::WrongNumberOfValues
+            ) || (error.kind() == ErrorKind::InvalidValue
+                && context(&error, ContextKind::InvalidValue)
+                    .is_some_and(|value| value.is_empty())) =>
+        {
+            let usage = active(&command).clone().render_usage();
+            error.insert(ContextKind::Usage, ContextValue::StyledStr(usage));
+            error.exit()
+        }
         Err(error) => {
-            let partial = command
-                .clone()
-                .ignore_errors(true)
-                .try_get_matches_from(std::env::args_os())
-                .ok();
-            let active = partial
-                .as_ref()
-                .and_then(ArgMatches::subcommand_name)
-                .and_then(|name| command.find_subcommand(name));
-            let active = active.unwrap_or(&command);
+            let active = active(&command);
             let field = context(&error, ContextKind::InvalidArg)
                 .or_else(|| context(&error, ContextKind::InvalidSubcommand))
                 .unwrap_or_else(|| "command".into());
@@ -97,4 +108,17 @@ pub(super) fn parse() -> ArgMatches {
 
 fn context(error: &clap::Error, kind: ContextKind) -> Option<String> {
     error.get(kind).map(ToString::to_string)
+}
+
+fn active(command: &clap::Command) -> &clap::Command {
+    let partial = command
+        .clone()
+        .ignore_errors(true)
+        .try_get_matches_from(std::env::args_os())
+        .ok();
+    partial
+        .as_ref()
+        .and_then(ArgMatches::subcommand_name)
+        .and_then(|name| command.find_subcommand(name))
+        .unwrap_or(command)
 }

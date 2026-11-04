@@ -12,7 +12,7 @@ function frozen(value) {
 // Feature: immutable toolboxes preserve the caller's domain and evidence.
 test("toolboxes copy and freeze mutable nested inputs without freezing their owner", async () => {
   const original = {
-    topic: { function: "choose", question: "Team?", choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, evidence: ["body"] },
+    topic: { function: "choose", question: "Team?", choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"] },
     links: { function: "relate", rules: [{ name: "knows", source: "person", target: "person", symmetric: true }] },
   };
   const snapshot = structuredClone(original);
@@ -22,15 +22,15 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
   assert(!Object.isFrozen(original));
   original.topic.choices[0] = "changed";
   original.topic.threshold.low = 0.9;
-  original.topic.evidence[0] = "other";
+  original.topic.field[0] = "other";
   original.links.rules[0].name = "changed";
   assert.deepEqual(toolbox, snapshot);
   const client = new sdk.ThinkThen({ backend: "stub" });
   try {
-    const fromToolbox = await client.choose(toolbox.topic, { body: "Refund" });
+    const fromToolbox = await client.choose(toolbox.topic, { body: "Refund" }).row();
     const direct = await client.choose("Team?", { body: "Refund" }, {
-      choices: snapshot.topic.choices, threshold: snapshot.topic.threshold, evidence: snapshot.topic.evidence,
-    });
+      choices: snapshot.topic.choices, threshold: snapshot.topic.threshold, field: snapshot.topic.field,
+    }).row();
     assert.deepEqual(fromToolbox, direct);
   } finally { await client.close(); }
 });
@@ -39,15 +39,15 @@ test("toolboxes copy and freeze mutable nested inputs without freezing their own
 test("stream creation snapshots options lists and evidence but leaves AbortSignal live", async () => {
   const client = new sdk.ThinkThen({ backend: "stub" });
   const controller = new AbortController();
-  const options = { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, evidence: ["body"], signal: controller.signal };
+  const options = { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"], signal: controller.signal };
   const record = { body: "Refund", other: "Different" };
   const stream = client.chooseStream("Team?", [record], options);
   options.choices[0] = "changed";
   options.threshold.low = 0.9;
-  options.evidence[0] = "other";
+  options.field[0] = "other";
   try {
     const [actual] = await stream.toArray();
-    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, evidence: ["body"] });
+    const expected = await client.choose("Team?", record, { choices: ["billing", "shipping"], threshold: { low: 0.2, high: 0.8 }, field: ["body"] }).row();
     assert.deepEqual(actual, expected);
     const second = client.chooseStream("Team?", [record], { choices: ["billing", "shipping"], signal: controller.signal });
     controller.abort("after creation");
@@ -66,7 +66,7 @@ test("reused input objects keep their per-yield evidence and original filter ref
   const bodies = ["first", "second", "third"];
   function* records() { for (const body of bodies) { record.body = body; yield record; } }
   try {
-    const rows = await client.filterStream("Ready?", records(), { evidence: ["body"] }).toArray();
+    const rows = await client.filterStream("Ready?", records(), { field: ["body"] }).toArray();
     assert.equal(rows.length, bodies.length);
     for (const [index, item] of rows.entries()) {
       assert.equal(item.item, record);
@@ -96,7 +96,7 @@ test("missing invalid ids and malformed host values preserve positions and faile
       for (const field of ["answer", "probability", "detail"]) assert(!Object.hasOwn(row, field));
       frozen(row);
     }
-    const one = await client.decide("Ready?", { id: false });
+    const one = await client.decide("Ready?", { id: false }).row();
     assert.equal(one.status, "failed");
     assert.equal(one.error.code, "record.invalid");
     assert.equal(await server.count(), 0);
@@ -108,8 +108,8 @@ test("keys never appear in inspect JSON source or errors", async () => {
   const key = "test-secret-never-display-this";
   const client = new sdk.ThinkThen({ backend: "stub", apiKey: key });
   try {
-    const row = await client.decide("Ready?", "evidence");
-    const failure = await client.decide("Ready?", null);
+    const row = await client.decide("Ready?", "evidence").row();
+    const failure = await client.decide("Ready?", null).row();
     let caught;
     try { await client.decide("", "evidence"); } catch (error) { caught = error; }
     assert(caught instanceof sdk.UsageError);
@@ -131,9 +131,9 @@ test("answered unsure and failed rows map probabilities detail and HTTP status w
   ]));
   const client = new sdk.ThinkThen({ backend: "systemone", url: server.url, batch: 1 });
   try {
-    const answered = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.5 });
-    const unsure = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.95 });
-    const failed = await client.choose("Team?", "bad", { choices: ["billing", "shipping"] });
+    const answered = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.5 }).row();
+    const unsure = await client.choose("Team?", "good", { choices: ["billing", "shipping"], threshold: 0.95 }).row();
+    const failed = await client.choose("Team?", "bad", { choices: ["billing", "shipping"] }).row();
     assert.equal(answered.status, "answered");
     assert.equal(answered.answer, "billing");
     assert.equal(answered.probability, probability);
@@ -192,7 +192,7 @@ test("raw and structured evidence retain the same bytes", async () => {
   const client = new sdk.ThinkThen({backend:"stub"});
   try {
     for (const text of ["", "a\0b\0", 'quoted "text"\n😀']) {
-      assert.deepEqual(await client.decide("Ready?", text, {evidence:"/body"}), await client.decide("Ready?", {body:text}, {evidence:"/body"}));
+      assert.deepEqual(await client.decide("Ready?", text, {field:"/body"}).row(), await client.decide("Ready?", {body:text}, {field:"/body"}).row());
     }
   } finally { await client.close(); }
 });
@@ -202,17 +202,17 @@ test("bigint is accepted only in a root id and stays exact through native eviden
   const client = new sdk.ThinkThen({backend:"stub"});
   try {
     for (const [id, expected] of [[0n,0], [9007199254740991n,9007199254740991], [9007199254740992n,9007199254740992n], [-9223372036854775808n,-9223372036854775808n], [18446744073709551615n,18446744073709551615n], ["", ""]]) {
-      const row = await client.decide("Ready?", {id,body:"same"});
+      const row = await client.decide("Ready?", {id,body:"same"}).row();
       assert.equal(row.status,"answered");
       assert.equal(row.id,expected);
     }
     for (const record of [{id:9007199254740992},{id:1.5},{id:18446744073709551616n},{id:-9223372036854775809n},{body:{id:1n}}]) {
-      const row = await client.decide("Ready?",record);
+      const row = await client.decide("Ready?",record).row();
       assert.equal(row.status,"failed");
       assert.equal(row.error.code,"record.invalid");
     }
-    const numeric = await client.decide("Ready?",{id:18446744073709551615n},{evidence:"/id"});
-    const text = await client.decide("Ready?","18446744073709551615",{evidence:"/id"});
+    const numeric = await client.decide("Ready?",{id:18446744073709551615n},{field:"/id"}).row();
+    const text = await client.decide("Ready?","18446744073709551615",{field:"/id"}).row();
     assert.equal(numeric.probability,text.probability);
     assert.equal(numeric.answer,text.answer);
   } finally { await client.close(); }
@@ -223,18 +223,18 @@ test("named calls carry source names while selecting a question never supplies o
   const client = new sdk.ThinkThen({backend:"stub"});
   const toolbox = sdk.defineToolbox({topic:{function:"choose",question:"Team?",choices:["billing","shipping"]}});
   try {
-    const selected = await client.choose(toolbox.topic,"Refund");
+    const selected = await client.choose(toolbox.topic,"Refund").row();
     assert(!Object.hasOwn(selected.source,"name"));
-    const named = await client.choose(toolbox.topic,"Refund",{name:"triage"});
+    const named = await client.choose(toolbox.topic,"Refund",{name:"triage"}).row();
     assert.equal(named.source.name,"triage");
     assert.notEqual(named.source.questionIdentity,selected.source.questionIdentity);
-    const direct = await client.choose("Team?","Refund",{choices:["billing","shipping"],name:"triage"});
+    const direct = await client.choose("Team?","Refund",{choices:["billing","shipping"],name:"triage"}).row();
     assert.deepEqual(named,direct);
     const rows = await client.chooseStream(toolbox.topic,["Refund"],{name:"batch-triage"}).toArray();
     assert.equal(rows.length,1);
     assert.equal(rows[0].source.name,"batch-triage");
     await client.close();
-    await assert.rejects(client.decide("Ready?","closed"), error => error instanceof sdk.UsageError && error.code === "usage.abi");
+    await assert.rejects(client.decide("Ready?","closed"), error => error instanceof sdk.UsageError && error.code === "usage.closed");
   } finally { await client.close(); }
 });
 
@@ -243,11 +243,11 @@ test("labels and annotation entries keep names that match native field names", a
   const client = new sdk.ThinkThen({backend:"stub"});
   const labels = ["function","question_identity","http_status","either"];
   try {
-    const chosen = await client.choose("Which?","evidence",{choices:labels});
+    const chosen = await client.choose("Which?","evidence",{choices:labels}).row();
     assert.equal(chosen.status,"answered");
     assert.deepEqual(Object.keys(chosen.detail.labels).sort(),[...labels].sort());
     const toolbox = sdk.defineToolbox(Object.fromEntries(labels.map(name => [name,{function:"choose",question:"Which?",choices:labels}])));
-    const annotated = await client.annotate(toolbox,"evidence");
+    const annotated = await client.annotate(toolbox,"evidence").row();
     assert.equal(annotated.status,"answered");
     assert.deepEqual(Object.keys(annotated.answer).sort(),[...labels].sort());
     for (const name of labels) assert.deepEqual(Object.keys(annotated.answer[name].detail.labels).sort(),[...labels].sort());
@@ -264,14 +264,14 @@ test("record getters cannot change evidence between validation and encoding", as
     get body() { bodyReads++; return bodyReads === 1 ? "first" : NaN; },
   };
   try {
-    const actual = await client.decide("Ready?",record,{evidence:"/body"});
-    const expected = await client.decide("Ready?",{id:17,body:"first"},{evidence:"/body"});
+    const actual = await client.decide("Ready?",record,{field:"/body"}).row();
+    const expected = await client.decide("Ready?",{id:17,body:"first"},{field:"/body"}).row();
     assert.deepEqual(actual,expected);
     assert.equal(idReads,1);
     assert.equal(bodyReads,1);
     const date = new Date(0);
     date.id = 17n;
-    const invalid = await client.decide("Ready?",date);
+    const invalid = await client.decide("Ready?",date).row();
     assert.equal(invalid.status,"failed");
     assert.equal(invalid.error.code,"record.invalid");
   } finally { await client.close(); }
@@ -301,7 +301,7 @@ test("unsupported host values produce coded secret-free errors before requests o
       const source = {[Symbol.iterator](){return this;},next(){pulled++;return {done:true};}};
       await assert.rejects(client.decideStream("Ready?",source,{threshold:value}).next(),usage("usage.question"));
       assert.equal(pulled,0);
-      const row = await client.decide("Ready?",{body:value});
+      const row = await client.decide("Ready?",{body:value}).row();
       assert.equal(row.status,"failed");
       assert.equal(row.error.code,"record.invalid");
       assert(!inspect(row,{depth:null,showHidden:true}).includes(secret));
@@ -321,7 +321,7 @@ test("symmetric relation rules retain the native direction flag", async () => {
   try {
     const rules = fixture.request.question.rules.map(({relation,reads,either,...rule})=>({...rule,name:relation,symmetric:true}));
     const text = fixture.request.records[0];
-    const row = await client.relate(rules,text);
+    const row = await client.relate(rules,text).row();
     assert.equal(row.status,"answered");
     assert.equal(row.answer.length,1);
     assert.equal(row.answer[0].symmetric,true);

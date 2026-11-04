@@ -44,3 +44,6 @@ PYTHON
 for kotlin_plugin_dependency in $kotlin_plugin_dependencies; do
     mvn -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$cache/m2" dependency:get "-Dartifact=$kotlin_plugin_dependency"
 done
+# The Kotlin reference uses the Dokka plugin, whose analysis dependencies resolve only when it runs.
+python3 scripts/jvm-generated
+mvn -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$cache/m2" -Pdokka package -DskipTests

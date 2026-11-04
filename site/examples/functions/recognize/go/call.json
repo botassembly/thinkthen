@@ -1,0 +1,5 @@
+{
+  "anchor": "\tnames, err := tt.Answer(client.Recognize(context.Background(), kinds,",
+  "before": 0,
+  "after": 2
+}

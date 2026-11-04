@@ -33,7 +33,9 @@ func savedQuestions(_ client: Client) async throws {
     _ = try toolbox.choose(named: "rank")
     preconditionFailure("wrong toolbox function was selected")
   } catch {
-    precondition(error == ThinkThenError.toolboxSelection(name: "rank", expected: .choose))
+    precondition(
+      (error as? ThinkThenError) == ThinkThenError.toolboxSelection(name: "rank", expected: .choose)
+    )
   }
   let children = AnnotationQuestions(["topic": .choose(choice)])
   let annotated = try await client.annotate(children, record: record)

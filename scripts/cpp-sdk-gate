@@ -3,6 +3,17 @@
 set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
+case "${1:-}" in
+    --interface-only) THINKTHEN_CPP_INTERFACE_ONLY=1; THINKTHEN_C_SOURCE_NATIVE=1; export THINKTHEN_CPP_INTERFACE_ONLY THINKTHEN_C_SOURCE_NATIVE ;;
+    --corrections-only) THINKTHEN_CPP_CORRECTIONS_ONLY=1; THINKTHEN_C_SOURCE_NATIVE=1; export THINKTHEN_CPP_CORRECTIONS_ONLY THINKTHEN_C_SOURCE_NATIVE ;;
+    "") ;;
+    *) echo 'usage: scripts/cpp-sdk-gate [--interface-only|--corrections-only]' >&2; exit 2 ;;
+esac
+if [ "${THINKTHEN_CPP_CORRECTIONS_ONLY:-0}" = 1 ]; then
+    cargo fmt --all --check
+    cargo clippy --locked -p thinkthen-ffi --example headers -- -D warnings
+    cargo run --quiet --locked -p thinkthen-ffi --example headers -- --check
+fi
 scratch=$(mktemp -d)
 trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status"' EXIT
 trap 'exit 1' HUP INT TERM

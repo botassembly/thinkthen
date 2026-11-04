@@ -1,0 +1,165 @@
+---
+title: Java SDK
+description: "Java SDK: the ten functions as methods on a client, with not sure thrown as UnsureException."
+goal: A Java developer installs the SDK, gets a first answer from decide, learns how not sure and failure arrive, and finds the Java call for each function.
+reader: A Java developer who wants answers about text inside a program
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+
+The Java SDK gives your code the ten functions as methods on a client; each returns a result whose `answer()` you can use directly, such as `true` or `false` from decide.
+
+<Example id="lang-java" title="Example.java" />
+
+Add it to Maven or Gradle (Java 22 or later). It includes the native engine:
+
+<InstallLine k="languages.java.install" lang="text" />
+
+With the JAR and its dependencies in a `lib` folder, Java runs the file directly:
+
+```sh
+java --enable-native-access=ALL-UNNAMED \
+  -cp 'lib/*' Example.java
+```
+
+On the module path, use `--enable-native-access=dev.thinkthen`. The client uses the key you set in the [Quickstart](/quickstart/).
+
+## When decide is not sure
+
+Give decide a low and a high bar, and a text that falls between them is not sure. Reading a not-sure answer with `answer()` throws `UnsureException`, so it can't pass for a no. This message lands between the bars:
+
+<Example id="sdk-java-unsure" title="Unsure.java" />
+
+Send not sure to a person. To branch without the exception, check `isUnsure()` first. `UnsureException` is a `NoSuchElementException`, and its `probability()` gives the chance of yes.
+
+## When a call fails
+
+Blank text throws `ThinkThenException` at once, and nothing is sent:
+
+<Example id="sdk-java-failure" title="Failure.java" />
+
+Any other failure, such as the service being down, comes back as a result whose `isFailed()` is `true`. Its `answer()` throws `ThinkThenException`, whose `code()` names the problem. `throwIfFailed()` throws it sooner. A list passed to a one-message call throws `IllegalArgumentException`; use the `…Stream` call instead. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+
+## The ten functions
+
+Each example asks about the same support-inbox messages as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>decide: yes, no or not sure</summary>
+
+<Example id="lang-java" title="Example.java" />
+
+The message asks for a refund, so decide says `true`. `DecideOptions.builder().threshold(Threshold.cut(0.8))` moves the bar, and `Threshold.band(0.2, 0.8)` sets a low and a high bar, as above. `field(Pointer.of("/text"))` picks the field to judge when a message is a `Map` or JSON. `client.decideStream(question, messages)` judges a whole list and returns a `Stream` of results; close it with try-with-resources. [decide](/functions/decide/) shows every answer.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>choose: one answer from your list</summary>
+
+<Example id="sdk-java-choose" title="Choose.java" />
+
+A refund request is about billing. With `ChooseOptions.builder().threshold(...)`, choose is not sure when no choice reaches the bar, and `answer()` then throws `UnsureException`. [choose](/functions/choose/) shows every answer.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>filter: keep the messages that answer yes</summary>
+
+<Example id="sdk-java-filter" title="Filter.java" />
+
+filter gives a `Stream` of your own messages that answer yes: the refund request and the double charge. Not-sure messages are left out. If a message fails, the stream first gives every kept message, then throws one `ThinkThenException` whose `failures()` lists each failed result. `client.filterRows(...)` gives a `Filtered` for every message instead, with `item()`, `kept()` and `isUnsure()`:
+
+<Example id="use-filter-java" title="Example.java" />
+
+[filter](/functions/filter/) shows every answer.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>tag: every label that fits</summary>
+
+<Example id="sdk-java-tag" title="Tag.java" />
+
+The message names a double charge and a late parcel, so both labels fit. The list is empty when none fits. [tag](/functions/tag/) shows every answer.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>score: a number from 0 to 1</summary>
+
+<Example id="sdk-java-score" title="Score.java" />
+
+A refund request is routine, so it scores near 0. Levels run lowest first. [score](/functions/score/) shows every answer.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>rank: put messages in order</summary>
+
+<Example id="sdk-java-rank" title="Rank.java" />
+
+The double charge is the most urgent, so it ranks 1. `answer()` is the rank, a `Long`. `item()` is a `JsonValue` copy of the message, so text comes back as a `JsonString`. `position()` is the message's place in your list, counted from 1. `RankOptions.builder().top(2)` ranks only the first two. [rank](/functions/rank/) shows every answer.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>find: the line that answers</summary>
+
+<Example id="sdk-java-find" title="Find.java" />
+
+The second line holds the request. The answer is an `Optional<Span>`, empty when no line answers; a `Span` has `text()`, `start()` and `end()`, counted in characters. [find](/functions/find/) shows every answer.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>recognize: names and their kinds</summary>
+
+<Example id="sdk-java-recognize" title="Recognize.java" />
+
+Morgan is a person and Example Group an organization. Each `Entity` has a `mention()`, with its `kind()` and `span()`, and a `probability()`. [recognize](/functions/recognize/) shows every answer.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>relate: how names connect</summary>
+
+<Example id="sdk-java-relate" title="Relate.java" />
+
+Morgan works for Example Group, so relate links the two by the rule. relate finds the names itself, so it needs no recognize call first. `RelationRule.builder(source, target, relation)` adds `reads(...)` to word the relation and `either(true)` to make it work both ways. [relate](/functions/relate/) shows every answer.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>annotate: several questions at once</summary>
+
+<Example id="sdk-java-annotate" title="Annotate.java" />
+
+Each message gets all three answers: refund or not, the topic, and its urgency. Each question's `answer()` throws on not sure or failure, as decide's does. `form.decide("refund")` throws `ThinkThenException` with the code `usage.argument` for a name you never added or a question of another function. [annotate](/functions/annotate/) shows every answer.
+
+</details>
+
+## The full API
+
+`client.async()` gives every one-message call as a `CompletableFuture`. The [Java API reference](https://github.com/botassembly/thinkthen/blob/v0.2.0/sdk/java/API.md) lists every name, and its Javadoc ships in the sources JAR.

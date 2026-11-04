@@ -1,0 +1,3 @@
+[{"customer":"Ana","msg_id":"a1","is_refund":1,"status":"answered"},
+{"customer":"Ben","msg_id":"a2","is_refund":0,"status":"answered"},
+{"customer":"Ana","msg_id":"a3","is_refund":1,"status":"answered"}]

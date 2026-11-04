@@ -1,0 +1,409 @@
+#!/usr/bin/env python3
+"""The foreground VM owner stops and unlocks on signal, timeout and control EOF."""
+import hashlib
+import ast
+import json
+import os
+from pathlib import Path
+import signal
+import runpy
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+from types import SimpleNamespace
+from unittest import mock
+import zipfile
+
+import release_windows_host
+
+ENTRY = Path(__file__).with_name('windows-cli-job')
+REPLAY_CHECK = sys.argv[1:] == ['--replay-check']
+REAL_NODE = shutil.which('node')
+
+if sys.argv[1:] == ['--metadata-check']:
+    protocol = runpy.run_path(str(ENTRY.with_name('windows-native-proof')))['metadata_run']
+    with mock.patch('subprocess._text_encoding', return_value='ascii') as default_encoding:
+        # Actual child stdout/stderr contain UTF-8 C4 81, including the byte that
+        # fails under Windows cp1252. Child source and arguments remain ASCII.
+        child = "import os; os.write(1,b'{\"name\":\"\\xc4\\x81\"}'); os.write(2,b'\\xc4\\x81')"
+        result = protocol(sys.executable, '-c', child, cwd=ENTRY.parent, env=dict(os.environ))
+        assert json.loads(result.stdout) == {'name': '\u0101'}
+        assert result.stderr == '\u0101'
+        try:
+            protocol(sys.executable, '-c', "import os; os.write(1,b'\\xff')",
+                     cwd=ENTRY.parent, env=dict(os.environ))
+        except UnicodeDecodeError as error:
+            assert error.encoding == 'utf-8'
+        else:
+            raise AssertionError('invalid protocol bytes were replaced or ignored')
+        default_encoding.assert_not_called()
+    print('Actual metadata subprocess decodes UTF-8 JSON/stdout/stderr under forced ASCII and rejects invalid UTF-8.')
+    sys.exit(0)
+
+if sys.argv[1:] == ['--source-check']:
+    entry = runpy.run_path(str(ENTRY))
+    with tempfile.TemporaryDirectory(prefix='windows-source-content-test-') as temporary:
+        root = Path(temporary)
+        revision = subprocess.check_output(['git', '-C', str(ENTRY.parent.parent), 'rev-parse', 'HEAD'], text=True).strip()
+        source = entry['stage_source'](ENTRY.parent.parent, revision, root / 'source.tar.gz')
+        with tarfile.open(root / 'source.tar.gz') as archive:
+            archive.extractall(root / 'extracted', filter='data')
+        checkout = root / 'extracted/source'
+        git = ['git', '-C', str(checkout)]
+        assert subprocess.check_output([*git, 'rev-parse', 'HEAD'], text=True).strip() == revision
+        assert subprocess.check_output([*git, 'rev-parse', 'HEAD^{tree}'], text=True).strip() == source['tree']
+        entries = subprocess.check_output([*git, 'ls-files', '--stage', '-z']).decode().split('\0')[:-1]
+        # Gitlinks record commits, not file bytes; HEAD/tree equality covers them.
+        paths = [item.split('\t', 1)[1] for item in entries if not item.startswith('160000 ')]
+        def tracked_bytes(name):
+            path = checkout / name
+            return os.fsencode(os.readlink(path)) if path.is_symlink() else path.read_bytes()
+        before = {name: hashlib.sha256(tracked_bytes(name)).hexdigest() for name in paths}
+        stale = subprocess.run([*git, 'diff-index', '--quiet', 'HEAD', '--'])
+        assert stale.returncode == 1, 'extraction did not reproduce the copied-index stat witness'
+        assert subprocess.run([*git, 'diff', '--quiet', 'HEAD', '--']).returncode == 0
+        assert before == {name: hashlib.sha256(tracked_bytes(name)).hexdigest() for name in paths}
+        witness = checkout / 'scripts/windows-cli-job'
+        witness.write_bytes(witness.read_bytes() + b'\n# source content witness\n')
+        assert subprocess.run([*git, 'diff', '--quiet', 'HEAD', '--']).returncode == 1
+        changed = subprocess.check_output([*git, 'diff', '--name-status', '--no-renames', 'HEAD', '--'], text=True)
+        assert changed.splitlines() == ['M\tscripts/windows-cli-job']
+        assert subprocess.check_output([*git, 'rev-parse', 'HEAD^{tree}'], text=True).strip() == source['tree']
+        assert 'git diff --quiet HEAD --' in ENTRY.read_text()
+        assert 'Select-Object -First 40' in ENTRY.read_text()
+        print('Copied index falsely reports dirty after extraction; content-aware check preserves every tracked byte and rejects a real mutation.')
+    sys.exit(0)
+
+with tempfile.TemporaryDirectory(prefix='windows-cli-job-test-') as temporary:
+    root = Path(temporary)
+    (root / 'home').mkdir()
+    (root / 'bin').mkdir()
+    output = root / 'build'
+    output.mkdir()
+    native = 'C:/thinkthen-jobs/cli-' + 'a' * 12 + '-12345678'
+    metadata = {'root': native, 'source': 'a' * 40, 'sha256': 'b' * 64,
+                'binary': native + '/build/cli/thinkthen.exe',
+                'helper': native + '/capture/site/scripts/windows-example.py',
+                'python': native + '/python/python.exe'}
+    (output / 'vm.json').write_text(json.dumps(metadata))
+    (output / 'python.json').write_text(json.dumps({'files': {'python.exe': 'b' * 64}}))
+    commands = root / 'commands'
+    tool_names = ['python', 'python3', 'py', 'git', 'tar', 'cargo', 'rustup', 'cl', 'link']
+    inventory_report = {'tools': [{'name': name, 'selected_path': None, 'installations': []}
+                                  for name in tool_names], 'version_kind': 'file metadata'}
+    inventory_report['python_layout'] = {'root': 'C:/tt0106/Python313',
+                                         'files': [{'path': 'Lib/os.py', 'exists': False},
+                                                   {'path': 'Lib/encodings/__init__.py', 'exists': True}],
+                                         'zip': {'relevant_entries': []},
+                                         'configs': [], 'env_script': {'python_directives': []}}
+    inventory_report['tools'][0]['installations'] = [{'path': 'C:/Python313/python.exe', 'file_version': '3.13.0'}]
+    inventory_raw = (json.dumps(inventory_report) + '\r\n').encode()
+    fixture = '''#!/usr/bin/env python3
+import base64, hashlib, json, os, pathlib, sys, zipfile
+with pathlib.Path({log!r}).open('a') as log: log.write(pathlib.Path(sys.argv[0]).name+' '+repr(sys.argv[1:])+'\\n')
+if pathlib.Path(sys.argv[0]).name == 'ssh':
+ script=base64.b64decode(sys.argv[-1].split()[-1]).decode('utf-16-le')
+ if 'scripts/windows-native-proof cli' in script:
+  source=json.loads((pathlib.Path(os.environ['FULL_BUILD_OUTPUT'])/'source.json').read_text())['source']
+  binary=b'simulated native CLI'
+  identity=dict(inputs=dict(source_revision=source),artifacts={{'thinkthen.exe':hashlib.sha256(binary).hexdigest()}})
+  with zipfile.ZipFile(pathlib.Path({remote!r})/'cli.zip','w') as package:
+   package.writestr('identity.json',json.dumps(identity))
+   package.writestr('thinkthen.exe',binary)
+  print('Simulated native build boundary; no compiler or VM used'); sys.exit(0)
+ if '$bytes=(Get-Item' in script:
+  assert 'OpenStandardInput' not in script
+  name=script.split("$path='",1)[1].split("'",1)[0].rsplit('/',1)[1]
+  data=(pathlib.Path({remote!r})/name).read_bytes()
+  print(json.dumps(dict(bytes=len(data),sha256=hashlib.sha256(data).hexdigest()))); sys.exit(0)
+ if os.environ.get('INVENTORY_ONLY'):
+  if 'Windows SSH ready' in script: sys.exit(0)
+  if 'version_kind=' not in script: sys.exit(90)
+  if os.environ.get('INVENTORY_FAIL'):
+   sys.stdout.buffer.write(b'partial inventory\\r\\n')
+   sys.stderr.buffer.write(b'vswhere read failed\\r\\n')
+   sys.exit(3)
+  sys.stdout.buffer.write({inventory!r})
+  sys.exit(0)
+ if '$actual=@{{}}' in script:
+  encoded=script.split("FromBase64String('",1)[1].split("')",1)[0]
+  files=json.loads(base64.b64decode(encoded))
+  if os.environ.get('WRONG_PYTHON_HASH'): files['python.exe']='0'*64
+  print(json.dumps(files)); sys.exit(0)
+ if 'import encodings,json' in script and os.environ.get('STDLIB_FAIL'):
+  sys.stdout.buffer.write(b'Python 3.13.17\\r\\n')
+  sys.stderr.buffer.write(b'Fatal Python error: Failed to import encodings module\\r\\n')
+  sys.exit(1)
+ if '--version' in script and os.environ.get('READINESS_FAIL'):
+  sys.stdout.buffer.write(b'Readiness prerequisite: git\\r\\n')
+  sys.stderr.buffer.write(b'Missing Windows prerequisite: git\\r\\n')
+  sys.exit(127)
+ if 'Get-FileHash' in script: print(('c' if os.environ.get('WRONG_HASH') else 'b')*64)
+elif pathlib.Path(sys.argv[0]).name == 'scp':
+ fault=os.environ.get('SCP_FAULT')
+ if fault=='exit':
+  sys.stderr.write('simulated SCP failure'); sys.exit(7)
+ source,destination=sys.argv[-2:]
+ if source.startswith(('fake:', 'Docker@localhost:')):
+  data=(pathlib.Path({remote!r})/source.rsplit('/',1)[1]).read_bytes()
+  pathlib.Path(destination).write_bytes(data)
+ else:
+  data=pathlib.Path(source).read_bytes()
+  if fault=='truncated': data=data[:-1]
+  if fault=='corrupt': data=b'x'+data[1:]
+  (pathlib.Path({remote!r})/destination.rsplit('/',1)[1]).write_bytes(data)
+elif pathlib.Path(sys.argv[0]).name == 'node':
+ if sys.argv[1:]==['--version']: print('v22.23.4'); sys.exit(0)
+ assert sys.argv[1:]==['scripts/run-examples.mjs','--replay','start/decide-branch-ps']
+ assert not any(name.endswith(('_API_KEY','_TOKEN','_SECRET','_PASSWORD')) for name in os.environ)
+ assert 'SITE_PREPARED_EXAMPLES' not in os.environ and 'SITE_PACKAGES' not in os.environ
+ assert os.environ['SITE_WINDOWS_HOST']=='Docker@localhost'
+ cache=pathlib.Path(os.environ['SITE_CAPTURE_FILE'])
+ artifacts=pathlib.Path(os.environ['SITE_CAPTURE_ARTIFACT_DIR']); artifacts.mkdir()
+ missing=not json.loads(cache.read_text())
+ manifest=dict(calls=0,bytes=0,passed_ids=[] if missing else ['start/decide-branch-ps'],failures=['saved response is missing'] if missing else [])
+ (artifacts/'manifest.json').write_text(json.dumps(manifest))
+ if missing:
+  pathlib.Path(str(cache)+'.miss.json').write_text(json.dumps(dict(digest='fixture',request=dict(state='public fixture'))))
+  sys.stderr.write('saved response is missing'); sys.exit(1)
+ private=artifacts/'private/windows/start'; private.mkdir(parents=True)
+ (private/'decide-branch-ps.json').write_text(json.dumps(dict(os='simulated-native-boundary')))
+ print('Strict cached replay boundary; no keys or upstream calls'); sys.exit(0)
+else:
+ if sys.argv[1] == 'stop' and os.environ.get('STOP_FAIL'): sys.exit(1)
+ if sys.argv[1] == 'inspect': print('true' if os.environ.get('STILL_RUNNING') else 'false')
+'''.format(log=str(commands), inventory=inventory_raw, remote=str(root / 'remote'))
+    (root / 'remote').mkdir()
+    for name in ('ssh', 'docker', 'scp'):
+        (root / 'bin' / name).write_text(fixture)
+        (root / 'bin' / name).chmod(0o700)
+    if REPLAY_CHECK:
+        (root / 'bin/node').write_text(fixture)
+        (root / 'bin/node').chmod(0o700)
+    environment = dict(os.environ, HOME=str(root / 'home'), PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'])
+    # File-copy actors simulate SCP; native SCP success remains actual-job proof.
+    entry_module = runpy.run_path(str(ENTRY))
+    upload_options = SimpleNamespace(mode='build', python_home=None, host='fake', port=2222, output=output)
+    payload = b'archive\x00\xff\r\n' * 9000
+    payload_hash = hashlib.sha256(payload).hexdigest()
+    with mock.patch.dict(os.environ, environment, clear=True):
+        for archive_name in ('python.zip', 'source.tar.gz'):
+            archive = root / archive_name
+            archive.write_bytes(payload)
+            entry_module['upload_archive'](upload_options, native + '/' + archive_name, archive, payload_hash)
+            receipt = json.loads((output / (archive_name + '.upload.json')).read_text())
+            assert receipt == {'bytes': len(payload), 'sha256': payload_hash}
+            assert (output / (archive_name + '-verify.stdout')).read_bytes()
+            for fault in ('truncated', 'corrupt', 'exit'):
+                with mock.patch.dict(os.environ, {'SCP_FAULT': fault}):
+                    try:
+                        entry_module['upload_archive'](upload_options, native + '/' + archive_name, archive, payload_hash)
+                    except subprocess.CalledProcessError as error:
+                        assert fault == 'exit' and error.returncode == 7
+                        assert (output / (archive_name + '.scp.stderr')).read_bytes() == b'simulated SCP failure'
+                    except ValueError as error:
+                        assert fault != 'exit' and 'length/hash receipt differs' in str(error)
+                    else:
+                        raise AssertionError('damaged or failed SCP transfer was accepted')
+            entry_module['upload_archive'](upload_options, native + '/' + archive_name, archive, payload_hash)
+            assert (output / (archive_name + '-verify.stdout')).read_bytes()
+        entry_module['copy_archive'](upload_options, 'fake:' + native + '/source.tar.gz',
+                                     output / 'download.zip', 'download.zip')
+        assert (output / 'download.zip').read_bytes() == payload
+    commands.write_text('')
+    invalid_cleanup = subprocess.run([sys.executable, str(ENTRY), 'inventory', str(root / 'unused'),
+                                      '--cleanup-root', 'C:/Windows'], env=environment,
+                                     capture_output=True, timeout=5)
+    assert invalid_cleanup.returncode == 2 and not commands.read_text(), 'inventory attempted cleanup'
+    for mode in ('signal', 'timeout', 'eof', 'stop-failure', 'running', 'primary-failure', 'readiness-failure', 'python-hash'):
+        commands.write_text('')
+        arguments = [sys.executable, str(ENTRY), 'hold', str(output), '--seconds', '3' if mode in ('signal', 'eof') else '0.02']
+        if mode == 'eof': arguments.append('--until-eof')
+        if mode == 'readiness-failure': arguments.extend(['--ready-seconds', '0.01'])
+        control = dict(environment)
+        if mode == 'readiness-failure': control['READINESS_FAIL'] = '1'
+        if mode == 'python-hash': control['WRONG_PYTHON_HASH'] = '1'
+        if mode in ('stop-failure', 'running', 'primary-failure'): control['STOP_FAIL'] = '1'
+        if mode in ('running', 'primary-failure'): control['STILL_RUNNING'] = '1'
+        if mode == 'primary-failure': control['WRONG_HASH'] = '1'
+        process = subprocess.Popen(arguments, env=control, stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if mode not in ('primary-failure', 'readiness-failure', 'python-hash'):
+            ready = json.loads(process.stdout.readline())
+            assert ready['ready'] and ready['binary'] == metadata['binary']
+        if mode == 'signal': process.send_signal(signal.SIGTERM)
+        _, stderr = process.communicate(timeout=10)
+        assert (process.returncode == 0) == (mode in ('timeout', 'eof')), stderr
+        if mode in ('stop-failure', 'running', 'primary-failure'): assert b'Windows VM cleanup failed:' in stderr, stderr
+        if mode == 'python-hash': assert b'Native owned Python runtime differs' in stderr, stderr
+        if mode == 'primary-failure': assert b'Retained native CLI differs from its build' in stderr, stderr
+        if mode == 'readiness-failure':
+            assert (output / 'readiness.stdout').read_bytes() == b'Readiness prerequisite: git\r\n'
+            assert (output / 'readiness.stderr').read_bytes() == b'Missing Windows prerequisite: git\r\n'
+            assert json.loads((output / 'readiness.json').read_text())['exit'] == 127
+            assert b'Missing Windows prerequisite: git' in stderr, stderr
+            assert b'TimeoutError: Native Windows' in stderr, stderr
+        seen = commands.read_text().splitlines()
+        assert any(line.startswith("docker ['start'") for line in seen), seen
+        assert any(line.startswith("docker ['stop'") for line in seen), seen
+        lock = root / 'home/.windows-vm-lock'
+        assert lock.exists() == (mode in ('running', 'primary-failure')), (mode, stderr)
+        if lock.exists():
+            assert b'Windows VM stop unconfirmed; retain owned lock' in stderr, stderr
+            (lock / 'owner').unlink()
+            lock.rmdir()
+    # The entry must refuse failed stdlib startup before source staging. Mock
+    # only the approved download/provision dependency, never start a real VM.
+    commands.write_text('')
+    destination = root / 'stdlib-failed'
+    entry = runpy.run_path(str(ENTRY))['main']
+    handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+    try:
+        with mock.patch.dict(os.environ, dict(environment, STDLIB_FAIL='1'), clear=True), \
+             mock.patch.object(sys, 'argv', [str(ENTRY), 'build', str(destination), '--cleanup-root', 'C:/thinkthen-jobs/cli-eeeeeeeeeeee-12345678']), \
+             mock.patch.dict(entry.__globals__, {'prepare_python_archive': lambda _: {},
+                                                'provision_python': lambda *_: None}):
+            try:
+                entry()
+            except TimeoutError:
+                pass
+            else:
+                raise AssertionError('broken stdlib bootstrap was accepted')
+    finally:
+        for sig, handler in handlers.items(): signal.signal(sig, handler)
+    assert (destination / 'readiness.stderr').read_bytes() == b'Fatal Python error: Failed to import encodings module\r\n'
+    assert json.loads((destination / 'readiness.json').read_text())['exit'] == 1
+    assert not (destination / 'source.tar.gz').exists(), 'source staged before Python bootstrap succeeded'
+    assert not (root / 'home/.windows-vm-lock').exists()
+    seen = commands.read_text().splitlines()
+    assert any(line.startswith("docker ['stop'") for line in seen), seen
+    assert (destination / 'cleanup-cli-eeeeeeeeeeee-12345678.stdout').exists()
+    # Test owned ._pth construction offline with the downloader trust boundary mocked.
+    fixture_archive = root / 'python-fixture.zip'
+    original_paths = b'python313.zip\r\n.\r\n#import site\r\n'
+    with zipfile.ZipFile(fixture_archive, 'w') as package:
+        for name in ('python.exe', 'python313.dll', 'python313.zip'):
+            package.writestr(name, b'fixture ' + name.encode())
+        package.writestr('python313._pth', original_paths)
+    package_hash = hashlib.sha256(fixture_archive.read_bytes()).hexdigest()
+    def fetch_fixture(url, target):
+        assert url == release_windows_host.PYTHON_EMBED_URL
+        shutil.copyfile(fixture_archive, target)
+        return target
+    prepared = root / 'owned-python'
+    prepared.mkdir()
+    with mock.patch.object(release_windows_host, 'fetch', side_effect=fetch_fixture):
+        manifest = release_windows_host.prepare_embedded_python(prepared)
+    configured = (prepared / 'python313._pth').read_bytes()
+    assert configured == original_paths + b'\n../source/scripts\n../capture/scripts\n'
+    assert manifest['archive_sha256'] == package_hash
+    assert manifest['files']['python313._pth'] == hashlib.sha256(configured).hexdigest()
+    assert hashlib.sha256(fixture_archive.read_bytes()).hexdigest() == package_hash
+    # Exercise real main, runtime preparation, genuine Git staging, BOTH upload
+    # callers, artifact download and identity acceptance. Only the download and
+    # native SSH/SCP/Docker boundary are actors; no bootstrap short-circuit.
+    destination = root / 'complete-build'
+    entry = runpy.run_path(str(ENTRY))['main']
+    arguments = [str(ENTRY), 'build', str(destination)]
+    if REPLAY_CHECK:
+        inputs = root / 'replay-inputs'
+        (inputs / 'bin').mkdir(parents=True)
+        cli = inputs / 'bin/thinkthen'
+        cli.write_bytes(b'fixture Linux version-probe CLI')
+        cli.chmod(0o700)
+        (inputs / 'recorded-responses.json').write_text('{"cached":{}}')
+        source = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+        (inputs / 'producer-source-commit').write_text(source + '\n')
+        (inputs / 'inputs.json').write_text(json.dumps({'linux_cli': {'source': source, 'sha256': hashlib.sha256(cli.read_bytes()).hexdigest()},
+                                                       'cache': {'sha256': hashlib.sha256((inputs / 'recorded-responses.json').read_bytes()).hexdigest()}}))
+        arguments += ['--replay-inputs', str(inputs)]
+    handlers = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGINT)}
+    try:
+        with mock.patch.dict(os.environ, dict(environment, FULL_BUILD_OUTPUT=str(destination),
+                                             THINKTHEN_API_KEY='host-sentinel', OPENAI_API_KEY='host-sentinel'), clear=True), \
+             mock.patch.object(sys, 'argv', arguments), \
+             mock.patch.object(release_windows_host, 'fetch', side_effect=fetch_fixture):
+            entry()
+    finally:
+        for sig, handler in handlers.items(): signal.signal(sig, handler)
+    identity = json.loads((destination / 'identity.json').read_text())
+    metadata = json.loads((destination / 'vm.json').read_text())
+    assert identity['inputs']['source_revision'] == metadata['source']
+    assert metadata['sha256'] == hashlib.sha256((destination / 'thinkthen.exe').read_bytes()).hexdigest()
+    for name in ('python.zip', 'source.tar.gz'):
+        receipt = json.loads((destination / (name + '.upload.json')).read_text())
+        assert receipt['bytes'] == (destination / name).stat().st_size
+        assert receipt['sha256'] == hashlib.sha256((destination / name).read_bytes()).hexdigest()
+    assert (destination / 'cli.zip.scp.stdout').exists()
+    assert not (root / 'home/.windows-vm-lock').exists()
+    if REPLAY_CHECK:
+        assert (destination / 'replay/private/windows/start/decide-branch-ps.json').exists()
+        assert json.loads((destination / 'replay/manifest.json').read_text())['calls'] == 0
+        assert (inputs / 'recorded-responses.json').read_bytes() == (destination / 'replay-cache.json').read_bytes()
+        ssh_calls = [ast.literal_eval(line[4:]) for line in commands.read_text().splitlines() if line.startswith('ssh ')]
+        cleanup = __import__('base64').b64decode(ssh_calls[-1][-1].split()[-1]).decode('utf-16-le')
+        assert "Remove-Item -LiteralPath '" + metadata['root'] + "' -Recurse -Force" in cleanup
+        cli.write_bytes(cli.read_bytes() + b'corrupt')
+        invalid = root / 'invalid-replay'
+        invalid.mkdir()
+        try:
+            entry.__globals__['prepare_replay'](SimpleNamespace(replay_inputs=inputs, output=invalid))
+        except ValueError as error:
+            assert 'checksum differs: bin/thinkthen' in str(error)
+        else:
+            raise AssertionError('changed Linux version-probe CLI was accepted')
+        # A miss stays a failure, with its body/failure retained, never a fill.
+        failed = root / 'miss-output'
+        failed.mkdir()
+        (failed / 'replay-cache.json').write_text('{}')
+        node = entry.__globals__['shutil'].which('node', path=environment['PATH'])
+        options = SimpleNamespace(output=failed, host='Docker@localhost', port=2222)
+        with mock.patch.dict(os.environ, environment, clear=True):
+            try:
+                entry.__globals__['replay_windows'](options, metadata, (node, hashlib.sha256(b'{}').hexdigest()))
+            except subprocess.CalledProcessError as error:
+                assert error.returncode == 1
+            else:
+                raise AssertionError('strict replay miss was accepted')
+        assert json.loads((failed / 'replay-cache.json.miss.json').read_text())['request']
+        assert (failed / 'replay.stderr').read_bytes() == b'saved response is missing'
+    with zipfile.ZipFile(fixture_archive, 'w') as package:
+        for name in ('python.exe', 'python313.dll', 'python313.zip'):
+            package.writestr(name, b'fixture ' + name.encode())
+        package.writestr('python313._pth', original_paths + b'import site\n')
+    with mock.patch.object(release_windows_host, 'fetch', side_effect=fetch_fixture):
+        try:
+            release_windows_host.prepare_embedded_python(prepared)
+        except ValueError as error:
+            assert 'unexpected import paths' in str(error)
+        else:
+            raise AssertionError('active site imports were accepted')
+    for fail in (False, True):
+        commands.write_text('')
+        destination = root / ('inventory-failed' if fail else 'inventory')
+        control = dict(environment, INVENTORY_ONLY='1')
+        if fail: control['INVENTORY_FAIL'] = '1'
+        result = subprocess.run([sys.executable, str(ENTRY), 'inventory', str(destination)],
+                                env=control, stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+        assert (result.returncode != 0) == fail, result.stderr
+        assert json.loads((destination / 'inventory-status.json').read_text())['exit'] == (3 if fail else 0)
+        if fail:
+            assert (destination / 'inventory.stdout').read_bytes() == b'partial inventory\r\n'
+            assert (destination / 'inventory.stderr').read_bytes() == b'vswhere read failed\r\n'
+        else:
+            assert json.loads(result.stdout) == inventory_report
+            assert (destination / 'inventory.stdout').read_bytes() == inventory_raw
+            assert (destination / 'inventory.stderr').read_bytes() == b''
+            assert json.loads((destination / 'inventory.json').read_text()) == inventory_report
+        assert not (destination / 'source.tar.gz').exists(), 'inventory staged source'
+        assert not (root / 'home/.windows-vm-lock').exists(), result.stderr
+        seen = commands.read_text().splitlines()
+        assert sum(line.startswith('ssh ') for line in seen) == 2, seen
+        assert any(line.startswith("docker ['stop'") for line in seen), seen
+        assert any(line.startswith("docker ['inspect'") for line in seen), seen
+print('Windows inventory retains raw success/failure output with no staging or tool retries.')
+print('Windows VM controls preserve primary failures and retain ownership until a confirmed stop; no real VM used')
+if REPLAY_CHECK:
+    subprocess.run([REAL_NODE, str(ENTRY.parent.parent / 'site/scripts/capture-backend-test.mjs')], check=True)

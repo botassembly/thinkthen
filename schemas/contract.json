@@ -88,6 +88,42 @@
       "value": 1012
     },
     {
+      "family": "usage",
+      "name": "usage.closed",
+      "record": false,
+      "value": 1013
+    },
+    {
+      "family": "usage",
+      "name": "usage.function",
+      "record": false,
+      "value": 1014
+    },
+    {
+      "family": "usage",
+      "name": "usage.record-kind",
+      "record": false,
+      "value": 1015
+    },
+    {
+      "family": "usage",
+      "name": "usage.offsets",
+      "record": false,
+      "value": 1016
+    },
+    {
+      "family": "usage",
+      "name": "usage.argument",
+      "record": false,
+      "value": 1017
+    },
+    {
+      "family": "usage",
+      "name": "usage.option",
+      "record": false,
+      "value": 1018
+    },
+    {
       "family": "record",
       "name": "record.json",
       "record": true,
@@ -110,6 +146,12 @@
       "name": "record.invalid",
       "record": true,
       "value": 2004
+    },
+    {
+      "family": "record",
+      "name": "record.empty",
+      "record": true,
+      "value": 2005
     },
     {
       "family": "backend",

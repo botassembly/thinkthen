@@ -1,0 +1,4 @@
+a1	true
+a2	false
+a3	true
+thinkthen: 3 rows, 0 failed, TIME

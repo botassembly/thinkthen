@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 from release_images import image
+from native_platform import publish_jvm_aliases
 
 ROOT = Path(__file__).resolve().parent.parent
 STORE = Path.home() / '.local/share/thinkthen-build-tools'
@@ -114,6 +115,7 @@ def import_pair(path, source):
                 if not (cache / name).exists():
                     atomic_copy(source / name, cache / name)
                 (cache / name).chmod(0o644)
+            publish_jvm_aliases(cache)
             atomic_copy(path, destination)
 
 

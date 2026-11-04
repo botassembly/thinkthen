@@ -1,0 +1,160 @@
+{
+  "product": "ThinkThen",
+  "version": "0.2.0",
+  "versionLine": "thinkthen 0.2.0",
+  "platforms": "Linux, macOS, Windows",
+  "repo": "https://github.com/botassembly/thinkthen",
+  "release": "https://github.com/botassembly/thinkthen/releases/tag/v0.2.0",
+  "rustVersion": "1.95.0",
+  "floors": {
+    "macos": "macOS 15 on Apple silicon",
+    "linux": "glibc 2.28 or later",
+    "windows": "Windows x86-64; tested on Windows Server 2022"
+  },
+  "counts": {
+    "functions": "ten",
+    "languages": "thirteen"
+  },
+  "install": {
+    "brew": "brew install botassembly/thinkthen/thinkthen",
+    "cargo": "cargo install thinkthen --version 0.2.0",
+    "linux": "base=https://github.com/botassembly/thinkthen/releases/download/v0.2.0\ncurl -fsSLO \"$base/thinkthen-0.2.0-linux-x86_64.tar.gz\"\ncurl -fsSLO \"$base/SHA256SUMS\"\nsha256sum --check --ignore-missing SHA256SUMS\nmkdir thinkthen-0.2.0\ntar -xzf thinkthen-0.2.0-linux-x86_64.tar.gz -C thinkthen-0.2.0\nexport PATH=\"$PWD/thinkthen-0.2.0:$PATH\"",
+    "macos": "base=https://github.com/botassembly/thinkthen/releases/download/v0.2.0\ncurl -fsSLO \"$base/thinkthen-0.2.0-macos-arm64.tar.gz\"\ncurl -fsSLO \"$base/SHA256SUMS\"\ngrep ' thinkthen-0.2.0-macos-arm64.tar.gz$' SHA256SUMS | shasum -a 256 --check\nmkdir thinkthen-0.2.0\ntar -xzf thinkthen-0.2.0-macos-arm64.tar.gz -C thinkthen-0.2.0\nexport PATH=\"$PWD/thinkthen-0.2.0:$PATH\"",
+    "macosUnblock": "xattr -dr com.apple.quarantine thinkthen-0.2.0",
+    "windows": "$zip = \"thinkthen-0.2.0-windows-x86_64.zip\"\n$line = Get-Content .\\SHA256SUMS | Where-Object { $_.EndsWith(\" $zip\") }\n$want = \"$line\".Split(\" \")[0]\n$got = (Get-FileHash $zip -Algorithm SHA256).Hash\nif ($want -and $got -eq $want) { \"Checksum matches\" } else { \"No match\" }",
+    "windowsUnpack": "Unblock-File $zip\nExpand-Archive $zip .\\thinkthen-0.2.0\n$env:Path = \"$PWD\\thinkthen-0.2.0;$env:Path\"",
+    "installer": "curl -fsSL https://thinkthen.dev/install.sh | sh",
+    "installerWindows": "irm https://thinkthen.dev/install.ps1 | iex"
+  },
+  "limits": {
+    "requestBytes": "96,000",
+    "batch": "50",
+    "openaiQuestions": "400"
+  },
+  "languages": {
+    "python": {
+      "name": "Python",
+      "page": "/sdks/python/",
+      "package": "thinkthen on PyPI, with pandas and Polars accessors",
+      "install": "python -m pip install \"thinkthen==0.2.0\"",
+      "installLang": "sh",
+      "requires": "Python 3.10 or later"
+    },
+    "typescript": {
+      "name": "TypeScript and JavaScript",
+      "page": "/sdks/typescript/",
+      "package": "thinkthen on npm",
+      "install": "npm install thinkthen@0.2.0",
+      "installLang": "sh",
+      "requires": "Node.js 22.12 or later, in an ESM project"
+    },
+    "go": {
+      "name": "Go",
+      "page": "/sdks/go/",
+      "package": "github.com/botassembly/thinkthen/sdk/go/thinkthen",
+      "install": "go get github.com/botassembly/thinkthen/sdk/go/thinkthen@v0.2.0",
+      "installLang": "sh",
+      "requires": "Go 1.23 or later with cgo enabled and a C compiler"
+    },
+    "java": {
+      "name": "Java",
+      "page": "/sdks/java/",
+      "package": "io.github.botassembly:thinkthen-java",
+      "install": "io.github.botassembly:thinkthen-java:0.2.0",
+      "installLang": "text",
+      "requires": "Java 22 or later"
+    },
+    "kotlin": {
+      "name": "Kotlin",
+      "page": "/sdks/kotlin/",
+      "package": "io.github.botassembly:thinkthen-kotlin",
+      "install": "io.github.botassembly:thinkthen-kotlin:0.2.0",
+      "installLang": "text",
+      "requires": "Kotlin/JVM on Java 22 or later"
+    },
+    "csharp": {
+      "name": "C#",
+      "page": "/sdks/csharp/",
+      "package": "Botassembly.ThinkThen on NuGet",
+      "install": "dotnet add package Botassembly.ThinkThen --version 0.2.0",
+      "installLang": "sh",
+      "requires": ".NET 10 on Linux x64 or arm64 with glibc, macOS on Apple silicon, or Windows x64"
+    },
+    "r": {
+      "name": "R",
+      "page": "/sdks/r/",
+      "package": "thinkthen on R-universe",
+      "install": "install.packages(\"thinkthen\", repos = c(\n  \"https://botassembly.r-universe.dev\", \"https://cloud.r-project.org\"))",
+      "installLang": "r",
+      "requires": "R 4.2.0 or later"
+    },
+    "c": {
+      "name": "C",
+      "page": "/sdks/c/",
+      "package": "the C archive from the release",
+      "install": "cc -std=c11 -Wall -Wextra -Werror example.c -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
+      "installLang": "sh",
+      "requires": "A C11 compiler and pkg-config"
+    },
+    "cpp": {
+      "name": "C++",
+      "page": "/sdks/cpp/",
+      "package": "the C++ and C archives from the release",
+      "install": "c++ -std=c++17 -Wall -Wextra -Werror example.cpp -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
+      "installLang": "sh",
+      "requires": "A C++17 compiler and the matching C library"
+    },
+    "ruby": {
+      "name": "Ruby",
+      "page": "/sdks/ruby/",
+      "package": "thinkthen gem",
+      "install": "gem install thinkthen --version 0.2.0",
+      "installLang": "sh",
+      "requires": "CRuby 3.3 or later and RubyGems"
+    },
+    "swift": {
+      "name": "Swift",
+      "page": "/sdks/swift/",
+      "package": "Swift package from GitHub",
+      "install": ".package(url: \"https://github.com/botassembly/thinkthen\", exact: \"0.2.0\")",
+      "installLang": "swift",
+      "requires": "Swift 6.3 or later; macOS 15 or later; on Linux, glibc 2.35 or later"
+    },
+    "zig": {
+      "name": "Zig",
+      "page": "/sdks/zig/",
+      "package": "the Zig archive from the release",
+      "install": "release=https://github.com/botassembly/thinkthen/releases/\\\ndownload/v0.2.0\nzig fetch --save=thinkthen \\\n  \"$release/thinkthen-zig-0.2.0-linux-x86_64.tar.gz\"",
+      "installLang": "sh",
+      "requires": "Zig 0.17.0"
+    },
+    "rust": {
+      "name": "Rust",
+      "page": "/sdks/rust/",
+      "package": "thinkthen on crates.io",
+      "install": "cargo add thinkthen@0.2.0 --no-default-features",
+      "installLang": "sh",
+      "requires": "Rust 1.95.0 or later"
+    },
+    "pandas": {
+      "name": "pandas",
+      "page": "/sdks/python/#pandas",
+      "package": "thinkthen with pandas",
+      "install": "python -m pip install \"thinkthen[pandas]==0.2.0\"",
+      "installLang": "sh",
+      "requires": "Python 3.10 or later"
+    },
+    "polars": {
+      "name": "Polars",
+      "page": "/sdks/python/#polars",
+      "package": "thinkthen with polars",
+      "install": "python -m pip install \"thinkthen[polars]==0.2.0\"",
+      "installLang": "sh",
+      "requires": "Python 3.10 or later"
+    }
+  },
+  "hero": {
+    "title": "Code that knows what you mean.",
+    "tagline": "Simple functions that give your software the judgment to handle whatever comes its way."
+  }
+}

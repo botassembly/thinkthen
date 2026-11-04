@@ -1,0 +1,3 @@
+{"id":"e1","status":"answered","answer":true,"probability":0.72}
+{"id":"e2","status":"unsure","answer":null,"probability":0.33}
+{"id":"e3","status":"answered","answer":false,"probability":0.08}

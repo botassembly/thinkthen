@@ -11,7 +11,13 @@ fn sql_settings_preserve_codes_and_forbidden_field_precedence() {
     .unwrap();
     for case in cases {
         let settings = case["settings"].as_str().unwrap();
-        let variable = |_: &str| panic!("rejected SQL settings read a credential");
+        let variable = |name: &str| {
+            assert_eq!(
+                name, "THINKTHEN_BACKEND",
+                "rejected SQL settings read a credential"
+            );
+            None
+        };
         let error = if let Some(policy) = case.get("policy") {
             thinkthen_sql::client_with_policy(settings, policy.as_str(), variable)
         } else {

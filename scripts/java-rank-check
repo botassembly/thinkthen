@@ -1,0 +1,52 @@
+#!/bin/sh
+# Check rank's heap bound against a retained packaged JAR or this tree's Java JAR.
+# Usage: scripts/java-rank-check PACKAGED_INPUT_DIRECTORY [--source]
+set -eu
+cd "$(dirname "$0")/.."
+root=$PWD
+. scripts/jvm-env
+inputs=$1
+mode=${2:-}
+scratch=$(mktemp -d)
+trap 'status=$?; set +e; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
+trap 'exit 1' HUP INT TERM
+python3 - "$cache/m2" "$scratch/dependencies" <<'PY'
+from pathlib import Path
+import shutil, sys
+repository, output = map(Path, sys.argv[1:])
+output.mkdir()
+for group in ('com/fasterxml/jackson/core', 'org/jspecify/jspecify'):
+    for jar in sorted((repository / group).rglob('*.jar')):
+        shutil.copy2(jar, output / jar.name)
+PY
+jar="$inputs/thinkthen-java-0.2.0.jar"
+if [ "$mode" = --source ]; then
+    python3 scripts/jvm-generated
+    mkdir "$scratch/library"
+    python3 - "$root" "$scratch/sources" <<'PY'
+from pathlib import Path
+import sys
+root, output = map(Path, sys.argv[1:])
+sources = sorted((root / 'sdk/java/library/src/main/java').rglob('*.java'))
+sources += sorted((root / 'sdk/java/library/target/generated-sources/contracts').rglob('*.java'))
+output.write_text('\n'.join(str(path) for path in sources) + '\n')
+PY
+    "$JAVA_HOME/bin/javac" -Xlint:all -Werror --release 22 --module-path "$scratch/dependencies" -d "$scratch/library" @"$scratch/sources"
+    (cd "$scratch/library"; "$JAVA_HOME/bin/jar" xf "$jar" io/thinkthen/native)
+    jar="$scratch/thinkthen-java.jar"
+    "$JAVA_HOME/bin/jar" --create --file "$jar" -C "$scratch/library" .
+elif [ -n "$mode" ]; then
+    echo 'Expected --source or no mode' >&2
+    exit 2
+fi
+mkdir "$scratch/consumer" "$scratch/home"
+classpath="$jar:$scratch/dependencies/*"
+"$JAVA_HOME/bin/javac" -Xlint:all -Werror --release 22 -cp "$classpath" -d "$scratch/consumer" sdk/java/consumer/src/main/java/JavaRankMemoryCases.java
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BACKEND THINKTHEN_BASE_URL THINKTHEN_BATCH CLASSPATH JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+XDG_CACHE_HOME="$scratch/home/.cache"
+export XDG_CACHE_HOME
+for cache_state in cold warm; do
+    echo "Rank heap bound with $cache_state native cache"
+    "$JAVA_HOME/bin/java" -Duser.home="$scratch/home" -Xmx64m -XX:+ExitOnOutOfMemoryError --enable-native-access=ALL-UNNAMED -cp "$scratch/consumer:$classpath" JavaRankMemoryCases
+done
+python3 "$root/scripts/loader-cache-check" "$XDG_CACHE_HOME" "$JAVA_HOME/bin/java" -Duser.home="$scratch/home" -Xmx64m -XX:+ExitOnOutOfMemoryError --enable-native-access=ALL-UNNAMED -cp "$scratch/consumer:$classpath" JavaRankMemoryCases

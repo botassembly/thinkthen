@@ -26,8 +26,8 @@ test("required lists numeric thresholds and removed settings reach typed admissi
     for (const options of [{ adapter: "stub" }, { mode: "embedded" }, { keySource: "SECRET" }]) {
       assert.throws(() => new sdk.ThinkThen(options), usage);
     }
-    const row = await client.decide("Ready?", { "a/b~c": { "0": "same evidence" } }, { evidence: ["a/b~c", 0], threshold: band });
-    const pointer = await client.decide("Ready?", { "a/b~c": { "0": "same evidence" } }, { evidence: "/a~1b~0c/0", threshold: band });
+    const row = await client.decide("Ready?", { "a/b~c": { "0": "same evidence" } }, { field: ["a/b~c", 0], threshold: band }).row();
+    const pointer = await client.decide("Ready?", { "a/b~c": { "0": "same evidence" } }, { field: "/a~1b~0c/0", threshold: band }).row();
     assert.deepEqual(row, pointer);
   } finally { await client.close(); }
 });

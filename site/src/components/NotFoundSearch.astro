@@ -1,0 +1,23 @@
+---
+// Runs a site search on the words in the missing address.
+import product from '../../product.config.mjs';
+---
+<p>Searching the site for the words in this address. You can also start from the <a href="/">home page</a> or the <a href="/answers/">answers</a>.</p>
+<ul id="nf-results"></ul>
+<script define:vars={{ ranking: product.pagefind.ranking }}>
+  (async () => {
+    const words = decodeURIComponent(location.pathname).split(/[\/\-_.]+/).filter((w) => w && w.length > 1 && w !== 'html').join(' ');
+    if (!words) return;
+    const pagefind = await import('/pagefind/pagefind.js');
+    await pagefind.options({ ranking });
+    const { results } = await pagefind.search(words);
+    const list = document.getElementById('nf-results');
+    for (const r of results.slice(0, 8)) {
+      const d = await r.data();
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = d.url; a.textContent = d.meta.title;
+      li.append(a); list.append(li);
+    }
+  })();
+</script>

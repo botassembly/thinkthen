@@ -1,0 +1,35 @@
+---
+title: Options
+description: The options every ThinkThen function takes, each with the environment variable that sets it, from choosing the service and model to reading CSV files and printing JSON.
+goal: Someone writing a command or a script finds the option they need, what it does, and the environment variable that sets it.
+reader: A ThinkThen user or agent setting an option on the command line or in a script's environment
+kind: reference
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "Options: every shared ThinkThen option and its variable"
+---
+
+import SharedOptions from '../../../components/SharedOptions.astro';
+
+Every function takes these options. Most can also come from an environment variable, and an option on the command line wins over its variable.
+
+Each function's own options, such as `--threshold` for decide or `--choice` for choose, are on that function's page. `thinkthen FUNCTION --help` lists them all.
+
+## Every shared option
+
+<SharedOptions />
+
+[Configuration](/configuration/) covers the services, the models, your key and the address variables.
+
+## On-or-off options
+
+`--in-place`, `--details`, `--json`, `--quiet` and `--verbose` are off unless you give them. On the command line, the option alone turns it on, and `--json=false` turns it off. Their variables take `true` or `false`, such as `THINKTHEN_JSON=true`.
+
+## How ThinkThen picks the input format
+
+Without `--from`, a file ending in `.jsonl`, `.csv`, `.tsv` or `.xlsx` is read as that format. Anything else, standard input included, is read as one text for most functions, and as one text per line for filter, rank and annotate. [File types](/command-line/file-types/) shows each format.
+
+## Next
+
+[JSON output](/reference/json-output/) lists the fields `--json` prints.

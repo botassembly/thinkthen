@@ -8,18 +8,26 @@ pub mod native;
 mod queue;
 #[cfg(any(feature = "native", feature = "command"))]
 mod signal;
+#[cfg(feature = "stream")]
+mod stream;
 use crate::core::{
     records::Record,
     results::{self, AnyRow, Function, Row},
 };
 use crate::engine::RecordEvent;
 use crate::{Cancel, Engine, Error, OffsetUnit, Question, Request};
-pub use filtered::Filtered;
+pub use filtered::{FilterError, Filtered, Kept};
 use queue::{Queue, Received};
 use std::marker::PhantomData;
 use std::sync::Arc;
 #[cfg(feature = "stream")]
 use std::task::{Context, Poll};
+#[cfg(feature = "stream")]
+pub use stream::{AnyRowStream, RowStream};
+
+// Typed Rust calls report spans in UTF-8 bytes, so `&text[start..end]` slices the
+// matched text.
+const RUST_OFFSETS: OffsetUnit = OffsetUnit::Utf8;
 
 // Empty queue polls describe host scheduling, not the end of a batch.
 const INPUT_IDLE: std::time::Duration = std::time::Duration::from_millis(100);
@@ -197,32 +205,56 @@ impl<F: Function> Call<F> {
     }
 }
 impl Engine {
-    /// Evaluate one record. A record failure is returned as an ordinary row.
+    /// Evaluate one record. Blank field is a `record.empty` error; every other
+    /// record failure is returned as an ordinary row.
+    ///
+    /// The record is anything that converts into a [`Record`]: text as `&str` or
+    /// `String`, a [`serde_json::Value`], or a built [`Record`]. A list is refused
+    /// when the code is compiled; use [`Engine::rows`] for many records.
+    /// ```compile_fail
+    /// # let engine = thinkthen::Settings::default().engine(|_| None).unwrap();
+    /// # let refund = thinkthen::Decide::new("Refund?").unwrap();
+    /// let row = engine.run(&refund, vec!["Refund me.", "Thanks!"]);
+    /// ```
     /// # Errors
-    /// Returns only a call-level error.
-    pub fn run<F: Function>(&self, question: &F, record: Record) -> Result<Row<F>, Error> {
-        let mut rows = self.rows(question, [record])?;
+    /// Returns a call-level error, or `record.empty` for blank field.
+    pub fn run<F: Function>(
+        &self,
+        question: &F,
+        record: impl Into<Record>,
+    ) -> Result<Row<F>, Error> {
+        let mut rows = self.rows(question, [record.into()])?;
         let row = rows.next().unwrap_or_else(|| Err(results::mismatch()))?;
         if let Some(result) = rows.next() {
             result?;
             return Err(results::mismatch());
         }
+        if let Some(error) = row
+            .error()
+            .filter(|error| error.code() == crate::Code::RecordEmpty)
+        {
+            return Err(error.clone());
+        }
         Ok(row)
     }
     /// Evaluate records through a lazy iterator on a bounded worker.
+    ///
+    /// Each record is anything that converts into a [`Record`]. A worker thread
+    /// reads them, so they must be owned: collect borrowed items into a `Vec` first.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
     pub fn rows<F: Function, I>(&self, question: &F, records: I) -> Result<Rows<F>, Error>
     where
-        I: IntoIterator<Item = Record> + Send + 'static,
+        I: IntoIterator + Send + 'static,
+        I::Item: Into<Record>,
         I::IntoIter: Send,
     {
         Ok(Rows {
             inner: self.any_rows(
                 question.clone().into(),
-                None,
-                records,
-                OffsetUnit::CodePoints,
+                self.name.clone(),
+                records.into_iter().map(Into::into),
+                RUST_OFFSETS,
             )?,
             function: PhantomData,
         })
@@ -240,9 +272,9 @@ impl Engine {
     pub fn open<F: Function>(&self, question: &F) -> Result<Call<F>, Error> {
         let call = self.open_any(
             question.clone().into(),
-            None,
+            self.name.clone(),
             Vec::new(),
-            OffsetUnit::CodePoints,
+            RUST_OFFSETS,
             InputKind::Open,
         )?;
         Ok(Call {
@@ -254,8 +286,11 @@ impl Engine {
         })
     }
     /// Open a canonical dynamic request. Initial records precede pushed records.
+    ///
+    /// Binding plumbing: language bindings choose their own offset unit here.
     /// # Errors
     /// Returns call setup or pre-existing cancellation errors.
+    #[doc(hidden)]
     pub fn open_request(&self, request: &Request, offsets: OffsetUnit) -> Result<AnyCall, Error> {
         self.open_any(
             request.question().clone(),
@@ -373,26 +408,6 @@ impl Engine {
             cancel: self.cancel.clone(),
             done: false,
         })
-    }
-}
-
-#[cfg(feature = "stream")]
-impl futures_core::Stream for AnyRows {
-    type Item = Result<AnyRow, Error>;
-    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        self.get_mut().poll(cx)
-    }
-}
-#[cfg(feature = "stream")]
-impl<F: Function> futures_core::Stream for Rows<F> {
-    type Item = Result<Row<F>, Error>;
-    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let rows = self.get_mut();
-        match rows.inner.poll(cx) {
-            Poll::Ready(Some(row)) => Poll::Ready(Some(rows.admit(row))),
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => Poll::Pending,
-        }
     }
 }
 

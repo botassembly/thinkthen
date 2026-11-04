@@ -1,4 +1,5 @@
 """Prepare the cross builder or the native Windows installed-package checker."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,9 +10,38 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+import tarfile
 
 from release_downloads import prepare_tool
 from release_prepare_common import ROOT, TOOLS, PINS, fetch, run, prepared
+
+
+# Official archive/hash: https://www.python.org/downloads/release/python-31317/
+PYTHON_EMBED_URL = 'https://www.python.org/ftp/python/3.13.17/python-3.13.17-embed-amd64.zip'
+
+
+def prepare_embedded_python(output):
+    """Prepare a private standard-library runtime without pip or an installer."""
+    archive = fetch(PYTHON_EMBED_URL, output / 'python.zip')
+    with zipfile.ZipFile(archive) as bundle:
+        names = bundle.namelist()
+        if any('/' in name or '\\' in name or name in ('.', '..') for name in names):
+            raise ValueError('Embedded Python archive must contain only flat files')
+        required = {'python.exe', 'python313.dll', 'python313.zip', 'python313._pth'}
+        if not required.issubset(names):
+            raise ValueError('Embedded Python runtime is incomplete')
+        original = bundle.read('python313._pth')
+        paths = [line.strip() for line in original.decode('utf-8-sig').splitlines()
+                 if line.strip() and not line.lstrip().startswith('#')]
+        if paths != ['python313.zip', '.']:
+            raise ValueError('Embedded Python has unexpected import paths')
+        files = {name: hashlib.sha256(bundle.read(name)).hexdigest() for name in names}
+    # Keep site disabled and add only these two owned module directories.
+    configured = original + b'\n../source/scripts\n../capture/scripts\n'
+    (output / 'python313._pth').write_bytes(configured)
+    files['python313._pth'] = hashlib.sha256(configured).hexdigest()
+    return {'url': PYTHON_EMBED_URL, 'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
+            'original_pth_sha256': hashlib.sha256(original).hexdigest(), 'files': files}
 
 
 def selections():
@@ -121,14 +151,15 @@ def prepare_swift(env, folder):
 def native():
     from release_windows_r import runtime
     runtime()
-    pins = selections()['INPUTS']
     folder = TOOLS / 'windows-check'
     folder.mkdir(parents=True, exist_ok=True)
     binary = folder / 'bin'
     binary.mkdir(exist_ok=True)
-    url, digest = pins['duckdb-cli.zip']
-    with zipfile.ZipFile(fetch(url, folder / 'duckdb-cli.zip', digest)) as archive:
-        archive.extractall(binary)
+    from duckdb_release import VERSION
+    filename = 'duckdb-cli-windows-amd64.tar.gz'
+    url = f'https://github.com/duckdb/duckdb/releases/download/v{VERSION}/{filename}'
+    with tarfile.open(fetch(url, folder / filename)) as archive:
+        archive.extractall(binary, filter='data')
     release = zig_version()
     zig = TOOLS / 'zig' / release
     def archive():

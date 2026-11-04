@@ -135,7 +135,8 @@ def main():
         environment.update(TMPDIR=str(temporary_alias), THINKTHEN_PRIVATE_PATTERNS=str(scratch / 'patterns'))
         arguments = [str(inside_evidence), str(scratch / 'registration.json'), str(scratch / 'assets'),
                      str(cargo_home), swift, postgres, str(scratch / 'patterns')]
-        run('scripts/runtime-floor-build', 'scripts/public-export-gate', '--inside', *arguments, env=environment)
+        inside = '--inside-day-one' if mode == 'day-one' else '--inside'
+        run('scripts/runtime-floor-build', 'scripts/public-export-gate', inside, *arguments, env=environment)
         failed = False
     finally:
         for receipt in inside_evidence.iterdir():

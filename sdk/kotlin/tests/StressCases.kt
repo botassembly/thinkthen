@@ -1,6 +1,6 @@
 package consumer
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.coroutines.*
@@ -28,7 +28,7 @@ private suspend fun stressConsume(client: ThinkThen, sample: JsonObject, call: I
     var failed = 0L
     client.decideStream("Ready?", stressRecords(sample.required("records").jsonPrimitive.int, call, basis)).collect { row ->
         widths.add(row.id!!.let { contractValue(it) }.jsonPrimitive.content.length)
-        check(row.position == (++received).toULong()) { "Stress position changed" }
+        check(row.position == (++received).toLong()) { "Stress position changed" }
         check(row.id?.let { contractValue(it) } == JsonPrimitive("call-${basis + call}-record-${basis + received - 1}")) { "Stress id changed" }
         when (row) {
             is Row.Answered -> {

@@ -1,0 +1,138 @@
+# Errors and exit codes. Source: product (schemas/contract.json, the exit codes in the command).
+- id: exit-codes
+  question: What do ThinkThen's exit codes mean?
+  source: product
+  frequency: nine exit codes; every script branches on them
+  rank: 25
+  page: /how-thinkthen-judges/
+  reference: /reference/exit-codes/
+- id: exit-6
+  question: What does exit code 6 mean in ThinkThen?
+  source: product
+  frequency: the exit code of any run with a failed record
+  rank: 28
+  page: /troubleshooting/
+  reference: /reference/exit-codes/6/
+- id: exit-3
+  question: What does exit code 3 mean in ThinkThen?
+  source: product
+  frequency: --check on a not sure answer
+  rank: 39
+  page: /how-thinkthen-judges/
+  reference: /reference/exit-codes/3/
+- id: exit-2
+  question: What does exit code 2 mean in ThinkThen?
+  source: product
+  frequency: every usage error
+  rank: 40
+  page: /troubleshooting/
+  reference: /reference/exit-codes/2/
+- id: key-missing
+  question: How do I fix usage.key-missing in ThinkThen?
+  source: product
+  frequency: the first error of a first real-model run
+  rank: 29
+  page: /troubleshooting/
+  reference: /reference/errors/usage-key-missing/
+- id: record-json
+  question: How do I fix record.json "the record is not JSON"?
+  source: product
+  frequency: one of four record error codes; JSON Lines input
+  rank: 41
+  page: /troubleshooting/
+  reference: /reference/errors/record-json/
+- id: record-missing
+  question: How do I fix record.missing "the record holds nothing at /text"?
+  source: product
+  frequency: one of four record error codes; --field mistakes
+  rank: 42
+  page: /troubleshooting/
+  reference: /reference/errors/record-missing/
+- id: backend-transport
+  question: Why does ThinkThen say the backend could not be reached?
+  source: product
+  frequency: backend.transport on any network or address problem
+  rank: 43
+  page: /troubleshooting/
+  reference: /reference/errors/backend-transport/
+- id: too-large
+  question: What is the largest record ThinkThen can send?
+  source: product
+  frequency: record.too-large; the 96,000-byte request limit
+  rank: 44
+  page: /how-thinkthen-judges/
+  reference: /reference/errors/record-too-large/
+- id: stop-on-failure
+  question: How do I make a script stop when ThinkThen fails on a record?
+  source: product
+  frequency: exit 6 arrives after the stream finishes; scripts must branch on it
+  rank: 32
+  page: /troubleshooting/
+  reference: /reference/exit-codes/6/
+  answers_page: true
+  page_title: Troubleshooting
+  reference_title: Exit code 6
+  reader: A script author who must not continue after a failed record
+  answer: |
+    Save the rows to a file and test the command's exit status. ThinkThen {version} writes every row, failed ones included, and then exits 6 when any record failed, so the script can stop and the file still holds the field of what failed.
+  why: |
+    A failed record never stops the stream: the other records still answer, and the failed row carries `"status":"failed"` with its error code. The exit status reports the failure once the stream is done. Testing it in `if` keeps the script in control, even under `set -e`.
+  limits: |
+    Exit 6 means at least one row failed; read the rows to see which. Usage errors exit 2 before any row is written, and local errors exit 5. With `--check`, a failed row wins over every verdict, so the exit is 6, not 0, 1 or 3.
+  examples:
+    - id: ans-stop-on-failure
+      says: "Save the rows of `broken.jsonl` to a file, test the exit status, then show what each row holds:"
+  explain:
+    "stopped: thinkthen exited": "The script's own message: the command exited 6 because rows failed."
+    status: "`answered`, or `failed` for a record that could not be judged."
+    error: The error code of each failed row; `null` on an answered row.
+- id: verbose
+  question: How do I see how many rows ThinkThen processed and how many failed?
+  source: product
+  frequency: --verbose and --quiet in every command's help
+  rank: 45
+  page: /troubleshooting/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Troubleshooting
+  reference_title: Command options
+  reader: A developer watching a long run or checking a batch job
+  answer: |
+    Add `--verbose`. When the command finishes, ThinkThen {version} prints one summary line on standard error with the number of rows, the number that failed, and the elapsed seconds. `--quiet` prints no answers, notices or progress line instead; errors still reach standard error.
+  why: |
+    Answers go to standard output and diagnostics to standard error, so the summary never mixes with the answers a script reads. The example merges the two streams to show both, and replaces the elapsed time with `TIME` because it changes on every run.
+  limits: |
+    The progress line appears only when standard error is a terminal. The summary counts rows, not requests. A failed row still makes the command exit 6. Each request waits on the model, so the elapsed time grows with the number of requests.
+  examples:
+    - id: ans-quiet-verbose
+      says: "Add `--verbose`. `2>&1` merges standard error into the output so both show, and `sed` replaces the elapsed time with `TIME`:"
+  explain:
+    "a1\ttrue": "The first record, `a1`, with its answer after a tab, on standard output."
+    failed: "The summary on standard error: rows written, rows that failed, and the elapsed time."
+- id: stderr
+  question: Where does ThinkThen print errors?
+  source: product
+  frequency: every failed record prints a diagnostic
+  rank: 69
+  page: /troubleshooting/
+  reference: /reference/errors/
+  answers_page: true
+  page_title: Troubleshooting
+  reference_title: Error codes
+  reader: A developer redirecting ThinkThen output to files in a script
+  answer: |
+    Rows go to standard output and diagnostics to standard error. With `--json`, a failed record in ThinkThen {version} gives both: a row with `"status":"failed"` on standard output, and a `thinkthen: CODE: position N id ID file FILE: message` line on standard error. In text mode a failed record prints nothing on standard output, only the line on standard error. Redirect them to separate files with `>` and `2>`.
+  why: |
+    Keeping diagnostics off standard output means a pipe into `jq` or a file only ever holds rows, or answers in text mode. The exit code, 6 here, tells the script that a record failed.
+  limits: |
+    `-q` hides answers, rows and notices, not errors. A usage error, exit code 2, prints only the diagnostic and no rows. A failed row can also come from the service, such as [`backend.status`](/reference/errors/backend-status/), and its line goes to standard error the same way.
+  examples:
+    - id: ans-stderr
+      says: "Write the rows to `rows.jsonl` and the diagnostics to `errors.txt`. Nothing reaches the terminal, and the command exits 6 because one record failed:"
+    - id: ans-stderr-rows
+      says: "`rows.jsonl` holds one row per record, the failed one included:"
+    - id: ans-stderr-errors
+      says: "`errors.txt` holds the diagnostic line:"
+  explain:
+    status: "`answered`, or `failed` for the record with no `text` field."
+    record.missing: "The error code on standard error: the record held nothing at `/text`."

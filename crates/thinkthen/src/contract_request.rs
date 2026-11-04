@@ -38,7 +38,7 @@ impl Request {
     }
     /// Parse and admit a request without reading files, settings or credentials.
     /// # Errors
-    /// Returns the shared question, domain, evidence or name admission error.
+    /// Returns the shared question, domain, field or name admission error.
     pub fn from_json(json: &str) -> Result<Self, Error> {
         serde_json::from_str::<Input>(json)
             .map_err(|error| {
@@ -53,19 +53,7 @@ impl Request {
     /// # Errors
     /// Returns a name error for invalid text.
     pub fn named(mut self, name: impl Into<String>) -> Result<Self, Error> {
-        let name = name.into();
-        crate::core::ask::admit_name(&name)?;
-        if name.trim().is_empty() {
-            return Err(Error::new(
-                ErrorKind::Name,
-                crate::core::diagnostic::requirement(
-                    "name",
-                    "a nonblank execution name",
-                    "blank text",
-                ),
-            ));
-        }
-        self.name = Some(name);
+        self.name = Some(admit_name(name.into())?);
         Ok(self)
     }
     /// Supply initial JSON records; record admission belongs to execution.
@@ -99,4 +87,16 @@ impl TryFrom<Input> for Request {
             None => Ok(request),
         }
     }
+}
+
+/// Admit an execution name: nonblank text without control characters.
+pub(crate) fn admit_name(name: String) -> Result<String, Error> {
+    crate::core::ask::admit_name(&name)?;
+    if name.trim().is_empty() {
+        return Err(Error::new(
+            ErrorKind::Name,
+            crate::core::diagnostic::requirement("name", "a nonblank execution name", "blank text"),
+        ));
+    }
+    Ok(name)
 }

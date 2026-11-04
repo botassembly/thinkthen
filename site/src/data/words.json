@@ -1,0 +1,17 @@
+{
+  "source": "sdlc/decisions/2026-11-03-docs-rules-and-sitemap.md: rule 12; PM m23339",
+  "banned": [
+    { "word": "evidence", "use": "Say text or field." },
+    { "word": "rows?", "unlessPrecededBy": "CSV ", "csvContext": true, "use": "Say message or line for a result; row is for a CSV line." },
+    { "word": "records?", "use": "Say message, line or CSV row." },
+    { "word": "bands?|cuts?", "use": "Say bar, low bar or high bar." },
+    { "word": "surfaces?", "use": "Name the command, SDK or database." },
+    { "word": "semantic", "use": "Say what the reader gets." },
+    { "word": "ThinkThen['’]s", "use": "Name ThinkThen without the possessive." },
+    { "word": "packages?", "routes": "^/sdks/", "use": "Say SDK for a language library." },
+    { "word": "spreadsheets?", "near": "CSV", "use": "Say CSV file." },
+    { "word": "stub", "use": "Show only real-run examples." },
+    { "word": "excerpt|full program", "use": "Show the complete copied example." },
+    { "word": "backends?", "exceptRoutes": ["/configuration/", "/reference/options/"], "use": "Keep this term on Configuration and the help-derived shared options reference." }
+  ]
+}

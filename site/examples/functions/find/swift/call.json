@@ -1,0 +1,5 @@
+{
+  "anchor": "let action = try await client.find(",
+  "before": 0,
+  "after": 2
+}

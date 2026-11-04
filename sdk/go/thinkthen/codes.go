@@ -5,82 +5,56 @@ package thinkthen
 */
 import "C"
 
-import "errors"
-
-type Code int32
-
-const (
-	CodeUsageThreshold    Code = C.THINKTHEN_CODE_USAGE_THRESHOLD
-	CodeUsageQuestion     Code = C.THINKTHEN_CODE_USAGE_QUESTION
-	CodeUsageName         Code = C.THINKTHEN_CODE_USAGE_NAME
-	CodeUsageSettings     Code = C.THINKTHEN_CODE_USAGE_SETTINGS
-	CodeUsageBackend      Code = C.THINKTHEN_CODE_USAGE_BACKEND
-	CodeUsageURL          Code = C.THINKTHEN_CODE_USAGE_URL
-	CodeUsageKeyMissing   Code = C.THINKTHEN_CODE_USAGE_KEY_MISSING
-	CodeUsageBatch        Code = C.THINKTHEN_CODE_USAGE_BATCH
-	CodeUsagePointer      Code = C.THINKTHEN_CODE_USAGE_POINTER
-	CodeUsageSQLPolicy    Code = C.THINKTHEN_CODE_USAGE_SQL_POLICY
-	CodeUsageSQLSelection Code = C.THINKTHEN_CODE_USAGE_SQL_SELECTION
-	CodeUsageABI          Code = C.THINKTHEN_CODE_USAGE_ABI
-	CodeRecordJSON        Code = C.THINKTHEN_CODE_RECORD_JSON
-	CodeRecordMissing     Code = C.THINKTHEN_CODE_RECORD_MISSING
-	CodeRecordTooLarge    Code = C.THINKTHEN_CODE_RECORD_TOO_LARGE
-	CodeRecordInvalid     Code = C.THINKTHEN_CODE_RECORD_INVALID
-	CodeBackendTransport  Code = C.THINKTHEN_CODE_BACKEND_TRANSPORT
-	CodeBackendStatus     Code = C.THINKTHEN_CODE_BACKEND_STATUS
-	CodeBackendReply      Code = C.THINKTHEN_CODE_BACKEND_REPLY
-	CodeLocalCancelled    Code = C.THINKTHEN_CODE_LOCAL_CANCELLED
-	CodeLocalIO           Code = C.THINKTHEN_CODE_LOCAL_IO
-	CodeLocalToolbox      Code = C.THINKTHEN_CODE_LOCAL_TOOLBOX
-	CodeInternalBug       Code = C.THINKTHEN_CODE_INTERNAL_BUG
+import (
+	"errors"
+	"strings"
 )
 
-var codeNames = map[Code]string{
-	CodeUsageThreshold:    "usage.threshold",
-	CodeUsageQuestion:     "usage.question",
-	CodeUsageName:         "usage.name",
-	CodeUsageSettings:     "usage.settings",
-	CodeUsageBackend:      "usage.backend",
-	CodeUsageURL:          "usage.url",
-	CodeUsageKeyMissing:   "usage.key-missing",
-	CodeUsageBatch:        "usage.batch",
-	CodeUsagePointer:      "usage.pointer",
-	CodeUsageSQLPolicy:    "usage.sql-policy",
-	CodeUsageSQLSelection: "usage.sql-selection",
-	CodeUsageABI:          "usage.abi",
-	CodeRecordJSON:        "record.json",
-	CodeRecordMissing:     "record.missing",
-	CodeRecordTooLarge:    "record.too-large",
-	CodeRecordInvalid:     "record.invalid",
-	CodeBackendTransport:  "backend.transport",
-	CodeBackendStatus:     "backend.status",
-	CodeBackendReply:      "backend.reply",
-	CodeLocalCancelled:    "local.cancelled",
-	CodeLocalIO:           "local.io",
-	CodeLocalToolbox:      "local.toolbox",
-	CodeInternalBug:       "internal.bug",
-}
+// Code is a stable engine error code and can be matched with errors.Is.
+type Code int32
 
+// String returns the engine code name.
 func (c Code) String() string {
 	if name, ok := codeNames[c]; ok {
 		return name
 	}
 	return "unknown"
 }
+
+// Error returns the engine message.
 func (c Code) Error() string { return c.String() }
 
 // Family returns the engine contract family, or an empty string for an unknown code.
 func (c Code) Family() string {
-	if err := loadNative(); err != nil {
+	family, _, ok := strings.Cut(c.String(), ".")
+	if !ok {
 		return ""
 	}
-	return C.GoString(C.tt_code_family(C.int32_t(c)))
+	return family
 }
 
+// ErrUsage matches errors in the usage family through errors.Is.
 var ErrUsage = errors.New("thinkthen: usage")
-var ErrTransport = errors.New("thinkthen: transport")
+
+// ErrRecord matches errors in the record family through errors.Is.
+var ErrRecord = errors.New("thinkthen: record")
+
+// ErrBackend matches errors in the backend family through errors.Is.
+var ErrBackend = errors.New("thinkthen: backend")
+
+// ErrLocal matches errors in the local family through errors.Is.
+var ErrLocal = errors.New("thinkthen: local")
+
+// ErrInternal matches errors in the internal family through errors.Is.
+var ErrInternal = errors.New("thinkthen: internal")
+
+// ErrUnsure matches an outcome for which the engine is not sure.
+var ErrUnsure = errors.New("thinkthen: unsure")
+
+// ErrClosed matches a call on a closed client.
 var ErrClosed = errors.New("thinkthen: closed")
 
+// Error preserves an engine error code, message, cause and optional HTTP status.
 type Error struct {
 	code       Code
 	message    string
@@ -88,28 +62,56 @@ type Error struct {
 	httpStatus int
 }
 
+// Code returns the stable engine error code.
 func (e *Error) Code() Code { return e.code }
+
+// Error returns the engine message.
 func (e *Error) Error() string {
 	if e == nil {
 		return ""
 	}
 	return e.message
 }
-func (e *Error) Unwrap() error           { return e.cause }
+
+// Unwrap returns the underlying cause.
+func (e *Error) Unwrap() error { return e.cause }
+
+// HTTPStatus returns the backend HTTP status when present.
 func (e *Error) HTTPStatus() (int, bool) { return e.httpStatus, e.httpStatus != 0 }
+
+// Is matches an exact code or an error family.
 func (e *Error) Is(target error) bool {
 	if code, ok := target.(Code); ok {
 		return e.code == code
 	}
-	return target == ErrUsage && e.code.Family() == "usage" || target == ErrTransport && e.code == CodeBackendTransport
+	if target == ErrClosed {
+		return e.code == CodeUsageClosed
+	}
+	switch target {
+	case ErrUsage:
+		return e.code.Family() == "usage"
+	case ErrRecord:
+		return e.code.Family() == "record"
+	case ErrBackend:
+		return e.code.Family() == "backend"
+	case ErrLocal:
+		return e.code.Family() == "local"
+	case ErrInternal:
+		return e.code.Family() == "internal"
+	}
+	return false
 }
 
+// Backend selects a built-in engine backend.
 type Backend uint32
 
 const (
+	// SystemOne selects the System One backend.
 	SystemOne Backend = C.THINKTHEN_BACKEND_SYSTEMONE
-	OpenAI    Backend = C.THINKTHEN_BACKEND_OPENAI
-	Stub      Backend = C.THINKTHEN_BACKEND_STUB
+	// OpenAI selects the OpenAI backend.
+	OpenAI Backend = C.THINKTHEN_BACKEND_OPENAI
+	// Stub selects deterministic offline test answers.
+	Stub Backend = C.THINKTHEN_BACKEND_STUB
 )
 
 func normalizedBackend(b Backend) Backend {
@@ -118,6 +120,8 @@ func normalizedBackend(b Backend) Backend {
 	}
 	return b
 }
+
+// String returns a readable representation.
 func (v Backend) String() string {
 	switch v {
 	case SystemOne:
@@ -130,14 +134,19 @@ func (v Backend) String() string {
 	return "unknown"
 }
 
+// Status identifies whether an outcome is answered, unsure, or failed.
 type Status uint32
 
 const (
+	// Answered means the outcome has an answer.
 	Answered Status = C.THINKTHEN_STATUS_ANSWERED
-	Unsure   Status = C.THINKTHEN_STATUS_UNSURE
-	Failed   Status = C.THINKTHEN_STATUS_FAILED
+	// Unsure means the engine did not select a definite answer.
+	Unsure Status = C.THINKTHEN_STATUS_UNSURE
+	// Failed means the record carries an error.
+	Failed Status = C.THINKTHEN_STATUS_FAILED
 )
 
+// String returns a readable representation.
 func (v Status) String() string {
 	switch v {
 	case Answered:
@@ -150,21 +159,33 @@ func (v Status) String() string {
 	return "unknown"
 }
 
+// Function identifies one of the ten semantic functions.
 type Function uint32
 
 const (
-	FunctionDecide    Function = C.THINKTHEN_FUNCTION_DECIDE
-	FunctionChoose    Function = C.THINKTHEN_FUNCTION_CHOOSE
-	FunctionTag       Function = C.THINKTHEN_FUNCTION_TAG
-	FunctionScore     Function = C.THINKTHEN_FUNCTION_SCORE
-	FunctionFilter    Function = C.THINKTHEN_FUNCTION_FILTER
-	FunctionFind      Function = C.THINKTHEN_FUNCTION_FIND
+	// FunctionDecide identifies the decide function.
+	FunctionDecide Function = C.THINKTHEN_FUNCTION_DECIDE
+	// FunctionChoose identifies the choose function.
+	FunctionChoose Function = C.THINKTHEN_FUNCTION_CHOOSE
+	// FunctionTag identifies the tag function.
+	FunctionTag Function = C.THINKTHEN_FUNCTION_TAG
+	// FunctionScore identifies the score function.
+	FunctionScore Function = C.THINKTHEN_FUNCTION_SCORE
+	// FunctionFilter identifies the filter function.
+	FunctionFilter Function = C.THINKTHEN_FUNCTION_FILTER
+	// FunctionFind identifies the find function.
+	FunctionFind Function = C.THINKTHEN_FUNCTION_FIND
+	// FunctionRecognize identifies the recognize function.
 	FunctionRecognize Function = C.THINKTHEN_FUNCTION_RECOGNIZE
-	FunctionRelate    Function = C.THINKTHEN_FUNCTION_RELATE
-	FunctionRank      Function = C.THINKTHEN_FUNCTION_RANK
-	FunctionAnnotate  Function = C.THINKTHEN_FUNCTION_ANNOTATE
+	// FunctionRelate identifies the relate function.
+	FunctionRelate Function = C.THINKTHEN_FUNCTION_RELATE
+	// FunctionRank identifies the rank function.
+	FunctionRank Function = C.THINKTHEN_FUNCTION_RANK
+	// FunctionAnnotate identifies the annotate function.
+	FunctionAnnotate Function = C.THINKTHEN_FUNCTION_ANNOTATE
 )
 
+// String returns a readable representation.
 func (v Function) String() string {
 	switch v {
 	case FunctionDecide:

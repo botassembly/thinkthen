@@ -10,29 +10,44 @@ use std::collections::BTreeMap;
 #[schemars(with = "AnnotateWire")]
 pub struct Annotate {
     questions: BTreeMap<String, AnnotatableQuestion>,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Annotate {
-    /// Admit a nonempty named collection of per-record questions.
+    /// Admit a nonempty named collection of per-record questions, such as an
+    /// array of `(name, question)` pairs or a map.
     /// # Errors
-    /// Returns a shared question or name error.
-    pub fn new(questions: BTreeMap<String, AnnotatableQuestion>) -> Result<Self, Error> {
-        admit_names(&questions)?;
+    /// Returns a shared question or name error, including for a repeated name.
+    pub fn new<N: Into<String>, Q: Into<AnnotatableQuestion>>(
+        questions: impl IntoIterator<Item = (N, Q)>,
+    ) -> Result<Self, Error> {
+        let mut named = BTreeMap::new();
+        for (name, question) in questions {
+            let name = name.into();
+            if named.contains_key(&name) {
+                return Err(question_error(crate::core::diagnostic::requirement(
+                    "name",
+                    "a unique name",
+                    "a repeated name",
+                )));
+            }
+            named.insert(name, question.into());
+        }
+        admit_names(&named)?;
         Ok(Self {
-            questions,
-            evidence: None,
+            questions: named,
+            field: None,
         })
     }
-    /// Select shared evidence; individual entries can select their own evidence.
+    /// Select shared field; individual entries can select their own field.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
         self
     }
-    /// The admitted shared evidence pointer.
+    /// The admitted shared field pointer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -50,10 +65,10 @@ pub(crate) struct AnnotateWire {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<AnnotateWire> for Annotate {
     type Error = Error;
@@ -63,9 +78,9 @@ impl TryFrom<AnnotateWire> for Annotate {
             .0
             .into_iter()
             .map(|(name, question)| Ok((name, question.try_into()?)))
-            .collect::<Result<_, Error>>()?;
+            .collect::<Result<BTreeMap<String, AnnotatableQuestion>, Error>>()?;
         let mut question = Self::new(questions)?;
-        question.evidence = admit_evidence(value.evidence)?;
+        question.field = admit_field(value.field)?;
         Ok(question)
     }
 }
@@ -79,7 +94,7 @@ impl From<Annotate> for AnnotateWire {
                     .map(|(name, question)| (name, question.into()))
                     .collect(),
             ),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }

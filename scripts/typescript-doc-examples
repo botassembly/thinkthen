@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""Run authored JavaScript fences unchanged and compile them as strict TypeScript."""
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+consumer = Path(sys.argv[1]).resolve()
+tsc = ROOT / 'sdk/typescript/node_modules/.bin/tsc'
+failures = []
+sources = []
+environment = dict(os.environ)
+for name in ('THINKTHEN_BACKEND', 'THINKTHEN_API_KEY', 'OPENAI_API_KEY', 'THINKTHEN_BASE_URL', 'THINKTHEN_BATCH'):
+    environment.pop(name, None)
+environment['THINKTHEN_BACKEND'] = 'stub'
+guide = (ROOT / 'docs/surfaces/typescript.md').read_text()
+blocks = list(re.finditer(r'```([^\n]*)\n(.*?)\n```', guide, re.S))
+for block in blocks:
+    if block[1] == 'json' and '"entries"' in block[2]:
+        (consumer / 'toolbox.json').write_text(block[2] + '\n')
+    if block[1] == 'text' and block[2].startswith('{"id":'):
+        (consumer / 'records.jsonl').write_text(block[2] + '\n')
+for page in ('sdk/typescript/README.md', 'docs/surfaces/typescript.md'):
+    text = (ROOT / page).read_text()
+    for index, block in enumerate(re.finditer(r'```([^\n]*)\n(.*?)\n```', text, re.S), 1):
+        if block[1] != 'js':
+            continue
+        label = f'{Path(page).stem}-{index}'
+        source = consumer / (label + '.mjs')
+        source.write_text(block[2] + '\n')
+        typed = source.with_suffix('.mts')
+        typed.write_text(source.read_text())
+        sources.append(str(typed))
+        result = subprocess.run(['node', str(source)], cwd=consumer, env=environment,
+                                text=True, capture_output=True, check=False)
+        print(f'--- {page} block {index} (exit {result.returncode}) ---', flush=True)
+        print(result.stdout, end='', flush=True)
+        if result.stderr:
+            print(result.stderr, end='', flush=True)
+        following = re.match(r'\s*```text\n(.*?)\n```', text[block.end():], re.S)
+        if result.returncode:
+            failures.append(label + ': execution failed')
+        if following and result.stdout.replace('\r\n', '\n').rstrip() != following[1].rstrip():
+            failures.append(label + ': saved output differs')
+# Compile every unchanged fence in one strict invocation; .mts keeps modules isolated.
+command = [str(tsc), '--strict', '--noUncheckedIndexedAccess', '--exactOptionalPropertyTypes',
+           '--noEmit', '--module', 'NodeNext', '--target', 'ES2022',
+           '--lib', 'ES2022,DOM,ESNext.Disposable', '--types', 'node',
+           '--typeRoots', str(ROOT / 'sdk/typescript/node_modules/@types'), *sources]
+compiled = subprocess.run(command, cwd=consumer, env=environment, text=True,
+                          capture_output=True, check=False)
+print('--- strict TypeScript compilation ---', flush=True)
+print(compiled.stdout + compiled.stderr, end='', flush=True)
+if compiled.returncode:
+    failures.append('strict compilation failed')
+if failures:
+    raise SystemExit('\n'.join(failures))
+print(f'TypeScript authored examples: {len(sources)} run unchanged and compile strictly')

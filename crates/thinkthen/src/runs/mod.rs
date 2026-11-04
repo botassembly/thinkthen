@@ -4,6 +4,6 @@ mod children;
 mod entry;
 mod pipeline;
 
-pub use children::force_cleanup;
-pub use entry::{RunEntry, load};
-pub use pipeline::{RunCompletion, execute};
+pub(crate) use children::force_cleanup;
+pub(crate) use entry::{RunEntry, load, names_entry};
+pub(crate) use pipeline::{RunCompletion, execute};

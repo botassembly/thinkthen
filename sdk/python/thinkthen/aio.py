@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterable, Iterable
-from typing import Any, TypeVar, overload
+from typing import Any, Literal, TypeVar, overload
 from weakref import WeakKeyDictionary
+
+from typing_extensions import TypeForm
 
 from ._async import AsyncClient
 from ._questions import (
     AnnotateQuestion,
-    AnnotationQuestions,
+    AnnotationInput,
     ChooseQuestion,
     DecideQuestion,
     FilterQuestion,
@@ -22,11 +24,13 @@ from ._questions import (
     TagQuestion,
 )
 from ._runtime import Cancel
-from ._streams import AsyncRowStream
+from ._streams import AsyncKeptStream, AsyncRowStream
 from ._types import (
     AnnotateRow,
+    ChoiceInput,
     ChooseRow,
     DecideRow,
+    Descriptions,
     FilterRow,
     FindRow,
     RankRow,
@@ -38,6 +42,7 @@ from ._types import (
     Strings,
     TagRow,
     Threshold,
+    _Label,
 )
 
 T = TypeVar("T")
@@ -76,7 +81,9 @@ async def decide(
     record: Record,
     *,
     threshold: Threshold | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    yes_means: str | None = None,
+    no_means: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -100,7 +107,9 @@ def decide_stream(
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     threshold: Threshold | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    yes_means: str | None = None,
+    no_means: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -114,121 +123,232 @@ def filter(
     question: FilterQuestion,
     records: Iterable[T] | AsyncIterable[T],
     *,
+    errors: Literal["raise"] = "raise",
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[FilterRow[T]]: ...
+) -> AsyncKeptStream[T]: ...
+@overload
+def filter(
+    question: FilterQuestion,
+    records: Iterable[T] | AsyncIterable[T],
+    *,
+    errors: Literal["coerce"],
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncKeptStream[T | FilterRow[T]]: ...
 @overload
 def filter(
     question: str,
     records: Iterable[T] | AsyncIterable[T],
     *,
     threshold: Threshold | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    yes_means: str | None = None,
+    no_means: str | None = None,
+    errors: Literal["raise"] = "raise",
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[FilterRow[T]]: ...
+) -> AsyncKeptStream[T]: ...
+@overload
+def filter(
+    question: str,
+    records: Iterable[T] | AsyncIterable[T],
+    *,
+    threshold: Threshold | None = None,
+    field: str | None = None,
+    yes_means: str | None = None,
+    no_means: str | None = None,
+    errors: Literal["coerce"],
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncKeptStream[T | FilterRow[T]]: ...
 def filter(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
+    """Stream the kept records; see ``AsyncClient.filter``."""
     return (_default() if client is None else client).filter(*args, **kwargs)
 
 
 @overload
+def filter_rows(
+    question: FilterQuestion,
+    records: Iterable[T] | AsyncIterable[T],
+    *,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncRowStream[FilterRow[T]]: ...
+@overload
+def filter_rows(
+    question: str,
+    records: Iterable[T] | AsyncIterable[T],
+    *,
+    threshold: Threshold | None = None,
+    field: str | None = None,
+    yes_means: str | None = None,
+    no_means: str | None = None,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncRowStream[FilterRow[T]]: ...
+def filter_rows(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
+    return (_default() if client is None else client).filter_rows(*args, **kwargs)
+
+
+@overload
 async def choose(
-    question: ChooseQuestion,
+    question: ChooseQuestion[_Label],
     record: Record,
     *,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> ChooseRow: ...
+) -> ChooseRow[_Label]: ...
 @overload
 async def choose(
     question: str,
     record: Record,
     *,
-    choices: Strings,
+    choices: TypeForm[_Label],
     threshold: Threshold | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> ChooseRow: ...
+) -> ChooseRow[_Label]: ...
+@overload
+async def choose(
+    question: str,
+    record: Record,
+    *,
+    choices: list[_Label] | tuple[_Label, ...],
+    threshold: Threshold | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> ChooseRow[_Label]: ...
 async def choose(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     return await (_default() if client is None else client).choose(*args, **kwargs)
 
 
 @overload
 def choose_stream(
-    question: ChooseQuestion,
+    question: ChooseQuestion[_Label],
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[ChooseRow]: ...
+) -> AsyncRowStream[ChooseRow[_Label]]: ...
 @overload
 def choose_stream(
     question: str,
     records: Iterable[Record] | AsyncIterable[Record],
     *,
-    choices: Strings,
+    choices: TypeForm[_Label],
     threshold: Threshold | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[ChooseRow]: ...
+) -> AsyncRowStream[ChooseRow[_Label]]: ...
+@overload
+def choose_stream(
+    question: str,
+    records: Iterable[Record] | AsyncIterable[Record],
+    *,
+    choices: list[_Label] | tuple[_Label, ...],
+    threshold: Threshold | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncRowStream[ChooseRow[_Label]]: ...
 def choose_stream(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     return (_default() if client is None else client).choose_stream(*args, **kwargs)
 
 
 @overload
 async def tag(
-    question: TagQuestion,
+    question: TagQuestion[_Label],
     record: Record,
     *,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> TagRow: ...
+) -> TagRow[_Label]: ...
 @overload
 async def tag(
     question: str,
     record: Record,
     *,
-    labels: Strings,
+    labels: TypeForm[_Label],
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> TagRow: ...
+) -> TagRow[_Label]: ...
+@overload
+async def tag(
+    question: str,
+    record: Record,
+    *,
+    labels: list[_Label] | tuple[_Label, ...],
+    threshold: float | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> TagRow[_Label]: ...
 async def tag(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     return await (_default() if client is None else client).tag(*args, **kwargs)
 
 
 @overload
 def tag_stream(
-    question: TagQuestion,
+    question: TagQuestion[_Label],
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[TagRow]: ...
+) -> AsyncRowStream[TagRow[_Label]]: ...
 @overload
 def tag_stream(
     question: str,
     records: Iterable[Record] | AsyncIterable[Record],
     *,
-    labels: Strings,
+    labels: TypeForm[_Label],
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[TagRow]: ...
+) -> AsyncRowStream[TagRow[_Label]]: ...
+@overload
+def tag_stream(
+    question: str,
+    records: Iterable[Record] | AsyncIterable[Record],
+    *,
+    labels: list[_Label] | tuple[_Label, ...],
+    threshold: float | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
+    name: str | None = None,
+    cancel: Cancel | None = None,
+    client: AsyncClient | None = None,
+) -> AsyncRowStream[TagRow[_Label]]: ...
 def tag_stream(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     return (_default() if client is None else client).tag_stream(*args, **kwargs)
 
@@ -247,8 +367,9 @@ async def score(
     question: str,
     record: Record,
     *,
-    levels: Strings,
-    evidence: str | None = None,
+    levels: ChoiceInput[_Label],
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -271,8 +392,9 @@ def score_stream(
     question: str,
     records: Iterable[Record] | AsyncIterable[Record],
     *,
-    levels: Strings,
-    evidence: str | None = None,
+    levels: ChoiceInput[_Label],
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -284,24 +406,25 @@ def score_stream(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -
 @overload
 def rank(
     question: RankQuestion,
-    records: Iterable[Record] | AsyncIterable[Record],
+    records: Iterable[T] | AsyncIterable[T],
     *,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[RankRow]: ...
+) -> AsyncRowStream[RankRow[T]]: ...
 @overload
 def rank(
     question: str,
-    records: Iterable[Record] | AsyncIterable[Record],
+    records: Iterable[T] | AsyncIterable[T],
     *,
-    levels: Strings,
+    levels: ChoiceInput[_Label],
     top: int | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
+    descriptions: Descriptions[_Label] | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
-) -> AsyncRowStream[RankRow]: ...
+) -> AsyncRowStream[RankRow[T]]: ...
 def rank(*args: Any, client: AsyncClient | None = None, **kwargs: Any) -> Any:
     return (_default() if client is None else client).rank(*args, **kwargs)
 
@@ -321,7 +444,7 @@ async def find(
     record: Record,
     *,
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -345,7 +468,7 @@ def find_stream(
     records: Iterable[Record] | AsyncIterable[Record],
     *,
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -369,7 +492,7 @@ async def recognize(
     *,
     kinds: Strings,
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -395,7 +518,7 @@ def recognize_stream(
     *,
     kinds: Strings,
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -421,7 +544,7 @@ async def relate(
     *,
     rules: list[RelationRule] | tuple[RelationRule, ...],
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -445,7 +568,7 @@ def relate_stream(
     *,
     rules: list[RelationRule] | tuple[RelationRule, ...],
     threshold: float | None = None,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -465,10 +588,10 @@ async def annotate(
 ) -> AnnotateRow: ...
 @overload
 async def annotate(
-    toolbox: AnnotationQuestions,
+    toolbox: AnnotationInput,
     record: Record,
     *,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -488,10 +611,10 @@ def annotate_stream(
 ) -> AsyncRowStream[AnnotateRow]: ...
 @overload
 def annotate_stream(
-    toolbox: AnnotationQuestions,
+    toolbox: AnnotationInput,
     records: Iterable[Record] | AsyncIterable[Record],
     *,
-    evidence: str | None = None,
+    field: str | None = None,
     name: str | None = None,
     cancel: Cancel | None = None,
     client: AsyncClient | None = None,
@@ -510,7 +633,7 @@ __all__ = [
     "choose_stream",
     "decide",
     "decide_stream",
-    "filter",
+    "filter_rows",
     "find",
     "find_stream",
     "rank",

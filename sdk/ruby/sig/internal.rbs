@@ -64,6 +64,8 @@ module ThinkThen
     end
     class RecordInput < FFI::Struct
     end
+    class RecordView < FFI::Struct
+    end
     class NativeError < FFI::Struct
       def initialize: () -> void
     end
@@ -117,6 +119,7 @@ module ThinkThen
     def self.thinkthen_call_free: (*untyped) -> untyped
     def self.thinkthen_error_free: (*untyped) -> untyped
     def self.thinkthen_row_free: (*untyped) -> untyped
+    def self.thinkthen_row_original: (*untyped) -> untyped
     def self.settings: () -> untyped
     def self.validate_threshold: (Symbol, String?, untyped) -> void
     def self.thinkthen_question_from_json: (*untyped) -> untyped
@@ -124,13 +127,15 @@ module ThinkThen
     def self.dump: (untyped, ?symbols: bool) -> String
     def self.snapshot: (untyped, ?untyped, ?bool) -> untyped
     def self.context_dump: (untyped, Symbol) -> String
-    def self.records: (untyped) { (untyped, Integer) -> untyped } -> untyped
-    def self.record_value: (untyped) -> [String, String?]
+    NO_COPY: Object
+    def self.records: (untyped, ?Hash[Integer, String]) { (untyped, Integer) -> untyped } -> untyped
+    def self.record_value: (untyped) -> [String, String?, String?]
     def self.parse: (String) -> untyped
+    def self.original: (untyped) -> untyped
     def self.copy: (untyped) -> String
     def self.error_symbol: (String) -> error_code
     def self.discriminator: (Hash[Integer, String], Integer) -> String
-    def self.error_class: (Integer, String) -> singleton(Error)
+    def self.error_class: (Integer, String) -> (singleton(UsageError) | singleton(LibraryError))
     def self.checked: () { (untyped) -> untyped } -> untyped
     def self.bytes: (String) { (untyped, Integer) -> untyped } -> untyped
   end
@@ -145,6 +150,7 @@ module ThinkThen
     def self.wire: (untyped) -> untyped
   end
   module WireValue : Object
+    def to_json: (*untyped) -> String
     def to_h: () -> Hash[String, json]
   end
   interface _RowFields
@@ -155,10 +161,12 @@ module ThinkThen
     def answer: () -> untyped
   end
   module RowWire : Object, _RowFields
+    include AnswerValue
     def id_present?: () -> bool
     def to_h: () -> Hash[String, json]
   end
   module AnnotationWire : Object, _RowFields
+    include AnswerValue
     include WireValue
     def to_h: () -> Hash[String, json]
   end
@@ -174,9 +182,9 @@ module ThinkThen
   class Question
     attr_reader value: untyped
     def initialize: (Symbol, ?String?, **untyped) -> void
-    def self.evidence: (evidence?) -> String?
+    def self.field: (field?) -> String?
     def self.threshold: (threshold?, band: bool) -> untyped
-    def self.list: (Array[String]) -> Array[String]
+    def self.list: (Symbol, untyped, ?untyped) -> untyped
   end
   class AnnotationQuestions
     def value: () -> untyped
@@ -196,9 +204,13 @@ module ThinkThen
   end
   class Client
     private
+    def check_failures: (untyped) -> void
+    def deliver: (untyped, Symbol) { (untyped, Enumerator::Yielder) -> void } -> Enumerator[untyped, void]
+    def single_result: (untyped) -> untyped
+    def single_record: (untyped) -> Array[untyped]
     def build_question: (Symbol, untyped, untyped) -> untyped
     def open_rows: (untyped, untyped, untyped, untyped) -> untyped
-    def admit: (String, ?untyped) -> untyped
+    def admit: (String, ?untyped, ?Hash[Integer, String]) -> untyped
     def check_process: () -> void
     def forget: (untyped) -> untyped
   end
@@ -227,7 +239,7 @@ module ThinkThen
     def initialize: (question_identity: String, backend: backend, model: String, ?name: String?) -> void
   end
   class RowError
-    def initialize: (code: error_code, message: String, ?http_status: Integer?) -> void
+    def initialize: (code: error_code, message: String, ?http_status: Integer?, ?raw_code: Integer?, ?raw_name: String?) -> void
   end
   class RelationRule
     private
@@ -236,7 +248,7 @@ module ThinkThen
     def initialize: (source: String, target: String, relation: String, ?phrase: String?, ?symmetric: bool) -> void
   end
   class Retry
-    def initialize: (?max_retries: Integer?, ?initial_backoff_ms: Integer?, ?attempt_timeout_ms: Integer?) -> void
+    def initialize: (?max_retries: Integer?, ?initial_backoff: Float?, ?attempt_timeout: Float?) -> void
   end
 end
 
@@ -261,5 +273,74 @@ module ThinkThen
     def self.worker: (untyped, untyped) -> Thread
     def start: (untyped) -> NativeRead
     def close: () -> nil
+  end
+end
+
+module ThinkThen
+  interface _AnswerValue
+    def answer: () -> untyped
+    def answered?: () -> bool
+    def status: () -> status
+    def to_h: () -> Hash[String, json]
+  end
+  module AnswerValue : Object, _AnswerValue
+    include Comparable
+    def ==: (untyped) -> bool
+    def yes?: () -> bool
+    def no?: () -> bool
+    def found?: () -> bool
+    def to_s: () -> String
+    def inspect: () -> String
+    def to_f: () -> Float
+    def to_i: () -> Integer
+    def to_sym: () -> Symbol
+    def to_a: () -> Array[untyped]
+    def empty?: () -> bool
+    def include?: (untyped) -> bool
+    def each: () { (untyped) -> untyped } -> untyped
+    def <=>: (untyped) -> Integer?
+    def []: (untyped) -> untyped
+    def to_json: (*untyped) -> String
+  end
+  interface _Probability
+    def probability: () -> Float?
+  end
+  module UnsureAnswer : Object, _Probability
+    def answer: () -> bot
+  end
+  interface _Failure
+    def error: () -> RowError
+  end
+  module FailedAnswer : Object, _Failure
+    def answer: () -> bot
+  end
+  class AnnotationAnswers < Hash[String, untyped]
+    def []: (String | Symbol) -> untyped
+    def fetch: (untyped) -> untyped
+  end
+end
+
+module ThinkThen
+  interface _InputRow
+    def row: () -> untyped
+  end
+  module RankCopy : Object, _InputRow
+    def item: () -> untyped
+  end
+  module InputRow : Object, _InputRow
+    include WireValue
+    def answer: () -> untyped
+    def probability: () -> Float?
+    def detail: () -> untyped
+    def kept?: () -> bool
+    def answered?: () -> bool
+    def unsure?: () -> bool
+    def failed?: () -> bool
+    def function: () -> function
+    def position: () -> Integer
+    def id: () -> (String | Integer | nil)
+    def id_present?: () -> bool
+    def source: () -> Source
+    def status: () -> status
   end
 end

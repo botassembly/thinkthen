@@ -28,7 +28,9 @@ def test_missing_column_rows_keep_engine_positions_and_probability(
     path = Path(os.environ["THINKTHEN_CASES"]) / "typed/decide-precision.json"
     with Loopback(path) as server:
         client = tt.Client(url=server.url, api_key="synthetic")
-        result = source.thinkthen.decide("Ready?", client=client)
+        result = source.thinkthen.decide(
+            "Ready?", client=client, details=True, errors="coerce"
+        )
         frame = result if library == "pandas" else result.struct.unnest()
         assert len(frame) == 2
         assert frame["position"].to_list() == [1, 2]
@@ -56,7 +58,9 @@ def test_empty_columns_preserve_declared_fields(library: str) -> None:
         if library == "pandas"
         else module.Series("body", [], dtype=module.String)
     )
-    result = source.thinkthen.decide("Ready?", client=tt.Client(backend="stub"))
+    result = source.thinkthen.decide(
+        "Ready?", client=tt.Client(backend="stub"), details=True, errors="coerce"
+    )
     frame = result if library == "pandas" else result.struct.unnest()
     assert len(frame) == 0
     assert "probability" in frame.columns and "source" in frame.columns
@@ -108,10 +112,12 @@ def test_filter_unsure_and_failed_are_not_kept(
         ) as client,
     ):
         if surface == "stream":
-            with client.filter(question, records) as rows:
+            with client.filter_rows(question, records) as rows:
                 result = getattr(rows, "to_" + library)()
         else:
-            result = source.thinkthen.filter(question, client=client)
+            result = source.thinkthen.filter(
+                question, client=client, details=True, errors="coerce"
+            )
         frame = (
             result
             if library == "pandas"

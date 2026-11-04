@@ -1,0 +1,19 @@
+{
+  "entries": {
+    "refunds": {
+      "question": {
+        "function": "filter",
+        "question": "Does the customer request a refund?",
+        "field": "/text"
+      }
+    },
+    "topic": {
+      "question": {
+        "function": "choose",
+        "question": "What is the message about?",
+        "choices": ["billing", "shipping", "other"],
+        "field": "/text"
+      }
+    }
+  }
+}

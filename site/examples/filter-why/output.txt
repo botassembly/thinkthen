@@ -1,0 +1,3 @@
+{"item":"Please refund my order.","status":"answered","kept":true}
+{"item":"Where is my parcel?","status":"answered","kept":false}
+{"item":"I was charged twice for one invoice.","status":"unsure","kept":false}

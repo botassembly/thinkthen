@@ -72,8 +72,11 @@ fn first_interrupt_cancels_a_held_request_on_each_backend() {
 #[test]
 fn broken_stdout_exits_silently_with_141() {
     let (output, reader) = support::closed_output();
+    let source = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(source.path(), "evidence").unwrap();
     let result = support::command()
         .args(["decide", "Ready?", "--backend", "stub", "--json"])
+        .arg(source.path())
         .stdin(Stdio::null())
         .stdout(output)
         .stderr(Stdio::piped())

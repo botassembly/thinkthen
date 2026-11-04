@@ -17,12 +17,16 @@ func cachedLibrary() (string, error) {
 	}
 	base, err := os.UserCacheDir()
 	if err == nil {
-		path, cacheErr := cacheLibrary(base)
-		// Only direct filesystem errors permit fallback. Cache integrity failures
-		// remain fatal even when an error wraps a filesystem failure.
-		_, unavailable := cacheErr.(*os.PathError)
-		if cacheErr == nil || !unavailable {
-			return path, cacheErr
+		// The user cache root belongs to other programs too. An insecure root
+		// cannot host our engine, but is not a compromised ThinkThen entry.
+		if rootErr := checkCachePath(base, true); rootErr == nil || errors.Is(rootErr, os.ErrNotExist) {
+			path, cacheErr := cacheLibrary(base)
+			// Only direct filesystem errors permit fallback. Cache integrity failures
+			// remain fatal even when an error wraps a filesystem failure.
+			_, unavailable := cacheErr.(*os.PathError)
+			if cacheErr == nil || !unavailable {
+				return path, cacheErr
+			}
 		}
 	}
 	base, err = temporaryCache()

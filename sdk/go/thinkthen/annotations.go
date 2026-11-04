@@ -2,16 +2,37 @@ package thinkthen
 
 import (
 	"encoding/json"
+	"fmt"
+	"iter"
 	"sort"
+	"strings"
 )
 
+// Annotation is a sealed typed child outcome with its function identity.
 type Annotation interface {
 	Function() Function
 	annotation()
 }
+
+// Annotations holds child outcomes by question name.
 type Annotations struct{ entries map[string]Annotation }
 
+// String displays annotation names and their typed answers in name order.
+func (a Annotations) String() string {
+	var entries []string
+	for _, name := range a.Names() {
+		entries = append(entries, fmt.Sprintf("%s: %v", name, a.entries[name]))
+	}
+	return "{" + strings.Join(entries, ", ") + "}"
+}
+
+// GoString provides the same concise representation as String.
+func (a Annotations) GoString() string { return a.String() }
+
+// Get returns the named annotation, if present.
 func (a Annotations) Get(name string) (Annotation, bool) { v, ok := a.entries[name]; return v, ok }
+
+// Names returns annotation names in sorted order.
 func (a Annotations) Names() []string {
 	names := make([]string, 0, len(a.entries))
 	for n := range a.entries {
@@ -21,45 +42,71 @@ func (a Annotations) Names() []string {
 	return names
 }
 
+// DecideAnnotation is a typed decide child outcome.
 type DecideAnnotation struct{ Entry[bool, NoDetail] }
 
-func (DecideAnnotation) annotation()        {}
+func (DecideAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (DecideAnnotation) Function() Function { return FunctionDecide }
 
+// ChooseAnnotation is a typed choose child outcome.
 type ChooseAnnotation struct{ Entry[string, LabelsDetail] }
 
-func (ChooseAnnotation) annotation()        {}
+func (ChooseAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (ChooseAnnotation) Function() Function { return FunctionChoose }
 
+// TagAnnotation is a typed tag child outcome.
 type TagAnnotation struct{ Entry[[]string, LabelsDetail] }
 
-func (TagAnnotation) annotation()        {}
+func (TagAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (TagAnnotation) Function() Function { return FunctionTag }
 
+// ScoreAnnotation is a typed score child outcome.
 type ScoreAnnotation struct{ Entry[float64, LevelsDetail] }
 
-func (ScoreAnnotation) annotation()        {}
+func (ScoreAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (ScoreAnnotation) Function() Function { return FunctionScore }
 
+// FindAnnotation is a typed find child outcome.
 type FindAnnotation struct{ Entry[*Span, NoDetail] }
 
-func (FindAnnotation) annotation()        {}
+func (FindAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (FindAnnotation) Function() Function { return FunctionFind }
 
+// RecognizeAnnotation is a typed recognize child outcome.
 type RecognizeAnnotation struct{ Entry[[]Name, RecognizeDetail] }
 
-func (RecognizeAnnotation) annotation()        {}
+func (RecognizeAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (RecognizeAnnotation) Function() Function { return FunctionRecognize }
 
+// RelateAnnotation is a typed relate child outcome.
 type RelateAnnotation struct{ Entry[[]Relation, PairsDetail] }
 
-func (RelateAnnotation) annotation()        {}
+func (RelateAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (RelateAnnotation) Function() Function { return FunctionRelate }
 
+// FilterAnnotation is a typed filter child outcome.
 type FilterAnnotation struct{ Entry[bool, NoDetail] }
 
-func (FilterAnnotation) annotation()        {}
+func (FilterAnnotation) annotation() {}
+
+// Function returns the annotation function.
 func (FilterAnnotation) Function() Function { return FunctionFilter }
+
+// UnmarshalJSON decodes typed annotation child outcomes from engine JSON.
 func (a *Annotations) UnmarshalJSON(data []byte) error {
 	var entries map[string]struct {
 		Function       string
@@ -139,4 +186,15 @@ func (a *Annotations) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+// All visits each annotation in name order and stops when the caller breaks.
+func (a Annotations) All() iter.Seq2[string, Annotation] {
+	return func(yield func(string, Annotation) bool) {
+		for _, name := range a.Names() {
+			if !yield(name, a.entries[name]) {
+				return
+			}
+		}
+	}
 }

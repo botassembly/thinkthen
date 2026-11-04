@@ -32,7 +32,7 @@ fn questions_require_their_domains_and_round_trip_the_canonical_contract() {
             serde_json::to_value(request.question().function()).unwrap(),
             question["function"]
         );
-        assert_eq!(request.question().evidence_pointer().to_string(), "");
+        assert_eq!(request.question().field_pointer().to_string(), "");
         assert_eq!(request.name(), Some("named"));
         let encoded = serde_json::to_string(&request).unwrap();
         assert_eq!(
@@ -160,7 +160,7 @@ fn both_backends_use_direct_keys_and_only_their_own_environment_fallback() {
                 .run(&Decide::new("Ready?").unwrap(), Record::text("evidence"))
                 .unwrap();
             assert_eq!(row.probability().unwrap().get(), 0.8123456789012345);
-            assert_eq!(row.into_result().unwrap(), Some(true));
+            assert!(row.into_answer().unwrap());
             assert_eq!(reads.get(), usize::from(!direct));
             assert!(!format!("{settings:?}").contains(KEY));
         }
@@ -195,10 +195,10 @@ fn toolbox_selection_retains_required_domains_and_rejects_duplicate_names() {
     let entries = toolbox
         .iter()
         .map(|(name, question)| (name.to_owned(), question.clone().try_into().unwrap()))
-        .collect();
+        .collect::<Vec<(String, questions::AnnotatableQuestion)>>();
     let annotate = questions::Annotate::new(entries)
         .unwrap()
-        .evidence("/body".parse().unwrap());
+        .field("/body".parse().unwrap());
     let rank: thinkthen::SimpleQuestion = questions::Rank::new("How?", ["low", "high"])
         .unwrap()
         .into();
@@ -209,7 +209,7 @@ fn toolbox_selection_retains_required_domains_and_rejects_duplicate_names() {
     let error = Request::from_json(r#"{"question":{"function":"annotate","questions":{"rank":{"function":"rank","question":"How?","levels":["low","high"]}}}}"#).unwrap_err();
     assert_eq!(error.code(), thinkthen::Code::UsageQuestion);
     assert_eq!(annotate.questions().iter().count(), 1);
-    assert_eq!(annotate.evidence_pointer().to_string(), "/body");
+    assert_eq!(annotate.field_pointer().to_string(), "/body");
     let request = Request::new(annotate)
         .named("summary")
         .unwrap()
@@ -230,7 +230,7 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
             questions::Decide::new("Ready?")
                 .unwrap()
                 .threshold(band)
-                .evidence("/body".parse().unwrap())
+                .field("/body".parse().unwrap())
                 .into(),
             json!({"low":0.2,"high":0.8}),
         ),
@@ -285,7 +285,7 @@ fn typed_builders_map_thresholds_evidence_rules_and_ranking_limits() {
         let encoded = serde_json::to_value(&question).unwrap();
         assert_eq!(encoded["threshold"], threshold);
         if encoded["function"] == "decide" {
-            assert_eq!(encoded["evidence"], "/body");
+            assert_eq!(encoded["field"], "/body");
         }
         if encoded["function"] == "relate" {
             assert_eq!(
@@ -331,18 +331,19 @@ fn annotation_preserves_inherited_evidence_and_explicit_root_selection() {
         json!({"function":"recognize","kinds":["person"]}),
         json!({"function":"relate","rules":[{"relation":"knows","source":"person","target":"person"}]}),
     ] {
-        for evidence in [
+        for field in [
             None,
             Some(json!("")),
             Some(json!("/title")),
             Some(json!(null)),
         ] {
             let mut child = child.clone();
-            if let Some(value) = &evidence {
-                child["evidence"] = value.clone();
+            if let Some(value) = &field {
+                child["field"] = value.clone();
             }
-            let input = json!({"question":{"function":"annotate","evidence":"/body","questions":{"q":child}}});
-            if evidence == Some(json!(null)) {
+            let input =
+                json!({"question":{"function":"annotate","field":"/body","questions":{"q":child}}});
+            if field == Some(json!(null)) {
                 assert!(!validator.is_valid(&input));
                 assert!(Request::from_json(&input.to_string()).is_err());
                 continue;
@@ -352,25 +353,23 @@ fn annotation_preserves_inherited_evidence_and_explicit_root_selection() {
             let Question::Annotate(annotation) = admitted.question() else {
                 panic!("expected annotation")
             };
-            let selected = annotation.questions()["q"].evidence_override();
+            let selected = annotation.questions()["q"].field_override();
             assert_eq!(
                 selected.map(ToString::to_string),
-                evidence
+                field
                     .as_ref()
                     .map(|value| value.as_str().unwrap().to_owned())
             );
             assert_eq!(
-                selected
-                    .unwrap_or(annotation.evidence_pointer())
-                    .to_string(),
-                evidence
+                selected.unwrap_or(annotation.field_pointer()).to_string(),
+                field
                     .as_ref()
                     .map_or("/body", |value| value.as_str().unwrap())
             );
             let encoded = serde_json::to_value(&admitted).unwrap();
             assert_eq!(
-                encoded["question"]["questions"]["q"].get("evidence"),
-                evidence.as_ref()
+                encoded["question"]["questions"]["q"].get("field"),
+                field.as_ref()
             );
             validator.validate(&encoded).unwrap();
             assert_eq!(

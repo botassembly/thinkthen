@@ -11,21 +11,17 @@ fn read<T: serde::de::DeserializeOwned>(json: &str) -> Result<T, Error> {
         ))
     })
 }
-fn span(evidence: &str, text: &str, start: usize, end: usize) -> bool {
+fn span(field: &str, text: &str, start: usize, end: usize) -> bool {
     start < end
-        && end <= evidence.chars().count()
-        && evidence
-            .chars()
-            .skip(start)
-            .take(end - start)
-            .eq(text.chars())
+        && end <= field.chars().count()
+        && field.chars().skip(start).take(end - start).eq(text.chars())
 }
-fn names(question: &Recognize, answer: Vec<results::Name>, evidence: &str) -> bool {
+fn names(question: &Recognize, answer: Vec<results::Name>, field: &str) -> bool {
     answer
         .windows(2)
         .all(|pair| matches!(pair, [left,right] if left.end <= right.start))
         && answer.iter().all(|name| {
-            span(evidence, &name.text, name.start, name.end)
+            span(field, &name.text, name.start, name.end)
                 && question
                     .inner
                     .kinds
@@ -33,15 +29,15 @@ fn names(question: &Recognize, answer: Vec<results::Name>, evidence: &str) -> bo
                     .any(|kind| kind.label() == name.kind)
         })
 }
-fn relations(question: &Relate, answer: Vec<results::Relation>, evidence: &str) -> bool {
+fn relations(question: &Relate, answer: Vec<results::Relation>, field: &str) -> bool {
     answer.iter().enumerate().all(|(position, relation)| {
         let source = &relation.source;
         let target = &relation.target;
         (source.text != target.text || source.kind != target.kind)
             && (!relation.either || source.start < target.start)
             && (source.end <= target.start || target.end <= source.start)
-            && span(evidence, &source.text, source.start, source.end)
-            && span(evidence, &target.text, target.start, target.end)
+            && span(field, &source.text, source.start, source.end)
+            && span(field, &target.text, target.start, target.end)
             && !answer.iter().take(position).any(|prior| {
                 prior.relation == relation.relation
                     && prior.source.text == source.text
@@ -59,7 +55,7 @@ fn relations(question: &Relate, answer: Vec<results::Relation>, evidence: &str) 
             })
     })
 }
-pub(crate) fn validate(question: &Question, json: &str, evidence: &str) -> Result<(), Error> {
+pub(crate) fn validate(question: &Question, json: &str, field: &str) -> Result<(), Error> {
     let valid = match question {
         Question::Decide(_) | Question::Filter(_) => {
             let _: bool = read(json)?;
@@ -76,7 +72,11 @@ pub(crate) fn validate(question: &Question, json: &str, evidence: &str) -> Resul
         Question::Tag(question) => {
             let answer: Vec<String> = read(json)?;
             answer.iter().enumerate().all(|(index, label)| {
-                question.inner.labels.contains(label)
+                question
+                    .inner
+                    .labels
+                    .iter()
+                    .any(|option| option.label() == label)
                     && !answer.iter().take(index).any(|prior| prior == label)
             })
         }
@@ -91,7 +91,7 @@ pub(crate) fn validate(question: &Question, json: &str, evidence: &str) -> Resul
         Question::Find(_) => {
             let answer: Option<results::Found> = read(json)?;
             answer.is_none_or(|answer| {
-                crate::core::function::find::units(evidence)
+                crate::core::function::find::units(field)
                     .iter()
                     .any(|found| {
                         found.text == answer.text
@@ -100,8 +100,8 @@ pub(crate) fn validate(question: &Question, json: &str, evidence: &str) -> Resul
                     })
             })
         }
-        Question::Recognize(question) => names(question, read(json)?, evidence),
-        Question::Relate(question) => relations(question, read(json)?, evidence),
+        Question::Recognize(question) => names(question, read(json)?, field),
+        Question::Relate(question) => relations(question, read(json)?, field),
         // The record store admits annotation members separately because selectors differ.
         Question::Annotate(_) => false,
     };

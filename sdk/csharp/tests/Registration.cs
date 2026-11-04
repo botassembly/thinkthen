@@ -26,6 +26,9 @@ internal static partial class Program
             Check(row.Source.Backend == Backend.Stub, "DI options did not reach the client");
             Check(!Row(row).ToJsonString().Contains(secret, StringComparison.Ordinal), "row source leaked a key");
             await Code(ErrorCode.UsageQuestion, async () => { await client.DecideAsync("", "alpha"); });
+            await foreach (var _ in client.DecideStreamAsync("Ready?", Records(new string?[] { null, null }))) { }
+            Check(captured.Levels.Where(entry => entry.Message.Contains("row failed", StringComparison.Ordinal))
+                .All(entry => entry.Level == LogLevel.Debug), "record failures flooded warning logs");
             Check(captured.Messages.All(message => !message.Contains(secret, StringComparison.Ordinal)),
                 "host logger exposed a key");
             if (logging) Check(captured.Messages.Count > 0, "registered host logger received no lifecycle or error event");
@@ -39,11 +42,16 @@ internal static partial class Program
 internal sealed class CapturedLogger : ILogger<ThinkThenClient>
 {
     internal List<string> Messages { get; } = new();
+    internal List<(LogLevel Level, string Message)> Levels { get; } = new();
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
     public bool IsEnabled(LogLevel logLevel) => true;
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
-        lock (Messages) Messages.Add(formatter(state, exception) + exception?.ToString());
+        lock (Messages)
+        {
+            string message = formatter(state, exception) + exception?.ToString();
+            Messages.Add(message); Levels.Add((logLevel, message));
+        }
     }
 }

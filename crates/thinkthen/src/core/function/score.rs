@@ -6,7 +6,7 @@ use crate::core::{Ask, Error, ErrorKind};
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub(crate) struct Score {
     pub(crate) text: String,
-    pub(crate) levels: Vec<String>,
+    pub(crate) levels: Vec<crate::core::ChoiceOption>,
 }
 
 impl Score {
@@ -19,8 +19,20 @@ impl Score {
         text: impl Into<String>,
         levels: impl IntoIterator<Item = impl Into<String>>,
     ) -> Result<Self, Error> {
+        Self::with_options(
+            text,
+            levels
+                .into_iter()
+                .map(|value| crate::core::ChoiceOption::new(value.into()))
+                .collect::<Result<Vec<_>, _>>()?,
+        )
+    }
+    pub(crate) fn with_options(
+        text: impl Into<String>,
+        levels: impl IntoIterator<Item = crate::core::ChoiceOption>,
+    ) -> Result<Self, Error> {
         let text = text.into();
-        let levels: Vec<String> = levels.into_iter().map(Into::into).collect();
+        let levels: Vec<_> = levels.into_iter().collect();
         if text.trim().is_empty() {
             return Err(Error::new(
                 ErrorKind::Question,
@@ -28,8 +40,9 @@ impl Score {
             ));
         }
         if levels.len() < crate::core::questions::MIN_LEVELS
-            || levels.iter().any(|level| level.trim().is_empty())
-            || !crate::core::ask::distinct_labels(levels.iter().map(String::as_str))
+            || !crate::core::ask::distinct_labels(
+                levels.iter().map(crate::core::ChoiceOption::label),
+            )
         {
             return Err(Error::new(
                 ErrorKind::Question,
@@ -43,10 +56,24 @@ impl Score {
         Ok(Self { text, levels })
     }
 
-    fn ask(&self, evidence: &str) -> Ask {
+    fn ask(&self, field: &str) -> Ask {
+        let mut text = self.text.clone();
+        for level in &self.levels {
+            if let Some(description) = level.description_text() {
+                text.push_str(&format!(
+                    "\nLevel {} means: {}",
+                    serde_json::to_string(level.label()).unwrap_or_default(),
+                    serde_json::to_string(description).unwrap_or_default()
+                ));
+            }
+        }
         Ask::Scale {
-            instructions: super::quoted(evidence, &self.text),
-            levels: self.levels.clone(),
+            instructions: super::quoted(field, &text),
+            levels: self
+                .levels
+                .iter()
+                .map(|level| level.label().to_owned())
+                .collect(),
         }
     }
 }
@@ -57,8 +84,8 @@ impl super::Function for Score {
         record: &crate::core::AdmittedRecord,
         _limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        let evidence = record.evidence();
-        Ok(vec![self.ask(evidence)])
+        let field = record.field();
+        Ok(vec![self.ask(field)])
     }
 
     fn read_record(

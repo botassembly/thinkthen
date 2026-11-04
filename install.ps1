@@ -1,6 +1,9 @@
 # Install the command from a release after verifying its checksum.
 # irm https://thinkthen.dev/install.ps1 | iex
 # & .\install.ps1 --version 0.2.0
+# Adds the install folder to HKCU Environment\Path and this session unless
+# THINKTHEN_NO_MODIFY_PATH=1. The receipt records the registry value to remove
+# the folder from when uninstalling; the machine PATH is never changed.
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
@@ -39,6 +42,59 @@ function Assert-RegularFile([string] $Path) {
     }
 }
 
+function Test-PathEntry([string] $Value, [string] $Directory) {
+    foreach ($entry in ($Value -split ';')) {
+        $expanded = [Environment]::ExpandEnvironmentVariables($entry).Trim('"').TrimEnd('\')
+        if (-not [IO.Path]::IsPathRooted($expanded)) { continue }
+        try { $expanded = [IO.Path]::GetFullPath($expanded).TrimEnd('\') } catch { continue }
+        if ($expanded -ieq $Directory.TrimEnd('\')) { return $true }
+    }
+    return $false
+}
+
+function Add-UserPath([string] $Directory) {
+    $changed = $false
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
+    try {
+        $kind = [Microsoft.Win32.RegistryValueKind]::ExpandString
+        $raw = ''
+        if ($key.GetValueNames() -contains 'Path') {
+            $kind = $key.GetValueKind('Path')
+            if ($kind -notin @([Microsoft.Win32.RegistryValueKind]::String, [Microsoft.Win32.RegistryValueKind]::ExpandString)) {
+                throw 'User PATH must be a string or expandable string; its value was not changed.'
+            }
+            $raw = [string] $key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        }
+        if (-not (Test-PathEntry $raw $Directory)) {
+            $updated = $Directory
+            if ($raw.Length) { $updated = $raw + ';' + $Directory }
+            $key.SetValue('Path', $updated, $kind)
+            $changed = $true
+            Write-Host "Added $Directory to user PATH (HKCU\Environment\Path). New windows pick it up."
+        }
+    } finally { $key.Dispose() }
+    if (-not (Test-PathEntry $env:Path $Directory)) { $env:Path = $Directory + ';' + $env:Path }
+    if ($changed) {
+        if (-not ('ThinkThenInstaller.EnvironmentChange' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace ThinkThenInstaller {
+    public static class EnvironmentChange {
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr SendMessageTimeout(IntPtr window, uint message,
+            IntPtr parameter, string value, uint flags, uint timeout, out IntPtr result);
+    }
+}
+'@
+        }
+        $result = [IntPtr]::Zero
+        $null = [ThinkThenInstaller.EnvironmentChange]::SendMessageTimeout(
+            [IntPtr] 0xffff, 0x001a, [IntPtr]::Zero, 'Environment', 2, 5000, [ref] $result)
+    }
+    return $changed
+}
+
 $requested = 'latest'
 for ($index = 0; $index -lt $args.Count; $index++) {
     switch -CaseSensitive ($args[$index]) {
@@ -68,6 +124,9 @@ try {
     $directory = Join-Path $HOME '.local\bin'
     if ($env:THINKTHEN_INSTALL_DIR) { $directory = $env:THINKTHEN_INSTALL_DIR }
     $directory = Assert-InstallPath $directory
+    if ($env:THINKTHEN_NO_MODIFY_PATH -ne '1' -and $directory.Contains(';')) {
+        throw 'Install directory contains a PATH separator; set THINKTHEN_NO_MODIFY_PATH=1 for an explicit-path install.'
+    }
     $installed = Join-Path $directory 'thinkthen.exe'
     $receipt = Join-Path $directory 'thinkthen.install.json'
     Assert-RegularFile $installed
@@ -125,6 +184,7 @@ try {
     $null = Assert-InstallPath $directory
     Assert-RegularFile $installed
     Assert-RegularFile $receipt
+    $previous = $null
     if (Test-Path -LiteralPath $receipt) {
         $previous = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
         if ($previous.state -eq 'pending') {
@@ -146,11 +206,20 @@ try {
     $record | ConvertTo-Json | Set-Content -LiteralPath $receiptStage -Encoding UTF8
     Move-Item -LiteralPath $receiptStage -Destination $receipt -Force
     Move-Item -LiteralPath $stage -Destination $installed -Force
+    $pathChanges = @()
+    if ($previous -and $previous.PSObject.Properties['path_changes'] -and
+        @($previous.path_changes) -contains 'HKCU\Environment\Path') {
+        $pathChanges = @('HKCU\Environment\Path')
+    }
+    if ($env:THINKTHEN_NO_MODIFY_PATH -ne '1') {
+        if (Add-UserPath $directory) { $pathChanges = @('HKCU\Environment\Path') }
+    }
+    $record.path_changes = @($pathChanges)
     $record.state = 'installed'
     $record | ConvertTo-Json | Set-Content -LiteralPath $receiptStage -Encoding UTF8
     Move-Item -LiteralPath $receiptStage -Destination $receipt -Force
     Write-Output "Installed $reported to $installed"
-    if (@($env:PATH -split ';') -notcontains $directory) {
+    if (-not (Test-PathEntry $env:PATH $directory)) {
         $quoted = $directory.Replace("'", "''")
         Write-Output "For this session: `$env:PATH = '$quoted;' + `$env:PATH"
     }

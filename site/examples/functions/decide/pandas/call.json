@@ -1,0 +1,5 @@
+{
+  "anchor": "messages[\"is_refund\"] = messages[\"message\"].thinkthen.decide(",
+  "before": 0,
+  "after": 2
+}

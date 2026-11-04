@@ -19,6 +19,17 @@ internal static partial class Program
 
     private static async Task Main(string[] args)
     {
+        if (args is ["--interface-only"]) { InterfaceCases(); return; }
+        if (args is ["--description-admission"]) { DescriptionAdmissionCases(); return; }
+        if (args is ["--backend-empty"])
+        {
+            Check(Environment.GetEnvironmentVariable("THINKTHEN_BACKEND") == "", "runner did not preserve an empty backend environment value");
+            await Code(ErrorCode.UsageBackend, () => { using var client = new ThinkThenClient(); return Task.CompletedTask; });
+            Console.WriteLine("C# empty backend environment refused by shared admission.");
+            return;
+        }
+        if (args is ["--rank-snapshot"]) { await RankSnapshotCases(); return; }
+        if (args is ["--surface-interface"]) { await InterfaceNativeCases(); return; }
         if (args is ["--registry", var contract])
         {
             try { await Registry(contract); }
@@ -55,10 +66,13 @@ internal static partial class Program
         }
         if (args is [var construction, "--stub-only"])
         {
+            InterfaceCases();
             await Construction(construction);
             return;
         }
         Check(args.Length == 3, "supply construction file, canonical conformance directory and loopback executable");
+        InterfaceCases();
+        await InterfaceNativeCases();
         await Construction(args[0]);
         await AdmissionCases(args[1]);
         await Conformance(Path.Combine(args[1], "typed"), args[2]);
@@ -102,7 +116,7 @@ internal static partial class Program
         try { await action(); }
         catch (ThinkThenException error)
         {
-            Check(error.Code == code, $"expected {code}, got {error.Code}");
+            Check(error.ErrorCode == code, $"expected {code}, got {error.ErrorCode}");
             return;
         }
         throw new Exception($"expected {code}");

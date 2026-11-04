@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate the TypeScript error declarations from the engine registry."""
 import json
+from release_registry import NODE_TARGETS
 from pathlib import Path
 root = Path(__file__).resolve().parent.parent
 codes = json.loads((root / 'schemas/contract.json').read_text())['codes']
@@ -9,6 +10,10 @@ values = [code['name'] for code in codes]
 (package / 'errors.js').write_text('// Generated during package preparation.\nexport const ERROR_CODES = Object.freeze(' + json.dumps(values) + ');\n')
 lines = ['// Generated during package preparation.']
 for name, selected in [('ErrorCode', codes), ('RowErrorCode', [c for c in codes if c['record']]), ('UsageCode', [c for c in codes if c['family'] == 'usage']), ('BackendCode', [c for c in codes if c['family'] == 'backend'])]:
+    lines.append('/** Shared engine error codes admitted in this context. */')
     lines.append('export type ' + name + ' = ' + ' | '.join(json.dumps(c['name']) for c in selected) + ';')
+lines.append('/** Every shared engine error code, in registry order. */')
 lines.append('export declare const ERROR_CODES: readonly ErrorCode[];')
 (package / 'errors.d.ts').write_text('\n'.join(lines) + '\n')
+
+(package / 'platforms.js').write_text('// Generated during package preparation.\nexport const PLATFORMS = Object.freeze(' + json.dumps(list(NODE_TARGETS.values())) + ');\n')

@@ -1,24 +1,24 @@
 //! Resolve explicit options before consulting environment values.
-use crate::{Engine, Error, ErrorKind, Settings};
+use crate::{Code, Engine, Error, Settings};
 use clap::ArgMatches;
 use serde_json::{Map, Value};
 
 pub(super) fn usage(field: &str, expected: &str, received: &str) -> Error {
-    Error::new(
-        ErrorKind::Question,
+    Error::from_contract(
+        Code::UsageOption,
         crate::core::diagnostic::requirement(field, expected, received),
     )
 }
 pub(super) fn unknown(field: &str, name: &str, accepted: &[&str]) -> Error {
-    Error::new(
-        ErrorKind::Question,
+    Error::from_contract(
+        Code::UsageOption,
         crate::core::diagnostic::unknown(field, name, accepted),
     )
 }
 pub(super) fn unknown_value(field: &str, value: &str, accepted: &[&str]) -> Error {
-    Error::new(
-        ErrorKind::Question,
-        crate::core::diagnostic::unknown_value(field, value, accepted),
+    Error::from_contract(
+        Code::UsageOption,
+        crate::core::diagnostic::unknown_option_value(field, value, accepted),
     )
 }
 pub(super) fn explicit(matches: &ArgMatches, key: &str) -> Option<String> {
@@ -35,7 +35,11 @@ pub(super) fn boolean(key: &str, value: Option<String>) -> Result<Option<bool>, 
         .map(|v| match v.as_str() {
             "true" => Ok(true),
             "false" => Ok(false),
-            _ => Err(usage(key, "true or false", "a string (contents redacted)")),
+            _ => Err(usage(
+                key,
+                "true or false",
+                &format!("{:?}", crate::escape_diagnostic(&v)),
+            )),
         })
         .transpose()
 }
@@ -72,9 +76,13 @@ pub(super) fn number(key: &str, text: &str) -> Result<Value, Error> {
     text.parse::<serde_json::Number>()
         .map(Value::Number)
         .map_err(|_| {
-            Error::new(
-                ErrorKind::Question,
-                crate::core::diagnostic::expected(key, "a number", &Value::String(text.into())),
+            Error::from_contract(
+                Code::UsageOption,
+                crate::core::diagnostic::requirement(
+                    key,
+                    "a number",
+                    &format!("`{}`", crate::escape_diagnostic(text)),
+                ),
             )
         })
 }
@@ -146,7 +154,7 @@ pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
             );
         }
     }
-    if let Some(url) = explicit(matches, "url") {
+    if let Some(url) = value(matches, "url") {
         settings.insert("url".into(), url.into());
     }
     Settings::from_json(&Value::Object(settings).to_string())?.engine(|key| std::env::var(key).ok())

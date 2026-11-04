@@ -23,7 +23,7 @@ func TestSavedToolbox(t *testing.T) {
 		t.Fatal(err)
 	}
 	q, ok := box.Choose("topic")
-	if !ok || !reflect.DeepEqual(q.Choices(), []string{"billing", "shipping"}) || *q.Evidence() != "/body" {
+	if !ok || !reflect.DeepEqual(q.Choices(), []string{"billing", "shipping"}) || *q.Field() != "/body" {
 		t.Fatal("typed question was not restored")
 	}
 	rule, ok := box.Relate("names")
@@ -61,7 +61,7 @@ func TestSavedToolbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := c.Choose(context.Background(), tt.NewChoose("Which topic?", []string{"billing", "shipping"}).WithEvidence("/body").WithThreshold(tt.Cutoff(0.7)), record)
+	want, err := c.Choose(context.Background(), tt.NewChoose("Which topic?", []string{"billing", "shipping"}).WithField("/body").WithThreshold(tt.Cutoff(0.7)), record)
 	if err != nil {
 		t.Fatal(err)
 	}

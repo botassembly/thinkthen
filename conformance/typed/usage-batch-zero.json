@@ -16,5 +16,9 @@
   "requests": 0,
   "client": {
     "batch": 0
+  },
+  "not_applicable": {
+    "go": "Config.Batch zero selects the engine default; an explicit zero batch override is not representable.",
+    "postgres": "PostgreSQL's approved host setting contract reserves batch 0 for automatic batching; this shared case tests the library's explicit positive batch count."
   }
 }

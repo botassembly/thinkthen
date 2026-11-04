@@ -1,0 +1,2 @@
+thinkthen: record.json: position 2 id none file broken.jsonl: the record is not JSON
+thinkthen: record.missing: position 3 id a3 file broken.jsonl: the record holds nothing at /text

@@ -1,0 +1,1 @@
+pg-server.sh: starts a private PostgreSQL 18 server for the build; a reader runs the SQL on their own server

@@ -1,0 +1,25 @@
+---
+import Example from './Example.astro';
+import LanguageVariant from './LanguageVariant.astro';
+import { missingFunctionVariants } from '../lib/function-variants.mjs';
+interface Props { id: string }
+const { id } = Astro.props;
+const content = await Astro.slots.render('default');
+const variants = [...content.matchAll(/data-language-variant="([^"]+)"/g)].map((match) => match[1]);
+const extra = missingFunctionVariants([...content.matchAll(/data-example="([^"]+)"/g)].map((match) => match[1]), variants);
+if (variants.filter((surface) => surface === 'command').length !== 1 || new Set(variants).size !== variants.length) throw new Error(`Language group ${id}: require one command fallback and unique variants`);
+---
+<div data-language-group={id}>
+  <Fragment set:html={content} />
+  {extra.map(({ surface, example }) => <LanguageVariant surface={surface}><Example id={example} wrap /></LanguageVariant>)}
+  <p data-language-fallback hidden>This example uses the command.</p>
+</div>
+<script>
+  import { applySurfaceGroups, readSurface } from '../lib/surface-choice.mjs';
+  const apply = () => applySurfaceGroups(readSurface());
+  apply();
+  document.addEventListener('astro:page-load', apply);
+</script>
+<style>
+  [data-language-fallback] { color: var(--sl-color-gray-3); font-size: var(--sl-text-sm); margin-block: 0.25rem; }
+</style>

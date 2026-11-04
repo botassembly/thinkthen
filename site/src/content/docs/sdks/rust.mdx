@@ -1,0 +1,155 @@
+---
+title: Rust SDK
+description: "Rust SDK: ask the ten ThinkThen questions from Rust and get yes, no or not sure back as plain Rust values."
+goal: The reader runs a first decide in Rust, adds the crate, handles not sure and failures, and finds the Rust call for each of the ten functions.
+reader: A Rust developer who wants to ask questions about text from code
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "Rust"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The Rust SDK gives your Rust code the ten functions as methods on one engine; each call gives back a plain Rust value, such as `true` or `false` from decide, or an `Err` when the answer is not sure or ThinkThen can't judge the text.
+
+<Example id="lang-rust" title="src/main.rs" />
+
+`true` means yes: the message asks for a refund.
+
+Add the crate (<Fact k="languages.rust.requires" />):
+
+<InstallLine k="languages.rust.install" lang="sh" />
+
+The engine is inside the crate, so `cargo run` is all it needs. `Engine::from_env()` uses the key from the [Quickstart](/quickstart/).
+
+## Handle not sure and failures
+
+Set a low bar and a high bar with `Threshold::band`. Between them, decide is not sure, and `into_answer()` returns `Err(NoAnswer::Unsure)` with the probability. When ThinkThen can't judge the message, it returns `Err(NoAnswer::Failed)` with the error instead. Neither one can pass for `false`.
+
+<Example id="sdks/rust/unsure" title="src/main.rs" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`probability.get()` is the chance of yes. `error.code()` names the error, such as `record.missing`; [Troubleshooting](/reference/troubleshooting/) lists each one. With `?`, not sure and a failure both stop the function. `answer()` borrows the answer instead of taking it.
+
+`run` itself returns `Err` only when the call can't go ahead, such as blank text (`record.empty`) or a cancelled call.
+
+## The ten functions
+
+Each function reads the same support-inbox messages as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+<Example id="functions/decide/rust" title="src/main.rs" />
+
+Yes: the message asks for a refund. `Decide` takes `.threshold(...)` (one bar with `Threshold::cut`, or a low and a high bar with `Threshold::band`), `.yes_means(...)` and `.no_means(...)`. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/rust" title="src/main.rs" />
+
+A refund is about billing. `Choose` takes `.descriptions(...)`, each choice paired with what it means, and `.threshold(...)`, which can make choose not sure. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="functions/filter/rust" title="src/main.rs" />
+
+The parcel question is left out. `engine.filter` gives back your own items, and leaves out the ones it is not sure about. The closure picks the text to judge from each item. A message that fails arrives as an `Err` in its place, holding the item, and reading goes on. `engine.filter_items` gives every item with its outcome instead. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/rust" title="src/main.rs" />
+
+The message is about both billing and shipping. The answer is a `Vec<String>`, empty when no label fits. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/rust" title="src/main.rs" />
+
+The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+<Example id="functions/rank/rust" title="src/main.rs" />
+
+The double charge is the most urgent. Each answer is a `NonZeroUsize` rank, starting at 1, and `record()` holds the message it belongs to. `Rank` takes `.top(...)` to keep only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/rust" title="src/main.rs" />
+
+The second line states the action. The answer is `Some(Found)`, with `text()`, `start()` and `end()`, or `None` when no line answers. Offsets count UTF-8 bytes, as Rust strings do, so `&message[action.start()..action.end()]` is the same text. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/rust" title="src/main.rs" />
+
+Each `Name` has `text()`, `kind()`, `start()`, `end()` and `probability()`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/rust" title="src/main.rs" />
+
+`RelationRule::new` takes the relation, then the kind of name at each end. `.reads(...)` words the relation, and `.either(true)` makes it work in both directions. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+<Example id="functions/annotate/rust" title="src/main.rs" />
+
+Each answer is read by name. It prints as its answer, or as `unsure` or `failed:` with the error code; `answers.answer::<Decide>("refund")` takes it as a `Result`, as decide does. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+`engine.rows(&question, messages)` takes any owned iterator and gives one result per message, in order. With the `stream` feature, `rows.into_stream()` is a `Stream` for async code; the crate brings no async runtime. Each question takes `.field("/text".parse()?)` to judge one field of a JSON message. Dropping the results, or calling `cancel()`, stops the call. The [Rust API reference](https://docs.rs/thinkthen/0.2.0/thinkthen/) lists every type and method.

@@ -6,6 +6,7 @@ Gem::Specification.new do |spec|
   spec.name = "thinkthen"
   spec.version = ThinkThen::VERSION
   spec.summary = "Ask typed questions about text"
+  spec.description = "Ten typed functions for text, with a native engine, streaming records and RBS signatures."
   spec.authors = ["Ian Maurer"]
   spec.license = "MIT"
   spec.homepage = "https://github.com/botassembly/thinkthen"
@@ -20,5 +21,5 @@ Gem::Specification.new do |spec|
     "rubygems_mfa_required" => "true"
   }
   spec.require_paths = ["lib"]
-  spec.add_runtime_dependency "ffi", "~> 1.17"
+  spec.add_dependency "ffi", "~> 1.17"
 end

@@ -61,9 +61,9 @@ fn bare_output_has_one_relation_per_line_and_empty_success() {
         );
         assert!(output.stderr.is_empty());
         if expected {
-            assert_eq!(output.stdout, b"[1]\tAda --works_for--> Acme\n");
+            assert_eq!(output.stdout, b"Ada --works_for--> Acme\n");
         } else {
-            assert_eq!(output.stdout, b"[1]\n");
+            assert_eq!(output.stdout, b"\n");
         }
     }
 }
@@ -77,7 +77,7 @@ fn details_and_record_streams_keep_rows() {
             2,
         ),
         (
-            vec!["--from", "jsonl", "--json", "--evidence", "/body"],
+            vec!["--from", "jsonl", "--json", "--field", "/body"],
             "{\"body\":\"Ada joined Acme\"}\n",
             1,
         ),

@@ -13,8 +13,13 @@ use std::process::{Output, Stdio};
 use support::reported;
 
 fn run(server: &Loopback, extra: &[&str]) -> Output {
+    let input = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(input.path(), "evidence").unwrap();
     support::command()
-        .args(["choose", "Which?", "--choice", "z", "--choice", "a"])
+        .arg("choose")
+        .arg("Which?")
+        .arg(input.path())
+        .args(["--choice", "z", "--choice", "a"])
         .args(extra)
         .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", KEY)
@@ -74,7 +79,7 @@ fn an_unknown_reply_option_exits_with_backend_error() {
     )
     .unwrap();
     let output = run(&server, &[]);
-    assert_eq!(output.status.code(), Some(6));
-    assert_eq!(output.stdout, b"[1] failed\n");
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
     assert_eq!(reported(&output), "backend.reply");
 }

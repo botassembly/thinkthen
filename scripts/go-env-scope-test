@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Run the real temporary Go invocations without compiling or invoking Go."""
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+if len(sys.argv) == 3 and sys.argv[1] == '--baseline':
+    source = subprocess.check_output(['git', 'show', sys.argv[2] + ':scripts/go-api-check'],
+                                     cwd=ROOT, text=True)
+elif len(sys.argv) == 1:
+    source = (ROOT / 'scripts/go-api-check').read_text()
+else:
+    sys.exit('usage: go-env-scope-test [--baseline REV]')
+readme, = [line for line in source.splitlines() if 'THINKTHEN_BACKEND=stub go run ./readme' in line]
+negative, = [line for line in source.splitlines()
+            if 'THINKTHEN_CONTRACT="$scratch/changed-contract.json" go test' in line]
+setup = '''set -eu
+scratch=$1
+unset THINKTHEN_BACKEND
+THINKTHEN_CONTRACT=canonical-contract
+export THINKTHEN_CONTRACT
+go() {
+    if [ "$1" = run ]; then
+        test "$THINKTHEN_BACKEND" = stub
+        test "$THINKTHEN_CONTRACT" = canonical-contract
+        printf 'README used stub\\n'
+    else
+        test "${THINKTHEN_BACKEND-UNSET}" = UNSET
+        test "$THINKTHEN_CONTRACT" = "$scratch/changed-contract.json"
+        printf 'backends(99): expected negative\\n'
+        return 1
+    fi
+}
+'''
+verify = '''
+printf 'after: backend=%s contract=%s\\n' "${THINKTHEN_BACKEND-UNSET}" "$THINKTHEN_CONTRACT"
+test "${THINKTHEN_BACKEND-UNSET}" = UNSET
+test "$THINKTHEN_CONTRACT" = canonical-contract
+'''
+failed = False
+with tempfile.TemporaryDirectory(prefix='go-env-scope-') as temporary:
+    for name, invocation in (('README', readme), ('enum negative', negative + '\nexit 99\nfi')):
+        result = subprocess.run(['sh', '-eu', '-c', setup + invocation + verify, 'go-env-scope', temporary],
+                                capture_output=True, text=True)
+        print(name + ': ' + result.stdout, end='')
+        if result.returncode:
+            print(result.stderr, file=sys.stderr, end='')
+            failed = True
+sys.exit(1 if failed else 0)

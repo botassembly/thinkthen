@@ -1,4 +1,4 @@
-package io.thinkthen.internal;
+package dev.thinkthen.internal;
 
 import java.nio.charset.StandardCharsets;
 

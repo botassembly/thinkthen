@@ -1,6 +1,6 @@
 package consumer
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.serialization.json.*
@@ -13,7 +13,7 @@ private suspend fun earlyStop() = coroutineScope {
     val entered = CompletableDeferred<Unit>()
     val stopped = CompletableDeferred<Unit>()
     var produced = 0
-    ThinkThen { backend = Backend.Stub; batch = 1 }.use { client ->
+    ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
         val records = flow {
             try {
                 produced++
@@ -33,7 +33,7 @@ private suspend fun earlyStop() = coroutineScope {
 private suspend fun blockedInput() = coroutineScope {
     val entered = CompletableDeferred<Unit>()
     val stopped = CompletableDeferred<Unit>()
-    ThinkThen { backend = Backend.Stub }.use { client ->
+    ThinkThen { backend = Backend.STUB }.use { client ->
         val collector = launch {
             client.decideStream("Ready?", flow<String> {
                 try { capturedSignal(entered, "producer entered"); run { FlowCapture.event("producer waits for cancellation"); awaitCancellation() } }
@@ -49,7 +49,7 @@ private suspend fun blockedInput() = coroutineScope {
 
 // Feature: upstream and downstream exceptions preserve their identity and release producers.
 private suspend fun exceptionCleanup() = coroutineScope {
-    ThinkThen { backend = Backend.Stub; batch = 1 }.use { client ->
+    ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
         val upstream = IllegalStateException("upstream consumer marker")
         try {
             client.decideStream("Ready?", flow<String> { throw upstream }).collect()
@@ -98,7 +98,7 @@ private suspend fun nativeCancellation(mode: String, stream: Boolean, backend: B
 private suspend fun clientClose() = coroutineScope {
     val entered = CompletableDeferred<Unit>()
     val stopped = CompletableDeferred<Unit>()
-    val client = ThinkThen { backend = Backend.Stub }
+    val client = ThinkThen { backend = Backend.STUB }
     try {
         val operation = async {
             client.decideStream("Ready?", flow<String> {
@@ -117,7 +117,7 @@ private suspend fun clientClose() = coroutineScope {
 
 // Feature: cold flows create independent calls, and cancelling one leaves another usable.
 private suspend fun independentCollections() = coroutineScope {
-    ThinkThen { backend = Backend.Stub; batch = 1 }.use { client ->
+    ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
         var collections = 0
         val entered = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
@@ -130,7 +130,7 @@ private suspend fun independentCollections() = coroutineScope {
         val first = async { rows.onEach { capturedSignal(entered, "producer entered"); capturedAwait(release, "collection release") }.toList() }
         capturedAwait(entered, "producer entered")
         val other = rows.toList()
-        check(other.size == 2 && other.map { it.position } == listOf(1uL, 2uL))
+        check(other.size == 2 && other.map { it.position } == listOf(1L, 2L))
         FlowCapture.event("cancel first collection"); first.cancelAndJoin(); FlowCapture.event("first collection joined")
         check(first.isCancelled && collections == 2)
         check(rows.toList() == other)
@@ -146,7 +146,7 @@ private suspend fun remoteRows(directory: Path) {
         val request = sample.required("request").jsonObject
         val question = request.required("question").jsonObject
         val records = request.required("records").jsonArray.toList()
-        for(selected in listOf(Backend.SystemOne,Backend.OpenAI)) Fixture.case(directory.resolve(name)).use { fixture ->
+        for(selected in listOf(Backend.SYSTEMONE,Backend.OPENAI)) Fixture.case(directory.resolve(name)).use { fixture ->
             ThinkThen {
                 backend = selected; url = fixture.url; apiKey = ApiKey("loopback-only")
                 model = "fixture-model"; batch = 1; retry = RetryPolicy(0,0.milliseconds,10000.milliseconds)
@@ -159,10 +159,10 @@ private suspend fun remoteRows(directory: Path) {
                         rows.forEachIndexed { index,row -> assertRow(row,expected[index].jsonObject,selected,::JsonPrimitive,{ error("No detail") }) }
                     }
                     "filter" -> {
-                        val rows = client.filter(question.required("question").jsonPrimitive.content,records.asFlow(),question.threshold(),question.pointer()).toList()
+                        val rows = client.filterRows(question.required("question").jsonPrimitive.content,records.asFlow(),question.threshold(),question.pointer()).toList()
                         check(rows.size == expected.size)
                         rows.forEachIndexed { index,item ->
-                            check(item.item === records[(item.row.position-1uL).toInt()])
+                            check(item.item === records[(item.row.position-1L).toInt()])
                             assertRow(item.row,expected[index].jsonObject,selected,::JsonPrimitive,{ error("No detail") })
                         }
                     }
@@ -170,7 +170,7 @@ private suspend fun remoteRows(directory: Path) {
                         val rows = client.rank(question.required("question").jsonPrimitive.content,records.asFlow(),question.strings("levels"),question["top"]?.jsonPrimitive?.int,question.pointer()).toList()
                         check(rows.size == expected.size)
                         rows.forEachIndexed { index,item ->
-                            check(item.item === records[(item.row.position-1uL).toInt()])
+                            check(snapshotMatches(item.item, records[(item.row.position-1L).toInt()])) { "Rank snapshot ${item.item} differs from its input" }
                             assertRow(item.row,expected[index].jsonObject,selected,::JsonPrimitive,{ contractValue(it) })
                         }
                     }
@@ -186,7 +186,7 @@ fun main(args: Array<String>) = FlowCapture.run(args) { runBlocking {
     FlowCapture.case("earlyStop") { earlyStop() }
     FlowCapture.case("blockedInput") { blockedInput() }
     FlowCapture.case("exceptionCleanup") { exceptionCleanup() }
-    for (backend in listOf(Backend.SystemOne,Backend.OpenAI)) {
+    for (backend in listOf(Backend.SYSTEMONE,Backend.OPENAI)) {
         FlowCapture.case("nativeCancellation $backend headers finite") { nativeCancellation("headers", stream = false, backend = backend) }
         FlowCapture.case("nativeCancellation $backend body stream") { nativeCancellation("body", stream = true, backend = backend) }
     }

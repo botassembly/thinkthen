@@ -1,0 +1,6 @@
+┌────────┬─────────┬───────────┬───────────────┐
+│ msg_id │ person  │ relation  │ organization  │
+│ int32  │ varchar │  varchar  │    varchar    │
+├────────┼─────────┼───────────┼───────────────┤
+│      5 │ Morgan  │ works_for │ Example Group │
+└────────┴─────────┴───────────┴───────────────┘

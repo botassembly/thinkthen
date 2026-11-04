@@ -43,7 +43,11 @@ def test_annotation_columns_keep_inputs_and_child_values(surface: str) -> None:
         ) as client,
     ):
         result = source.thinkthen.annotate(
-            questions, evidence=definition["evidence"], client=client
+            questions,
+            field=definition["field"],
+            client=client,
+            details=True,
+            errors="coerce",
         )
         assert list(result.columns) == [
             "id",
@@ -94,7 +98,9 @@ def test_annotation_columns_retain_schema_for_empty_and_failed_inputs(
     source: Any = pd.DataFrame(values) if surface == "pandas" else pl.DataFrame(values)
     questions = tt.AnnotationQuestions({"ready": tt.DecideQuestion("Ready?")})
     with tt.Client(backend="stub") as client:
-        result = source.thinkthen.annotate(questions, client=client)
+        result = source.thinkthen.annotate(
+            questions, client=client, details=True, errors="coerce"
+        )
     assert list(result.columns) == [
         "id",
         "body",

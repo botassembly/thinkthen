@@ -8,15 +8,8 @@ def readme_examples
   examples = File.read(readme, encoding: Encoding::UTF_8).scan(/```ruby\n(.*?)```/m).flatten
   raise "no Ruby README examples" if examples.empty?
   examples.each_with_index do |example, index|
-    # The cancellation excerpt continues an existing client and record source.
-    source = <<~RUBY
-      require "thinkthen"
-      ThinkThen::Client.open(backend: :stub) do |client|
-        records = ["Please check my order."]
-        #{example}
-      end
-    RUBY
-    output, status = Open3.capture2e(RbConfig.ruby, "-w", "-e", source)
+    # Each example opens its own default client, as a reader's code does; the stub answers here.
+    output, status = Open3.capture2e({"THINKTHEN_BACKEND" => "stub"}, RbConfig.ruby, "-w", "-e", example)
     raise "README Ruby example #{index + 1} failed:\n#{output}" unless status.success?
   end
   puts "installed Ruby gem: all #{examples.length} README code examples pass"

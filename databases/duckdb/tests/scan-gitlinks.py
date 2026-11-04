@@ -11,7 +11,9 @@ from testing import child_environment
 
 env = child_environment()
 root = Path(__file__).resolve().parents[3]
-pins = json.loads((root / 'databases/duckdb/community-versions.json').read_text())['1.4.3']
+sys.path.insert(0, str(root / 'scripts'))
+from duckdb_release import VERSION
+pins = json.loads((root / 'databases/duckdb/community-versions.json').read_text())[VERSION]
 # A generated synthetic credential exercises the pinned upstream detector.
 credential = 'ghp_' + 'aB3cD4eF5gH6iJ7kL8mN9oP0qR1sT2uV3wX4'
 with tempfile.TemporaryDirectory(prefix='gitlink-scans-') as temporary:

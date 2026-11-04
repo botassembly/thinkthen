@@ -1,4 +1,4 @@
-"""Derive installed PostgreSQL enums from the engine registry."""
+"""Derive installed PostgreSQL enums, signatures and settings from the engine registry."""
 import json
 from pathlib import Path
 import sys
@@ -7,45 +7,77 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from rules import FUNCTIONS, arguments, SETTINGS
 registry = json.loads(Path(sys.argv[1]).read_text())
 path = Path(sys.argv[2])
+upgrades = [Path(name) for name in sys.argv[3:]]
 sql = path.read_text()
 for token, key in [('STATUSES', 'statuses'), ('CODES', 'codes')]:
     sql = sql.replace('@' + token + '@', ', '.join("'" + row['name'] + "'" for row in registry[key]))
 values = [row['value'] for row in registry['codes']]
 assert len(values) == len(set(values)) and all(0 < value < 36**3 for value in values)
 # Host transport arguments stay local; question arguments come from the schema.
+TYPES = {'question': 'text', 'choices': 'text[]', 'labels': 'text[]', 'levels': 'text[]',
+         'kinds': 'text[]', 'rules': 'thinkthen.rule[]', 'toolbox': 'jsonb',
+         'threshold': 'float8', 'low': 'float8', 'high': 'float8', 'top': 'bigint', 'field': 'text'}
+ORDER = ['question', 'choices', 'labels', 'levels', 'kinds', 'rules', 'toolbox', 'threshold', 'low', 'high', 'top', 'field']
+# Filter alone raises on failed records unless the caller asks for failed rows.
+LOCAL = {function: [('yes_means', 'text', 'NULL'), ('no_means', 'text', 'NULL')]
+         for function in ('decide', 'filter')}
+LOCAL['filter'].append(('failures', 'text', "'raise'"))
+LOCAL.update({function: [('descriptions', 'jsonb', 'NULL')]
+              for function in ('choose', 'tag', 'score', 'rank')})
+TAIL = [('name', 'text', 'NULL'), ('params', 'jsonb', "'[]'::jsonb"),
+        ('record_column', 'name', "'record'"), ('id_column', 'name', 'NULL')]
 for function, row in FUNCTIONS.items():
     names = arguments(function)
     required = set(row['required']) - {'function'}
     required = {'toolbox' if name == 'questions' else name for name in required}
-    types = {'question': 'text', 'choices': 'text[]', 'labels': 'text[]', 'levels': 'text[]',
-             'kinds': 'text[]', 'rules': 'thinkthen.rule[]', 'toolbox': 'jsonb',
-             'threshold': 'float8', 'low': 'float8', 'high': 'float8', 'top': 'bigint', 'evidence': 'text'}
-    order = ['question', 'choices', 'labels', 'levels', 'kinds', 'rules', 'toolbox', 'threshold', 'low', 'high', 'top', 'evidence']
-    parameters = ['source_sql text'] + [name + ' ' + types[name] + ('' if name in required else ' DEFAULT NULL') for name in order if name in names]
-    parameters += ["name text DEFAULT NULL", "params jsonb DEFAULT '[]'::jsonb", "record_column name DEFAULT 'record'", "id_column name DEFAULT NULL"]
-    sql = re.sub(r'(CREATE FUNCTION thinkthen\.' + function + r')\([^\n]*\)', lambda match: match[1] + '(' + ', '.join(parameters) + ')', sql)
-    signature = ['text'] + [types[name] for name in order if name in names] + ['text', 'jsonb', 'name', 'name']
-    sql = re.sub(r'(REVOKE EXECUTE ON FUNCTION thinkthen\.' + function + r')\([^\n]*\)', lambda match: match[1] + '(' + ', '.join(signature) + ')', sql)
+    own = [(name, TYPES[name], None if name in required else 'NULL') for name in ORDER if name in names]
+    parameters = [('source_sql', 'text', None)] + own + LOCAL.get(function, []) + TAIL
+    declared = ', '.join(name + ' ' + kind + ('' if default is None else ' DEFAULT ' + default)
+                         for name, kind, default in parameters)
+    signature = ', '.join(kind for _, kind, _ in parameters)
+    sql, count = re.subn(r'(CREATE FUNCTION thinkthen\.' + function + r')\([^()]*\)',
+                         lambda match: match[1] + '(' + declared + ')', sql)
+    assert count == 1, function
+    sql, count = re.subn(r'((?:REVOKE EXECUTE ON|COMMENT ON) FUNCTION thinkthen\.' + function + r')\([^()]*\)',
+                         lambda match: match[1] + '(' + signature + ')', sql)
+    assert count == 2, function
 path.write_text(sql)
+# Each upgrade script ends by installing the current release's objects.
+install = sql.split('\n', 1)[1]
+for upgrade in upgrades:
+    text = upgrade.read_text()
+    assert text.count('@INSTALL@') == 1, upgrade
+    upgrade.write_text(text.replace('@INSTALL@', install))
 
 header = ['/* Generated from engine declarations during packaging. */', 'static const struct config_enum_entry backend_options[] = {']
+header.append('    {"", 0, true}, /* Omitted selection is resolved by the engine. */')
 for row in registry['backends']:
     header.append('    {"' + row['name'] + '", THINKTHEN_BACKEND_' + row['name'].upper() + ', false},')
 header.append('    {NULL, 0, false}\n};')
 schema = json.loads((Path(sys.argv[1]).parent / 'client.schema.json').read_text())
-header.append('#define TT_DEFAULT_BACKEND THINKTHEN_BACKEND_' + schema['properties']['backend']['default'].upper())
 retry = schema['$defs']['Retry']['properties']
 for name, definition in retry.items():
     header.append('#define TT_DEFAULT_' + name.upper() + ' ' + str(definition['default']))
     header.append('#define TT_MIN_' + name.upper() + ' ' + str(definition['minimum']))
 (path.parent / 'registry.h').write_text('\n'.join(header) + '\n')
 
+# Engine keys ending in _ms become PostgreSQL time settings, so '2min' works.
 variables = {'backend': 'backend', 'model': 'model', 'batch': 'batch', 'max_retries': 'retries', 'initial_backoff_ms': 'backoff', 'attempt_timeout_ms': 'timeout'}
+descriptions = {
+    'backend': 'Backend that answers questions; an administrator limits choices with thinkthen.allowed_backends.',
+    'model': 'Model the backend uses; empty selects the backend default.',
+    'batch': 'Records sent in one backend request; 0 lets the engine choose.',
+    'max_retries': 'Retries after a failed backend request; SQL may lower but not raise the engine default.',
+    'initial_backoff_ms': 'Wait before the first retry of a failed backend request.',
+    'attempt_timeout_ms': 'Time limit for one backend request attempt.',
+}
+assert set(descriptions) == set(SETTINGS) == set(variables), SETTINGS
 registrations = []
 for key, (nested, definition) in SETTINGS.items():
-    name = '"thinkthen.' + key + '", "ThinkThen ' + key + '.", NULL, &' + variables[key]
+    setting = key.removesuffix('_ms')
+    name = '"thinkthen.' + setting + '", "' + descriptions[key] + '", NULL, &' + variables[key]
     if key == 'backend':
-        call = 'DefineCustomEnumVariable(' + name + ', TT_DEFAULT_BACKEND, backend_options'
+        call = 'DefineCustomEnumVariable(' + name + ', 0, backend_options'
     elif key == 'model':
         call = 'DefineCustomStringVariable(' + name + ', ""'
     else:
@@ -53,6 +85,7 @@ for key, (nested, definition) in SETTINGS.items():
         minimum = str(definition.get('minimum', 0)) if nested else '0'
         call = 'DefineCustomIntVariable(' + name + ', ' + default + ', ' + minimum + ', ' + str(definition['default'] if key == 'max_retries' else definition.get('maximum', 'INT_MAX'))
     hook = 'tt_check_batch' if key == 'batch' else 'NULL'
-    registrations.append(call + ', PGC_USERSET, 0, ' + hook + ', NULL, NULL);')
+    flags = 'GUC_UNIT_MS' if setting != key else '0'
+    registrations.append(call + ', PGC_USERSET, ' + flags + ', ' + hook + ', NULL, NULL);')
 with (path.parent / 'registry.h').open('a') as output:
     output.write('#define TT_REGISTER_SETTINGS ' + ' '.join(registrations) + '\n')

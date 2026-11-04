@@ -86,6 +86,7 @@ def clean_packages(scratch, native, source):
         assert contents.read('thinkthen/__init__.py') == (source / 'sdk/python/thinkthen/__init__.py').read_bytes()
     out = scratch / 'out'
     packages['python'] = wheel
+    (out / 'prerequisites/python-frames-windows/wheels').mkdir(parents=True)
     (out / 'build.json').write_text(json.dumps({'version': version()}))
     (out / 'requirements.json').write_text(json.dumps({name: {'runtime': name, 'platform': 'windows-x86_64'}
                                                       for name in packages}))
@@ -108,7 +109,8 @@ def license_cache(source):
     with patch.object(databases, 'ROOT', source):
         before = databases.database_inputs()
         assert databases.database_inputs() == before
-        for name in ('LICENSE', 'extensions/rules.py', 'schemas/client.schema.json', 'schemas/request.schema.json'):
+        for name in ('LICENSE', 'extensions/rules.py', 'schemas/client.schema.json', 'schemas/request.schema.json',
+                     'scripts/release-tools.json', 'scripts/duckdb_release.py', 'databases/duckdb/community-versions.json'):
             path = source / name
             original = path.read_bytes()
             try:
@@ -155,6 +157,9 @@ def database_failures(scratch):
 
 
 def main():
+    if sys.argv[1:] == ['--cache-only']:
+        license_cache(ROOT)
+        return
     with tempfile.TemporaryDirectory(prefix='thinkthen-windows-contents-') as temporary:
         scratch = Path(temporary)
         native = scratch / 'native/thinkthen_ffi.dll'

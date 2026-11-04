@@ -1,0 +1,42 @@
+{
+  "function": "decide",
+  "position": 1,
+  "id": "a1",
+  "source": {
+    "question_identity": "62b349b9eaa569848d9da72125a5c2bcc97b068129dc2f31ce28b0c9e9d54c9d",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "answered",
+  "answer": true,
+  "probability": 0.99
+}
+{
+  "function": "decide",
+  "position": 2,
+  "source": {
+    "question_identity": "62b349b9eaa569848d9da72125a5c2bcc97b068129dc2f31ce28b0c9e9d54c9d",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "failed",
+  "error": {
+    "code": "record.json",
+    "message": "the record is not JSON"
+  }
+}
+{
+  "function": "decide",
+  "position": 3,
+  "id": "a3",
+  "source": {
+    "question_identity": "62b349b9eaa569848d9da72125a5c2bcc97b068129dc2f31ce28b0c9e9d54c9d",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "failed",
+  "error": {
+    "code": "record.missing",
+    "message": "the record holds nothing at /text"
+  }
+}

@@ -1,0 +1,1 @@
+{"billing":0.98,"other":0.02,"shipping":0.0}

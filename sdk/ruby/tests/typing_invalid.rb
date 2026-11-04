@@ -8,9 +8,9 @@ ThinkThen::Client.open(backend: :stub) do |client|
   client.rank("Urgency?", "record", levels: %w[low high], top: 1.5) # type-error
   ThinkThen::Client.new(backend: :unknown) # type-error
   row = client.decide("Ready?", "record")
-  row.answer # type-error
+  row.answer # Raises on not sure or failure.
   rank = ThinkThen::RankQuestion.new("Urgency?", levels: %w[low high])
   ThinkThen::AnnotationQuestions.new(questions: {"bad" => rank}) # type-error
   toolbox = ThinkThen::Toolbox.new(questions: {"ready" => ThinkThen::DecideQuestion.new("Ready?")})
-  client.annotate(toolbox, "record") # type-error
+  client.annotate(toolbox, "record") # Eligible saved questions can annotate.
 end

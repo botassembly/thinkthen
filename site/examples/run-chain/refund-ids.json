@@ -1,0 +1,12 @@
+{
+  "run": [
+    {
+      "question": {
+        "function": "filter",
+        "question": "Does the customer request a refund?",
+        "field": "/text"
+      }
+    },
+    {"shell": ["jq", "-c", "select(.answer == true) | {id, probability}"]}
+  ]
+}

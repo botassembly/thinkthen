@@ -1,0 +1,12 @@
+{
+  "position": 1,
+  "id": "a1"
+}
+{
+  "position": 2,
+  "id": null
+}
+{
+  "position": 3,
+  "id": 42
+}

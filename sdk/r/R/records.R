@@ -98,6 +98,7 @@ vec_cast.tt_relation.tt_relation <- function(x, to, ...) x
       tags = vctrs::new_list_of(lapply(detail$pieces, function(piece) .tt_named_double(piece$tags)), ptype = double())
     ), "tt_piece")
     detail$names <- .tt_record(list(
+      text = .tt_scalar(detail$names, "text", NA_character_, as.character),
       start = .tt_scalar(detail$names, "start", NA_real_, as.double),
       end = .tt_scalar(detail$names, "end", NA_real_, as.double),
       kinds = vctrs::new_list_of(lapply(detail$names, function(name) .tt_named_double(name$kinds)), ptype = double())

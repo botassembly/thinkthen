@@ -18,14 +18,16 @@ static int bind_parameters(Cursor *cursor) {
     json_t *parameters = json_loadb(text, length, JSON_DECODE_ANY | JSON_ALLOW_NUL, &failure);
     if (parameters == NULL || !json_is_array(parameters)) {
         json_decref(parameters);
-        return cursor_error(cursor,
-            json_error_code(&failure) == json_error_out_of_memory ? SQLITE_NOMEM : SQLITE_MISMATCH,
-            "source parameters must be a JSON array of SQLite values");
+        if (json_error_code(&failure) == json_error_out_of_memory)
+            return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
+        return usage_error(cursor, "params must be a JSON array of SQLite values");
     }
     int slots = sqlite3_bind_parameter_count(cursor->source);
     if (json_array_size(parameters) != (size_t)slots) {
+        size_t count = json_array_size(parameters);
         json_decref(parameters);
-        return cursor_error(cursor, SQLITE_RANGE, "source parameter count does not match its bindings");
+        return usage_error(cursor, "params holds %llu values, but source_sql has %d parameters",
+                           (unsigned long long)count, slots);
     }
     int result = SQLITE_OK;
     for (int index = 0; index < slots; ++index) {
@@ -47,30 +49,31 @@ static int bind_parameters(Cursor *cursor) {
     }
     json_decref(parameters);
     if (result == SQLITE_MISMATCH)
-        return cursor_error(cursor, result, "source parameters cannot contain arrays or objects");
+        return usage_error(cursor, "params cannot contain arrays or objects");
     return result == SQLITE_OK ? SQLITE_OK : native_failure(cursor, result);
 }
 
 int source_open(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
+    static const char *const names[] = {"record_column", "id_column", "format"};
     for (int argument = ARG_RECORD; argument <= ARG_FORMAT; ++argument) {
         sqlite3_value *value = cursor->arguments[argument];
         if (value == NULL) continue;
         const unsigned char *text = sqlite3_value_text(value);
         if (text == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
         if (memchr(text, '\0', (size_t)sqlite3_value_bytes(value)) != NULL)
-            return cursor_error(cursor, SQLITE_MISMATCH, "source column and format values must not contain zero bytes");
+            return usage_error(cursor, "%s must not contain a zero byte", names[argument - ARG_RECORD]);
     }
     const char *sql = (const char *)sqlite3_value_text(cursor->arguments[0]);
     int length = sqlite3_value_bytes(cursor->arguments[0]);
     if (sql == NULL) return cursor_error(cursor, SQLITE_NOMEM, "out of memory");
     if (memchr(sql, '\0', (size_t)length) != NULL)
-        return cursor_error(cursor, SQLITE_ERROR, "source SQL contains a zero byte");
+        return usage_error(cursor, "source_sql must not contain a zero byte");
     const char *tail = NULL;
     int result = sqlite3_prepare_v3(table->db, sql, length, 0, &cursor->source, &tail);
     if (result != SQLITE_OK) return native_failure(cursor, result);
     if (cursor->source == NULL)
-        return cursor_error(cursor, SQLITE_ERROR, "source SQL must contain one row-producing statement");
+        return usage_error(cursor, "source_sql must contain one SELECT statement");
     sqlite3_stmt *extra = NULL;
     int remaining = length - (int)(tail - sql);
     if (remaining != 0) {
@@ -78,11 +81,11 @@ int source_open(Cursor *cursor) {
         if (result != SQLITE_OK) return native_failure(cursor, result);
         if (extra != NULL) {
             sqlite3_finalize(extra);
-            return cursor_error(cursor, SQLITE_ERROR, "source SQL must contain only one statement");
+            return usage_error(cursor, "source_sql must contain only one statement");
         }
     }
     if (!sqlite3_stmt_readonly(cursor->source))
-        return cursor_error(cursor, SQLITE_READONLY, "source SQL must be read-only");
+        return usage_error(cursor, "source_sql must be read-only, such as a SELECT");
     const char *record=cursor->arguments[ARG_RECORD] ? (const char*)sqlite3_value_text(cursor->arguments[ARG_RECORD]) : "record";
     const char *id=cursor->arguments[ARG_ID] ? (const char*)sqlite3_value_text(cursor->arguments[ARG_ID]) : "id";
     cursor->record_column=-1;cursor->id_column=-1;
@@ -91,23 +94,46 @@ int source_open(Cursor *cursor) {
         if(sqlite3_stricmp(name,record)==0)cursor->record_column=n;
         if(sqlite3_stricmp(name,id)==0)cursor->id_column=n;
     }
-    if(cursor->record_column<0 || (cursor->arguments[ARG_ID] && cursor->id_column<0))
-        return cursor_error(cursor,SQLITE_MISMATCH,"source column does not exist");
-    cursor->json=cursor->arguments[ARG_EVIDENCE]!=NULL;
+    if(cursor->record_column<0)
+        return usage_error(cursor,cursor->arguments[ARG_RECORD] ? "record_column '%s' names no column of source_sql"
+            : "source_sql has no column named %s; name one with record_column",record);
+    if(cursor->arguments[ARG_ID] && cursor->id_column<0)
+        return usage_error(cursor,"id_column '%s' names no column of source_sql",id);
+    cursor->spool_ids=!strcmp(table->registration->function,"rank");
+    cursor->json=cursor->arguments[ARG_FIELD]!=NULL;
     if(cursor->arguments[ARG_FORMAT]) {
         const char *format=(const char*)sqlite3_value_text(cursor->arguments[ARG_FORMAT]);
         if(!strcmp(format,"json"))cursor->json=1;
-        else if(strcmp(format,"text") || cursor->json)
-            return cursor_error(cursor,SQLITE_MISMATCH,"format must be text or json and agree with evidence");
+        else if(strcmp(format,"text"))
+            return usage_error(cursor,"format must be 'text' or 'json', not '%s'",format);
+        else if(cursor->json)
+            return usage_error(cursor,"format 'text' cannot be combined with field, which reads JSON records");
     }
     return bind_parameters(cursor);
+}
+
+/* Keep this source row's native id until its result row is emitted. */
+static int keep_id(Cursor *cursor) {
+    if(cursor->id_column<0 && cursor->spool_ids)return SQLITE_OK;
+    sqlite3_value *value=cursor->id_column<0 ? NULL : sqlite3_column_value(cursor->source,cursor->id_column);
+    if(cursor->spool_ids)return replay_save_id(cursor,value);
+    if(cursor->ids_count==cursor->ids_capacity) {
+        size_t capacity=cursor->ids_capacity?cursor->ids_capacity*2:128;
+        sqlite3_value **ids=sqlite3_realloc64(cursor->ids,capacity*sizeof(*ids));
+        if(!ids)return SQLITE_NOMEM;
+        cursor->ids=ids;cursor->ids_capacity=capacity;
+    }
+    sqlite3_value *id=value ? sqlite3_value_dup(value) : NULL;
+    if(value && !id)return SQLITE_NOMEM;
+    cursor->ids[cursor->ids_count++]=id;
+    return SQLITE_OK;
 }
 
 int source_chunk(Cursor *cursor) {
     Table *table = (Table *)cursor->base.pVtab;
     thinkthen_sql_input records[TT_SOURCE_CHUNK_RECORDS] = {{0}};
     sqlite3_value *values[TT_SOURCE_CHUNK_RECORDS] = {0};
-    /* Reuse released slots between chunks; rank keeps every source position. */
+    /* Reuse released slots between chunks; rank spools its ids instead. */
     if(cursor->ids_start) {
         cursor->ids_count-=cursor->ids_start;
         memmove(cursor->ids,cursor->ids+cursor->ids_start,cursor->ids_count*sizeof(*cursor->ids));
@@ -123,15 +149,8 @@ int source_chunk(Cursor *cursor) {
         result = sqlite3_step(cursor->source);
         if (result == SQLITE_DONE) { ended = 1; result = SQLITE_OK; break; }
         if (result != SQLITE_ROW) break;
-        if(cursor->ids_count==cursor->ids_capacity) {
-            size_t capacity=cursor->ids_capacity?cursor->ids_capacity*2:128;
-            sqlite3_value **ids=sqlite3_realloc64(cursor->ids,capacity*sizeof(*ids));
-            if(!ids){result=SQLITE_NOMEM;break;}
-            cursor->ids=ids;cursor->ids_capacity=capacity;
-        }
-        sqlite3_value *id=cursor->id_column<0 ? NULL : sqlite3_value_dup(sqlite3_column_value(cursor->source,cursor->id_column));
-        if(cursor->id_column>=0 && !id){result=SQLITE_NOMEM;break;}
-        cursor->ids[cursor->ids_count++]=id;
+        result = keep_id(cursor);
+        if (result != SQLITE_OK) break;
         int type = sqlite3_column_type(cursor->source, cursor->record_column);
         if (type != SQLITE_TEXT) {
             records[count++].kind = type == SQLITE_NULL ? THINKTHEN_RECORD_MISSING : THINKTHEN_RECORD_INVALID;
@@ -144,7 +163,7 @@ int source_chunk(Cursor *cursor) {
         const unsigned char *text = sqlite3_value_text(values[count]);
         int length = sqlite3_value_bytes(values[count]);
         if (text == NULL) { result = SQLITE_NOMEM; break; }
-        records[count].data = text;
+        records[count].data = (const char *)text;
         records[count].len = (size_t)length;
         ++count;
         result = SQLITE_OK;

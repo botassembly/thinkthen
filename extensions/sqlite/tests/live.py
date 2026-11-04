@@ -36,10 +36,20 @@ with subprocess.Popen([consumer, extension], stdin=subprocess.PIPE, stdout=subpr
         if not statement.strip() or statement.lstrip().startswith("--"):
             continue
         rows = sql(statement)
-        assert len(rows) == 1, rows
-        row=rows[0]
-        assert row['status'] in ('answered','unsure') and row['error_code'] is None,rows
-        print(json.dumps(row,ensure_ascii=False))
+        if 'thinkthen_filter(' in statement:
+            assert len(rows) <= 1, rows
+            assert all(row['status'] == 'answered' and row['answer'] == 1 for row in rows), rows
+            if flags:
+                probe = statement.rstrip().removesuffix(';') + ' WHERE threshold = ?'
+                for threshold, expected in ((0.1, 1), (1, 0)):
+                    checked = sql(probe, [threshold])
+                    assert len(checked) == expected, checked
+                    assert all(row['status'] == 'answered' and row['answer'] == 1
+                               and row['error_code'] is None for row in checked), checked
+        else:
+            assert len(rows) == 1, rows
+        assert all(row['status'] in ('answered','unsure') and row['error_code'] is None for row in rows), rows
+        print(json.dumps(rows[0] if rows else [],ensure_ascii=False))
         count += 1
     assert count == 10, count
     host.stdin.close()

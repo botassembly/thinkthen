@@ -276,7 +276,7 @@ impl<'a, F: Function> Chunk<'a, F> {
     fn add(
         &mut self,
         id: Id,
-        evidence: Result<AdmittedRecord, Error>,
+        field: Result<AdmittedRecord, Error>,
         entry: Result<Vec<Prepared>, Error>,
     ) {
         let entry = entry.map(|asks| {
@@ -296,7 +296,7 @@ impl<'a, F: Function> Chunk<'a, F> {
                 })
                 .collect()
         });
-        self.entries.push((id, evidence, entry, Vec::new()));
+        self.entries.push((id, field, entry, Vec::new()));
     }
 
     /// Bounded wire requests for this round, retaining their original answer slots.

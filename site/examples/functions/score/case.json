@@ -1,0 +1,11 @@
+{
+  "question": "How urgent is the request?",
+  "levels": [
+    "routine",
+    "urgent"
+  ],
+  "records": [
+    "Please refund my order."
+  ],
+  "answers": "One number from 0 to 1 per record, in record order."
+}

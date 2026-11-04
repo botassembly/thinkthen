@@ -1,0 +1,4 @@
+{"position":1,"themes":["price","support"]}
+{"position":2,"themes":["bug","praise"]}
+{"position":3,"themes":["shipping"]}
+{"position":4,"themes":["praise"]}

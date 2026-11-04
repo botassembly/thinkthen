@@ -1,0 +1,33 @@
+#!/bin/sh
+# Prepare one debug R module for facade RED/GREEN checks; no release assets.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+: "${1:?usage: description-admission-prepare-r OUTPUT_DIRECTORY}"
+export CARGO_NET_OFFLINE=true
+export R_HOME="$(R RHOME)"
+cargo build --offline --locked -p thinkthen-r
+python3 - "$1" <<'PY'
+import hashlib
+import os
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+output = Path(sys.argv[1])
+output.mkdir()
+archive = Path(os.environ.get("CARGO_TARGET_DIR", "target")) / "debug/libthinkthen_r.a"
+shutil.copy2(archive, output / archive.name)
+with tempfile.TemporaryDirectory(prefix="thinkthen-r-module-") as temporary:
+    scratch = Path(temporary)
+    shutil.copy2("sdk/r/src/entrypoint.c", scratch / "entrypoint.c")
+    flags = shlex.split(subprocess.check_output(["scripts/native-frameworks"], text=True))
+    subprocess.run(["R", "CMD", "SHLIB", "entrypoint.c", str((output / archive.name).resolve()), *flags,
+                    "-o", str((output / "thinkthen.so").resolve())], cwd=scratch, check=True)
+(output / "revision").write_text(subprocess.check_output(["git", "rev-parse", "HEAD"], text=True))
+for name in (archive.name, "thinkthen.so"):
+    print(output / name, hashlib.sha256((output / name).read_bytes()).hexdigest(), flush=True)
+PY

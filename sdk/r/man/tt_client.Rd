@@ -1,6 +1,5 @@
 \name{tt_client}
 \alias{tt_client}
-\alias{tt_client_from_env}
 \alias{tt_close}
 \alias{local_tt_client}
 \alias{with_tt_client}
@@ -10,7 +9,6 @@
 \usage{
 tt_client(backend = NULL, ..., api_key = NULL, url = NULL,
                       model = NULL, batch = NULL, retry = NULL)
-tt_client_from_env(...)
 tt_close(client)
 local_tt_client(client, .env = parent.frame())
 with_tt_client(client, code)
@@ -18,8 +16,8 @@ tt_retry(..., max_retries = NULL, initial_backoff_ms = NULL,
                      attempt_timeout_ms = NULL)
 }
 \arguments{
-\item{backend}{Backend name. NULL uses engine configuration.}
-\item{...}{Named options passed to the engine. Vector helpers pass all arguments to the corresponding row function.}
+\item{backend}{Backend name. NULL reads THINKTHEN_BACKEND, then uses the engine default.}
+\item{...}{Named engine options. Unknown options are refused before any backend call.}
 \item{api_key}{Optional backend API key.}
 \item{url}{Optional backend address.}
 \item{model}{Optional model name.}
@@ -32,5 +30,5 @@ tt_retry(..., max_retries = NULL, initial_backoff_ms = NULL,
 \item{initial_backoff_ms}{Optional whole integer initial retry delay in milliseconds.}
 \item{attempt_timeout_ms}{Optional whole integer attempt timeout in milliseconds.}
 }
-\value{\code{tt_client()} and \code{tt_client_from_env()} return a client. \code{tt_retry()} returns immutable retry settings. \code{tt_close()} returns NULL invisibly. \code{local_tt_client()} returns the client invisibly. \code{with_tt_client()} returns the value of \code{code}.}
+\value{\code{tt_client()} returns a client. \code{tt_retry()} returns immutable retry settings. \code{tt_close()} returns NULL invisibly. \code{local_tt_client()} returns the client invisibly. \code{with_tt_client()} returns the value of \code{code}.}
 \seealso{\code{\link{thinkthen-package}}}

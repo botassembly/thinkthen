@@ -3,6 +3,7 @@
 
 import json
 import runpy
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,9 +23,76 @@ def names(entries):
     return {entry["name"] for entry in entries}
 
 
+def retired_public_names(request):
+    # Private implementation names, test payloads and historical decisions are
+    # outside this shipped contract. Public declarations and published prose are not.
+    roots = ["schemas", "docs", "site/src/content", "site/src/data",
+             "crates/thinkthen/src/cli", "crates/thinkthen-ffi/include"]
+    candidates = {ROOT / "README.md"}
+    # Release notes are generated from this source, not the site tree.
+    release_source = (ROOT / "scripts/release_install.py").read_text()
+    require("--evidence" not in release_source, "release notes retain the retired selector flag")
+    # Inspect generated package descriptions without matching fixture payloads.
+    package_source = (ROOT / "scripts/release_sites.py").read_text()
+    descriptions = re.findall(r'\bdesc\s+"([^"\n]+)"', package_source)
+    require(bool(descriptions), "Homebrew package description is absent")
+    require(all("evidence" not in text.lower() for text in descriptions),
+            "Homebrew package description retains retired public wording")
+    for name in roots:
+        candidates.update(path for path in (ROOT / name).rglob("*") if path.is_file())
+    for path in (ROOT / "sdk").rglob("*"):
+        if path.is_file() and not ({"tests", "test", "consumer", "target", "node_modules", ".pytest_cache", ".ruff_cache", "__pycache__"} & set(path.parts)):
+            candidates.add(path)
+    failures = []
+    public_rust = re.compile(
+        r'pub\s+(?:(?:async|const|unsafe|extern\s+"[^"]+")\s+)*'
+        r'(?:fn|struct|enum|type|const)\s+\w*evidence\w*', re.IGNORECASE)
+    for crate in ("thinkthen", "thinkthen-ffi"):
+        for path in (ROOT / "crates" / crate / "src").rglob("*.rs"):
+            if public_rust.search(path.read_text(encoding="utf-8")):
+                failures.append(str(path.relative_to(ROOT)))
+    for path in sorted(candidates):
+        if path.suffix.lower() in {".png", ".jpg", ".webp", ".woff", ".woff2", ".ico"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeError:
+            continue
+        relative = path.relative_to(ROOT).as_posix()
+        if relative == "site/src/data/old-addresses.txt":
+            # Historical route names are data; comments and prose still count.
+            text = "\n".join(line for line in text.splitlines()
+                             if not re.fullmatch(r"/(?:[A-Za-z0-9._~-]+/)*", line))
+        elif relative == "site/src/data/redirects.json":
+            # Keys preserve old addresses; destinations are current public names.
+            text = json.dumps(list(json.loads(text).values()))
+        elif relative == "site/src/data/words.json":
+            vocabulary = json.loads(text)
+            for matcher in vocabulary["banned"]:
+                if matcher.get("word") == "evidence":
+                    del matcher["word"]
+            text = json.dumps(vocabulary)
+        if "evidence" in text.lower():
+            failures.append(str(path.relative_to(ROOT)))
+    require(not failures, "retired public selector spelling: " + ", ".join(failures))
+    # The Go corpus adapter projects the public question schema into apiQuestion.
+    # Check that projection, not arbitrary user-record structs or payload strings.
+    properties = request["$defs"]["RawQuestion"]["oneOf"][0]["properties"]
+    selector = next(name for name, value in properties.items()
+                    if value.get("$ref") == "#/$defs/Pointer")
+    fixture = (ROOT / "sdk/go/tests/fixture_types_test.go").read_text()
+    question = re.search(r'\btype apiQuestion struct\s*\{(.*?)\n\}', fixture, re.DOTALL)
+    require(question is not None, "Go corpus question projection is absent")
+    member = selector[:1].upper() + selector[1:]
+    tag = re.search(r'\b' + re.escape(member) + r'\s+\*string\s+`json:"([^"]+)"`', question[1])
+    require(tag is not None and tag[1] == selector,
+            "Go corpus selector JSON tag differs from the canonical question schema")
+
+
 registry = read("schemas/contract.json")
 abi = read("schemas/abi.json")
 request = read("schemas/request.schema.json")
+retired_public_names(request)
 rows = read("schemas/row.schema.json")
 settings = read("schemas/client.schema.json")
 manifest = read("conformance/typed/manifest.json")
@@ -42,13 +110,14 @@ for question in questions:
     fields = question["properties"]
     require(question["additionalProperties"] is False, "question accepts unknown fields")
     require(not ({"options", "on", "ref", "mode"} & set(fields)), "question retains removed fields")
-    require("evidence" in fields, "question lacks shared evidence admission")
+    require("field" in fields, "question lacks shared field admission")
 children = request["$defs"]["RawAnnotatableQuestion"]["oneOf"]
 require({item["properties"]["function"]["const"] for item in children} == functions - {"rank", "annotate"},
         "annotation child set differs from the admitted function set")
 require(not ({"adapter", "mode", "key_source"} & set(settings["properties"])),
         "settings retain removed fields")
-require(settings["properties"]["backend"]["default"] == "systemone", "backend default differs")
+require("default" not in settings["properties"]["backend"], "backend omission must defer to engine environment resolution")
+require("backend" not in settings.get("required", []), "backend omission must remain admitted")
 require(len(rows["oneOf"]) == len(functions), "row schema does not cover every function")
 require(set(manifest["backends"]) == names(registry["backends"]) - {"stub"},
         "semantic corpus does not cover both remote wire formats")

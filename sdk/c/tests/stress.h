@@ -28,11 +28,11 @@ static void *stress_drive(void *raw) {
                 char record[96];
                 int n = snprintf(record, sizeof record, "{\"id\":\"record-%zu\",\"body\":\"record %zu\"}", work->offset + sent, work->offset + sent);
                 assert(n > 0 && (size_t)n < sizeof record);
-                int32_t admitted = thinkthen_call_send_json(work->call, (const uint8_t *)record, (size_t)n, &error);
+                int32_t admitted = thinkthen_call_send_json(work->call, (const char *)record, (size_t)n, &error);
                 if (admitted == THINKTHEN_OK) ++sent;
                 else {
                     /* Cancellation can arrive after the input slot was reserved. */
-                    assert(work->cancel && admitted == THINKTHEN_ERROR);
+                    assert(work->cancel && admitted < 0);
                     assert(strcmp(thinkthen_code_name(error.code), "local.cancelled") == 0);
                     thinkthen_error_free(&error);
                 }
@@ -55,7 +55,7 @@ static void *stress_drive(void *raw) {
         thinkthen_row_free(&row);
     } while (status == THINKTHEN_OK || status == THINKTHEN_NEEDS_INPUT);
     if (work->cancel) {
-        assert(status == THINKTHEN_ERROR && received == 0);
+        assert(status < 0 && received == 0);
         assert(strcmp(thinkthen_code_name(error.code), "local.cancelled") == 0);
     } else {
         assert(status == THINKTHEN_END && received == work->count);
@@ -68,7 +68,7 @@ static int stress_main(int argc, char **argv) {
     assert(argc == 10);
     thinkthen_client *client = NULL;
     thinkthen_error error = {.struct_size = sizeof error};
-    assert(thinkthen_client_open_json((const uint8_t *)argv[2], strlen(argv[2]), &client, &error) == THINKTHEN_OK);
+    assert(thinkthen_client_open_json((const char *)argv[2], strlen(argv[2]), &client, &error) == THINKTHEN_OK);
     int cancel = strcmp(argv[1], "stress-cancel") == 0;
     size_t workers = cancel ? 1 : strtoull(argv[7], NULL, 10);
     assert(workers > 0);
@@ -82,8 +82,8 @@ static int stress_main(int argc, char **argv) {
         for (size_t i = 0; i < workers; ++i) {
             work[i] = (stress_work){client, strtoull(argv[3], NULL, 10), argv[4], argv[5], strtod(argv[6], NULL), cancel, NULL, 0, strtoull(argv[9], NULL, 10) + (round * workers + i) * strtoull(argv[3], NULL, 10), 0};
             thinkthen_question *q = NULL;
-            assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const uint8_t *)"Ready?", 6, &q, &error) == THINKTHEN_OK);
-            assert(thinkthen_question_set_evidence(q, (const uint8_t *)"/body", 5, &error) == THINKTHEN_OK);
+            assert(thinkthen_question_new(THINKTHEN_FUNCTION_DECIDE, (const char *)"Ready?", 6, &q, &error) == THINKTHEN_OK);
+            assert(thinkthen_question_set_field(q, (const char *)"/body", 5, &error) == THINKTHEN_OK);
             assert(thinkthen_call_open_question(client, q, NULL, THINKTHEN_OFFSET_CODE_POINTS, &work[i].call, &error) == THINKTHEN_OK);
             thinkthen_question_free(q);
             assert(pthread_create(&threads[i], NULL, stress_drive, &work[i]) == 0);

@@ -1,0 +1,11 @@
+{
+  "question": "Which topics appear?",
+  "labels": [
+    "billing",
+    "shipping"
+  ],
+  "records": [
+    "I was charged twice and my parcel is late again."
+  ],
+  "answers": "One list of labels per record, sorted by name, in record order."
+}

@@ -1,4 +1,4 @@
-//! Filter input ownership follows each native row without changing its public prefix.
+//! Filter and Rank input ownership follows each native row without changing its public prefix.
 #![allow(
     unsafe_code,
     reason = "owned source allocations retain original record bytes"
@@ -44,24 +44,31 @@ impl Original {
             .collect()
     }
 }
-/// The original filter input. Bytes retain text/JSON encoding even for failed rows.
-/// Missing and explicit conversion-failure inputs have empty bytes. Invalid UTF-8
-/// text or JSON still has its original kind and bytes, so this is not a text view.
+/// A filter or rank record's input, as thinkthen_row_original writes it, with its kind and bytes as
+/// sent, failed records included. Missing and invalid records have no bytes. The bytes may
+/// not be UTF-8, so this is not a thinkthen_text.
 #[repr(C)]
 #[derive(Debug)]
 pub struct RecordView {
-    /// Generated record-kind discriminator.
+    /// How the record was sent, a thinkthen_record_kind.
     pub kind: u32,
-    /// Borrowed bytes owned by the row or typed value snapshot.
+    /// The record's bytes, borrowed from the row or value.
     pub data: *const u8,
-    /// Count without a terminating NUL.
+    /// The byte length; not NUL-terminated.
     pub len: usize,
 }
 
-/// Borrow the original filter input after call/client destruction, until row cleanup.
+/// Write the input of a filter or rank row to *out.
+///
+/// *out borrows from the row and lasts until thinkthen_row_free(row), even after the call and
+/// client are freed; never free it. Returns THINKTHEN_OK with *out written, or a negative code
+/// with *out unchanged: -THINKTHEN_CODE_USAGE_FUNCTION when the row is not a filter or rank row, or
+/// -THINKTHEN_CODE_USAGE_ABI when the row did not come from this library.
 /// # Safety
-/// Row is an engine-produced supported prefix with a live source allocation;
-/// out/error are distinct empty writable slots. Immutable readers may run concurrently.
+/// Any thread may call this while no thread changes or frees row. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_row_original(
     row: *const HostRow,
@@ -72,8 +79,8 @@ pub unsafe extern "C" fn thinkthen_row_original(
     unsafe {
         project(out, error, || {
             row_size(row.cast_mut())?;
-            if (*row).function != FunctionName::Filter.abi() {
-                return Err(native::abi_error());
+            if ![FunctionName::Filter.abi(), FunctionName::Rank.abi()].contains(&(*row).function) {
+                return Err(native::argument_error(thinkthen::Code::UsageFunction));
             }
             (*row)
                 .source
@@ -89,7 +96,8 @@ pub(crate) unsafe fn input(
     len: usize,
     kind: u32,
 ) -> Result<Original, thinkthen::Error> {
-    let kind = RecordKind::from_abi(kind).ok_or_else(native::abi_error)?;
+    let kind = RecordKind::from_abi(kind)
+        .ok_or_else(|| thinkthen::native::argument_error(thinkthen::Code::UsageRecordKind))?;
     /* SAFETY: text and JSON inputs borrow readable counted bytes until return. */
     let data = if matches!(kind, RecordKind::Text | RecordKind::Json) {
         unsafe { bytes(data, len) }
@@ -97,4 +105,12 @@ pub(crate) unsafe fn input(
         &[]
     };
     Ok(Original::new(kind, data))
+}
+
+pub(crate) fn attach_rank(row: &mut HostRow, record: &thinkthen::records::Record) {
+    let (kind, data) = record.original();
+    // SAFETY: from_row exclusively owns a fresh engine-produced source allocation.
+    unsafe {
+        row.source.attach_original(Original::new(kind, data));
+    }
 }

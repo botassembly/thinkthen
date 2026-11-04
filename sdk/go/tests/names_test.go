@@ -33,8 +33,8 @@ func TestToolboxSelectionDoesNotNameExecution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, _ := inline.Value()
-	b, _ := named.Value()
+	a, _ := valueOf(inline)
+	b, _ := valueOf(named)
 	source := named.Source()
 	if a != b || source.Name == nil || *source.Name != "run" || source.QuestionIdentity == inline.Source().QuestionIdentity {
 		t.Fatal("execution name did not retain its engine semantics")

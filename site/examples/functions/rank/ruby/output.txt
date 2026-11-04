@@ -1,0 +1,3 @@
+1 #<data ThinkThen::RankRow item="I was charged twice for one invoice.", row=#<ThinkThen::Answered 1>>
+2 #<data ThinkThen::RankRow item="Where is my parcel?", row=#<ThinkThen::Answered 2>>
+3 #<data ThinkThen::RankRow item="Please refund my order.", row=#<ThinkThen::Answered 3>>

@@ -13,6 +13,7 @@ type Client struct {
 	native *nativeClient
 }
 
+// New opens a client using cfg, with zero values selecting engine defaults.
 func New(cfg Config) (*Client, error) {
 	native, err := newNative(cfg)
 	if err != nil {
@@ -20,6 +21,8 @@ func New(cfg Config) (*Client, error) {
 	}
 	return &Client{native: &native}, nil
 }
+
+// Close releases the client and prevents new calls; existing streams remain independent.
 func (c *Client) Close() error {
 	if c == nil {
 		return nil
@@ -34,15 +37,15 @@ func (c *Client) Close() error {
 }
 func (c *Client) open(ctx context.Context, q question, input Input) (nativeCall, error) {
 	if ctx == nil {
-		return nativeCall{}, conversionError(false)
+		return nativeCall{}, &Error{code: CodeUsageArgument, message: "context must not be nil"}
 	}
 	if c == nil {
-		return nativeCall{}, ErrClosed
+		return nativeCall{}, &Error{code: CodeUsageClosed, message: "thinkthen: closed"}
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.native == nil {
-		return nativeCall{}, ErrClosed
+		return nativeCall{}, &Error{code: CodeUsageClosed, message: "thinkthen: closed"}
 	}
 	return c.native.open(q, input)
 }
@@ -52,7 +55,7 @@ func drive[R any](c *Client, ctx context.Context, q question, input Input, conve
 	return func(yield func(R, error) bool) {
 		var zero R
 		if !input.finite && input.sequence == nil {
-			yield(zero, conversionError(false))
+			yield(zero, &Error{code: CodeUsageArgument, message: "input has no source; use Records, Texts, or FromSeq"})
 			return
 		}
 		native, err := c.open(ctx, q, input)
@@ -155,7 +158,7 @@ func drive[R any](c *Client, ctx context.Context, q question, input Input, conve
 		}
 	}
 }
-func single[R any](seq iter.Seq2[R, error]) (R, error) {
+func single[R interface{ Err() error }](seq iter.Seq2[R, error]) (R, error) {
 	var result R
 	var failure error
 	for row, err := range seq {
@@ -164,6 +167,9 @@ func single[R any](seq iter.Seq2[R, error]) (R, error) {
 		} else {
 			result = row
 		}
+	}
+	if errors.Is(result.Err(), CodeRecordEmpty) {
+		return result, result.Err()
 	}
 	return result, failure
 }

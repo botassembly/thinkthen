@@ -1,7 +1,7 @@
 //! The OpenAI decisions wire format.
 //!
 //! Contract: <https://developers.openai.com/api/reference/resources/decisions/methods/create>
-//! Questions and answers are ordered arrays. Each ask quotes its own evidence,
+//! Questions and answers are ordered arrays. Each ask quotes its own field,
 //! and `input` carries the request's shared state. Choice values retain their types.
 
 use serde::{Deserialize, Serialize};

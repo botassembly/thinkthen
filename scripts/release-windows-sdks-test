@@ -74,6 +74,7 @@ def fixture(failure):
         (checks / 'swift').mkdir()
         (folder / 'ruby/dependencies').mkdir(parents=True)
         (folder / 'ruby/dependencies/ffi.gem').touch()
+        (folder / 'prerequisites/python-frames-windows/wheels').mkdir(parents=True)
         (folder / 'prerequisites/r').mkdir(parents=True)
         (folder / 'prerequisites/r/inventory.json').write_text(
             json.dumps({'install_order': [], 'packages': {}, 'r': 'fixture'}))

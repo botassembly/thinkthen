@@ -42,6 +42,10 @@ module ThinkThen
       layout :struct_size, :uint32, :kind, :uint32, :data, :pointer, :len, :size_t
     end
 
+    class RecordView < FFI::Struct
+      layout :kind, :uint32, :data, :pointer, :len, :size_t
+    end
+
     class NativeError < FFI::Struct
       layout :struct_size, :uint32, :code, :int32, :http_status, :uint16, :message, Buffer
       def initialize
@@ -98,6 +102,7 @@ module ThinkThen
       attach_function :thinkthen_call_free, [:pointer], :void
       attach_function :thinkthen_error_free, [:pointer], :void
       attach_function :thinkthen_row_free, [:pointer], :void
+      attach_function :thinkthen_row_original, [:pointer, :pointer, :pointer], :int32
     rescue FFI::NotFoundError
       raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
     end
@@ -190,9 +195,12 @@ module ThinkThen
           if value.is_a?(Array)
             Array.new(value).map { |entry| snapshot(entry, seen, symbols) }
           else
-            value.to_a.to_h do |key, entry|
+            members = Hash.new #: Hash[String, untyped]
+            value.to_a.each_with_object(members) do |(key, entry), output|
               raise TypeError, "JSON keys must be strings" unless key.is_a?(String) || (symbols && key.is_a?(Symbol))
-              [key.to_s, snapshot(entry, seen, symbols)]
+              name = key.to_s
+              raise ArgumentError, "String and Symbol keys name the same JSON member" if output.key?(name)
+              output[name] = snapshot(entry, seen, symbols)
             end
           end
         ensure
@@ -208,7 +216,8 @@ module ThinkThen
       checked { |error| public_send("thinkthen_#{context}_conversion_error", error) }
     end
 
-    def self.records(values)
+    # Fill invalid with each unconvertible record's one-based position and reason.
+    def self.records(values, invalid = {})
       values = Array.new(values)
       memory = FFI::MemoryPointer.new(RecordInput.size, [values.length, 1].max)
       # @type var buffers: Array[untyped]
@@ -216,7 +225,8 @@ module ThinkThen
       values.each_with_index do |value, index|
         record = RecordInput.new(memory + index * RecordInput.size)
         record[:struct_size] = RecordInput.size
-        kind, bytes = record_value(value)
+        kind, bytes, reason = record_value(value)
+        invalid[index + 1] = reason if reason
         record[:kind] = NativeContract::RECORD_NAMES.key(kind)
         buffer = bytes && FFI::MemoryPointer.from_string(bytes)
         record[:data] = buffer || FFI::Pointer::NULL
@@ -229,16 +239,32 @@ module ThinkThen
       memory&.free
     end
 
+    # Return the record kind and bytes, or "invalid" with the class and reason it has no JSON form.
     def self.record_value(value)
-      return ["missing", nil] if value.nil?
-      bytes = value.is_a?(String) ? value.encode(Encoding::UTF_8) : dump(value).encode(Encoding::UTF_8)
-      [value.is_a?(String) ? "text" : "json", bytes]
-    rescue StandardError, SystemStackError
-      ["invalid", nil]
+      return ["missing", nil, nil] if value.nil?
+      bytes = value.is_a?(String) ? value.encode(Encoding::UTF_8) : dump(value, symbols: true).encode(Encoding::UTF_8)
+      [value.is_a?(String) ? "text" : "json", bytes, nil]
+    rescue StandardError, SystemStackError => error
+      ["invalid", nil, "#{value.class} cannot be written as JSON: #{error.message}"]
     end
 
     def self.parse(value)
       JSON.parse(value, max_nesting: false)
+    end
+
+    # Marks a rank row whose record never had a JSON form, so it has no copy.
+    NO_COPY = Object.new.freeze
+
+    # Decode the engine's snapshot of a rank row's record as a new Ruby value.
+    def self.original(row)
+      view = RecordView.new
+      checked { |error| thinkthen_row_original(row, view, error) }
+      kind = discriminator(NativeContract::RECORD_NAMES, view[:kind])
+      return NO_COPY if kind == "invalid"
+      return nil unless %w[text json].include?(kind)
+      bytes = view[:len].zero? ? +"" : view[:data].read_string_length(view[:len])
+      bytes.force_encoding(Encoding::UTF_8)
+      kind == "text" ? bytes : parse(bytes)
     end
 
     def self.copy(buffer)
@@ -262,17 +288,17 @@ module ThinkThen
     def self.error_class(value, code)
       family = thinkthen_code_family(value)
       klass = {"usage" => UsageError, "backend" => BackendError, "internal" => InternalError,
-               "record" => LocalError, "local" => LocalError}.fetch(family) do
+               "record" => RecordError, "local" => LocalError}.fetch(family) do
         raise UsageError.new(NativeContract::ABI_MESSAGE, code: NativeContract::ABI_CODE)
       end
-      code == "local.cancelled" ? Cancelled : klass
+      code == "local.cancelled" ? CancelledError : klass
     end
     private_class_method :error_class
 
     def self.checked
       error = NativeError.new
       result = yield error
-      if result == -1
+      if result < 0
         code = thinkthen_code_name(error[:code])
         unless code && NativeContract::CODE_NAMES.key?(error[:code])
           raise UnknownCodeError.new(copy(error[:message]), raw_code: error[:code], raw_name: code, http_status: error[:http_status].zero? ? nil : error[:http_status])

@@ -1,0 +1,160 @@
+---
+title: C SDK
+description: "C SDK: ask the ten ThinkThen questions from C, and get yes, no or not sure back as a return code and a plain C answer."
+goal: The reader runs a first decide in C, compiles against the library, handles not sure and failures through the return code, and finds the C call for each of the ten functions.
+reader: A C developer who wants to ask questions about text from a program
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "C"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The C SDK gives your program the ten functions as plain C calls; each call returns a code that says whether there is an answer, and writes the answer into your own variable, such as a `bool` from decide.
+
+<Example id="functions/decide/c" title="example.c" />
+
+`true` means yes: the message asks for a refund.
+
+It needs <Fact k="languages.c.requires" />. Extract the C archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) into `thinkthen`, save the program as `example.c`, then compile it and run `./example`:
+
+<InstallLine k="languages.c.install" lang="sh" />
+
+The `-Wl,-rpath` flag tells the program where to find the library when it runs. The client uses the key from the [Quickstart](/quickstart/).
+
+## Read not sure and failures from the return code
+
+Every call returns `THINKTHEN_OK` when it wrote an answer. It returns `THINKTHEN_UNSURE` when the model is not sure, and then it writes no answer, so not sure can never read as `false`. When ThinkThen can't judge the text, it returns a negative number, and `error` holds the code and its message.
+
+To get not sure from decide, build the question and set a low bar and a high bar with `thinkthen_question_set_band`. `thinkthen_run_one` then asks it and fills in the result.
+
+<Example id="sdks/c/unsure" title="example.c" />
+
+A double charge might be a refund request, or might not, so decide is not sure. Send it to a person. `probability` is the chance of yes.
+
+- The negative number is minus the error code, such as `-THINKTHEN_CODE_RECORD_EMPTY` for blank text, which is never sent. Compare with `THINKTHEN_OK`, never with `-1`.
+- `thinkthen_code_name` gives the code's name, such as `record.empty`. `error.message` is counted bytes, so print it with its length. [Troubleshooting](/reference/troubleshooting/) lists each code.
+- decide, filter and choose take a low and a high bar. choose and find can also be not sure without them. tag, score, rank, recognize and relate answer or fail. Each annotate answer follows its own question.
+- With GCC and Clang, ignoring a return code draws a compiler warning.
+
+Start every `thinkthen_error` with `THINKTHEN_ERROR_INIT` and every result with `THINKTHEN_ROW_INIT`. Passing one to another call frees what it held first. Free each with `thinkthen_error_free` or `thinkthen_row_free` after its last use. Clients, questions, calls and values each have their own free function, and every free function accepts `NULL`.
+
+## The ten functions
+
+Each program is a whole file that compiles with the line above, and asks the support-inbox question its function page asks.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+<Example id="functions/decide/c" title="example.c" />
+
+Yes: the message asks for a refund. `thinkthen_decide` writes the answer into your `bool`, and uses one bar at 0.5. For a low and a high bar, or to say what yes and no mean with `thinkthen_question_set_yes_means` and `thinkthen_question_set_no_means`, build a question and use `thinkthen_run_one`, as in the not sure example above. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/c" title="example.c" />
+
+A refund is about billing. `thinkthen_choose` writes the index of the chosen string in your choices, so your own string names the answer. It returns `THINKTHEN_UNSURE` when no choice reaches the bar. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="functions/filter/c" title="example.c" />
+
+The parcel question is left out. A filter asks one question of many messages through a call. `thinkthen_call_next_kept` gives only the messages that answer yes, and returns `THINKTHEN_END` after the last. A message that fails returns its own negative code in its place, and the rest carry on. `position` is the message's place in your input, starting at 1, and `thinkthen_row_original` gives back the message itself. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/c" title="example.c" />
+
+The message is about both billing and shipping. `thinkthen_tag` writes one `bool` per label, in label order, and all of them may be `false`. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/c" title="example.c" />
+
+The levels run lowest first, so a plain refund request scores near routine. `thinkthen_score` writes a `double` from 0 for the first level to 1 for the last. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+<Example id="functions/rank/c" title="example.c" />
+
+The double charge is the most urgent. Rank compares many messages, so it runs through a call. Each result's `rank` is its answer, 1 for the most urgent, and its `position` points back to your message. `thinkthen_question_set_top` keeps only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/c" title="example.c" />
+
+The second line states the action. `thinkthen_find` writes a span whose `present` is 0 when no line answers. Its `start` and `end` are byte offsets, and its `text` points into your own text, so keep that text while you read the span. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/c" title="example.c" />
+
+`thinkthen_recognize` writes a new value. Read its names with `thinkthen_value_name_count` and `thinkthen_value_name_at`, before you free it with `thinkthen_value_free`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/c" title="example.c" />
+
+A `thinkthen_rule` names the kind of name at each end and the relation between them. `thinkthen_relate` takes an array of rules and writes a new value; read it with `thinkthen_value_relation_count` and `thinkthen_value_relation_at`. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+<Example id="functions/annotate/c" title="example.c" />
+
+An annotate question holds several named questions, added with `thinkthen_question_add_entry`. Over many messages it runs through a call; `thinkthen_annotate` asks it of one message. `thinkthen_row_values` gives a message's answers, and `thinkthen_value_annotation_get` reads one by name. Each answer returns `THINKTHEN_UNSURE` or its own failure code instead of writing an answer that isn't there. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+For a JSON message, pass `THINKTHEN_RECORD_JSON`, and point the question at one field with `thinkthen_question_set_field`, such as `"/text"`. `thinkthen_call_open_question` takes messages one at a time, for input you don't hold up front. One thread drives a call, `thinkthen_call_cancel` stops it from any thread, and threads may share one client. The [C header](https://github.com/botassembly/thinkthen/blob/v0.2.0/crates/thinkthen-ffi/include/thinkthen.h) lists every type and function.

@@ -23,7 +23,7 @@ fn pulled_records_preserve_raw_text_exact_ids_and_independent_record_failures() 
         .open(
             &Decide::new("Ready?")
                 .unwrap()
-                .evidence("/body".parse().unwrap()),
+                .field("/body".parse().unwrap()),
         )
         .unwrap();
     let sender = call.sender();
@@ -43,7 +43,7 @@ fn pulled_records_preserve_raw_text_exact_ids_and_independent_record_failures() 
     let actual: Vec<_> = rows.by_ref().collect::<Result<Vec<_>, _>>().unwrap();
     worker.join().unwrap();
     assert_eq!(actual.len(), 3);
-    assert_eq!(actual[0].clone().into_result().unwrap(), Some(true));
+    assert!(actual[0].clone().into_answer().unwrap());
     assert_eq!(actual[1].id().unwrap().as_u64(), Some(u64::MAX));
     assert_eq!(actual[2].error().unwrap().code().as_str(), "record.missing");
     rows.cancel();
@@ -66,7 +66,7 @@ fn every_offset_unit_applies_to_answers_and_details_including_annotation_pointer
     ] {
         for annotate in [false, true] {
             let request = if annotate {
-                json!({"function":"annotate","questions":{"names":{"function":"recognize","kinds":["person"],"evidence":"/body"}},"records":[{"body":"😀 Ada"}]})
+                json!({"function":"annotate","questions":{"names":{"function":"recognize","kinds":["person"],"field":"/body"}},"records":[{"body":"😀 Ada"}]})
             } else {
                 json!({"function":"recognize","kinds":["person"],"records":["😀 Ada"]})
             };
@@ -100,7 +100,7 @@ fn filters_keep_rows_after_record_failure_and_cancel_wakes_pending_input() {
     let engine = engine(&server);
     let question = Filter::new("Ready?")
         .unwrap()
-        .evidence("/body".parse().unwrap());
+        .field("/body".parse().unwrap());
     let call = engine.open(&question).unwrap();
     let sender = call.sender();
     let worker = std::thread::spawn(move || {
@@ -149,7 +149,7 @@ fn host_utf16_admission_preserves_unicode_and_refuses_unpaired_surrogates() {
     let row = engine
         .run(&question, Record::from_utf16(&[0xd83d, 0xde00, 65]))
         .unwrap();
-    assert_eq!(row.into_result().unwrap(), Some(true));
+    assert!(row.into_answer().unwrap());
     assert!(
         server.requests()[0]
             .json()
@@ -180,7 +180,7 @@ fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records
     let question = Decide::new("Ready?").unwrap();
     let row = engine
         .run(
-            &question.clone().evidence("/text".parse().unwrap()),
+            &question.clone().field("/text".parse().unwrap()),
             Record::from_json(array),
         )
         .unwrap();
@@ -194,7 +194,7 @@ fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records
     for pointer in ["", "/0/text"] {
         let row = engine
             .run(
-                &question.clone().evidence(pointer.parse().unwrap()),
+                &question.clone().field(pointer.parse().unwrap()),
                 Record::from_json(array),
             )
             .unwrap();
@@ -202,7 +202,7 @@ fn object_field_on_array_reports_the_stream_form_without_rejecting_array_records
     }
     let row = engine
         .run(
-            &question.evidence("/2".parse().unwrap()),
+            &question.field("/2".parse().unwrap()),
             Record::from_json(array),
         )
         .unwrap();

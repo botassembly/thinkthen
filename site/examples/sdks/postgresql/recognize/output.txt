@@ -1,0 +1,6 @@
+ msg_id |     name      |     kind     
+--------+---------------+--------------
+ 6      | Morgan        | person
+ 6      | Example Group | organization
+(2 rows)
+

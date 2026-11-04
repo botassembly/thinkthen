@@ -1,0 +1,78 @@
+---
+import { surfaces, pickerRoute } from '../lib/function-surfaces.mjs';
+const route = Astro.url.pathname;
+const selected = route.match(/^\/functions\/[^/]+\/([^/]+)\//)?.[1] ?? route.match(/^\/(?:languages|databases)\/([^/]+)\//)?.[1] ?? 'command';
+---
+<details class="surface-picker" data-surface-picker data-pagefind-ignore>
+  <summary aria-label="Choose language"><span class="picker-label">Language</span><span data-surface-label>{surfaces.find(({id}) => id === selected)?.label ?? 'Command'}</span><span aria-hidden="true"> ▾</span></summary>
+  <nav aria-label="Languages and databases">
+    {surfaces.map(({id, label}) => <a href={pickerRoute(route, id)} data-surface={id} aria-current={selected === id ? 'true' : undefined}>{label}</a>)}
+  </nav>
+</details>
+<script>
+  import { pickerRoute, surfaces } from '../lib/function-surfaces.mjs';
+  import { applySurfaceGroups, readSurface as stored, writeSurface } from '../lib/surface-choice.mjs';
+  function update(surface: string) {
+    for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-surface]')) {
+      link.href = pickerRoute(location.pathname, link.dataset.surface);
+      if (link.dataset.surface === surface) link.setAttribute('aria-current', 'true'); else link.removeAttribute('aria-current');
+    }
+    document.querySelector('[data-surface-label]')!.textContent = surfaces.find(({id}) => id === surface)?.label ?? 'Command';
+  }
+  let pending = 0;
+  async function swap(url: string, push: boolean) {
+    const generation = ++pending;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Page unavailable: ${response.status}`);
+    const parsed = new DOMParser().parseFromString(await response.text(), 'text/html');
+    const content = parsed.querySelector('main');
+    if (!content || generation !== pending) return;
+    const y = scrollY;
+    // Scripts already loaded by Astro are shared by every matrix cell.
+    document.querySelector('main')!.replaceWith(content);
+    document.title = parsed.title;
+    if (push) history.pushState({ surface: true }, '', url);
+    else if (new URL(url, location.href).href !== location.href) history.replaceState({ surface: true }, '', url);
+    for (const selector of ['link[rel="canonical"]', 'link[rel="alternate"][type="text/markdown"]', 'meta[name="description"]']) {
+      const old = document.head.querySelector(selector);
+      const replacement = parsed.head.querySelector(selector);
+      if (old && replacement) old.replaceWith(replacement);
+    }
+    const surface = new URL(url, location.href).pathname.match(/^\/functions\/[^/]+\/([^/]+)\//)?.[1] ?? stored();
+    update(surface);
+    for (const control of document.querySelectorAll<HTMLButtonElement>('[data-copy-markdown]')) control.dataset.copyMarkdown = location.pathname.replace(/\/$/, '') + '.md';
+    document.dispatchEvent(new Event('astro:page-load'));
+    applySurfaceGroups(surface);
+    scrollTo(0, y);
+  }
+  document.addEventListener('click', async (event) => {
+    const link = (event.target as Element).closest<HTMLAnchorElement>('[data-surface]');
+    if (!link || (event as MouseEvent).button !== 0 || (event as MouseEvent).metaKey || (event as MouseEvent).ctrlKey || (event as MouseEvent).shiftKey || (event as MouseEvent).altKey) return;
+    event.preventDefault();
+    writeSurface(link.dataset.surface!);
+    document.querySelector<HTMLDetailsElement>('[data-surface-picker]')!.open = false;
+    if (/^\/functions\/[^/]+(?:\/[^/]+)?\/$/.test(location.pathname)) {
+      try { await swap(link.href, true); } catch { location.assign(link.href); }
+    } else {
+      update(link.dataset.surface!);
+      applySurfaceGroups(link.dataset.surface!);
+    }
+  });
+  addEventListener('popstate', () => { swap(location.href, false).catch(() => location.reload()); });
+  const explicit = location.pathname.match(/^\/functions\/[^/]+\/([^/]+)\//)?.[1] ?? location.pathname.match(/^\/(?:languages|databases)\/([^/]+)\//)?.[1];
+  update(explicit ?? stored());
+  // Explicit cell URLs stay shareable; a bare function route uses the stored language.
+  if (/^\/functions\/[^/]+\/$/.test(location.pathname) && stored() !== 'command') {
+    swap(pickerRoute(location.pathname, stored()), false).catch(() => {});
+  }
+</script>
+<style>
+  .surface-picker { position: relative; flex-shrink: 1; min-width: 0; }
+  summary { list-style: none; cursor: pointer; min-height: 44px; display: flex; align-items: center; gap: 0.25rem; padding: 0 0.4rem; font-size: 0.875rem; }
+  [data-surface-label] { max-width: 7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 49.99rem) { [data-surface-label] { display: none; } }
+  summary::-webkit-details-marker { display: none; }
+  nav { position: absolute; z-index: 100; top: 100%; right: 0; min-width: 12rem; max-height: 65vh; overflow-y: auto; background: var(--sl-color-bg); border: 1px solid var(--sl-color-gray-5); border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem #0004; }
+  a { display: flex; align-items: center; min-height: 44px; padding: 0 1rem; text-decoration: none; color: var(--sl-color-text); }
+  a:hover, a[aria-current='true'] { background: var(--sl-color-gray-6); }
+</style>

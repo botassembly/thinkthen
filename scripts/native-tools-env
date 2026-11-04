@@ -1,5 +1,6 @@
 #!/bin/sh
-# Source from the repository root to select prepared compilers and runtimes.
+# Source from the repository root, or run native-tools-env COMMAND [ARG ...],
+# to select prepared compilers and runtimes.
 # These are build paths, never library runtime search paths.
 export PYTHONDONTWRITEBYTECODE=1
 if [ -n "${PM_JOB_CORES:-}" ]; then
@@ -33,3 +34,16 @@ if [ "${THINKTHEN_FLOOR_BUILD:-}" = 1 ]; then
     PATH="${THINKTHEN_NODE_HOME:-/opt/node}/bin:/opt/R/bin:/opt/ruby/bin:${THINKTHEN_GO_HOME:-/opt/go}/bin:/opt/thinkthen-pg18/bin:$PATH"
     export PATH
 fi
+
+# A sourced caller keeps its own positional arguments and control flow.
+# zsh names a sourced file in $0, so its file context also means sourced.
+case "${ZSH_EVAL_CONTEXT:-}:${0##*/}" in
+    *:file*) ;;
+    *:native-tools-env)
+        if [ "$#" -eq 0 ]; then
+            echo 'usage: scripts/native-tools-env COMMAND [ARG ...]' >&2
+            exit 2
+        fi
+        exec "$@"
+        ;;
+esac

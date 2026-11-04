@@ -1,0 +1,86 @@
+---
+title: Introducing ThinkThen
+description: Code sees strings and can't tell what they mean. ThinkThen lets code ask one bounded question about text, get a typed answer back, and act on it.
+goal: Introduce ThinkThen to a developer who has never seen it, show the core move with a real run, and send them to the quickstart.
+reader: A developer who writes code that has to act on text
+kind: blog
+date: 2026-10-01
+author: Ian Maurer
+verified: 2026-11-02
+---
+import Example from '../../../components/Example.astro';
+import Fact from '../../../components/Fact.astro';
+
+Code sees strings but can't tell what they mean. ThinkThen <Fact k="version" /> gives it a way to ask.
+
+ThinkThen fixes that. Your code asks one bounded question about some text. It gets back a typed answer and acts on it.
+
+## Ask a question, get a value
+
+Here's a customer message. Does it ask for a refund?
+
+<Example id="decide-hello" />
+
+The answer is `true` or `false`, and your code reads it as a value. There's no prose to parse. Add `--json` and you get the details, with the probability behind the answer; the [decide page](/functions/decide/#see-why) shows it.
+
+The command asks Jev, the default model. [Configuration](/configuration/) sets up your key.
+
+Every answer has a shape you choose up front: yes or no, one choice from your list, a set of labels, or a number on your scale.
+
+## Ten functions you already know
+
+I built ThinkThen around shapes every programmer knows. `decide` is an if that understands. `filter` is a grep that understands. `rank` is a sort that understands.
+
+The other seven fill out the set. `choose` picks one option. `tag` names every label that fits. `score` places text on a scale. `find` picks the best line. `recognize` finds names. `relate` finds how they connect. `annotate` asks several of these at once and fills out a form for each message.
+
+[The ten functions](/#pick-the-function-that-fits-your-question) are listed on the home page, each with its own page.
+
+## Answers are exit codes
+
+In a script, add `--check` and the answer becomes the exit code. Yes exits 0. No exits 1.
+
+Set a low bar and a high bar, and the middle gets its own answer. Here the bars are 0.2 and 0.8, and this answer lands between them:
+
+<Example id="exit-check-notsure" />
+
+Not sure exits 3, so a person reads it. A failure gets its own exit code too: 6 when a line failed, 2 when the command itself was wrong. A failure never looks like an answer. [Exit codes](/command-line/exit-codes/) lists every code.
+
+## No training data to start
+
+You don't train a model. You don't label a dataset first. The question is plain words.
+
+You still measure before you trust it. Label some real cases, run the question over them, and count where the model agrees with you. Pick the threshold from that count. [Break a problem into decisions](/how-tos/break-a-problem-into-decisions/) shows how to keep each question small enough to check.
+
+## It runs where your data is
+
+ThinkThen is one command and SDKs for twelve languages plus Rust, starting with [Python](/sdks/python/). Every SDK calls the same Rust engine and returns the same answers.
+
+There are extensions for [DuckDB](/sdks/duckdb/), [SQLite](/sdks/sqlite/) and [PostgreSQL](/sdks/postgresql/) too. In those, a question is a table function over a query, and its answers are columns.
+
+The command reads CSV, TSV and xlsx and writes the answers back as new columns. That covers a lot of real work.
+
+## Two model services
+
+ThinkThen speaks System One, the API [Jev](https://typesafe.ai) answers. Jev, from TypeSafe, is the default. ThinkThen can also ask OpenAI models through OpenAI's decisions API. Either one can point at another server that speaks the same API with `--url`. [Configuration](/configuration/) sets up each one.
+
+One caution: a threshold belongs to one model. Switch models, and you measure again.
+
+## Where it breaks
+
+**Planted facts move answers.** The model takes the text at its word. A false claim added to a customer message can move the answer. Set a [low bar and a high bar](/functions/decide/#not-sure), and send the middle to a person.
+
+**`tag` misses part of the set.** On Beatles Bench, Jev names exactly the right set of lead singers only 56% of the time. That's from the bench's [function table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/functions.tsv). Use `tag` to fill a queue a person reads.
+
+**It only answers.** ThinkThen writes no text and takes no action. Your code acts.
+
+## Proven in public
+
+We built [Beatles Bench](https://github.com/botassembly/beatles-bench) to test this in the open. It asks 1,501 questions, most of them about Beatles songs. A script set every right answer from Wikipedia and Wikidata.
+
+Jev gets 70.5% of them right from memory. The [model report](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/reports/models.md) compares it with other models and with plain search. I build ThinkThen, so weigh that result with care.
+
+## Open source
+
+ThinkThen is MIT licensed. I build it at GenomOncology, and the code is on [GitHub](https://github.com/botassembly/thinkthen).
+
+The [quickstart](/quickstart/) installs it and asks your first question.

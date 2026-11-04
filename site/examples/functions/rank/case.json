@@ -1,0 +1,13 @@
+{
+  "question": "How urgent is the request?",
+  "levels": [
+    "routine",
+    "urgent"
+  ],
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ],
+  "answers": "One rank per record, starting at 1, in record order."
+}

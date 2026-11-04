@@ -13,7 +13,7 @@ await using var client = new ThinkThenClient(new()
 var value = new InputRecord("aot", "alpha");
 var metadata = RecordJson.Default.InputRecord;
 var toolbox = AnnotationQuestions.Parse("""{"ready":{"function":"decide","question":"Ready?"}}""");
-var decision = await client.DecideAsync("Ready?", value, metadata);
+var decision = await client.DecideWithMetadataAsync("Ready?", value, metadata);
 Successful(decision);
 var rowMetadata = (System.Text.Json.Serialization.Metadata.JsonTypeInfo<Row<bool, NoDetail>>)RecordJson.Default.GetTypeInfo(typeof(Row<bool, NoDetail>))!;
 string json = JsonSerializer.Serialize(decision, rowMetadata);
@@ -23,31 +23,31 @@ string settingsJson = JsonSerializer.Serialize(settings, RecordJson.Default.Thin
 if (settingsJson.Contains("synthetic-secret", StringComparison.Ordinal)) throw new Exception("AOT settings serialization leaked a key");
 if (JsonSerializer.Deserialize(settingsJson, RecordJson.Default.ThinkThenOptions)!.Backend != Backend.Stub)
     throw new Exception("AOT settings admission changed backend");
-Successful(await client.ChooseAsync("Which?", value, ["first", "second"], metadata));
-Successful(await client.TagAsync("Which?", value, ["label"], metadata));
-Successful(await client.ScoreAsync("Urgent?", value, ["routine", "urgent"], metadata));
-Successful(await client.FindAsync("Which line?", value, metadata));
-Successful(await client.RecognizeAsync(value, ["person"], metadata));
-Successful(await client.RelateAsync(value,
-    [new RelationRule { Source = "person", Target = "company", Relation = "works_for" }], metadata));
-Successful(await client.AnnotateAsync(toolbox, value, metadata));
-Successful(await client.Toolbox(toolbox).AnnotateAsync(value, metadata));
+Successful(await client.ChooseWithMetadataAsync("Which?", value, ["first", "second"], metadata));
+Successful(await client.TagWithMetadataAsync("Which?", value, ["label"], metadata));
+Successful(await client.ScoreWithMetadataAsync("Urgent?", value, ["routine", "urgent"], metadata));
+Successful(await client.FindWithMetadataAsync("Which line?", value, metadata));
+Successful(await client.RecognizeWithMetadataAsync(value, ["person"], metadata));
+Successful(await client.RelateWithMetadataAsync(value,
+    [new RelationRule { Source = "person", Target = "company", Name = "works_for" }], metadata));
+Successful(await client.AnnotateWithMetadataAsync(toolbox, value, metadata));
+Successful(await client.Toolbox(toolbox).AnnotateWithMetadataAsync(value, metadata));
 int filtered = 0;
-await foreach (var item in client.FilterAsync("Ready?", Records(), metadata))
+await foreach (var item in client.FilterStreamWithMetadataAsync("Ready?", Records(), metadata))
 {
     if (!ReferenceEquals(item.Item, value) || item.Row.Status == RowStatus.Failed) throw new Exception("AOT filter lost original record");
     filtered++;
 }
 if (filtered != 1) throw new Exception("AOT filter dropped a row");
 int ranked = 0;
-await foreach (var item in client.RankAsync("Urgent?", Records(), ["routine", "urgent"], metadata))
+await foreach (var item in client.RankWithMetadataAsync("Urgent?", Records(), ["routine", "urgent"], metadata))
 {
-    if (!ReferenceEquals(item.Item, value) || item.Row.Status == RowStatus.Failed) throw new Exception("AOT rank lost original record");
+    if (item.Item != value || ReferenceEquals(item.Item, value) || item.Row.Status == RowStatus.Failed) throw new Exception("AOT rank lost original record");
     ranked++;
 }
 if (ranked != 1) throw new Exception("AOT rank dropped a row");
 int annotated = 0;
-await foreach (var row in client.Toolbox(toolbox).AnnotateStreamAsync(Records(), metadata))
+await foreach (var row in client.Toolbox(toolbox).AnnotateStreamWithMetadataAsync(Records(), metadata))
 {
     if (row.Position != 1 || row.Status == RowStatus.Failed) throw new Exception("AOT toolbox lost input position");
     annotated++;

@@ -1,0 +1,15 @@
+{
+  "function": "decide",
+  "position": 1,
+  "id": "a4",
+  "source": {
+    "question_identity": "7cd1876e82c67b9664acdb9d3ffea1967cb0a1d895c05e75aa5702006c60036a",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "failed",
+  "error": {
+    "code": "record.missing",
+    "message": "the record holds nothing at /text"
+  }
+}

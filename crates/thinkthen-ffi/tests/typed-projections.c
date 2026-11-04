@@ -46,7 +46,7 @@ static void names(thinkthen_value *value, thinkthen_error *error) {
     } putchar(']');
 }
 static void body(thinkthen_value *, thinkthen_error *);
-static void answer(thinkthen_value *value, uint32_t function, thinkthen_error *error) {
+static void answer(thinkthen_value *value, thinkthen_function function, thinkthen_error *error) {
     size_t count = 0;
     switch (function) {
     case THINKTHEN_FUNCTION_DECIDE: case THINKTHEN_FUNCTION_FILTER: {
@@ -78,7 +78,7 @@ static void answer(thinkthen_value *value, uint32_t function, thinkthen_error *e
     default: assert(0);
     }
 }
-static void detail(thinkthen_value *value, uint32_t function, thinkthen_error *error) {
+static void detail(thinkthen_value *value, thinkthen_function function, thinkthen_error *error) {
     size_t count = 0;
     switch (function) {
     case THINKTHEN_FUNCTION_CHOOSE: case THINKTHEN_FUNCTION_TAG:
@@ -102,7 +102,7 @@ static void detail(thinkthen_value *value, uint32_t function, thinkthen_error *e
             if (i) {
                 putchar(',');
             }
-            thinkthen_span name = {0}; ok(thinkthen_value_kind_span(value, i, &name, error), error); printf("{\"start\":%" PRIu64 ",\"end\":%" PRIu64 ",\"kinds\":{", name.start, name.end);
+            thinkthen_span name = {0}; ok(thinkthen_value_kind_span(value, i, &name, error), error); fputs("{\"text\":", stdout); text(name.text); printf(",\"start\":%" PRIu64 ",\"end\":%" PRIu64 ",\"kinds\":{", name.start, name.end);
             size_t kinds = 0; ok(thinkthen_value_kind_probability_count(value, i, &kinds, error), error);
             for (size_t j = 0; j < kinds; j++) { if (j) putchar(','); thinkthen_probability item = {0}; ok(thinkthen_value_kind_probability_at(value, i, j, &item, error), error); label(item); } fputs("}}", stdout);
         } fputs("]}", stdout); break;
@@ -114,7 +114,7 @@ static void detail(thinkthen_value *value, uint32_t function, thinkthen_error *e
     }
 }
 static void body(thinkthen_value *value, thinkthen_error *error) {
-    uint32_t function = 0, status = 0;
+    thinkthen_function function = 0; thinkthen_status status = 0;
     ok(thinkthen_value_function(value, &function, error), error); ok(thinkthen_value_status(value, &status, error), error);
     printf("\"function\":%u,\"status\":%u", function, status);
     if (status == THINKTHEN_STATUS_FAILED) {
@@ -129,11 +129,11 @@ int main(int argc, char **argv) {
     assert(argc == 3 || (argc == 4 && strcmp(argv[3], "cancelled") == 0)); assert(thinkthen_abi_compatible(THINKTHEN_ABI_VERSION, thinkthen_abi_version()));
     thinkthen_error error = {0}; error.struct_size = sizeof(error);
     thinkthen_client *client = NULL;
-    int32_t opened = thinkthen_client_open_json((const uint8_t *)argv[1], strlen(argv[1]), &client, &error);
+    int32_t opened = thinkthen_client_open_json((const char *)argv[1], strlen(argv[1]), &client, &error);
     thinkthen_call *call = NULL;
-    if (opened == THINKTHEN_OK) opened = thinkthen_call_open_json(client, (const uint8_t *)argv[2], strlen(argv[2]), THINKTHEN_OFFSET_CODE_POINTS, &call, &error);
+    if (opened == THINKTHEN_OK) opened = thinkthen_call_open_json(client, (const char *)argv[2], strlen(argv[2]), THINKTHEN_OFFSET_CODE_POINTS, &call, &error);
     thinkthen_client_free(client);
-    if (opened == THINKTHEN_ERROR) {
+    if (opened < 0) {
         assert(call == NULL);
         printf("{\"error\":\"%s\"}\n", thinkthen_code_name(error.code));
         thinkthen_error_free(&error);
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
         thinkthen_row row = {0}; row.struct_size = sizeof(row);
         int32_t result = thinkthen_call_next(call, &row, &error);
         if (result == THINKTHEN_END) break;
-        if (result == THINKTHEN_ERROR) {
+        if (result < 0) {
             assert(row.answer.data == NULL && row.detail.data == NULL);
             printf("{\"error\":\"%s\"}\n", thinkthen_code_name(error.code));
             assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);

@@ -1,6 +1,6 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,24 +19,24 @@ public final class ConformanceCases {
         var definition = request.get("question");
         String function = definition.get("function").asText();
         if (function.equals("annotate")) {
-            var options = AnnotateOptions.builder().evidence(Pointer.of(definition.path("evidence").asText("")));
+            var options = AnnotateOptions.builder().field(Pointer.of(definition.path("field").asText("")));
             if (request.hasNonNull("name")) options.name(request.get("name").asText());
-            return client.annotateStream(annotations(definition.get("questions")),records,options.build());
+            return client.annotateStream(annotations(definition.get("questions")),records,options.build()).map(Annotated::row);
         }
         var box = ConsumerCases.JSON.createObjectNode(); box.set("entry",definition);
-        var toolbox = Toolbox.parse(box.toString());
+        var toolbox = Toolbox.fromDefinitions(box.toString());
         return switch (function) {
             case "decide" -> client.decideStream(named(toolbox.decide("entry").orElseThrow(),request,DecideQuestion::named),records);
             case "choose" -> client.chooseStream(named(toolbox.choose("entry").orElseThrow(),request,ChooseQuestion::named),records);
             case "tag" -> client.tagStream(named(toolbox.tag("entry").orElseThrow(),request,TagQuestion::named),records);
             case "score" -> client.scoreStream(named(toolbox.score("entry").orElseThrow(),request,ScoreQuestion::named),records);
-            case "filter" -> client.filter(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).peek(item -> {
+            case "filter" -> client.filterRows(named(toolbox.filter("entry").orElseThrow(),request,FilterQuestion::named),records).peek(item -> {
                 if (expected.isArray()) {
                     var wanted = expected.get(Math.toIntExact(item.row().position() - 1));
                     ConsumerCases.equal(item.kept(),wanted.path("answer").asBoolean(false),"canonical filter kept");
                 }
-            }).map(ItemRow::row);
-            case "rank" -> client.rank(named(toolbox.rank("entry").orElseThrow(),request,RankQuestion::named),records).map(ItemRow::row);
+            }).map(Filtered::row);
+            case "rank" -> client.rank(named(toolbox.rank("entry").orElseThrow(),request,RankQuestion::named),records).map(Ranked::row);
             case "find" -> client.findStream(named(toolbox.find("entry").orElseThrow(),request,FindQuestion::named),records);
             case "recognize" -> client.recognizeStream(named(toolbox.recognize("entry").orElseThrow(),request,RecognizeQuestion::named),records);
             case "relate" -> client.relateStream(named(toolbox.relate("entry").orElseThrow(),request,RelateQuestion::named),records);
@@ -47,7 +47,7 @@ public final class ConformanceCases {
         return request.hasNonNull("name") ? rename.apply(question,request.get("name").asText()) : question;
     }
     private static AnnotationQuestions annotations(JsonNode questions) {
-        var box = Toolbox.parse(questions.toString()); var result = AnnotationQuestions.builder();
+        var box = Toolbox.fromDefinitions(questions.toString()); var result = AnnotationQuestions.builder();
         questions.properties().forEach(entry -> {
             String name = entry.getKey();
             switch (entry.getValue().get("function").asText()) {
@@ -100,14 +100,14 @@ public final class ConformanceCases {
             for (var piece : recognize.pieces()) { var row = (ObjectNode) value(piece.span()); row.set("tags",value(piece.tags())); pieces.add(row); }
             result.set("names",value(recognize.names())); return result;
         }
-        if (item instanceof RelateDetail relate) { var result = ConsumerCases.JSON.createObjectNode(); result.set("names",value(relate.names())); result.set("pairs",value(relate.pairs())); return result; }
+        if (item instanceof RelationDetail relate) { var result = ConsumerCases.JSON.createObjectNode(); result.set("names",value(relate.names())); result.set("pairs",value(relate.pairs())); return result; }
         return ConsumerCases.JSON.valueToTree(item);
     }
     private static ObjectNode outcome(String function,AnnotationOutcome<?,?> item) {
         var result = ConsumerCases.JSON.createObjectNode().put("function",function).put("status",item.status().name().toLowerCase(java.util.Locale.ROOT));
         switch (item) {
             case AnnotationAnswered<?,?> a -> { result.set("answer",value(a.answer())); a.probability().ifPresent(p -> result.put("probability",p)); a.detail().ifPresent(d -> result.set("detail",detail(d))); }
-            case AnnotationUnsure<?,?> u -> { result.put("probability",u.probability()); u.detail().ifPresent(d -> result.set("detail",detail(d))); }
+            case AnnotationUnsure<?,?> u -> { result.put("probability",u.probability().orElseThrow()); u.detail().ifPresent(d -> result.set("detail",detail(d))); }
             case AnnotationFailed<?,?> f -> { var error = result.putObject("error").put("code",f.error().code().wireName()); f.error().httpStatus().ifPresent(status -> error.put("http_status",status)); }
         }
         return result;
@@ -130,16 +130,16 @@ public final class ConformanceCases {
             var record = sample.get("request").get("records").get(row.get("position").intValue()-1);
             var question = sample.get("request").get("question");
             if (question.path("function").asText().equals("annotate") && row.path("answer").isObject())
-                row.get("answer").properties().forEach(entry -> offsets(entry.getValue(),evidence(record,question.get("questions").get(entry.getKey()),question)));
+                row.get("answer").properties().forEach(entry -> offsets(entry.getValue(),field(record,question.get("questions").get(entry.getKey()),question)));
             else {
-                String text = evidence(record,question,question);
+                String text = field(record,question,question);
                 offsets(row.path("answer"),text); offsets(row.path("detail"),text);
             }
         }
         return result;
     }
-    private static String evidence(JsonNode record,JsonNode definition,JsonNode question) {
-        var pointer = definition.hasNonNull("evidence") ? definition.get("evidence") : question.get("evidence");
+    private static String field(JsonNode record,JsonNode definition,JsonNode question) {
+        var pointer = definition.hasNonNull("field") ? definition.get("field") : question.get("field");
         var selected = pointer == null ? record : record.at(pointer.asText());
         return selected.isTextual() ? selected.asText() : selected.toString();
     }
@@ -157,7 +157,7 @@ public final class ConformanceCases {
         ConsumerCases.check(loaded.get("ready").orElseThrow() instanceof FilterQuestion && loaded.get("missing").isEmpty(),"saved lookup");
         ConsumerCases.check(loaded.relate("names").isPresent(),"saved relate lost");
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
-            var original = ChooseQuestion.of("Which topic?",List.of("billing","shipping"),ChooseOptions.builder().threshold(Threshold.cut(0.7)).evidence(Pointer.of("/body")).build());
+            var original = ChooseQuestion.of("Which topic?",List.of("billing","shipping"),ChooseOptions.builder().threshold(Threshold.cut(0.7)).field(Pointer.of("/body")).build());
             var record = java.util.Map.of("body","Bill");
             ConsumerCases.check(row(client.choose(loaded.choose("topic").orElseThrow(),record)).equals(row(client.choose(original,record))),"loaded execution changed");
             var named = original.named("triage");
@@ -213,12 +213,12 @@ public final class ConformanceCases {
     private static boolean ValuesEqual(String left, String right) throws Exception { return ConsumerCases.JSON.readTree(left).equals(ConsumerCases.JSON.readTree(right)); }
     // Feature: the asynchronous public facade preserves the shared named evidence case.
     private static void asyncCase(Path directory, JsonNode manifest) throws Exception {
-        var file = directory.resolve("decide-evidence-name.json");
+        var file = directory.resolve("decide-field-name.json");
         var sample = ConsumerCases.JSON.readTree(file.toFile());
         var request = sample.get("request");
         var definitions = ConsumerCases.JSON.createObjectNode();
         definitions.set("entry",request.get("question"));
-        var question = Toolbox.parse(definitions.toString()).decide("entry").orElseThrow().named(request.get("name").asText());
+        var question = Toolbox.fromDefinitions(definitions.toString()).decide("entry").orElseThrow().named(request.get("name").asText());
         for (var backend : manifest.get("backends")) {
             try (var fixture = new BackendFixture(file.toString());
                  var client = ThinkThen.builder().backend(Backend.valueOf(backend.asText().toUpperCase(java.util.Locale.ROOT)))
@@ -230,7 +230,7 @@ public final class ConformanceCases {
                 ConsumerCases.equal(source.model(),manifest.get("client").get("model").asText(),"async model");
                 ConsumerCases.check(!source.questionIdentity().isEmpty(),"async question identity");
                 var actual = ConsumerCases.JSON.createArrayNode().add(row(result));
-                ConsumerCases.equal(ConsumerCases.JSON.readTree(ConsumerCases.JSON.writeValueAsBytes(actual)),expected(sample),"shared async named evidence rows");
+                ConsumerCases.equal(ConsumerCases.JSON.readTree(ConsumerCases.JSON.writeValueAsBytes(actual)),expected(sample),"shared async named field rows");
                 ConsumerCases.equal(fixture.command("count"),sample.get("requests").asText(),"async request count");
             }
         }

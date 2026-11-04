@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 pub struct Rank {
     pub(crate) inner: crate::core::Score,
     pub(crate) top: Option<crate::core::RankLimit>,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Rank {
     /// Admit a question with its required levels.
@@ -23,7 +23,20 @@ impl Rank {
         Ok(Self {
             inner: crate::core::Score::new(question, levels)?,
             top: None,
-            evidence: None,
+            field: None,
+        })
+    }
+    /// Admit named levels with optional descriptions.
+    /// # Errors
+    /// Returns the shared scale admission error.
+    pub fn with_options(
+        question: impl Into<String>,
+        levels: impl IntoIterator<Item = AnswerOption>,
+    ) -> Result<Self, Error> {
+        Ok(Self {
+            inner: crate::core::Score::with_options(question, levels)?,
+            top: None,
+            field: None,
         })
     }
     /// Retain at most this many successful ranks.
@@ -33,16 +46,16 @@ impl Rank {
         self.top = Some(crate::core::RankLimit::new(top.get())?);
         Ok(self)
     }
-    /// Select evidence with an admitted JSON Pointer.
+    /// Select field with an admitted JSON Pointer.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
         self
     }
-    /// The admitted evidence pointer.
+    /// The admitted field pointer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -54,7 +67,8 @@ pub(crate) struct RankWire {
     question: String,
     #[schemars(length(min = MIN_LEVELS))]
     #[serde(deserialize_with = "crate::core::diagnostic::levels")]
-    levels: Vec<String>,
+    #[schemars(with = "Vec<AnswerOption>")]
+    levels: Vec<OptionWire>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Option<std::num::NonZeroUsize>", range(max = crate::core::RankLimit::MAX))]
     #[serde(deserialize_with = "crate::core::diagnostic::top")]
@@ -62,16 +76,23 @@ pub(crate) struct RankWire {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<RankWire> for Rank {
     type Error = Error;
     fn try_from(value: RankWire) -> Result<Self, Error> {
-        let mut question = Self::new(value.question, value.levels)?;
-        question.evidence = admit_evidence(value.evidence)?;
+        let mut question = Self::with_options(
+            value.question,
+            value
+                .levels
+                .into_iter()
+                .map(AnswerOption::try_from)
+                .collect::<Result<Vec<_>, _>>()?,
+        )?;
+        question.field = admit_field(value.field)?;
         question.top = value.top.map(crate::core::RankLimit::new).transpose()?;
         Ok(question)
     }
@@ -80,9 +101,9 @@ impl From<Rank> for RankWire {
     fn from(value: Rank) -> Self {
         Self {
             question: value.inner.text,
-            levels: value.inner.levels,
+            levels: value.inner.levels.into_iter().map(Into::into).collect(),
             top: value.top.map(|top| top.get()),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }

@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-pg-') as temporary:
         sql = blocks[0]
         result = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
                                 capture_output=True, env=env, check=True)
-        assert '(2 rows)' in result.stdout, result.stdout
+        assert '(3 rows)' in result.stdout, result.stdout
     finally:
         subprocess.run(['pg_ctl', '-D', data, '-m', 'fast', '-w', 'stop'], check=True)
 print('README: PostgreSQL passes')

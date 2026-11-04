@@ -1,0 +1,82 @@
+---
+title: relate
+description: relate finds the names in a piece of text and prints each connection between them that a rule you give describes, such as a person who works for an organization.
+goal: A newcomer who needs to know how the names in a text are connected leaves able to write a rule, get each connection it finds, read no connection, see the chance of each one, move the bar, and relate names in every row of a CSV file.
+reader: Someone at the command line who needs to know who works for whom, or how other names in a text are connected
+kind: how-to
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "relate: how the names in a text are connected"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
+
+relate finds the names in a piece of text and prints each connection between them that one of your rules describes, returning several connections or none. A rule gives the connection a name, then the kind of name it starts from and the kind it points to.
+
+<Example id="relate-pair" />
+
+One connection: the rule `works_for person organization` matches Morgan, a person, and Example Group, an organization.
+
+## No connection
+
+<Example id="relate-none" />
+
+The message names no person and no organization, so the answer is empty.
+
+## See why
+
+<details class="example-disclosure">
+<summary>See why</summary>
+
+`--json` prints the details. This `jq` keeps each connection's name and its chance.
+
+<Example id="relate-why" />
+
+relate keeps each connection whose chance reaches the bar, 0.5 by default. [JSON output](/reference/json-output/) lists every field, including each name and where it sits in the text.
+
+</details>
+
+## Move the bar
+
+<details class="example-disclosure">
+<summary>Move the bar</summary>
+
+Raise the bar to 0.99 and the connection is dropped, because it has 0.97.
+
+<Example id="relate-bar" />
+
+Lower the bar to catch more connections. Raise it to keep only the clear ones.
+
+</details>
+
+## Relate names in every row of a CSV file
+
+<details class="example-disclosure">
+<summary>Relate names in every row of a CSV file</summary>
+
+<ExampleFile id="relate-into" file="messages.csv" />
+
+<Example id="relate-into" />
+
+`--column` names the column to read, and `--into` names the new answer column. Each cell lists its connections as `source relation target`, joined by `; `. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+
+</details>
+
+## Options
+
+<details class="example-disclosure">
+<summary>Options</summary>
+
+Repeat `--rule` for each connection you want. `--either` lets every rule point both ways.
+
+<FunctionOptions name="relate" />
+
+</details>
+
+If relate can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+
+**In code:** [Python](/sdks/python/#relate) · [TypeScript](/sdks/typescript/#relate) · [Go](/sdks/go/#relate) · [Java](/sdks/java/#relate) · [Kotlin](/sdks/kotlin/#relate) · [C#](/sdks/csharp/#relate) · [R](/sdks/r/#relate) · [Ruby](/sdks/ruby/#relate) · [Rust](/sdks/rust/#relate) · [Swift](/sdks/swift/#relate) · [Zig](/sdks/zig/#relate) · [C](/sdks/c/#relate) · [C++](/sdks/cpp/#relate) · [DuckDB](/sdks/duckdb/#relate) · [SQLite](/sdks/sqlite/#relate) · [PostgreSQL](/sdks/postgresql/#relate)
+
+Next: [annotate](/functions/annotate/) asks several questions about each line at once.

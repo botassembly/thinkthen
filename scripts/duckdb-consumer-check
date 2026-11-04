@@ -1,0 +1,11 @@
+#!/bin/sh
+# Compile only the DuckDB consumer against existing, source-verified fixtures.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+if [ "${1:-}" = --prepare-fixtures ]; then exec scripts/native-test-assets prepare; fi
+ruff check --select F401,F841,ERA,BLE,E722,S110 databases/duckdb/tests/union_cases.py databases/duckdb/tests/run.py
+fixture_environment=$(scripts/native-test-assets env)
+eval "$fixture_environment"
+export THINKTHEN_SQL_ARCHIVE="$THINKTHEN_SQL_TEST_ARCHIVE"
+exec sh databases/duckdb/tests/development.sh "$@"

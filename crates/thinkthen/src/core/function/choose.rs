@@ -62,9 +62,9 @@ impl super::Function for Choose {
         record: &crate::core::AdmittedRecord,
         _limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        let evidence = record.evidence();
+        let field = record.field();
         Ok(vec![Ask::Choice {
-            instructions: super::quoted(evidence, &self.text),
+            instructions: super::quoted(field, &self.text),
             options: self.options.clone(),
         }])
     }

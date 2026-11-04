@@ -1,0 +1,3 @@
+     status  answer      error_code
+0  answered    True             NaN
+1    failed    <NA>  record.missing

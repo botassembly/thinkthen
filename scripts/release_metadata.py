@@ -113,7 +113,7 @@ def source_versions(root, expected):
         raise ValueError(name + ': SQLite package does not use the prepared runtime floor')
     name = 'databases/duckdb/community-versions.json'
     versions = json.loads((root / name).read_text())
-    selected = re.search(r'/duckdb-([0-9.]+)', (root / 'databases/duckdb/build.sh').read_text())[1]
+    selected = json.loads((root / 'scripts/release-tools.json').read_text())['duckdb']
     if selected not in versions:
         raise ValueError(name + ': DuckDB package runtime has no community revision')
     for release, pins in versions.items():

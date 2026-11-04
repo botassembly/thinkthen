@@ -1,0 +1,1 @@
+{"left":"Contoso Ltd, Paris","right":"Contoso Group, Lyon"}

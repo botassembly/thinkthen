@@ -180,6 +180,7 @@ fn only_https_and_named_loopback_http_are_admitted_and_sent() {
 fn backend_names_reject_unknown_values_before_credentials() {
     let error = Settings::from_json(r#"{"backend":"a-new-name"}"#).unwrap_err();
     assert_eq!(error.code().as_str(), "usage.backend");
+    assert!(!error.message().contains("stub"));
     for (code, family) in [
         (Code::UsageQuestion, "usage"),
         (Code::BackendStatus, "backend"),

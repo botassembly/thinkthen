@@ -40,11 +40,11 @@ def check_frames(cases: Path) -> None:
                 question: Any = tt.AnnotationQuestions(
                     {"ready": tt.DecideQuestion("Ready?")}
                 )
-                evidence = "/record/body"
+                field = "/record/body"
             else:
-                definition["evidence"] = "/record"
+                definition["field"] = "/record"
                 question = admitted(definition)
-                evidence = None
+                field = None
             for frame_name in ("pandas", "polars"):
                 frame: Any = (
                     pd.DataFrame({"record": records})
@@ -62,9 +62,14 @@ def check_frames(cases: Path) -> None:
                         retry=tt.RetryPolicy(max_retries=0),
                     ) as client,
                 ):
-                    options = {"client": client, "name": "frame-" + function}
-                    if evidence is not None:
-                        options["evidence"] = evidence
+                    options = {
+                        "client": client,
+                        "name": "frame-" + function,
+                        "details": True,
+                        "errors": "coerce",
+                    }
+                    if field is not None:
+                        options["field"] = field
                     result = getattr(frame.thinkthen, function)(question, **options)
                     assert len(result) == len(expected), (wire, frame_name, function)
                     if function == "annotate":

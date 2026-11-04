@@ -1,0 +1,10 @@
+package consumer.rejected
+
+import dev.thinkthen.kotlin.*
+import kotlinx.coroutines.flow.flowOf
+
+// Feature: SingleRejectsSequence. A one-record call refuses many records when the code is compiled.
+suspend fun rejectedSingleRejectsSequence(client: ThinkThen) {
+// Expect: pass many records to tagStream
+    client.tag("Which labels?", sequenceOf("alpha", "beta"), listOf("billing"))
+}

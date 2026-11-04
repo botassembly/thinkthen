@@ -1,12 +1,12 @@
 // @ts-check
 import { isProxy } from "node:util/types";
-import { CancelledError, engineError, hostValue, nativeError, loadNative } from "./bridge.js";
+import { CancelledError, engineError, hostValue, hostSnapshot, nativeError, loadNative } from "./bridge.js";
 import { encodeRecord } from "./bridge.js";
 /** @typedef {import('./bridge.js').NativeClient} NativeClient */
 /** @typedef {import('./bridge.js').Operation} Operation */
 /** @typedef {import('./bridge.js').Reply} Reply */
 /** @typedef {import('./index.d.ts').AnyRow} Row */
-/** @typedef {{row: Row, position: number, id: {kind: string, value?: string}}} Packet */
+/** @typedef {{row: Row, position: number, id: {kind: string, value?: string}, original?: {kind: string, data: string} | null}} Packet */
 /** @typedef {{packet: Packet, reply: Reply}} Event */
 /** @param {string} text @returns {Packet} */
 function packet(text) {
@@ -21,6 +21,19 @@ function packet(text) {
   value.row = /** @type {Row} */(hostValue(value.row));
   return value;
 }
+/** @param {Packet} value @returns {unknown} */
+function rankOriginal(value) {
+  const original = value.original;
+  if (!original || original.kind === "invalid" || original.kind === "missing") return undefined;
+  if (original.kind === "text") return original.data;
+  if (original.kind !== "json") throw engineError(null);
+  const result = /** @type {unknown} */(JSON.parse(original.data));
+  if (result !== null && typeof result === "object" && !Array.isArray(result)
+      && !Object.hasOwn(result, "id") && value.id.kind !== "absent") {
+    Object.defineProperty(result, "id", {value: value.id.kind === "string" ? value.id.value : BigInt(/** @type {string} */(value.id.value)), enumerable: true});
+  }
+  return hostSnapshot(result);
+}
 /**
  * @param {NativeClient} client @param {string} request
  * @param {Iterable<import('./index.d.ts').RecordInput> | AsyncIterable<import('./index.d.ts').RecordInput>} records
@@ -29,6 +42,7 @@ function packet(text) {
  */
 export function stream(client, request, records, signal, name, release) {
   const filter = name === "filter";
+  const rank = name === "rank";
   /** @type {Iterator<import('./index.d.ts').RecordInput> | AsyncIterator<import('./index.d.ts').RecordInput> | undefined} */
   let iterator;
   /** @type {Operation | undefined} */ let operation;
@@ -100,7 +114,8 @@ export function stream(client, request, records, signal, name, release) {
         if (filter) originals.set(++position, item.value);
         try {
           const encoded = typeof item.value === "string" ? {data: item.value} : encodeRecord(item.value);
-          if (encoded.idKind === undefined) reply(encoded.data, typeof item.value === "string");
+          if (encoded.missing) reply(encoded.data, false, false, "", "", true);
+          else if (encoded.idKind === undefined) reply(encoded.data, typeof item.value === "string");
           else reply(encoded.data, false, false, encoded.idKind, encoded.idValue);
         }
         catch { reply("", false, true); }
@@ -114,7 +129,7 @@ export function stream(client, request, records, signal, name, release) {
     signal?.addEventListener("abort", abort, { once: true });
     completion = new Promise(resolve => { completed = resolve; });
     try {
-      const finite = !isProxy(records) && Array.isArray(records) && Object.getPrototypeOf(records) === Array.prototype
+      const finite = !rank && !isProxy(records) && Array.isArray(records) && Object.getPrototypeOf(records) === Array.prototype
         && !Object.hasOwn(records, Symbol.iterator) && !(Symbol.asyncIterator in records);
       operation = finite ? client.startFinite(request, callback) : client.start(request, callback);
     } catch (error) { completed?.(); fail(nativeError(error)); }
@@ -140,9 +155,9 @@ export function stream(client, request, records, signal, name, release) {
         reading = false;
         operation?.unreference();
         const row = event.packet.row;
-        const item = originals.get(event.packet.position);
+        const item = rank ? rankOriginal(event.packet) : originals.get(event.packet.position);
         originals.delete(event.packet.position);
-        return { done: false, value: filter ? Object.freeze({item, row, kept: row.status === "answered" && row.answer === true}) : row };
+        return { done: false, value: filter ? Object.freeze({item, row, kept: row.status === "answered" && row.answer === true}) : rank ? Object.freeze({...row, item}) : row };
       }
       await new Promise(resolve => { wake = () => { resolve(undefined); }; });
     }

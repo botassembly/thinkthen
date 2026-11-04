@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ThinkThen">
+<rect width="64" height="64" rx="14" fill="#ffffff"/>
+<circle cx="21" cy="32" r="9" fill="#c77700"/>
+<path fill="#0b8046" d="M36 20 L56 32 L36 44 Z"/>
+</svg>

@@ -1,5 +1,6 @@
 //! Native discriminator values have one declaration per enum.
 /// The typed contract's native ABI major and minor, independent of package version.
+#[doc(hidden)]
 // Minor two adds independently retained call event waits.
 pub const ABI_VERSION: u32 = (2 << 16) | 2;
 macro_rules! discriminators {
@@ -8,10 +9,12 @@ macro_rules! discriminators {
         impl $name {
             /// Every native value from this declaration.
             pub const ALL:&'static [Self]=&[$(Self::$variant,)+];
-            /// The explicit stable native discriminator.
+            /// The explicit stable native discriminator, for language bindings.
+            #[doc(hidden)]
             #[must_use]
             pub const fn abi(self)->u32{self as u32}
-            /// Reject unknown native discriminators.
+            /// Reject unknown native discriminators, for language bindings.
+            #[doc(hidden)]
             #[must_use]
             pub const fn from_abi(value:u32)->Option<Self>{match value{$($value=>Some(Self::$variant),)+_=>None}}
         }

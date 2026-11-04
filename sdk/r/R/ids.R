@@ -3,6 +3,10 @@
   vctrs::new_rcrd(list(decimal = decimal, kind = kind), class = "tt_id_integer")
 }
 
+#' Represent an exact signed or unsigned integer identifier without double rounding.
+#'
+#' @rdname tt_id_integer
+#' @export
 tt_id_integer <- function(x) {
   if (!is.character(x)) {
     # Shared admission supplies the code and message for an invalid constructor.

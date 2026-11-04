@@ -1,0 +1,5 @@
+{
+  "anchor": "is_refund <- tt_decide(\"Please refund my order.\",",
+  "before": 0,
+  "after": 2
+}

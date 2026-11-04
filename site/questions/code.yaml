@@ -1,0 +1,57 @@
+# Calling ThinkThen from code and SQL. Source: product (the packages and extensions 0.2.0 ships).
+- id: python
+  question: How do I use ThinkThen from Python?
+  source: product
+  frequency: Python is the first package; data work starts there
+  rank: 33
+  page: /install/python/
+  reference: /reference/rows/
+- id: pandas
+  question: How do I add ThinkThen answers to a pandas DataFrame?
+  source: product
+  frequency: the pandas and Polars accessors ship with the Python package
+  rank: 34
+  page: /install/python/
+  reference: /reference/rows/
+- id: typescript
+  question: How do I use ThinkThen from Node.js or TypeScript?
+  source: product
+  frequency: the npm package; web back ends
+  rank: 35
+  page: /install/typescript/
+  reference: /reference/rows/
+- id: duckdb
+  question: How do I use ThinkThen in DuckDB?
+  source: product
+  frequency: the DuckDB extension; analysts work in SQL
+  rank: 46
+  page: /install/duckdb/
+  reference: /reference/errors/
+- id: postgres
+  question: How do I use ThinkThen in PostgreSQL?
+  source: product
+  frequency: the PostgreSQL extension
+  rank: 47
+  page: /install/postgresql/
+  reference: /reference/errors/
+- id: sqlite
+  question: How do I use ThinkThen in SQLite?
+  source: product
+  frequency: the SQLite extension
+  rank: 52
+  page: /install/sqlite/
+  reference: /reference/errors/
+- id: go
+  question: How do I use ThinkThen from Go?
+  source: product
+  frequency: the Go module
+  rank: 53
+  page: /install/go/
+  reference: /reference/rows/
+- id: other-languages
+  question: Which programming languages does ThinkThen support?
+  source: product
+  frequency: twelve packages plus Rust
+  rank: 48
+  page: /languages/
+  reference: /reference/rows/

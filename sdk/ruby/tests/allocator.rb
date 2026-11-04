@@ -96,7 +96,7 @@ if $PROGRAM_NAME == __FILE__
         ThinkThen::Client.open(backend: :systemone, url: backend.url, api_key: "synthetic-loopback-key") do |client|
           token = ThinkThen::CancelToken.new
           stream = client.decide_each("Ready?", ["record"], cancel: token)
-          worker = Thread.new { raises(ThinkThen::Cancelled) { stream.to_a } }
+          worker = Thread.new { raises(ThinkThen::CancelledError) { stream.to_a } }
           equal("arrived", backend.command("arrived"), "native read precedes cancellation")
           token.cancel
           worker.value

@@ -1,7 +1,7 @@
 @SuppressWarnings("module")
-module io.thinkthen {
+module dev.thinkthen {
     requires com.fasterxml.jackson.databind;
     requires static transitive org.jspecify;
-    exports io.thinkthen;
-    exports io.thinkthen.internal to io.thinkthen.kotlin;
+    exports dev.thinkthen;
+    exports dev.thinkthen.internal to dev.thinkthen.kotlin;
 }

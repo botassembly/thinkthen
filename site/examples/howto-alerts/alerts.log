@@ -1,0 +1,5 @@
+2026-10-27T08:01:12Z disk /var at 96% on db-2
+2026-10-27T08:01:40Z p99 latency 2.4s on checkout-api
+2026-10-27T08:02:05Z certificate for api.example.com expires in 5 days
+2026-10-27T08:03:51Z disk /var at 97% on db-2
+2026-10-27T08:04:10Z 502 responses from checkout-api above 5%

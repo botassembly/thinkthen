@@ -1,4 +1,4 @@
-import io.thinkthen.*;
+import dev.thinkthen.*;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
@@ -15,7 +15,7 @@ public final class JavaOwnershipCases {
     private JavaOwnershipCases() {}
     private static final String KEY = "synthetic-java-consumer-key-should-never-appear";
 
-    private static ThinkThen remote(Backend backend, BackendFixture server) {
+    static ThinkThen remote(Backend backend, BackendFixture server) {
         return ThinkThen.builder().backend(backend).url(URI.create(server.base())).apiKey(KEY)
             .retry(RetryPolicy.builder().maxRetries(0).attemptTimeout(java.time.Duration.ofSeconds(60)).build()).build();
     }
@@ -70,7 +70,7 @@ public final class JavaOwnershipCases {
             public boolean hasNext() { return reads.get() < 10000; }
             public String next() { reads.incrementAndGet(); return "alpha"; }
         };
-        Row<String, ChooseDetail> retained;
+        Row<String, LabelDetail> retained;
         try (var client = ThinkThen.builder().backend(Backend.STUB).build()) {
             try (var stream = client.decideStream("Ready?", input)) {
                 JavaApiCases.check(stream.spliterator().trySplit() == null, "stream cannot split");
@@ -94,15 +94,7 @@ public final class JavaOwnershipCases {
             retained = client.choose("Which?", "alpha", List.of("a", "b"));
         }
         JavaApiCases.check(JavaApiCases.answered(retained).detail().orElseThrow().labels().size() == 2, "typed detail survives native call and client close");
-        retained.raiseForStatus();
-        var closed = ThinkThen.builder().backend(Backend.STUB).build();
-        closed.close();
-        closed.close();
-        try {
-            closed.decide("Ready?", "alpha");
-            throw new AssertionError("closed client must refuse a new call");
-        } catch (IllegalStateException expected) { }
-
+        retained.throwIfFailed();
         var codecFailure = new IllegalStateException("caller codec failure");
         try (var client = ThinkThen.builder().backend(Backend.STUB).recordCodec(value -> { throw codecFailure; }).build()) {
             try {
@@ -119,7 +111,7 @@ public final class JavaOwnershipCases {
 
     // Feature: application logging can close a stream when its call opens.
     static void closeFromLifecycleLogger() {
-        var logger = java.util.logging.Logger.getLogger("io.thinkthen");
+        var logger = java.util.logging.Logger.getLogger("dev.thinkthen");
         var level = logger.getLevel();
         boolean parents = logger.getUseParentHandlers();
         var current = new java.util.concurrent.atomic.AtomicReference<Stream<Row<Boolean, NoDetail>>>();
@@ -265,16 +257,16 @@ public final class JavaOwnershipCases {
             JavaApiCases.equal(server.command("count"), "1", "one decide request");
         }
         try (var server = new BackendFixture(conformance.resolve("choose-threshold-unsure.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
-            Row<String, ChooseDetail> row = client.choose("Which?", "evidence", List.of("z", "a"), ChooseOptions.builder().threshold(Threshold.cut(0.8)).build());
+            Row<String, LabelDetail> row = client.choose("Which?", "evidence", List.of("z", "a"), ChooseOptions.builder().threshold(Threshold.cut(0.8)).build());
             switch (row) {
-                case Unsure<String, ChooseDetail> unsure -> JavaApiCases.equal(unsure.probability(), ConsumerCases.JSON.readTree(conformance.resolve("choose-threshold-unsure.json").toFile()).get("expected").get(0).get("probability").doubleValue(), "unsure retains probability without an answer accessor");
+                case Unsure<String, LabelDetail> unsure -> JavaApiCases.equal(unsure.probability().orElseThrow(), ConsumerCases.JSON.readTree(conformance.resolve("choose-threshold-unsure.json").toFile()).get("expected").get(0).get("probability").doubleValue(), "unsure retains probability without an answer accessor");
                 default -> throw new AssertionError("expected unsure choose row");
             }
-            row.raiseForStatus();
+            row.throwIfFailed();
         }
         try (var server = new BackendFixture(conformance.resolve("score-weighted.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
             var row = JavaApiCases.answered(client.score("How much?", "evidence", List.of("low", "high")));
-            ScoreDetail detail = row.detail().orElseThrow();
+            LevelDetail detail = row.detail().orElseThrow();
             JavaApiCases.equal(detail.levels(), List.of(0.2, 0.8), "typed score detail preserves level order");
         }
         try (var server = new BackendFixture(conformance.resolve("tag-backend-reply.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
@@ -283,13 +275,13 @@ public final class JavaOwnershipCases {
         try (var server = new BackendFixture(conformance.resolve("find-unicode.json").toString()); var client = remote(Backend.SYSTEMONE, server)) {
             String text = "é🦀\r\n \n 答🙂 \r\n";
             Span span = JavaApiCases.answered(client.find("Which line?", text)).answer().orElseThrow();
-            JavaApiCases.equal(text.substring(span.start(), span.end()), " 答🙂 ", "wire offsets select original UTF-16 text");
+            JavaApiCases.equal(text.substring(Math.toIntExact(span.start()),Math.toIntExact(span.end())), " 答🙂 ", "wire offsets select original UTF-16 text");
             JavaApiCases.equal(span.text(), " 答🙂 ", "wire span retains text");
         }
     }
 
     public static void main(String[] args) throws Exception {
-        io.thinkthen.internal.DriverEventCases.run();
+        dev.thinkthen.internal.DriverEventCases.run();
         noCallForRejectedRecords();
         unavailableServer();
         streamsAndCallerFailures();

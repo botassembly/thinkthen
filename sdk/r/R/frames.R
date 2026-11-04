@@ -6,20 +6,27 @@
   producer
 }
 
-tt_answer <- function(rows) {
+#' Project typed answers from rows, keeping rank answers aligned to input positions.
+#'
+#' @rdname tt_answer
+#' @export
+tt_answer <- function(rows, errors = "error") {
   producer <- .tt_result(rows)
-  failures <- which(rows$status == "failed")
-  child_failures <- if (producer == "annotate") unlist(lapply(rows$answer, function(entries) {
-    names(entries)[vapply(entries, function(entry) isTRUE(entry$status == "failed"), logical(1))]
-  }), use.names = FALSE) else character()
-  if (length(failures) || length(child_failures)) {
-    cli::cli_warn("ThinkThen returned failed rows or annotation entries.",
-      class = "thinkthen_failed_rows", call = NULL, positions = rows$position[failures],
-      codes = as.character(rows$error_code[failures]), entries = child_failures)
+  errors <- .tt_errors(errors)
+  .tt_failures(rows, errors)
+  if (producer == "annotate") return(.tt_annotation_answers(rows))
+  if (producer == "rank") {
+    size <- attr(rows, ".thinkthen_input_size", exact = TRUE)
+    if (is.null(size)) size <- max(c(0, rows$position))
+    return(rows$answer[match(seq_len(size), rows$position)])
   }
   rows$answer
 }
 
+#' Attach outcome columns by position to a copy of the original data frame.
+#'
+#' @rdname tt_answer
+#' @export
 tt_bind <- function(data, rows, prefix) {
   producer <- .tt_result(rows)
   if (!is.data.frame(data) || (producer != "annotate" &&
@@ -68,14 +75,36 @@ tt_bind <- function(data, rows, prefix) {
   result
 }
 
-tt_decide_vec <- function(...) tt_answer(tt_decide(...))
-tt_choose_vec <- function(...) tt_answer(tt_choose(...))
-tt_tag_vec <- function(...) tt_answer(tt_tag(...))
-tt_score_vec <- function(...) tt_answer(tt_score(...))
-tt_filter_vec <- function(...) tt_answer(tt_filter(...))
-tt_keep <- tt_filter_vec
-tt_rank_vec <- function(...) tt_answer(tt_rank(...))
-tt_find_vec <- function(...) tt_answer(tt_find(...))
-tt_annotate_vec <- function(...) tt_answer(tt_annotate(...))
-tt_recognize_vec <- function(...) tt_answer(tt_recognize(...))
-tt_relate_vec <- function(...) tt_answer(tt_relate(...))
+.tt_errors <- function(errors) {
+  if (!is.character(errors) || length(errors) != 1L || is.na(errors) || !errors %in% c("error", "na")) {
+    .tt_r_error('`errors` must be "error" or "na".', "argument")
+  }
+  errors
+}
+
+.tt_failures <- function(rows, errors, kept = NULL) {
+  if (errors == "na") return(invisible(NULL))
+  failed <- which(rows$status == "failed")
+  children <- if (.tt_result(rows) == "annotate") unlist(lapply(rows$answer, function(entries) {
+    Filter(function(entry) isTRUE(entry$status == "failed"), entries)
+  }), recursive = FALSE) else list()
+  if (!length(failed) && !length(children)) return(invisible(NULL))
+  first <- if (length(failed)) as.character(rows$error_code[failed[[1]]]) else as.character(children[[1]]$error$code)
+  rlang::abort("ThinkThen returned failed records.", class = c("thinkthen_failed_rows", "thinkthen_error"),
+    code = first, rows = rows, failed_rows = rows[failed, ], kept = kept,
+    entries = children, call = rlang::caller_env())
+}
+
+.tt_annotation_answers <- function(rows) {
+  children <- attr(rows, ".thinkthen_children", exact = TRUE)
+  columns <- lapply(names(children), function(name) {
+    verb <- children[[name]]
+    values <- lapply(rows$answer, function(entries) {
+      child <- entries[[name]]
+      if (is.null(child)) .tt_answer_values(list(list()), verb) else child$answer
+    })
+    do.call(vctrs::vec_c, c(values, list(.ptype = .tt_answer_values(list(), verb))))
+  })
+  names(columns) <- names(children)
+  tibble::new_tibble(columns, nrow = nrow(rows))
+}

@@ -81,13 +81,13 @@ for case in cases:
         stream = client.annotate_stream(
             tt.AnnotationQuestions({
                 name: admitted(value) for name, value in definition['questions'].items()
-            }), records, evidence=definition.get('evidence'),
+            }), records, field=definition.get('field'),
         )
     else:
         toolbox = tt.Toolbox({'case': admitted(definition)})
         question = getattr(toolbox, function)('case')
         if function in {'filter', 'rank'}:
-            stream = getattr(client, function)(question, records)
+            stream = getattr(client, {'filter': 'filter_rows'}.get(function, function))(question, records)
         else:
             stream = getattr(client, function + '_stream')(question, records)
     with stream:

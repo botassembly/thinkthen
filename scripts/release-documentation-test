@@ -2,6 +2,7 @@
 """Check the limits and upgrade notes delivered in the release note."""
 import os
 from pathlib import Path
+import re
 import tempfile
 from unittest.mock import patch
 
@@ -29,17 +30,24 @@ for text in (install, readme):
 for name in ('PyPI', 'npm', 'RubyGems', 'NuGet', 'Maven Central', 'r-universe',
              'github.com/botassembly/thinkthen/sdk/go/thinkthen', 'Swift Package Manager'):
     assert name in install, name
-    assert name in readme, name
-postgres = 'Linux x86-64 and arm64 servers running PostgreSQL 18 with glibc 2.28 or later'
+# Installation facts live in the release instructions; the README hands SDK
+# readers to their canonical guides rather than repeating those instructions.
+readme_links = set(re.findall(r'\]\((https://thinkthen\.dev/sdks/[^)]+)\)', readme))
+for sdk in ('python', 'typescript', 'go', 'java', 'kotlin', 'csharp', 'r', 'ruby',
+            'rust', 'swift', 'zig', 'c', 'cpp', 'duckdb', 'sqlite', 'postgresql'):
+    assert f'https://thinkthen.dev/sdks/{sdk}/' in readme_links, sdk
+    assert (ROOT / f'site/src/content/docs/sdks/{sdk}.mdx').is_file(), sdk
 for text in (install, (ROOT / 'docs/surfaces/postgresql.md').read_text(),
              (ROOT / 'extensions/postgres/README.md').read_text()):
-    assert postgres in text, postgres
-for surface in ('Ruby memory', 'C# memory', 'SQLite memory', 'PostgreSQL memory',
-                'SQLite joins', 'DuckDB loading', 'Unsigned macOS', 'Unsigned Windows',
+    # Preserve every supported-platform fact without prescribing prose order.
+    for fact in ('Linux', 'x86-64', 'arm64', 'PostgreSQL 18', 'glibc 2.28 or later'):
+        assert fact in text, fact
+for surface in ('PostgreSQL LIMIT', 'DuckDB short LIMIT', 'SQLite joins', 'DuckDB loading', 'Unsigned macOS', 'Unsigned Windows',
                 'Database cancellation'):
     assert '| ' + surface in note, surface
-assert note.index('## Known limits') < note.index('## Install')
-limits = note.split('## Known limits', 1)[1].split('## Install', 1)[0]
+assert note.index('## Install') < note.index('## For 0.1 users') < note.index('## Known limits')
+limits = (ROOT / 'docs/resource-observations.md').read_text()
+assert 'docs/resource-observations.md' in note
 for surface, rates in (
         ('Ruby memory', ('-0.5712842105', '-0.1832421053')),
         ('C# memory', ('0.2392926316', '0.0883873684')),
@@ -75,14 +83,14 @@ for command in ('status', 'check', 'cache', 'transform', 'audit', 'diff', 'prune
 for option in ('details', 'json', 'jsonl', 'on-error', 'plan', 'dry-run', 'timeout',
                'seed', 'profile', 'max-requests-total', 'max-estimated-input-tokens-total',
                'facts', 'input', 'lines', 'csv', 'tsv', 'field', 'context', 'jobs',
-               'max-retries', 'max-request-bytes', 'max-text-bytes', 'raw', 'true', 'false',
+               'max-retries', 'max-request-bytes', 'max-text-bytes', 'raw',
                'option', 'options', 'label', 'kind', 'relation', 'relation-threshold',
                'kind-field', 'none', 'record', 'replay', 'cache', 'no-cache', 'refresh-cache'):
     assert f'`--{option}`' in upgrade, option
 for feature in ('polars', 'bundled-sqlite', 'host-sqlite'):
     assert f'`{feature}`' in upgrade, feature
 for fact in ('Intel macOS', 'static musl Linux', 'glibc 2.28',
-             '`--details` becomes `--json`', 'no compatibility shims'):
+             'Current `--details` adds status', 'no compatibility shims'):
     assert fact in upgrade, fact
 assert 'cargo add thinkthen --no-default-features' in note
 assert 'R source packages require R >=4.2.0' in note
@@ -91,5 +99,8 @@ assert '`--batch max`' in upgrade and '`--batch` now takes a record count' in up
 assert 'Botassembly.ThinkThen' in note
 assert 'github.com/botassembly/thinkthen/sdk/go/thinkthen' in note
 assert '0.1.2' in note
+assert '`--true TEXT` and `--false TEXT` describe what yes and no mean' in upgrade
+assert '`THINKTHEN_URL` sets the address for either backend' in upgrade
+assert '`--details` becomes `--json`' not in upgrade
 assert r'Unblock-File .\thinkthen-0.2.0-windows-x86_64.zip' in note
 print('Release limits and upgrade notes: PASS')

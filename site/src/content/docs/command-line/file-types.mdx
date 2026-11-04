@@ -1,0 +1,91 @@
+---
+title: File types
+description: Give ThinkThen text from a pipe or a file, one item per line, a CSV, TSV or Excel file, or many files in one command.
+goal: The reader gets their own text into the command in the right shape and knows where each answer goes.
+reader: A command-line user with messages in a pipe, a text file, a CSV, TSV or Excel file, or many files
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+Every function reads the text to judge from a pipe, from `--text`, or from files. It reads plain text, one item per line, CSV, TSV and Excel files, and many files in one command.
+
+<Example id="files-text" />
+
+Yes: the message asks for a refund. A pipe is one text, and its answer is one line. `--text 'Please refund my order.'` does the same without a pipe, and a file name after the question reads that file as one text.
+
+## Judge each line
+
+`--from lines` makes each line its own text. This file holds three messages:
+
+<ExampleFile id="files-lines" file="messages.txt" />
+
+<Example id="files-lines" />
+
+Lines 1 and 3 ask for a refund. Each answer starts with the line's number and a tab. Blank lines are skipped. filter, rank and annotate read lines without `--from lines`; the other functions read the whole input as one text.
+
+## Add an answer column to a CSV file
+
+A CSV file is a table of text with a header line. Name the column to judge with `--column`, and the new answer column with `--into`.
+
+<ExampleFile id="decide-csv" file="messages.csv" />
+
+<Example id="decide-csv" />
+
+The same table comes back with an `is_refund` column. Excel reads `TRUE` and `FALSE` as yes and no. A not sure answer, or a row that failed, leaves the cell empty, so it never reads as a no. Each failed row is named on standard error, and the command exits 6 ([Exit codes](/command-line/exit-codes/)).
+
+Where the new table goes depends on how you give the file:
+
+| You give | The new table goes to |
+| --- | --- |
+| `--from csv < messages.csv` | the screen, as above |
+| `messages.csv` | a new file beside it, `messages.thinkthen.csv`, and the command prints that name |
+| `messages.csv --output reviewed.csv` | `reviewed.csv` |
+| `messages.csv --in-place` | `messages.csv` itself, after it keeps the original as `messages.backup.csv` |
+
+ThinkThen never overwrites an output file. If `messages.thinkthen.csv` already exists, the command stops with exit code 2; choose a new `--output` name or remove the old file. Repeat `--column` to judge several columns of each row together. `--details` adds five more columns for each answer, such as its status and probability.
+
+## Read a TSV file
+
+A TSV file is a CSV file with tabs between the columns. Use `--from tsv`, or name a file that ends in `.tsv`.
+
+<ExampleFile id="files-tsv" file="messages.tsv" />
+
+<Example id="files-tsv" />
+
+The same table comes back, with tabs, and the `is_refund` column added.
+
+## Add an answer column to an Excel file
+
+An Excel file (`.xlsx`) works by name, never from a pipe. This workbook holds one worksheet, `Messages`:
+
+<ExampleFile id="files-xlsx" file="messages.xlsx" />
+
+<Example id="files-xlsx" />
+
+The command writes `messages.thinkthen.xlsx` beside the input and prints its name. Its `is_refund` column holds real `TRUE` and `FALSE` cells, and `#N/A` for not sure or a failed message, so an Excel formula can't mistake either for a no.
+
+Every other worksheet, style and formula stays as it was. When a workbook holds more than one worksheet, name one with `--sheet Messages`. Formula cells are read from their saved values and never recalculated. Older `.xls` files, macro-enabled workbooks and signed workbooks are refused; save an unsigned `.xlsx` copy first.
+
+## Judge many files at once
+
+Name every file after the question. Here the shell expands `messages/*.txt` to three files, each holding one message:
+
+<ExampleFile id="files-many" file="messages/a1.txt" />
+
+<ExampleFile id="files-many" file="messages/a2.txt" />
+
+<ExampleFile id="files-many" file="messages/a3.txt" />
+
+<Example id="files-many" />
+
+`a1` and `a3` ask for a refund. Each file is one text, and each answer starts with its file name and a tab. Add `-` among the files to read the pipe too. A CSV, TSV or Excel file goes alone, one per command.
+
+## How ThinkThen picks the type
+
+A file's ending picks its type: `.csv`, `.tsv`, `.xlsx` and `.jsonl`. Anything else, and a pipe, is plain text. `--from` names the type outright: `text`, `lines`, `jsonl`, `csv`, `tsv` or `xlsx`. In a script, say `--from` so the type never depends on a file's name. [JSON Lines](/command-line/json-lines/) covers `.jsonl` files.
+
+## Next
+
+[JSON Lines](/command-line/json-lines/) judges one field of each JSON object and adds the answer to it.

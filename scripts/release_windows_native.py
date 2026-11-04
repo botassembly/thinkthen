@@ -1,11 +1,10 @@
 """Link Windows consumers and database adapters using the prepared target SDK."""
+from duckdb_release import VERSION as DUCKDB_VERSION
+from release_metadata import version as package_version
 import os
 import hashlib
-import re
 from pathlib import Path
 import subprocess
-import shutil
-import zipfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -118,6 +117,8 @@ def database_inputs():
                *sorted((ROOT / 'extensions/sqlite/src').glob('*.[ch]')),
                *sorted((ROOT / 'databases/duckdb/src').glob('*')),
                ROOT / 'databases/duckdb/generate-types.py',
+               ROOT / 'databases/duckdb/community-versions.json',
+               ROOT / 'scripts/duckdb_release.py', ROOT / 'scripts/release-tools.json',
                ROOT / 'extensions/rules.py', ROOT / 'schemas/client.schema.json',
                ROOT / 'schemas/request.schema.json',
                ROOT / 'schemas/row.schema.json', ROOT / 'schemas/contract.json', ROOT / 'LICENSE']
@@ -175,13 +176,12 @@ def workers():
 
 
 def duckdb_build(stage, native, toolchain):
-    from release_windows import copy
-    source = TOOLS / 'duckdb/1.4.3/duckdb-1.4.3'
+    source = TOOLS / f'duckdb/{DUCKDB_VERSION}/duckdb-{DUCKDB_VERSION}'
     build = stage / 'duckdb'
     run('cmake', '-S', source, '-B', build, '-DCMAKE_TOOLCHAIN_FILE=' + str(toolchain),
         '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_UNITTESTS=OFF', '-DBUILD_SHELL=OFF',
         '-DENABLE_EXTENSION_AUTOLOADING=OFF', '-DENABLE_EXTENSION_AUTOINSTALL=OFF',
-        '-DDISABLE_BUILTIN_EXTENSIONS=ON', '-DOVERRIDE_GIT_DESCRIBE=v1.4.3')
+        '-DDISABLE_BUILTIN_EXTENSIONS=ON', f'-DOVERRIDE_GIT_DESCRIBE=v{DUCKDB_VERSION}')
     run('cmake', '--build', build, '--target', 'duckdb_static', '--parallel', workers())
     output = native / 'duckdb'
     output.mkdir(exist_ok=True)
@@ -198,7 +198,7 @@ def duckdb_build(stage, native, toolchain):
     metadata.write_text('windows_amd64')
     (stage / 'null').write_bytes(b'\0')
     run('cmake', '-DEXTENSION=' + str(extension), '-DNULL_FILE=' + str(stage / 'null'),
-        '-DPLATFORM_FILE=' + str(metadata), '-DVERSION_FIELD=v1.4.3', '-DABI_TYPE=CPP',
+        '-DPLATFORM_FILE=' + str(metadata), f'-DVERSION_FIELD=v{DUCKDB_VERSION}', f'-DEXTENSION_VERSION={package_version()}', '-DABI_TYPE=CPP',
         '-P', source / 'scripts/append_metadata.cmake')
     from package_inventory import stage as stage_inputs, duckdb_terms
     stage_inputs('duckdb', output, ROOT)

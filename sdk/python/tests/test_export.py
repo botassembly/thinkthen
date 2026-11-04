@@ -89,7 +89,7 @@ def test_export_keeps_integer_ids_and_copies_filter_items() -> None:
     record = {"id": 2**64 - 1, "text": "body"}
     with (
         tt.Client(backend="stub") as client,
-        client.filter("Ready?", [record]) as stream,
+        client.filter_rows("Ready?", [record]) as stream,
     ):
         row = next(stream)
     exported = row.to_dict()

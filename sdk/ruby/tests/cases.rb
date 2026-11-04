@@ -127,7 +127,7 @@ def assert_typed_row(row, expected)
   assert(row.source.is_a?(ThinkThen::Source), "typed source")
   assert(!row.respond_to?(:p), "no old probability spelling")
   unless row.answered?
-    assert(!row.respond_to?(:answer), "non-answer variant has no answer accessor")
+    raises(row.unsure? ? ThinkThen::UnsureError : ThinkThen::RecordError) { row.answer }
     assert(!row.to_h.key?("answer"), "non-answer wire shape omits answer")
   end
   if row.failed?
@@ -167,14 +167,19 @@ end
 def execute_case(test, settings)
   output = []
   config = settings.transform_keys(&:to_sym).merge(backend: settings.fetch("backend").to_sym)
-  config[:retry] = ThinkThen::Retry.new(**config[:retry].transform_keys(&:to_sym)) if config[:retry]
+  if config[:retry]
+    policy = config[:retry].transform_keys(&:to_sym)
+    policy[:initial_backoff] = policy.delete(:initial_backoff_ms) / 1000.0 if policy.key?(:initial_backoff_ms)
+    policy[:attempt_timeout] = policy.delete(:attempt_timeout_ms) / 1000.0 if policy.key?(:attempt_timeout_ms)
+    config[:retry] = ThinkThen::Retry.new(**policy)
+  end
   ThinkThen::Client.open(**config) do |client|
     cancel = ThinkThen::CancelToken.new
     cancel.cancel if test["cancelled"]
     stream = invoke_rows(client, test.fetch("request"), cancel: cancel)
     begin
       stream.each do |value|
-        row = value.is_a?(ThinkThen::FilterRow) ? value.row : value
+        row = value.is_a?(ThinkThen::FilterRow) || value.is_a?(ThinkThen::RankRow) ? value.row : value
         equal(row.answered? && row.answer == true, value.kept?, "filter kept") if value.is_a?(ThinkThen::FilterRow)
         expected = test.fetch("expected", test.fetch("expected_rows", []))[output.length]
         assert_typed_row(row, expected) if expected
@@ -233,13 +238,13 @@ def shared_cases
   manifest = JSON.parse(File.read(File.join(folder, "manifest.json"), encoding: Encoding::UTF_8))
   registry = JSON.parse(File.read(File.expand_path(manifest.fetch("registry"), folder), encoding: Encoding::UTF_8))
   equal(registry.fetch("codes").to_h { |code| [code.fetch("value"), code.fetch("name")] },
-        ThinkThen::NativeContract::CODE_NAMES, "generated code mapping")
+        ThinkThen.const_get(:NativeContract)::CODE_NAMES, "generated code mapping")
   registry.fetch("codes").each do |code|
     equal(code.fetch("family"), ThinkThen.send(:native).thinkthen_code_family(code.fetch("value")), "ABI error family")
     expected_class = {"usage" => ThinkThen::UsageError, "backend" => ThinkThen::BackendError,
-                      "internal" => ThinkThen::InternalError, "record" => ThinkThen::LocalError,
+                      "internal" => ThinkThen::InternalError, "record" => ThinkThen::RecordError,
                       "local" => ThinkThen::LocalError}.fetch(code.fetch("family"))
-    expected_class = ThinkThen::Cancelled if code.fetch("name") == "local.cancelled"
+    expected_class = ThinkThen::CancelledError if code.fetch("name") == "local.cancelled"
     equal(expected_class, ThinkThen.send(:native).send(:error_class, code.fetch("value"), code.fetch("name")), "public error family class")
   end
   equal(nil, ThinkThen.send(:native).thinkthen_code_family(2147483647), "unknown ABI code has no family")

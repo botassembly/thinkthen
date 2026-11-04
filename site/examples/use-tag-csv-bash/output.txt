@@ -1,0 +1,5 @@
+messages.thinkthen.csv
+id,text,topics
+a1,Please refund my order.,billing
+a2,Where is my parcel?,shipping
+a3,I was charged twice for one invoice.,billing

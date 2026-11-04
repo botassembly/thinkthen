@@ -80,35 +80,37 @@ func (t *Toolbox) UnmarshalJSON(data []byte) error {
 type definition struct {
 	Function  string          `json:"function"`
 	Text      string          `json:"question"`
-	Choices   []string        `json:"choices"`
-	Labels    []string        `json:"labels"`
-	Levels    []string        `json:"levels"`
+	Choices   []answerOption  `json:"choices"`
+	Labels    []answerOption  `json:"labels"`
+	Levels    []answerOption  `json:"levels"`
 	Kinds     []string        `json:"kinds"`
 	Rules     []Rule          `json:"rules"`
 	Threshold json.RawMessage `json:"threshold"`
-	Evidence  *string         `json:"evidence"`
+	Field     *string         `json:"field"`
 	Top       *int            `json:"top"`
+	YesMeans  *string         `json:"true"`
+	NoMeans   *string         `json:"false"`
 }
 
 func (d definition) question() question {
-	q := question{text: d.Text, rules: d.Rules, evidence: d.Evidence, top: d.Top}
+	q := question{text: d.Text, rules: d.Rules, field: d.Field, top: d.Top, yesMeans: d.YesMeans, noMeans: d.NoMeans}
 	switch d.Function {
 	case "decide":
 		q.function = FunctionDecide
 	case "choose":
 		q.function = FunctionChoose
-		q.domain = d.Choices
+		q.domain, q.descriptions = optionDomain(d.Choices)
 	case "tag":
 		q.function = FunctionTag
-		q.domain = d.Labels
+		q.domain, q.descriptions = optionDomain(d.Labels)
 	case "score":
 		q.function = FunctionScore
-		q.domain = d.Levels
+		q.domain, q.descriptions = optionDomain(d.Levels)
 	case "filter":
 		q.function = FunctionFilter
 	case "rank":
 		q.function = FunctionRank
-		q.domain = d.Levels
+		q.domain, q.descriptions = optionDomain(d.Levels)
 	case "find":
 		q.function = FunctionFind
 	case "recognize":

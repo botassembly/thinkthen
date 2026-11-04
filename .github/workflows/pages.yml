@@ -1,0 +1,61 @@
+name: Deploy documentation
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions: {contents: read, pages: write, id-token: write}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      HELD_INSTALLER_SHA: 2e0bd5f3619cee856a27ad5e495113c2842ffb351c37ba38175838784511606d
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - id: tools
+        name: Read the existing documentation Node pin
+        run: |
+          python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+          import ast
+          from pathlib import Path
+          module = ast.parse(Path('scripts/public_export_gate.py').read_text())
+          version = next(ast.literal_eval(node.value) for node in module.body
+                         if isinstance(node, ast.Assign) and any(isinstance(name, ast.Name) and name.id == 'NODE_VERSION' for name in node.targets))
+          print('node=' + version)
+          PYTHON
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/pages-target" >> "$GITHUB_ENV"
+          echo "SITE_BIN_DIR=$RUNNER_TEMP/pages-target/debug" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: {node-version: '${{ steps.tools.outputs.node }}'}
+      - name: Preserve the installers still served before release
+        run: python3 site/scripts/pages-installers.py snapshot "$RUNNER_TEMP/pages-installers" --expected-sha "$HELD_INSTALLER_SHA"
+      - name: Build only the command used to render help
+        run: cargo build --locked -p thinkthen --bin thinkthen
+      - name: Render and check the documentation from this commit
+        working-directory: site
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/astro-build.mjs
+          node scripts/agent-files.mjs
+          node scripts/host-files.mjs
+          node scripts/check.mjs
+      - name: Keep unreleased installers out of the Pages artifact
+        run: python3 site/scripts/pages-installers.py restore "$RUNNER_TEMP/pages-installers" site/dist --expected-sha "$HELD_INSTALLER_SHA"
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with: {path: site/dist}
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

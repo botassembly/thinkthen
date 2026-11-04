@@ -127,7 +127,7 @@ def sample(roots, backend_port=None, exclude=(), required_pid=None, details=None
                 events.append(dict(event='access_denied', **loss.failure))
                 events.append(dict(event='process_exit', process=identity.copy(), state_after=loss.failure['state_after']))
             continue
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             continue
     if required_pid is not None and required_pid not in observed:
         raise ValueError(f'required live workload PID {required_pid} was not sampled')
@@ -140,7 +140,11 @@ def sample(roots, backend_port=None, exclude=(), required_pid=None, details=None
                 except PermissionError as error:
                     pid = os.getpid() if directory == Path('/proc/self') else int(directory.name)
                     raise AccessLost(tracked.get(pid, dict(pid=pid)), error) from error
-                except FileNotFoundError:
+                except (FileNotFoundError, ProcessLookupError):
+                    # Observed sockets need a readable table, even if their
+                    # process vanished after we collected its descriptors.
+                    if any(owner == namespace for owner, _ in inodes):
+                        raise
                     continue
                 for line in rows:
                     fields = line.split()

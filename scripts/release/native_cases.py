@@ -13,16 +13,16 @@ def selected(record, pointer):
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
 
 
-def utf8(value, evidence):
+def utf8(value, field):
     if isinstance(value, dict):
         if 'start' in value and 'end' in value:
-            value['start'] = len(evidence[:value['start']].encode('utf-8'))
-            value['end'] = len(evidence[:value['end']].encode('utf-8'))
+            value['start'] = len(field[:value['start']].encode('utf-8'))
+            value['end'] = len(field[:value['end']].encode('utf-8'))
         for child in value.values():
-            utf8(child, evidence)
+            utf8(child, field)
     elif isinstance(value, list):
         for child in value:
-            utf8(child, evidence)
+            utf8(child, field)
 
 
 def expected_rows(case, offsets):
@@ -35,9 +35,9 @@ def expected_rows(case, offsets):
                 for name, child in row['answer'].items():
                     entry = question['questions'][name]
                     if entry['function'] in ('find', 'recognize', 'relate'):
-                        utf8(child, selected(record, entry.get('evidence', question.get('evidence', ''))))
+                        utf8(child, selected(record, entry.get('field', question.get('field', ''))))
             elif question['function'] in ('find', 'recognize', 'relate'):
-                utf8(row, selected(record, question.get('evidence', '')))
+                utf8(row, selected(record, question.get('field', '')))
     return rows
 
 

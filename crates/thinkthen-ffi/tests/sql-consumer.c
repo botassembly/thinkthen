@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BYTES(value) (const uint8_t *)(value), strlen(value)
+#define BYTES(value) (const char *)(value), strlen(value)
 static pthread_t driver;
 static atomic_bool stopped;
 static unsigned probes;
@@ -21,7 +21,7 @@ static void *stop_input(void *unused) {
     return NULL;
 }
 static void rejected(int result, int32_t code, thinkthen_error *error) {
-    assert(result == THINKTHEN_ERROR && error->code == code);
+    assert(result < 0 && error->code == code);
     assert(error->message.len != 0);
     thinkthen_error_free(error);
 }
@@ -40,14 +40,14 @@ static void projected(thinkthen_client *client, const char *request, int annotat
         if (result == THINKTHEN_NEEDS_INPUT) {
             assert(!supplied++);
             const char record[] = "{\"id\":18446744073709551615,\"body\":\"evidence\"}";
-            thinkthen_sql_input input = {THINKTHEN_RECORD_JSON, (const uint8_t *)record, sizeof record - 1};
+            thinkthen_sql_input input = {THINKTHEN_RECORD_JSON, (const char *)record, sizeof record - 1};
             assert(thinkthen_sql_call_send_chunk(call, &input, 1, &error) == THINKTHEN_OK);
             thinkthen_sql_call_end_input(call);
         } else if (result == THINKTHEN_OK) {
             assert(++rows == 1);
             retained = row;
         }
-    } while (result != THINKTHEN_END && result != THINKTHEN_ERROR);
+    } while (result != THINKTHEN_END && result >= 0);
     assert(result == THINKTHEN_END && rows == 1);
     thinkthen_sql_call_free(call);
     thinkthen_value *value = NULL;
@@ -64,7 +64,7 @@ static void projected(thinkthen_client *client, const char *request, int annotat
         assert(thinkthen_value_annotation_at(value, 0, &name, &child, &error) == THINKTHEN_OK);
         assert(name.len == 5 && memcmp(name.data, "named", 5) == 0);
         thinkthen_value_free(value);
-        uint32_t status = 0;
+        thinkthen_status status = 0;
         assert(thinkthen_value_status(child, &status, &error) == THINKTHEN_OK);
         assert(status == THINKTHEN_STATUS_ANSWERED);
         thinkthen_value_free(child);
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
     thinkthen_question_free(question);
     thinkthen_client_free(client);
     char record[] = "evidence";
-    thinkthen_sql_input input = {THINKTHEN_RECORD_TEXT, (const uint8_t *)record, strlen(record)};
+    thinkthen_sql_input input = {THINKTHEN_RECORD_TEXT, (const char *)record, strlen(record)};
     rejected(thinkthen_sql_call_send_chunk(call, &input, 1, &error), THINKTHEN_CODE_USAGE_ABI, &error);
     thinkthen_row retained = {.struct_size = sizeof retained};
     int supplied = 0, rows = 0, result;
@@ -128,12 +128,12 @@ int main(int argc, char **argv) {
             assert(++rows == 1 && row.position == 1);
             retained = row;
         }
-    } while (result != THINKTHEN_END && result != THINKTHEN_ERROR);
+    } while (result != THINKTHEN_END && result >= 0);
     assert(probes > 0);
     thinkthen_sql_call_free(call);
     if (argc > 1) {
         assert(pthread_join(stopper, NULL) == 0);
-        assert(result == THINKTHEN_ERROR && error.code == THINKTHEN_CODE_LOCAL_CANCELLED);
+        assert(result < 0 && error.code == THINKTHEN_CODE_LOCAL_CANCELLED);
         assert(rows == 0);
     } else {
         assert(result == THINKTHEN_END && rows == 1);

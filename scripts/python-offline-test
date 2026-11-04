@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Install the actual Python wheel through its generated offline instructions."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from release_install import install_note
+from release_python_dependencies import inputs, stage_runtime, wheelhouse
+from release_readme import readme
+from release_registry_check import environment as isolated_environment
+
+
+def install_command(document, artifact, dependencies):
+    blocks = re.findall(r'^```sh[ \t]*\n(.*?)^```[ \t]*$', document, re.M | re.S)
+    installs = [body for body in blocks if '-m pip install' in body]
+    assert len(installs) == 1, 'expected one fenced offline pip install command'
+    body = installs[0].replace('\\\n', '').strip()
+    assert '\n' not in body, 'offline install fence must contain one shell command'
+    command = shlex.split(body)
+    expected = ['python3', '-m', 'pip', 'install', '--no-index', '--find-links',
+                os.path.relpath(dependencies, artifact.parent), './' + artifact.name]
+    assert command == expected, 'unsupported README offline install command shape'
+    return command
+
+
+def command_control():
+    with tempfile.TemporaryDirectory(prefix='python-offline-readme-') as temporary:
+        package = Path(temporary)
+        artifact = package / 'python/thinkthen-0.2.0-cp310-abi3-linux_x86_64.whl'
+        dependencies = package / 'prerequisites/python-frames-cp310/wheels'
+        dependencies.mkdir(parents=True)
+        (package / 'build.json').write_text(json.dumps(dict(version='0.2.0')))
+        (package / 'requirements.json').write_text(json.dumps({'python': {'runtime': 'Python >= 3.10', 'macos': '11.0'}}))
+        document = readme('python', package, artifact).decode()
+        command = install_command(document, artifact, dependencies)
+        assert command[:4] == ['python3', '-m', 'pip', 'install']
+        for invalid in (document.replace('```sh\n', '```text\n'),
+                        document.replace('python3 -m pip', 'sh python3 -m pip'),
+                        document.replace('--no-index ', ''),
+                        document.replace('--find-links ', '--index-url '),
+                        document.replace('./' + artifact.name, './another.whl'),
+                        document.replace('./' + artifact.name, './' + artifact.name + ' && echo extra'),
+                        document + '\n```sh\n' + shlex.join(command) + '\n```\n'):
+            try:
+                install_command(invalid, artifact, dependencies)
+            except AssertionError:
+                pass
+            else:
+                raise AssertionError('unsupported install shape was admitted')
+    print('Generated fenced install command is parsed exactly; unsupported shapes are rejected.')
+
+
+def main(wheel, prepared, runtime):
+    with tempfile.TemporaryDirectory(prefix='python-offline-') as temporary:
+        scratch = Path(temporary)
+        package = scratch / 'package'
+        (package / 'python').mkdir(parents=True)
+        artifact = package / 'python' / wheel.name
+        shutil.copy2(wheel, artifact)
+        dependencies = package / 'prerequisites/python-frames-cp310/wheels'
+        dependencies.mkdir(parents=True)
+        for entry in inputs().values():
+            source = prepared / entry['file']
+            assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256']
+            shutil.copy2(source, dependencies / source.name)
+        registry = scratch / 'registry'
+        stage_runtime(package, registry / 'prerequisites/python-runtime/wheels')
+        assert {p.name for p in wheelhouse(registry).iterdir()} == {p.name for p in dependencies.iterdir()}
+        assert not (registry / 'pypi').exists(), 'third-party wheels are not publication artifacts'
+        (package / 'build.json').write_text(json.dumps(dict(version=wheel.name.split('-')[1], platform='macos-arm64', revision='fixture', node='', java='', r='')))
+        (package / 'requirements.json').write_text(json.dumps({'python': {'runtime': 'Python >= 3.10', 'macos': '11.0'}}))
+        document = readme('python', package, artifact).decode()
+        command = install_command(document, artifact, dependencies)
+        install_note(package)
+        install = (package / 'INSTALL.md').read_text()
+        assert '--no-index --find-links prerequisites/python-frames-cp310/wheels python/*.whl' in install
+        home = scratch / 'home'
+        home.mkdir()
+        environment = isolated_environment(scratch)
+        for name in tuple(environment):
+            if name.startswith('PIP_'):
+                environment.pop(name)
+        environment.update(PIP_CONFIG_FILE=os.devnull, PIP_NO_INDEX='1', PIP_NO_CACHE_DIR='1',
+                           PIP_DISABLE_PIP_VERSION_CHECK='1')
+        subprocess.run([str(runtime), '-I', '-m', 'venv', str(scratch / 'venv')], env=environment, check=True)
+        python = scratch / 'venv/bin/python'
+        subprocess.run([str(python), '-I', '-c', "import importlib.util, sys; assert sys.version_info[:2] == (3, 10); assert importlib.util.find_spec('typing_extensions') is None"], env=environment, check=True)
+        negative = subprocess.run([str(python), '-I', '-m', 'pip', 'install', '--no-index', '--no-cache-dir', str(artifact)], env=environment, text=True, capture_output=True)
+        assert negative.returncode != 0 and 'typing' in negative.stderr, negative.stdout + negative.stderr
+        command[0] = str(python)
+        command.insert(1, '-I')
+        command.insert(command.index('install') + 1, '--no-cache-dir')
+        subprocess.run(command, cwd=artifact.parent, env=environment, check=True)
+        subprocess.run([str(python), '-I', '-c', "import thinkthen as tt; from typing import Literal; c = tt.Client(backend='stub'); route = c.choose('Which?', 'body', choices=Literal['a', 'b']); assert route.ok; assert str(route) in {'a', 'b'}; c.close()"], env=environment, check=True)
+        print('Python 3.10 cold offline wheel install/import: pass; missing-wheel control rejects; registry runtime staging stays separate')
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] == ['--check-readme-command']:
+        command_control()
+    else:
+        main(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve())

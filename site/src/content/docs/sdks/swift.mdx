@@ -1,0 +1,178 @@
+---
+title: Swift SDK
+description: "Swift SDK: ask the ten ThinkThen questions from Swift and get yes, no or not sure back as plain Swift values."
+goal: The reader runs a first decide in Swift, adds the SDK to a build, catches not sure and failures, and finds the Swift call for each of the ten functions.
+reader: A Swift developer who wants to ask questions about text from code
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "Swift"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+import Fact from '../../../components/Fact.astro';
+
+The Swift SDK gives your Swift code the ten functions as `async` methods on one client; each call gives back a result, and its `get()` gives the plain Swift value, such as `true` or `false` from decide, or throws when the answer is not sure.
+
+<Example id="sdks/swift/first" title="Sources/Example/main.swift" />
+
+`true` means yes: the message asks for a refund.
+
+Add it to your `Package.swift` dependencies (<Fact k="languages.swift.requires" />):
+
+<InstallLine k="languages.swift.install" lang="swift" />
+
+Then add the `ThinkThen` product to your target. This `Package.swift` builds the program above from `Sources/Example` with `swift run`:
+
+<ExampleFile id="sdks/swift/first" file="Package.swift" />
+
+The client uses the key from the [Quickstart](/quickstart/).
+
+## Catch not sure and failures
+
+Set a low bar and a high bar with `.band(low:high:)`. Between them, decide is not sure, and `get()` throws `RowError.unsure`. When ThinkThen can't judge the message, `get()` throws `RowError.failed` instead. Neither one can pass for `false`.
+
+<Example id="sdks/swift/unsure" title="Sources/Example/main.swift" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`RowError.unsure` carries the chance of yes. `RowError.failed` carries a `RowFailure`, whose `code` names the error and whose `message` says what went wrong; [Troubleshooting](/reference/troubleshooting/) lists each code. A blank message or a question ThinkThen can't accept throws `ThinkThenError` from the call itself, before there is a result to read; its `failure` holds the code. To check the outcome without throwing, test the result's `isUnsure` or `isFailed`, or switch on `result()`.
+
+## The ten functions
+
+Each function reads the same support-inbox messages as the function pages. Where a program reads `message.txt` or `messages.txt`, the text it holds is named above the program.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/decide/swift" title="Sources/Example/main.swift" />
+
+Yes: the message asks for a refund. `decide` also takes `yesMeans:` and `noMeans:`, and `options: .init(threshold:)` with one bar, such as `0.8`, or a low and a high bar with `.band(low:high:)`. Pass `records:` instead of `record:` to judge many messages; it gives one result each, in order. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/choose/swift" title="Sources/Example/main.swift" />
+
+A refund is about billing. A choice can carry what it means, as `Choice("billing", description: "...")`, and `options: .init(threshold:)` can make choose not sure. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+`messages.txt` holds three lines: `Please refund my order.`, `Where is my parcel?` and `I was charged twice for one invoice.`
+
+<Example id="functions/filter/swift" title="Sources/Example/main.swift" />
+
+The parcel question is left out. `filter` gives back your own messages, in the type you passed in, and leaves out the ones it is not sure about. If any message fails, it throws one `RowFailure` after the kept ones, and its `failedRows` lists every failure. `filterResults` gives every message with its outcome and `kept` instead. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+`message.txt` holds `I was charged twice and my parcel is late again.`
+
+<Example id="functions/tag/swift" title="Sources/Example/main.swift" />
+
+The message is about both billing and shipping. The answer is a `[String]`, empty when no label fits. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+`message.txt` holds `Please refund my order.`
+
+<Example id="functions/score/swift" title="Sources/Example/main.swift" />
+
+The levels run lowest first, so a plain refund request scores near routine. The answer is a `Double`. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+`messages.txt` holds the three messages from filter.
+
+<Example id="functions/rank/swift" title="Sources/Example/main.swift" />
+
+The double charge is the most urgent. Each `RankResult` gives its rank from `get()`, starting at 1, and keeps your message as `item` and its place in your input as `position`. `RankOptions(top:)` keeps only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+`message.txt` holds two lines: `Morgan works for Example Group.` and `Please refund my order.`
+
+<Example id="functions/find/swift" title="Sources/Example/main.swift" />
+
+The second line states the action. The answer is a `TextSpan?` with `text`, `start` and `end`, or `nil` when no line answers. Offsets count Unicode code points; `range(in:)` turns them into a `Range<String.Index>`. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+`message.txt` holds `Morgan works for Example Group.`
+
+<Example id="functions/recognize/swift" title="Sources/Example/main.swift" />
+
+Each `RecognizedName` holds the name's `text`, `kind`, `start`, `end` and `probability`. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+`message.txt` holds the two lines from find.
+
+<Example id="functions/relate/swift" title="Sources/Example/main.swift" />
+
+A `RelationRule` names the kind of name at each end and the relation between them; `either: true` lets it read in both directions. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+`messages.txt` holds the three messages from filter.
+
+<Example id="functions/annotate/swift" title="Sources/Example/main.swift" />
+
+Each answer is read by name with `get(_:as:)`, and throws `RowError.unsure` when not sure, as decide does. For one message, pass `record:` instead of `records:`. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+Each options type takes `field:`, a JSON Pointer such as `"/text"`, to judge one field of a structured message. A message is `.text(...)`, or `.json(...)` for a structured one. Cancelling the task that runs a call stops it and throws `CancellationError`. The [Swift API source](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/swift/Sources/ThinkThen) lists every type and method.

@@ -1,0 +1,16 @@
+stopped: thinkthen exited 6
+{
+  "position": 1,
+  "status": "answered",
+  "error": null
+}
+{
+  "position": 2,
+  "status": "failed",
+  "error": "record.json"
+}
+{
+  "position": 3,
+  "status": "failed",
+  "error": "record.missing"
+}

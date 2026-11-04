@@ -25,6 +25,17 @@
     "question"
   ],
   "$defs": {
+    "AnswerOption": {
+      "description": "One named answer with an optional description.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/DescribedOption"
+        }
+      ]
+    },
     "Band": {
       "type": "object",
       "properties": {
@@ -48,6 +59,22 @@
       "exclusiveMinimum": 0,
       "maximum": 1
     },
+    "DescribedOption": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "description"
+      ]
+    },
     "Pointer": {
       "type": "string",
       "format": "json-pointer"
@@ -57,7 +84,13 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "false": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -70,6 +103,12 @@
             "threshold": {
               "$ref": "#/$defs/Threshold",
               "default": 0.5
+            },
+            "true": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,
@@ -84,11 +123,11 @@
             "choices": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 2
             },
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -113,7 +152,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -123,7 +162,7 @@
             "labels": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 1
             },
@@ -145,7 +184,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -155,7 +194,7 @@
             "levels": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 2
             },
@@ -173,7 +212,13 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "false": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -186,6 +231,12 @@
             "threshold": {
               "$ref": "#/$defs/Threshold",
               "default": 0.5
+            },
+            "true": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,
@@ -197,7 +248,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -221,7 +272,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -249,7 +300,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -288,7 +339,13 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "false": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -301,6 +358,12 @@
             "threshold": {
               "$ref": "#/$defs/Threshold",
               "default": 0.5
+            },
+            "true": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,
@@ -315,11 +378,11 @@
             "choices": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 2
             },
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -344,7 +407,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -354,7 +417,7 @@
             "labels": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 1
             },
@@ -376,7 +439,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -386,7 +449,7 @@
             "levels": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 2
             },
@@ -404,7 +467,13 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "false": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -417,6 +486,12 @@
             "threshold": {
               "$ref": "#/$defs/Threshold",
               "default": 0.5
+            },
+            "true": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "additionalProperties": false,
@@ -428,7 +503,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -452,7 +527,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -480,7 +555,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -508,7 +583,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {
@@ -518,7 +593,7 @@
             "levels": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/AnswerOption"
               },
               "minItems": 2
             },
@@ -545,7 +620,7 @@
         {
           "type": "object",
           "properties": {
-            "evidence": {
+            "field": {
               "$ref": "#/$defs/Pointer"
             },
             "function": {

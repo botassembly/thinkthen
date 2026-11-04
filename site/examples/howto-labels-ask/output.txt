@@ -1,0 +1,6 @@
+{"id":"a1","label":true,"answer":true}
+{"id":"a2","label":false,"answer":false}
+{"id":"a3","label":true,"answer":true}
+{"id":"a4","label":true,"answer":true}
+{"id":"a5","label":false,"answer":false}
+{"id":"a6","label":true,"answer":true}

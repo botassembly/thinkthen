@@ -1,0 +1,8 @@
+---
+import { sharedOptions } from '../lib/function-options.mjs';
+const options = sharedOptions();
+---
+<table data-shared-options>
+  <thead><tr><th>Option</th><th>What it does</th><th>Variable</th></tr></thead>
+  <tbody>{options.map((row) => <tr><td><code>{row.option}</code></td><td>{row.description}</td><td>{row.variable}</td></tr>)}</tbody>
+</table>

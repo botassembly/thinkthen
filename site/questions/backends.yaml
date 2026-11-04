@@ -1,0 +1,47 @@
+# Backends and models. Source: product (the three backends in the version line).
+- id: openai
+  question: Can ThinkThen use OpenAI models?
+  source: product
+  frequency: openai is one of three backends
+  rank: 49
+  page: /install/backends/
+  reference: /reference/options/
+- id: local-server
+  question: How do I point ThinkThen at my own model server?
+  source: product
+  frequency: --url and THINKTHEN_BASE_URL
+  rank: 50
+  page: /install/backends/
+  reference: /reference/options/
+- id: which-model
+  question: How do I see which backend and model answered a question?
+  source: product
+  frequency: source on every row
+  rank: 51
+  page: /install/backends/
+  reference: /reference/rows/
+- id: name-question
+  question: How do I label a ThinkThen question so I can find it in logs?
+  source: product
+  frequency: --name in every function's help
+  rank: 54
+  page: /answers/name-question/
+  reference: /reference/options/
+  answers_page: true
+  page_title: Result rows
+  reference_title: Command options
+  reader: A developer who logs ThinkThen rows and needs to tell questions apart
+  answer: |
+    Add `--name` with a short label. ThinkThen {version} puts it in every row's `source.name`, beside the backend and the model, so a log line shows which question produced it.
+  why: |
+    Every row carries a `source` object that says where its answer came from. `--name` adds your label to it, so rows from several questions in one log stay apart. The name also becomes part of `source.question_identity`, the fingerprint of the question and its settings, so the same question under two names gets two identities.
+  limits: |
+    A name must hold visible text; `--name ''` stops with [`usage.name`](/reference/errors/usage-name/). `backend` and `model` name the backend and the model that answered, such as `systemone` and `jev-1.13.0`.
+  examples:
+    - id: ans-name
+      says: "Ask one question under the name `refund-check`. `jq` keeps the answer and three fields of the row's `source`:"
+  explain:
+    answer: "The answer: `true` means yes."
+    name: Your label, copied from `--name` onto every row.
+    backend: The backend that answered.
+    model: The model that answered.

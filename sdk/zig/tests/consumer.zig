@@ -21,12 +21,7 @@ fn fail(a: A, diagnostic: tt.Diagnostic) !void {
 }
 const Mode = enum { many, cancelled, single };
 fn emitItem(comptime function: tt.Function, a: A, item: anytype) !void {
-    if (function == .filter) {
-        const bytes = try std.json.Stringify.valueAlloc(a, item.row, .{ .emit_null_optional_fields = false });
-        var row = try std.json.parseFromSliceLeaky(std.json.Value, a, bytes, .{ .parse_numbers = false });
-        try row.object.put(a, "kept", .{ .bool = item.kept() });
-        try emit(a, row);
-    } else try emit(a, item);
+    try emit(a, if (function == .filter) item.row else item);
 }
 fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, value: std.json.Value, records: []const tt.Record, mode: Mode) !void {
     var diagnostic: tt.Diagnostic = .{};
@@ -34,26 +29,26 @@ fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, valu
     if (mode == .single) {
         std.debug.assert(records.len == 1);
         if (function == .decide) {
-            const item = try client.decideOne(a, q.question, records[0], q.options, &diagnostic);
+            const item = try client.decide(a, q.question, records[0], q.options, &diagnostic);
             write("[");
             try emitItem(function, a, item);
             write("]");
             return;
         } else return error.SingleModeRequiresDecide;
     }
-    var call = client.open(function, a, q, .{ .records = records }, &diagnostic) catch {
+    var call = client.openAll(function, a, q, .{ .records = records }, &diagnostic) catch {
         return fail(a, diagnostic);
     };
     defer call.deinit();
     q = undefined;
     if (mode == .cancelled) {
         call.cancel();
-        _ = call.next(a, &diagnostic) catch return fail(a, diagnostic);
+        _ = call.next(&diagnostic) catch return fail(a, diagnostic);
         return error.CancellationWasIgnored;
     }
     write("[");
     var count: usize = 0;
-    while (try call.next(a, &diagnostic)) |item| {
+    while (try (if (function == .filter) call.nextRow(&diagnostic) else call.next(&diagnostic))) |item| {
         if (count > 0) write(",");
         try emitItem(function, a, item);
         count += 1;
@@ -83,9 +78,9 @@ fn run(a: A, settings_json: []const u8, request_json: []const u8, mode: Mode) !v
     }
     return error.UnknownFixture;
 }
-fn driveHeld(call: *tt.Call(.decide), a: A) void {
+fn driveHeld(call: *tt.Call(.decide)) void {
     var diag: tt.Diagnostic = .{};
-    _ = call.next(a, &diag) catch |err| {
+    _ = call.next(&diag) catch |err| {
         std.debug.assert(err == error.Cancelled and diag.code == .local_cancelled);
         return;
     };
@@ -95,9 +90,9 @@ fn held(a: A, settings_json: []const u8) !void {
     const settings = try fixture.settings(a, settings_json);
     var client = try tt.Client.init(settings, null);
     defer client.deinit();
-    var call = try client.decide(a, "Ready?", .{ .records = &.{.{ .text = "evidence" }} }, .{}, null);
+    var call = try client.decideAll(a, "Ready?", .{ .records = &.{.{ .text = "evidence" }} }, .{}, null);
     defer call.deinit();
-    const worker = try std.Thread.spawn(.{}, driveHeld, .{ &call, a });
+    const worker = try std.Thread.spawn(.{}, driveHeld, .{&call});
     var signal: [1]u8 = undefined;
     const count = if (builtin.os.tag == .windows) _read(0, &signal, 1) else std.c.read(0, &signal, 1);
     std.debug.assert(count == 1);

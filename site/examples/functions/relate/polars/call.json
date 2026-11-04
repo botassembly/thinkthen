@@ -1,0 +1,5 @@
+{
+  "anchor": "relations = messages[\"message\"].thinkthen.relate(rules=rules)",
+  "before": 0,
+  "after": 0
+}

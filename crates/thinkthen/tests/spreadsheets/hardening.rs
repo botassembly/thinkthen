@@ -44,7 +44,7 @@ fn excel_widens_filters_and_spans_and_inserts_before_row_extensions() {
                 sheet
             }
         });
-        let result = excel(&input, &[]);
+        let result = excel(&input, &["--details"]);
         assert!(result.status.success(), "{result:?}");
         let output =
             input.with_file_name(format!("ranges-{prefixed}-{last_column}.thinkthen.xlsx"));
@@ -112,7 +112,7 @@ fn formula_caches_require_values_except_for_saved_empty_strings() {
         (
             2,
             "<c r=\"B2\" t=\"str\"><f>IF(TRUE,\"\",\"x\")</f><v/></c>",
-            0,
+            6,
         ),
     ] {
         let input = directory.path().join(format!("cache-{index}.xlsx"));
@@ -179,7 +179,7 @@ fn oversized_annotation_records_publish_failed_cells() {
             "csv",
         ])
         .arg(&input)
-        .args(["--column", "Body"])
+        .args(["--column", "Body", "--details"])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(6), "{output:?}");
@@ -192,19 +192,35 @@ fn oversized_annotation_records_publish_failed_cells() {
 }
 
 #[test]
-fn details_flag_keeps_file_details_in_their_columns() {
+fn details_flag_adds_detail_columns_after_the_one_answer_column() {
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("details.csv");
     fs::write(&input, "Body\nalpha\n").unwrap();
+    let plain = support::command()
+        .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "ready", "--output"])
+        .arg(directory.path().join("plain.csv"))
+        .output()
+        .unwrap();
+    assert!(plain.status.success(), "{plain:?}");
+    assert_eq!(
+        table(&directory.path().join("plain.csv"), b',')[0],
+        ["Body", "ready"]
+    );
     let output = support::command()
         .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
         .arg(&input)
-        .args(["--column", "Body", "--into", "ready", "--format", "text"])
+        .args(["--column", "Body", "--into", "ready", "--details"])
         .output()
         .unwrap();
     assert!(output.status.success(), "{output:?}");
     let rows = table(&directory.path().join("details.thinkthen.csv"), b',');
     assert_eq!(rows.len(), 2);
+    assert_eq!(
+        rows[0][1..5],
+        ["ready", "ready_status", "ready_probability", "ready_error"]
+    );
     assert_eq!(rows[0][5], "ready_detail");
     assert!(rows[1][5].is_empty());
     assert_eq!(rows[0][6], "ready_source");
@@ -269,7 +285,8 @@ fn unrepresentable_excel_answers_and_details_become_failed_cells() {
             .args([function, "Pick", "--url", server.base(), "--from", "xlsx"])
             .env("THINKTHEN_API_KEY", crate::loopback::KEY)
             .arg(&input)
-            .args(["--sheet", "Intake", "--column", "Body", "--into", "result"]);
+            .args(["--sheet", "Intake", "--column", "Body", "--into", "result"])
+            .arg("--details");
         if function == "choose" {
             command.args(["--choice", &bad, "--choice", "good"]);
         } else {
@@ -335,8 +352,8 @@ fn unrepresentable_annotation_cells_preserve_successful_sibling_columns() {
     })
     .unwrap();
     let questions = json!({
-        "bad":{"function":"choose","question":"Which?","choices":[bad,"good"],"evidence":"/Body"},
-        "ready":{"function":"decide","question":"Ready?","evidence":"/Body"}
+        "bad":{"function":"choose","question":"Which?","choices":[bad,"good"],"field":"/Body"},
+        "ready":{"function":"decide","question":"Ready?","field":"/Body"}
     });
     let definition = directory.path().join("questions.json");
     fs::write(&definition, json!({"questions":questions}).to_string()).unwrap();
@@ -350,7 +367,7 @@ fn unrepresentable_annotation_cells_preserve_successful_sibling_columns() {
             "xlsx",
         ])
         .arg(&input)
-        .args(["--sheet", "Intake", "--column", "Body"])
+        .args(["--sheet", "Intake", "--column", "Body", "--details"])
         .env("THINKTHEN_API_KEY", crate::loopback::KEY)
         .output()
         .unwrap();

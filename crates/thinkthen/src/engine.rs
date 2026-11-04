@@ -36,6 +36,7 @@ pub struct Engine {
     policy: RetryPolicy,
     pub(crate) cancel: Cancel,
     cancel_attached: bool,
+    pub(crate) name: Option<String>,
 }
 
 impl Engine {
@@ -61,7 +62,34 @@ impl Engine {
             backend,
             batch: Batch::default(),
             agent: Arc::new(OnceLock::new()),
+            name: None,
         }
+    }
+
+    /// Read `THINKTHEN_BACKEND`, the selected backend's key variable (such as
+    /// `THINKTHEN_API_KEY`) and `THINKTHEN_BATCH` from the environment, as the
+    /// command does. With no backend set, the default backend is used.
+    ///
+    /// ```no_run
+    /// let engine = thinkthen::Engine::from_env()?;
+    /// # Ok::<(), thinkthen::Error>(())
+    /// ```
+    /// # Errors
+    /// Returns `usage.backend` for an unknown backend name, or the shared URL,
+    /// credential or batch error.
+    pub fn from_env() -> Result<Self, Error> {
+        crate::Settings::default().engine(|name| std::env::var(name).ok())
+    }
+
+    /// Give this engine's typed calls an execution name, which every row's
+    /// [`Source::name`](crate::results::Source::name) reports.
+    /// # Errors
+    /// Returns `usage.name` for a blank name or one containing U+0000.
+    pub fn named(self, name: impl Into<String>) -> Result<Self, Error> {
+        Ok(Self {
+            name: Some(crate::contract_request::admit_name(name.into())?),
+            ..self
+        })
     }
 
     /// This engine with `batch` records to a request.
@@ -207,6 +235,7 @@ impl fmt::Debug for Engine {
             .debug_struct("Engine")
             .field("backend", &self.backend)
             .field("batch", &self.batch)
+            .field("name", &self.name)
             .finish_non_exhaustive()
     }
 }

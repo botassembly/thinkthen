@@ -63,7 +63,7 @@ fn names_keep_offsets_kinds_and_cuts() {
                 (".", [0., 0., 0., 0., 1.]),
             ],
             vec!["person", "company"],
-            vec![("Éva", 2, 5, "person"), ("Acme", 10, 14, "company")],
+            vec![("Éva", 5, 9, "person"), ("Acme", 14, 18, "company")],
         ),
         (
             "word",
@@ -177,7 +177,7 @@ fn toolbox_empty_text_and_local_limits_keep_record_rows() {
         .unwrap()
         .map(|row| row.unwrap())
         .for_each(|row| rows.push(serde_json::to_value(row).unwrap()));
-    assert_eq!(rows[0]["answer"], json!([]));
+    assert_eq!(rows[0]["error"]["code"], "record.empty");
     assert_eq!(rows[1]["answer"][0]["text"], "Ada");
     assert_eq!(rows[2]["error"]["code"], "record.too-large");
     assert_eq!(server.count(), 2);
@@ -478,15 +478,15 @@ fn failed_rounds_stop_each_record_without_partial_names() {
 }
 
 #[test]
-fn unicode_pieces_preserve_names_and_original_scalar_offsets() {
+fn unicode_pieces_preserve_names_and_original_byte_offsets() {
     for (text, expected, start, end) in [
-        ("A\u{301}da met Acme.", "A\u{301}da", 0, 4),
-        ("\u{feff}Ada met Acme.", "Ada", 1, 4),
+        ("A\u{301}da met Acme.", "A\u{301}da", 0, 5),
+        ("\u{feff}Ada met Acme.", "Ada", 3, 6),
         (
             "\u{feff}\u{200b}\u{200c}\u{200d}\u{2060}Ada met Acme.",
             "Ada",
-            5,
-            8,
+            15,
+            18,
         ),
     ] {
         let question = Recognize::new(["ENTITY"]).unwrap();
@@ -637,7 +637,7 @@ fn names_require_a_unicode_letter_or_decimal_digit() {
             if kept {
                 assert_eq!(names[0]["text"], text);
                 assert_eq!(names[0]["start"], 0);
-                assert_eq!(names[0]["end"], text.chars().count());
+                assert_eq!(names[0]["end"], text.len());
                 assert_eq!(names[0]["probability"], 1.);
             }
         }
@@ -679,7 +679,7 @@ fn dependent_rounds_preserve_names_through_split_retry_and_deduplication() {
     assert_eq!(rows.len(), 4);
     for (position, row) in rows.into_iter().enumerate() {
         assert_eq!(row.position(), (position + 1) as u64);
-        let names = row.into_result().unwrap().unwrap();
+        let names = row.into_answer().unwrap();
         assert_eq!(
             names
                 .iter()

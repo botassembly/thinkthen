@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'databases'))
 from testing import read_line
-from stress import check_round, environment, report, settings, workload
+from stress import StatementFailure, check_round, environment, report, settings, statement_failure, workload
 
 
 class Host:
@@ -28,17 +28,20 @@ class Host:
         name = f' ({signal.Signals(-code).name})' if code < 0 else ''
         raise RuntimeError(f'SQLite consumer exited during a statement: returncode={code}{name}') from None
 
-    def receive(self):
+    def receive(self, case=None):
         line = read_line(self.process.stdout)
         if not line:
             self.exited()
         result = json.loads(line)
+        if case is not None and result['code'] == 1:
+            assert not result['rows'], result
+            return statement_failure(case, result['message'])
         assert result['code'] in (0, 100, 101), result
         return result['rows']
 
-    def sql(self, sql, parameters=(), **options):
+    def sql(self, sql, parameters=(), *, case=None, **options):
         self.send(dict(sql=sql, parameters=parameters, **options))
-        return self.receive()
+        return self.receive(case)
 
     def close(self, check=True):
         try:
@@ -69,7 +72,7 @@ def round_rows(host, case, round_index):
     prefixes = [f'round-{case["identifier_base"] + round_index}-call-{case["identifier_base"] + index}-' for index in range(case['concurrency'])]
     statements = [statement(case['records'], prefix, case['identifier_base']) for prefix in prefixes]
     if case['concurrency'] == 1:
-        results = [host.sql(*statements[0])]
+        results = [host.sql(*statements[0], case=case)]
     else:
         # One serialized SQLite connection permits interleaved live statements.
         assert case['concurrency'] == 2, 'SQLite consumer owns two cursor slots'
@@ -85,7 +88,7 @@ def round_rows(host, case, round_index):
             host.send(dict(operation='close', slot=slot))
             host.receive()
     for prefix, rows in zip(prefixes, results):
-        yield prefix, decode(rows)
+        yield prefix, rows if isinstance(rows, StatementFailure) else decode(rows)
 
 
 def main():

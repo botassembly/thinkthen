@@ -1,12 +1,12 @@
 package consumer
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 // Feature: a finite or streaming collection starts one driver across 1,000 rows.
 suspend fun streamThreads() {
-    ThinkThen { backend = Backend.Stub; batch = 1 }.use { client ->
+    ThinkThen { backend = Backend.STUB; batch = 1 }.use { client ->
         val records = List(1000) { "alpha" }
         StreamThreadAudit().use {
             check(client.decideStream("Ready?", records).count() == 1000)

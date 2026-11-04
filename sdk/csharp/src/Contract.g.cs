@@ -72,10 +72,17 @@ internal static class Contract
         1010 => "usage.sql-policy",
         1011 => "usage.sql-selection",
         1012 => "usage.abi",
+        1013 => "usage.closed",
+        1014 => "usage.function",
+        1015 => "usage.record-kind",
+        1016 => "usage.offsets",
+        1017 => "usage.argument",
+        1018 => "usage.option",
         2001 => "record.json",
         2002 => "record.missing",
         2003 => "record.too-large",
         2004 => "record.invalid",
+        2005 => "record.empty",
         3001 => "backend.transport",
         3002 => "backend.status",
         3003 => "backend.reply",
@@ -85,32 +92,70 @@ internal static class Contract
         5001 => "internal.bug",
         _ => null
     };
-    internal static readonly string[] Exports = ["thinkthen_call_events","thinkthen_events_version","thinkthen_events_wait","thinkthen_events_wake","thinkthen_events_free","thinkthen_settings_conversion_error","thinkthen_question_conversion_error","thinkthen_client_open_json","thinkthen_client_free","thinkthen_call_open_question","thinkthen_call_send_utf16","thinkthen_call_send_json","thinkthen_call_end_input","thinkthen_call_next","thinkthen_call_cancel","thinkthen_call_free","thinkthen_error_free","thinkthen_code_family","thinkthen_code_name","thinkthen_call_send_missing","thinkthen_row_free","thinkthen_question_from_json","thinkthen_question_free","thinkthen_toolbox_from_json","thinkthen_toolbox_from_definitions_json","thinkthen_toolbox_to_json","thinkthen_toolbox_definitions_json","thinkthen_buffer_free","thinkthen_toolbox_free","thinkthen_call_send_invalid","thinkthen_toolbox_select_as","thinkthen_settings_from_json","thinkthen_settings_free"];
+    internal static readonly string[] Exports = ["thinkthen_call_events","thinkthen_events_version","thinkthen_events_wait","thinkthen_events_wake","thinkthen_events_free","thinkthen_settings_conversion_error","thinkthen_question_conversion_error","thinkthen_client_open_json","thinkthen_client_free","thinkthen_call_open_question","thinkthen_call_send_utf16","thinkthen_call_send_json","thinkthen_call_end_input","thinkthen_call_next","thinkthen_call_cancel","thinkthen_call_free","thinkthen_error_free","thinkthen_code_family","thinkthen_code_name","thinkthen_call_send_missing","thinkthen_row_free","thinkthen_row_original","thinkthen_question_from_json","thinkthen_question_free","thinkthen_toolbox_from_json","thinkthen_toolbox_from_definitions_json","thinkthen_toolbox_to_json","thinkthen_toolbox_definitions_json","thinkthen_buffer_free","thinkthen_toolbox_free","thinkthen_call_send_invalid","thinkthen_toolbox_select_as","thinkthen_settings_from_json","thinkthen_settings_free"];
 }
+/// <summary>Stable error codes from the shared engine registry.</summary>
 [System.Text.Json.Serialization.JsonConverter(typeof(ErrorCodeConverter))]
 public enum ErrorCode
 {
+    /// <summary>The shared `usage.threshold` error.</summary>
     UsageThreshold = 1001,
+    /// <summary>The shared `usage.question` error.</summary>
     UsageQuestion = 1002,
+    /// <summary>The shared `usage.name` error.</summary>
     UsageName = 1003,
+    /// <summary>The shared `usage.settings` error.</summary>
     UsageSettings = 1004,
+    /// <summary>The shared `usage.backend` error.</summary>
     UsageBackend = 1005,
+    /// <summary>The shared `usage.url` error.</summary>
     UsageUrl = 1006,
+    /// <summary>The shared `usage.key-missing` error.</summary>
     UsageKeyMissing = 1007,
+    /// <summary>The shared `usage.batch` error.</summary>
     UsageBatch = 1008,
+    /// <summary>The shared `usage.pointer` error.</summary>
     UsagePointer = 1009,
+    /// <summary>The shared `usage.sql-policy` error.</summary>
     UsageSqlPolicy = 1010,
+    /// <summary>The shared `usage.sql-selection` error.</summary>
     UsageSqlSelection = 1011,
+    /// <summary>The shared `usage.abi` error.</summary>
     UsageAbi = 1012,
+    /// <summary>The shared `usage.closed` error.</summary>
+    UsageClosed = 1013,
+    /// <summary>The shared `usage.function` error.</summary>
+    UsageFunction = 1014,
+    /// <summary>The shared `usage.record-kind` error.</summary>
+    UsageRecordKind = 1015,
+    /// <summary>The shared `usage.offsets` error.</summary>
+    UsageOffsets = 1016,
+    /// <summary>The shared `usage.argument` error.</summary>
+    UsageArgument = 1017,
+    /// <summary>The shared `usage.option` error.</summary>
+    UsageOption = 1018,
+    /// <summary>The shared `record.json` error.</summary>
     RecordJson = 2001,
+    /// <summary>The shared `record.missing` error.</summary>
     RecordMissing = 2002,
+    /// <summary>The shared `record.too-large` error.</summary>
     RecordTooLarge = 2003,
+    /// <summary>The shared `record.invalid` error.</summary>
     RecordInvalid = 2004,
+    /// <summary>The shared `record.empty` error.</summary>
+    RecordEmpty = 2005,
+    /// <summary>The shared `backend.transport` error.</summary>
     BackendTransport = 3001,
+    /// <summary>The shared `backend.status` error.</summary>
     BackendStatus = 3002,
+    /// <summary>The shared `backend.reply` error.</summary>
     BackendReply = 3003,
+    /// <summary>The shared `local.cancelled` error.</summary>
     LocalCancelled = 4001,
+    /// <summary>The shared `local.io` error.</summary>
     LocalIo = 4002,
+    /// <summary>The shared `local.toolbox` error.</summary>
     LocalToolbox = 4003,
+    /// <summary>The shared `internal.bug` error.</summary>
     InternalBug = 5001,
 }

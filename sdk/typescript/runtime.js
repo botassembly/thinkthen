@@ -1,6 +1,9 @@
 // @ts-check
-import { ThinkThenError, RULE_FIELDS, conversion, encode, snapshot, loadNative, nativeError } from "./bridge.js";
+import { ThinkThenError, RULE_FIELDS, conversion, encode, snapshot, loadNative, nativeError, rejectRecordKind } from "./bridge.js";
+import { readFile } from "node:fs/promises";
 import { stream } from "./stream.js";
+import { answerPromise, keptRecords } from "./answers.js";
+export { answer, UnsureError, RecordError } from "./answers.js";
 export { ThinkThenError, UsageError, BackendError, CancelledError } from "./bridge.js";
 export { ERROR_CODES } from "./errors.js";
 /** @typedef {import('./index.d.ts').RecordInput} RecordInput */
@@ -21,7 +24,20 @@ const hostRuleFields = Object.fromEntries(Object.entries(RULE_FIELDS).map(([host
 /** @param {unknown} value @returns {unknown} */
 function wireQuestion(value) {
   if (!value || typeof value !== "object") return value;
-  /** @type {Record<string, unknown>} */ const fields = Object.fromEntries(Object.entries(value).map(([key, child]) => [key, key === "evidence" ? pointer(child) : child]));
+  /** @type {Record<string, unknown>} */ const fields = Object.fromEntries(Object.entries(value).map(([key, child]) => [key, key === "field" ? pointer(child) : child]));
+  if (Object.hasOwn(fields, "yesMeans")) { fields.true = fields.yesMeans; delete fields.yesMeans; }
+  if (Object.hasOwn(fields, "noMeans")) { fields.false = fields.noMeans; delete fields.noMeans; }
+  const descriptions = fields.descriptions;
+  if (descriptions !== null && typeof descriptions === "object" && !Array.isArray(descriptions)) {
+    const slot = fields.function === "choose" ? "choices" : fields.function === "tag" ? "labels" : "levels";
+    const labels = fields[slot];
+    if (Array.isArray(labels)) {
+      fields[slot] = labels.map((/** @type {unknown} */ label) => typeof label === "string" && Object.hasOwn(descriptions, label)
+        ? {name: label, description: /** @type {unknown} */(Reflect.get(descriptions, label))} : label);
+      // Leave unsupported keys for the shared engine to refuse rather than drop them.
+      if (Object.keys(descriptions).every(label => labels.includes(label))) delete fields.descriptions;
+    }
+  }
   if (Array.isArray(fields.rules)) fields.rules = fields.rules.map((/** @type {unknown} */ rule) => {
     if (!rule || typeof rule !== "object") return rule;
     return rename(rule, RULE_FIELDS);
@@ -38,9 +54,24 @@ export function parseToolbox(json) {
     const decoded = /** @type {unknown} */(JSON.parse(loadNative().parseToolbox(json)));
     const definitions = /** @type {Record<string, Record<string, unknown>>} */(decoded);
     const entries = Object.entries(definitions).map(([name, question]) => {
-      if (question.function !== "relate") return [name, question];
-      const rules = /** @type {readonly object[]} */(question.rules);
-      return [name, {...question, rules: rules.map(rule => rename(rule, hostRuleFields))}];
+      const fields = {...question};
+      if (Object.hasOwn(fields, "true")) { fields.yesMeans = fields.true; delete fields.true; }
+      if (Object.hasOwn(fields, "false")) { fields.noMeans = fields.false; delete fields.false; }
+      for (const slot of ["choices", "labels", "levels"]) {
+        if (!Array.isArray(fields[slot])) continue;
+        /** @type {[string, unknown][]} */ const descriptions = [];
+        fields[slot] = fields[slot].map((/** @type {unknown} */ option) => {
+          if (option === null || typeof option !== "object" || !("name" in option)) return option;
+          if ("description" in option && typeof option.name === "string") descriptions.push([option.name, option.description]);
+          return option.name;
+        });
+        if (descriptions.length) fields.descriptions = Object.fromEntries(descriptions);
+      }
+      if (question.function === "relate") {
+        const rules = /** @type {readonly object[]} */(question.rules);
+        fields.rules = rules.map(rule => rename(rule, hostRuleFields));
+      }
+      return [name, fields];
     });
     return /** @type {import('./index.d.ts').Toolbox} */(snapshot(Object.fromEntries(entries)));
   } catch (error) { throw nativeError(error); }
@@ -52,6 +83,13 @@ export function serializeToolbox(toolbox) {
   catch (error) { throw nativeError(error); }
 }
 
+/** @type {ThinkThen | undefined} */
+let defaultClient;
+/** @param {ThinkThen | undefined} client */
+export function setDefaultClient(client) { defaultClient = client; }
+/** @param {string | URL} path @returns {Promise<import('./index.d.ts').Toolbox>} */
+export async function loadToolbox(path) { return parseToolbox(await readFile(path, "utf8")); }
+
 export class ThinkThen {
   /** @type {import('./bridge.js').NativeClient} */ #client;
   /** @type {Set<Stream>} */ #calls = new Set();
@@ -61,6 +99,9 @@ export class ThinkThen {
     const native = loadNative();
     const settings = conversion(() => {
       const { apiKey, retry, ...fields } = /** @type {import('./index.d.ts').ClientOptions} */(snapshot(options));
+      if (fields.backend === undefined && process.env.THINKTHEN_BACKEND !== undefined) {
+        fields.backend = /** @type {import('./index.d.ts').Backend} */(process.env.THINKTHEN_BACKEND);
+      }
       const names = { maxRetries: "max_retries", initialBackoffMs: "initial_backoff_ms", attemptTimeoutMs: "attempt_timeout_ms" };
       return encode({ ...fields, ...(apiKey === undefined ? {} : {api_key: apiKey}),
         ...(retry === undefined ? {} : {retry: rename(retry, names)}) });
@@ -82,6 +123,7 @@ export class ThinkThen {
     let request = "";
     /** @type {ThinkThenError | undefined} */ let failure;
     try {
+      if (typeof records === "string") rejectRecordKind();
       const {signal: liveSignal, ...fields} = options;
       signal = liveSignal;
       const executionName = fields.name; delete fields.name;
@@ -109,10 +151,17 @@ export class ThinkThen {
     this.#calls.add(result);
     return result;
   }
-  /** @param {string} name @param {unknown} question @param {RecordInput} record @param {CallOptions} [options] @returns {Promise<unknown>} */
-  async #single(name, question, record, options) {
-    const call = this.#stream(name, question, [record], options);
-    try { return (await call.toArray())[0]; } finally { await call.return(); }
+  /** @param {string} name @param {unknown} question @param {RecordInput} record @param {CallOptions} [options] @returns {import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */
+  #single(name, question, record, options) {
+    const row = (async () => {
+      const collection = conversion(() => Array.isArray(record) || record !== null && typeof record === "object"
+        && (Symbol.iterator in record || Symbol.asyncIterator in record), () => loadNative().rejectRecordKind());
+      if (collection) rejectRecordKind();
+      const call = this.#stream(name, question, [record], options);
+      try { return /** @type {import('./index.d.ts').AnyRow} */((await call.toArray())[0]); }
+      finally { await call.return(); }
+    })();
+    return answerPromise(row);
   }
   /** @type {typeof import("./index.d.ts").decide} */
   decide = /** @type {typeof import("./index.d.ts").decide} */((q, r, o) => this.#single("decide", q, r, o));
@@ -146,26 +195,34 @@ export class ThinkThen {
   annotate = /** @type {typeof import("./index.d.ts").annotate} */((q, r, o) => this.#single("annotate", q, r, o));
   /** @type {typeof import("./index.d.ts").annotateStream} */
   annotateStream = /** @type {typeof import("./index.d.ts").annotateStream} */((q, r, o) => this.#stream("annotate", q, r, o));
+  /** @type {typeof import("./index.d.ts").filter} */
+  filter = /** @type {typeof import("./index.d.ts").filter} */((q, r, o) => keptRecords(typeof q === "string" ? this.filterStream(q, r, o) : this.filterStream(q, r, o)));
   /** @type {typeof import("./index.d.ts").filterStream} */
   filterStream = /** @type {typeof import("./index.d.ts").filterStream} */((q, r, o) => this.#stream("filter", q, r, o));
   /** @type {typeof import("./index.d.ts").rankStream} */
   rankStream = /** @type {typeof import("./index.d.ts").rankStream} */((q, r, o) => this.#stream("rank", q, r, o));
 }
-/** @param {(client: ThinkThen) => Promise<unknown>} call @returns {Promise<unknown>} */
-async function standaloneSingle(call) {
-  const client = new ThinkThen();
-  try { return await call(client); } finally { await client.close(); }
+/** @param {(client: ThinkThen) => import('./index.d.ts').AnswerPromise<import('./index.d.ts').AnyRow>} call @returns {import('./index.d.ts').AnswerPromise<import('./index.d.ts').AnyRow>} */
+function standaloneSingle(call) {
+  try {
+    const client = defaultClient ?? new ThinkThen();
+    const owned = client !== defaultClient;
+    const result = call(client);
+    return answerPromise(result.row().finally(() => owned ? client.close() : undefined));
+  } catch (error) { return answerPromise(Promise.reject(nativeError(error))); }
 }
 /** @param {(client: ThinkThen) => Stream} call @returns {Stream} */
 function standaloneStream(call) {
-  const client = new ThinkThen();
+  const client = defaultClient ?? new ThinkThen();
+  const owned = client !== defaultClient;
   const result = call(client);
-  const finish = async () => { await result.return(); await client.close(); };
+  const close = async () => { if (owned) await client.close(); };
+  const finish = async () => { await result.return(); await close(); };
   return {
     [Symbol.asyncIterator]() { return this; },
     async next() {
-      try { const value = await result.next(); if (value.done) await client.close(); return value; }
-      catch (error) { await client.close(); throw error; }
+      try { const value = await result.next(); if (value.done) await close(); return value; }
+      catch (error) { await close(); throw error; }
     },
     async return() { await finish(); return {done: true, value: undefined}; },
     async [Symbol.asyncDispose]() { await finish(); },
@@ -173,38 +230,41 @@ function standaloneStream(call) {
   };
 }
 /** @type {typeof import("./index.d.ts").decide} */
-export const decide = /** @type {typeof import("./index.d.ts").decide} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.decide))(q, r, o)));
+export const decide = /** @type {typeof import("./index.d.ts").decide} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.decide))(q, r, o)));
 /** @type {typeof import("./index.d.ts").decideStream} */
 export const decideStream = /** @type {typeof import("./index.d.ts").decideStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.decideStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").choose} */
-export const choose = /** @type {typeof import("./index.d.ts").choose} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.choose))(q, r, o)));
+export const choose = /** @type {typeof import("./index.d.ts").choose} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.choose))(q, r, o)));
 /** @type {typeof import("./index.d.ts").chooseStream} */
 export const chooseStream = /** @type {typeof import("./index.d.ts").chooseStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.chooseStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").tag} */
-export const tag = /** @type {typeof import("./index.d.ts").tag} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.tag))(q, r, o)));
+export const tag = /** @type {typeof import("./index.d.ts").tag} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.tag))(q, r, o)));
 /** @type {typeof import("./index.d.ts").tagStream} */
 export const tagStream = /** @type {typeof import("./index.d.ts").tagStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.tagStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").score} */
-export const score = /** @type {typeof import("./index.d.ts").score} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.score))(q, r, o)));
+export const score = /** @type {typeof import("./index.d.ts").score} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.score))(q, r, o)));
 /** @type {typeof import("./index.d.ts").scoreStream} */
 export const scoreStream = /** @type {typeof import("./index.d.ts").scoreStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.scoreStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").find} */
-export const find = /** @type {typeof import("./index.d.ts").find} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.find))(q, r, o)));
+export const find = /** @type {typeof import("./index.d.ts").find} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.find))(q, r, o)));
 /** @type {typeof import("./index.d.ts").findStream} */
 export const findStream = /** @type {typeof import("./index.d.ts").findStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.findStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").recognize} */
-export const recognize = /** @type {typeof import("./index.d.ts").recognize} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.recognize))(q, r, o)));
+export const recognize = /** @type {typeof import("./index.d.ts").recognize} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.recognize))(q, r, o)));
 /** @type {typeof import("./index.d.ts").recognizeStream} */
 export const recognizeStream = /** @type {typeof import("./index.d.ts").recognizeStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.recognizeStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").relate} */
-export const relate = /** @type {typeof import("./index.d.ts").relate} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.relate))(q, r, o)));
+export const relate = /** @type {typeof import("./index.d.ts").relate} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.relate))(q, r, o)));
 /** @type {typeof import("./index.d.ts").relateStream} */
 export const relateStream = /** @type {typeof import("./index.d.ts").relateStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.relateStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").annotate} */
-export const annotate = /** @type {typeof import("./index.d.ts").annotate} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => Promise<unknown>} */(client.annotate))(q, r, o)));
+export const annotate = /** @type {typeof import("./index.d.ts").annotate} */((q, r, o) => standaloneSingle(client => (/** @type {(q: unknown, r: RecordInput, o?: CallOptions) => import("./index.d.ts").AnswerPromise<import("./index.d.ts").AnyRow>} */(client.annotate))(q, r, o)));
 /** @type {typeof import("./index.d.ts").annotateStream} */
 export const annotateStream = /** @type {typeof import("./index.d.ts").annotateStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.annotateStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").filterStream} */
 export const filterStream = /** @type {typeof import("./index.d.ts").filterStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.filterStream))(q, r, o)));
 /** @type {typeof import("./index.d.ts").rankStream} */
 export const rankStream = /** @type {typeof import("./index.d.ts").rankStream} */((q, r, o) => standaloneStream(client => (/** @type {(q: unknown, r: Records, o?: CallOptions) => Stream} */(client.rankStream))(q, r, o)));
+
+/** @type {typeof import('./index.d.ts').filter} */
+export const filter = /** @type {typeof import('./index.d.ts').filter} */((q, r, o) => keptRecords(typeof q === "string" ? filterStream(q, r, o) : filterStream(q, r, o)));

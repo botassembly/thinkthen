@@ -79,7 +79,7 @@ fn arguments(request: &Value, directory: &Path) -> Vec<String> {
     {
         args.push("--either".into());
     }
-    for key in ["evidence", "top", "threshold"] {
+    for key in ["field", "top", "threshold"] {
         if let Some(value) = question.get(key) {
             if key == "threshold" && value.is_object() {
                 args.extend([
@@ -242,7 +242,20 @@ fn every_function_serializes_the_shared_rows_from_both_wires() {
                 });
                 assert_eq!(
                     output.status.code(),
-                    Some(if failed { 6 } else { 0 }),
+                    Some(
+                        if !actual.is_empty()
+                            && actual.iter().all(|row| row["status"] == "failed"
+                                && row["error"]["code"]
+                                    .as_str()
+                                    .is_some_and(|code| code.starts_with("backend.")))
+                        {
+                            4
+                        } else if failed {
+                            6
+                        } else {
+                            0
+                        }
+                    ),
                     "{name} {backend}: {}",
                     String::from_utf8_lossy(&output.stderr)
                 );

@@ -1,125 +1,307 @@
-# ThinkThen in Kotlin
+# Kotlin functions that answer questions about text
 
-[Where record text goes](service.md) describes the default service and connection settings.
+ThinkThen 0.2.0 for Kotlin gives you ten functions. Each one reads a record, answers one question about it, and returns a typed value your code can branch on.
 
-Record methods suspend and return one row; `Stream` methods and filter/rank return Flows. A List passed as a single record remains one JSON array record. Flow completion or cancellation closes its operation; close clients with `use`.
+## Install and ask your first question
 
-Check `META-INF/README.md` inside the JAR for the supplied package's operating-system floor and runtime requirements before installation. Use the package for your operating system and architecture.
-
-Use Kotlin/JVM with Java 22 or later. Add the supplied `thinkthen-kotlin-0.2.0.jar`, matching Java engine JAR and supplied runtime dependencies to your application's dependencies. In Gradle Kotlin DSL, a local package folder can use `implementation(fileTree("packages") { include("**/*.jar") })`. The package requires kotlinx.coroutines and kotlinx.serialization at its packaged versions. Enable native access with `--enable-native-access=ALL-UNNAMED`. The matching Java dependency contains the native engine.
-
-Set `THINKTHEN_API_KEY` through the environment before creating a normal client. Keep keys out of source and reports. `ThinkThen { }` selects the default backend. `Backend.Stub` needs no key or network and returns synthetic installation-check answers.
-
-A whole JSON null record or a record without the selected evidence field returns a failed `record.missing` row locally and sends no HTTP request for that record. A selected field containing JSON null, such as `{"text":null}` with `/text`, sends that null value to the backend. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
-
-Create `records.jsonl` with one JSON value per line. For example, put `{"id":"a1","text":"Please refund my order."}` and `{"id":"a2","text":"Where is my parcel?"}` on separate lines. Add `null`, `{"id":"a4"}` and `{"id":"a6","text":null}` on separate lines to compare the null cases. The example first judges `["first", "second"]` as one JSON array record, then reads the file as a collection of separate records. Both calls use the stub backend. Keep every collection outcome, including answered false and failed rows.
+Add the package to Gradle:
 
 ```kotlin
-import io.thinkthen.kotlin.*
-import java.io.File
+dependencies {
+    implementation("io.github.botassembly:thinkthen-kotlin:0.2.0")
+}
+```
+
+Or to Maven:
+
+```xml
+<dependency>
+  <groupId>io.github.botassembly</groupId>
+  <artifactId>thinkthen-kotlin</artifactId>
+  <version>0.2.0</version>
+</dependency>
+```
+
+It needs Kotlin/JVM on Java 22 or later and includes the native engine. Set the Kotlin JVM target to 22, because the calls are inline functions built for Java 22. Run with `--enable-native-access=ALL-UNNAMED`.
+
+```kotlin
+import dev.thinkthen.kotlin.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.collect
-import kotlinx.serialization.json.Json
 
 fun main() = runBlocking {
-    val records = File("records.jsonl").readLines().filter { it.isNotBlank() }
-        .map { Json.parseToJsonElement(it) }
-    ThinkThen { backend = Backend.Stub }.use { client ->
-        val array = client.decide("Does the customer request a refund?", listOf("first", "second"))
-        println("array ${array.status}")
-        client.decideStream("Does the customer request a refund?", records, evidence = Pointer("/text"))
-            .collect { row ->
-                val message = if (row is Row.Failed) row.error.message else ""
-                val answer = if (row is Row.Answered) row.answer else null
-                println("${row.position} ${row.status} $answer $message")
-            }
+    ThinkThen().use { client ->
+        val isRefund = client.decide(
+            "Does the customer request a refund?",
+            "Please refund my order.",
+        ).answer()
+        println(isRefund)
     }
 }
 ```
 
-Save that example as Example.kt. With the supplied Kotlin JAR and its dependencies under `packages/`, compile for JVM 22 and run with the matching Java runtime:
+<!-- output: capture -->
 
-```sh
-CP=$(printf '%s:' packages/*.jar packages/dependencies/*.jar)
-kotlinc -jvm-target 22 -classpath "$CP" Example.kt -d example.jar
-java --enable-native-access=ALL-UNNAMED -classpath "example.jar:$CP" ExampleKt
+Set `THINKTHEN_API_KEY` in the environment first; the client reads it from there. [Choose a service and get a key](service.md#choose-a-service-and-get-a-key) explains the backends and how to get a key.
+
+## Handle not sure and failures
+
+`answer()` is the one step from a row to its answer. `getOrThrow()` is the same call, named as Kotlin's `Result` names it. Neither hands back a default:
+
+- When ThinkThen is not sure, it throws `UnsureException`. That is a `NoSuchElementException`, and its `probability` gives the row's probability.
+- When the record failed, it throws `ThinkThenException`. Its `code` names the engine error, and `code.wireName` gives the name, such as `record.missing`.
+
+With decide's default cut, every answer is yes or no. A band, `Threshold.band(low, high)`, makes the middle not sure. Check `isUnsure` first and send those records to a person:
+
+```kotlin
+val message = "Please refund my order."
+val refundCheck = client.decide(
+    "Does the customer request a refund?", message,
+    threshold = Threshold.band(0.2, 0.8),
+)
+when {
+    refundCheck.isUnsure -> println("Ask a person: $message")
+    refundCheck.answer() -> println("Send to refunds: $message")
+    else -> println("Leave in the inbox: $message")
+}
 ```
 
-The JVM target must match the library's JVM 22 bytecode; the compiler's default target is too old for its inline functions.
+A failed record still reaches `answer()` and throws there. Use `isAnswered` or `isFailed` to test without throwing, or `when` on the row's type, as [Judge many records](#judge-many-records) shows.
 
-## Records and the ten functions
+Mistakes in the call itself throw at once. Blank text throws `ThinkThenException` with `record.empty` before any request is sent. A `List`, `Array`, `Sequence` or `Flow` passed to a one-record call does not compile, and the compiler names the `…Stream` call to use instead.
 
-Strings remain raw text. Serializable Kotlin values or JsonElement values supply structured records; null and JsonNull become missing-record rows. Custom values use the configured Json serializers or an explicit KSerializer overload. Structured records can carry exact string or integer IDs. `evidence = Pointer("/text")` selects a field; pointers escape `/` as `~1` and `~` as `~0`.
+## The ten functions
 
-| Call on an open client | Answer type |
-| --- | --- |
-| `decide(question, record)` | Boolean |
-| `choose(question, record, choices = listOf("billing", "shipping", "other"))` | String |
-| `tag(question, record, labels = listOf("billing", "shipping"))` | List of strings |
-| `score(question, record, levels = listOf("routine", "urgent"))` | Double from 0 to 1 |
-| `filter(question, records)` | Flow of Filtered original items and rows |
-| `rank(question, records, levels = listOf("routine", "urgent"))` | Flow of Ranked original items and Long ranks |
-| `find(question, record)` | FindAnswer.Match or FindAnswer.NoMatch |
-| `recognize(record, kinds = listOf("person", "organization"))` | List of Entity |
-| `relate(record, rules = rules)` | List of Relation |
-| `ask(Annotate(questions), record)` | Annotations |
+Each snippet runs inside `ThinkThen().use { client -> ... }` in a coroutine, as in the first example. The many-record functions read the same three support messages:
 
-Use literal wording such as `"Does the customer request a refund?"`. Recognize and relate take domains without prompts. Construct rules with `RelationRule(name = "works_for", source = "person", target = "organization")`; optional `reads` supplies wording and `either` makes the relation undirected.
+```kotlin
+val messages = listOf(
+    mapOf("id" to "a1", "text" to "Please refund my order."),
+    mapOf("id" to "a2", "text" to "Where is my parcel?"),
+    mapOf("id" to "a3", "text" to "I was charged twice for one invoice."),
+)
+val text = Pointer("/text")
+```
 
-Decide, choose and filter accept `Threshold.cut(0.8)` or `Threshold.band(0.2, 0.8)`. Tag, find, recognize and relate accept cuts only. A decide/filter band yields false below low, unsure inside and true at or above high. Choose needs its winning choice to reach the upper cut. Score and rank levels run lowest to highest. Rank reads the collection, puts highest scores first and retains failures when `top` limits successful ranks.
+`Pointer("/text")` tells ThinkThen to judge each message's `text` field. Without a pointer, it judges the whole record.
 
-A rank row's answer is its rank; `position` is its input order. Filter emits every outcome with its original `item`, `row` and `kept`; `keptItems()` projects only answered true items. Preserve original IDs or input positions when saving results.
+### decide: answer a yes-or-no question
 
-## Rows, flows and questions
+```kotlin
+val isRefund = client.decide(
+    "Does the customer request a refund?",
+    "Please refund my order.",
+).answer()
+```
 
-Rows are sealed `Row.Answered`, `Row.Unsure` and `Row.Failed` cases. Answered rows have `answer`, optional `probability` and typed `detail`. Failed rows have `RowError`. All rows retain `function`, `position`, `id`, `source` and `status`. RecordId preserves text, signed and unsigned integer variants. Source identifies the question, backend and served model. Detail carries label and level probabilities, recognition pieces and relation pairs. Find's NoMatch is an answered outcome. Spans use UTF-16 offsets from zero with an exclusive end. Find selects a whole nonblank line; keep line breaks.
+### choose: pick the one option that fits
 
-Single calls suspend. Their `…Stream` counterparts accept an Iterable or Flow and return a cold Flow. Filter and rank already take collections. Collect each Flow once: collecting again executes another call. Collections supply finite input and preserve batching. Avoid one call per record. `ThinkThen { batch = 16 }` sets packing; byte and backend limits also apply. One record can require several questions.
+```kotlin
+val topic = client.choose(
+    "What is the message about?",
+    "Please refund my order.",
+    listOf("billing", "shipping", "other"),
+).answer()
+```
+
+### tag: label every option that fits
+
+```kotlin
+val topics = client.tag(
+    "Which topics appear?",
+    "I was charged twice and my parcel is late again.",
+    listOf("billing", "shipping"),
+).answer()
+```
+
+### score: place the text on a scale from 0 to 1
+
+```kotlin
+val urgency = client.score(
+    "How urgent is the request?",
+    "Please refund my order.",
+    listOf("routine", "urgent"),
+).answer()
+```
+
+Levels run from lowest to highest. A score orders a queue a person reads. Use decide for a yes-or-no gate.
+
+### filter: keep the records that answer yes
+
+```kotlin
+client.filter(
+    "Does the customer request a refund?", messages,
+    field = text,
+).collect { refund -> println(refund["id"]) }
+```
+
+`filter` returns a `Flow` of your own records, only the ones that answer yes. Records that are not sure are left out. When records fail, the flow delivers every kept record first, then throws one `ThinkThenException`. Its `failures` lists every failed row with its `position`. To see every record's outcome, call `filterRows`, which gives a `Filtered` for each record with its `item`, `kept` and `answer()`.
+
+### rank: order every record, highest first
+
+```kotlin
+client.rank(
+    "How urgent is the request?", messages,
+    listOf("routine", "urgent"),
+    field = text,
+).collect { ranked ->
+    val urgencyRank = ranked.answer()
+    val message = ranked.item as JsonObject
+    val id = message.values()["id"] as JsonString
+    println("$urgencyRank ${id.value()}")
+}
+```
+
+rank gives back each record as a `JsonValue` snapshot (text arrives as `JsonString`); filter gives back your own objects. These are the Java package's types, so import `dev.thinkthen.JsonObject` and `dev.thinkthen.JsonString`. A JSON record arrives as its JSON type, such as `JsonObject`, whose `values()` map holds its fields, and a missing or invalid record arrives as `JsonNull`, never `null`. `answer()` is the rank, a `Long` starting at 1. `position` is the record's place in your input. `top = n` keeps the first `n` ranks and still reports failed records.
+
+### find: point to the line that answers
+
+```kotlin
+val action = client.find(
+    "Which line states the requested action?",
+    "Morgan works for Example Group.\nPlease refund my order.\n",
+).answer()
+println(action?.text ?: "no line answers")
+```
+
+The answer is a `Span?`, and `null` means no line answers the question. Find picks one whole line, so keep the line breaks. A `Span` gives the matched `text` and its `start` and `end` as `Long` UTF-16 offsets, with the end excluded.
+
+### annotate: fill in several questions for each record
+
+```kotlin
+val questions = AnnotationQuestions(mapOf(
+    "refund" to Decide("Does the customer request a refund?"),
+    "topic" to Choose("What is the message about?",
+        listOf("billing", "shipping", "other")),
+    "urgency" to Score("How urgent is the request?",
+        listOf("routine", "urgent")),
+))
+client.annotateStream(questions, messages, field = text)
+    .collect { form ->
+        val answers = form.answer()
+        val isRefund = answers.decide("refund").answer()
+        val topic = answers.choose("topic").answer()
+        val urgency = answers.score("urgency").answer()
+        println("${form.position} $isRefund $topic $urgency")
+    }
+```
+
+Each question has its own outcome, and its `answer()` throws on not sure or failure, as a row's does. A selector such as `answers.decide(name)` throws `ThinkThenException` with `usage.argument` for a name you never added or a question of another function; `answers.decideOrNull(name)` returns `null` instead. For one record, `client.annotate(questions, message)` returns the row directly. Rank cannot go in `AnnotationQuestions`, and the compiler refuses it.
+
+### recognize: pull out each name and its kind
+
+```kotlin
+val names = client.recognize(
+    "Morgan works for Example Group.",
+    listOf("person", "organization"),
+).answer()
+for (name in names) {
+    println("${name.mention.kind}: ${name.mention.span.text}")
+}
+```
+
+### relate: link names by the relations you allow
+
+```kotlin
+val relations = client.relate(
+    "Morgan works for Example Group.\nPlease refund my order.\n",
+    listOf(RelationRule("person", "organization", "works_for")),
+).answer()
+for (relation in relations) {
+    println("${relation.source.span.text} ${relation.relation} " +
+        relation.target.span.text)
+}
+```
+
+`RelationRule(source, target, relation)` also takes `reads` to word the relation and `either = true` to make it undirected. Relate finds its own names, so it needs no recognize call first. [Relation rule fields](service.md#relation-rule-fields) describes each field.
+
+## Judge many records
+
+Every one-record function has a `…Stream` twin, such as `decideStream`, that takes an `Iterable` or a `Flow` and returns a cold `Flow` of rows in input order. `filter`, `filterRows` and `rank` take many records already. ThinkThen packs the records into batches; `ThinkThen { batch = 16 }` sets the size.
+
+Each collection of a flow makes its own call, so collect it once. A failed or not-sure record is a row like any other, so a `when` keeps every record without stopping the batch:
 
 ```kotlin
 client.decideStream(
-    "Does the customer request a refund?", records,
-    evidence = Pointer("/text")
-).collect { row ->
-    if (row is Row.Failed) error("${row.error.code}: ${row.error.message}")
-    println(row.position)
-}
-```
-
-Typed classes such as `Decide`, `Choose` and `Recognize` store wording, domains and options. Use `client.ask(question, record)` or `askStream(question, records)` for single-question types. Filter and rank use their own methods. `Toolbox(mapOf("refund" to Decide("Does the customer request a refund?")))` stores named entries; `toolbox.decide("refund")` selects one. `Toolbox.fromJson(text)` loads the saved `entries` format, and `toJson()` saves it. `AnnotationQuestions(mapOf(...))` excludes rank and annotate. An answered annotation can hold unsure or failed children; inspect each entry's EntryOutcome.
-
-Use Kotlin/Java file and CSV or spreadsheet libraries for IO. There is no shell toolbox-run API. The public result row is not annotated with a general JSON serializer; export the fields your application needs rather than assuming `encodeToString(row)` works. Preserve exact IDs and nested failures in the saved result.
-
-## Save and load questions
-
-A saved toolbox uses named question entries. Save this as `toolbox.json`:
-
-```json
-{"entries":{"ready":{"question":{"function":"filter","question":"Does the customer request a refund?","evidence":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"evidence":"/text"}}}}
-```
-
-Load the entries once, select a typed question and pass the whole collection to its matching call. Saving the toolbox preserves question definitions and their evidence selectors. SDK toolboxes contain questions; command shell steps and runs belong to the command's richer saved-run format.
-
-```kotlin
-val box = Toolbox.fromJson(File("toolbox.json").readText())
-File("toolbox-copy.json").writeText(box.toJson())
-val topic = requireNotNull(box.choose("topic"))
-ThinkThen { backend = Backend.Stub }.use { client ->
-    client.askStream(topic, records).collect { row ->
-        if (row is Row.Failed) error("${row.error.code}: ${row.error.message}")
-        println(row)
+    "Does the customer request a refund?", messages,
+    field = text,
+).collect { refundCheck ->
+    val position = refundCheck.position
+    when (refundCheck) {
+        is Row.Answered ->
+            println("$position ${refundCheck.answer}")
+        is Row.Unsure ->
+            println("$position not sure: ask a person")
+        is Row.Failed ->
+            println("$position failed: ${refundCheck.error.code.wireName}")
     }
 }
 ```
 
-Use this code inside the coroutine from the first example. `box["topic"]` returns a nullable general question; typed selectors such as `box.filter("ready")` and `box.choose("topic")` return nullable typed questions. Check absence before the call. Collect each returned Flow once.
+Each row also carries `id`, the record's own `id` as a `RecordId`, and `source`, the backend and model that answered. Inside a flow, a blank record is a failed row with `record.empty`, and the rest continue.
 
-Call `relate` or `relateStream` alone when you need names and relations from the same evidence. On `Row.Answered`, unwrap its nullable detail with `val detail = requireNotNull(row.detail)`. `detail.names` contains all admitted names, including names with no returned relation, and `detail.pairs` contains scored relation pairs. Read accepted relations from `row.answer`. Do not run recognize first for that task.
+## Say what yes, no and each option mean
 
-## Failures and cancellation
+Decide and filter take `yesMeans` and `noMeans`. Choose, tag, score and rank take `descriptions`, a map from each option or level to what it means. The answers keep their short names.
 
-Record and backend failures return Row.Failed, including single calls. They do not throw automatically. Test for failure before saving or chaining; throw or end collection if the workload requires stopping. Inspect annotation children independently.
+```kotlin
+val isRefund = client.decide(
+    "Does the customer request a refund?",
+    "Please refund my order.",
+    yesMeans = "The customer asks for money back",
+    noMeans = "The customer asks for anything else",
+).answer()
+val topic = client.choose(
+    "What is the message about?",
+    "Please refund my order.",
+    listOf("billing", "shipping", "other"),
+    descriptions = mapOf(
+        "billing" to "Invoices, charges and refunds",
+        "shipping" to "Delivery and parcels",
+        "other" to "Anything else",
+    ),
+).answer()
+```
 
-Call-level errors throw ThinkThenException with a stable code, message and optional HTTP status. Cancelling the collecting coroutine cancels native work and raises CancellationException. Flow short-circuiting closes its call. `use` closes the client and cancels active collectors.
+A description for a name that is not one of the options throws `ThinkThenException` when the question is used, at the call or when you add it to a `Toolbox`.
 
-Make questions unambiguous. Define the evidence criterion, distinguish an unstated fact from a stated negative and use distinct choices. The stub checks installation, not question quality.
+## Records and field
+
+A record is a `String`, a `JsonElement`, or any value kotlinx.serialization can encode, such as a `Map<String, String>` or a `@Serializable` class. A string stays text even when it holds JSON. Set `json` on the client, `ThinkThen { json = Json { serializersModule = ... } }`, to use your own serializers, or pass `serializer =` to one call.
+
+A one-record call takes exactly one record. A `JsonArray` is one record. A `null` record, or a record without the field the pointer selects, gives a failed row with `record.missing` and sends no request. In a pointer, write `~1` for a `/` in a key and `~0` for a `~`. A record's `id` comes back exactly on its row, as text or as a whole number.
+
+## Read the probability and details
+
+`probability` is a `Double?`, and a failed row has none. For decide and filter it is the probability of yes, even when the answer is no. For the other functions it is the probability of the answer given.
+
+An answered or not-sure row also has `detail`. Choose and tag give a `LabelDetail` with each label's probability in `labels`. Score and rank give a `LevelDetail` with each level's probability in `levels`, in level order. Recognize gives a `RecognizeDetail`, and relate gives a `RelationDetail` with every name it found in `names` and every scored pair in `pairs`.
+
+## Save and load a toolbox
+
+A toolbox is a file of named questions. Save this as `toolbox.json`:
+
+```json
+{"entries":{"refund":{"question":{"function":"filter","question":"Does the customer request a refund?","field":"/text"}},"topic":{"question":{"function":"choose","question":"What is the message about?","choices":["billing","shipping","other"],"field":"/text"}}}}
+```
+
+Load it, pick a question by name and type, and pass that question to its function:
+
+```kotlin
+val toolbox = Toolbox.load(java.nio.file.Path.of("toolbox.json"))
+val topicQuestion = toolbox.choose("topic")
+client.askStream(topicQuestion, messages).collect { topic ->
+    println("${topic.position} ${topic.answer()}")
+}
+```
+
+`Toolbox.load(path)` and `Toolbox.fromJson(json)` read this saved format, and `toJson()` writes it. `Toolbox.fromDefinitions(json)` reads bare definitions with no `entries` wrapper, such as `{"topic":{"function":"choose", ...}}`. `Toolbox { "topic"(Choose(...)) }` makes one in code. The typed selectors, such as `toolbox.choose(name)`, throw `ThinkThenException` with `usage.argument` for a missing name or a different function; their `…OrNull` forms, such as `toolbox.chooseOrNull(name)`, return `null` instead. `client.ask(question, record)` asks one record, `client.filter(toolbox.filter("refund"), messages)` filters, and `toolbox.forAnnotation()` gives every question to `annotate`, refusing a toolbox that holds a rank question.
+
+## Settings, cancellation and closing
+
+`ThinkThen { }` takes `backend`, `model`, `url`, `apiKey`, `batch`, `retry` and `json`. With no `backend` set, the client reads `THINKTHEN_BACKEND`, as the command does, and then uses the default backend. With no `apiKey` set, it reads the backend's key variable, such as `THINKTHEN_API_KEY`. An `ApiKey` never appears in `toString`.
+
+Cancelling the coroutine that collects a flow cancels the native work and raises `CancellationException`. Stopping a flow early, with `first()` or `take(n)`, closes its call. `use` closes the client and cancels its active collections, and a later call throws `ThinkThenException` with `usage.closed`.
+
+## Reference
+
+[Read the API reference](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/kotlin/src/main/kotlin/dev/thinkthen/kotlin). Every public name has KDoc in the published sources JAR, so your editor shows it on hover.

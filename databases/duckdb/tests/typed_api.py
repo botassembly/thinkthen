@@ -21,24 +21,26 @@ def literal(value):
 def contract_row(row, function):
     common = {'position', 'id', 'status', 'probability', 'error_code', 'error_message',
               'error_http_status', 'source', 'detail'}
-    answers = ({'rank'} if function == 'rank' else
-               {'found', 'found_text', 'found_start', 'found_end'} if function == 'find' else {'answer'})
-    assert common <= row.keys(), row
-    assert row.keys() <= common | answers | {'record'} | ({'kept'} if function == 'filter' else set()), row
+    assert common | {'answer'} <= row.keys(), row
+    assert row.keys() <= common | {'answer', 'record'}, row
     validate_source(row['source'])
+    if function == 'find' and row['answer'] is not None:
+        assert list(row['answer']) == ['text', 'start_offset', 'end_offset'], row
+    if function == 'recognize' and row['answer'] is not None:
+        assert all(list(name) == ['text', 'kind', 'start_offset', 'end_offset', 'probability'] for name in row['answer']), row
     if function == 'filter':
-        assert type(row['kept']) is bool, row
-        assert row['kept'] is (row['status'] == 'answered' and row['answer'] is True), row
+        assert row['status'] == 'failed' or (row['status'] == 'answered' and row['answer'] is True), row
     if function == 'annotate' and row['answer'] is not None:
-        for child in row['answer'].values():
+        for name, child in row['detail'].items():
             assert child.keys() <= {'function', 'status', 'answer', 'probability', 'error', 'detail'}, child
+            assert row['answer'][name] == child['answer'], row
     result = {'function': function, 'position': row['position'], 'status': row['status'],
               'source': row['source']}
     for key in ('id', 'probability', 'detail'):
         if row.get(key) is not None:
             result[key] = row[key]
     if row['status'] != 'answered':
-        answer = row.get('rank') if function == 'rank' else row.get('found') if function == 'find' else row['answer']
+        answer = row['answer']
         assert answer is None, row
     if row['status'] != 'failed':
         assert all(row[key] is None for key in ('error_code', 'error_message', 'error_http_status')), row
@@ -47,7 +49,7 @@ def contract_row(row, function):
         if row['error_http_status'] is not None:
             result['error']['http_status'] = row['error_http_status']
     elif row['status'] == 'answered':
-        result['answer'] = row.get('rank') if function == 'rank' else row.get('found') if function == 'find' else row['answer']
+        result['answer'] = row['answer']
     return result
 
 
@@ -130,10 +132,10 @@ def admission(options):
         ):
             envelope = json.loads(host.failure(statement))
             assert envelope['exception_message'].startswith('usage.question: '), envelope
-        failed = host.ok("SELECT to_json(t) AS result FROM thinkthen_filter((SELECT NULL::VARCHAR AS record), 'Ready?') t")
+        failed = host.ok("SELECT to_json(t) AS result FROM thinkthen_filter((SELECT NULL::VARCHAR AS record), 'Ready?', failures := 'row') t")
         row = json.loads(failed[0]['result'])
         contract_row(row, 'filter')
-        assert row['status'] == 'failed' and row['error_code'] == 'record.missing' and row['kept'] is False, row
+        assert row['status'] == 'failed' and row['error_code'] == 'record.missing', row
         for case, request, expected in admission_cases(ROOT, 'duckdb'):
             result = host.query('SELECT * FROM ' + invocation(request))
             assert 'error' in result, (case['name'], result)

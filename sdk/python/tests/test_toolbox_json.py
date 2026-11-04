@@ -28,10 +28,11 @@ def test_saved_toolbox_loads_typed_questions_and_maps_names() -> None:
             "Which topic?",
             choices=["billing", "shipping"],
             threshold=0.7,
-            evidence="/body",
+            field="/body",
         )
-        assert client.choose(loaded.choose("topic"), {"body": "Bill"}) == client.choose(
-            original, {"body": "Bill"}
+        assert (
+            client.choose(loaded.choose("topic"), {"body": "Bill"}).to_dict()
+            == client.choose(original, {"body": "Bill"}).to_dict()
         )
     with pytest.raises(KeyError):
         loaded["missing"]

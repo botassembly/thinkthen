@@ -7,18 +7,15 @@
 #ifndef THINKTHEN_FIXTURE_H
 #define THINKTHEN_FIXTURE_H
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stddef.h>
-#include <stdint.h>
 #include "thinkthen.h"
 
 #if (defined(THINKTHEN_TEST_FIXTURE) && defined(THINKTHEN_TEST_BUILD))
 /**
- * Process-owned test routes. Existing clients retain their admitted snapshots.
+ * Test routes to local servers, in a debug test build. Free with thinkthen_fixture_routes_free.
  */
 typedef struct thinkthen_fixture_routes thinkthen_fixture_routes;
 #endif
@@ -29,14 +26,24 @@ extern "C" {
 
 #if (defined(THINKTHEN_TEST_FIXTURE) && defined(THINKTHEN_TEST_BUILD))
 /**
- * Install both loopback routes only in an explicit debug test artifact.
- * # Safety
- * URL bytes are readable; out/error are distinct empty writable slots.
+ * Send backend requests to two local test servers, in a debug test build only.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+ * for a bad URL or a build without test routes, or -THINKTHEN_CODE_USAGE_ABI when the text is
+ * not UTF-8. Free *out with thinkthen_fixture_routes_free.
+ * Pointers and threads:
+ * Any thread may call this. systemone points to systemone_len readable bytes, or to a NUL-
+ * terminated string when systemone_len is THINKTHEN_NUL_TERMINATED; it is copied before
+ * return. openai points to openai_len readable bytes, or to a NUL-terminated string when
+ * openai_len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error
+ * is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_fixture_routes_install(const uint8_t *systemone,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_fixture_routes_install(const char *systemone,
                                          size_t systemone_len,
-                                         const uint8_t *openai,
+                                         const char *openai,
                                          size_t openai_len,
                                          struct thinkthen_fixture_routes **out,
                                          thinkthen_error *error);
@@ -44,9 +51,11 @@ int32_t thinkthen_fixture_routes_install(const uint8_t *systemone,
 
 #if (defined(THINKTHEN_TEST_FIXTURE) && defined(THINKTHEN_TEST_BUILD))
 /**
- * Clear the owned test routes; opened clients keep their copied destinations.
- * # Safety
- * NULL or the unique live guard owner after all readers finish.
+ * Remove the test routes. Clients already open keep theirs.
+ *
+ * NULL is ignored.
+ * Pointers and threads:
+ * Call this once, after every other use of owner has returned.
  */
 THINKTHEN_API void thinkthen_fixture_routes_free(struct thinkthen_fixture_routes *owner);
 #endif

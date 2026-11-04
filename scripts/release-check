@@ -3,6 +3,7 @@
 
 Usage: check PLATFORM_DIRECTORY. Prints one result per package; errors stop it.
 """
+from package_inventory import python_wheelhouse as wheelhouse
 from release_images import image
 from package_inventory import check as package_inventory
 from release_records import encode_records
@@ -263,7 +264,7 @@ def python_node():
     node, npm = shutil.which('node'), shutil.which('npm')
     run(python, '-m', 'venv', SCRATCH / 'python')
     interpreter = SCRATCH / 'python/bin/python'
-    run(interpreter, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', only('python/*.whl'))
+    run(interpreter, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', wheelhouse(PACKAGE), only('python/*.whl'))
     run(interpreter, CHECKS / 'python.py', CHECKS / 'stub.json')
     optional = PACKAGE / 'prerequisites/python-frames-cp310'
     run(interpreter, '-m', 'pip', 'install', '--no-index', '--no-cache-dir', '--find-links', optional / 'wheels', '-r', optional / 'requirements.txt')

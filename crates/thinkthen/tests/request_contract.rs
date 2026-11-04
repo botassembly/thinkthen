@@ -5,7 +5,9 @@ pub mod loopback;
 
 use loopback::{KEY, Loopback};
 use serde_json::{Value, json};
-use thinkthen::{BackendName, Batch, Cancel, Decide, Key, OffsetUnit, Record, Request, Settings};
+use thinkthen::{
+    BackendName, Batch, Cancel, Decide, Key, OffsetUnit, Record, Request, Settings, Threshold,
+};
 #[test]
 fn cancelling_before_the_first_record_stops_empty_and_nonempty_calls() {
     for question in [
@@ -49,15 +51,14 @@ fn settings_resolve_credentials_once_and_literal_questions_do_not_read_paths() {
         })
         .unwrap();
     let admitted = reads.borrow().clone();
-    assert_eq!(admitted, ["THINKTHEN_API_KEY"]);
+    assert_eq!(admitted, ["THINKTHEN_BACKEND", "THINKTHEN_API_KEY"]);
     let question = Decide::new("literal.json").unwrap();
-    assert_eq!(
+    assert!(
         engine
             .run(&question, Record::text("evidence"))
             .unwrap()
-            .into_result()
-            .unwrap(),
-        Some(true)
+            .into_answer()
+            .unwrap()
     );
     assert_eq!(*reads.borrow(), admitted);
     assert_eq!(server.count(), 1);
@@ -104,10 +105,10 @@ fn routes_preserve_identity_and_default_ids_do_not_become_evidence() {
     assert_eq!(rows.len(), 2);
     assert_ne!(rows[0].id(), rows[1].id());
     assert_eq!(rows[0].probability(), rows[1].probability());
-    let changed = question.threshold("0.555".parse().unwrap());
+    let changed = question.threshold(Threshold::cut(0.555).unwrap());
     let changed_row = engine.run(&changed, Record::text("evidence")).unwrap();
     assert_ne!(identities[0], changed_row.source().question_identity());
-    let nearby = changed.threshold("0.554".parse().unwrap());
+    let nearby = changed.threshold(Threshold::cut(0.554).unwrap());
     let nearby_row = engine.run(&nearby, Record::text("evidence")).unwrap();
     assert_ne!(
         changed_row.source().question_identity(),

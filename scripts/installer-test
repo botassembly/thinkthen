@@ -2,11 +2,15 @@
 """Test installers against a loopback release mirror; optionally use a built command.
 
 Usage: scripts/installer-test [--binary PATH]
+       scripts/installer-test --binary PATH --first-success ABS_OUTPUT
+         --cache PATH --provenance INPUTS_JSON
 Default Unix fixtures prove the installer protocol. --binary also proves a real
 command installs and runs. Windows requires --binary pointing to thinkthen.exe.
-No compilation, external network or shell profile changes occur.
+No compilation or external network is needed. Profile tests use an isolated HOME;
+Windows PATH tests save and restore the exact user registry value and its type.
 """
 import argparse
+import hashlib
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -20,11 +24,11 @@ import sys
 import tarfile
 import tempfile
 import threading
+import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / 'scripts'))
-from release_install import checksums
 
 
 class Mirror(SimpleHTTPRequestHandler):
@@ -44,10 +48,286 @@ class Mirror(SimpleHTTPRequestHandler):
             super().do_HEAD()
 
 
+def unix_path_cases(command, environment, scratch, fish=None):
+    variants = [('zsh', ['.zshrc'], None),
+                ('bash', ['.bashrc', '.bash_profile'], '.bash_profile'),
+                ('bash', ['.bashrc', '.bash_login'], '.bash_login'),
+                ('bash', ['.bashrc', '.profile'], None),
+                ('fish', ['.config/fish/conf.d/thinkthen.fish'], None),
+                ('sh', ['.profile'], None)]
+    for index, (shell, profiles, existing) in enumerate(variants):
+        home = scratch / ('path-' + str(index))
+        home.mkdir()
+        if existing:
+            (home / existing).write_text('# keep user settings')
+        folder = home / "custom 'bin $literal `literal`"
+        env = dict(environment, HOME=str(home), USERPROFILE=str(home), SHELL='/bin/' + shell,
+                   XDG_CONFIG_HOME=str(home / '.config'), THINKTHEN_INSTALL_DIR=str(folder))
+        env.pop('THINKTHEN_NO_MODIFY_PATH', None)
+        env.pop('ZDOTDIR', None)
+        for attempt in range(2):
+            result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+            assert result.returncode == 0, (shell, result.stdout, result.stderr)
+            actual = {}
+            for name in profiles:
+                profile = home / name
+                assert profile.is_file(), ('missing PATH profile', shell, name, result.stdout)
+                body = profile.read_text()
+                assert body.count('# thinkthen PATH') == 1, (profile, body)
+                if existing == name:
+                    assert body.startswith('# keep user settings'), body
+                actual[name] = body
+            if attempt == 0:
+                original = actual
+            else:
+                assert actual == original, ('duplicate PATH line on repeat', actual)
+        receipt = json.loads((folder / 'thinkthen.install.json').read_text())
+        assert set(receipt['path_changes']) == {str(home / name) for name in profiles}, receipt
+        executable = fish if shell == 'fish' and fish else shutil.which(shell)
+        if executable:
+            for arguments in (['-ic', 'thinkthen --version'], ['-ilc', 'thinkthen --version']) if shell == 'bash' else (['-ilc', 'thinkthen --version'],):
+                result = subprocess.run([str(executable), *arguments], env=env,
+                                        capture_output=True, text=True, timeout=30)
+                assert result.returncode == 0 and result.stdout.startswith('thinkthen 0.2.0'), (
+                    'new terminal did not find installed command', shell, arguments, result.stdout, result.stderr)
+        elif shell == 'fish' and platform.system() == 'Linux':
+            from build_targets import container_labels
+            from release_images import image
+            identity = image('installer')
+            print('installer PATH: fish container ' + identity, flush=True)
+            result = subprocess.run(['docker', 'run', '--rm', '--network', 'none',
+                *container_labels(ROOT), '--user', f'{os.getuid()}:{os.getgid()}',
+                '-v', f'{home}:{home}', '-e', 'HOME=' + str(home),
+                '-e', 'XDG_CONFIG_HOME=' + str(home / '.config'), '-e', 'PATH=/usr/bin:/bin',
+                identity, '/bin/sh', '-c', 'cat /installer-inputs.txt >&2; exec fish -ilc "thinkthen --version"'],
+                capture_output=True, text=True, timeout=60)
+            print(result.stderr, flush=True)
+            assert result.returncode == 0 and result.stdout.startswith('thinkthen 0.2.0'), (result.stdout, result.stderr)
+        else:
+            print('installer PATH: startup runtime unavailable here: ' + shell, flush=True)
+    for mode in ('already-present', 'opt-out'):
+        home = scratch / mode
+        home.mkdir()
+        folder = home / '.local/bin'
+        env = dict(environment, HOME=str(home), USERPROFILE=str(home), SHELL='/bin/zsh',
+                   THINKTHEN_INSTALL_DIR=str(folder), XDG_CONFIG_HOME=str(home / '.config'))
+        if mode == 'already-present':
+            env.pop('THINKTHEN_NO_MODIFY_PATH', None)
+            env['PATH'] = str(folder) + os.pathsep + env['PATH']
+        else:
+            env['THINKTHEN_NO_MODIFY_PATH'] = '1'
+        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        assert not (home / '.zshrc').exists(), mode
+        assert json.loads((folder / 'thinkthen.install.json').read_text())['path_changes'] == [], mode
+    separator_path_case(command, environment, scratch, ':')
+    print('installer PATH: isolated profiles, repeat, opt-out and available real shell startups pass', flush=True)
+
+
+def windows_path_cases(command, environment, scratch):
+    import winreg
+    access = winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE
+    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, 'Environment', 0, access) as key:
+        try:
+            saved = winreg.QueryValueEx(key, 'Path')
+        except FileNotFoundError:
+            saved = None
+        try:
+            for kind in (winreg.REG_SZ, winreg.REG_EXPAND_SZ):
+                folder = Path(environment['HOME']) / ('path-' + str(kind))
+                original = r'%USERPROFILE%\before;C:\Windows\System32;'
+                winreg.SetValueEx(key, 'Path', 0, kind, original)
+                env = dict(environment, THINKTHEN_INSTALL_DIR=str(folder))
+                env.pop('THINKTHEN_NO_MODIFY_PATH', None)
+                # Run the installer inside this PowerShell process, then start a child
+                # with its updated process environment as a new terminal would inherit.
+                script = "$global:LASTEXITCODE=0; & '" + str(ROOT / 'install.ps1').replace("'", "''") + "'; "
+                expected_source = str(folder / 'thinkthen.exe').replace("'", "''")
+                child = "$ErrorActionPreference='Stop'; $resolved=(Get-Command thinkthen -ErrorAction Stop).Source; "
+                child += "if ($resolved -ine '" + expected_source + "') {throw 'resolved another command'}; "
+                child += r"$version=& thinkthen --version; if ($LASTEXITCODE -ne 0 -or $version -isnot [string] -or $version -cnotmatch '^thinkthen 0\.2\.0(?: \([^\r\n]*\))?$') {throw 'installed command did not run'}; "
+                child += "Write-Output ('PATH_RESOLVED=' + $resolved)"
+                # Encode the child script so the parent cannot expand its variables.
+                import base64
+                encoded = base64.b64encode(child.encode('utf-16le')).decode('ascii')
+                script += "if ($LASTEXITCODE) {exit $LASTEXITCODE}; & powershell.exe -NoProfile -NonInteractive -EncodedCommand " + encoded + "; exit $LASTEXITCODE"
+                result = subprocess.run([command[0], '-NoProfile', '-NonInteractive', '-Command', script],
+                                        env=env, capture_output=True, text=True, timeout=120)
+                assert result.returncode == 0 and ('PATH_RESOLVED=' + str(folder / 'thinkthen.exe')) in result.stdout.splitlines(), (
+                    'new PowerShell child did not find installed command', result.stdout, result.stderr)
+                expected = original + ';' + str(folder)
+                assert winreg.QueryValueEx(key, 'Path') == (expected, kind), winreg.QueryValueEx(key, 'Path')
+                result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+                assert result.returncode == 0, (result.stdout, result.stderr)
+                assert winreg.QueryValueEx(key, 'Path') == (expected, kind), 'rerun changed user PATH'
+                receipt = json.loads((folder / 'thinkthen.install.json').read_text(encoding='utf-8-sig'))
+                assert receipt['path_changes'] == [r'HKCU\Environment\Path'], receipt
+                for entry in (str(folder).replace('\\', '/').upper() + '/',
+                              '%USERPROFILE%' + os.sep + folder.name):
+                    equivalent = original + ';' + entry
+                    winreg.SetValueEx(key, 'Path', 0, kind, equivalent)
+                    result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+                    assert result.returncode == 0, (result.stdout, result.stderr)
+                    assert winreg.QueryValueEx(key, 'Path') == (equivalent, kind), ('duplicate equivalent PATH', entry)
+                winreg.SetValueEx(key, 'Path', 0, kind, original)
+                opted = dict(env, THINKTHEN_NO_MODIFY_PATH='1')
+                result = subprocess.run(command, env=opted, capture_output=True, text=True, timeout=120)
+                assert result.returncode == 0, (result.stdout, result.stderr)
+                assert winreg.QueryValueEx(key, 'Path') == (original, kind), 'opt-out changed user PATH'
+            separator_path_case(command, environment, scratch, ';')
+            winreg.DeleteValue(key, 'Path')
+            env = dict(environment, THINKTHEN_INSTALL_DIR=str(scratch / 'absent-user-path'))
+            env.pop('THINKTHEN_NO_MODIFY_PATH', None)
+            result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+            assert result.returncode == 0, (result.stdout, result.stderr)
+            assert winreg.QueryValueEx(key, 'Path') == (str(scratch / 'absent-user-path'), winreg.REG_EXPAND_SZ)
+        finally:
+            if saved is None:
+                try:
+                    winreg.DeleteValue(key, 'Path')
+                except FileNotFoundError:
+                    pass
+            else:
+                winreg.SetValueEx(key, 'Path', 0, saved[1], saved[0])
+            broadcast_windows_environment()
+    print('installer PATH: user registry entries/type, repeat, opt-out and new PowerShell child pass', flush=True)
+
+
+def separator_path_case(command, environment, scratch, separator):
+    home = scratch / 'separator-home'
+    home.mkdir()
+    folder = home / ('custom' + separator + 'bin')
+    env = dict(environment, HOME=str(home), USERPROFILE=str(home), SHELL='/bin/sh',
+               THINKTHEN_INSTALL_DIR=str(folder))
+    env.pop('THINKTHEN_NO_MODIFY_PATH', None)
+    result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+    assert result.returncode != 0 and 'contains a PATH separator' in result.stderr, (result.stdout, result.stderr)
+    assert not folder.exists(), 'separator refusal changed install directory'
+    assert not (home / '.profile').exists(), 'separator refusal changed profile'
+    result = subprocess.run(command, env=dict(env, THINKTHEN_NO_MODIFY_PATH='1'),
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert json.loads((folder / 'thinkthen.install.json').read_text(encoding='utf-8-sig'))['path_changes'] == []
+    if separator == ':':
+        physical = home / 'physical:parent'
+        physical.mkdir()
+        alias = home / 'parent-alias'
+        alias.symlink_to(physical, target_is_directory=True)
+        folder = alias / 'bin'
+        env['THINKTHEN_INSTALL_DIR'] = str(folder)
+        result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=120)
+        assert result.returncode != 0 and 'contains a PATH separator' in result.stderr, (
+            'canonical install directory bypassed separator refusal', result.stdout, result.stderr)
+        assert not (folder / 'thinkthen').exists(), 'canonical separator refusal installed a binary'
+        assert not (home / '.profile').exists(), 'canonical separator refusal changed profile'
+
+
+def broadcast_windows_environment():
+    import ctypes
+    from ctypes import wintypes
+    send = ctypes.WinDLL('user32', use_last_error=True).SendMessageTimeoutW
+    send.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPCWSTR,
+                     wintypes.UINT, wintypes.UINT, ctypes.POINTER(ctypes.c_size_t)]
+    send.restype = wintypes.LPARAM
+    result = ctypes.c_size_t()
+    send(0xffff, 0x001a, 0, 'Environment', 2, 5000, ctypes.byref(result))
+
+
+def first_success(args, env, home, mirror, base, archive, installed, receipt):
+    """Walk the README against a private candidate mirror and strict saved answers."""
+    output = args.first_success
+    provenance = json.loads(args.provenance.read_text())
+    def digest(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    assert re.fullmatch(r'[0-9a-f]{40}', provenance['linux_cli']['source'])
+    assert digest(args.binary) == provenance['linux_cli']['sha256'], 'candidate binary hash differs'
+    assert digest(args.cache) == provenance['cache']['sha256'], 'input cache hash differs'
+    output.mkdir()
+    shutil.copy2(args.provenance, output / 'inputs.json')
+    shutil.copy2(args.cache, output / 'recorded-responses.json')
+    shutil.copy2(archive, output / archive.name)
+    shutil.copy2(archive.parent / 'SHA256SUMS', output / 'SHA256SUMS')
+    shutil.copy2(ROOT / 'install.sh', mirror / 'install.sh')
+    # Keep only OS/tool settings: no inherited provider keys, URLs or user config.
+    isolated = {key: env[key] for key in ('PATH', 'LANG', 'LC_ALL', 'TZ', 'TMPDIR') if key in env}
+    isolated.update(HOME=str(home), USERPROFILE=str(home), SHELL='/bin/sh',
+                    XDG_CONFIG_HOME=str(home / 'config'), XDG_CACHE_HOME=str(home / 'cache'),
+                    THINKTHEN_INSTALL_BASE=base, THINKTHEN_INSTALL_API=base)
+    command = f'curl -fsSL {base}/install.sh | sh'
+    (output / 'install-command.sh').write_text(command + '\n')
+    summary = dict(candidate_source=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT,
+                                                          text=True, encoding='utf-8').strip(),
+                   payload='private candidate archive; not a published release',
+                   binary_source=provenance['linux_cli']['source'], binary_sha256=digest(args.binary),
+                   input_cache_sha256=digest(args.cache), archive_sha256=digest(archive))
+    started = time.perf_counter()
+    try:
+        try:
+            result = subprocess.run(['sh', '-c', command], cwd=home, env=isolated,
+                                    capture_output=True, timeout=120)
+        except subprocess.TimeoutExpired as error:
+            (output / 'install.stdout').write_bytes(error.stdout or b'')
+            (output / 'install.stderr').write_bytes(error.stderr or b'')
+            summary['install_timeout'] = True
+            raise
+        summary.update(install_exit=result.returncode, install_seconds=time.perf_counter() - started)
+        for name, data in (('install.stdout', result.stdout), ('install.stderr', result.stderr)):
+            (output / name).write_bytes(data)
+        assert result.returncode == 0, 'README local-mirror installation failed; see retained streams'
+        assert digest(installed) == summary['binary_sha256'], 'installed bytes differ from producer'
+        shutil.copy2(receipt, output / 'thinkthen.install.json')
+        version = subprocess.run([str(installed), '--version'], env=isolated, capture_output=True, timeout=10)
+        (output / 'version.stdout').write_bytes(version.stdout)
+        (output / 'version.stderr').write_bytes(version.stderr)
+        summary['version_exit'] = version.returncode
+        assert version.returncode == 0, 'installed command version failed'
+        isolated['PATH'] = str(installed.parent) + os.pathsep + isolated.get('PATH', os.defpath)
+        result = subprocess.run(['node', str(ROOT / 'scripts/installer-first-success.mjs'), str(output)],
+                                cwd=home, env=isolated, capture_output=True, timeout=180)
+        (output / 'recorder.stdout').write_bytes(result.stdout)
+        (output / 'recorder.stderr').write_bytes(result.stderr)
+        summary['answer_exit'] = result.returncode
+        assert result.returncode == 0, 'README first answer failed; see retained answer/recorder streams'
+    finally:
+        summary['install_and_first_answer_seconds'] = time.perf_counter() - started
+        summary['files'] = {p.name: digest(p) for p in output.iterdir() if p.is_file()}
+        (output / 'first-success.json').write_text(json.dumps(summary, indent=2) + '\n')
+        print(json.dumps(summary), flush=True)
+
+
 def main():
+    from release_install import checksums
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path)
+    parser.add_argument('--path-only', action='store_true')
+    parser.add_argument('--fish', type=Path)
+    parser.add_argument('--prepare-fish', action='store_true')
+    parser.add_argument('--first-success', type=Path, metavar='ABS_OUTPUT')
+    parser.add_argument('--cache', type=Path)
+    parser.add_argument('--provenance', type=Path)
     args = parser.parse_args()
+    if args.first_success:
+        if (platform.system() != 'Linux' or not args.binary or not args.cache or not args.provenance
+                or args.path_only or args.prepare_fish or args.fish):
+            parser.error('--first-success requires Linux, --binary, --cache and --provenance only')
+        if (not args.first_success.is_absolute() or args.first_success.exists()
+                or args.first_success.resolve().is_relative_to(ROOT)):
+            parser.error('--first-success must be a fresh absolute output outside the checkout')
+    elif args.cache or args.provenance:
+        parser.error('--cache and --provenance require --first-success')
+    if args.prepare_fish:
+        if platform.system() != 'Linux':
+            print('installer PATH: native macOS fish is not required; Linux container owns syntax proof')
+            return
+        from build_targets import container_labels
+        from release_images import TAGS
+        base = next(line.split()[1] for line in (ROOT / 'scripts/floors/Host.Dockerfile').read_text().splitlines()
+                    if line.startswith('FROM '))
+        assert '@sha256:' in base, 'installer test base must be pinned'
+        print('installer PATH: prepare fish 3.7.0-1 using ' + base, flush=True)
+        subprocess.run(['docker', 'build', *container_labels(ROOT), '--build-arg', 'BASE=' + base,
+                        '-t', TAGS['installer'], '-f', str(ROOT / 'scripts/floors/Installer.Dockerfile'), str(ROOT)], check=True)
+        return
     windows = os.name == 'nt'
     if windows and not args.binary:
         parser.error('Windows requires --binary PATH to a prepared thinkthen.exe')
@@ -56,7 +336,7 @@ def main():
             ('Darwin', 'arm64'): 'macos-arm64',
             ('Windows', 'AMD64'): 'windows-x86_64'}[(platform.system(), platform.machine())]
     with tempfile.TemporaryDirectory(prefix='thinkthen-installer-test-') as temporary:
-        scratch = Path(temporary)
+        scratch = Path(temporary).resolve()
         mirror = scratch / 'mirror'
         release = mirror / 'botassembly/thinkthen/releases/download/v0.2.0'
         release.mkdir(parents=True)
@@ -95,11 +375,21 @@ def main():
             env.update(HOME=str(home), USERPROFILE=str(home), XDG_CONFIG_HOME=str(home / 'config'),
                        XDG_CACHE_HOME=str(home / 'cache'), THINKTHEN_INSTALL_BASE=base,
                        THINKTHEN_INSTALL_API=base)
+            env.update(THINKTHEN_NO_MODIFY_PATH='1', SHELL='/bin/sh')
             install = home / '.local/bin'
             installed = install / binary.name
             receipt = install / 'thinkthen.install.json'
             command = (['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
                         '-File', str(ROOT / 'install.ps1')] if windows else ['dash' if platform.system() == 'Linux' else 'sh', str(ROOT / 'install.sh')])
+            if args.first_success:
+                first_success(args, env, home, mirror, base, archive, installed, receipt)
+                return
+            if args.path_only:
+                if windows:
+                    windows_path_cases(command, env, scratch)
+                else:
+                    unix_path_cases(command, env, scratch, args.fish)
+                return
 
             def run(*options, ok=True, folder=install):
                 current_env = dict(env, THINKTHEN_INSTALL_DIR=str(folder))
@@ -213,6 +503,10 @@ def main():
                 installed.unlink()
             print('installer-test: install/version, mirror selection, checksums, unchanged failed upgrades, unsafe paths and version compatibility passed')
             print('installer-test: command payload = ' + ('prepared executable' if args.binary else 'protocol fixture'))
+            if windows:
+                windows_path_cases(command, env, scratch)
+            else:
+                unix_path_cases(command, env, scratch, args.fish)
         finally:
             server.shutdown()
             server.server_close()

@@ -1,0 +1,25 @@
+#!/bin/sh
+# Reuse the prepared Linux image's packaging tools in this source job only.
+set -eu
+cd "$(dirname "$0")/.."
+case "${1:-}" in ''|--check) ;; *) echo 'usage: scripts/source-linux-tools [--check]' >&2; exit 2 ;; esac
+[ "$(uname -s)" = Linux ] || { echo 'source Linux tools require Linux' >&2; exit 2; }
+. scripts/native-tools-env
+tools="$PWD/target/source-tools/bin"
+mkdir -p "$tools"
+scripts/runtime-floor-build sh -eu -c 'cp "$(command -v patchelf)" "$1"' source-tools "$tools/patchelf"
+"$tools/patchelf" --version
+if [ "${1:-}" = --check ]; then
+    scratch=$(mktemp -d)
+    trap 'status=$?; set +e; trap - EXIT; rm -rf "$scratch"; exit "$status"' EXIT
+    printf '%s\n' 'int answer(void) { return 42; }' > "$scratch/consumer.c"
+    cc -Wall -Wextra -Werror -fPIC -shared "$scratch/consumer.c" -o "$scratch/consumer.so"
+    "$tools/patchelf" --set-soname libsource-consumer.so.0 "$scratch/consumer.so"
+    test "$("$tools/patchelf" --print-soname "$scratch/consumer.so")" = libsource-consumer.so.0
+    python3 - "$scratch/consumer.so" <<'PY'
+import ctypes
+import sys
+assert ctypes.CDLL(sys.argv[1]).answer() == 42
+PY
+    echo 'Prepared patchelf runs on the source host and preserves the patched ELF consumer'
+fi

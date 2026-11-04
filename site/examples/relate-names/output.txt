@@ -1,0 +1,2 @@
+{"text":"Morgan","kind":"person","probability":1.0}
+{"text":"Example Group","kind":"organization","probability":0.99}

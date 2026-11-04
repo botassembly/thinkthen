@@ -6,6 +6,7 @@ The command prints one line per package and the resulting platform directory.
 A failed tool prints its last thirty output lines.
 """
 from csharp_dependencies import prepared_feed
+from duckdb_release import VERSION as DUCKDB_VERSION
 from release_home import checked_home
 from release_go import command as go_command
 from release_images import image
@@ -124,20 +125,25 @@ def jvm(out, checks, version, jvm_platform, library, native):
 
 
 def csharp(out, checks, rid, native):
-    env = dict(os.environ, DOTNET_CLI_HOME=str(ROOT / '.dotnet-home'),
+    scratch = tempfile.TemporaryDirectory(prefix='thinkthen-nuget-')
+    env = dict(os.environ, DOTNET_CLI_HOME=str(Path(scratch.name) / 'home'),
                DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
-               DOTNET_GENERATE_ASPNET_CERTIFICATE='false', NUGET_PACKAGES=str(ROOT / '.nuget'))
+               DOTNET_GENERATE_ASPNET_CERTIFICATE='false', NUGET_PACKAGES=str(Path(scratch.name) / 'build-cache'))
     config = ROOT / 'NuGet.Config'
     config.write_text('<configuration><packageSources><clear /><add key="prepared" value="' + str(prepared_feed()) + '" /></packageSources></configuration>')
     prop = {'osx-arm64': 'MacNative', 'linux-x64': 'LinuxNative', 'linux-arm64': 'LinuxArm64Native', 'win-x64': 'WindowsNative'}[rid]
     package = out / 'csharp'
     run('dotnet', 'pack', 'sdk/csharp/ThinkThen.csproj', '-c', 'Release', '--configfile', config,
         '-o', package, f'-p:{prop}={native}', '-p:DebugType=None', '-p:DebugSymbols=false', env=env)
+    env['NUGET_PACKAGES'] = str(Path(scratch.name) / 'consumer-cache')
     run('dotnet', 'build', 'sdk/csharp/tests/Consumer.csproj', '-c', 'Release', '--source', package, '--source', prepared_feed(),
         '-o', ROOT / 'consumer-dotnet', '-p:DebugType=None', '-p:DebugSymbols=false', env=env)
+    from release_registry_check import verify_nuget
+    verify_nuget(package, Path(env['NUGET_PACKAGES']))
     for path in (ROOT / 'consumer-dotnet').glob('*'):
         if path.is_file() and (path.name.startswith('Consumer.') or (path.suffix == '.dll' and path.name != 'ThinkThen.dll')):
             copy(path, checks / 'csharp' / path.name)
+    scratch.cleanup()
 
 
 def r_binary(out, rust):
@@ -454,7 +460,7 @@ def finalize(out, version, java, r_version):
                     'zig': 'Zig 0.17.0 compiler to build; operating-system runtime thereafter',
                     'swift': 'Swift 6.3 toolchain to build; Swift 6.3.2 runtime, bundled Linux runtime libraries',
                     'sqlite': 'sqlite3 command >=3.41 with extension loading',
-                    'duckdb': 'official DuckDB1.4.3 command or Python package'}
+                    'duckdb': f'official DuckDB {DUCKDB_VERSION} command or Python package'}
     if platform.system() == 'Linux': requirements['postgres'] = 'PostgreSQL18 ' + host
     runtime = {name: {'runtime': value, 'platform': host} for name, value in requirements.items()}
     runtime['python']['optional_frames'] = json.loads((out / 'prerequisites/python-frames-cp310/inventory.json').read_text())['scope']
@@ -522,7 +528,7 @@ def native_requirements(packages):
 def database_packages(out, version, host, rid, cache):
     duck = ROOT / '.duck-package'
     run('scripts/duckdb-build', env=dict(os.environ,
-        THINKTHEN_DUCKDB_DEPS=str(Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / 'duckdb/1.4.3'),
+        THINKTHEN_DUCKDB_DEPS=str(Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / f'duckdb/{DUCKDB_VERSION}'),
         THINKTHEN_SQL_ARCHIVE=str(cache / rid / 'libthinkthen_ffi.a'),
         THINKTHEN_DUCKDB_OUTPUT=str(duck), PM_TICKET=os.environ['PM_JOB'].split()[0]))
     (out / 'duckdb').mkdir()
@@ -530,14 +536,14 @@ def database_packages(out, version, host, rid, cache):
     archive(duck, out / f'duckdb/thinkthen-duckdb-{version}-{host}.tar.gz')
     # Official database runtimes are prerequisites, separate from the extension.
     prerequisite = out / 'prerequisites/duckdb'
-    deps = Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / 'duckdb/1.4.3'
+    deps = Path(os.environ['THINKTHEN_RUNTIME_PREFIX']) / 'duckdb' if platform.system() == 'Darwin' else TOOLS / f'duckdb/{DUCKDB_VERSION}'
     copy(deps / 'cli/duckdb', prerequisite / 'duckdb')
     copy(duck / 'DUCKDB-LICENSE', prerequisite / 'LICENSE')
-    source = deps / 'duckdb-1.4.3'
+    source = deps / f'duckdb-{DUCKDB_VERSION}'
     for path in (source / 'third_party').rglob('*'):
         if path.is_file() and ('LICENSE' in path.name.upper() or path.name.upper() in ('COPYING', 'NOTICE')):
             copy(path, prerequisite / 'notices' / path.relative_to(source))
-    wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
+    wheel = (TOOLS / f'duckdb/{DUCKDB_VERSION}/python-wheel').read_text().strip()
     copy(deps / wheel, prerequisite / wheel)
     host_version = text(prerequisite / 'duckdb', '--version')
     (prerequisite / 'identity.json').write_text(json.dumps({'version': host_version,

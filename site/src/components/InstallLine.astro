@@ -1,0 +1,8 @@
+---
+// An install line from src/data/site.json, as a copyable command.
+// `wrap` wraps a long line at a narrow width instead of scrolling it.
+import { Code } from '@astrojs/starlight/components';
+import { fact } from '../lib/facts.mjs';
+const { k = 'install.brew', lang = 'sh', wrap = false } = Astro.props;
+---
+<Code code={fact(k)} lang={lang} frame="terminal" wrap={wrap} />

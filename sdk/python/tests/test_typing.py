@@ -17,20 +17,21 @@ import pytest
             'tt.AnnotationQuestions({"ranking": '
             'tt.RankQuestion("How much?", levels=["low", "high"])})'
         ),
-        'client.annotate(tt.Toolbox({"ready": tt.DecideQuestion("Ready?")}), "body")',
         'client.choose(tt.DecideQuestion("Ready?"), "body")',
+        'client.choose("Which?", "body", choices=Literal[1, 2])',
     ],
 )
 def test_static_consumers_reject_wrong_domains(statement: str, tmp_path: Path) -> None:
     source = tmp_path / "consumer.py"
     source.write_text(
-        'import thinkthen as tt\nclient = tt.Client(backend="stub")\n'
+        'import thinkthen as tt; from typing import Literal\nclient = tt.Client(backend="stub")\n'
         + statement
         + "\n"
     )
     checked = subprocess.run(
         [
             "mypy",
+            "--enable-incomplete-feature=TypeForm",
             "--strict",
             "--no-incremental",
             "--python-executable",

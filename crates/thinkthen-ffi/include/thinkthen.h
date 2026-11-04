@@ -1,4 +1,45 @@
 /* Generated from Rust exports and contract registries. Do not edit. */
+/*
+ * ThinkThen C interface.
+ *
+ * Return values. A function that returns a status returns THINKTHEN_OK (0) on
+ * success, or the negative of a thinkthen_code on failure, for example
+ * -THINKTHEN_CODE_USAGE_QUESTION. Some also return THINKTHEN_UNSURE when the model is
+ * not sure, or THINKTHEN_END and THINKTHEN_NEEDS_INPUT while reading a call; each
+ * function lists the values it returns. Write rc != THINKTHEN_OK, not rc == -1.
+ *
+ * Errors. Every status-returning function takes a last thinkthen_error *error, which may be
+ * NULL. When it is not NULL, initialize it with THINKTHEN_ERROR_INIT: a failure
+ * fills error->code and error->message, and success leaves it empty. Free it with
+ * thinkthen_error_free. Passing it again frees what it held, so reusing one error
+ * variable never leaks. An error whose struct_size is not set returns
+ * -THINKTHEN_CODE_USAGE_ABI and is left untouched.
+ *
+ * Text. Text is UTF-8, passed as a pointer and a byte length. Pass
+ * THINKTHEN_NUL_TERMINATED as the length for a NUL-terminated string. The library
+ * copies input before returning, except that thinkthen_find returns a span borrowing
+ * the caller's text. Keep that text alive while using the span. An argument that is not UTF-8 is refused
+ * with -THINKTHEN_CODE_USAGE_ABI; a record that is not UTF-8 fails its own row as
+ * record.invalid. Text it returns (thinkthen_text) is not
+ * NUL-terminated; print it with printf("%.*s", (int)text.len, text.data).
+ *
+ * Ownership. Each object has one free function: thinkthen_settings_free,
+ * thinkthen_client_free, thinkthen_question_free, thinkthen_toolbox_free,
+ * thinkthen_call_free, thinkthen_value_free, thinkthen_row_free,
+ * thinkthen_error_free and thinkthen_buffer_free. Each accepts NULL. Initialize a row
+ * with THINKTHEN_ROW_INIT; passing it again frees what it held. A thinkthen_buffer
+ * output is overwritten, not freed, so free it before passing it again. A handle
+ * output such as thinkthen_value ** is overwritten too. A view such as
+ * thinkthen_text, thinkthen_span or thinkthen_record_view borrows from the value or
+ * row it came from and lasts until that is freed; thinkthen_find spans instead borrow
+ * the caller's text.
+ *
+ * Threads. A settings, question or toolbox object is used by one thread at a time
+ * while it changes; once built, a question may be read by many threads. A client
+ * may be shared by every thread. One thread drives a call at a time, and
+ * thinkthen_call_cancel may run on any thread. Each function's Pointers and threads
+ * note says what it needs.
+ */
 #ifndef THINKTHEN_API
 #if defined(_WIN32) && defined(THINKTHEN_BUILD)
 #define THINKTHEN_API __declspec(dllexport)
@@ -12,64 +53,176 @@
 #endif
 #ifndef THINKTHEN_REGISTRY_H
 #define THINKTHEN_REGISTRY_H
-#define THINKTHEN_ABI_VERSION 131074u
+/** Marks a function whose returned status must be checked. */
+#ifndef THINKTHEN_NODISCARD
+#if defined(__GNUC__) || defined(__clang__)
+#define THINKTHEN_NODISCARD __attribute__((warn_unused_result))
+#elif defined(__cplusplus) && __cplusplus >= 201703L
+#define THINKTHEN_NODISCARD [[nodiscard]]
+#elif defined(_MSC_VER)
+#include <sal.h>
+#define THINKTHEN_NODISCARD _Check_return_
+#else
+#define THINKTHEN_NODISCARD
+#endif
+#endif
+/** The library version this header describes, such as "0.2.0"; thinkthen_version() gives the loaded library's. */
+#define THINKTHEN_VERSION "0.2.0"
+/** The major part of THINKTHEN_VERSION. */
 #define THINKTHEN_VERSION_MAJOR 0u
+/** The minor part of THINKTHEN_VERSION. */
 #define THINKTHEN_VERSION_MINOR 2u
+/** The patch part of THINKTHEN_VERSION. */
 #define THINKTHEN_VERSION_PATCH 0u
+/** The binary interface this header needs: THINKTHEN_ABI_MAJOR in the high 16 bits, THINKTHEN_ABI_MINOR in the low 16. Pass it to thinkthen_abi_compatible with thinkthen_abi_version(). */
+#define THINKTHEN_ABI_VERSION 131074u
+/** The binary interface's major version; a library with another major is incompatible. */
+#define THINKTHEN_ABI_MAJOR 2u
+/** The binary interface's minor version; a library with this minor or a later one is compatible. */
+#define THINKTHEN_ABI_MINOR 2u
+/** The code name a binding reports when the loaded library's binary interface is incompatible. */
 #define THINKTHEN_ABI_ERROR_CODE "usage.abi"
+/** The message a binding reports when the loaded library's binary interface is incompatible. */
 #define THINKTHEN_ABI_ERROR_MESSAGE "the native ABI is incompatible"
+/** Pass as a text length to read a NUL-terminated string instead of a counted one. */
+#define THINKTHEN_NUL_TERMINATED SIZE_MAX
+/**
+ * Every error code, shared by every ThinkThen library. A failing function returns
+ * the negative of one, such as -THINKTHEN_CODE_RECORD_EMPTY. thinkthen_code_name gives
+ * its dotted name, such as "record.empty", and thinkthen_code_family its family.
+ */
 typedef enum thinkthen_code {
+  /** usage.threshold: A cut or band is out of range or not allowed for this function. */
   THINKTHEN_CODE_USAGE_THRESHOLD = 1001,
+  /** usage.question: The question is not valid: blank or missing a part it needs. */
   THINKTHEN_CODE_USAGE_QUESTION = 1002,
+  /** usage.name: A name is blank, repeated, or not the name of an existing question. */
   THINKTHEN_CODE_USAGE_NAME = 1003,
+  /** usage.settings: The settings are not valid. */
   THINKTHEN_CODE_USAGE_SETTINGS = 1004,
+  /** usage.backend: The backend is unknown, or not allowed here. */
   THINKTHEN_CODE_USAGE_BACKEND = 1005,
+  /** usage.url: The URL is not valid. */
   THINKTHEN_CODE_USAGE_URL = 1006,
+  /** usage.key-missing: The backend needs an API key and none was given or found. */
   THINKTHEN_CODE_USAGE_KEY_MISSING = 1007,
+  /** usage.batch: The batch size is not a positive count. */
   THINKTHEN_CODE_USAGE_BATCH = 1008,
+  /** usage.pointer: A pointer, such as a field pointer, is not a valid JSON Pointer. */
   THINKTHEN_CODE_USAGE_POINTER = 1009,
+  /** usage.sql-policy: The database administrator's SQL policy is not valid. */
   THINKTHEN_CODE_USAGE_SQL_POLICY = 1010,
+  /** usage.sql-selection: The database administrator does not allow this backend and model. */
   THINKTHEN_CODE_USAGE_SQL_SELECTION = 1011,
+  /** usage.abi: A struct, handle or slot is not one this library made or initialized, or the library's binary interface is incompatible. */
   THINKTHEN_CODE_USAGE_ABI = 1012,
+  /** usage.closed: The client or call was used after it was closed. */
+  THINKTHEN_CODE_USAGE_CLOSED = 1013,
+  /** usage.function: This function does not fit the question's or value's function. */
+  THINKTHEN_CODE_USAGE_FUNCTION = 1014,
+  /** usage.record-kind: The record kind is unknown. */
+  THINKTHEN_CODE_USAGE_RECORD_KIND = 1015,
+  /** usage.offsets: The offset unit is unknown. */
+  THINKTHEN_CODE_USAGE_OFFSETS = 1016,
+  /** usage.argument: An argument is NULL, out of range, or not allowed here. */
+  THINKTHEN_CODE_USAGE_ARGUMENT = 1017,
+  /** usage.option: An option is not valid for this function. */
+  THINKTHEN_CODE_USAGE_OPTION = 1018,
+  /** record.json: The record is not valid JSON. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_RECORD_JSON = 2001,
+  /** record.missing: The record is a missing value. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_RECORD_MISSING = 2002,
+  /** record.too-large: The record is larger than the backend accepts. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_RECORD_TOO_LARGE = 2003,
+  /** record.invalid: The record could not be read, for example text that is not UTF-8. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_RECORD_INVALID = 2004,
+  /** record.empty: The record's text is blank, so it is never sent. A record error: that record's row fails and the call goes on. */
+  THINKTHEN_CODE_RECORD_EMPTY = 2005,
+  /** backend.transport: The backend could not be reached. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_BACKEND_TRANSPORT = 3001,
+  /** backend.status: The backend refused the request. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_BACKEND_STATUS = 3002,
+  /** backend.reply: The backend's reply could not be read. A record error: that record's row fails and the call goes on. */
   THINKTHEN_CODE_BACKEND_REPLY = 3003,
+  /** local.cancelled: The call was cancelled. */
   THINKTHEN_CODE_LOCAL_CANCELLED = 4001,
+  /** local.io: A local file could not be read or written. */
   THINKTHEN_CODE_LOCAL_IO = 4002,
+  /** local.toolbox: A toolbox could not be read. */
   THINKTHEN_CODE_LOCAL_TOOLBOX = 4003,
+  /** internal.bug: A bug in this library; please report it. */
   THINKTHEN_CODE_INTERNAL_BUG = 5001,
 } thinkthen_code;
-#define THINKTHEN_FUNCTION_DECIDE 1u
-#define THINKTHEN_FUNCTION_CHOOSE 2u
-#define THINKTHEN_FUNCTION_TAG 3u
-#define THINKTHEN_FUNCTION_SCORE 4u
-#define THINKTHEN_FUNCTION_FILTER 5u
-#define THINKTHEN_FUNCTION_FIND 7u
-#define THINKTHEN_FUNCTION_RECOGNIZE 8u
-#define THINKTHEN_FUNCTION_RELATE 9u
-#define THINKTHEN_FUNCTION_RANK 6u
-#define THINKTHEN_FUNCTION_ANNOTATE 10u
-#define THINKTHEN_BACKEND_SYSTEMONE 1u
-#define THINKTHEN_BACKEND_OPENAI 2u
-#define THINKTHEN_BACKEND_STUB 3u
-#define THINKTHEN_STATUS_ANSWERED 1u
-#define THINKTHEN_STATUS_UNSURE 2u
-#define THINKTHEN_STATUS_FAILED 3u
-#define THINKTHEN_RECORD_TEXT 0u
-#define THINKTHEN_RECORD_JSON 1u
-#define THINKTHEN_RECORD_MISSING 2u
-#define THINKTHEN_RECORD_INVALID 3u
-#define THINKTHEN_OFFSET_UTF8 0u
-#define THINKTHEN_OFFSET_UTF16 1u
-#define THINKTHEN_OFFSET_CODE_POINTS 2u
-#define THINKTHEN_OFFSET_CODE_POINTS_INCLUSIVE 3u
+/** The ten functions a question can ask. */
+typedef enum thinkthen_function {
+  /** decide: Answer yes or no. */
+  THINKTHEN_FUNCTION_DECIDE = 1,
+  /** choose: Pick one of the choices. */
+  THINKTHEN_FUNCTION_CHOOSE = 2,
+  /** tag: Pick every label that applies. */
+  THINKTHEN_FUNCTION_TAG = 3,
+  /** score: Place the text on ordered levels and give a number. */
+  THINKTHEN_FUNCTION_SCORE = 4,
+  /** filter: Keep the records the answer is yes for. */
+  THINKTHEN_FUNCTION_FILTER = 5,
+  /** find: Find the part of the text that answers the question. */
+  THINKTHEN_FUNCTION_FIND = 7,
+  /** recognize: Find names of the given kinds. */
+  THINKTHEN_FUNCTION_RECOGNIZE = 8,
+  /** relate: Find relations between recognized names. */
+  THINKTHEN_FUNCTION_RELATE = 9,
+  /** rank: Order the records by score. */
+  THINKTHEN_FUNCTION_RANK = 6,
+  /** annotate: Ask several named questions at once. */
+  THINKTHEN_FUNCTION_ANNOTATE = 10,
+} thinkthen_function;
+/** The backends a client can use. The stub answers without a network or a key. */
+typedef enum thinkthen_backend {
+  /** systemone: The System One service; needs an API key. */
+  THINKTHEN_BACKEND_SYSTEMONE = 1,
+  /** openai: An OpenAI-compatible service; needs an API key. */
+  THINKTHEN_BACKEND_OPENAI = 2,
+  /** stub: A local stand-in that answers without a network or a key, for tests. */
+  THINKTHEN_BACKEND_STUB = 3,
+} thinkthen_backend;
+/** A row's status. Read its answer only when it is THINKTHEN_STATUS_ANSWERED. */
+typedef enum thinkthen_status {
+  /** answered: The row has an answer. */
+  THINKTHEN_STATUS_ANSWERED = 1,
+  /** unsure: The model was not sure, so the row has no answer. */
+  THINKTHEN_STATUS_UNSURE = 2,
+  /** failed: The record failed; the row's error says why. */
+  THINKTHEN_STATUS_FAILED = 3,
+} thinkthen_status;
+/** How a record's bytes are read: as text, as JSON, or as a missing or unreadable value. */
+typedef enum thinkthen_record_kind {
+  /** text: The bytes are UTF-8 text. */
+  THINKTHEN_RECORD_TEXT = 0,
+  /** json: The bytes are one JSON value. */
+  THINKTHEN_RECORD_JSON = 1,
+  /** missing: A missing value, such as SQL NULL; it fails as record.missing. */
+  THINKTHEN_RECORD_MISSING = 2,
+  /** invalid: A value the caller could not convert; it fails as record.invalid. */
+  THINKTHEN_RECORD_INVALID = 3,
+} thinkthen_record_kind;
+/** The unit of span offsets. C uses THINKTHEN_OFFSET_UTF8, which counts bytes. */
+typedef enum thinkthen_offset {
+  /** utf8: Byte offsets into UTF-8 text. */
+  THINKTHEN_OFFSET_UTF8 = 0,
+  /** utf16: UTF-16 code unit offsets. */
+  THINKTHEN_OFFSET_UTF16 = 1,
+  /** code_points: Code point offsets, end exclusive. */
+  THINKTHEN_OFFSET_CODE_POINTS = 2,
+  /** code_points_inclusive: Code point offsets, end inclusive. */
+  THINKTHEN_OFFSET_CODE_POINTS_INCLUSIVE = 3,
+} thinkthen_offset;
+/** The thinkthen_id kind for absent. */
 #define THINKTHEN_ID_ABSENT 0u
+/** The thinkthen_id kind for string. */
 #define THINKTHEN_ID_STRING 1u
+/** The thinkthen_id kind for signed. */
 #define THINKTHEN_ID_SIGNED 2u
+/** The thinkthen_id kind for unsigned. */
 #define THINKTHEN_ID_UNSIGNED 3u
 #endif /* THINKTHEN_REGISTRY_H */
 
@@ -77,85 +230,94 @@ typedef enum thinkthen_code {
 #ifndef THINKTHEN_H
 #define THINKTHEN_H
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stddef.h>
-#include <stdint.h>
 
 /**
- * A row or successful operation.
+ * Success: the function did what it says, or wrote the next row.
  */
 #define THINKTHEN_OK 0
 
 /**
- * Successful completion, including after record failures.
+ * A call has no more rows; failed records do not change this.
  */
 #define THINKTHEN_END 1
 
 /**
- * One input slot is reserved before the host sends its next record.
+ * A streaming call waits for the next record or thinkthen_call_end_input.
  */
 #define THINKTHEN_NEEDS_INPUT 2
 
 /**
- * A call-level error, separate from the row status and code registry.
+ * Not sure; no answer was written. This is not an engine error code.
+ */
+#define THINKTHEN_UNSURE 4
+
+/**
+ * Kept for compatibility. Failures return the negative of a thinkthen_code, never this value.
  */
 #define THINKTHEN_ERROR -1
 
 /**
- * An independently retained event source, safe after the call is freed.
+ * A call's wake source, from thinkthen_call_events; it may outlive the call. Free it with
+ * thinkthen_events_free.
  */
 typedef struct thinkthen_events thinkthen_events;
 
 /**
- * One driving thread owns the cell; cancel accesses only its separate token.
+ * An open call. One thread drives it at a time; thinkthen_call_cancel may run on any thread.
+ * Free it with thinkthen_call_free.
  */
 typedef struct thinkthen_call thinkthen_call;
 
 /**
- * An independently retained admitted engine.
+ * An open client. Any thread may use it, and calls opened from it outlive it. Free it with
+ * thinkthen_client_free.
  */
 typedef struct thinkthen_client thinkthen_client;
 
 /**
- * Mutable typed question with no retained caller-owned pointers.
+ * A question. One thread at a time changes it; once complete, many threads may use it.
+ * Free it with thinkthen_question_free.
  */
 typedef struct thinkthen_question thinkthen_question;
 
 /**
- * Mutable settings copied when a client is opened.
+ * Settings for a client, copied when it opens. Free them with thinkthen_settings_free.
  */
 typedef struct thinkthen_settings thinkthen_settings;
 
 /**
- * Named typed snapshots that survive their inserted children.
+ * A set of named questions, each copied in. Free it with thinkthen_toolbox_free.
  */
 typedef struct thinkthen_toolbox thinkthen_toolbox;
 
 /**
- * An independent typed snapshot; every returned view borrows this owner.
+ * A copy of a row's answer, read with the thinkthen_value_* functions. Views it writes
+ * borrow from it. Free it with thinkthen_value_free.
  */
 typedef struct thinkthen_value thinkthen_value;
 
 /**
- * An engine allocation, released only by its matching cleanup operation.
+ * Bytes the library allocated for the caller. Free them with thinkthen_buffer_free, or with
+ * the free function of the error or row that holds the buffer.
  */
 typedef struct thinkthen_buffer {
   /**
-   * Counted UTF-8 bytes without a terminating NUL.
+   * UTF-8 bytes, not NUL-terminated; NULL when empty.
    */
   uint8_t *data;
   /**
-   * Byte length.
+   * The byte length.
    */
   size_t len;
 } thinkthen_buffer;
 
 /**
- * A sized owned error; code zero means no error and HTTP status zero means absent.
+ * Why a function failed. Initialize it with THINKTHEN_ERROR_INIT and free it with
+ * thinkthen_error_free; passing it again frees what it held.
  */
 typedef struct thinkthen_error {
   /**
@@ -163,61 +325,87 @@ typedef struct thinkthen_error {
    */
   uint32_t struct_size;
   /**
-   * A stable generated code, or zero.
+   * The thinkthen_code, or 0 when there is no error.
    */
   int32_t code;
   /**
-   * Optional HTTP status; zero means absent.
+   * The backend's HTTP status, or 0 when there is none.
    */
   uint16_t http_status;
   /**
-   * Owned plain UTF-8 message, independent of the call.
+   * The message, owned by the error; it never holds a key.
    */
   struct thinkthen_buffer message;
 } thinkthen_error;
 
 /**
- * Counted borrowed UTF-8. Setters copy input; projections borrow their value owner.
+ * UTF-8 text as a pointer and a byte length, not NUL-terminated. Text passed in is copied;
+ * text written out borrows from the value it came from.
  */
 typedef struct thinkthen_text {
   /**
-   * Readable bytes, NULL only when length is zero.
+   * The bytes; NULL only when len is 0.
    */
-  const uint8_t *data;
+  const char *data;
   /**
-   * Byte length without terminating NUL.
+   * The byte length, or THINKTHEN_NUL_TERMINATED for text passed in.
    */
   size_t len;
 } thinkthen_text;
 
 /**
- * A typed borrowed relation rule. A NULL reads pointer means omitted wording.
+ * One relation rule for thinkthen_question_add_rule or thinkthen_relate; copied before return.
  */
 typedef struct thinkthen_rule {
   /**
-   * Relation name.
+   * The relation's name, such as "works_for".
    */
   struct thinkthen_text relation;
   /**
-   * Source kind.
+   * The kind of name the relation starts from.
    */
   struct thinkthen_text source;
   /**
-   * Target kind.
+   * The kind of name it points to.
    */
   struct thinkthen_text target;
   /**
-   * Optional explicit wording.
+   * How the model should read the relation; data NULL to leave it out.
    */
   struct thinkthen_text reads;
   /**
-   * Zero for directed, one for unordered.
+   * 1 when the relation runs both ways, 0 when it runs from source to target.
    */
   uint8_t either;
 } thinkthen_rule;
 
 /**
- * One independently owned typed row. Scalar fields are selected by function/status.
+ * A part of a text, as thinkthen_find and the find, piece and kind accessors write it.
+ * Its text borrows from the value, or from the caller's own text for thinkthen_find.
+ */
+typedef struct thinkthen_span {
+  /**
+   * 1 when a part answers the question; 0 when the answer is that none does.
+   */
+  uint8_t present;
+  /**
+   * The part's text; not NUL-terminated.
+   */
+  struct thinkthen_text text;
+  /**
+   * Where the part starts, in the call's offset unit (bytes for C).
+   */
+  uint64_t start;
+  /**
+   * Where the part ends, exclusive, in the same unit.
+   */
+  uint64_t end;
+} thinkthen_span;
+
+/**
+ * One record's result. Initialize it with THINKTHEN_ROW_INIT and free it with
+ * thinkthen_row_free; passing it again frees what it held. Read the answer fields only when
+ * status is THINKTHEN_STATUS_ANSWERED, or use thinkthen_row_values for typed access.
  */
 typedef struct thinkthen_row {
   /**
@@ -225,247 +413,226 @@ typedef struct thinkthen_row {
    */
   uint32_t struct_size;
   /**
-   * Generated function discriminator.
+   * The question's function.
    */
-  uint32_t function;
+  thinkthen_function function;
   /**
-   * Generated status discriminator.
+   * Whether the record was answered, not sure, or failed.
    */
-  uint32_t status;
+  thinkthen_status status;
   /**
-   * Original one-based input position.
+   * The record's input position, 1 for the first.
    */
   uint64_t position;
   /**
-   * Full precision aggregate probability, or NaN when absent.
+   * The answer's probability, or NaN when its function has none.
    */
   double probability;
   /**
-   * Failed-record code, or zero.
+   * A failed record's thinkthen_code, or 0.
    */
   int32_t error_code;
   /**
-   * Answered decide/filter value as zero or one.
+   * A decide or filter answer: 1 for yes, 0 for no. 0 also when not answered.
    */
   uint8_t answer_bool;
   /**
-   * Answered rank, independent of position.
+   * A rank answer, 1 for the first.
    */
   uint64_t rank;
   /**
-   * Answered score.
+   * A score answer, from 0 to 1.
    */
   double number;
   /**
-   * Optional original id as exact contract JSON.
+   * The record's id as JSON, or empty.
    */
   struct thinkthen_buffer id;
   /**
-   * Typed answer as contract JSON, absent for unsure/failed.
+   * The answer as JSON; empty when not sure or failed.
    */
   struct thinkthen_buffer answer;
   /**
-   * Optional typed function detail as contract JSON.
+   * The answer's detail as JSON, or empty.
    */
   struct thinkthen_buffer detail;
   /**
-   * Typed attempted-route source as contract JSON.
+   * Which question, backend and model gave the row, as JSON.
    */
   struct thinkthen_buffer source;
   /**
-   * Failed record's typed contract error as JSON.
+   * A failed record's error as JSON, or empty.
    */
   struct thinkthen_buffer error;
 } thinkthen_row;
 
 /**
- * One borrowed finite input; its byte view is copied before open returns.
+ * One record for thinkthen_call_open_records_*; its bytes are copied before the call opens.
  */
 typedef struct thinkthen_record_input {
   /**
-   * Allocated descriptor size, at least the current prefix and at most record_stride.
+   * sizeof(thinkthen_record_input), at most record_stride.
    */
   uint32_t struct_size;
   /**
-   * Generated record kind; missing and invalid need no byte view.
+   * How to read data, a thinkthen_record_kind; missing and invalid records need no data.
    */
-  uint32_t kind;
+  thinkthen_record_kind kind;
   /**
-   * Readable bytes for text or JSON, or NULL at zero length.
+   * The record's bytes for text or JSON; NULL only when len is 0.
    */
-  const uint8_t *data;
+  const char *data;
   /**
-   * Byte length without a terminator.
+   * The byte length, or THINKTHEN_NUL_TERMINATED.
    */
   size_t len;
 } thinkthen_record_input;
 
 /**
- * The original filter input. Bytes retain text/JSON encoding even for failed rows.
- * Missing and explicit conversion-failure inputs have empty bytes. Invalid UTF-8
- * text or JSON still has its original kind and bytes, so this is not a text view.
+ * A filter or rank record's input, as thinkthen_row_original writes it, with its kind and bytes as
+ * sent, failed records included. Missing and invalid records have no bytes. The bytes may
+ * not be UTF-8, so this is not a thinkthen_text.
  */
 typedef struct thinkthen_record_view {
   /**
-   * Generated record-kind discriminator.
+   * How the record was sent, a thinkthen_record_kind.
    */
-  uint32_t kind;
+  thinkthen_record_kind kind;
   /**
-   * Borrowed bytes owned by the row or typed value snapshot.
+   * The record's bytes, borrowed from the row or value.
    */
   const uint8_t *data;
   /**
-   * Count without a terminating NUL.
+   * The byte length; not NUL-terminated.
    */
   size_t len;
 } thinkthen_record_view;
 
 /**
- * A typed borrowed text span; present distinguishes answered null from an empty span.
- */
-typedef struct thinkthen_span {
-  /**
-   * Zero means find answered no match.
-   */
-  uint8_t present;
-  /**
-   * Decoded UTF-8 text owned by the value handle.
-   */
-  struct thinkthen_text text;
-  /**
-   * Start in the call's selected offset unit.
-   */
-  uint64_t start;
-  /**
-   * End in the selected offset unit.
-   */
-  uint64_t end;
-} thinkthen_span;
-
-/**
- * A recognized name and its support probability.
+ * A recognized name, as thinkthen_value_name_at writes it; its texts borrow from the value.
  */
 typedef struct thinkthen_name {
   /**
-   * Original decoded UTF-8 text.
+   * The name as it appears in the record.
    */
   struct thinkthen_text text;
   /**
-   * Span start.
+   * Where the name starts, in the call's offset unit.
    */
   uint64_t start;
   /**
-   * Span end.
+   * Where the name ends, exclusive.
    */
   uint64_t end;
   /**
-   * Decoded kind name.
+   * The kind of name, one of the question's kinds.
    */
   struct thinkthen_text kind;
   /**
-   * Full precision support probability.
+   * How likely the name is right, from 0 to 1.
    */
   double probability;
 } thinkthen_name;
 
 /**
- * A relation endpoint has no invented aggregate probability.
+ * One name a relation joins; its texts borrow from the value.
  */
 typedef struct thinkthen_endpoint {
   /**
-   * Original endpoint text.
+   * The name as it appears in the record.
    */
   struct thinkthen_text text;
   /**
-   * Span start.
+   * Where the name starts, in the call's offset unit.
    */
   uint64_t start;
   /**
-   * Span end.
+   * Where the name ends, exclusive.
    */
   uint64_t end;
   /**
-   * Endpoint kind.
+   * The kind of name.
    */
   struct thinkthen_text kind;
 } thinkthen_endpoint;
 
 /**
- * A typed relation, usable for answers and candidate-pair detail alike.
+ * A relation between two names, as thinkthen_value_relation_at and thinkthen_value_pair_at
+ * write it; its texts borrow from the value.
  */
 typedef struct thinkthen_relation {
   /**
-   * Typed source endpoint.
+   * The name the relation starts from.
    */
   struct thinkthen_endpoint source;
   /**
-   * Typed target endpoint.
+   * The name the relation points to.
    */
   struct thinkthen_endpoint target;
   /**
-   * Decoded relation name.
+   * The relation's name, from the question's rule.
    */
   struct thinkthen_text relation;
   /**
-   * Full precision relation probability.
+   * How likely the relation holds, from 0 to 1.
    */
   double probability;
   /**
-   * One for an unordered rule, zero otherwise.
+   * 1 when the rule runs both ways, 0 otherwise.
    */
   uint8_t either;
 } thinkthen_relation;
 
 /**
- * One caller-domain or boundary label and its probability.
+ * A label and its probability, as the detail accessors write it; label borrows from the value.
  */
 typedef struct thinkthen_probability {
   /**
-   * Decoded label.
+   * The label.
    */
   struct thinkthen_text label;
   /**
-   * Full precision probability.
+   * Its probability, from 0 to 1.
    */
   double probability;
 } thinkthen_probability;
 
 /**
- * The attempted route, including on failed rows.
+ * Which question, backend and model gave a row, failed rows included; texts borrow from the value.
  */
 typedef struct thinkthen_source {
   /**
-   * Stable question identity.
+   * A stable identity of the question.
    */
   struct thinkthen_text question_identity;
   /**
-   * Generated backend discriminator.
+   * The backend, a thinkthen_backend value.
    */
-  uint32_t backend;
+  thinkthen_backend backend;
   /**
-   * Resolved model name.
+   * The model the backend used.
    */
   struct thinkthen_text model;
 } thinkthen_source;
 
 /**
- * Exact identifier values never pass through a floating-point representation.
+ * A record's id, exactly as given: integers never pass through a double.
  */
 typedef struct thinkthen_id {
   /**
-   * Generated identifier-kind discriminator.
+   * Which field holds the id: THINKTHEN_ID_ABSENT, _STRING, _SIGNED or _UNSIGNED.
    */
   uint32_t kind;
   /**
-   * String value, usable only for the string kind.
+   * The id, for THINKTHEN_ID_STRING; borrows from the value.
    */
   struct thinkthen_text text;
   /**
-   * Integer value, usable only for the signed kind.
+   * The id, for THINKTHEN_ID_SIGNED.
    */
   int64_t signed_value;
   /**
-   * Integer value, usable only for the unsigned kind.
+   * The id, for THINKTHEN_ID_UNSIGNED.
    */
   uint64_t unsigned_value;
 } thinkthen_id;
@@ -475,221 +642,459 @@ extern "C" {
 #endif // __cplusplus
 
 /**
- * Start one typed question; domain-less functions require empty text.
- * # Safety
- * Counted text is readable; out and error are distinct empty writable slots.
+ * Say what a yes answer means, for a decide or filter question.
+ *
+ * The meaning is sent with the question so the model reads it, and setting it again replaces
+ * it. Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not decide or filter, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_question_new(uint32_t function,
-                               const uint8_t *data,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_set_yes_means(struct thinkthen_question *question,
+                                         const char *data,
+                                         size_t len,
+                                         struct thinkthen_error *error);
+
+/**
+ * Say what a no answer means, for a decide or filter question.
+ *
+ * Setting it again replaces it. Returns THINKTHEN_OK, or a negative code with the question
+ * unchanged: -THINKTHEN_CODE_USAGE_QUESTION when the question is not decide or filter, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_set_no_means(struct thinkthen_question *question,
+                                        const char *data,
+                                        size_t len,
+                                        struct thinkthen_error *error);
+
+/**
+ * Describe one choice, label or level by name, for choose, tag, score and rank.
+ *
+ * Add the option first; describing the same name again replaces its description. Returns
+ * THINKTHEN_OK, or a negative code with the question unchanged: -THINKTHEN_CODE_USAGE_QUESTION
+ * when name is not one of the question's options or the function takes no descriptions, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. A question still missing its options
+ * is checked when it runs instead.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. name points to name_len readable bytes, or to a NUL-
+ * terminated string when name_len is THINKTHEN_NUL_TERMINATED; it is copied before return.
+ * description points to len readable bytes, or to a NUL-terminated string when len is
+ * THINKTHEN_NUL_TERMINATED; it is copied before return. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_set_description(struct thinkthen_question *question,
+                                           const char *name,
+                                           size_t name_len,
+                                           const char *description,
+                                           size_t len,
+                                           struct thinkthen_error *error);
+
+/**
+ * Start a question that asks function about text.
+ *
+ * function is a thinkthen_function. recognize, relate and annotate take empty text; every
+ * other function needs a question text. Returns THINKTHEN_OK with *out set to a new question,
+ * or a negative code with *out set to NULL: -THINKTHEN_CODE_USAGE_FUNCTION for an unknown
+ * function, -THINKTHEN_CODE_USAGE_QUESTION for blank text, or text given to a function that
+ * takes none, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out
+ * and frees it with thinkthen_question_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+ * when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_new(thinkthen_function function,
+                               const char *data,
                                size_t len,
                                struct thinkthen_question **out,
                                struct thinkthen_error *error);
 
 /**
- * Add a copied choose choice, leaving the builder unchanged on rejection.
- * # Safety
- * One driver owns the builder and empty error slot; text is counted readable UTF-8.
+ * Add one choice to a choose question.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not choose, or the choice is blank or
+ * repeated, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_choice(struct thinkthen_question *question,
-                                      const uint8_t *data,
+                                      const char *data,
                                       size_t len,
                                       struct thinkthen_error *error);
 
 /**
- * Add a copied tag label.
- * # Safety
- * One driver owns the builder and error; text is counted readable UTF-8.
+ * Add one label to a tag question.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not tag, or the label is blank or
+ * repeated, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_label(struct thinkthen_question *question,
-                                     const uint8_t *data,
+                                     const char *data,
                                      size_t len,
                                      struct thinkthen_error *error);
 
 /**
- * Add a copied score or rank level.
- * # Safety
- * One driver owns the builder and error; text is counted readable UTF-8.
+ * Add one level, lowest first to a score or rank question.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not score or rank, or the level is blank
+ * or repeated, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_level(struct thinkthen_question *question,
-                                     const uint8_t *data,
+                                     const char *data,
                                      size_t len,
                                      struct thinkthen_error *error);
 
 /**
- * Add a copied recognition kind.
- * # Safety
- * One driver owns the builder and error; text is counted readable UTF-8.
+ * Add one kind of name to recognize to a recognize question.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not recognize, or the kind is blank or
+ * repeated, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_kind(struct thinkthen_question *question,
-                                    const uint8_t *data,
+                                    const char *data,
                                     size_t len,
                                     struct thinkthen_error *error);
 
 /**
- * Add one fully admitted relation rule copied from borrowed fields.
- * # Safety
- * Builder and rule fields are live; error is empty exclusive storage.
+ * Add one relation rule to a relate question.
+ *
+ * rule->relation names the relation, rule->source and rule->target the kinds it joins,
+ * rule->reads (data NULL to leave it out) how to read it, and rule->either 1 when it runs both
+ * ways. Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not relate or the rule is blank or
+ * repeated, -THINKTHEN_CODE_USAGE_ARGUMENT when either is not 0 or 1, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. rule points to a readable rule whose text fields are
+ * readable; they are copied. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_rule(struct thinkthen_question *question,
                                     const struct thinkthen_rule *rule,
                                     struct thinkthen_error *error);
 
 /**
- * Set a validated numeric cut for a threshold-taking function.
- * # Safety
- * A sole driver owns the builder and empty error slot.
+ * Set the cut a probability must reach for a yes or a choice.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_THRESHOLD when cut is outside 0 to 1 or the function takes no cut.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_set_cut(struct thinkthen_question *question,
                                    double cut,
                                    struct thinkthen_error *error);
 
 /**
- * Set a band for decide, filter or choose; numeric-only functions reject it.
- * # Safety
- * A sole driver owns the builder and empty error slot.
+ * Set a band of probabilities, from low to high, that gives THINKTHEN_UNSURE.
+ *
+ * Only decide, filter and choose take a band. Returns THINKTHEN_OK, or a negative code with
+ * the question unchanged: -THINKTHEN_CODE_USAGE_THRESHOLD when the band is out of order,
+ * outside 0 to 1, or the function takes none.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_set_band(struct thinkthen_question *question,
                                     double low,
                                     double high,
                                     struct thinkthen_error *error);
 
 /**
- * Copy an admitted evidence pointer.
- * # Safety
- * A sole driver owns the builder and empty error; text is counted readable UTF-8.
+ * Point the question at the part of a JSON record to read, as a JSON Pointer.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_POINTER when data is not a JSON Pointer, or -THINKTHEN_CODE_USAGE_ABI
+ * when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_question_set_evidence(struct thinkthen_question *question,
-                                        const uint8_t *data,
-                                        size_t len,
-                                        struct thinkthen_error *error);
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_set_field(struct thinkthen_question *question,
+                                     const char *data,
+                                     size_t len,
+                                     struct thinkthen_error *error);
 
 /**
- * Bound successful rank output, retaining failed rows.
- * # Safety
- * A sole driver owns the builder and empty error slot.
+ * Keep only the top answered rows of a rank question; failed rows are always kept.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the question unchanged:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is not rank or top is 0.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_set_top(struct thinkthen_question *question,
                                    size_t top,
                                    struct thinkthen_error *error);
 
 /**
- * Snapshot one eligible child into annotation; rank and annotate are rejected.
- * # Safety
- * Both builders and counted name are live; error is exclusive and empty.
+ * Add a copy of child to an annotate question under name.
+ *
+ * Changing or freeing child afterwards does not change the annotation. Returns THINKTHEN_OK,
+ * or a negative code with the question unchanged: -THINKTHEN_CODE_USAGE_QUESTION when the
+ * question is not annotate, child is rank or annotate, or child is incomplete;
+ * -THINKTHEN_CODE_USAGE_NAME when name is blank or repeated; or -THINKTHEN_CODE_USAGE_ABI when
+ * the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a question; other questions may be used on other
+ * threads. question is a live question. child is a live question no thread changes during the
+ * call. name points to len readable bytes, or to a NUL-terminated string when len is
+ * THINKTHEN_NUL_TERMINATED; it is copied before return. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_add_entry(struct thinkthen_question *question,
-                                     const uint8_t *name,
+                                     const char *name,
                                      size_t len,
                                      const struct thinkthen_question *child,
                                      struct thinkthen_error *error);
 
 /**
- * Release a question; calls, toolboxes and annotations retain owned snapshots.
- * # Safety
- * NULL or the unique allocation after all readers finish.
+ * Free a question.
+ *
+ * Free a question made by any thinkthen_question_* function. NULL is ignored. Calls, toolboxes
+ * and annotations made from it keep their own copies.
+ * Pointers and threads:
+ * Call this once, after every other use of question has returned.
  */
 THINKTHEN_API void thinkthen_question_free(struct thinkthen_question *question);
 
 /**
- * Copy a complete admitted question into an independent mutable builder.
- * # Safety
- * Source is live; out and error are distinct empty writable slots.
+ * Copy a complete question into a new question that changes on its own.
+ *
+ * Returns THINKTHEN_OK with *out set to a new question, or a negative code with *out set to
+ * NULL: -THINKTHEN_CODE_USAGE_QUESTION when source is incomplete. The caller owns *out and
+ * frees it with thinkthen_question_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes source. out is writable. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+ * passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_clone(const struct thinkthen_question *source,
                                  struct thinkthen_question **out,
                                  struct thinkthen_error *error);
 
 /**
- * Admit one canonical question through the shared grammar without executing it.
- * # Safety
- * Counted UTF-8 and distinct empty output slots remain live until return.
+ * Read one question from its JSON definition.
+ *
+ * Returns THINKTHEN_OK with *out set to a new question, or a negative code with *out set to
+ * NULL: -THINKTHEN_CODE_USAGE_QUESTION when the JSON is not a valid question, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+ * thinkthen_question_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+ * when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_question_from_json(const uint8_t *data,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_question_from_json(const char *data,
                                      size_t len,
                                      struct thinkthen_question **out,
                                      struct thinkthen_error *error);
 
 /**
- * Allocate default typed settings without reading keys or environment.
- * # Safety
- * Out and error are distinct empty writable slots.
+ * Make settings with every default, without reading keys or the environment.
+ *
+ * Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
+ * thinkthen_settings_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_new(struct thinkthen_settings **out,
                                struct thinkthen_error *error);
 
 /**
- * Select a typed backend before opening a client.
- * # Safety
- * Settings is live and exclusively driven; error is empty writable storage.
+ * Choose the backend, a thinkthen_backend.
+ *
+ * Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_BACKEND with the settings unchanged for an
+ * unknown backend.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+ * On a negative return it holds the code and message; passing it again frees what it held, so
+ * a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_backend(struct thinkthen_settings *settings,
-                                       uint32_t backend,
+                                       thinkthen_backend backend,
                                        struct thinkthen_error *error);
 
 /**
- * Copy a validated direct API key; debug output never reveals it.
- * # Safety
- * Builder and counted bytes are live; error is exclusive and empty.
+ * Set the API key; the library never prints or logs it.
+ *
+ * Without one, the client reads the backend's key variable. Returns THINKTHEN_OK, or a
+ * negative code with the settings unchanged: -THINKTHEN_CODE_USAGE_KEY_MISSING for a blank
+ * key, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_api_key(struct thinkthen_settings *settings,
-                                       const uint8_t *data,
+                                       const char *data,
                                        size_t len,
                                        struct thinkthen_error *error);
 
 /**
- * Copy a model name without resolving the backend or credentials.
- * # Safety
- * Builder and counted bytes are live; error is exclusive and empty.
+ * Set the model name the backend uses.
+ *
+ * Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8, with the
+ * settings unchanged.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_model(struct thinkthen_settings *settings,
-                                     const uint8_t *data,
+                                     const char *data,
                                      size_t len,
                                      struct thinkthen_error *error);
 
 /**
- * Copy an admitted URL without reading credentials.
- * # Safety
- * Builder and counted bytes are live; error is exclusive and empty.
+ * Set the backend's base URL.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the settings unchanged:
+ * -THINKTHEN_CODE_USAGE_URL for a URL that is not valid, or -THINKTHEN_CODE_USAGE_ABI when the
+ * text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. data points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_url(struct thinkthen_settings *settings,
-                                   const uint8_t *data,
+                                   const char *data,
                                    size_t len,
                                    struct thinkthen_error *error);
 
 /**
- * Select a validated positive batch count.
- * # Safety
- * Builder is live and exclusive; error is empty writable storage.
+ * Set how many records go to the backend in one request.
+ *
+ * Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_BATCH with the settings unchanged when batch
+ * is 0 or too large.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+ * On a negative return it holds the code and message; passing it again frees what it held, so
+ * a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_batch(struct thinkthen_settings *settings,
                                      uint64_t batch,
                                      struct thinkthen_error *error);
 
 /**
- * Copy a validated retry policy expressed in whole milliseconds.
- * # Safety
- * Builder is live and exclusive; error is empty writable storage.
+ * Set how many times a failed request is retried, the first wait, and each attempt's limit, in
+ * milliseconds.
+ *
+ * Returns THINKTHEN_OK, or -THINKTHEN_CODE_USAGE_SETTINGS with the settings unchanged for
+ * values out of range.
+ * Pointers and threads:
+ * One thread at a time may call this on a settings object; other settings objects may be used
+ * on other threads. settings is live. error is NULL or initialized with THINKTHEN_ERROR_INIT.
+ * On a negative return it holds the code and message; passing it again frees what it held, so
+ * a reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_set_retry(struct thinkthen_settings *settings,
                                      uint32_t max_retries,
                                      uint64_t initial_backoff_ms,
@@ -697,598 +1102,1248 @@ int32_t thinkthen_settings_set_retry(struct thinkthen_settings *settings,
                                      struct thinkthen_error *error);
 
 /**
- * Release a settings builder; already opened clients own their snapshots.
- * # Safety
- * NULL or the unique live builder after all readers finish.
+ * Free settings.
+ *
+ * Free settings. NULL is ignored. Clients opened from them keep their own copy.
+ * Pointers and threads:
+ * Call this once, after every other use of settings has returned.
  */
 THINKTHEN_API void thinkthen_settings_free(struct thinkthen_settings *settings);
 
 /**
- * Copy an independent settings snapshot without resolving environment variables.
- * # Safety
- * Source is live; out and error are distinct empty writable slots.
+ * Copy settings into a new settings object, without reading the environment.
+ *
+ * Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
+ * thinkthen_settings_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees source. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_clone(const struct thinkthen_settings *source,
                                  struct thinkthen_settings **out,
                                  struct thinkthen_error *error);
 
 /**
- * Replace only the explicit key from an opaque settings snapshot.
- * # Safety
- * Both handles are live; destination is exclusive; error is empty writable storage.
+ * Copy only the API key from source into destination.
+ *
+ * Returns THINKTHEN_OK.
+ * Pointers and threads:
+ * One thread at a time may change destination, and no thread changes source during the call.
+ * error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+ * code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+ * it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_settings_copy_api_key(struct thinkthen_settings *destination,
                                         const struct thinkthen_settings *source,
                                         struct thinkthen_error *error);
 
 /**
- * Admit canonical settings with omitted fields resolved by the engine defaults.
- * # Safety
- * Counted bytes are live; out and error are distinct empty writable slots.
+ * Read settings from JSON; fields left out take their defaults.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_USAGE_SETTINGS, or another usage code naming the field, for JSON that is not
+ * valid settings, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns
+ * *out and frees it with thinkthen_settings_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+ * when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_settings_from_json(const uint8_t *data,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_settings_from_json(const char *data,
                                      size_t len,
                                      struct thinkthen_settings **out,
                                      struct thinkthen_error *error);
 
 /**
- * Allocate an initially empty collection of named typed questions.
- * # Safety
- * Out and error are distinct empty writable slots.
+ * Make an empty toolbox of named questions.
+ *
+ * Returns THINKTHEN_OK with *out set. The caller owns *out and frees it with
+ * thinkthen_toolbox_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_new(struct thinkthen_toolbox **out,
                               struct thinkthen_error *error);
 
 /**
- * Insert a copied non-annotate question; duplicate names leave the toolbox unchanged.
- * # Safety
- * Live handles and counted name remain borrowed until return; error is empty.
+ * Add a copy of question to the toolbox under name.
+ *
+ * Returns THINKTHEN_OK, or a negative code with the toolbox unchanged:
+ * -THINKTHEN_CODE_USAGE_NAME when name is blank or already used,
+ * -THINKTHEN_CODE_USAGE_QUESTION when question is incomplete or annotate, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * Pointers and threads:
+ * One thread at a time may call this on a toolbox; other toolboxs may be used on other
+ * threads. question is live and no thread changes it during the call. name points to len
+ * readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED; it is
+ * copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+ * return it holds the code and message; passing it again frees what it held, so a reused error
+ * leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_insert(struct thinkthen_toolbox *toolbox,
-                                 const uint8_t *name,
+                                 const char *name,
                                  size_t len,
                                  const struct thinkthen_question *question,
                                  struct thinkthen_error *error);
 
 /**
- * Select an independent owned question that survives toolbox destruction.
- * # Safety
- * Handles and counted name are live; outputs are distinct empty writable slots.
+ * Copy the question named name out of the toolbox.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_USAGE_NAME when no question has that name, or -THINKTHEN_CODE_USAGE_ABI when
+ * the text is not UTF-8. The caller owns *out and frees it with thinkthen_question_free; it
+ * outlives the toolbox, and an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees toolbox. name points to len
+ * readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED; it is
+ * copied before return. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_select(const struct thinkthen_toolbox *toolbox,
-                                 const uint8_t *name,
+                                 const char *name,
                                  size_t len,
                                  struct thinkthen_question **out,
                                  struct thinkthen_error *error);
 
 /**
- * Release a toolbox; selected questions and opened calls remain independent.
- * # Safety
- * NULL or the unique live collection after all readers finish.
+ * Free a toolbox.
+ *
+ * Free a toolbox. NULL is ignored. Questions selected from it and calls opened from them keep
+ * their own copies.
+ * Pointers and threads:
+ * Call this once, after every other use of toolbox has returned.
  */
 THINKTHEN_API void thinkthen_toolbox_free(struct thinkthen_toolbox *toolbox);
 
 /**
- * Admit canonical toolbox JSON without resolving files or executing entries.
- * # Safety
- * Counted UTF-8 and distinct empty output slots remain live until return.
+ * Read a toolbox from the command's entries JSON, without reading files or running anything.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_LOCAL_TOOLBOX, -THINKTHEN_CODE_USAGE_NAME or -THINKTHEN_CODE_USAGE_QUESTION
+ * for JSON that is not a valid toolbox, or -THINKTHEN_CODE_USAGE_ABI when the text is not
+ * UTF-8. The caller owns *out and frees it with thinkthen_toolbox_free; an old handle in *out
+ * is not freed.
+ * Pointers and threads:
+ * Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+ * when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_toolbox_from_json(const uint8_t *data,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_toolbox_from_json(const char *data,
                                     size_t len,
                                     struct thinkthen_toolbox **out,
                                     struct thinkthen_error *error);
 
 /**
- * Select an owned snapshot of the requested function, with shared mismatch errors.
- * # Safety
- * Handles, counted name and distinct empty output slots are live until return.
+ * Copy the question named name out of the toolbox, checking that it asks function.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_USAGE_FUNCTION for an unknown function, -THINKTHEN_CODE_USAGE_NAME when no
+ * question has that name or it asks another function, or -THINKTHEN_CODE_USAGE_ABI when the
+ * text is not UTF-8. The caller owns *out and frees it with thinkthen_question_free; it
+ * outlives the toolbox, and an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees toolbox. name points to len
+ * readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED; it is
+ * copied before return. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_select_as(const struct thinkthen_toolbox *toolbox,
-                                    const uint8_t *name,
+                                    const char *name,
                                     size_t len,
-                                    uint32_t function,
+                                    thinkthen_function function,
                                     struct thinkthen_question **out,
                                     struct thinkthen_error *error);
 
 /**
- * Admit flat typed definitions from a native host constructor.
- * # Safety
- * Counted UTF-8 and distinct empty output slots remain live until return.
+ * Read a toolbox from flat question definitions, as thinkthen_toolbox_definitions_json writes
+ * them.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+ * for definitions that are not valid, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8.
+ * The caller owns *out and frees it with thinkthen_toolbox_free; an old handle in *out is not
+ * freed.
+ * Pointers and threads:
+ * Any thread may call this. data points to len readable bytes, or to a NUL-terminated string
+ * when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_toolbox_from_definitions_json(const uint8_t *data,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_toolbox_from_definitions_json(const char *data,
                                                 size_t len,
                                                 struct thinkthen_toolbox **out,
                                                 struct thinkthen_error *error);
 
 /**
- * Save the admitted named questions in the command's entries format.
- * # Safety
- * The handle is borrowed; out and error are distinct empty writable slots.
+ * Write the toolbox in the command's entries JSON to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_INTERNAL_BUG with *out empty.
+ * *out is a new buffer the caller owns; free it with thinkthen_buffer_free. The old contents
+ * of *out are not freed, so free a buffer before passing it again.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees toolbox. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_to_json(const struct thinkthen_toolbox *toolbox,
                                   struct thinkthen_buffer *out,
                                   struct thinkthen_error *error);
 
 /**
- * Export admitted flat definitions for host hydration, without host validation.
- * # Safety
- * The handle is borrowed; out and error are distinct empty writable slots.
+ * Write the toolbox as flat question definitions to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_INTERNAL_BUG with *out empty.
+ * *out is a new buffer the caller owns; free it with thinkthen_buffer_free. The old contents
+ * of *out are not freed, so free a buffer before passing it again.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees toolbox. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_toolbox_definitions_json(const struct thinkthen_toolbox *toolbox,
                                            struct thinkthen_buffer *out,
                                            struct thinkthen_error *error);
 
 /**
- * Export one admitted question's canonical definition for host hydration.
- * # Safety
- * The handle is borrowed; out and error are distinct empty writable slots.
+ * Write a complete question's JSON definition to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out empty:
+ * -THINKTHEN_CODE_USAGE_QUESTION when the question is incomplete. *out is a new buffer the
+ * caller owns; free it with thinkthen_buffer_free. The old contents of *out are not freed, so
+ * free a buffer before passing it again.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees question. out is writable. error
+ * is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_to_json(const struct thinkthen_question *question,
                                    struct thinkthen_buffer *out,
                                    struct thinkthen_error *error);
 
 /**
- * Return the question's function discriminator without completing its builder.
- * # Safety
- * The question is live; out and error are distinct exclusive writable slots.
+ * Write the question's thinkthen_function to *out.
+ *
+ * Returns THINKTHEN_OK with *out written. It works on an incomplete question too.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees question. out is writable. error
+ * is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_question_function(const struct thinkthen_question *question,
-                                    uint32_t *out,
+                                    thinkthen_function *out,
                                     struct thinkthen_error *error);
 
 /**
- * Retain the call's wake source without changing its input reservation.
+ * Ask a yes-or-no question about one text, and write the answer to *answer.
  *
- * Host sequence: retain once; read events_version BEFORE call_next; on
- * NEEDS_INPUT select caller input against events_wait(version). If input wins,
- * call events_wake and join the waiter before sending through the sole driver.
- * If an event wins, recheck call_next without issuing another input demand.
- * Output may become ready while the reserved input remains outstanding.
+ * Returns THINKTHEN_OK with *answer written; THINKTHEN_UNSURE with *answer unchanged (the
+ * default cut never gives it; set a band with thinkthen_question_set_band and
+ * thinkthen_run_one); or a negative thinkthen_code with *answer unchanged:
+ * -THINKTHEN_CODE_RECORD_EMPTY for empty or blank text (never sent to the backend), a
+ * usage code for a bad argument, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question is a NUL-terminated
+ * string. text points to len readable bytes (or a NUL-terminated string with
+ * THINKTHEN_NUL_TERMINATED). answer is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+ * again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_decide(const struct thinkthen_client *client,
+                         const char *question,
+                         const char *text,
+                         size_t len,
+                         bool *answer,
+                         struct thinkthen_error *error);
+
+/**
+ * Choose one of count choices for one text, and write the chosen index to *choice.
  *
- * Cancellation wakes this source through the call's queues. A host also wakes
- * and joins its waiters on close; it frees the event handle only after all
- * version/wait/wake operations return. The event handle can outlive call_free.
- * # Safety
- * The sole driver owns a live call during this retain operation.
+ * *choice is an index into choices, so the caller's own string names the answer. Returns
+ * THINKTHEN_OK with *choice written; THINKTHEN_UNSURE with *choice unchanged when no
+ * choice reaches the cut; or a negative thinkthen_code with *choice unchanged:
+ * usage.question for fewer than two or repeated choices, -THINKTHEN_CODE_RECORD_EMPTY for
+ * blank text, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question and each of the
+ * count choices are NUL-terminated strings. text points to len readable bytes (or a NUL-
+ * terminated string with THINKTHEN_NUL_TERMINATED). choice is writable. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it
+ * with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_choose(const struct thinkthen_client *client,
+                         const char *question,
+                         const char *const *choices,
+                         size_t count,
+                         const char *text,
+                         size_t len,
+                         size_t *choice,
+                         struct thinkthen_error *error);
+
+/**
+ * Tag one text with any of count labels, and write whether each applies to selected.
+ *
+ * selected has count entries, in the order of labels; an answer with no labels sets them
+ * all to false. Returns THINKTHEN_OK with selected written, or a negative thinkthen_code
+ * with selected unchanged: usage.question for no or repeated labels,
+ * -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question and each of the
+ * count labels are NUL-terminated strings. text points to len readable bytes (or a NUL-
+ * terminated string with THINKTHEN_NUL_TERMINATED). selected points to count writable
+ * bools. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_tag(const struct thinkthen_client *client,
+                      const char *question,
+                      const char *const *labels,
+                      size_t count,
+                      const char *text,
+                      size_t len,
+                      bool *selected,
+                      struct thinkthen_error *error);
+
+/**
+ * Score one text on count ordered levels, and write the score to *score.
+ *
+ * The score runs from 0 for the first level to 1 for the last. Returns THINKTHEN_OK with
+ * *score written, or a negative thinkthen_code with *score unchanged: usage.question for
+ * fewer than two or repeated levels, -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a
+ * backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question and each of the
+ * count levels are NUL-terminated strings. text points to len readable bytes (or a NUL-
+ * terminated string with THINKTHEN_NUL_TERMINATED). score is writable. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it
+ * with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_score(const struct thinkthen_client *client,
+                        const char *question,
+                        const char *const *levels,
+                        size_t count,
+                        const char *text,
+                        size_t len,
+                        double *score,
+                        struct thinkthen_error *error);
+
+/**
+ * Find the part of one text that answers a question, and write it to *found.
+ *
+ * found->present is 1 when a part answers it and 0 when the answer is that none does.
+ * found->start and found->end are byte offsets into text, and found->text points into the
+ * caller's own text, so it lives as long as text does. Returns THINKTHEN_OK with *found
+ * written; THINKTHEN_UNSURE with *found unchanged; or a negative thinkthen_code with
+ * *found unchanged: -THINKTHEN_CODE_RECORD_EMPTY for blank text, a usage code for a bad
+ * argument, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. question is a NUL-terminated
+ * string. text points to len readable bytes (or a NUL-terminated string with
+ * THINKTHEN_NUL_TERMINATED). found is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+ * again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_find(const struct thinkthen_client *client,
+                       const char *question,
+                       const char *text,
+                       size_t len,
+                       struct thinkthen_span *found,
+                       struct thinkthen_error *error);
+
+/**
+ * Recognize names of count kinds in one text, and write them to a new value.
+ *
+ * Read the names with thinkthen_value_name_count and thinkthen_value_name_at; their
+ * offsets are bytes into text. Free the value with thinkthen_value_free. Returns
+ * THINKTHEN_OK with *names set (an answer may hold no names), or a negative thinkthen_code
+ * with *names unchanged: usage.question for no or repeated kinds,
+ * -THINKTHEN_CODE_RECORD_EMPTY for blank text, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. Each of the count kinds is a
+ * NUL-terminated string. text points to len readable bytes (or a NUL-terminated string
+ * with THINKTHEN_NUL_TERMINATED). names is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+ * again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_recognize(const struct thinkthen_client *client,
+                            const char *const *kinds,
+                            size_t count,
+                            const char *text,
+                            size_t len,
+                            struct thinkthen_value **names,
+                            struct thinkthen_error *error);
+
+/**
+ * Find relations of count rules in one text, and write them to a new value.
+ *
+ * Read the relations with thinkthen_value_relation_count and thinkthen_value_relation_at,
+ * and the names they join with thinkthen_value_name_count and thinkthen_value_name_at.
+ * Free the value with thinkthen_value_free. Returns THINKTHEN_OK with *relations set (an
+ * answer may hold no relations), or a negative thinkthen_code with *relations unchanged:
+ * usage.question for no rules or a bad rule, -THINKTHEN_CODE_RECORD_EMPTY for blank text,
+ * or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client. rules points to count
+ * readable rules whose text fields are readable. text points to len readable bytes (or a
+ * NUL-terminated string with THINKTHEN_NUL_TERMINATED). relations is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code
+ * and message; passing it again frees what it held, so a reused error leaks nothing. Free
+ * it with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_relate(const struct thinkthen_client *client,
+                         const struct thinkthen_rule *rules,
+                         size_t count,
+                         const char *text,
+                         size_t len,
+                         struct thinkthen_value **relations,
+                         struct thinkthen_error *error);
+
+/**
+ * Ask count named questions about one text, and write their answers to a new value.
+ *
+ * Read each answer by name with thinkthen_value_annotation_get, or by index with
+ * thinkthen_value_annotation_at; each child follows its own function's rules. Free the
+ * value with thinkthen_value_free. Returns THINKTHEN_OK with *annotation set, or a
+ * negative thinkthen_code with *annotation unchanged: usage.name for repeated or bad
+ * names, usage.question for a rank or annotate child, -THINKTHEN_CODE_RECORD_EMPTY for
+ * blank text, or a backend code.
+ * A string argument that is not UTF-8 returns -THINKTHEN_CODE_USAGE_ABI.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client and the questions while no
+ * thread changes them. names holds count NUL-terminated strings and questions count live
+ * question handles. text points to len readable bytes (or a NUL-terminated string with
+ * THINKTHEN_NUL_TERMINATED). annotation is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it
+ * again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_annotate(const struct thinkthen_client *client,
+                           const char *const *names,
+                           const struct thinkthen_question *const *questions,
+                           size_t count,
+                           const char *text,
+                           size_t len,
+                           struct thinkthen_value **annotation,
+                           struct thinkthen_error *error);
+
+/**
+ * Get a wake source for a streaming call, for a host that waits on input and output at once.
+ *
+ * Read thinkthen_events_version before thinkthen_call_next. When it returns
+ * THINKTHEN_NEEDS_INPUT, wait for your own input or thinkthen_events_wait(version), whichever
+ * comes first. If input comes first, call thinkthen_events_wake, join the waiter, then send.
+ * If an event comes first, call thinkthen_call_next again. Cancelling the call wakes the
+ * source. Returns a new handle the caller owns; free it with thinkthen_events_free after every
+ * wait and wake has returned. It may outlive the call.
+ * Pointers and threads:
+ * The thread driving call calls this. call is live.
  */
 THINKTHEN_API struct thinkthen_events *thinkthen_call_events(const struct thinkthen_call *call);
 
 /**
- * Read the version BEFORE the sole driver checks call readiness.
- * # Safety
- * Events stays live until this call returns. Concurrent event operations are safe.
+ * Return the wake source's current version.
+ *
+ * Read it before you check the call, then wait on it.
+ * Pointers and threads:
+ * Any thread may call this while events is live; event functions may run at the same time.
  */
 THINKTHEN_API uint64_t thinkthen_events_version(const struct thinkthen_events *events);
 
 /**
- * Wait for a change from version, returning immediately if it already changed.
- * A wake requests a recheck; it does not promise a row or consume input capacity.
- * # Safety
- * Events stays live until this wait returns. Concurrent waits and wakes are safe.
+ * Wait until the version is no longer version; return at once if it already changed.
+ *
+ * A wake asks you to check the call again. It does not promise a row.
+ * Pointers and threads:
+ * Any thread may call this while events is live; event functions may run at the same time.
  */
 THINKTHEN_API void thinkthen_events_wait(const struct thinkthen_events *events, uint64_t version);
 
 /**
- * Wake waits on earlier versions, including waits not yet entered.
- * This does not cancel the call or alter its reserved input.
- * # Safety
- * Events stays live until this call returns. Concurrent event operations are safe.
+ * Wake every wait on an earlier version, including a wait not yet entered.
+ *
+ * It does not cancel the call or change its input.
+ * Pointers and threads:
+ * Any thread may call this while events is live; event functions may run at the same time.
  */
 THINKTHEN_API void thinkthen_events_wake(const struct thinkthen_events *events);
 
 /**
- * Free an event source after all its operations have returned.
- * # Safety
- * Events is uniquely owned and no version, wait or wake operation remains active.
+ * Free a wake source.
+ *
+ * NULL is ignored.
+ * Pointers and threads:
+ * Call this once, after every version, wait and wake call on events has returned.
  */
 THINKTHEN_API void thinkthen_events_free(struct thinkthen_events *events);
 
 /**
- * Return the shared call-level error for host settings conversion failure.
- * # Safety
- * The error is an exclusive, empty writable slot with a supported struct_size.
+ * Fill error with the shared usage.settings error, for a binding that cannot convert its own
+ * settings.
+ *
+ * Returns -THINKTHEN_CODE_USAGE_SETTINGS.
+ * Pointers and threads:
+ * Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API int32_t thinkthen_settings_conversion_error(struct thinkthen_error *error);
+THINKTHEN_API THINKTHEN_NODISCARD int32_t thinkthen_settings_conversion_error(struct thinkthen_error *error);
 
 /**
- * Return the shared call-level error for host question conversion failure.
- * # Safety
- * The error is an exclusive, empty writable slot with a supported struct_size.
+ * Fill error with the shared usage.question error, for a binding that cannot convert its own
+ * question.
+ *
+ * Returns -THINKTHEN_CODE_USAGE_QUESTION.
+ * Pointers and threads:
+ * Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API int32_t thinkthen_question_conversion_error(struct thinkthen_error *error);
+THINKTHEN_API THINKTHEN_NODISCARD int32_t thinkthen_question_conversion_error(struct thinkthen_error *error);
 
 /**
- * Return the shared cancellation error after a host interrupts a completed pull.
- * # Safety
- * The error is an exclusive, empty writable slot with a supported struct_size.
+ * Fill error with the shared local.cancelled error, for a binding that stops a call itself.
+ *
+ * Returns -THINKTHEN_CODE_LOCAL_CANCELLED.
+ * Pointers and threads:
+ * Any thread may call this. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API int32_t thinkthen_cancelled_error(struct thinkthen_error *error);
+THINKTHEN_API THINKTHEN_NODISCARD int32_t thinkthen_cancelled_error(struct thinkthen_error *error);
 
 /**
- * Native ABI major/minor, independent of package version.
+ * Return the loaded library's binary interface version.
+ *
+ * THINKTHEN_ABI_MAJOR is in the high 16 bits and THINKTHEN_ABI_MINOR in the low 16. Pass it
+ * with THINKTHEN_ABI_VERSION to thinkthen_abi_compatible. Any thread may call this.
  */
 THINKTHEN_API uint32_t thinkthen_abi_version(void);
 
 /**
- * Process-lifetime NUL-terminated package version; never free this pointer.
+ * Return the loaded library's version, such as "0.2.0".
+ *
+ * The string is NUL-terminated and lasts for the whole process; never free it. Compare it with
+ * THINKTHEN_VERSION. Any thread may call this.
  */
 THINKTHEN_API const char *thinkthen_version(void);
 
 /**
- * Process-lifetime dotted code name, or NULL for an unknown integer.
+ * Return a code's dotted name, such as "record.empty", or NULL for an unknown code.
+ *
+ * value may be positive or negative. The string is NUL-terminated and lasts for the whole
+ * process; never free it. Any thread may call this.
  */
 THINKTHEN_API const char *thinkthen_code_name(int32_t value);
 
 /**
- * Process-lifetime NUL-terminated family, or NULL for an unknown code, including zero.
- * The family comes from the engine registry. Never free the returned pointer.
+ * Return a code's family, such as "record", or NULL for an unknown code or 0.
+ *
+ * The string is NUL-terminated and lasts for the whole process; never free it. Any thread may
+ * call this.
  */
 THINKTHEN_API const char *thinkthen_code_family(int32_t value);
 
 /**
- * Open a client from a copied typed settings snapshot.
- * # Safety
- * Handles are live; out/error are distinct, empty writable slots.
+ * Open a client from settings, or from the environment when settings is NULL.
+ *
+ * With NULL settings, THINKTHEN_BACKEND picks the backend and the backend's own variables give
+ * the key and URL. The client copies the settings, so they may be freed at once. Returns
+ * THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_USAGE_BACKEND for an unknown THINKTHEN_BACKEND,
+ * -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set, or another
+ * usage code for settings that are not valid. The caller owns *out and frees it with
+ * thinkthen_client_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. settings is NULL or live, and no thread changes it during the
+ * call. out is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative
+ * return it holds the code and message; passing it again frees what it held, so a reused error
+ * leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_client_open(const struct thinkthen_settings *settings,
                               struct thinkthen_client **out,
                               struct thinkthen_error *error);
 
 /**
- * Admit canonical client JSON for a JSON-native host before resolving keys.
- * # Safety
- * Counted bytes and distinct, empty outputs remain live until return.
+ * Open a client on one backend with every other setting at its default.
+ *
+ * This is the shortcut for thinkthen_settings_new, thinkthen_settings_set_backend,
+ * thinkthen_client_open and thinkthen_settings_free. The key comes from the backend's own
+ * environment variable, and the stub backend needs none. Returns THINKTHEN_OK with *out set,
+ * or a negative code with *out set to NULL: -THINKTHEN_CODE_USAGE_BACKEND for an unknown
+ * backend, or -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a key and none is set.
+ * The caller owns *out and frees it with thinkthen_client_free; an old handle in *out is not
+ * freed.
+ * Pointers and threads:
+ * Any thread may call this. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
-int32_t thinkthen_client_open_json(const uint8_t *settings,
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_open_backend(thinkthen_backend backend,
+                                      struct thinkthen_client **out,
+                                      struct thinkthen_error *error);
+
+/**
+ * Open a client from settings JSON.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+ * for settings that are not valid, -THINKTHEN_CODE_USAGE_KEY_MISSING when the backend needs a
+ * key and none is set, or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller
+ * owns *out and frees it with thinkthen_client_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. settings points to len readable bytes, or to a NUL-terminated
+ * string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable.
+ * error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the
+ * code and message; passing it again frees what it held, so a reused error leaks nothing. Free
+ * it with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_client_open_json(const char *settings,
                                    size_t len,
                                    struct thinkthen_client **out,
                                    struct thinkthen_error *error);
 
 /**
- * Free this client; its calls retain the engine independently.
- * # Safety
- * NULL or one live owner after all active operations finish.
+ * Free a client.
+ *
+ * Free a client. NULL is ignored. Calls opened from it keep running on their own.
+ * Pointers and threads:
+ * Call this once, after every other use of client has returned.
  */
 THINKTHEN_API void thinkthen_client_free(struct thinkthen_client *client);
 
 /**
- * Open a copied typed question with its lists, options and optional execution name.
- * NULL name is absent; a present empty name fails the shared name validation.
- * Toolbox selection never supplies this execution name.
- * # Safety
- * Handles, optional name view and distinct empty outputs remain live until return.
+ * Open a streaming call that asks question about each record you send.
+ *
+ * offsets is a thinkthen_offset; C uses THINKTHEN_OFFSET_UTF8. name, when not NULL, names the
+ * run in each row's source; a present empty name is refused. Read the call with
+ * thinkthen_call_next. Returns THINKTHEN_OK with *out set, or a negative code with *out set to
+ * NULL: -THINKTHEN_CODE_USAGE_QUESTION for an incomplete question, -THINKTHEN_CODE_USAGE_NAME
+ * for a bad name, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+ * thinkthen_call_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes question. client and question are live;
+ * both may be freed after return. name is NULL or points to a readable thinkthen_text. out is
+ * writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_open_question(const struct thinkthen_client *client,
                                      const struct thinkthen_question *question,
                                      const struct thinkthen_text *name,
-                                     uint32_t offsets,
+                                     thinkthen_offset offsets,
                                      struct thinkthen_call **out,
                                      struct thinkthen_error *error);
 
 /**
- * Admit a canonical request for a JSON-native host; never load a question file.
- * # Safety
- * Client and counted bytes are live; outputs are distinct empty slots.
+ * Open a call from request JSON, for a host that speaks JSON; question files are never read.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+ * for a request that is not valid, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit,
+ * or -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it
+ * with thinkthen_call_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. client is live. request points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is
+ * writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_open_json(const struct thinkthen_client *client,
-                                 const uint8_t *request,
+                                 const char *request,
                                  size_t len,
-                                 uint32_t offsets,
+                                 thinkthen_offset offsets,
                                  struct thinkthen_call **out,
                                  struct thinkthen_error *error);
 
 /**
- * Send copied text after NEEDS_INPUT; invalid UTF-8 becomes one record.invalid row.
- * # Safety
- * One driver owns a live call and borrows counted readable bytes and an empty error.
+ * Send one text record to a call.
+ *
+ * Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. Text that is not UTF-8 is
+ * sent as a record that fails as record.invalid, and blank text fails as record.empty; neither
+ * reaches the backend.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+ * to len readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED;
+ * it is copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_send_text(struct thinkthen_call *call,
-                                 const uint8_t *data,
+                                 const char *data,
                                  size_t len,
                                  struct thinkthen_error *error);
 
 /**
- * Send copied structured JSON; admission failures become failed records.
- * # Safety
- * One driver owns the call; counted input and error slots remain live.
+ * Send one JSON record to a call.
+ *
+ * Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. JSON that is not valid is
+ * sent as a record that fails as record.json.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+ * to len readable bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED;
+ * it is copied before return. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_send_json(struct thinkthen_call *call,
-                                 const uint8_t *data,
+                                 const char *data,
                                  size_t len,
                                  struct thinkthen_error *error);
 
 /**
- * Send native-endian UTF-16; unpaired surrogates become one failed record.
- * # Safety
- * One driver owns the call; data lends len aligned units or NULL at zero.
+ * Send one UTF-16 text record, in the machine's byte order, to a call.
+ *
+ * Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. Text with an unpaired
+ * surrogate is sent as a record that fails as record.invalid.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. data points
+ * to len readable, aligned uint16_t units; it may be NULL when len is 0. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+ * passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_send_utf16(struct thinkthen_call *call,
                                   const uint16_t *data,
                                   size_t len,
                                   struct thinkthen_error *error);
 
 /**
- * Send an explicit host missing value without a backend call.
- * # Safety
- * One driver owns the live call and empty exclusive error slot.
+ * Send a missing value, such as a SQL NULL, to a call.
+ *
+ * Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. It fails as record.missing
+ * without a backend request.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. error is NULL
+ * or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_send_missing(struct thinkthen_call *call,
                                     struct thinkthen_error *error);
 
 /**
- * Send an explicit host conversion failure without fabricating a JSON id.
- * # Safety
- * One driver owns the live call and empty exclusive error slot.
+ * Send a value the host could not convert to a call.
+ *
+ * Send only after thinkthen_call_next returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when the call is not waiting for input. It fails as record.invalid
+ * without a backend request.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. error is NULL
+ * or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_send_invalid(struct thinkthen_call *call,
                                     struct thinkthen_error *error);
 
 /**
- * Close input without waiting for output capacity or backend work.
- * # Safety
- * A sole driver owns a live call; free cannot run concurrently.
+ * Say no more records are coming.
+ *
+ * Rows already sent still arrive; thinkthen_call_next returns THINKTHEN_END after the last. It
+ * returns at once.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. call is live.
  */
 THINKTHEN_API void thinkthen_call_end_input(struct thinkthen_call *call);
 
 /**
- * Pull one row, reserved input slot or completion. Failed records return OK.
- * # Safety
- * A sole driver owns the call; row/error are sized, distinct, empty output slots.
+ * Read the call's next event: a row, a request for input, or the end.
+ *
+ * Returns THINKTHEN_OK with the next row in *out; THINKTHEN_NEEDS_INPUT when a streaming call
+ * waits for a send or thinkthen_call_end_input; THINKTHEN_END when every row is read; or a
+ * negative code for the call as a whole, such as -THINKTHEN_CODE_LOCAL_CANCELLED. A record
+ * that fails is still THINKTHEN_OK: its row has status THINKTHEN_STATUS_FAILED and its own
+ * code, and reading goes on. *out is empty unless the return is THINKTHEN_OK. A filter row's
+ * input comes from thinkthen_row_original.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. out is
+ * initialized with THINKTHEN_ROW_INIT. Passing it again frees the row it held, so a reused row
+ * leaks nothing; free it with thinkthen_row_free after its last use. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+ * passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_next(struct thinkthen_call *call,
                             struct thinkthen_row *out,
                             struct thinkthen_error *error);
 
 /**
- * Request cancellation concurrently without touching driver state.
- * # Safety
- * The handle remains live until every concurrent operation returns.
+ * Read the next kept record of a filter call, skipping the records it drops.
+ *
+ * This is filter's usual view: a record the model answers no for, or is not sure about, is
+ * skipped. thinkthen_call_next stays the view of every row. Returns THINKTHEN_OK with *row
+ * holding a kept row (thinkthen_row_original gives its input); THINKTHEN_NEEDS_INPUT when a
+ * streaming call waits for a send; THINKTHEN_END when every record is judged; or a negative
+ * code. A failed record returns its own negative code in its place, with its row in *row and
+ * its message in error, and you may keep reading the records after it.
+ * -THINKTHEN_CODE_USAGE_FUNCTION means the call is not a filter call.
+ * Pointers and threads:
+ * One thread at a time drives call; thinkthen_call_cancel may run on any thread. row is
+ * initialized with THINKTHEN_ROW_INIT. Passing it again frees the row it held, so a reused row
+ * leaks nothing; free it with thinkthen_row_free after its last use. error is NULL or
+ * initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and message;
+ * passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_call_next_kept(struct thinkthen_call *call,
+                                 struct thinkthen_row *row,
+                                 struct thinkthen_error *error);
+
+/**
+ * Ask a call to stop.
+ *
+ * It returns at once. Once the call stops, thinkthen_call_next returns
+ * -THINKTHEN_CODE_LOCAL_CANCELLED, and a wait on the call's events wakes.
+ * Pointers and threads:
+ * Any thread may call this, also while another thread drives call. call is live until every
+ * such call returns.
  */
 THINKTHEN_API void thinkthen_call_cancel(struct thinkthen_call *call);
 
 /**
- * Cancel and release a call without joining a backend worker.
- * # Safety
- * NULL or the unique owner after all active operations finish.
+ * Cancel and free a call.
+ *
+ * Free a call. NULL is ignored. It does not wait for a backend request in flight. Rows already
+ * read stay valid.
+ * Pointers and threads:
+ * Call this once, after every other use of call, including thinkthen_call_cancel, has
+ * returned.
  */
 THINKTHEN_API void thinkthen_call_free(struct thinkthen_call *call);
 
 /**
- * Free one owned counted buffer and clear it; empty/NULL is harmless.
- * # Safety
- * The slot uniquely owns an engine allocation and no reader remains.
+ * Free a buffer's contents and leave it empty.
+ *
+ * NULL and an empty buffer are ignored, so a freed buffer may be freed again.
+ * Pointers and threads:
+ * Call this after the last read of buffer.
  */
 THINKTHEN_API void thinkthen_buffer_free(struct thinkthen_buffer *buffer);
 
 /**
- * Free a supported error prefix while preserving caller size and trailing bytes.
- * # Safety
- * NULL or a sized unique error after readers finish; unsupported prefixes are untouched.
+ * Free an error's message and leave it empty.
+ *
+ * NULL, an empty error and an error not initialized with THINKTHEN_ERROR_INIT are ignored, so
+ * a freed error may be freed again or passed again.
+ * Pointers and threads:
+ * Call this after the last read of error.
  */
 THINKTHEN_API void thinkthen_error_free(struct thinkthen_error *error);
 
 /**
- * Free a supported row prefix while preserving caller size and trailing bytes.
- * # Safety
- * NULL or a sized unique row after readers finish; unsupported prefixes are untouched.
+ * Free a row's contents and leave it empty.
+ *
+ * NULL, an empty row and a row not initialized with THINKTHEN_ROW_INIT are ignored, so a freed
+ * row may be freed again or passed again. Views borrowed from the row end here.
+ * Pointers and threads:
+ * Call this after the last read of row and its views.
  */
 THINKTHEN_API void thinkthen_row_free(struct thinkthen_row *row);
 
 /**
- * Admit a question and copy all finite descriptors before starting the shared worker.
- * Initial records in request JSON are rejected as competing collections.
- * # Safety
- * Client and counted request bytes are live; records points to count readable slots
- * of record_stride bytes each, with readable byte views for text and JSON kinds.
- * Each slot has a readable size field; out/error are distinct empty writable slots.
+ * Open a call over count records with a question from request JSON.
+ *
+ * The request must not carry its own records. Read the call with thinkthen_call_next; it never
+ * returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK with *out set, or a negative code with
+ * *out set to NULL: a usage code for a request that is not valid or carries records,
+ * -THINKTHEN_CODE_USAGE_RECORD_KIND for an unknown record kind, -THINKTHEN_CODE_USAGE_ABI for
+ * a bad record size or stride, -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit, or
+ * -THINKTHEN_CODE_USAGE_ABI when the text is not UTF-8. The caller owns *out and frees it with
+ * thinkthen_call_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this. client is live. request points to len readable bytes, or to a NUL-
+ * terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied before return. records
+ * points to count readable thinkthen_record values, each record_stride bytes apart and each
+ * with struct_size set, whose bytes are copied before return. out is writable. error is NULL
+ * or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_open_records_json(const struct thinkthen_client *client,
-                                         const uint8_t *request,
+                                         const char *request,
                                          size_t len,
                                          const struct thinkthen_record_input *records,
                                          size_t count,
                                          size_t record_stride,
-                                         uint32_t offsets,
+                                         thinkthen_offset offsets,
                                          struct thinkthen_call **out,
                                          struct thinkthen_error *error);
 
 /**
- * Open a typed named question over a finite collection copied before return.
- * The exact count preserves finite batching and model-bound admission.
- * # Safety
- * Client, question, optional name and counted descriptors are live until return.
- * Each descriptor has record_stride readable bytes and a supported size prefix.
- * Out and error are distinct empty writable slots; one thread drives the call.
+ * Open a call that asks question about count records.
+ *
+ * name works as in thinkthen_call_open_question. Read the call with thinkthen_call_next; it
+ * never returns THINKTHEN_NEEDS_INPUT. Returns THINKTHEN_OK with *out set, or a negative code
+ * with *out set to NULL: -THINKTHEN_CODE_USAGE_QUESTION for an incomplete question,
+ * -THINKTHEN_CODE_USAGE_NAME for a bad name, -THINKTHEN_CODE_USAGE_RECORD_KIND for an unknown
+ * record kind, -THINKTHEN_CODE_USAGE_ABI for a bad record size or stride, or
+ * -THINKTHEN_CODE_USAGE_OFFSETS for an unknown offsets unit. The caller owns *out and frees it
+ * with thinkthen_call_free; an old handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes question. client and question are live.
+ * records points to count readable thinkthen_record values, each record_stride bytes apart and
+ * each with struct_size set, whose bytes are copied before return. name is NULL or points to a
+ * readable thinkthen_text. out is writable. error is NULL or initialized with
+ * THINKTHEN_ERROR_INIT. On a negative return it holds the code and message; passing it again
+ * frees what it held, so a reused error leaks nothing. Free it with thinkthen_error_free after
+ * its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_call_open_records_question(const struct thinkthen_client *client,
                                              const struct thinkthen_question *question,
                                              const struct thinkthen_text *name,
                                              const struct thinkthen_record_input *records,
                                              size_t count,
                                              size_t record_stride,
-                                             uint32_t offsets,
+                                             thinkthen_offset offsets,
                                              struct thinkthen_call **out,
                                              struct thinkthen_error *error);
 
 /**
- * Borrow the original filter input after call/client destruction, until row cleanup.
- * # Safety
- * Row is an engine-produced supported prefix with a live source allocation;
- * out/error are distinct empty writable slots. Immutable readers may run concurrently.
+ * Write the input of a filter or rank row to *out.
+ *
+ * *out borrows from the row and lasts until thinkthen_row_free(row), even after the call and
+ * client are freed; never free it. Returns THINKTHEN_OK with *out written, or a negative code
+ * with *out unchanged: -THINKTHEN_CODE_USAGE_FUNCTION when the row is not a filter or rank row, or
+ * -THINKTHEN_CODE_USAGE_ABI when the row did not come from this library.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees row. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_row_original(const struct thinkthen_row *row,
                                struct thinkthen_record_view *out,
                                struct thinkthen_error *error);
 
 /**
- * Evaluate one record; a failed record is an OK row, never an operation error.
- * # Safety
- * Handles and counted input are live; sized row/error outputs are distinct and empty.
+ * Answer one question about one record and write its whole row to *out.
+ *
+ * Returns THINKTHEN_OK when the record is answered, THINKTHEN_UNSURE when the model is not
+ * sure, or a negative thinkthen_code: the record's own code when it fails (for example
+ * -THINKTHEN_CODE_RECORD_EMPTY for blank text, which is never sent), a backend code when
+ * the backend fails, or a usage code for a bad argument. Read row.answer_bool, row.number
+ * or row.rank only after THINKTHEN_OK. The row is written in every case except a usage
+ * error. Passing the same row again frees what it held, so a reused row leaks nothing;
+ * free it with thinkthen_row_free after its last use.
+ * Pointers and threads:
+ * Any thread may call this, and threads may share the client and the question while no
+ * thread changes the question. data points to len readable bytes (or a NUL-terminated
+ * string with THINKTHEN_NUL_TERMINATED). out is initialized with THINKTHEN_ROW_INIT or
+ * freed after its last use; error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_run_one(const struct thinkthen_client *client,
                           const struct thinkthen_question *question,
-                          const uint8_t *data,
+                          const char *data,
                           size_t len,
-                          uint32_t kind,
+                          thinkthen_record_kind kind,
                           struct thinkthen_row *out,
                           struct thinkthen_error *error);
 
 /**
- * Borrow an answered choose label until value cleanup.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a choose value's choice to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. *out borrows
+ * from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_choice(const struct thinkthen_value *value,
                                struct thinkthen_text *out,
                                struct thinkthen_error *error);
 
 /**
- * Read an answered decide or filter boolean as zero or one.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a decide or filter value's answer to *out: 1 for yes and 0 for no.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_bool(const struct thinkthen_value *value,
                              uint8_t *out,
                              struct thinkthen_error *error);
 
 /**
- * Read an answered score without an aggregate probability.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a score value's score, from 0 to 1, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_number(const struct thinkthen_value *value,
                                double *out,
                                struct thinkthen_error *error);
 
 /**
- * Read an answered rank, independent of its original input position.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a rank value's rank, 1 for the first, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_rank(const struct thinkthen_value *value,
                              uint64_t *out,
                              struct thinkthen_error *error);
 
 /**
- * Count the answered tag labels, including a legitimate empty answer.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many labels a tag value applies to *out; 0 is a real answer.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_tag_count(const struct thinkthen_value *value,
                                   size_t *out,
                                   struct thinkthen_error *error);
 
 /**
- * Borrow one answered tag label until value cleanup.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a tag value's label at index to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when index is out of range. *out borrows from value and lasts
+ * until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_tag_at(const struct thinkthen_value *value,
                                size_t index,
                                struct thinkthen_text *out,
                                struct thinkthen_error *error);
 
 /**
- * Borrow a find answer; present zero means answered null, distinct from unsure.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write a find value's answer to *out; out->present is 0 when the answer is that no part
+ * answers it.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. *out borrows
+ * from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_found(const struct thinkthen_value *value,
                               struct thinkthen_span *out,
                               struct thinkthen_error *error);
 
 /**
- * Count recognized names from a recognize answer or relate detail.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many names a recognize value, or a relate value's detail, holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_name_count(const struct thinkthen_value *value,
                                    size_t *out,
                                    struct thinkthen_error *error);
 
 /**
- * Borrow one recognized name and its typed support probability.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the name at index, with its kind and probability, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when index is out of range. *out borrows from value and lasts
+ * until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_name_at(const struct thinkthen_value *value,
                                 size_t index,
                                 struct thinkthen_name *out,
                                 struct thinkthen_error *error);
 
 /**
- * Count answered relations.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many relations a relate value holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_relation_count(const struct thinkthen_value *value,
                                        size_t *out,
                                        struct thinkthen_error *error);
 
 /**
- * Borrow one answered relation and both typed endpoints.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the relation at index, with both names it joins, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when index is out of range. *out borrows from value and lasts
+ * until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_relation_at(const struct thinkthen_value *value,
                                     size_t index,
                                     struct thinkthen_relation *out,
                                     struct thinkthen_error *error);
 
 /**
- * Count named annotation outcomes, including failed children.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many named answers an annotate value holds, failed ones included, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written; THINKTHEN_UNSURE with *out unchanged when the value
+ * is not sure; or a negative code with *out unchanged: the record's own code when the value
+ * failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_annotation_count(const struct thinkthen_value *value,
                                          size_t *out,
                                          struct thinkthen_error *error);
 
 /**
- * Borrow an entry name and copy its typed outcome into an independent owner.
- * # Safety
- * Value is live; name/out/error are distinct empty writable slots.
+ * Write the name of the answer at index to *name and a copy of the answer to *out.
+ *
+ * Returns THINKTHEN_OK with *name and *out written; THINKTHEN_UNSURE with *out unchanged when
+ * the value is not sure; or a negative code with *out unchanged: the record's own code when
+ * the value failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when index is out of range. *name borrows from value and
+ * lasts until thinkthen_value_free(value). The caller owns *out, which follows its own
+ * function's rules, and frees it with thinkthen_value_free; an old handle in *out is not
+ * freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is live. name and out
+ * are writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return
+ * it holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_annotation_at(const struct thinkthen_value *value,
                                       size_t index,
                                       struct thinkthen_text *name,
@@ -1296,85 +2351,168 @@ int32_t thinkthen_value_annotation_at(const struct thinkthen_value *value,
                                       struct thinkthen_error *error);
 
 /**
- * Count optional choose/tag label probabilities.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Look up one annotation answer by its question's name, and copy it into a new value.
+ *
+ * The new value follows its own function's rules, so read it with that function's accessor.
+ * Returns THINKTHEN_OK with *out set; THINKTHEN_UNSURE with *out set to NULL when the
+ * annotation itself is not sure; or a negative code with *out set to NULL: the record's own
+ * code when it failed, -THINKTHEN_CODE_USAGE_FUNCTION when the value is not an annotation,
+ * -THINKTHEN_CODE_USAGE_NAME when no question has that name, or -THINKTHEN_CODE_USAGE_ABI when
+ * the text is not UTF-8. The caller owns *out and frees it with thinkthen_value_free; an old
+ * handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. name points to len readable
+ * bytes, or to a NUL-terminated string when len is THINKTHEN_NUL_TERMINATED; it is copied
+ * before return. out is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
+int32_t thinkthen_value_annotation_get(const struct thinkthen_value *value,
+                                       const char *name,
+                                       size_t len,
+                                       struct thinkthen_value **out,
+                                       struct thinkthen_error *error);
+
+/**
+ * Write how many label probabilities a choose or tag value's detail holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+ * writes 0.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
+ */
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_label_count(const struct thinkthen_value *value,
                                     size_t *out,
                                     struct thinkthen_error *error);
 
 /**
- * Borrow one choose/tag label probability, including unselected labels.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the label probability at index, chosen or not, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_label_at(const struct thinkthen_value *value,
                                  size_t index,
                                  struct thinkthen_probability *out,
                                  struct thinkthen_error *error);
 
 /**
- * Count optional score/rank level probabilities in question order.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many level probabilities a score or rank value's detail holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+ * writes 0.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_level_count(const struct thinkthen_value *value,
                                     size_t *out,
                                     struct thinkthen_error *error);
 
 /**
- * Read one score/rank level probability in question order.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the probability of the level at index, in question order, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_level_at(const struct thinkthen_value *value,
                                  size_t index,
                                  double *out,
                                  struct thinkthen_error *error);
 
 /**
- * Count recognition's original pieces, or zero when detail is absent.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many pieces a recognize value's detail split the text into to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+ * writes 0.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_piece_count(const struct thinkthen_value *value,
                                     size_t *out,
                                     struct thinkthen_error *error);
 
 /**
- * Borrow an original piece and its translated span.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the piece at index, with its span, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_piece_at(const struct thinkthen_value *value,
                                  size_t index,
                                  struct thinkthen_span *out,
                                  struct thinkthen_error *error);
 
 /**
- * Count one piece's typed boundary probabilities.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many boundary probabilities the piece at index holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_piece_tag_count(const struct thinkthen_value *value,
                                         size_t index,
                                         size_t *out,
                                         struct thinkthen_error *error);
 
 /**
- * Borrow one original piece's boundary label and probability.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write boundary probability tag of the piece at index to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_piece_tag_at(const struct thinkthen_value *value,
                                      size_t index,
                                      size_t tag,
@@ -1382,43 +2520,73 @@ int32_t thinkthen_value_piece_tag_at(const struct thinkthen_value *value,
                                      struct thinkthen_error *error);
 
 /**
- * Count proposed-name detail entries for recognition.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many proposed names a recognize value's detail holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+ * writes 0.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_kind_count(const struct thinkthen_value *value,
                                    size_t *out,
                                    struct thinkthen_error *error);
 
 /**
- * Read one proposed name's translated span; this detail has no text field.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the text and span of the proposed name at index to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_kind_span(const struct thinkthen_value *value,
                                   size_t index,
                                   struct thinkthen_span *out,
                                   struct thinkthen_error *error);
 
 /**
- * Count one proposed name's caller-domain kind probabilities.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many kind probabilities the proposed name at index holds to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_kind_probability_count(const struct thinkthen_value *value,
                                                size_t index,
                                                size_t *out,
                                                struct thinkthen_error *error);
 
 /**
- * Borrow one proposed name's kind label and probability.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write kind probability choice of the proposed name at index to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_kind_probability_at(const struct thinkthen_value *value,
                                             size_t index,
                                             size_t choice,
@@ -1426,144 +2594,233 @@ int32_t thinkthen_value_kind_probability_at(const struct thinkthen_value *value,
                                             struct thinkthen_error *error);
 
 /**
- * Count evaluated relation candidate pairs, including pairs outside the answer.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write how many name pairs a relate value's detail judged, related or not, to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's. A value without detail
+ * writes 0.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_pair_count(const struct thinkthen_value *value,
                                    size_t *out,
                                    struct thinkthen_error *error);
 
 /**
- * Borrow one evaluated candidate pair using the same typed relation shape.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the judged pair at index to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or a negative code with *out unchanged:
+ * -THINKTHEN_CODE_USAGE_FUNCTION when the value is another function's, or
+ * -THINKTHEN_CODE_USAGE_ARGUMENT when an index is out of range or the value has no detail.
+ * *out borrows from value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_pair_at(const struct thinkthen_value *value,
                                 size_t index,
                                 struct thinkthen_relation *out,
                                 struct thinkthen_error *error);
 
 /**
- * Compare required and engine ABI versions using the shared acceptance rule.
+ * Return 1 when a library with binary interface actual serves a caller built for required, and
+ * 0 when not.
+ *
+ * The major versions must match, and actual's minor must be at least required's. Any thread
+ * may call this.
  */
 THINKTHEN_API uint8_t thinkthen_abi_compatible(uint32_t required, uint32_t actual);
 
 /**
- * Number of codes in the authoritative engine registry.
+ * Return how many codes thinkthen_code_at lists.
+ *
+ * Any thread may call this.
  */
 THINKTHEN_API size_t thinkthen_code_count(void);
 
 /**
- * Registry code at index, or zero outside the registry. Zero is not an error code.
+ * Return the code at index, or 0 when index is out of range; 0 is never a code.
+ *
+ * Any thread may call this.
  */
 THINKTHEN_API int32_t thinkthen_code_at(size_t index);
 
 /**
- * Copy typed row values into an independent owner; every view borrows that owner.
- * # Safety
- * Row is a live sized prefix; out/error are distinct empty writable slots.
+ * Copy a row's answer into a new value, which the thinkthen_value_* functions read.
+ *
+ * Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+ * -THINKTHEN_CODE_USAGE_ABI when the row is empty or did not come from this library. The
+ * caller owns *out, which outlives the row, and frees it with thinkthen_value_free; an old
+ * handle in *out is not freed.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees row. out is writable. error is
+ * NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+ * message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+ * thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_row_values(const struct thinkthen_row *row,
                              struct thinkthen_value **out,
                              struct thinkthen_error *error);
 
 /**
- * Release a typed snapshot after all of its borrowed field views are finished.
- * # Safety
- * NULL or the unique live value owner with no active readers.
+ * Free a value.
+ *
+ * Free a value. NULL is ignored. Views borrowed from it end here.
+ * Pointers and threads:
+ * Call this once, after every other use of value and its views has returned.
  */
 THINKTHEN_API void thinkthen_value_free(struct thinkthen_value *value);
 
 /**
- * Read a typed function discriminator without interpreting JSON.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the value's thinkthen_function to *out.
+ *
+ * Returns THINKTHEN_OK with *out written.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_function(const struct thinkthen_value *value,
-                                 uint32_t *out,
+                                 thinkthen_function *out,
                                  struct thinkthen_error *error);
 
 /**
- * Read a typed status discriminator.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the value's thinkthen_status to *out.
+ *
+ * Returns THINKTHEN_OK with *out written.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_status(const struct thinkthen_value *value,
-                               uint32_t *out,
+                               thinkthen_status *out,
                                struct thinkthen_error *error);
 
 /**
- * Borrow source fields until value cleanup. Annotation entries have no source.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write which question, backend and model gave the value to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged for
+ * an annotation entry, which has no source. *out borrows from value and lasts until
+ * thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_source(const struct thinkthen_value *value,
                                struct thinkthen_source *out,
                                struct thinkthen_error *error);
 
 /**
- * Borrow an exact identifier; integer variants never use a double.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the record's id to *out, exactly: integers never pass through a double.
+ *
+ * out->kind is one of the THINKTHEN_ID_* kinds. Returns THINKTHEN_OK with *out written, or
+ * -THINKTHEN_CODE_USAGE_ABI with *out unchanged for an annotation entry. *out borrows from
+ * value and lasts until thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_id(const struct thinkthen_value *value,
                            struct thinkthen_id *out,
                            struct thinkthen_error *error);
 
 /**
- * Copy a failed-record error into a sized owner; an ordinary result gives no code.
- * # Safety
- * Value is live; result/error are sized, distinct empty writable slots.
+ * Copy a failed value's code and message into *result; it stays empty for a value that did not
+ * fail.
+ *
+ * result is initialized with THINKTHEN_ERROR_INIT. Passing it again frees what it held, so a
+ * reused result leaks nothing; free it with thinkthen_error_free. Returns THINKTHEN_OK, or
+ * -THINKTHEN_CODE_USAGE_ABI when result is not initialized.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is live. result and
+ * error are different variables. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+ * negative return it holds the code and message; passing it again frees what it held, so a
+ * reused error leaks nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_error(const struct thinkthen_value *value,
                               struct thinkthen_error *result,
                               struct thinkthen_error *error);
 
 /**
- * Read an aggregate probability; NaN means the function has no defined aggregate.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the value's probability to *out; NaN when its function has none.
+ *
+ * Returns THINKTHEN_OK with *out written.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_probability(const struct thinkthen_value *value,
                                     double *out,
                                     struct thinkthen_error *error);
 
 /**
- * Distinguish absent detail from a present empty typed detail collection.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write 1 to *out when the value carries detail, even an empty list, and 0 when it does not.
+ *
+ * Returns THINKTHEN_OK with *out written.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_has_detail(const struct thinkthen_value *value,
                                    uint8_t *out,
                                    struct thinkthen_error *error);
 
 /**
- * Borrow the actual execution name; a null text view means unnamed execution.
- * # Safety
- * Value is live; out and error are distinct empty writable slots.
+ * Write the run's name to *out; out->data is NULL when the run has none.
+ *
+ * Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged for
+ * an annotation entry. *out borrows from value and lasts until thinkthen_value_free(value);
+ * never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_source_name(const struct thinkthen_value *value,
                                     struct thinkthen_text *out,
                                     struct thinkthen_error *error);
 
 /**
- * Borrow original filter bytes owned by this independent typed snapshot.
- * # Safety
- * Value is live; out/error are distinct empty writable slots; readers may run concurrently.
+ * Write the input of a filter or rank value to *out.
+ *
+ * Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged
+ * when the value has no input. *out borrows from value and lasts until
+ * thinkthen_value_free(value); never free it.
+ * Pointers and threads:
+ * Any thread may call this while no thread changes or frees value. value is a live value. out
+ * is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+ * holds the code and message; passing it again frees what it held, so a reused error leaks
+ * nothing. Free it with thinkthen_error_free after its last use.
  */
-THINKTHEN_API
+THINKTHEN_API THINKTHEN_NODISCARD
 int32_t thinkthen_value_original(const struct thinkthen_value *value,
                                  struct thinkthen_record_view *out,
                                  struct thinkthen_error *error);
@@ -1572,4 +2829,17 @@ int32_t thinkthen_value_original(const struct thinkthen_value *value,
 }  // extern "C"
 #endif  // __cplusplus
 
+
+/*
+ * THINKTHEN_ERROR_INIT and THINKTHEN_ROW_INIT initialize an empty error or row:
+ * thinkthen_error error = THINKTHEN_ERROR_INIT; thinkthen_row row = THINKTHEN_ROW_INIT;
+ * They set struct_size, which every function checks before it writes the slot.
+ */
+#ifdef __cplusplus
+#define THINKTHEN_ERROR_INIT {sizeof(thinkthen_error), {}, {}, {}}
+#define THINKTHEN_ROW_INIT {sizeof(thinkthen_row), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}}
+#else
+#define THINKTHEN_ERROR_INIT {.struct_size = sizeof(thinkthen_error)}
+#define THINKTHEN_ROW_INIT {.struct_size = sizeof(thinkthen_row)}
+#endif
 #endif  /* THINKTHEN_H */

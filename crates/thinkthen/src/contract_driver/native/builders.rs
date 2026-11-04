@@ -15,11 +15,13 @@ fn name_error(message: impl Into<String>) -> Error {
 pub struct QuestionBuilder {
     function: FunctionName,
     text: String,
-    items: Vec<String>,
+    items: Vec<questions::AnswerOption>,
+    yes: Option<String>,
+    no: Option<String>,
     rules: Vec<questions::RelationRule>,
     entries: BTreeMap<String, questions::AnnotatableQuestion>,
     threshold: Option<Threshold>,
-    evidence: Option<Pointer>,
+    field: Option<Pointer>,
     top: Option<crate::core::RankLimit>,
 }
 impl QuestionBuilder {
@@ -45,10 +47,12 @@ impl QuestionBuilder {
             function,
             text: text.into(),
             items: Vec::new(),
+            yes: None,
+            no: None,
             rules: Vec::new(),
             entries: BTreeMap::new(),
             threshold: None,
-            evidence: None,
+            field: None,
             top: None,
         })
     }
@@ -59,10 +63,12 @@ impl QuestionBuilder {
             function: question.function(),
             text: String::new(),
             items: Vec::new(),
+            yes: None,
+            no: None,
             rules: Vec::new(),
             entries: BTreeMap::new(),
             threshold: None,
-            evidence: question.evidence_override().cloned(),
+            field: question.field_override().cloned(),
             top: None,
         };
         macro_rules! predicate {
@@ -72,17 +78,20 @@ impl QuestionBuilder {
             }};
         }
         match question {
-            Question::Decide(q) => predicate!(q),
-            Question::Filter(q) => predicate!(q),
+            Question::Decide(q) => {
+                predicate!(q);
+                draft.yes = q.inner.yes.clone();
+                draft.no = q.inner.no.clone();
+            }
+            Question::Filter(q) => {
+                predicate!(q);
+                draft.yes = q.inner.yes.clone();
+                draft.no = q.inner.no.clone();
+            }
             Question::Find(q) => predicate!(q),
             Question::Choose(q) => {
                 predicate!(q);
-                draft.items = q
-                    .inner
-                    .options
-                    .iter()
-                    .map(|item| item.label().to_owned())
-                    .collect();
+                draft.items = q.inner.options.clone();
             }
             Question::Tag(q) => {
                 predicate!(q);
@@ -98,12 +107,7 @@ impl QuestionBuilder {
                 draft.top = q.top;
             }
             Question::Recognize(q) => {
-                draft.items = q
-                    .inner
-                    .kinds
-                    .iter()
-                    .map(|item| item.label().to_owned())
-                    .collect();
+                draft.items = q.inner.kinds.clone();
                 draft.threshold = Some(q.inner.threshold);
             }
             Question::Relate(q) => {
@@ -142,15 +146,15 @@ impl QuestionBuilder {
                 "a domain for another function",
             )));
         }
-        crate::core::ChoiceOption::new(text)?;
-        if self.items.iter().any(|item| item == text) {
+        let item = crate::core::ChoiceOption::new(text)?;
+        if self.items.iter().any(|item| item.label() == text) {
             return Err(question_error(crate::core::diagnostic::requirement(
                 "domain",
                 "distinct entries",
                 "a repeated entry (contents redacted)",
             )));
         }
-        self.items.push(text.into());
+        self.items.push(item);
         Ok(())
     }
     /// Set a validated numeric threshold for a threshold-taking function.
@@ -195,11 +199,11 @@ impl QuestionBuilder {
         self.threshold = Some(threshold);
         Ok(())
     }
-    /// Copy one admitted evidence selection.
+    /// Copy one admitted field selection.
     /// # Errors
     /// Returns the shared pointer error without changing the builder.
-    pub fn set_evidence(&mut self, pointer: &str) -> Result<(), Error> {
-        self.evidence = Some(pointer.parse()?);
+    pub fn set_field(&mut self, pointer: &str) -> Result<(), Error> {
+        self.field = Some(pointer.parse()?);
         Ok(())
     }
     /// Retain at most this many successful ranks.
@@ -267,42 +271,48 @@ impl QuestionBuilder {
         macro_rules! finish {
             ($variant:ident,$value:expr) => {{
                 let value = $value;
-                Question::$variant(match &self.evidence {
-                    Some(pointer) => value.evidence(pointer.clone()),
+                Question::$variant(match &self.field {
+                    Some(pointer) => value.field(pointer.clone()),
                     None => value,
                 })
             }};
         }
         Ok(match self.function {
-            FunctionName::Decide => finish!(
-                Decide,
-                questions::Decide::new(&self.text)?.threshold(threshold)
-            ),
-            FunctionName::Filter => finish!(
-                Filter,
-                questions::Filter::new(&self.text)?.threshold(threshold)
-            ),
+            FunctionName::Decide => {
+                let mut value = questions::Decide::new(&self.text)?.threshold(threshold);
+                value.inner.yes = self.yes.clone();
+                value.inner.no = self.no.clone();
+                finish!(Decide, value)
+            }
+            FunctionName::Filter => {
+                let mut value = questions::Filter::new(&self.text)?.threshold(threshold);
+                value.inner.yes = self.yes.clone();
+                value.inner.no = self.no.clone();
+                finish!(Filter, value)
+            }
             FunctionName::Choose => finish!(
                 Choose,
-                questions::Choose::new(&self.text, self.items.clone())?.threshold(threshold)
+                questions::Choose::with_options(&self.text, self.items.clone())?
+                    .threshold(threshold)
             ),
             FunctionName::Tag => finish!(
                 Tag,
-                questions::Tag::new(&self.text, self.items.clone())?.threshold(cut?)
+                questions::Tag::with_options(&self.text, self.items.clone())?.threshold(cut?)
             ),
             FunctionName::Score => finish!(
                 Score,
-                questions::Score::new(&self.text, self.items.clone())?
+                questions::Score::with_options(&self.text, self.items.clone())?
             ),
             FunctionName::Rank => {
-                let mut value = questions::Rank::new(&self.text, self.items.clone())?;
+                let mut value = questions::Rank::with_options(&self.text, self.items.clone())?;
                 value.top = self.top;
                 finish!(Rank, value)
             }
             FunctionName::Find => finish!(Find, questions::Find::new(&self.text)?.threshold(cut?)),
             FunctionName::Recognize => finish!(
                 Recognize,
-                questions::Recognize::new(self.items.clone())?.threshold(cut?)
+                questions::Recognize::new(self.items.iter().map(|item| item.label().to_owned()))?
+                    .threshold(cut?)
             ),
             FunctionName::Relate => finish!(
                 Relate,

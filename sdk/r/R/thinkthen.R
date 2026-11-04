@@ -8,14 +8,14 @@
       class = c(paste0("thinkthen_", error$family, "_error"),
                 if (identical(error$code, "local.cancelled")) "thinkthen_cancelled_error",
                 "thinkthen_error"),
-      code = error$code, call = NULL, trace = rlang::trace_back(bottom = globalenv()))
+      code = error$code, call = rlang::caller_env(), trace = rlang::trace_back(bottom = globalenv()))
   }
   result
 }
 
 .tt_r_error <- function(message, code) {
-  rlang::abort(message, class = c("thinkthen_r_error", "thinkthen_error"),
-               code = paste0("r.", code), call = NULL)
+  rlang::abort(message, class = c("thinkthen_usage_error", "thinkthen_error"),
+               code = "usage.argument", call = rlang::caller_env())
 }
 
 .tt_dots <- function(...) {
@@ -62,10 +62,18 @@
   c(values[!vapply(values, is.null, logical(1))], .dots)
 }
 
+#' Create an engine client; an omitted backend reads THINKTHEN_BACKEND.
+#'
+#' @rdname tt_client
+#' @export
 tt_client <- function(backend = NULL, ..., api_key = NULL, url = NULL,
                       model = NULL, batch = NULL, retry = NULL) {
   .tt_check_abi()
   dots <- .tt_dots(...)
+  if (is.null(backend)) {
+    backend <- Sys.getenv("THINKTHEN_BACKEND", unset = NA_character_)
+    if (identical(backend, NA_character_)) backend <- NULL
+  }
   force(backend); force(api_key); force(url); force(model); force(batch); force(retry)
   if (inherits(retry, "tt_retry")) retry <- .tt_snapshot_value(retry)
   settings <- .tt_options(backend = backend, api_key = api_key, url = url,
@@ -75,21 +83,31 @@ tt_client <- function(backend = NULL, ..., api_key = NULL, url = NULL,
             class = "tt_client")
 }
 
-tt_client_from_env <- function(...) tt_client(...)
 print.tt_client <- function(x, ...) { cat("<tt_client>\n"); invisible(x) }
+#' Release a client; repeated close is safe and scoped defaults borrow clients.
+#'
+#' @rdname tt_client
+#' @export
 tt_close <- function(client) {
   .Call("wrap__r_client_close", client, PACKAGE = "thinkthen")
   invisible(NULL)
 }
 
+#' Set a scoped default and restore the previous client on normal or exceptional exit.
+#'
+#' @rdname tt_client
+#' @export
 local_tt_client <- function(client, .env = parent.frame()) {
   previous <- .tt_state$client
   .tt_state$client <- client
-  restore <- function() .tt_state$client <- previous
-  eval(call("on.exit", as.call(list(restore)), add = TRUE), envir = .env)
+  withr::defer(.tt_state$client <- previous, envir = .env)
   invisible(client)
 }
 
+#' Evaluate an expression with a borrowed default client, then restore the previous default.
+#'
+#' @rdname tt_client
+#' @export
 with_tt_client <- function(client, code) {
   previous <- .tt_state$client
   on.exit(.tt_state$client <- previous)
@@ -97,6 +115,10 @@ with_tt_client <- function(client, code) {
   force(code)
 }
 
+#' Admit immutable retry settings with the shared engine.
+#'
+#' @rdname tt_client
+#' @export
 tt_retry <- function(..., max_retries = NULL, initial_backoff_ms = NULL,
                      attempt_timeout_ms = NULL) {
   dots <- .tt_dots(...)

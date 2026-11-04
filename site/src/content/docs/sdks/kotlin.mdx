@@ -1,0 +1,154 @@
+---
+title: Kotlin SDK
+description: "Kotlin SDK: the ten functions as suspend calls on a client, with not sure thrown as UnsureException."
+goal: A Kotlin developer installs the SDK, gets a first answer from decide, learns how not sure and failure arrive, and finds the Kotlin call for each function.
+reader: A Kotlin developer who wants answers about text inside a JVM program
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+
+The Kotlin SDK gives your code the ten functions as `suspend` calls on a client; each returns a result whose `answer()` you can use directly, such as `true` or `false` from decide.
+
+<Example id="lang-kotlin" title="Main.kt" />
+
+Add it to Gradle or Maven. It includes the native engine:
+
+<InstallLine k="languages.kotlin.install" lang="text" />
+
+It needs Kotlin/JVM on Java 22 or later. Set the Kotlin JVM target to 22, and run with `--enable-native-access=ALL-UNNAMED`. The client uses the key you set in the [Quickstart](/quickstart/).
+
+## When decide is not sure
+
+Give decide a low and a high bar, and a text that falls between them is not sure. `answer()` then throws `UnsureException`, so not sure can't pass for a no. This message lands between the bars:
+
+<Example id="sdk-kotlin-unsure" title="Main.kt" />
+
+Send not sure to a person. To branch without the exception, check `isUnsure` first, or use `when` on the result: it is a `Row.Answered`, a `Row.Unsure` or a `Row.Failed`. `UnsureException` is a `NoSuchElementException` and carries the `probability`.
+
+## When a call fails
+
+Blank text throws `ThinkThenException` at once, and nothing is sent:
+
+<Example id="sdk-kotlin-failure" title="Main.kt" />
+
+Any other failure, such as the service being down, comes back as a `Row.Failed`, with `isFailed` set. Its `answer()` throws `ThinkThenException`, whose `code.wireName` names the problem. Passing a `List` or a `Flow` to a one-message call does not compile; the compiler names the `Stream` call to use instead. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+
+## The ten functions
+
+Each example asks about the same support-inbox messages as the function pages.
+
+### decide
+
+<details class="example-disclosure">
+<summary>decide: yes, no or not sure</summary>
+
+<Example id="lang-kotlin" title="Main.kt" />
+
+The message asks for a refund, so decide says `true`. `threshold = Threshold.cut(0.8)` moves the bar, and `Threshold.band(0.2, 0.8)` sets a low and a high bar, as above. `field = Pointer("/text")` picks the field to judge in a JSON message. `client.decideStream(question, messages)` judges a whole list and gives a `Flow` of results, one per message. [decide](/functions/decide/) shows every answer.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>choose: one answer from your list</summary>
+
+<Example id="sdk-kotlin-choose" title="Main.kt" />
+
+A refund request is about billing, so `answer()` is the `String` `billing`. With a `threshold`, choose is not sure when no choice reaches the bar, and `answer()` throws `UnsureException`. [choose](/functions/choose/) shows every answer.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>filter: keep the messages that answer yes</summary>
+
+<Example id="sdk-kotlin-filter" title="Main.kt" />
+
+filter gives a `Flow` of your own messages that answer yes: the refund request and the double charge. Not-sure messages are left out. If a message fails, the kept messages still arrive, then the flow throws one `ThinkThenException` whose `failures` lists each failed result. `client.filterRows(...)` gives every message instead, with `item`, `kept` and `answer()`. [filter](/functions/filter/) shows every answer.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>tag: every label that fits</summary>
+
+<Example id="sdk-kotlin-tag" title="Main.kt" />
+
+The message names a double charge and a late parcel, so both labels fit. The answer is a `List<String>`, empty when none fits. [tag](/functions/tag/) shows every answer.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>score: a number from 0 to 1</summary>
+
+<Example id="sdk-kotlin-score" title="Main.kt" />
+
+A refund request is routine, so it scores near 0. The answer is a `Double`, and levels run lowest first. [score](/functions/score/) shows every answer.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>rank: put messages in order</summary>
+
+<Example id="sdk-kotlin-rank" title="Main.kt" />
+
+The double charge is the most urgent, so it ranks 1. `answer()` is the rank, a `Long` from 1, and `position` is the message's place in your list, counted from 1. `top = 2` ranks only the first two. [rank](/functions/rank/) shows every answer.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>find: the line that answers</summary>
+
+<Example id="sdk-kotlin-find" title="Main.kt" />
+
+The second line holds the request. The answer is a `Span?` with `text`, `start` and `end`, counted as Kotlin counts a `String`. It is `null` when no line answers. [find](/functions/find/) shows every answer.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>recognize: names and their kinds</summary>
+
+<Example id="sdk-kotlin-recognize" title="Main.kt" />
+
+Morgan is a person and Example Group an organization. Each name is an `Entity` with a `mention`, holding its `kind` and `span`, and a `probability`. [recognize](/functions/recognize/) shows every answer.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>relate: how names connect</summary>
+
+<Example id="sdk-kotlin-relate" title="Main.kt" />
+
+Morgan works for Example Group, so relate links the two by the rule. relate finds the names itself, so it needs no recognize call first. `RelationRule` also takes `reads` and `either = true`. [relate](/functions/relate/) shows every answer.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>annotate: several questions at once</summary>
+
+<Example id="sdk-kotlin-annotate" title="Main.kt" />
+
+Each message gets all three answers: refund or not, the topic, and its urgency. `answers.decide("refund")` follows the rules of decide, so its `answer()` throws `UnsureException` when not sure. It throws `ThinkThenException` for a name you never added; `decideOrNull("refund")` returns `null` instead. `client.annotate(questions, message)` answers one message. [annotate](/functions/annotate/) shows every answer.
+
+</details>
+
+## The full API
+
+Every one-message call has a `Stream` form, such as `decideStream`, that takes an `Iterable` or a `Flow`. Close the client with `use`, which also cancels its running flows. The [Kotlin source](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/kotlin/src/main/kotlin/dev/thinkthen/kotlin) lists every name.

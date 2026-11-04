@@ -1,0 +1,60 @@
+---
+title: Triage a support inbox
+description: Ask two questions about every support message in one annotate call, send each message to its queue, and hand the not-sure ones to a person.
+goal: A support lead or developer leaves with every message in a queue, and the messages ThinkThen is not sure about in a file for a person to read.
+reader: Someone who wants incoming support messages sorted before a person reads them
+kind: how-to
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+
+At the end, every message in your inbox has a queue, and the messages ThinkThen is not sure about wait in a file for a person.
+
+## 1. Put the messages in a file
+
+Write one message per line as JSON, each with an `id` and a `text`:
+
+<ExampleFile id="howto-triage-ask" file="messages.jsonl" />
+
+## 2. Write the questions in a toolbox
+
+A [toolbox](/command-line/toolboxes/) file holds several named questions. `refund` is a yes-or-no question with a low and a high bar, so a message between them comes back not sure. `topic` picks one queue. `field` says which part of each line to read.
+
+<ExampleFile id="howto-triage-ask" file="triage.json" />
+
+## 3. Ask both questions about every message
+
+[annotate](/functions/annotate/) asks every question in the toolbox about each message. `--into triage` adds the answers to each line under `triage`, and `jq` shows them:
+
+<Example id="howto-triage-ask" />
+
+The first message asks for a refund and the second doesn't. The double charge falls between the bars, so its refund answer is `"unsure"`.
+
+## 4. Send each message to its queue
+
+The model only answers. Your code decides the route, here in `route.jq`:
+
+<ExampleFile id="howto-triage-route" file="route.jq" />
+
+<Example id="howto-triage-route" />
+
+When both answers arrived, a refund goes to the refunds queue and anything else goes to its topic. If either answer is not sure or failed, the message goes to a person, never to a queue by default.
+
+## 5. Hand the not-sure messages to a person
+
+Keep the not-sure and failed lines in their own file. Each line keeps its text, so the person reads the message itself:
+
+<Example id="howto-triage-person" />
+
+The double charge is the one message a person reads.
+
+## Check the result
+
+- Every `id` appears once in step 4. A line with `null` for an answer failed; [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+- Read ten messages from each queue. If a queue holds messages that belong elsewhere, reword the question or add a choice, and run it again.
+- [Measure answers against your own labels](/how-tos/measure-answers-against-your-own-labels/) before you trust the bars.
+
+## Next
+
+[Break a problem into decisions](/how-tos/break-a-problem-into-decisions/) shows how to split a job like this one into small questions.

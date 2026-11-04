@@ -12,6 +12,7 @@ scripts/sqlite-prepare --refresh
 cargo fetch --locked
 cargo fetch --locked --manifest-path fuzz/Cargo.toml
 if [ "$native_only" = 1 ]; then exit 0; fi
+python3 scripts/installer-test --prepare-fish
 scripts/rust-advisories --prepare
 scripts/rust-dependencies --prepare
 rustup component add rustfmt clippy

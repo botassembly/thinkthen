@@ -73,7 +73,10 @@ Portal tt_source(TtOwner *owner, text *sql, Jsonb *parameters, const char *recor
         }
     }
     owner->record_column = SPI_fnumber(source->tupDesc, record_column);
-    owner->id_column = id_column == NULL ? 0 : SPI_fnumber(source->tupDesc, id_column);
+    /* NULL uses a column named id when there is one; a column the caller names must exist. */
+    owner->id_column = SPI_fnumber(source->tupDesc, id_column == NULL ? "id" : id_column);
+    if (owner->id_column < 0 && id_column == NULL)
+        owner->id_column = 0;
     if (owner->record_column <= 0 || owner->id_column < 0)
         ereport(ERROR, (errcode(ERRCODE_UNDEFINED_COLUMN), errmsg("selected source column does not exist")));
     column_type = TupleDescAttr(source->tupDesc, owner->record_column - 1)->atttypid;
@@ -128,7 +131,7 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
                 }
             }
             encoded = tt_utf8(encoded, strlen(encoded), &id_length);
-            entry->value.data = (uint8_t *)MemoryContextAlloc(owner->id_context, id_length);
+            entry->value.data = (char *)MemoryContextAlloc(owner->id_context, id_length);
             memcpy((void *)entry->value.data, encoded, id_length);
             entry->value.len = id_length;
         }
@@ -140,7 +143,7 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
             record = cstring_to_text(JsonbToCString(NULL, &DatumGetJsonbP(value)->root, 0));
         else record = DatumGetTextPP(value);
         records[index].kind = kind;
-        records[index].data = (uint8_t *)tt_utf8(VARDATA_ANY(record), VARSIZE_ANY_EXHDR(record), &length);
+        records[index].data = tt_utf8(VARDATA_ANY(record), VARSIZE_ANY_EXHDR(record), &length);
         records[index].len = length;
     }
     TT_BRIDGE(result = thinkthen_sql_call_send_chunk_postgres(owner->call, records, count, &owner->error));

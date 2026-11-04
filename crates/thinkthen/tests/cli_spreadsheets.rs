@@ -9,6 +9,8 @@ pub mod loopback;
 mod admission;
 #[path = "spreadsheets/cancellation.rs"]
 mod cancellation;
+#[path = "spreadsheets/cells.rs"]
+mod cells;
 #[path = "spreadsheets/dates.rs"]
 mod dates;
 #[path = "spreadsheets/hardening.rs"]
@@ -43,7 +45,7 @@ fn write_csv(path: &Path, records: &[Value]) {
     }
     writer.flush().unwrap();
 }
-fn request_args(request: &Value, directory: &Path) -> Vec<String> {
+fn request_args(request: &Value) -> Vec<String> {
     let question = &request["question"];
     let function = question["function"].as_str().unwrap();
     let mut args = vec![function.to_owned()];
@@ -62,15 +64,6 @@ fn request_args(request: &Value, directory: &Path) -> Vec<String> {
                     rule["target"].as_str().unwrap().into(),
                 ]);
             }
-        }
-        "annotate" => {
-            let path = directory.join("annotation.json");
-            fs::write(
-                &path,
-                json!({"questions":question["questions"]}).to_string(),
-            )
-            .unwrap();
-            args.push(path.to_str().unwrap().into());
         }
         _ => args.push(question["question"].as_str().unwrap().to_owned()),
     }
@@ -97,8 +90,8 @@ fn request_args(request: &Value, directory: &Path) -> Vec<String> {
             args.extend(["--threshold".to_owned(), threshold.to_string()]);
         }
     }
-    if let Some(evidence) = question.get("evidence").and_then(Value::as_str) {
-        args.extend(["--evidence".to_owned(), evidence.to_owned()]);
+    if let Some(field) = question.get("field").and_then(Value::as_str) {
+        args.extend(["--field".to_owned(), field.to_owned()]);
     }
     if let Some(top) = question.get("top") {
         args.extend(["--top".to_owned(), top.to_string()]);
@@ -106,17 +99,26 @@ fn request_args(request: &Value, directory: &Path) -> Vec<String> {
 
     args
 }
+/// The readable cell a spreadsheet user sees for an answered value.
 fn encoded(value: &Value) -> String {
     match value {
-        Value::Null => "null".into(),
-        Value::Bool(b) => {
-            if *b {
-                "TRUE".into()
-            } else {
-                "FALSE".into()
-            }
-        }
+        Value::Null => String::new(),
+        Value::Bool(true) => "TRUE".into(),
+        Value::Bool(false) => "FALSE".into(),
         Value::String(s) => s.clone(),
+        Value::Array(items) => items.iter().map(encoded).collect::<Vec<_>>().join("; "),
+        Value::Object(fields) if fields.contains_key("relation") => format!(
+            "{} {} {}",
+            fields["source"]["text"].as_str().unwrap(),
+            fields["relation"].as_str().unwrap(),
+            fields["target"]["text"].as_str().unwrap()
+        ),
+        Value::Object(fields) if fields.contains_key("kind") => format!(
+            "{} ({})",
+            fields["text"].as_str().unwrap(),
+            fields["kind"].as_str().unwrap()
+        ),
+        Value::Object(fields) => fields["text"].as_str().unwrap().to_owned(),
         _ => value.to_string(),
     }
 }
@@ -152,6 +154,7 @@ fn in_place_preserves_a_workbook_saved_or_opened_during_the_request() {
                 "--into",
                 "ready",
                 "--in-place",
+                "--details",
                 "--url",
                 server.base(),
             ])
@@ -186,7 +189,7 @@ fn in_place_preserves_a_workbook_saved_or_opened_during_the_request() {
 }
 
 #[test]
-fn ten_functions_append_shared_answers_without_reordering_source_rows() {
+fn function_tables_append_readable_answers_without_reordering_source_rows() {
     let directory = TempDir::new().unwrap();
     let cases: Vec<Value> =
         serde_json::from_str(include_str!("../../../construction/stub.json")).unwrap();
@@ -211,75 +214,79 @@ fn ten_functions_append_shared_answers_without_reordering_source_rows() {
             .retain(|row| positions.contains(&(row["position"].as_u64().unwrap() as usize)));
         let request = &case["request"];
         let function = request["question"]["function"].as_str().unwrap();
+        if function == "annotate" {
+            // One column replaces this case's per-question pointers, so its
+            // stored answers do not apply; `cli_annotation_columns` owns annotate.
+            continue;
+        }
         let input = directory.path().join(format!("{function}.csv"));
         write_csv(&input, request["records"].as_array().unwrap());
         let mut command = support::command();
         command
-            .args(request_args(request, directory.path()))
+            .args(request_args(request))
             .args(["--backend", "stub", "--from", "csv"])
             .arg(&input)
-            .args(["--column", "body"]);
-        if function != "annotate" {
-            command.args(["--into", "result"]);
-        }
+            .args(["--column", "body", "--details", "--into", "result"]);
         let output = command.output().unwrap();
         assert!(
-            output.status.code() == Some(if function == "annotate" { 6 } else { 0 }),
+            output.status.code() == Some(0),
             "{function}: {}",
             String::from_utf8_lossy(&output.stderr)
         );
         let destination = input.with_file_name(format!("{function}.thinkthen.csv"));
         let rows = table(&destination, b',');
-        assert_eq!(rows.len(), request["records"].as_array().unwrap().len() + 1);
-        for (index, original) in request["records"].as_array().unwrap().iter().enumerate() {
+        let records = request["records"].as_array().unwrap();
+        let outcome = |position: usize| {
+            case["expected"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["position"] == position)
+        };
+        // Filter writes only its kept rows; every other function keeps them all.
+        let shown: Vec<usize> = (1..=records.len())
+            .filter(|position| {
+                function != "filter" || outcome(*position).is_some_and(|row| row["answer"] == true)
+            })
+            .collect();
+        assert_eq!(rows.len(), shown.len() + 1, "{function}");
+        let column = rows[0].iter().position(|h| h == "result").unwrap();
+        for (line, position) in shown.into_iter().enumerate() {
+            let row = &rows[line + 1];
+            let original = &records[position - 1];
             assert_eq!(
-                rows[index + 1][0],
+                row[0],
                 original
                     .as_str()
                     .or_else(|| original["body"].as_str())
                     .unwrap()
             );
-        }
-        for expected in case["expected"].as_array().unwrap() {
-            let position = expected["position"].as_u64().unwrap() as usize;
-            let outcomes = if function == "annotate" {
-                expected["answer"]
-                    .as_object()
-                    .unwrap()
-                    .iter()
-                    .map(|(name, value)| (name.as_str(), value))
-                    .collect::<Vec<_>>()
-            } else {
-                vec![("result", expected)]
+            let Some(outcome) = outcome(position) else {
+                continue;
             };
-            for (name, outcome) in outcomes {
-                let column = rows[0].iter().position(|h| h == name).unwrap();
-                let answer = if outcome["status"] == "answered" {
-                    encoded(&outcome["answer"])
-                } else {
-                    String::new()
-                };
-                assert_eq!(rows[position][column], answer, "{function}/{name} answer");
-                assert_eq!(
-                    rows[position][column + 1],
-                    outcome["status"].as_str().unwrap()
-                );
-                if let Some(p) = outcome.get("probability") {
-                    assert_eq!(
-                        rows[position][column + 2].parse::<f64>().unwrap(),
-                        p.as_f64().unwrap()
-                    );
-                }
+            let answer = if outcome["status"] == "answered" {
+                encoded(&outcome["answer"])
+            } else {
+                String::new()
+            };
+            assert_eq!(row[column], answer, "{function} answer");
+            assert_eq!(row[column + 1], outcome["status"].as_str().unwrap());
+            if let Some(p) = outcome.get("probability") {
+                assert_eq!(row[column + 2].parse::<f64>().unwrap(), p.as_f64().unwrap());
             }
         }
     }
 }
 
 #[test]
-fn filter_preserves_true_false_and_unsure_rows_in_file_order() {
+fn filter_writes_only_kept_rows_in_file_order() {
     let directory = TempDir::new().unwrap();
     let input = directory.path().join("filter.csv");
-    fs::write(&input, "Body\npositive\nnegative\nuncertain\n").unwrap();
+    fs::write(
+        &input,
+        "Body\npositive one\nnegative\nuncertain\npositive two\n",
+    )
+    .unwrap();
     let entry = directory.path().join("filter.json");
     fs::write(
         &entry,
@@ -315,15 +322,10 @@ fn filter_preserves_true_false_and_unsure_rows_in_file_order() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{output:?}");
-    let rows = table(&directory.path().join("filter.thinkthen.csv"), b',');
-    assert_eq!(rows.len(), 4);
-    for (row, expected) in rows[1..].iter().zip([
-        ["positive", "TRUE", "answered", "0.9"],
-        ["negative", "FALSE", "answered", "0.1"],
-        ["uncertain", "", "unsure", "0.5"],
-    ]) {
-        assert_eq!(row[..4], expected);
-    }
+    assert_eq!(
+        fs::read_to_string(directory.path().join("filter.thinkthen.csv")).unwrap(),
+        "Body,result\npositive one,TRUE\npositive two,TRUE\n"
+    );
 }
 
 #[test]
@@ -488,8 +490,9 @@ fn excel_appends_typed_cells_preserving_formulas_and_other_sheet_parts() {
     let sheet = String::from_utf8(member(&destination, "xl/worksheets/sheet1.xml")).unwrap();
     assert!(sheet.contains("<c r=\"B2\" s=\"1\"><f>1+2</f><v>3</v></c>"));
     assert!(sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"));
-    assert!(sheet.contains("<t xml:space=\"preserve\">ready_status</t>"));
-    assert!(sheet.contains("ref=\"A1:H2\""));
+    // One answer column by default.
+    assert!(!sheet.contains("ready_status"));
+    assert!(sheet.contains("ref=\"A1:C2\""));
     let bytes = fs::read(&destination).unwrap();
     let repeated = support::command()
         .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
@@ -683,7 +686,7 @@ fn replace_member(path: &Path, name: &str, contents: &[u8]) {
 #[test]
 fn excel_value_decoding_retains_numeric_text_and_shared_string_indexes() {
     let directory = TempDir::new().unwrap();
-    for (name, evidence, replacement) in [
+    for (name, field, replacement) in [
         (
             "number",
             "9007199254740993",
@@ -703,11 +706,11 @@ fn excel_value_decoding_retains_numeric_text_and_shared_string_indexes() {
             replace_member(&input, "xl/sharedStrings.xml", br#"<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si/><si><t>a<![CDATA[l]]>&#112;ha</t><rPh sb="0" eb="5"><t>pronunciation</t></rPh></si></sst>"#);
         }
         let reference = directory.path().join(format!("{name}.csv"));
-        fs::write(&reference, format!("Body\n{evidence}\n")).unwrap();
+        fs::write(&reference, format!("Body\n{field}\n")).unwrap();
         let csv = support::command()
             .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
             .arg(&reference)
-            .args(["--column", "Body", "--into", "ready"])
+            .args(["--column", "Body", "--into", "ready", "--details"])
             .output()
             .unwrap();
         assert!(csv.status.success());
@@ -719,6 +722,7 @@ fn excel_value_decoding_retains_numeric_text_and_shared_string_indexes() {
             .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
             .arg(&input)
             .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+            .arg("--details")
             .output()
             .unwrap();
         assert!(
@@ -822,7 +826,7 @@ fn excel_rejects_inconsistent_or_truncated_rows_and_preserves_foreign_extensions
     ))
     .unwrap();
     assert!(sheet.contains(extension));
-    assert!(sheet.contains("<dimension ref=\"A1:H2\"></dimension>"));
+    assert!(sheet.contains("<dimension ref=\"A1:C2\"></dimension>"));
 }
 
 #[test]
@@ -873,7 +877,7 @@ fn excel_refuses_declared_signatures_and_other_workbook_content_types() {
 }
 
 #[test]
-fn completion_failed_table_records_exit_six() {
+fn backend_only_table_failures_exit_four_for_direct_and_saved_calls() {
     for saved in [false, true] {
         let directory = TempDir::new().unwrap();
         let input = directory.path().join("records.csv");
@@ -893,6 +897,7 @@ fn completion_failed_table_records_exit_six() {
         }
         let output = command
             .args(["--from", "csv", "--column", "body", "--into", "ready"])
+            .args(["--details"])
             .arg(&input)
             .env("THINKTHEN_API_KEY", loopback::KEY)
             .env("THINKTHEN_BASE_URL", server.base())
@@ -900,7 +905,7 @@ fn completion_failed_table_records_exit_six() {
             .unwrap();
         assert_eq!(
             output.status.code(),
-            Some(6),
+            Some(4),
             "saved={saved}, stderr={:?}",
             output.stderr
         );
@@ -954,46 +959,35 @@ fn workbook_individual_shared_string_uses_the_record_byte_limit() {
 }
 
 #[test]
-fn spreadsheet_environment_selects_sheet_columns_destination_and_replacement() {
+fn spreadsheet_choices_ignore_the_environment() {
     let directory = TempDir::new().unwrap();
-    let input = directory.path().join("book.xlsx");
-    let destination = directory.path().join("answers.xlsx");
-    workbook(&input);
+    let csv = directory.path().join("input.csv");
+    let original = "Body\nevidence\n";
+    fs::write(&csv, original).unwrap();
+    let elsewhere = directory.path().join("elsewhere.csv");
     let output = support::command()
         .args(["decide", "Ready?", "--backend", "stub"])
-        .arg(&input)
-        .env("THINKTHEN_FROM", "xlsx")
+        .arg(&csv)
+        .args(["--column", "Body", "--into", "ready"])
+        .env("THINKTHEN_IN_PLACE", "true")
+        .env("THINKTHEN_OUTPUT", &elsewhere)
         .env("THINKTHEN_SHEET", "Intake")
-        .env("THINKTHEN_COLUMNS", r#"["Body"]"#)
-        .env("THINKTHEN_INTO", "ready")
-        .env("THINKTHEN_OUTPUT", &destination)
+        .env("THINKTHEN_COLUMNS", r#"["Other"]"#)
+        .env("THINKTHEN_INTO", "other")
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{output:?}");
-    let sheet = String::from_utf8(member(&destination, "xl/worksheets/sheet1.xml")).unwrap();
-    assert!(sheet.contains("<t xml:space=\"preserve\">ready_status</t>"));
-    assert!(sheet.contains("<c r=\"C2\" t=\"b\"><v>1</v></c>"));
-    assert_eq!(
-        member(&input, "xl/worksheets/sheet2.xml"),
-        member(&destination, "xl/worksheets/sheet2.xml")
-    );
-    let csv = directory.path().join("input.csv");
-    fs::write(&csv, "Body\nevidence\n").unwrap();
-    let output = support::command()
+    // An exported setting never replaces the source or moves the output.
+    assert_eq!(fs::read_to_string(&csv).unwrap(), original);
+    assert!(!elsewhere.exists());
+    let result = directory.path().join("input.thinkthen.csv");
+    assert_eq!(table(&result, b',')[0], ["Body", "ready"]);
+    let missing = support::command()
         .args(["decide", "Ready?", "--backend", "stub"])
         .arg(&csv)
         .env("THINKTHEN_COLUMNS", r#"["Body"]"#)
         .env("THINKTHEN_INTO", "ready")
-        .env("THINKTHEN_IN_PLACE", "true")
         .output()
         .unwrap();
-    assert_eq!(output.status.code(), Some(0), "{output:?}");
-    assert!(table(&csv, b',')[0].contains(&"ready_status".to_owned()));
-    assert!(directory.path().read_dir().unwrap().any(|entry| {
-        entry
-            .unwrap()
-            .file_name()
-            .to_string_lossy()
-            .contains("backup")
-    }));
+    assert_eq!(missing.status.code(), Some(2), "{missing:?}");
 }

@@ -16,7 +16,7 @@ fn both_wires_translate_annotation_answers_and_detail_without_surface_arithmetic
         {"criterion":"person","distribution":{"person":1,"none of these":0}},
         {"distribution":{"u1":0.1,"u2":0.9,"none":0}}
     ]});
-    let request=Request::from_json(&json!({"question":{"function":"annotate","evidence":"/body","questions":{"names":{"function":"recognize","kinds":["person"]},"line":{"function":"find","question":"Which line?"}}},"records":[{"body":text}]}).to_string()).unwrap();
+    let request=Request::from_json(&json!({"question":{"function":"annotate","field":"/body","questions":{"names":{"function":"recognize","kinds":["person"]},"line":{"function":"find","question":"Which line?"}}},"records":[{"body":text}]}).to_string()).unwrap();
     for backend in [BackendName::SystemOne, BackendName::OpenAi] {
         let server = Loopback::case(&case).unwrap();
         let engine = Settings::default()

@@ -1,0 +1,12 @@
+{
+  "function": "decide",
+  "position": 1,
+  "source": {
+    "question_identity": "fc84a64ae0d9719902b23242a5a09e314c2d62dc44214a9f813d84e28513b653",
+    "backend": "systemone",
+    "model": "jev-1.13.0"
+  },
+  "status": "answered",
+  "answer": true,
+  "probability": 0.99
+}

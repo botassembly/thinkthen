@@ -1,0 +1,4 @@
+id,text,urgency
+a1,Please refund my order.,0.05
+a2,Where is my parcel?,0.14
+a3,I was charged twice for one invoice.,0.45

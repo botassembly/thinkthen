@@ -4,6 +4,7 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$PWD
 swift format lint --strict --recursive sdk/swift
+scripts/swift-interface-check
 export CARGO_NET_OFFLINE=true
 if [ -z "${THINKTHEN_LOOPBACK:-}" ]; then cargo build --locked -p loopback; fi
 build_target=${CARGO_TARGET_DIR:-$root/target}
@@ -20,21 +21,30 @@ mkdir "$scratch/consumer" "$scratch/home" "$scratch/tmp" "$scratch/module-cache"
 export CLANG_MODULE_CACHE_PATH="$scratch/module-cache"
 cp sdk/swift/tests/*.swift "$scratch/consumer/"
 python3 sdk/swift/tests/readme.py sdk/swift/README.md "$scratch/consumer/Readme"
+python3 sdk/swift/tests/docs.py docs/surfaces/swift.md "$scratch/consumer/Examples"
 python3 scripts/surface-example prepare swift "$scratch/consumer/Guide"
 # SwiftPM has no remote dependencies to resolve. The separate consumer checks
 # normal dependency eligibility rather than only building the library itself.
 swift build --package-path "$scratch/consumer" --disable-sandbox --jobs "${CARGO_BUILD_JOBS:-2}" -Xswiftc -warnings-as-errors -Xswiftc -module-cache-path -Xswiftc "$CLANG_MODULE_CACHE_PATH" -Xcc "-fmodules-cache-path=$CLANG_MODULE_CACHE_PATH"
-(cd "$scratch/consumer/Guide" && python3 "$root/scripts/surface-example" check swift "$scratch/consumer/.build/debug/Guide")
+(
+    unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_URL THINKTHEN_BATCH
+    export THINKTHEN_BACKEND=stub HOME="$scratch/home" TMPDIR="$scratch/tmp"
+    cd "$scratch/consumer/Examples"
+    "$scratch/consumer/.build/debug/Examples"
+    cd "$scratch/consumer/Guide"
+    python3 "$root/scripts/surface-example" check swift "$scratch/consumer/.build/debug/Guide"
+)
 mkdir "$scratch/installed"
 cp "$scratch/consumer/.build/debug/Consumer" "$scratch/consumer/.build/debug/Readme" "$scratch/installed/"
 for resources in "$scratch/consumer/.build/debug/"*.resources "$scratch/consumer/.build/debug/"*.bundle; do
     test ! -d "$resources" || cp -R "$resources" "$scratch/installed/"
 done
 swift_engine=$(find "$scratch/installed" -type f -name "libthinkthen_ffi.$([ "$(uname -s)" = Darwin ] && echo dylib || echo so)" -print)
-python3 scripts/loader-failure-check "$swift_engine" -- "$scratch/installed/Readme"
+HOME="$scratch/home" TMPDIR="$scratch/tmp" python3 sdk/swift/tests/run.py --readme-only "$scratch/installed/Readme"
+python3 scripts/loader-failure-check "$swift_engine" --attempted "$swift_engine" -- "$scratch/installed/Readme"
 python3 sdk/swift/tests/options.py "$scratch/consumer" construction/options.json
 rm -rf "$scratch/ThinkThen" "$scratch/consumer"
-unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_BACKEND
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
 if [ -n "${THINKTHEN_SWIFT_OUTPUT:-}" ]; then
     mkdir -p "$THINKTHEN_SWIFT_OUTPUT"

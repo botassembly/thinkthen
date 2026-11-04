@@ -170,8 +170,8 @@ fn names_complete_only_touching_brackets_opened_inside_the_span() {
         assert_eq!(rows[0]["status"], "answered");
         let names = rows[0]["answer"].as_array().unwrap();
         assert_eq!(names.len(), 1, "{text}: {names:?}");
-        let start = text[..text.find(expected).unwrap()].chars().count();
-        let end = start + expected.chars().count();
+        let start = text.find(expected).unwrap();
+        let end = start + expected.len();
         assert_eq!(
             names[0],
             json!({"text":expected,"start":start,"end":end,"kind":"work","probability":0.8})

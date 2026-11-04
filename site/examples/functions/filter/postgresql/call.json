@@ -1,0 +1,5 @@
+{
+  "anchor": "WHERE to_jsonb(msg_id) IN (SELECT id FROM thinkthen.filter(",
+  "before": 0,
+  "after": 2
+}

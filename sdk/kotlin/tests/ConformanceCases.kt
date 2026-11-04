@@ -1,6 +1,6 @@
 package consumer
 
-import io.thinkthen.kotlin.*
+import dev.thinkthen.kotlin.*
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.coroutines.CancellationException
@@ -32,7 +32,7 @@ private suspend fun <A, D> collectRows(
 
 private fun rules(question: JsonObject): List<RelationRule> = question.required("rules").jsonArray.map {
     val rule = it.jsonObject
-    RelationRule(name = rule.required("relation").jsonPrimitive.content,
+    RelationRule(relation = rule.required("relation").jsonPrimitive.content,
         source = rule.required("source").jsonPrimitive.content,
         target = rule.required("target").jsonPrimitive.content,
         reads = rule["reads"]?.jsonPrimitive?.content,
@@ -43,40 +43,40 @@ private suspend fun exercise(client: ThinkThen, request: JsonObject, expected: J
     val q = request.required("question").jsonObject
     val records = request.required("records").jsonArray.toList()
     val input = records
-    val evidence = q.pointer()
+    val field = q.pointer()
     val text = q["question"]?.jsonPrimitive?.content
     val name = request["name"]?.jsonPrimitive?.content
     when (q.required("function").jsonPrimitive.content) {
-        "decide" -> collectRows(if (generic) client.askStream(Decide(requireNotNull(text),q.threshold(),evidence,name),input)
-            else client.decideStream(requireNotNull(text), input, q.threshold(), evidence, name), expected, selected, name, model,
+        "decide" -> collectRows(if (generic) client.askStream(Decide(requireNotNull(text),q.threshold(),field,name),input)
+            else client.decideStream(requireNotNull(text), input, q.threshold(), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { error("Decide has no detail") })
-        "choose" -> collectRows(client.chooseStream(requireNotNull(text), input, q.strings("choices"), q.threshold(), evidence, name), expected, selected, name, model,
+        "choose" -> collectRows(client.chooseStream(requireNotNull(text), input, q.strings("choices"), q.threshold(), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { contractValue(it) })
-        "tag" -> collectRows(client.tagStream(requireNotNull(text), input, q.strings("labels"), q.cut(), evidence, name), expected, selected, name, model,
+        "tag" -> collectRows(client.tagStream(requireNotNull(text), input, q.strings("labels"), q.cut(), field, name), expected, selected, name, model,
             { contractValue(it) }, { contractValue(it) })
-        "score" -> collectRows(client.scoreStream(requireNotNull(text), input, q.strings("levels"), evidence, name), expected, selected, name, model,
+        "score" -> collectRows(client.scoreStream(requireNotNull(text), input, q.strings("levels"), field, name), expected, selected, name, model,
             { JsonPrimitive(it) }, { contractValue(it) })
-        "find" -> collectRows(client.findStream(requireNotNull(text), input, q.cut(), evidence, name), expected, selected, name, model,
-            { when (it) { is FindAnswer.Match -> contractValue(it.span); FindAnswer.NoMatch -> JsonNull } },
+        "find" -> collectRows(client.findStream(requireNotNull(text), input, q.cut(), field, name), expected, selected, name, model,
+            { span -> span?.let { contractValue(it) } ?: JsonNull },
             { error("Find has no detail") })
-        "recognize" -> collectRows(client.recognizeStream(input, q.strings("kinds"), q.cut(), evidence, name), expected, selected, name, model,
+        "recognize" -> collectRows(client.recognizeStream(input, q.strings("kinds"), q.cut(), field, name), expected, selected, name, model,
             { contractValue(it) }, { contractValue(it) })
-        "relate" -> collectRows(client.relateStream(input, rules(q), q.cut(), evidence, name), expected, selected, name, model,
+        "relate" -> collectRows(client.relateStream(input, rules(q), q.cut(), field, name), expected, selected, name, model,
             { contractValue(it) }, { contractValue(it) })
         "annotate" -> {
             val toolbox = AnnotationQuestions.parse(buildJsonObject { put("questions", q.required("questions")) })
-            collectRows(client.toolbox(toolbox).annotateStream(input, evidence, name), expected, selected, name, model,
+            collectRows(client.annotateStream(toolbox, input, field, name), expected, selected, name, model,
                 { contractValue(it) }, { error("Annotate has no detail") })
         }
         "filter" -> collectRows(
-            client.filter(requireNotNull(text), input, q.threshold(), evidence, name).map { item ->
-                check(item.item === records[(item.row.position - 1uL).toInt()])
+            client.filterRows(requireNotNull(text), input, q.threshold(), field, name).map { item ->
+                check(item.item === records[(item.row.position - 1L).toInt()])
                 check(item.kept == ((item.row as? Row.Answered)?.answer == true))
                 item.row
             }, expected, selected, name, model, { JsonPrimitive(it) }, { error("Filter has no detail") })
         "rank" -> collectRows(
-            client.rank(requireNotNull(text), input, q.strings("levels"), q["top"]?.jsonPrimitive?.int, evidence, name).map { item ->
-                check(item.item === records[(item.row.position - 1uL).toInt()])
+            client.rank(requireNotNull(text), input, q.strings("levels"), q["top"]?.jsonPrimitive?.int, field, name).map { item ->
+                check(snapshotMatches(item.item, records[(item.row.position - 1L).toInt()])) { "Rank snapshot ${item.item} differs from its input" }
                 item.row
             }, expected, selected, name, model, { JsonPrimitive(it) }, { contractValue(it) })
         else -> error("Unknown shared function; update the public consumer")
@@ -97,10 +97,10 @@ private fun expectedOffsets(request: JsonObject, rows: JsonArray): JsonArray {
     }
     return JsonArray(rows.map { row ->
         val value = row.jsonObject
-        val record = request.required("records").jsonArray[(value.required("position").jsonPrimitive.content.toULong() - 1uL).toInt()]
-        fun evidence(definition: JsonObject): String {
+        val record = request.required("records").jsonArray[(value.required("position").jsonPrimitive.content.toLong() - 1L).toInt()]
+        fun field(definition: JsonObject): String {
             var selected = record
-            val pointer = (definition["evidence"] ?: question["evidence"])?.jsonPrimitive?.content
+            val pointer = (definition["field"] ?: question["field"])?.jsonPrimitive?.content
             pointer?.split('/')?.drop(1)?.forEach { encoded ->
                 val part = encoded.replace("~1","/").replace("~0","~")
                 selected = when (val parent = selected) {
@@ -113,8 +113,8 @@ private fun expectedOffsets(request: JsonObject, rows: JsonArray): JsonArray {
         }
         JsonObject(value.mapValues { (name, child) ->
             if (name == "answer" && question.required("function").jsonPrimitive.content == "annotate" && child is JsonObject)
-                JsonObject(child.mapValues { (entry, outcome) -> convert(outcome,evidence(question.required("questions").jsonObject.required(entry).jsonObject)) })
-            else if (name in setOf("answer","detail")) convert(child,evidence(question)) else child
+                JsonObject(child.mapValues { (entry, outcome) -> convert(outcome,field(question.required("questions").jsonObject.required(entry).jsonObject)) })
+            else if (name in setOf("answer","detail")) convert(child,field(question)) else child
         })
     })
 }
@@ -155,7 +155,7 @@ private suspend fun runSample(path: Path, sample: JsonObject, selected: Backend,
 }
 suspend fun stubCases(path: Path) {
     val samples = Json.parseToJsonElement(Files.readString(path)).jsonArray
-    samples.forEach { runSample(path,it.jsonObject,Backend.Stub,buildJsonObject {},true) }
+    samples.forEach { runSample(path,it.jsonObject,Backend.STUB,buildJsonObject {},true) }
 }
 private fun admissionCases(directory: Path) {
     val samples = Json.parseToJsonElement(Files.readString(directory.resolve("public-contract/usage-admission.json"))).jsonArray
@@ -218,14 +218,14 @@ private suspend fun optionCases(path: Path) {
             }
             catch (error: ThinkThenException) { check(error.code.wireName == failure) { "Wrong option admission: $error expected $failure" } }
         } else {
-            runSample(path,sample,Backend.Stub,sample.required("client").jsonObject,true)
+            runSample(path,sample,Backend.STUB,sample.required("client").jsonObject,true)
             val equivalent = JsonObject(sample + ("request" to sample.required("equivalent_request")))
-            runSample(path,equivalent,Backend.Stub,sample.required("client").jsonObject,true)
+            runSample(path,equivalent,Backend.STUB,sample.required("client").jsonObject,true)
         }
     }
 }
 
-// Feature: keptItems retains exactly the shared answered-true filter inputs.
+// Feature: filter keeps exactly the shared answered-true filter inputs; filterRows shows every row.
 private suspend fun keptItemsCase(path: Path, selected: Backend, defaults: JsonObject) {
     val sample = Json.parseToJsonElement(Files.readString(path)).jsonObject
     val request = sample.required("request").jsonObject
@@ -234,20 +234,36 @@ private suspend fun keptItemsCase(path: Path, selected: Backend, defaults: JsonO
     val expected = sample.required("expected").jsonArray
     val wanted = expected.filter { it.jsonObject["answer"] == JsonPrimitive(true) }
         .map { records[(it.jsonObject.required("position").jsonPrimitive.int)-1] }
+    fun client(fixture: Fixture) = ThinkThen { backend = selected; url = fixture.url; apiKey = ApiKey("loopback-only")
+        model = defaults["model"]?.jsonPrimitive?.contentOrNull
+        batch = defaults["batch"]?.jsonPrimitive?.intOrNull
+        retry = RetryPolicy(0,0.milliseconds,10000.milliseconds)
+    }
     Fixture.case(path).use { fixture ->
-        ThinkThen { backend = selected; url = fixture.url; apiKey = ApiKey("loopback-only")
-            model = defaults["model"]?.jsonPrimitive?.contentOrNull
-            batch = defaults["batch"]?.jsonPrimitive?.intOrNull
-            retry = RetryPolicy(0,0.milliseconds,10000.milliseconds)
-        }.use { client ->
+        client(fixture).use { client ->
             var count = 0
-            val actual = client.filter(question.required("question").jsonPrimitive.content,records,
-                question.threshold(),question.pointer()).onEach { item ->
+            client.filterRows(question.required("question").jsonPrimitive.content,records,
+                question.threshold(),question.pointer()).collect { item ->
                 val row = expected[count++].jsonObject
                 assertRow(item.row,row,selected,::JsonPrimitive,{ error("Filter has no detail") })
                 check(item.kept == (row["answer"] == JsonPrimitive(true))) { "Failed or unsure filter row was kept" }
-            }.keptItems().toList()
-            check(count == expected.size && actual == wanted) { "keptItems changed shared filter inputs" }
+            }
+            check(count == expected.size) { "filterRows changed shared filter rows" }
+        }
+        check(fixture.command("count").toInt() == sample.required("requests").jsonPrimitive.int)
+    }
+    Fixture.case(path).use { fixture ->
+        client(fixture).use { client ->
+            val actual = mutableListOf<JsonElement>()
+            val failed = expected.filter { it.jsonObject["status"] == JsonPrimitive("failed") }
+            try {
+                client.filter(question.required("question").jsonPrimitive.content,records,question.threshold(),question.pointer()).toList(actual)
+                check(failed.isEmpty()) { "filter hid a failed record" }
+            } catch (failure: ThinkThenException) {
+                check(failure.failures.map { it.position } == failed.map { it.jsonObject.required("position").jsonPrimitive.long }) { "filter failures changed" }
+                check(failure.code.wireName == failed.first().jsonObject.required("error").jsonObject.required("code").jsonPrimitive.content)
+            }
+            check(actual == wanted && actual.indices.all { actual[it] === wanted[it] }) { "filter changed shared filter inputs" }
         }
         check(fixture.command("count").toInt() == sample.required("requests").jsonPrimitive.int)
     }
@@ -259,20 +275,20 @@ fun main(args: Array<String>) = runBlocking {
     optionCases(directory.parent.parent.resolve("construction/options.json"))
     val manifest = Json.parseToJsonElement(Files.readString(directory.resolve("manifest.json"))).jsonObject
     val defaults = manifest.required("client").jsonObject
-    for (selected in listOf(Backend.SystemOne,Backend.OpenAI)) {
-        val path = directory.resolve("decide-evidence-name.json")
+    for (selected in listOf(Backend.SYSTEMONE,Backend.OPENAI)) {
+        val path = directory.resolve("decide-field-name.json")
         runSample(path,Json.parseToJsonElement(Files.readString(path)).jsonObject,selected,defaults,false,generic=true)
         keptItemsCase(directory.resolve("filter-rows.json"),selected,defaults)
     }
     if (args.getOrNull(1) == "--entry-forms") {
         val path = directory.resolve("usage-annotation-rank.json")
         val sample = Json.parseToJsonElement(Files.readString(path)).jsonObject
-        for (selected in listOf(Backend.SystemOne,Backend.OpenAI)) runSample(path,sample,selected,defaults,false)
+        for (selected in listOf(Backend.SYSTEMONE,Backend.OPENAI)) runSample(path,sample,selected,defaults,false)
         return@runBlocking
     }
     for(name in manifest.required("cases").jsonArray) {
         val path = directory.resolve(name.jsonPrimitive.content)
         val sample = Json.parseToJsonElement(Files.readString(path)).jsonObject
-        for(selected in listOf(Backend.SystemOne,Backend.OpenAI)) runSample(path,sample,selected,defaults,false)
+        for(selected in listOf(Backend.SYSTEMONE,Backend.OPENAI)) runSample(path,sample,selected,defaults,false)
     }
 }

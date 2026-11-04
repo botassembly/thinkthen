@@ -100,7 +100,7 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 			}
 			forms := []string{"collection"}
 			switch filepath.Base(path) {
-			case "filter-evidence-name.json":
+			case "filter-field-name.json":
 				forms = append(forms, "single", "sequence")
 			case "find-unicode.json":
 				forms = append(forms, "single")
@@ -117,7 +117,7 @@ func TestBothWireFormatsThroughTypedPublicAPI(t *testing.T) {
 					if sample.Client.Backend == "openai" {
 						backend = tt.OpenAI
 					}
-					cfg := tt.Config{Backend: backend, Model: sample.Client.Model, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: sample.Client.Batch}
+					cfg := tt.Config{Backend: backend, Model: sample.Client.Model, URL: b.url, APIKey: tt.APIKey("loopback-only"), Batch: batchValue(sample.Client.Batch)}
 					cfg.Retry = retryFor(sample.Client.Retry)
 					c, admission := tt.New(cfg)
 					if admission != nil {
@@ -200,8 +200,8 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
 		}
-		if q.Evidence != nil {
-			request = request.WithEvidence(*q.Evidence)
+		if q.Field != nil {
+			request = request.WithField(*q.Field)
 		}
 		rows := collectCase(t, s, c.AnnotateAll(ctx, request, input))
 		if len(rows) != len(s.Expected) {
@@ -210,7 +210,7 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 		for i, row := range rows {
 			want := s.Expected[i]
 			assertMetadata(t, row, want)
-			answer, ok := row.Value()
+			answer, ok := valueOf(row)
 			if want.Status != "answered" {
 				if ok {
 					t.Fatal("non-answer annotation has value")
@@ -249,7 +249,12 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
 		}
-		assertRows(t, collectCase(t, s, c.RankAll(ctx, request, input)), s.Expected)
+		ranked := collectCase(t, s, c.RankAll(ctx, request, input))
+		rows := make([]tt.Row[int, tt.LevelsDetail], len(ranked))
+		for i, row := range ranked {
+			rows[i] = row.Row
+		}
+		assertRows(t, rows, s.Expected)
 	case tt.Find:
 		if s.Request.Name != "" {
 			request = request.WithName(s.Request.Name)
@@ -280,15 +285,7 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 			request = request.WithName(s.Request.Name)
 		}
 		var rows []tt.FilterRow
-		if form == "single" {
-			row, err := c.Filter(ctx, request, records[0])
-			if err != nil {
-				t.Fatal(err)
-			}
-			rows = []tt.FilterRow{row}
-		} else {
-			rows = collectCase(t, s, c.FilterAll(ctx, request, input))
-		}
+		rows = collectCase(t, s, c.FilterRowsAll(ctx, request, input))
 		if len(rows) != len(s.Expected) {
 			t.Fatal("filter row count")
 		}
@@ -304,7 +301,7 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 				t.Fatal("filter kept differs from typed answer")
 			}
 			pos := row.Position()
-			if pos < 1 || pos > uint64(len(records)) || !reflect.DeepEqual(row.Item(), records[pos-1]) {
+			if pos < 1 || pos > len(records) || !reflect.DeepEqual(row.Item(), records[pos-1]) {
 				t.Fatal("filter lost original item")
 			}
 		}
@@ -313,11 +310,11 @@ func runTypedCaseForm(t *testing.T, c *tt.Client, s apiCase, form string) {
 
 type apiMetadata interface {
 	Status() tt.Status
-	Position() uint64
+	Position() int
 	ID() (tt.RecordID, bool)
 	Source() tt.Source
 	Probability() (float64, bool)
-	Error() *tt.Error
+	Err() error
 }
 
 func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
@@ -372,7 +369,7 @@ func assertMetadata(t *testing.T, row apiMetadata, want apiExpected) {
 	if len(source.QuestionIdentity) != 64 || (want.Source.QuestionIdentity != "" && source.QuestionIdentity != want.Source.QuestionIdentity) || !reflect.DeepEqual(source.Name, want.Source.Name) || map[tt.Backend]string{tt.SystemOne: "systemone", tt.OpenAI: "openai", tt.Stub: "stub"}[source.Backend] != backend || source.Model != model {
 		t.Fatal("typed source differs")
 	}
-	failure := row.Error()
+	failure := rowFailure(row.Err())
 	if (failure != nil) != (want.Error != nil) {
 		t.Fatal("error presence differs")
 	}
@@ -394,7 +391,7 @@ func assertRows[A, D any](t *testing.T, rows []tt.Row[A, D], expected []apiExpec
 	for i, row := range rows {
 		want := expected[i]
 		assertMetadata(t, row, want)
-		answer, ok := row.Value()
+		answer, ok := valueOf(row)
 		if ok != (want.Status == "answered") {
 			t.Fatal("Value status differs")
 		}
@@ -407,7 +404,7 @@ func assertRows[A, D any](t *testing.T, rows []tt.Row[A, D], expected []apiExpec
 				t.Fatal("typed answer differs from reviewed fixture")
 			}
 			mutateAnswer(any(answer))
-			again, present := row.Value()
+			again, present := valueOf(row)
 			if !present || !reflect.DeepEqual(again, expected) {
 				t.Fatal("answer storage escaped the row")
 			}

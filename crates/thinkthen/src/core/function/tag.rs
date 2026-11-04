@@ -8,35 +8,27 @@ use crate::core::{Answer, Ask, Detail, Error, ErrorKind, Function, Outcome, Thre
 #[derive(Debug, Clone, serde::Serialize)]
 pub(crate) struct Tag {
     pub(crate) text: String,
-    pub(crate) labels: Vec<String>,
+    pub(crate) labels: Vec<crate::core::ChoiceOption>,
     pub(crate) threshold: Threshold,
 }
 
 impl Tag {
-    /// Ask `text` about each of the distinct, nonblank `labels`.
-    ///
-    /// # Errors
-    ///
-    /// `usage.question` when the question is blank or the labels are empty,
-    /// blank, repeated or containing U+0000.
-    pub(crate) fn new(
+    pub(crate) fn with_options(
         text: impl Into<String>,
-        labels: impl IntoIterator<Item = impl Into<String>>,
+        labels: impl IntoIterator<Item = crate::core::ChoiceOption>,
     ) -> Result<Self, Error> {
         let text = text.into();
-        let labels: Vec<String> = labels.into_iter().map(Into::into).collect();
+        let labels: Vec<_> = labels.into_iter().collect();
         if text.trim().is_empty() {
             return Err(Error::new(
                 ErrorKind::Question,
                 crate::core::diagnostic::requirement("question", "nonblank text", "blank text"),
             ));
         }
-        for label in &labels {
-            crate::core::ask::admit_name(label)?;
-        }
         if labels.len() < crate::core::questions::MIN_LABELS
-            || labels.iter().any(|label| label.trim().is_empty())
-            || !crate::core::ask::distinct_labels(labels.iter().map(String::as_str))
+            || !crate::core::ask::distinct_labels(
+                labels.iter().map(crate::core::ChoiceOption::label),
+            )
         {
             return Err(Error::new(
                 ErrorKind::Question,
@@ -61,20 +53,20 @@ impl Function for Tag {
         record: &crate::core::AdmittedRecord,
         _limits: crate::core::Limits,
     ) -> Result<Vec<Ask>, Error> {
-        let evidence = record.evidence();
+        let field = record.field();
         Ok(self
             .labels
             .iter()
             .map(|label| Ask::YesNo {
                 instructions: super::quoted(
-                    evidence,
+                    field,
                     &format!(
                         "{} Does the label {} apply?",
                         self.text,
-                        serde_json::to_string(label).unwrap_or_default()
+                        serde_json::to_string(label.label()).unwrap_or_default()
                     ),
                 ),
-                yes: None,
+                yes: label.description_text().map(str::to_owned),
                 no: None,
             })
             .collect())
@@ -98,9 +90,9 @@ impl Function for Tag {
                 }
             };
             if question.threshold.verdict(p) == Verdict::Yes {
-                labels.push(label.clone());
+                labels.push(label.label().to_owned());
             }
-            detail.insert(label.clone(), p);
+            detail.insert(label.label().to_owned(), p);
         }
         Outcome::Answered {
             answer: Answer::Labels(labels),

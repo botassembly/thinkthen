@@ -1,0 +1,4 @@
+id,text,refund,topic,urgency
+a1,Please refund my order.,TRUE,billing,0.05
+a2,Where is my parcel?,FALSE,shipping,0.14
+a3,I was charged twice for one invoice.,TRUE,billing,0.45

@@ -3,9 +3,17 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+examples_only=0
+cache_only=0
+if [ "${1:-}" = --cache-only ]; then cache_only=1; shift; fi
+if [ "${1:-}" = --examples-only ]; then examples_only=1; set -- --readme-only; fi
 if [ "${1:-}" != --readme-only ]; then . scripts/zig-env; fi
 root=$PWD
-if [ -n "${THINKTHEN_GO_ENGINE:-}" ] && [ "${1:-}" != --readme-only ]; then
+# Development can check code while separately authored examples are changing.
+# The default routine and source gate always execute both docs examples.
+code_only=0
+if [ "${1:-}" = --code-only ]; then code_only=1; shift; fi
+if [ -n "${THINKTHEN_GO_ENGINE:-}" ] && [ "${1:-}" != --readme-only ] && [ "$cache_only" = 0 ]; then
     : "${THINKTHEN_LOOPBACK:?Provide the matching loopback for the prepared engine}"
 fi
 go() { "$root/scripts/go-build" "$@"; }
@@ -25,7 +33,7 @@ case "$(uname -s)" in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 if [ -n "${THINKTHEN_GO_ENGINE:-}" ]; then
     # The caller owns preparation and validates unchanged native inputs.
     test -f "$THINKTHEN_GO_ENGINE"
-    if [ "${1:-}" != --readme-only ]; then test -x "$THINKTHEN_LOOPBACK"; fi
+    if [ "${1:-}" != --readme-only ] && [ "$cache_only" = 0 ]; then test -x "$THINKTHEN_LOOPBACK"; fi
     python3 scripts/package_inventory.py stage go "$scratch/module"
     mkdir -p "$scratch/module/native"
     cp "$THINKTHEN_GO_ENGINE" "$scratch/module/native/library"
@@ -43,7 +51,7 @@ from native_platform import current
 from release_source import stage_go_libraries
 stage_go_libraries({current()['platform']: Path(sys.argv[2])}, Path(sys.argv[1]))
 PYTHON
-if [ "${1:-}" != --readme-only ]; then
+if [ "${1:-}" != --readme-only ] && [ "$cache_only" = 0 ]; then
     if [ -n "${THINKTHEN_NATIVE_FIXTURES:-}" ]; then
         test -d "$THINKTHEN_NATIVE_FIXTURES"
     else
@@ -51,12 +59,26 @@ if [ "${1:-}" != --readme-only ]; then
         THINKTHEN_NATIVE_FIXTURES="$scratch/native"
     fi
 fi
+if [ "${1:-}" != --readme-only ] && [ "$cache_only" = 0 ] && [ -z "${THINKTHEN_MALFORMED_ROW_FIXTURES:-}" ]; then
+    THINKTHEN_MALFORMED_ROW_FIXTURES="$scratch/malformed"
+    for kind in invalid-json unanswered-answer unknown-function; do
+        scripts/abi-minor-check --native "$THINKTHEN_GO_ENGINE" --malformed-row "$kind" \
+            --output "$THINKTHEN_MALFORMED_ROW_FIXTURES/$kind"
+    done
+    export THINKTHEN_MALFORMED_ROW_FIXTURES
+fi
 mkdir -p "$scratch/consumer" "$scratch/home" "$scratch/tmp"
 cp sdk/go/tests/*.go sdk/go/tests/go.mod "$scratch/consumer/"
 export THINKTHEN_CONTRACT="$root/schemas/contract.json" THINKTHEN_BOUNDARY_SOURCE="$root/crates/thinkthen/src/core/function/recognize.rs"
-export THINKTHEN_LOOPBACK THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes.go"
-unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
+export THINKTHEN_LOOPBACK THINKTHEN_CASES="$root/conformance" THINKTHEN_NATIVE_FIXTURES THINKTHEN_HEADER="$scratch/module/thinkthen.h" THINKTHEN_GO_CODES="$scratch/module/codes_generated.go"
+unset THINKTHEN_BACKEND THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH THINKTHEN_LIBRARY
 export HOME="$scratch/home" TMPDIR="$scratch/tmp"
+# os.UserCacheDir uses XDG_CACHE_HOME on Linux. Own the actual cache root,
+# including its permissions, instead of inheriting a runner's cache or umask.
+case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_cache="$HOME/.cache" ;; esac
+mkdir -p "$loader_cache"
+chmod 700 "$loader_cache"
+export XDG_CACHE_HOME="$loader_cache"
 cd "$scratch/consumer"
 go mod edit -replace="github.com/botassembly/thinkthen/sdk/go/thinkthen=$scratch/module"
 # Run the documented system-library commands against the installed C package.
@@ -71,9 +93,36 @@ system_readme() {
     (unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH CGO_LDFLAGS
         python3 "$root/scripts/readme-example" "$scratch/module/README.md" go "$scratch/system-readme/main.go")
 }
-system_readme
+if [ "$code_only" = 0 ] && [ "$cache_only" = 0 ]; then (export THINKTHEN_BACKEND=stub; system_readme); fi
 
-if [ "${1:-}" = --readme-only ]; then exit 0; fi
+if [ "${1:-}" = --readme-only ]; then
+    if [ "$examples_only" = 1 ]; then python3 "$root/sdk/go/check-examples"; fi
+    exit 0
+fi
+loader_cache_check() {
+    go test -c -o "$scratch/loader-consumer"
+    # Start cold even when earlier API/examples have already loaded the engine.
+    rm -rf "$loader_cache/thinkthen"
+    python3 "$root/scripts/loader-cache-check" --checksum "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
+}
+if [ "$cache_only" = 1 ]; then
+    go test -count=1 -v -run='^TestNativeTemporaryCache$' .
+    loader_cache_check
+    exit 0
+fi
+# Compile the existing checked README example against the staged import path.
+if [ "$code_only" = 0 ]; then
+mkdir readme
+python3 - "$scratch/module/README.md" readme/main.go <<'PY'
+from pathlib import Path
+import sys
+Path(sys.argv[2]).write_text(Path(sys.argv[1]).read_text().split('```go\n', 1)[1].split('```', 1)[0])
+PY
+(THINKTHEN_BACKEND=stub go run ./readme)
+python3 "$root/sdk/go/check-examples"
+python3 "$root/scripts/surface-example" prepare go "$scratch/consumer/guide"
+(cd guide && THINKTHEN_BACKEND=stub python3 "$root/scripts/surface-example" check go "$root/scripts/go-build" run .)
+fi
 go version
 staticcheck -version
 staticcheck_pin=$(python3 - "$root/scripts/release-tools.json" <<'PYTHON'
@@ -88,21 +137,7 @@ go version -m "$(command -v staticcheck)" | awk -v pin="$staticcheck_pin" '
 '
 go vet github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
 staticcheck github.com/botassembly/thinkthen/sdk/go/thinkthen ./...
-mkdir -p "$CARGO_TARGET_DIR"
-go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...
-# Compile the existing checked README example against the staged import path.
-mkdir readme
-python3 - "$scratch/module/README.md" readme/main.go <<'PY'
-from pathlib import Path
-import sys
-Path(sys.argv[2]).write_text(Path(sys.argv[1]).read_text().split('```go\n', 1)[1].split('```', 1)[0])
-PY
-go run ./readme
-python3 "$root/scripts/surface-example" prepare go "$scratch/consumer/guide"
-(cd guide && python3 "$root/scripts/surface-example" check go "$root/scripts/go-build" run .)
-go test -c -o "$scratch/loader-consumer"
-case "$(uname -s)" in Darwin) loader_cache="$HOME/Library/Caches" ;; *) loader_cache="$HOME/.cache" ;; esac
-python3 "$root/scripts/loader-cache-check" "$loader_cache" "$scratch/loader-consumer" -test.run='^TestSharedStub$'
+loader_cache_check
 # darwin/amd64 has no bundled engine, but remains a compilable public module.
 if [ "$(uname -s)" = Darwin ]; then
     mkdir unsupported
@@ -145,8 +180,11 @@ contract['backends'].append({'name': 'new-backend', 'value': 99})
 with open(sys.argv[2], 'w') as output:
     json.dump(contract, output)
 PYTHON
-if THINKTHEN_CONTRACT="$scratch/changed-contract.json" go test -run='^TestEnumsMatchEngineContract$' . > "$scratch/enum-negative.log" 2>&1; then
+if (THINKTHEN_CONTRACT="$scratch/changed-contract.json" go test -run='^TestEnumsMatchEngineContract$' .) > "$scratch/enum-negative.log" 2>&1; then
     echo 'Go enum test accepted an unknown contract value' >&2
     exit 1
 fi
 grep 'backends(99)' "$scratch/enum-negative.log"
+mkdir -p "$CARGO_TARGET_DIR"
+go test -race -count=1 github.com/botassembly/thinkthen/sdk/go/thinkthen
+go test -race -count=1 -coverpkg=github.com/botassembly/thinkthen/sdk/go/thinkthen -coverprofile="$CARGO_TARGET_DIR/go-coverage.out" "$@" ./...

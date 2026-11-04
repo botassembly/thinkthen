@@ -13,18 +13,40 @@ int replay_open(Cursor *cursor) {
     if(result!=SQLITE_OK)return cursor_error(cursor,result,"cannot read source version");
     result=sqlite3_open("", &cursor->replay);
     if(result==SQLITE_OK) result=sqlite3_exec(cursor->replay,
-        "PRAGMA cache_size=-32; PRAGMA journal_mode=OFF; CREATE TABLE rows(row BLOB,id,answer BLOB,error BLOB,detail BLOB,source BLOB,id_json BLOB)",NULL,NULL,NULL);
+        "PRAGMA cache_size=-32; PRAGMA journal_mode=OFF; CREATE TABLE rows(row BLOB,id,answer BLOB,error BLOB,detail BLOB,source BLOB,id_json BLOB);"
+        "CREATE TABLE ids(position INTEGER PRIMARY KEY,id)",NULL,NULL,NULL);
     if(result==SQLITE_OK) result=sqlite3_prepare_v2(cursor->replay,
         "INSERT INTO rows VALUES(?,?,?,?,?,?,?)",-1,&cursor->save,NULL);
+    if(result==SQLITE_OK) result=sqlite3_prepare_v2(cursor->replay,"INSERT INTO ids VALUES(?,?)",-1,&cursor->id_save,NULL);
+    if(result==SQLITE_OK) result=sqlite3_prepare_v2(cursor->replay,"SELECT id FROM ids WHERE position=?",-1,&cursor->id_read,NULL);
     return result==SQLITE_OK ? result : cursor_error(cursor,result,"cannot open result spool");
 }
-int replay_save(Cursor *cursor) {
+/* Spool one source row's native id under its input position. */
+int replay_save_id(Cursor *cursor,sqlite3_value *id) {
+    int result=sqlite3_bind_int64(cursor->id_save,1,++cursor->spooled_ids);
+    if(result==SQLITE_OK) result=id ? sqlite3_bind_value(cursor->id_save,2,id) : sqlite3_bind_null(cursor->id_save,2);
+    if(result==SQLITE_OK) {result=sqlite3_step(cursor->id_save);if(result==SQLITE_DONE)result=SQLITE_OK;}
+    sqlite3_reset(cursor->id_save);
+    return result;
+}
+/* The live row's native id, or NULL when the source names no id column. The
+ * value stays readable until the next call. */
+sqlite3_value *row_id(Cursor *cursor) {
+    if(cursor->spool_ids) {
+        sqlite3_reset(cursor->id_read);
+        if(sqlite3_bind_int64(cursor->id_read,1,(sqlite3_int64)cursor->row.position)!=SQLITE_OK
+           || sqlite3_step(cursor->id_read)!=SQLITE_ROW)return NULL;
+        sqlite3_value *id=sqlite3_column_value(cursor->id_read,0);
+        return sqlite3_value_type(id)==SQLITE_NULL ? NULL : id;
+    }
     size_t index=(size_t)(cursor->row.position-cursor->ids_offset)-1;
+    return index<cursor->ids_count ? cursor->ids[index] : NULL;
+}
+int replay_save(Cursor *cursor) {
+    sqlite3_value *id=row_id(cursor);
     thinkthen_buffer *buffers[]={&cursor->row.answer,&cursor->row.error,&cursor->row.detail,&cursor->row.source,&cursor->row.id};
     int result=sqlite3_bind_blob(cursor->save,1,&cursor->row,sizeof(cursor->row),SQLITE_TRANSIENT);
-    if(result==SQLITE_OK) result=index<cursor->ids_count && cursor->ids[index]
-        ? sqlite3_bind_value(cursor->save,2,cursor->ids[index])
-        : sqlite3_bind_null(cursor->save,2);
+    if(result==SQLITE_OK) result=id ? sqlite3_bind_value(cursor->save,2,id) : sqlite3_bind_null(cursor->save,2);
     for(int n=0;n<5 && result==SQLITE_OK;n++) {
         thinkthen_buffer *value=buffers[n];
         result=value->data ? sqlite3_bind_blob64(cursor->save,n+3,value->data,value->len,SQLITE_TRANSIENT)

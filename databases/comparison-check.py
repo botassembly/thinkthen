@@ -39,8 +39,11 @@ native = dict(position=1, id=None, status='answered', probability=0.9, answer=Tr
 assert contract_row(deepcopy(native), 'decide')['answer'] is True
 refuses('unexpected SQL column', lambda: contract_row({**native, 'extra': True}, 'decide'))
 refuses('nullable unknown source field', lambda: contract_row({**native, 'source': {**source, 'extra': None}}, 'decide'))
-refuses('nullable annotation source before SQL compaction', lambda: contract_row({**native,
-    'answer': {'decision': dict(function='decide', status='answered', answer=True, source=None)}}, 'annotate'))
+annotation = {**native, 'answer': {'decision': True},
+    'detail': {'decision': dict(function='decide', status='answered', answer=True)}}
+assert contract_row(deepcopy(annotation), 'annotate')['answer'] == {'decision': True}
+refuses('nullable annotation source before SQL compaction', lambda: contract_row({**annotation,
+    'detail': {'decision': {**annotation['detail']['decision'], 'source': None}}}, 'annotate'))
 for status in ('answered', 'unsure'):
     for field, value in [('error_code', 'backend.reply'), ('error_message', 'stale'), ('error_http_status', 503)]:
         row = {**native, 'status': status, 'answer': True if status == 'answered' else None, field: value}

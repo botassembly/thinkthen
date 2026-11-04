@@ -1,0 +1,5 @@
+using ThinkThen;
+public static class InvalidRankForm
+{
+    public static AnnotationQuestions Create(RankQuestion rank) => new() { { "rank", rank } };
+}

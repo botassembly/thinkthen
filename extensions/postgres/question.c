@@ -32,9 +32,19 @@ static thinkthen_text utf8_text(text *value)
 {
     thinkthen_text view;
     size_t length;
-    view.data = (uint8_t *)tt_utf8(VARDATA_ANY(value), VARSIZE_ANY_EXHDR(value), &length);
+    view.data = tt_utf8(VARDATA_ANY(value), VARSIZE_ANY_EXHDR(value), &length);
     view.len = length;
     return view;
+}
+
+/* A required argument or list item that is SQL NULL keeps the engine's code. */
+static void null_argument(TtOwner *owner, const char *name)
+{
+    int code;
+    TT_BRIDGE(code = thinkthen_question_conversion_error(&owner->error));
+    (void)code;
+    ereport(ERROR, (errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED), errmsg("%s cannot be SQL NULL", name),
+        errdetail_internal("%s", thinkthen_code_name(owner->error.code))));
 }
 
 void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
@@ -43,55 +53,90 @@ void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
     int code;
     int word = argument(fcinfo, "question");
     int structured = argument(fcinfo, !strcmp(function, "annotate") ? "toolbox" : "rules");
-    thinkthen_text wording = {NULL, 0};
+    StringInfoData encoded;
+    char *json;
+    size_t length;
     const char *list_names[] = {"choices", "labels", "levels", "kinds"};
-    uint32 ids[] = {THINKTHEN_FUNCTION_DECIDE, THINKTHEN_FUNCTION_CHOOSE, THINKTHEN_FUNCTION_TAG,
+    thinkthen_function ids[] = {THINKTHEN_FUNCTION_DECIDE, THINKTHEN_FUNCTION_CHOOSE, THINKTHEN_FUNCTION_TAG,
         THINKTHEN_FUNCTION_SCORE, THINKTHEN_FUNCTION_FILTER, THINKTHEN_FUNCTION_RANK,
         THINKTHEN_FUNCTION_FIND, THINKTHEN_FUNCTION_RECOGNIZE, THINKTHEN_FUNCTION_RELATE, THINKTHEN_FUNCTION_ANNOTATE};
     const char *functions[] = {"decide", "choose", "tag", "score", "filter", "rank", "find", "recognize", "relate", "annotate"};
     for (index = 0; index < 10; index++) if (!strcmp(function, functions[index])) owner->function = ids[index];
+    initStringInfo(&encoded);
+    appendStringInfo(&encoded, "{\"function\":\"%s\"", function);
     if (word >= 0) {
-        if (!supplied(fcinfo, word)) {TT_BRIDGE(code = thinkthen_question_conversion_error(&owner->error)); tt_check(owner, code);}
-        wording = utf8_text(PG_GETARG_TEXT_PP(word));
+        if (!supplied(fcinfo, word)) null_argument(owner, "question");
+        appendStringInfoString(&encoded, ",\"question\":");
+        escape_json(&encoded, text_to_cstring(PG_GETARG_TEXT_PP(word)));
     }
-    TT_BRIDGE(code = thinkthen_question_new(owner->function, wording.data, wording.len, &owner->question, &owner->error));
-    tt_check(owner, code);
     for (index = 0; index < 4; index++) {
         int slot = argument(fcinfo, list_names[index]);
-        ArrayType *array;
+        int descriptions_slot = argument(fcinfo, "descriptions");
+        Jsonb *descriptions = supplied(fcinfo, descriptions_slot) ? PG_GETARG_JSONB_P(descriptions_slot) : NULL;
         Datum *values;
         bool *nulls;
         int count;
         int item;
+        bool unmatched = descriptions != NULL && !JB_ROOT_IS_OBJECT(descriptions);
         if (slot < 0) continue;
-        if (!supplied(fcinfo, slot)) {TT_BRIDGE(code = thinkthen_question_conversion_error(&owner->error)); tt_check(owner, code);}
-        array = PG_GETARG_ARRAYTYPE_P(slot);
-        deconstruct_array(array, TEXTOID, -1, false, TYPALIGN_INT, &values, &nulls, &count);
+        if (!supplied(fcinfo, slot)) null_argument(owner, list_names[index]);
+        deconstruct_array(PG_GETARG_ARRAYTYPE_P(slot), TEXTOID, -1, false, TYPALIGN_INT, &values, &nulls, &count);
+        appendStringInfo(&encoded, ",\"%s\":[", list_names[index]);
         for (item = 0; item < count; item++) {
-            thinkthen_text value;
-            if (nulls[item]) {TT_BRIDGE(code = thinkthen_question_conversion_error(&owner->error)); tt_check(owner, code);}
-            value = utf8_text(DatumGetTextPP(values[item]));
-            if (index == 0) {TT_BRIDGE(code = thinkthen_question_add_choice(owner->question, value.data, value.len, &owner->error));}
-            else if (index == 1) {TT_BRIDGE(code = thinkthen_question_add_label(owner->question, value.data, value.len, &owner->error));}
-            else if (index == 2) {TT_BRIDGE(code = thinkthen_question_add_level(owner->question, value.data, value.len, &owner->error));}
-            else {TT_BRIDGE(code = thinkthen_question_add_kind(owner->question, value.data, value.len, &owner->error));}
-            tt_check(owner, code);
+            char *value;
+            JsonbValue *description;
+            if (nulls[item]) null_argument(owner, list_names[index]);
+            value = TextDatumGetCString(values[item]);
+            description = descriptions != NULL && JB_ROOT_IS_OBJECT(descriptions) ? tt_field(descriptions, value) : NULL;
+            if (item > 0) appendStringInfoChar(&encoded, ',');
+            if (description != NULL) {
+                appendStringInfoString(&encoded, "{\"name\":");
+                escape_json(&encoded, value);
+                appendStringInfoString(&encoded, ",\"description\":");
+                appendStringInfoString(&encoded, JsonbToCString(NULL, &JsonbValueToJsonb(description)->root, 0));
+                appendStringInfoChar(&encoded, '}');
+            } else escape_json(&encoded, value);
         }
+        appendStringInfoChar(&encoded, ']');
+        if (descriptions != NULL && JB_ROOT_IS_OBJECT(descriptions)) {
+            JsonbIterator *iterator = JsonbIteratorInit(&descriptions->root);
+            JsonbIteratorToken token;
+            JsonbValue key;
+            while ((token = JsonbIteratorNext(&iterator, &key, true)) != WJB_DONE) {
+                bool found = false;
+                if (token != WJB_KEY) continue;
+                for (item = 0; item < count; item++) {
+                    text *label = DatumGetTextPP(values[item]);
+                    if (VARSIZE_ANY_EXHDR(label) == (size_t)key.val.string.len &&
+                        !memcmp(VARDATA_ANY(label), key.val.string.val, key.val.string.len)) found = true;
+                }
+                if (!found) unmatched = true;
+            }
+        }
+        if (unmatched)
+            appendStringInfo(&encoded, ",\"descriptions\":%s", JsonbToCString(NULL, &descriptions->root, 0));
     }
     if (structured >= 0) {
-        StringInfoData encoded;
-        char *json;
-        size_t length;
-        if (!supplied(fcinfo, structured)) {TT_BRIDGE(code = thinkthen_question_conversion_error(&owner->error)); tt_check(owner, code);}
+        if (!supplied(fcinfo, structured)) null_argument(owner, !strcmp(function, "annotate") ? "toolbox" : "rules");
         json = !strcmp(function, "annotate") ? JsonbToCString(NULL, &PG_GETARG_JSONB_P(structured)->root, 0)
             : TextDatumGetCString(DirectFunctionCall1(array_to_json, PG_GETARG_DATUM(structured)));
-        initStringInfo(&encoded);
-        appendStringInfo(&encoded, "{\"function\":\"%s\",\"%s\":%s}", function, !strcmp(function, "annotate") ? "questions" : "rules", json);
-        json = tt_utf8(encoded.data, encoded.len, &length);
-        TT_BRIDGE({thinkthen_question_free(owner->question); owner->question = NULL;
-            code = thinkthen_sql_question_from_json((uint8_t *)json, length, &owner->question, &owner->error);});
-        tt_check(owner, code);
+        appendStringInfo(&encoded, ",\"%s\":%s", !strcmp(function, "annotate") ? "questions" : "rules", json);
     }
+    {
+        const char *names[] = {"yes_means", "no_means"};
+        const char *keys[] = {"true", "false"};
+        for (index = 0; index < 2; index++) {
+            int slot = argument(fcinfo, names[index]);
+            if (supplied(fcinfo, slot)) {
+                appendStringInfo(&encoded, ",\"%s\":", keys[index]);
+                escape_json(&encoded, text_to_cstring(PG_GETARG_TEXT_PP(slot)));
+            }
+        }
+    }
+    appendStringInfoChar(&encoded, '}');
+    json = tt_utf8(encoded.data, encoded.len, &length);
+    TT_BRIDGE(code = thinkthen_sql_question_from_json(json, length, &owner->question, &owner->error));
+    tt_check(owner, code);
     {
         const char *names[] = {"threshold", "low", "high"};
         double numbers[3];
@@ -103,11 +148,20 @@ void tt_question(TtOwner *owner, FunctionCallInfo fcinfo, const char *function)
         TT_BRIDGE(code = thinkthen_sql_question_set_threshold(owner->question, values[0], values[1], values[2], &owner->error));
         tt_check(owner, code);
     }
-    index = argument(fcinfo, "evidence");
+    index = argument(fcinfo, "field");
     if (supplied(fcinfo, index)) {
-        thinkthen_text evidence = utf8_text(PG_GETARG_TEXT_PP(index));
-        TT_BRIDGE(code = thinkthen_question_set_evidence(owner->question, evidence.data, evidence.len, &owner->error));
+        thinkthen_text field = utf8_text(PG_GETARG_TEXT_PP(index));
+        TT_BRIDGE(code = thinkthen_question_set_field(owner->question, field.data, field.len, &owner->error));
         tt_check(owner, code);
+    }
+    index = argument(fcinfo, "failures");
+    if (index >= 0) {
+        char *failures;
+        if (!supplied(fcinfo, index)) null_argument(owner, "failures");
+        failures = TextDatumGetCString(PG_GETARG_DATUM(index));
+        if (strcmp(failures, "raise") != 0 && strcmp(failures, "row") != 0)
+            tt_raise(THINKTHEN_CODE_USAGE_OPTION, "failures must be 'raise' or 'row'", NULL);
+        owner->keep_failures = !strcmp(failures, "row");
     }
     index = argument(fcinfo, "top");
     if (supplied(fcinfo, index)) {

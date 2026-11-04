@@ -1,0 +1,5 @@
+{
+  "anchor": "FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages',",
+  "before": 0,
+  "after": 1
+}

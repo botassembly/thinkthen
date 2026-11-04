@@ -279,6 +279,7 @@ if __name__ == '__main__':
         fixture(sys.argv[2])
     else:
         subprocess.run([sys.executable, ROOT / 'harness-path-test'], check=True)
+        subprocess.run([sys.executable, ROOT / 'stress-resource-lifetime-test'], check=True)
         memory_floors()
         count_growth()
         extended_window()

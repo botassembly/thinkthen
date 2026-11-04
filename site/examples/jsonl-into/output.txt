@@ -1,0 +1,3 @@
+{"id":"a1","text":"Please refund my order.","is_refund":true}
+{"id":"a2","text":"Where is my parcel?","is_refund":false}
+{"id":"a3","text":"I was charged twice for one invoice.","is_refund":true}

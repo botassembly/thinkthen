@@ -22,7 +22,7 @@ static GROUPS: Mutex<Groups> = Mutex::new(Groups {
 ///
 /// # Errors
 /// Returns the first wait error after attempting every owned group.
-pub fn force_cleanup() -> Result<(), Error> {
+pub(crate) fn force_cleanup() -> Result<(), Error> {
     let mut groups = lock(&GROUPS);
     groups.stopped = true;
     let mut failure = None;

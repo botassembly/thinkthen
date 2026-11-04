@@ -9,7 +9,7 @@ use super::*;
 #[schemars(with = "DecideWire")]
 pub struct Decide {
     pub(crate) inner: crate::core::Decide,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Decide {
     /// Admit this function's required question and domain.
@@ -18,19 +18,31 @@ impl Decide {
     pub fn new(question: impl Into<String>) -> Result<Self, Error> {
         Ok(Self {
             inner: crate::core::Decide::new(question)?,
-            evidence: None,
+            field: None,
         })
     }
-    /// Select evidence with an admitted JSON Pointer.
+    /// Set the meaning of a true answer.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn yes_means(mut self, meaning: impl Into<String>) -> Self {
+        self.inner.yes = Some(meaning.into());
         self
     }
-    /// The admitted evidence pointer.
+    /// Set the meaning of a false answer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn no_means(mut self, meaning: impl Into<String>) -> Self {
+        self.inner.no = Some(meaning.into());
+        self
+    }
+    /// Select field with an admitted JSON Pointer.
+    #[must_use]
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
+        self
+    }
+    /// The admitted field pointer.
+    #[must_use]
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -46,22 +58,28 @@ impl Decide {
 pub(crate) struct DecideWire {
     #[serde(deserialize_with = "crate::core::diagnostic::question")]
     question: String,
+    #[serde(default, rename = "true", skip_serializing_if = "Option::is_none")]
+    yes: Option<String>,
+    #[serde(default, rename = "false", skip_serializing_if = "Option::is_none")]
+    no: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::threshold")]
     threshold: ThresholdInput,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<DecideWire> for Decide {
     type Error = Error;
     fn try_from(value: DecideWire) -> Result<Self, Error> {
         let mut question = Self::new(value.question)?;
-        question.evidence = admit_evidence(value.evidence)?;
+        question.inner.yes = value.yes;
+        question.inner.no = value.no;
+        question.field = admit_field(value.field)?;
         question.inner.threshold = value.threshold.admit()?;
         Ok(question)
     }
@@ -70,8 +88,10 @@ impl From<Decide> for DecideWire {
     fn from(value: Decide) -> Self {
         Self {
             question: value.inner.text,
+            yes: value.inner.yes,
+            no: value.inner.no,
             threshold: value.inner.threshold.into(),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }
@@ -83,7 +103,7 @@ impl From<Decide> for DecideWire {
 #[schemars(with = "FilterWire")]
 pub struct Filter {
     pub(crate) inner: crate::core::Decide,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Filter {
     /// Admit this function's required question and domain.
@@ -92,19 +112,31 @@ impl Filter {
     pub fn new(question: impl Into<String>) -> Result<Self, Error> {
         Ok(Self {
             inner: crate::core::Decide::new(question)?,
-            evidence: None,
+            field: None,
         })
     }
-    /// Select evidence with an admitted JSON Pointer.
+    /// Set the meaning of a true answer.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn yes_means(mut self, meaning: impl Into<String>) -> Self {
+        self.inner.yes = Some(meaning.into());
         self
     }
-    /// The admitted evidence pointer.
+    /// Set the meaning of a false answer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn no_means(mut self, meaning: impl Into<String>) -> Self {
+        self.inner.no = Some(meaning.into());
+        self
+    }
+    /// Select field with an admitted JSON Pointer.
+    #[must_use]
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
+        self
+    }
+    /// The admitted field pointer.
+    #[must_use]
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -120,22 +152,28 @@ impl Filter {
 pub(crate) struct FilterWire {
     #[serde(deserialize_with = "crate::core::diagnostic::question")]
     question: String,
+    #[serde(default, rename = "true", skip_serializing_if = "Option::is_none")]
+    yes: Option<String>,
+    #[serde(default, rename = "false", skip_serializing_if = "Option::is_none")]
+    no: Option<String>,
     #[serde(default)]
     #[serde(deserialize_with = "crate::core::diagnostic::threshold")]
     threshold: ThresholdInput,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<FilterWire> for Filter {
     type Error = Error;
     fn try_from(value: FilterWire) -> Result<Self, Error> {
         let mut question = Self::new(value.question)?;
-        question.evidence = admit_evidence(value.evidence)?;
+        question.inner.yes = value.yes;
+        question.inner.no = value.no;
+        question.field = admit_field(value.field)?;
         question.inner.threshold = value.threshold.admit()?;
         Ok(question)
     }
@@ -144,8 +182,10 @@ impl From<Filter> for FilterWire {
     fn from(value: Filter) -> Self {
         Self {
             question: value.inner.text,
+            yes: value.inner.yes,
+            no: value.inner.no,
             threshold: value.inner.threshold.into(),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }
@@ -157,7 +197,7 @@ impl From<Filter> for FilterWire {
 #[schemars(with = "FindWire")]
 pub struct Find {
     pub(crate) inner: crate::core::Find,
-    pub(super) evidence: Option<Pointer>,
+    pub(super) field: Option<Pointer>,
 }
 impl Find {
     /// Admit this function's required question and domain.
@@ -166,19 +206,19 @@ impl Find {
     pub fn new(question: impl Into<String>) -> Result<Self, Error> {
         Ok(Self {
             inner: crate::core::Find::new(question)?,
-            evidence: None,
+            field: None,
         })
     }
-    /// Select evidence with an admitted JSON Pointer.
+    /// Select field with an admitted JSON Pointer.
     #[must_use]
-    pub fn evidence(mut self, pointer: Pointer) -> Self {
-        self.evidence = Some(pointer);
+    pub fn field(mut self, pointer: Pointer) -> Self {
+        self.field = Some(pointer);
         self
     }
-    /// The admitted evidence pointer.
+    /// The admitted field pointer.
     #[must_use]
-    pub fn evidence_pointer(&self) -> &Pointer {
-        self.evidence
+    pub fn field_pointer(&self) -> &Pointer {
+        self.field
             .as_ref()
             .unwrap_or(&crate::core::record::ROOT_POINTER)
     }
@@ -201,10 +241,10 @@ pub(crate) struct FindWire {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_evidence"
+        deserialize_with = "deserialize_field"
     )]
     #[schemars(with = "Pointer")]
-    evidence: Option<String>,
+    field: Option<String>,
 }
 impl TryFrom<FindWire> for Find {
     type Error = Error;
@@ -212,7 +252,7 @@ impl TryFrom<FindWire> for Find {
         let mut question = Self::new(value.question)?;
         let threshold = value.threshold.admit()?;
         threshold.require_cut()?;
-        question.evidence = admit_evidence(value.evidence)?;
+        question.field = admit_field(value.field)?;
         question.inner.threshold = threshold;
         Ok(question)
     }
@@ -222,7 +262,7 @@ impl From<Find> for FindWire {
         Self {
             question: value.inner.text,
             threshold: value.inner.threshold.into(),
-            evidence: value.evidence.map(|pointer| pointer.to_string()),
+            field: value.field.map(|pointer| pointer.to_string()),
         }
     }
 }

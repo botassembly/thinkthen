@@ -56,6 +56,7 @@ pub(super) fn request(function: &str, args: &ArgMatches) -> Result<Request, Erro
             .ok_or_else(|| usage(key, "a supplied list", "absent option"))?;
         question.insert(field.into(), list);
     }
+    super::question_options::apply(function, args, &mut question)?;
     if function == "relate" {
         question.insert("rules".into(), rules(args)?);
     }
@@ -164,23 +165,30 @@ fn rules(args: &ArgMatches) -> Result<Value, Error> {
 }
 
 pub(super) fn overrides(request: Request, args: &ArgMatches) -> Result<Request, Error> {
-    let evidence = value(args, "evidence");
+    let field = if args
+        .get_many::<String>("field")
+        .is_some_and(|values| values.len() > 1)
+    {
+        None
+    } else {
+        value(args, "field")
+    };
     let name = if args.try_get_one::<String>("name").is_ok() {
         value(args, "name")
     } else {
         None
     };
-    if evidence.is_none() && name.is_none() {
+    if field.is_none() && name.is_none() {
         return Ok(request);
     }
     let mut encoded = serde_json::to_value(request)
         .map_err(|_| super::local("the request could not be encoded"))?;
-    if let Some(evidence) = evidence {
+    if let Some(field) = field {
         encoded
             .get_mut("question")
             .and_then(Value::as_object_mut)
             .ok_or_else(|| super::local("the request question could not be encoded"))?
-            .insert("evidence".into(), evidence.into());
+            .insert("field".into(), field.into());
     }
     if let Some(name) = name {
         encoded

@@ -1,4 +1,5 @@
 """Prepare public build inputs separately from the offline candidate."""
+from duckdb_release import VERSION as DUCKDB_VERSION
 import email
 import hashlib
 import json
@@ -26,8 +27,10 @@ def python_frames():
     destination.mkdir(parents=True, exist_ok=True)
     hashes = json.loads((ROOT / 'scripts/release-python-hashes.json').read_text())
     pinned = {filename: digest for entries in hashes.values() for filename, digest in entries.items()}
+    from release_python_dependencies import versions
+    expected = PINS['python_frames'] | versions()
     requirements = []
-    for name, version in PINS['python_frames'].items():
+    for name, version in expected.items():
         selected = [digest for filename, digest in hashes[name].items()
                     if filename.startswith(name.replace('-', '_') + '-' + version + '-')]
         if not selected: raise ValueError('missing pinned Python wheels: ' + name)
@@ -35,7 +38,7 @@ def python_frames():
     (destination / 'requirements.txt').write_text('\n'.join(requirements) + '\n')
     if inventory.is_file():
         rows = json.loads(inventory.read_text())['wheels']
-        if {row['name']: row['version'] for row in rows} == PINS['python_frames']:
+        if {row['name']: row['version'] for row in rows} == expected:
             for row in rows:
                 if (row['sha256'] != pinned.get(row['file']) or
                         hashlib.sha256((wheels / row['file']).read_bytes()).hexdigest() != row['sha256']):
@@ -72,8 +75,8 @@ def r_sources():
 def language_inputs():
     for command in ('cpp-prepare', 'jvm-prepare', 'csharp-prepare', 'sqlite-prepare', 'duckdb-prepare'):
         prepared('scripts/' + command, *(['--refresh'] if command == 'sqlite-prepare' else []))
-    prepared('scripts/duckdb-prepare', '--community', '1.4.3')
-    wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
+    prepared('scripts/duckdb-prepare', '--community', DUCKDB_VERSION)
+    wheel = (TOOLS / f'duckdb/{DUCKDB_VERSION}/python-wheel').read_text().strip()
     abi = wheel.split('-')[2][2:]
     prepared('uv', 'python', 'install', f'{abi[0]}.{abi[1:]}')
     sdk_tools()
@@ -199,12 +202,13 @@ def floor_inputs():
                  'Frameworks/R.framework/Resources/etc/Renviron'] if macos else ['bin/sqlite3', 'sources/sqlite.zip']
     produce(base, prefix, roots, required, {})
     if macos:
-        wheel = (TOOLS / 'duckdb/1.4.3/python-wheel').read_text().strip()
+        wheel = (TOOLS / f'duckdb/{DUCKDB_VERSION}/python-wheel').read_text().strip()
         produce('scripts/floors/prepare-duckdb', prefix / 'duckdb',
-                ['static', 'cli', 'duckdb-1.4.3', wheel],
-                ['static/libduckdb_static.a', 'static/libduckdb_yyjson.a', 'cli/duckdb',
-                 'duckdb-1.4.3/src/include/duckdb.hpp', wheel],
-                {'source_recipe': hashlib.sha256((ROOT / 'scripts/duckdb-prepare').read_bytes()).hexdigest()})
+                ['static', 'cli', f'duckdb-{DUCKDB_VERSION}', wheel],
+                ['static/libduckdb_static.a', 'cli/duckdb',
+                 f'duckdb-{DUCKDB_VERSION}/src/include/duckdb.hpp', wheel],
+                {'source_recipe': hashlib.sha256(b''.join((ROOT / 'scripts' / name).read_bytes()
+                    for name in ('duckdb-prepare', 'duckdb_release.py', 'release-tools.json'))).hexdigest()})
     required = ['library/jsonlite/DESCRIPTION']
     for archive in PINS['r_sources']:
         package, version = archive.removesuffix('.tar.gz').split('_')
@@ -228,6 +232,7 @@ def prepare(target):
     actions = [('host tools', host_tools)]
     if platform.system() == 'Linux':
         actions.append(('floor image', lambda: prepared('scripts/floors/prepare-image')))
+        actions.append(('installer test image', lambda: prepared('scripts/installer-test', '--prepare-fish')))
     actions.extend([('language inputs', language_inputs), ('floor inputs', floor_inputs)])
     if platform.system() == 'Linux':
         actions.append(('Swift inputs', lambda: prepared('scripts/floors/prepare-swift')))

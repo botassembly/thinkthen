@@ -23,12 +23,25 @@ static tt::settings stub_settings() {
     return settings;
 }
 
-static std::string code_name(tt::errc code) {
-    return thinkthen_code_name(static_cast<std::int32_t>(code));
+static std::string code_name(std::error_code code) {
+    return thinkthen_code_name(code.value());
 }
 
 /* Feature: required domains and separate record encodings are C++ types. */
 static void typed_signatures() {
+    static_assert(std::is_same_v<decltype(thinkthen_row{}.function), thinkthen_function>);
+    static_assert(std::is_same_v<decltype(thinkthen_row{}.status), thinkthen_status>);
+    static_assert(sizeof(thinkthen_function) == sizeof(std::uint32_t));
+    static_assert(sizeof(thinkthen_status) == sizeof(std::uint32_t));
+    static_assert(offsetof(thinkthen_row, function) == 4);
+    static_assert(offsetof(thinkthen_row, status) == 8);
+    static_assert(sizeof(thinkthen_backend) == sizeof(std::uint32_t));
+    static_assert(sizeof(thinkthen_record_kind) == sizeof(std::uint32_t));
+    static_assert(sizeof(thinkthen_offset) == sizeof(std::uint32_t));
+    thinkthen_error initialized_error = THINKTHEN_ERROR_INIT;
+    thinkthen_row initialized_row = THINKTHEN_ROW_INIT;
+    assert(initialized_error.struct_size == sizeof initialized_error && initialized_error.code == 0);
+    assert(initialized_row.struct_size == sizeof initialized_row && initialized_row.error_code == 0);
     static_assert(!std::is_copy_constructible_v<tt::client>);
     static_assert(!std::is_constructible_v<tt::choose, std::string>);
     static_assert(!std::is_constructible_v<tt::tag, std::string>);
@@ -39,7 +52,7 @@ static void typed_signatures() {
     static_assert(!std::is_same_v<tt::text, tt::json_text>);
     static_assert(!std::is_same_v<tt::record, tt::owned_record>);
     static_assert(std::is_same_v<decltype(std::declval<const tt::row<tt::choose>&>().value()),
-                                 const std::string*>);
+                                 const std::string&>);
 }
 
 /* Feature: C++ questions admit their required lists through the engine. */
@@ -53,6 +66,16 @@ static void empty_domain() {
     }
 }
 
+/* Feature: native argument failures survive the shared invocation helper. */
+static void native_argument_errors() {
+    auto config = stub_settings();
+    config.backend = static_cast<tt::backend>(999);
+    try { tt::client rejected{config}; assert(false); }
+    catch (const tt::error& error) { assert(error.code() == tt::errc::usage_backend); }
+    try { (void)tt::threshold::band(0.8, 0.2); assert(false); }
+    catch (const tt::error& error) { assert(error.code() == tt::errc::usage_threshold); }
+}
+
 /* Feature: a copied typed row retains answer and detail after native cleanup. */
 static void owned_answer_and_detail() {
     const auto retained = [] {
@@ -60,19 +83,19 @@ static void owned_answer_and_detail() {
         auto row = owner.choose(tt::choose{"Which team?", {"billing", "shipping"}},
                                 tt::text{"refund please"});
         assert(row.status() == tt::status::answered);
-        assert(row.value() != nullptr);
+        assert(row.answer() != nullptr);
         assert(row.failure() == nullptr);
         return row;
     }();
     assert(retained.position() == 1);
-    const auto* value = retained.value();
+    const auto* value = retained.answer();
     assert(*value == "billing" || *value == "shipping");
     const auto detail = retained.detail();
     assert(detail.has_value());
     assert(detail->labels.size() == 2);
     assert(detail->labels.at(*value) == 1.0);
     const auto copy = retained;
-    assert(*copy.value() == *value);
+    assert(*copy.answer() == *value);
     assert(copy.detail()->labels == detail->labels);
 }
 
@@ -90,7 +113,7 @@ static void callback_local_record() {
     for (const auto& row : rows) {
         assert(row.status() == tt::status::answered);
         assert(row.id_json() == "18446744073709551615");
-        assert(row.value() != nullptr);
+        assert(row.answer() != nullptr);
         ++count;
     }
     assert(count == 1);
@@ -112,7 +135,7 @@ static void owned_collection() {
     assert(retained[0].position() == 1 && retained[1].position() == 2);
     assert(retained[0].id_json() == "-9223372036854775808");
     assert(retained[1].id_json() == "\"second\"");
-    assert(retained[0].value() && retained[1].value());
+    assert(retained[0].answer() && retained[1].answer());
 }
 
 /* Feature: missing records and invalid ids stay typed failed rows. */
@@ -120,13 +143,13 @@ static void record_failures() {
     tt::client owner(stub_settings());
     const auto missing = owner.decide(tt::decide{"Ready?"}, tt::missing_record{});
     assert(missing.status() == tt::status::failed);
-    assert(missing.value() == nullptr && !missing.probability());
+    assert(missing.answer() == nullptr && !missing.probability());
     assert(missing.failure());
     assert(code_name(missing.failure()->code()) == "record.missing");
     const auto invalid = owner.decide(tt::decide{"Ready?"},
         tt::json_text{"{\"id\":{\"nested\":1},\"body\":\"evidence\"}"});
     assert(invalid.status() == tt::status::failed);
-    assert(invalid.value() == nullptr && invalid.failure());
+    assert(invalid.answer() == nullptr && invalid.failure());
     assert(code_name(invalid.failure()->code()) == "record.invalid");
 }
 
@@ -149,7 +172,7 @@ static void moved_owners() {
     first.cancel_handle().request_cancel();
     assert(first.begin() == first.end());
     std::size_t count = 0;
-    for (const auto& row : moved) { assert(row.value()); ++count; }
+    for (const auto& row : moved) { assert(row.answer()); ++count; }
     assert(count == 1);
 }
 
@@ -167,7 +190,7 @@ static void source_exception() {
     }
     assert(propagated);
     const auto row = owner.decide(tt::decide{"Still usable?"}, tt::text{"evidence"});
-    assert(row.value());
+    assert(row.answer());
 }
 
 /* Feature: immutable questions preserve options, execution names and toolbox domains. */
@@ -180,17 +203,17 @@ static void snapshots_and_names() {
     const auto named = owner.choose(selected, tt::text{"evidence"}, "execution");
     assert(!unnamed.source().name && named.source().name == "execution");
     assert(unnamed.source().question_identity != named.source().question_identity);
-    assert(*unnamed.value() == *named.value());
+    assert(*unnamed.answer() == *named.answer());
     assert(std::holds_alternative<tt::rank>(tools.select("rank")));
     try { (void)tools.select<tt::decide>("color"); assert(false); }
     catch (const tt::error& error) { assert(error.code() == tt::errc::usage_name); }
-    const auto band = original.cutoff(tt::threshold::band(0.2, 0.8));
+    const auto band = original.threshold(tt::threshold::band(0.2, 0.8));
     assert(owner.choose(band, tt::text{"evidence"}).source().question_identity != unnamed.source().question_identity);
     assert(owner.choose(original, tt::text{"evidence"}).source().question_identity == unnamed.source().question_identity);
     tt::annotation_questions entries{{"ready", tt::decide{"Ready?"}}};
     const auto annotation = owner.annotate(tt::annotate{entries}, tt::text{"evidence"});
-    assert(annotation.value() && annotation.value()->size() == 1);
-    assert(std::get<tt::outcome<tt::decide>>(annotation.value()->at("ready")).value());
+    assert(annotation.answer() && annotation.answer()->size() == 1);
+    assert(std::get<tt::outcome<tt::decide>>(annotation.answer()->at("ready")).answer());
     std::error_code code = tt::errc::record_missing;
     assert(code.category() == tt::category() && code.message() == "record.missing");
 }
@@ -198,7 +221,7 @@ static void snapshots_and_names() {
 static void filter_originals() {
     tt::client owner(stub_settings());
     std::vector<tt::row<tt::filter>> retained;
-    for (const auto& row : owner.filter_each(tt::filter{"Ready?"},
+    for (const auto& row : owner.filter_rows_each(tt::filter{"Ready?"},
             std::vector<tt::owned_record>{tt::owned_text{"alpha"}, tt::missing_record{}, tt::owned_json_text{"{\"body\":\"beta\"}"}})) retained.push_back(row);
     assert(retained.size() == 3);
     assert(std::get<tt::owned_text>(retained[0].item()).value == "alpha");
@@ -215,9 +238,9 @@ static void saved_toolbox(const char* json) {
     const auto topic = tools.select<tt::choose>("topic");
     tt::client client(stub_settings());
     const auto loaded = client.choose(topic, tt::json_text{R"({"body":"Bill"})"});
-    const auto direct = client.choose(tt::choose{"Which topic?", {"billing", "shipping"}}.evidence("/body").cutoff(tt::threshold::cutoff(0.7)), tt::json_text{R"({"body":"Bill"})"});
+    const auto direct = client.choose(tt::choose{"Which topic?", {"billing", "shipping"}}.field("/body").threshold(tt::threshold::cutoff(0.7)), tt::json_text{R"({"body":"Bill"})"});
     assert(loaded.source().question_identity == direct.source().question_identity);
-    assert(loaded.value() && direct.value() && *loaded.value() == *direct.value());
+    assert(loaded.answer() && direct.answer() && *loaded.answer() == *direct.answer());
     std::map<std::string, tt::toolbox_question> entries;
     for (const auto* name : {"ready", "topic", "names", "decision", "tags", "urgency", "priority", "find", "recognized"})
         entries.emplace(name, tools.select(name));
@@ -259,6 +282,7 @@ int main(int argc, char** argv) {
     snapshots_and_names();
     filter_originals();
     empty_domain();
+    native_argument_errors();
     owned_answer_and_detail();
     callback_local_record();
     owned_collection();

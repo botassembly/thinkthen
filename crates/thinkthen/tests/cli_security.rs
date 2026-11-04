@@ -133,17 +133,20 @@ fn terminal_text_escapes_controls_while_pipes_keep_evidence_bytes() {
         .env("THINKTHEN_BASE_URL", server.base())
         .env("THINKTHEN_API_KEY", loopback::KEY);
     let script = r#"
-import errno, os, pty, subprocess, sys
+import errno, json, os, pty, subprocess, sys
 binary = sys.argv[1]
 text = 'safe\x1b[31m\x07\x85\u202eend\n'
-args = ([binary, 'rank', 'Order?', '--backend', 'stub', '--from', 'lines', '--level', 'low', '--level', 'high'] if sys.argv[2] == 'rank' else [binary, 'find', 'Which?', '--from', 'lines'])
-plain = subprocess.run(args, input=text.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+args = ([binary, 'rank', 'Order?', '--backend', 'stub', '--from', 'lines', '--level', 'low', '--level', 'high'] if sys.argv[2] == 'rank' else [binary, 'find', 'Which?', '--from', 'jsonl', '--field', '/body'])
+key = text.rstrip('\n')
+payload = text.encode() if sys.argv[2] == 'rank' else json.dumps({'id':key,'body':text}).encode()
+plain = subprocess.run(args, input=payload, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 assert plain.returncode == 0, plain.stderr
-assert plain.stdout == text.encode(), plain.stdout
+prefix = key.encode() + b'\t' if sys.argv[2] == 'find' else b''
+assert plain.stdout == prefix + text.encode(), plain.stdout
 master, slave = pty.openpty()
 child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=slave, stderr=subprocess.PIPE)
 os.close(slave)
-child.stdin.write(text.encode()); child.stdin.close()
+child.stdin.write(payload); child.stdin.close()
 chunks = []
 while True:
     try:
@@ -156,7 +159,8 @@ while True:
 os.close(master)
 assert child.wait() == 0, child.stderr.read()
 actual = b''.join(chunks)
-assert actual == b'safe\\u001b[31m\\u0007\\u0085\\u202eend\r\n', actual
+terminal_prefix = b'safe\\u001b[31m\\u0007\\u0085\\u202eend\t' if sys.argv[2] == 'find' else b''
+assert actual == terminal_prefix + b'safe\\u001b[31m\\u0007\\u0085\\u202eend\r\n', actual
 "#;
     for surface in ["rank", "find"] {
         let result = Command::new("python3")
@@ -191,7 +195,9 @@ fn chosen_labels_escape_terminal_controls() {
 import errno, os, pty, subprocess, sys
 master, slave = pty.openpty()
 label = 'safe\x1b[31m\x07\x85\u202eend'
-child = subprocess.Popen([sys.argv[1], 'choose', 'Which?', '--choice', label, '--choice', 'other', '--url', sys.argv[2]], stdin=subprocess.DEVNULL, stdout=slave, stderr=subprocess.PIPE)
+child = subprocess.Popen([sys.argv[1], 'choose', 'Which?', '--choice', label, '--choice', 'other', '--url', sys.argv[2]], stdin=subprocess.PIPE, stdout=slave, stderr=subprocess.PIPE)
+child.stdin.write(b"evidence")
+child.stdin.close()
 os.close(slave)
 chunks = []
 while True:

@@ -1,10 +1,10 @@
 # R API
 
-ThinkThen accepts a character vector, list of records or data frame. Each call returns a tibble. Arguments after `...` must be named. Unused arguments raise a `thinkthen_usage_error`.
+ThinkThen accepts a character vector, list of records or data frame. The plain verbs return typed answer vectors in input order; annotate returns one typed column per question, and filter returns the kept original records. Each `_rows` twin returns the full outcome tibble. Arguments after `...` must be named. Unused arguments raise a `thinkthen_usage_error`.
 
 ```r
 client <- tt_client(backend = "stub")
-rows <- tt_choose(c("Refund please", "Where is my delivery?"),
+teams <- tt_choose(c("Refund please", "Where is my delivery?"),
                   "Which team?", c("billing", "shipping"), client = client)
 tt_close(client)
 ```
@@ -13,7 +13,7 @@ tt_close(client)
 
 The public functions take data first. Choose takes required `choices`, tag takes required `labels`, score and rank take required `levels`, recognize takes required `kinds`, and relate takes required `rules`. These domains follow the question. Recognize and relate use their domain in place of the question.
 
-Every call accepts named `client`, `.progress`, `evidence` and `name`. `evidence` is a JSON Pointer. `name` is an optional execution name. Toolbox selection never supplies it. `tt_rank()` also accepts `top`, which limits successful rows and retains failed rows.
+Every call accepts named `client`, `.progress`, `field` and `name`. `field` is a JSON Pointer. `name` is an optional execution name. Toolbox selection never supplies it. `tt_rank()` also accepts `top`; unranked input positions receive NA. `tt_rank_rows()` limits successful rows and retains failed rows. Decide and filter accept `yes_means` and `no_means`; choose, tag, score and rank accept named character `descriptions`.
 
 Decide, choose and filter accept a numeric `threshold` or `c(low, high)`. Tag, find, recognize and relate accept a numeric cut. Score and rank have no threshold argument. The engine admits bounds, list contents and pointers.
 
@@ -28,22 +28,22 @@ route <- tt_choose_question("Which team?", c("billing", "shipping"))
 tools <- tt_toolbox(list(route = route))
 selected <- tt_question(tools, "route")
 questions <- tt_annotation_questions(list(route = selected))
-rules <- vctrs::list_of(tt_rule("person", "company", "works_for"))
+rules <- list(tt_rule("person", "company", "works_for"))
 ```
 
-`tt_toolbox()` admits a named list of questions. `tt_question()` selects one entry. The selected question survives collection of the toolbox. `tt_annotation_questions()` admits the narrower named collection accepted by `tt_annotate()`. It excludes rank and annotate. Relation rules use `tt_rule(source, target, relation, ..., reads = NULL, either = FALSE)` inside `vctrs::list_of()`.
+`tt_toolbox()` admits a named list of questions. `tt_toolbox_read(path)` and `tt_toolbox_write(toolbox, path)` read and write canonical saved toolboxes. `tt_question()` selects one entry. The selected question survives collection of the toolbox. `tt_annotation_questions()` admits the narrower named collection accepted by `tt_annotate()`. It excludes rank and annotate. Relation rules use `tt_rule(source, target, relation, ..., reads = NULL, either = FALSE)` alone or inside an ordinary `list()`.
 
 ## Clients
 
-`tt_client()` accepts `backend`, `api_key`, `url`, `model`, `batch` and `retry`. Backend names derive from the engine registry. Omitted settings use engine defaults. `tt_retry()` accepts named `max_retries`, `initial_backoff_ms` and `attempt_timeout_ms`. Counts and durations must be whole integers.
+`tt_client()` accepts `backend`, `api_key`, `url`, `model`, `batch` and `retry`. Backend names derive from the engine registry. An omitted backend reads raw `THINKTHEN_BACKEND`; an explicit backend wins. Other omitted settings use engine defaults. `tt_retry()` accepts named `max_retries`, `initial_backoff_ms` and `attempt_timeout_ms`. Counts and durations must be whole integers.
 
-`tt_client_from_env()` uses the same engine resolution and accepts the same overrides. `local_tt_client(client)` installs a default for its calling scope. `with_tt_client(client, code)` installs one while evaluating `code`. Both restore the previous default on exit. Neither closes the borrowed client. An omitted client uses a lazily created package default.
+`local_tt_client(client)` installs a default for its calling scope. `with_tt_client(client, code)` installs one while evaluating `code`. Both restore the previous default on exit. Neither closes the borrowed client. An omitted client uses a lazily created package default.
 
-`tt_close(client)` releases its engine and is idempotent. A call through a closed client raises a setup condition. Printing a client hides credentials. `options(thinkthen.verbose = TRUE)` prints function starts and failed positions. `.progress` controls cli progress in interactive sessions.
+`tt_close(client)` releases its engine and is idempotent. A call through a closed client raises `usage.closed`. Printing a client hides credentials. `options(thinkthen.verbose = TRUE)` prints function starts and failed positions. `.progress` controls cli progress in interactive sessions.
 
 ## Rows
 
-Every result inherits `tt_<function>_rows`, `tt_rows` and tibble classes. Columns contain `position`, `id`, `status`, `answer`, `probability`, `source`, `error_code`, `error_message`, `error_http_status` and `detail`. Status and error codes are factors drawn from the shared registry. Probability retains full double precision. Source entries have class `tt_source` and identify the question, backend, model and optional execution name.
+Every `_rows` result inherits `tt_<function>_rows`, `tt_rows` and tibble classes. Columns contain `position`, `id`, `status`, `answer`, `probability`, `source`, `error_code`, `error_message`, `error_http_status` and `detail`. Status and error codes are factors drawn from the shared registry. Probability retains full double precision. Source entries have class `tt_source` and identify the question, backend, model and optional execution name.
 
 Decide and filter answers are logical, choose answers are character, score and rank answers are double, and tag answers are `list_of<character>`. Find answers are `tt_span` records. Recognize answers are list columns of `tt_name` records. Relate answers hold `tt_relation` records. Annotate answers contain named function and status classes under `tt_outcome`.
 
@@ -51,17 +51,17 @@ Span offsets count Unicode code points from one and include the end. `$text`, `$
 
 Detail entries are typed per function. Label detail holds named probabilities. Scale detail holds probabilities in level order. Recognition detail holds piece and name record vectors. Relation detail holds relation pairs. No raw backend reply appears in rows.
 
-`tt_filter()` returns every row, plus its original `item` and logical `kept`. Rank returns successful rows in rank order, then failures, with original input positions.
+`tt_filter_rows()` returns every row, plus its original `item` and logical `kept`. `tt_filter()` returns only kept original records. `tt_rank_rows()` returns successful rows in rank order, then failures, with original input positions and original `item`; `tt_rank()` and `tt_answer()` align ranks to input order.
 
 ## Missing values and errors
 
 `NULL` as the collection means zero records. `list(NULL)` and atomic NA elements are missing records. They make no backend request and return failed rows with `record.missing`. Unsupported record conversion and invalid IDs retain their positions as failed rows. Failed scalar answers use typed NA. Failed list answers use NULL without losing rows. Answered empty collections retain their prototypes.
 
-Failed records return rows, including single-record calls. Call-level failures use rlang conditions under `thinkthen_error`. The class `thinkthen_<family>_error` names the engine family. R argument mistakes use `thinkthen_r_error` with an `r.` code. Cancellation also carries `thinkthen_cancelled_error`. Engine conditions carry the shared code and message. Escape and Ctrl-C cancel the engine call and raise `thinkthen_cancelled_error`. The package keeps native code loaded until process exit.
+The `_rows` forms retain failed rows, including single-record calls. Plain answer forms raise `thinkthen_failed_rows`, carrying every outcome in `rows`, every failed row in `failed_rows`, and the first code in `code`. Filter conditions also carry `kept`. Use `errors = "na"` to retain missing answers instead. Blank text is `record.empty`, with no backend request. Call-level failures use rlang conditions under `thinkthen_error`. The class `thinkthen_<family>_error` names the engine family. R argument mistakes use `thinkthen_usage_error` with a shared `usage.*` code. Cancellation also carries `thinkthen_cancelled_error`. Engine conditions carry the shared code and message. Escape and Ctrl-C cancel the engine call and raise `thinkthen_cancelled_error`. The package keeps native code loaded until process exit.
 
 ## Table helpers
 
-`tt_answer(rows)` projects existing answers. Every call also has a `_vec` helper. `tt_keep()` projects filter answers. These helpers emit one `thinkthen_failed_rows` cli warning when rows or annotation children fail. Their missing answers remain visible.
+`tt_answer(rows, errors = "error")` projects existing answers without another call. Not-sure answers are missing. Failed rows or annotation children raise by default; `errors = "na"` returns missing values. `tt_keep()` starts a filter call and returns its logical mask. The `_vec` helpers have been removed.
 
 `tt_bind(data, rows, prefix)` attaches outcome columns to a copy. It supports base data frames, tibbles, grouped tibbles and data.table. It joins by input position and requires one result per original row. Complete rank results can bind in input order. Truncated rank results and name collisions raise a usage condition. Input IDs never act as joins.
 
@@ -73,4 +73,4 @@ Ordinary integer IDs and safe whole doubles are accepted. Doubles beyond `2^53 -
 
 ## Package
 
-The package imports jsonlite, rlang, cli, vctrs and tibble. dplyr and data.table support their optional table classes. The source archive includes the engine and vendored Rust dependencies. An offline source installation needs these R dependencies, R headers, a C compiler, GNU make and Rust >= 1.95.0. Source installation supports Unix platforms. Windows uses the supplied binary package.
+The package imports jsonlite, rlang, cli, vctrs, tibble, withr and stats. dplyr and data.table support their optional table classes. The source archive includes the engine and vendored Rust dependencies. An offline source installation needs these R dependencies, R headers, a C compiler, GNU make and Rust >= 1.95.0. Source installation supports Unix platforms. Windows uses the supplied binary package.

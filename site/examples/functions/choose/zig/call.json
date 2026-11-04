@@ -1,0 +1,5 @@
+{
+  "anchor": "    const topic = try (try client.choose(",
+  "before": 0,
+  "after": 2
+}

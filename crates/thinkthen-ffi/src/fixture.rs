@@ -8,14 +8,24 @@ use crate::{
     exports::{OK, operation},
     memory::text,
 };
-/// Process-owned test routes. Existing clients retain their admitted snapshots.
+/// Test routes to local servers, in a debug test build. Free with thinkthen_fixture_routes_free.
 #[derive(Debug)]
 pub struct FixtureHandle {
     _guard: crate::fixture_routes::RouteGuard,
 }
-/// Install both loopback routes only in an explicit debug test artifact.
+/// Send backend requests to two local test servers, in a debug test build only.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL: a usage code
+/// for a bad URL or a build without test routes, or -THINKTHEN_CODE_USAGE_ABI when the text is
+/// not UTF-8. Free *out with thinkthen_fixture_routes_free.
 /// # Safety
-/// URL bytes are readable; out/error are distinct empty writable slots.
+/// Any thread may call this. systemone points to systemone_len readable bytes, or to a NUL-
+/// terminated string when systemone_len is THINKTHEN_NUL_TERMINATED; it is copied before
+/// return. openai points to openai_len readable bytes, or to a NUL-terminated string when
+/// openai_len is THINKTHEN_NUL_TERMINATED; it is copied before return. out is writable. error
+/// is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_fixture_routes_install(
     systemone: *const u8,
@@ -38,9 +48,11 @@ pub unsafe extern "C" fn thinkthen_fixture_routes_install(
         })
     }
 }
-/// Clear the owned test routes; opened clients keep their copied destinations.
+/// Remove the test routes. Clients already open keep theirs.
+///
+/// NULL is ignored.
 /// # Safety
-/// NULL or the unique live guard owner after all readers finish.
+/// Call this once, after every other use of owner has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_fixture_routes_free(owner: *mut FixtureHandle) {
     if !owner.is_null() {

@@ -4,7 +4,8 @@ set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
 case "${1:-}" in
-    --inside)
+    --inside|--inside-day-one)
+        inside_mode=$1
         shift
         python3 scripts/public_export_gate.py verify "$@"
         . scripts/native-env
@@ -14,6 +15,9 @@ case "${1:-}" in
         PATH="$HOME/.local/share/thinkthen-build-tools/cargo-deny/0.20.2-glibc2.28-rust1.95.0/installed/bin:$CARGO_HOME/bin:$PATH"
         export PATH
         export THINKTHEN_SWIFT_LOOPBACK="$THINKTHEN_LOOPBACK"
+        if [ "$inside_mode" = --inside-day-one ]; then
+            exec scripts/hosted-candidate-check --day-one-sdk-checks-inside
+        fi
         exec scripts/gate
         ;;
     *) exec python3 scripts/public_export_gate.py host "$@" ;;

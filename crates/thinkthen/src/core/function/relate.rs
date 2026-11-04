@@ -1,4 +1,4 @@
-//! Relations stated by the evidence, after shared name recognition.
+//! Relations stated by the field, after shared name recognition.
 
 use crate::core::{
     Answer, Ask, AskAnswer, ChoiceOption, Detail, Error, ErrorKind, Function, Name, Outcome,
@@ -262,21 +262,21 @@ impl Function for Relate {
         let question = context.question();
         let record = context.record();
         let answers = context.answers();
-        let evidence = record.evidence();
-        if answers.len() == question.recognize.initial(evidence).len() {
+        let field = record.field();
+        if answers.len() == question.recognize.initial(field).len() {
             return Function::followup_record(context.for_function(&question.recognize), limits);
         }
-        let (count, names) = question.recognized(evidence, answers)?;
+        let (count, names) = question.recognized(field, answers)?;
         if answers.len() > count {
             return Ok(Vec::new());
         }
-        let state: std::sync::Arc<str> = evidence.into();
+        let state: std::sync::Arc<str> = field.into();
         Ok(question.pairs(&names).into_iter().map(|(source, target, rule)| {
             let one = serde_json::to_string(&source).expect("an endpoint serializes");
             let two = serde_json::to_string(&target).expect("an endpoint serializes");
             let reads = &rule.reads;
             let question = if rule.either { format!("Does the text itself state that {one} {reads} {two}, or that {two} {reads} {one}?") } else { format!("Does the text itself state that {one} {reads} {two}?") };
-            Ask::YesNo { instructions: super::quoted(evidence, &question), yes: None, no: None }.with_state(state.clone())
+            Ask::YesNo { instructions: super::quoted(field, &question), yes: None, no: None }.with_state(state.clone())
         }).collect())
     }
     fn read_record(
@@ -286,9 +286,9 @@ impl Function for Relate {
         let question = context.question();
         let record = context.record();
         let answers = context.answers();
-        let evidence = record.evidence();
+        let field = record.field();
         question
-            .finish(evidence, answers)
+            .finish(field, answers)
             .unwrap_or_else(|error| Outcome::Failed { error })
     }
 }

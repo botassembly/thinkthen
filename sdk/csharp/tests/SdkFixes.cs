@@ -24,7 +24,7 @@ internal static partial class Program
             Successful(await client.DecideAsync(question, "beta"));
             using var annotations = AnnotationQuestions.Parse("""{"ready":{"function":"decide","question":"Ready?"}}""");
             Successful(await client.AnnotateAsync(annotations, "alpha"));
-            Successful(await client.AnnotateAsync(annotations, JsonSerializer.Deserialize<JsonElement>("""{"body":"beta"}"""), new AnnotateOptions { Evidence = pointer }));
+            Successful(await client.AnnotateAsync(annotations, JsonSerializer.Deserialize<JsonElement>("""{"body":"beta"}"""), new AnnotateOptions { Field = pointer }));
             await foreach (var row in client.DecideStreamAsync("Ready?", Records(new[] { "alpha", "beta" }))) Successful(row);
             await Code(ErrorCode.UsageName, () => client.DecideAsync("Ready?", "alpha", name: ""));
             _ = client.DecideStreamAsync("Ready?", Records(new[] { "unconsumed" }));
@@ -51,7 +51,7 @@ internal static partial class Program
         using var client = new ThinkThenClient(new() { Backend = Backend.Stub });
         foreach (Threshold invalid in new[] { Threshold.Band(0.8, 0.2), Threshold.Band(double.NaN, 0.8), Threshold.Cut(double.PositiveInfinity), Threshold.Cut(0) })
             await Code(ErrorCode.UsageThreshold, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Threshold = invalid }));
-        await Code(ErrorCode.UsagePointer, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Evidence = Pointer.From("bad") }));
+        await Code(ErrorCode.UsagePointer, () => client.DecideAsync("Ready?", "alpha", new DecideOptions { Field = Pointer.From("bad") }));
         await Code(ErrorCode.UsageName, () => client.DecideAsync("Ready?", "alpha", name: ""));
     }
     private static async Task EncoderCauses()
@@ -62,7 +62,7 @@ internal static partial class Program
         json.Converters.Add(converter);
         using var client = new ThinkThenClient(new() { Backend = Backend.Stub, Json = json });
         var invalid = Case<Failed<bool, NoDetail>>(await client.DecideAsync("Ready?", new BrokenRecord()));
-        Check(invalid.Error.Code == ErrorCode.RecordInvalid && ReferenceEquals(invalid.Error.Cause, cause),
+        Check(invalid.Error.ErrorCode == ErrorCode.RecordInvalid && ReferenceEquals(invalid.Error.Cause, cause),
             "record encoding lost the converter cause");
         converter.Failure = new InvalidOperationException("synthetic converter bug");
         try { await client.DecideAsync("Ready?", new BrokenRecord()); }

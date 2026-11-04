@@ -25,7 +25,7 @@ var (
 	_ tt.Row[string, tt.LabelsDetail]       = tt.ChooseRow{}
 	_ tt.Row[[]string, tt.LabelsDetail]     = tt.TagRow{}
 	_ tt.Row[float64, tt.LevelsDetail]      = tt.ScoreRow{}
-	_ tt.Row[uint64, tt.LevelsDetail]       = tt.RankRow{}
+	_ tt.Row[int, tt.LevelsDetail]          = tt.RankRow{}.Row
 	_ tt.Row[*tt.Span, tt.NoDetail]         = tt.FindRow{}
 	_ tt.Row[[]tt.Name, tt.RecognizeDetail] = tt.RecognizeRow{}
 	_ tt.Row[[]tt.Relation, tt.PairsDetail] = tt.RelateRow{}
@@ -87,7 +87,7 @@ func TestQuestionListsAndToolboxesOwnTheirStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	answer, ok := row.Value()
+	answer, ok := valueOf(row)
 	if !ok || (answer != "red" && answer != "green") {
 		t.Fatal("caller mutation changed choices")
 	}
@@ -127,7 +127,7 @@ func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	values, ok := row.Value()
+	values, ok := valueOf(row)
 	if !ok {
 		t.Fatal("annotation lost its answer")
 	}
@@ -139,7 +139,7 @@ func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 	if !ok {
 		t.Fatalf("annotation lost function type: %T", entry)
 	}
-	if _, ok := color.Value(); !ok {
+	if _, ok := valueOf(color); !ok {
 		t.Fatal("typed annotation answer unavailable")
 	}
 	names := values.Names()
@@ -147,7 +147,7 @@ func TestAnnotationsOwnQuestionMapsAndAnswers(t *testing.T) {
 		t.Fatal("wrong annotation count")
 	}
 	names[0] = "changed"
-	again, _ := row.Value()
+	again, _ := valueOf(row)
 	if _, ok := again.Get("color"); !ok {
 		t.Fatal("annotation names escaped storage")
 	}
@@ -198,7 +198,7 @@ func TestRecordIDsAndInvalidIDs(t *testing.T) {
 	}
 	for _, id := range []string{`null`, `true`, `1.5`, `[]`, `{}`, `18446744073709551616`, `-9223372036854775809`} {
 		row, err := c.Decide(context.Background(), tt.NewDecide("Ready?"), tt.RawJSON([]byte(`{"id":`+id+`,"body":"evidence"}`)))
-		if err != nil || row.Status() != tt.Failed || row.Error() == nil || row.Error().Code().String() != "record.invalid" {
+		if err != nil || row.Status() != tt.Failed || rowFailure(row.Err()) == nil || rowFailure(row.Err()).Code().String() != "record.invalid" {
 			t.Fatalf("invalid ID did not produce record.invalid: %s", id)
 		}
 	}
@@ -213,16 +213,16 @@ func TestMissingRowsAndTypedErrorIdentity(t *testing.T) {
 		t.Fatal("missing records vanished")
 	}
 	for i, row := range rows {
-		if row.Position() != uint64(i+1) || row.Status() != tt.Failed {
+		if row.Position() != i+1 || row.Status() != tt.Failed {
 			t.Fatal("failed row lost its original position")
 		}
-		if _, ok := row.Value(); ok {
+		if _, ok := valueOf(row); ok {
 			t.Fatal("failed row has an answer")
 		}
 		if _, ok := row.Probability(); ok {
 			t.Fatal("failed row has a probability")
 		}
-		failure := row.Error()
+		failure := rowFailure(row.Err())
 		var native *tt.Error
 		if !errors.Is(failure, tt.CodeRecordMissing) || !errors.As(failure, &native) || native.Error() == "" {
 			t.Fatal("typed row error lost identity")
@@ -238,12 +238,12 @@ func TestMissingRowsAndTypedErrorIdentity(t *testing.T) {
 func TestFilterRetainsOriginalFailedItems(t *testing.T) {
 	c := apiClientFor(t, tt.Config{Backend: tt.Stub})
 	records := []tt.Record{tt.Text("evidence"), tt.RawJSON([]byte("{bad")), tt.Missing()}
-	rows := collect(t, c.FilterAll(context.Background(), tt.NewFilter("Ready?"), tt.Records(records...)))
+	rows := collect(t, c.FilterRowsAll(context.Background(), tt.NewFilter("Ready?"), tt.Records(records...)))
 	if len(rows) != 3 {
 		t.Fatal("filter dropped failed records")
 	}
 	for i, row := range rows {
-		if !reflect.DeepEqual(row.Item(), records[i]) || row.Position() != uint64(i+1) {
+		if !reflect.DeepEqual(row.Item(), records[i]) || row.Position() != i+1 {
 			t.Fatal("filter changed original item")
 		}
 		if row.Status() == tt.Failed && row.Kept() {

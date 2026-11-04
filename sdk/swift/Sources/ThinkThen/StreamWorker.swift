@@ -116,7 +116,7 @@ final class NativeCall: Sendable {
           continuation.resume(throwing: error)
         }
       }) {
-        continuation.resume(throwing: ThinkThenError.cancelled)
+        continuation.resume(throwing: CancellationError())
       }
     }
   }
@@ -156,7 +156,7 @@ final class InputPump: Sendable {
           do { result = .success(try await source.next()) } catch {
             result = .failure(
               error is CancellationError
-                ? ThinkThenError.cancelled
+                ? CancellationError()
                 : ThinkThenError.recordSource(message: String(describing: error)))
           }
           state.withLock { if !$0.stopped { $0.result = result } }

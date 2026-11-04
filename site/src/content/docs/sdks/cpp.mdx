@@ -1,0 +1,156 @@
+---
+title: C++ SDK
+description: "C++ SDK: ask the ten ThinkThen questions from C++17 and get yes, no or not sure back as plain C++ values."
+goal: The reader compiles a first decide in C++, catches not sure and failures, and finds the C++ call for each of the ten functions.
+reader: A C++ developer who wants to ask questions about text from a program
+kind: reference
+verified: 2026-11-03
+sidebar:
+  label: "C++"
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+
+The C++ SDK gives your C++17 program the ten functions as methods on one client; each call gives back a result whose `value()` is a plain C++ value, such as `true` or `false` from decide, and throws when the answer is not sure or failed.
+
+<Example id="functions/decide/cpp" title="example.cpp" />
+
+`true` means yes: the message asks for a refund.
+
+It needs a C++17 compiler. Extract the C++ and C archives for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) into one `thinkthen` folder, save the program as `example.cpp`, then compile it and run `./example`:
+
+<InstallLine k="languages.cpp.install" lang="sh" />
+
+With CMake, use `find_package(ThinkThenCpp CONFIG REQUIRED)` and link `ThinkThen::Cpp`. The client uses the key from the [Quickstart](/quickstart/).
+
+## Catch not sure and failures
+
+Set a low bar and a high bar with `thinkthen::threshold::band`. Between them, decide is not sure, and `value()` throws `thinkthen::unsure`. When ThinkThen can't judge the message, `value()` throws `thinkthen::error` instead. Neither one can pass for `false`.
+
+<Example id="sdks/cpp/unsure" title="example.cpp" />
+
+A double charge might be a refund request, or might not, so the answer is not sure. Send it to a person.
+
+`thinkthen::unsure` derives from `std::exception`, not from `thinkthen::error`, so a handler for errors never catches a not-sure answer. Its `probability()` is the chance of yes, when the model gave one.
+
+`thinkthen::error` derives from `std::system_error`. `code().message()` names the error, such as `record.empty`, and `what()` says what went wrong; [Troubleshooting](/reference/troubleshooting/) lists each one. Blank text throws `thinkthen::error` from the call itself, before any request is sent. A refused question throws it when you build the question.
+
+To check the outcome without an exception, test `unsure()` or `failed()`, or call `answer()`, which gives a pointer that is null when there is no answer. A decide or filter result also tests as its answer in an `if`, and throws the same way.
+
+## The ten functions
+
+Each function reads the same support-inbox messages as the function pages. Each program is a whole file that compiles with the line above.
+
+### decide
+
+<details class="example-disclosure">
+<summary>Yes or no about one message</summary>
+
+<Example id="functions/decide/cpp" title="example.cpp" />
+
+Yes: the message asks for a refund. A `thinkthen::decide` question takes `.threshold(0.7)` for one bar, `.threshold(thinkthen::threshold::band(0.2, 0.8))` for a low and a high bar, and `.yes_means(...)` and `.no_means(...)`. `client.decide_each` takes many messages and gives one result each, in order. [decide](/functions/decide/) shows every option.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>The one choice that fits</summary>
+
+<Example id="functions/choose/cpp" title="example.cpp" />
+
+A refund is about billing. A `thinkthen::choose` question takes `.descriptions(...)`, a map from each choice to what it means, and `.threshold(...)`, which can make choose not sure. [choose](/functions/choose/) shows every option.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>Only the messages that answer yes</summary>
+
+<Example id="functions/filter/cpp" title="example.cpp" />
+
+The parcel question is left out. `filter_each` gives back your own messages, each as the `thinkthen::owned_record` you passed in, and leaves out the ones it is not sure about. A failed message does not stop it: it gives back every kept message, then throws one `thinkthen::error` whose `failed_rows()` lists each failed message with its `position`, `code` and `message`. `filter_rows_each` gives every message with its outcome instead, where `kept()` is true only for a yes. [filter](/functions/filter/) shows every option.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>Every label that fits</summary>
+
+<Example id="functions/tag/cpp" title="example.cpp" />
+
+The message is about both billing and shipping. The answer is a `std::vector<std::string>`, empty when no label fits. [tag](/functions/tag/) shows every option.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>A number from 0 to 1 on your scale</summary>
+
+<Example id="functions/score/cpp" title="example.cpp" />
+
+The levels run lowest first, so a plain refund request scores near routine. [score](/functions/score/) shows every option.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>Every message, highest first</summary>
+
+<Example id="functions/rank/cpp" title="example.cpp" />
+
+The double charge is the most urgent. `value()` is the rank, starting at 1, and `item()` is the message you passed in. A `thinkthen::rank` question takes `.top(n)` to keep only the first few. [rank](/functions/rank/) shows every option.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>The line that answers the question</summary>
+
+<Example id="functions/find/cpp" title="example.cpp" />
+
+The second line states the action. The answer is a `std::optional<thinkthen::span>`, with the line's `text` and its offsets in UTF-8 bytes, and it is empty when no line answers. [find](/functions/find/) shows every option.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>Each name in the text and its kind</summary>
+
+<Example id="functions/recognize/cpp" title="example.cpp" />
+
+Each `thinkthen::name` holds the name's `text`, its `kind` and its offsets in UTF-8 bytes. [recognize](/functions/recognize/) shows every option.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>Names linked by the relations you allow</summary>
+
+<Example id="functions/relate/cpp" title="example.cpp" />
+
+A `thinkthen::rule` names the relation, then the kind of name at each end. It also takes a description and whether the relation runs both ways. [relate](/functions/relate/) shows every option.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>Several questions for each message</summary>
+
+<Example id="functions/annotate/cpp" title="example.cpp" />
+
+`thinkthen::get<thinkthen::decide>(answers, "refund")` reads one answer by name, as the question type it was built with. Each answer has its own `value()`, which throws when not sure, as decide does. Printed directly, it shows `unsure` or `failed: CODE` instead of an answer. For one message, call `client.annotate(question, message)`. [annotate](/functions/annotate/) shows every option.
+
+</details>
+
+## The full API
+
+Every question takes `.field("/text")` to judge one field of a JSON message, passed as `thinkthen::json_text`. Each `_each` call also takes a `thinkthen::record_source`, a function that returns the next message or `std::nullopt` after the last. A stream is read once; leaving the loop or calling `close()` stops it. The headers in [`include/thinkthen/`](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/cpp/include/thinkthen) declare every type and method.

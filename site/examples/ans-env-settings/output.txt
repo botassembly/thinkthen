@@ -1,0 +1,12 @@
+{
+  "id": "a1",
+  "answer": true
+}
+{
+  "id": "a2",
+  "answer": false
+}
+{
+  "id": "a3",
+  "answer": true
+}

@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import tempfile
 
 from migration_cases import child_environment, command, fixture
 
@@ -18,6 +19,27 @@ def rank_memory(package):
         assert observation['rows'] == 100000 and observation['misplaced'] == 0, observation
         print('DuckDB rank source retention:', observation, flush=True)
         assert observation['growth_bytes'] < 128 * 1024 * 1024, observation
+
+
+
+def rank_wide_memory(package):
+    # Lazy input carries 512 MiB of unrelated, row-specific original columns.
+    # Top-one must preserve its winner and spill losers within the SQL budget.
+    if sys.platform == 'win32':
+        return
+    with tempfile.TemporaryDirectory(prefix='duckdb-wide-rank-') as scratch:
+        profile = Path(scratch) / 'profile.json'
+        result = subprocess.run([str(package / 'sql'), str(package / 'thinkthen.duckdb_extension'),
+                                 '--rank-wide-memory', str(Path(scratch) / 'spill'), str(profile)],
+                                env=child_environment(), capture_output=True, text=True, timeout=120)
+        assert result.returncode == 0, (result.stdout, result.stderr)
+        observation = json.loads(result.stdout)
+        observation['spill_bytes'] = json.loads(profile.read_text())['system']['peak_temp_dir_size']
+        print('DuckDB wide original-column top-one retention:', observation, flush=True)
+        assert observation['rows'] == 1 and observation['misplaced'] == 0, observation
+        assert observation['source_rows'] == 65536 and observation['largest_vector'] == 2048, observation
+        assert observation['growth_bytes'] < 192 * 1024 * 1024, observation
+        assert observation['spill_bytes'] > 128 * 1024 * 1024, observation
 
 
 def first_response(host_type, loopback):
@@ -51,6 +73,7 @@ def first_response(host_type, loopback):
 
 def streaming(host_type, package, loopback):
     rank_memory(package)
+    rank_wide_memory(package)
     native_read_ahead(package, loopback)
 
 

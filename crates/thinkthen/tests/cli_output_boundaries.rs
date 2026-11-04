@@ -46,7 +46,7 @@ fn empty_tag_answers_keep_one_marked_line_per_record() {
         .unwrap();
     let output = child.wait_with_output().unwrap();
     assert_eq!(output.status.code(), Some(0), "{output:?}");
-    assert_eq!(output.stdout, b"[1]\n[2]\n");
+    assert_eq!(output.stdout, b"1\t\n2\t\n");
 }
 #[test]
 fn unknown_option_uses_the_command_error_form() {
@@ -54,7 +54,7 @@ fn unknown_option_uses_the_command_error_form() {
     assert_eq!(output.status.code(), Some(2));
     let message = String::from_utf8(output.stderr).unwrap();
     assert!(
-        message.starts_with("thinkthen: usage.question: "),
+        message.starts_with("thinkthen: usage.option: "),
         "{message}"
     );
     assert_eq!(message.lines().count(), 1);
@@ -206,12 +206,17 @@ fn annotations_render_named_answers_in_text_mode() {
         .arg("annotate")
         .arg(path)
         .args(["--from", "text", "--url", server.base()])
+        .arg({
+            let input = directory.path().join("input.txt");
+            std::fs::write(&input, "evidence").unwrap();
+            input
+        })
         .env("THINKTHEN_API_KEY", KEY)
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let text = String::from_utf8(output.stdout).unwrap();
-    assert!(text.starts_with("[1]\tready: "), "{text}");
+    assert_eq!(text, "ready=true\n");
     assert!(text.contains("true"), "{text}");
     assert!(!text.contains(['{', '}', '"']), "{text}");
 }

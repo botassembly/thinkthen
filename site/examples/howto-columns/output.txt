@@ -1,0 +1,4 @@
+messages.triage.csv
+a1 TRUE billing 0.05 answered
+a2 FALSE shipping 0.14 answered
+a3 TRUE billing 0.45 answered

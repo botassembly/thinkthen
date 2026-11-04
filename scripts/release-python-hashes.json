@@ -89,5 +89,8 @@
   "tzdata": {
     "tzdata-2026.5-py2.py3-none-any.whl": "b683bd1b6659ddcd810ff02ad09ba821d4bf1065072805063eb35c49617905ac",
     "tzdata-2024.2-py2.py3-none-any.whl": "a48093786cdcde33cad18c2555e8532f34422074448fbc874186f0abd79565cd"
+  },
+  "typing-extensions": {
+    "typing_extensions-4.16.0-py3-none-any.whl": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
   }
 }

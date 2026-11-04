@@ -150,7 +150,7 @@ impl Service {
         let text = if stored_evidence.get("type").and_then(Value::as_str) == Some("text") {
             value.as_str().ok_or(Error::Storage)?.to_owned()
         } else {
-            thinkthen::native::recording_evidence(&serde_json::to_string(value)?)
+            thinkthen::native::recording_field(&serde_json::to_string(value)?)
                 .map_err(|_| Error::Question)?
         };
         definition

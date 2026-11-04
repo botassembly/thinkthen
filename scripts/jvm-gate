@@ -37,6 +37,11 @@ trap 'gate_status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$gate_status
 trap 'exit 1' HUP INT TERM
 "$jvm_python" scripts/jvm_repository.py seed "$cache/m2" "$scratch/m2"
 mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" install -DskipTests
+"$jvm_python" sdk/kotlin/tests/api_dump.py "$JAVA_HOME/bin/javap" "$(ls sdk/kotlin/target/thinkthen-kotlin-*.jar)" sdk/kotlin/api/thinkthen-kotlin.api
+"$jvm_python" sdk/kotlin/tests/kdoc_check.py sdk/kotlin/src/main/kotlin
+mvn -o -B -q -f sdk/java/pom.xml -Dmaven.repo.local="$scratch/m2" -Pdokka -pl ../kotlin package -DskipTests
+test -s sdk/kotlin/target/dokka/index.html
+echo 'Kotlin reference builds'
 "$jvm_python" scripts/jvm_repository.py consumer "$root" "$scratch"
 case "$native_target" in /*) ;; *) native_target="$root/$native_target" ;; esac
 native_input="$native_target/debug/$jvm_library"
@@ -47,9 +52,6 @@ export THINKTHEN_LOOPBACK="$native_target/debug/loopback"
 export THINKTHEN_API_KEY=sk-test-0123456789
 PATH="$JAVA_HOME/bin:$cache/apache-maven-3.9.11/bin:/usr/bin:/bin"
 export PATH
-"$jvm_python" "$root/scripts/surface-example" prepare java "$scratch/src/main/java"
-"$jvm_python" "$root/scripts/surface-example" prepare kotlin "$scratch/src/main/kotlin"
-cp "$scratch/src/main/java/records.jsonl" "$scratch/records.jsonl"
 cd "$scratch"
 mvn -o -B -q -Dmaven.repo.local="$scratch/m2" package dependency:build-classpath -Dmdep.outputFile="$scratch/classpath"
 "$jvm_python" - "$root" "$scratch/classpath" <<'PYTHON'
@@ -67,6 +69,9 @@ mkdir -p "$scratch/home"
 XDG_CACHE_HOME="$scratch/home/.cache"
 export XDG_CACHE_HOME
 java() { command "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" "$@"; }
+"$jvm_python" "$root/scripts/sdk-readme-examples" jvm "$classpath" "$scratch/m2" "$scratch/home"
+"$jvm_python" "$root/scripts/java-example-check" "$classpath" "$scratch/target/classes"
+"$jvm_python" "$root/scripts/kotlin-example-check" "$classpath" "$scratch/m2" "$scratch/home"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConsumerCases "$root/construction/stub.json"
 case "$(uname -s)" in
     Darwin) loader_cache="$scratch/home/Library/Caches" ;;
@@ -76,23 +81,15 @@ esac
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" KotlinCasesKt "$root/construction/stub.json"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" OptionCases "$root/construction/options.json"
 
-"$jvm_python" "$root/scripts/surface-example" check java "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" Example
-"$jvm_python" "$root/scripts/surface-example" check kotlin "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" ExampleKt
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaCacheCases
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaConcurrencyCases
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SdkConventionCasesKt
-"$jvm_python" "$root/sdk/java/check-packaging"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaApiCases
-"$jvm_python" "$root/scripts/java-idle-flush-test" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaIdleFlushCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaClosedClientCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaDescriptionCases
 java --enable-native-access=ALL-UNNAMED -Dos.arch=unsupported -cp "$classpath" JavaLoaderFailureCases
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaSettingsCases "$root/schemas/contract.json"
-java --enable-native-access=ALL-UNNAMED -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1 -cp "$classpath" JavaOwnershipCases "$root/conformance"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance/typed"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.ConformanceCasesKt "$root/conformance/typed"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SurfaceCasesKt "$root/conformance"
-java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.FlowCasesKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SdkConventionCasesKt
+"$jvm_python" "$root/sdk/java/check-packaging"
 java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.AbiAndCodesKt registry "$root/schemas/contract.json"
-java --enable-native-access=io.thinkthen --module-path "$(cat "$scratch/classpath")" --add-modules ALL-MODULE-PATH -cp target/classes consumer.AbiAndCodesKt abi true
+java --enable-native-access=dev.thinkthen --module-path "$(cat "$scratch/classpath")" --add-modules ALL-MODULE-PATH -cp target/classes consumer.AbiAndCodesKt abi true
 "$jvm_python" "$root/sdk/kotlin/tests/abi.py" "$THINKTHEN_NATIVE_FIXTURES/manifest.json" "$classpath" "$JAVA_HOME/bin/java" "$jvm_platform" "$jvm_library" "$scratch"
 
 
@@ -111,10 +108,24 @@ from pathlib import Path
 import sys
 text = Path(sys.argv[2]).read_text()
 for case in Path(sys.argv[1]).glob('*.kt.fail'):
-    assert case.name.removesuffix('.fail') + ':' in text, text
-    Path('src/main/kotlin', case.name.removesuffix('.fail')).unlink()
+    name = case.name.removesuffix('.fail')
+    assert name + ':' in text, text
+    for message in [line.removeprefix('// Expect: ') for line in case.read_text().splitlines() if line.startswith('// Expect: ')]:
+        assert any(name + ':' in line and message in line for line in text.splitlines()), (name, message, text)
+    Path('src/main/kotlin', name).unlink()
 print("Kotlin public API compile refusals passed")
 PYTHON
+
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" ConformanceCases "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.ConformanceCasesKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.SurfaceCasesKt "$root/conformance"
+THINKTHEN_BACKEND=stub java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.EnvironmentCasesKt
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" consumer.FlowCasesKt "$root/conformance/typed"
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaCacheCases
+java --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaConcurrencyCases
+java -Xmx64m -XX:+ExitOnOutOfMemoryError --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaRankMemoryCases
+"$jvm_python" "$root/scripts/java-idle-flush-test" "$JAVA_HOME/bin/java" "-Duser.home=$scratch/home" --enable-native-access=ALL-UNNAMED -cp "$classpath" JavaIdleFlushCases
+java --enable-native-access=ALL-UNNAMED -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1 -cp "$classpath" JavaOwnershipCases "$root/conformance"
 
 if [ -n "${THINKTHEN_JVM_OUT:-}" ]; then
   mkdir -p "$THINKTHEN_JVM_OUT/lib" "$THINKTHEN_JVM_OUT/maven" "$THINKTHEN_JVM_OUT/construction"

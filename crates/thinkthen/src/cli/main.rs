@@ -1,9 +1,12 @@
 //! The command translates shell conventions to the typed library.
 mod execute;
 mod grammar;
+mod help;
 mod input;
 mod invocation;
+mod jsonl;
 mod options;
+mod question_options;
 mod render;
 mod saved_run;
 mod syntax;
@@ -105,8 +108,8 @@ fn broken_pipe(error: &Error) -> bool {
         .is_some_and(|source| source.kind() == io::ErrorKind::BrokenPipe)
 }
 
-/// A text line's evidence excludes its line ending, while its original keeps it.
-fn evidence(line: &str) -> &str {
+/// A text line's field excludes its line ending, while its original keeps it.
+fn field(line: &str) -> &str {
     let line = line.strip_suffix('\n').unwrap_or(line);
     line.strip_suffix('\r').unwrap_or(line)
 }

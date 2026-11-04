@@ -40,7 +40,7 @@ fn independent_labels_keep_their_probability_and_input_order() {
         let question = Tag::new("What applies?", ["billing", "refund", "shipping"])
             .unwrap()
             .threshold(Cut::new(0.7).unwrap())
-            .evidence("/body".parse().unwrap());
+            .field("/body".parse().unwrap());
         let records = (0..3)
             .map(|i| Record::json(json!({"id": format!("r{i}"), "body": "a \"quoted\" message"})));
         let mut rows = Vec::new();

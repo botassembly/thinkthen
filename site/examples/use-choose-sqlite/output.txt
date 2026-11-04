@@ -1,0 +1,5 @@
+[{"msg_id":1,"topic":"billing","status":"answered"},
+{"msg_id":2,"topic":"shipping","status":"answered"},
+{"msg_id":3,"topic":"billing","status":"answered"}]
+[{"topic":"billing","messages":2},
+{"topic":"shipping","messages":1}]

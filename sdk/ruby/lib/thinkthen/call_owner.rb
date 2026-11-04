@@ -16,7 +16,7 @@ module ThinkThen
     def use
       check_process
       @mutex.synchronize do
-        raise IOError, "call is closed" if @closing || !@pointer
+        raise UsageError.new("call is closed", code: :"usage.closed") if @closing || !@pointer
         raise ThreadError, "call already has an active driver" if @active
         @active = true
       end

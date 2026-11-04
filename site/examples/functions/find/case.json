@@ -1,0 +1,7 @@
+{
+  "question": "Which line states the requested action?",
+  "records": [
+    "Morgan works for Example Group.\nPlease refund my order."
+  ],
+  "answers": "One found line's text per record, or null when no line answers, in record order."
+}

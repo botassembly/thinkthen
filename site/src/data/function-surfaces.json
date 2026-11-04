@@ -1,0 +1,116 @@
+{
+  "functions": [
+    "decide",
+    "choose",
+    "tag",
+    "score",
+    "filter",
+    "rank",
+    "find",
+    "annotate",
+    "recognize",
+    "relate"
+  ],
+  "surfaces": [
+    {
+      "id": "command",
+      "label": "Command",
+      "section": "languages"
+    },
+    {
+      "id": "python",
+      "label": "Python",
+      "section": "languages"
+    },
+    {
+      "id": "pandas",
+      "label": "pandas",
+      "section": "languages"
+    },
+    {
+      "id": "polars",
+      "label": "Polars",
+      "section": "languages"
+    },
+    {
+      "id": "typescript",
+      "label": "TypeScript",
+      "section": "languages"
+    },
+    {
+      "id": "go",
+      "label": "Go",
+      "section": "languages"
+    },
+    {
+      "id": "java",
+      "label": "Java",
+      "section": "languages"
+    },
+    {
+      "id": "kotlin",
+      "label": "Kotlin",
+      "section": "languages"
+    },
+    {
+      "id": "csharp",
+      "label": "C#",
+      "section": "languages"
+    },
+    {
+      "id": "r",
+      "label": "R",
+      "section": "languages"
+    },
+    {
+      "id": "c",
+      "label": "C",
+      "section": "languages"
+    },
+    {
+      "id": "cpp",
+      "label": "C++",
+      "section": "languages"
+    },
+    {
+      "id": "ruby",
+      "label": "Ruby",
+      "section": "languages"
+    },
+    {
+      "id": "swift",
+      "label": "Swift",
+      "section": "languages"
+    },
+    {
+      "id": "zig",
+      "label": "Zig",
+      "section": "languages"
+    },
+    {
+      "id": "rust",
+      "label": "Rust",
+      "section": "languages"
+    },
+    {
+      "id": "duckdb",
+      "label": "DuckDB",
+      "section": "databases"
+    },
+    {
+      "id": "sqlite",
+      "label": "SQLite",
+      "section": "databases"
+    },
+    {
+      "id": "postgresql",
+      "label": "PostgreSQL",
+      "section": "databases"
+    },
+    {
+      "id": "files",
+      "label": "Spreadsheet files",
+      "section": "languages"
+    }
+  ]
+}

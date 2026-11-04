@@ -1,0 +1,86 @@
+---
+title: tag
+description: tag gives a piece of text every label from your list that fits it, which may be several labels, one or none.
+goal: A newcomer who needs to label a text leaves able to get every label that fits, read one label and no label, see the chance of each label, move the bar, and label every row of a CSV file.
+reader: Someone at the command line who needs to mark a text with every label that applies
+kind: how-to
+verified: 2026-11-03
+head:
+  - tag: title
+    content: "tag: every label that fits a text"
+---
+import Example from '../../../components/Example.astro';
+import ExampleFile from '../../../components/ExampleFile.astro';
+import FunctionOptions from '../../../components/FunctionOptions.astro';
+
+tag checks each label in your list against a piece of text and prints every label that fits, separated by tabs. A text may get several labels, one, or none.
+
+<Example id="tag-both" />
+
+Both labels: the message is about a double charge and a late parcel.
+
+## One label
+
+<Example id="tag-one" />
+
+billing only: the message asks for money back and says nothing about a delivery.
+
+## No label
+
+<Example id="tag-none" />
+
+No label fits, so the answer is empty.
+
+## See why
+
+<details class="example-disclosure">
+<summary>See why</summary>
+
+`--json` prints the details. This `jq` keeps the chance of each label.
+
+<Example id="tag-why" />
+
+tag keeps each label whose chance reaches the bar, 0.5 by default. Both 0.9 and 0.8 reach it. [JSON output](/reference/json-output/) lists every field.
+
+</details>
+
+## Move the bar
+
+<details class="example-disclosure">
+<summary>Move the bar</summary>
+
+Raise the bar to 0.85 and only billing is kept, because shipping has 0.8.
+
+<Example id="tag-bar" />
+
+Lower the bar to give more labels. Raise it to give only the clear ones.
+
+</details>
+
+## Label every row of a CSV file
+
+<details class="example-disclosure">
+<summary>Label every row of a CSV file</summary>
+
+<ExampleFile id="tag-csv" file="messages.csv" />
+
+<Example id="tag-csv" />
+
+`--column` names the column to read, and `--into` names the new answer column. When a row gets several labels, the cell holds them joined by `; `. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+
+</details>
+
+## Options
+
+<details class="example-disclosure">
+<summary>Options</summary>
+
+<FunctionOptions name="tag" />
+
+</details>
+
+If tag can't answer a text, it prints an error and exits with code 2, 4, 5 or 6. [Troubleshooting](/reference/troubleshooting/) lists each error and its fix.
+
+**In code:** [Python](/sdks/python/#tag) · [TypeScript](/sdks/typescript/#tag) · [Go](/sdks/go/#tag) · [Java](/sdks/java/#tag) · [Kotlin](/sdks/kotlin/#tag) · [C#](/sdks/csharp/#tag) · [R](/sdks/r/#tag) · [Ruby](/sdks/ruby/#tag) · [Rust](/sdks/rust/#tag) · [Swift](/sdks/swift/#tag) · [Zig](/sdks/zig/#tag) · [C](/sdks/c/#tag) · [C++](/sdks/cpp/#tag) · [DuckDB](/sdks/duckdb/#tag) · [SQLite](/sdks/sqlite/#tag) · [PostgreSQL](/sdks/postgresql/#tag)
+
+Next: [score](/functions/score/) places a text on a scale from 0 to 1.

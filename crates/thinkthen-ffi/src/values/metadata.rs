@@ -13,24 +13,40 @@ use thinkthen::{
     Code, native,
     records::{IdKind, RecordId},
 };
-/// Compare required and engine ABI versions using the shared acceptance rule.
+/// Return 1 when a library with binary interface actual serves a caller built for required, and
+/// 0 when not.
+///
+/// The major versions must match, and actual's minor must be at least required's. Any thread
+/// may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_abi_compatible(required: u32, actual: u32) -> u8 {
     u8::from(native::check_version(required, actual).is_ok())
 }
-/// Number of codes in the authoritative engine registry.
+/// Return how many codes thinkthen_code_at lists.
+///
+/// Any thread may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_code_count() -> usize {
     Code::ALL.len()
 }
-/// Registry code at index, or zero outside the registry. Zero is not an error code.
+/// Return the code at index, or 0 when index is out of range; 0 is never a code.
+///
+/// Any thread may call this.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_code_at(index: usize) -> i32 {
     Code::ALL.get(index).map_or(0, |code| code.abi())
 }
-/// Copy typed row values into an independent owner; every view borrows that owner.
+/// Copy a row's answer into a new value, which the thinkthen_value_* functions read.
+///
+/// Returns THINKTHEN_OK with *out set, or a negative code with *out set to NULL:
+/// -THINKTHEN_CODE_USAGE_ABI when the row is empty or did not come from this library. The
+/// caller owns *out, which outlives the row, and frees it with thinkthen_value_free; an old
+/// handle in *out is not freed.
 /// # Safety
-/// Row is a live sized prefix; out/error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees row. out is writable. error is
+/// NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it holds the code and
+/// message; passing it again frees what it held, so a reused error leaks nothing. Free it with
+/// thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_row_values(
     row: *const HostRow,
@@ -47,9 +63,11 @@ pub unsafe extern "C" fn thinkthen_row_values(
         })
     }
 }
-/// Release a typed snapshot after all of its borrowed field views are finished.
+/// Free a value.
+///
+/// Free a value. NULL is ignored. Views borrowed from it end here.
 /// # Safety
-/// NULL or the unique live value owner with no active readers.
+/// Call this once, after every other use of value and its views has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_free(value: *mut ValueHandle) {
     if !value.is_null() {
@@ -57,9 +75,14 @@ pub unsafe extern "C" fn thinkthen_value_free(value: *mut ValueHandle) {
         drop(unsafe { Box::from_raw(value) });
     }
 }
-/// Read a typed function discriminator without interpreting JSON.
+/// Write the value's thinkthen_function to *out.
+///
+/// Returns THINKTHEN_OK with *out written.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_function(
     value: *const ValueHandle,
@@ -69,9 +92,14 @@ pub unsafe extern "C" fn thinkthen_value_function(
     /* SAFETY: the value is borrowed and outputs are exclusive until return. */
     unsafe { project(out, error, || Ok((*value).function()?.abi())) }
 }
-/// Read a typed status discriminator.
+/// Write the value's thinkthen_status to *out.
+///
+/// Returns THINKTHEN_OK with *out written.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_status(
     value: *const ValueHandle,
@@ -81,9 +109,16 @@ pub unsafe extern "C" fn thinkthen_value_status(
     /* SAFETY: the value is borrowed and outputs are exclusive until return. */
     unsafe { project(out, error, || Ok((*value).status()?.abi())) }
 }
-/// Borrow source fields until value cleanup. Annotation entries have no source.
+/// Write which question, backend and model gave the value to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged for
+/// an annotation entry, which has no source. *out borrows from value and lasts until
+/// thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_source(
     value: *const ValueHandle,
@@ -105,9 +140,16 @@ pub unsafe extern "C" fn thinkthen_value_source(
         })
     }
 }
-/// Borrow an exact identifier; integer variants never use a double.
+/// Write the record's id to *out, exactly: integers never pass through a double.
+///
+/// out->kind is one of the THINKTHEN_ID_* kinds. Returns THINKTHEN_OK with *out written, or
+/// -THINKTHEN_CODE_USAGE_ABI with *out unchanged for an annotation entry. *out borrows from
+/// value and lasts until thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_id(
     value: *const ValueHandle,
@@ -144,9 +186,17 @@ pub unsafe extern "C" fn thinkthen_value_id(
         })
     }
 }
-/// Copy a failed-record error into a sized owner; an ordinary result gives no code.
+/// Copy a failed value's code and message into *result; it stays empty for a value that did not
+/// fail.
+///
+/// result is initialized with THINKTHEN_ERROR_INIT. Passing it again frees what it held, so a
+/// reused result leaks nothing; free it with thinkthen_error_free. Returns THINKTHEN_OK, or
+/// -THINKTHEN_CODE_USAGE_ABI when result is not initialized.
 /// # Safety
-/// Value is live; result/error are sized, distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is live. result and
+/// error are different variables. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a
+/// negative return it holds the code and message; passing it again frees what it held, so a
+/// reused error leaks nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_error(
     value: *const ValueHandle,
@@ -157,6 +207,7 @@ pub unsafe extern "C" fn thinkthen_value_error(
     unsafe {
         operation(error, || {
             let size = error_size(result).ok_or_else(native::abi_error)?;
+            HostError::clear(result, size);
             (match (*value).error()? {
                 Some(error) => HostError::from_error(size, error),
                 None => HostError::empty(size),
@@ -166,9 +217,14 @@ pub unsafe extern "C" fn thinkthen_value_error(
         })
     }
 }
-/// Read an aggregate probability; NaN means the function has no defined aggregate.
+/// Write the value's probability to *out; NaN when its function has none.
+///
+/// Returns THINKTHEN_OK with *out written.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_probability(
     value: *const ValueHandle,
@@ -199,9 +255,14 @@ pub unsafe extern "C" fn thinkthen_value_probability(
         })
     }
 }
-/// Distinguish absent detail from a present empty typed detail collection.
+/// Write 1 to *out when the value carries detail, even an empty list, and 0 when it does not.
+///
+/// Returns THINKTHEN_OK with *out written.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_has_detail(
     value: *const ValueHandle,
@@ -234,9 +295,16 @@ pub unsafe extern "C" fn thinkthen_value_has_detail(
     }
 }
 
-/// Borrow the actual execution name; a null text view means unnamed execution.
+/// Write the run's name to *out; out->data is NULL when the run has none.
+///
+/// Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged for
+/// an annotation entry. *out borrows from value and lasts until thinkthen_value_free(value);
+/// never free it.
 /// # Safety
-/// Value is live; out and error are distinct empty writable slots.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_source_name(
     value: *const ValueHandle,
@@ -257,9 +325,16 @@ pub unsafe extern "C" fn thinkthen_value_source_name(
     }
 }
 
-/// Borrow original filter bytes owned by this independent typed snapshot.
+/// Write the input of a filter or rank value to *out.
+///
+/// Returns THINKTHEN_OK with *out written, or -THINKTHEN_CODE_USAGE_ABI with *out unchanged
+/// when the value has no input. *out borrows from value and lasts until
+/// thinkthen_value_free(value); never free it.
 /// # Safety
-/// Value is live; out/error are distinct empty writable slots; readers may run concurrently.
+/// Any thread may call this while no thread changes or frees value. value is a live value. out
+/// is writable. error is NULL or initialized with THINKTHEN_ERROR_INIT. On a negative return it
+/// holds the code and message; passing it again frees what it held, so a reused error leaks
+/// nothing. Free it with thinkthen_error_free after its last use.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_value_original(
     value: *const ValueHandle,

@@ -38,15 +38,18 @@ docker run --pull=never --rm --network none --label "$(python3 scripts/build_tar
         exec setpriv --reuid "$1" --regid "$2" --clear-groups env -i HOME=/work/built/home \
             PATH=/opt/thinkthen-pg18/bin:/usr/bin:/bin LANG=C.UTF-8 LLVM_PROFILE_FILE="$3" \
             THINKTHEN_LOOPBACK=/loopback THINKTHEN_STRESS_FULL="$5" THINKTHEN_GATE_STRICT="$6" sh -eu -c '\''
+                # Each step runs even after an earlier one fails, so one run reports every failure.
+                status=0
                 python3 /src/extensions/postgres/tests/typed_api.py /loopback \
                     --abi-mismatch-extension /work/built/build/thinkthen_postgres_mismatch.so \
-                    --systemone-url-env THINKTHEN_TEST_LOOPBACK_URL --openai-url-env THINKTHEN_TEST_LOOPBACK_URL --group "$1"
+                    --systemone-url-env THINKTHEN_TEST_LOOPBACK_URL --openai-url-env THINKTHEN_TEST_LOOPBACK_URL --group "$1" || status=1
                 case "$1" in
-                    all) python3 /src/scripts/stress-adapters.py --surface postgres -- python3 /src/extensions/postgres/tests/stress.py ;;
+                    all) python3 /src/scripts/stress-adapters.py --surface postgres -- python3 /src/extensions/postgres/tests/stress.py || status=1 ;;
                 esac
                 case "$1" in
-                    all|ownership) python3 /src/scripts/sql-stress-lifetime-test /src postgres /loopback ;;
+                    all|ownership) python3 /src/scripts/sql-stress-lifetime-test /src postgres /loopback || status=1 ;;
                 esac
+                exit "$status"
             '\'' sh "$4"
     ' sh "$(id -u)" "$(id -g)" "${LLVM_PROFILE_FILE:-}" "${1:-all}" "${THINKTHEN_STRESS_FULL:-}" "${THINKTHEN_GATE_STRICT:-0}"
 if [ -n "${LLVM_PROFILE_FILE:-}" ]; then

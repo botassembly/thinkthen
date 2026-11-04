@@ -7,6 +7,8 @@ package thinkthen
 import "C"
 
 import (
+	"encoding/json"
+	"os"
 	"time"
 )
 
@@ -25,13 +27,21 @@ func newNative(cfg Config) (nativeClient, error) {
 	}
 	var settings *C.thinkthen_settings
 	e := nativeError()
-	if err := nativeResult(C.tt_settings_new(&settings, &e), &e); err != nil {
-		return nativeClient{}, err
+	if backend, present := os.LookupEnv("THINKTHEN_BACKEND"); cfg.Backend == 0 && present {
+		data, _ := json.Marshal(map[string]string{"backend": backend})
+		if err := nativeResult(C.tt_settings_from_json(bytesPointer(data), C.size_t(len(data)), &settings, &e), &e); err != nil {
+			return nativeClient{}, err
+		}
+	} else {
+		if err := nativeResult(C.tt_settings_new(&settings, &e), &e); err != nil {
+			return nativeClient{}, err
+		}
+		if err := nativeResult(C.tt_settings_set_backend(settings, C.uint32_t(normalizedBackend(cfg.Backend)), &e), &e); err != nil {
+			C.tt_settings_free(settings)
+			return nativeClient{}, err
+		}
 	}
 	defer C.tt_settings_free(settings)
-	if err := nativeResult(C.tt_settings_set_backend(settings, C.uint32_t(normalizedBackend(cfg.Backend)), &e), &e); err != nil {
-		return nativeClient{}, err
-	}
 	for _, v := range []struct {
 		kind int
 		text string
@@ -53,17 +63,17 @@ func newNative(cfg Config) (nativeClient, error) {
 			return nativeClient{}, err
 		}
 	}
-	if cfg.Batch != nil {
-		if *cfg.Batch < 0 {
-			return nativeClient{}, conversionError(true)
+	if cfg.Batch != 0 {
+		if cfg.Batch < 0 {
+			return nativeClient{}, &Error{code: CodeUsageBatch, message: "Batch must be positive, or zero for the engine default"}
 		}
-		if err := nativeResult(C.tt_settings_set_batch(settings, C.uint64_t(*cfg.Batch), &e), &e); err != nil {
+		if err := nativeResult(C.tt_settings_set_batch(settings, C.uint64_t(cfg.Batch), &e), &e); err != nil {
 			return nativeClient{}, err
 		}
 	}
 	if r := cfg.Retry; r != nil {
 		if r.MaxRetries < 0 || uint64(r.MaxRetries) > uint64(^uint32(0)) || r.InitialBackoff < 0 || r.AttemptTimeout < 0 || r.InitialBackoff%time.Millisecond != 0 || r.AttemptTimeout%time.Millisecond != 0 {
-			return nativeClient{}, conversionError(true)
+			return nativeClient{}, &Error{code: CodeUsageSettings, message: "Retry requires a nonnegative uint32 retry count and nonnegative whole-millisecond durations"}
 		}
 		if err := nativeResult(C.tt_settings_set_retry(settings, C.uint32_t(r.MaxRetries), C.uint64_t(r.InitialBackoff/time.Millisecond), C.uint64_t(r.AttemptTimeout/time.Millisecond), &e), &e); err != nil {
 			return nativeClient{}, err
@@ -125,9 +135,9 @@ func buildQuestion(q question) (*C.thinkthen_question, error) {
 	case 3:
 		return nil, conversionError(false)
 	}
-	if q.evidence != nil {
-		data := []byte(*q.evidence)
-		if err := nativeResult(C.tt_question_set_evidence(ptr, bytesPointer(data), C.size_t(len(data)), &e), &e); err != nil {
+	if q.field != nil {
+		data := []byte(*q.field)
+		if err := nativeResult(C.tt_question_set_field(ptr, bytesPointer(data), C.size_t(len(data)), &e), &e); err != nil {
 			return nil, err
 		}
 	}
@@ -151,12 +161,15 @@ func buildQuestion(q question) (*C.thinkthen_question, error) {
 			return nil, err
 		}
 	}
+	if q.yesMeans != nil || q.noMeans != nil || q.descriptions != nil {
+		return describeQuestion(ptr, q)
+	}
 	success = true
 	return ptr, nil
 }
 func ownedText(s string) (C.thinkthen_text, func()) {
 	data := C.CBytes(append([]byte(s), 0))
-	return C.thinkthen_text{data: (*C.uint8_t)(data), len: C.size_t(len(s))}, func() { C.free(data) }
+	return C.thinkthen_text{data: (*C.char)(data), len: C.size_t(len(s))}, func() { C.free(data) }
 }
 func addRule(q *C.thinkthen_question, rule Rule) error {
 	name, f1 := ownedText(rule.Name)

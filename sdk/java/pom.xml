@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm-parent</artifactId><version>0.2.0</version><packaging>pom</packaging>
-  <name>ThinkThen JVM</name><description>Typed questions about evidence through ten functions.</description>
+  <name>ThinkThen JVM</name><description>Typed questions about records through ten functions.</description>
   <url>https://github.com/botassembly/thinkthen</url>
   <licenses><license><name>MIT</name><url>https://opensource.org/license/mit</url></license></licenses>
   <developers><developer><id>imaurer</id><name>Ian Maurer</name></developer></developers>

@@ -5,16 +5,20 @@ from __future__ import annotations
 import atexit
 import json
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import fields
 from threading import RLock
-from typing import Any, TypeVar, overload
+from typing import Any, Literal, TypeVar, cast, overload
 from weakref import WeakSet
+
+from typing_extensions import TypeForm
 
 from . import _native
 from ._questions import (
     _MISSING,
     AnnotateQuestion,
+    AnnotationInput,
+    AnnotationQuestion,
     AnnotationQuestions,
     ChooseQuestion,
     DecideQuestion,
@@ -26,17 +30,21 @@ from ._questions import (
     ScoreQuestion,
     TagQuestion,
     _Question,
+    annotation_members,
+    choice_members,
     definition,
 )
-from ._runtime import Cancel, binding, encode, source
-from ._streams import RowStream
+from ._runtime import Cancel, binding, encode, one_row, single_record, source
+from ._streams import Errors, KeptStream, RowStream, coerce_errors
 from ._types import (
     AnnotateRow,
     Backend,
     BackendInput,
+    ChoiceInput,
     ChooseRow,
     ClientSettings,
     DecideRow,
+    Descriptions,
     FilterRow,
     FindRow,
     RankRow,
@@ -49,6 +57,7 @@ from ._types import (
     Strings,
     TagRow,
     Threshold,
+    _Label,
 )
 
 T = TypeVar("T")
@@ -71,20 +80,27 @@ class Client:
     def __init__(
         self,
         *,
-        backend: BackendInput = "systemone",
+        backend: BackendInput | None = None,
         url: str | None = None,
         model: str | None = None,
         api_key: str | None = None,
         batch: int | None = None,
         retry: RetryPolicy | None = None,
     ) -> None:
+        """Open a client.
+
+        Without ``backend``, the client reads ``THINKTHEN_BACKEND`` as the
+        command does, and then uses System One.
+        """
         values: dict[str, object] = {
-            "backend": backend,
             "url": url,
             "model": model,
             "api_key": api_key,
             "batch": batch,
         }
+        if backend is not None:
+            # Omitted, the shared settings read THINKTHEN_BACKEND as the command does.
+            values["backend"] = backend
         if isinstance(batch, bool):
             binding(_native.reject_settings_conversion)
         if retry is not None:
@@ -132,26 +148,6 @@ class Client:
             ),
         )
 
-    @classmethod
-    def from_env(
-        cls,
-        *,
-        backend: BackendInput = "systemone",
-        url: str | None = None,
-        model: str | None = None,
-        api_key: str | None = None,
-        batch: int | None = None,
-        retry: RetryPolicy | None = None,
-    ) -> Client:
-        return cls(
-            backend=backend,
-            url=url,
-            model=model,
-            api_key=api_key,
-            batch=batch,
-            retry=retry,
-        )
-
     def __repr__(self) -> str:
         return f"Client(closed={self._native is None})"
 
@@ -186,6 +182,14 @@ class Client:
         **options: object,
     ) -> RowStream[Any]:
         shape_question = question
+        members = getattr(question, "_members", {})
+        domain_name = {"choose": "choices", "tag": "labels"}.get(function)
+        if domain_name is not None:
+            domain = options.get(domain_name, _MISSING)
+            if domain is not _MISSING:
+                members = choice_members(domain, domain_name)
+        children = annotation_members(question) if function == "annotate" else {}
+
         loaded: _native.NativeQuestion | None = None
         if isinstance(question, _Question):
             if question._native.function != function or any(
@@ -197,8 +201,14 @@ class Client:
             payload: dict[str, object] = {"name": name}
         else:
             if function == "annotate":
+                if isinstance(question, Mapping):
+                    question = AnnotationQuestions(
+                        cast(Mapping[str, AnnotationQuestion], question)
+                    )
                 if not isinstance(question, AnnotationQuestions):
-                    binding(_native.reject_question_conversion)
+                    raise TypeError(
+                        "toolbox must be a dict of questions, a Toolbox, or AnnotationQuestions"
+                    )
                 question = question._definitions()
             admitted = definition(function, question, **options)
             payload = {"question": admitted, "name": name}
@@ -229,6 +239,8 @@ class Client:
                 len(records) if isinstance(records, (list, tuple)) else 0,
                 function=function,
                 question=shape_question,
+                members=members,
+                children=children,
             )
             self._active.add(stream)
         _log.debug("%s", function)
@@ -237,11 +249,12 @@ class Client:
     def _single(
         self, function: str, question: object, record: Record, **options: Any
     ) -> Any:
+        single_record(function, record)
         with self._rows(function, question, (record,), **options) as rows:
             row = next(rows)
             for _ in rows:
                 pass
-            return row
+            return one_row(row)
 
     def _invoke(
         self,
@@ -288,7 +301,9 @@ class Client:
         record: Record,
         *,
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> DecideRow: ...
@@ -298,7 +313,9 @@ class Client:
         record: Any,
         *,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        yes_means: Any = None,
+        no_means: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -307,7 +324,9 @@ class Client:
             question,
             record,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            yes_means=yes_means,
+            no_means=no_means,
             name=name,
             cancel=cancel,
         )
@@ -328,7 +347,9 @@ class Client:
         records: Iterable[Record],
         *,
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[DecideRow]: ...
@@ -338,7 +359,9 @@ class Client:
         records: Any,
         *,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        yes_means: Any = None,
+        no_means: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -347,7 +370,9 @@ class Client:
             question,
             records,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            yes_means=yes_means,
+            no_means=no_means,
             name=name,
             cancel=cancel,
         )
@@ -358,9 +383,20 @@ class Client:
         question: FilterQuestion,
         records: Iterable[T],
         *,
+        errors: Literal["raise"] = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[FilterRow[T]]: ...
+    ) -> KeptStream[T]: ...
+    @overload
+    def filter(
+        self,
+        question: FilterQuestion,
+        records: Iterable[T],
+        *,
+        errors: Literal["coerce"],
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> KeptStream[T | FilterRow[T]]: ...
     @overload
     def filter(
         self,
@@ -368,26 +404,104 @@ class Client:
         records: Iterable[T],
         *,
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
+        errors: Literal["raise"] = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[FilterRow[T]]: ...
+    ) -> KeptStream[T]: ...
+    @overload
+    def filter(
+        self,
+        question: str,
+        records: Iterable[T],
+        *,
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
+        errors: Literal["coerce"],
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> KeptStream[T | FilterRow[T]]: ...
     def filter(
         self,
         question: Any,
         records: Any,
         *,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        yes_means: Any = None,
+        no_means: Any = None,
+        errors: Errors = "raise",
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
+        """Stream the kept records, as passed in; not-sure records are left out.
+
+        A failed record raises one ``RecordError`` after every kept record is
+        delivered; ``errors="coerce"`` yields each failed ``FilterRow`` in its
+        place instead. ``filter_rows`` keeps every row.
+        """
+        coerce = coerce_errors(errors)
+        return KeptStream(
+            self.filter_rows(
+                question,
+                records,
+                threshold=threshold,
+                field=field,
+                yes_means=yes_means,
+                no_means=no_means,
+                name=name,
+                cancel=cancel,
+            ),
+            coerce,
+        )
+
+    @overload
+    def filter_rows(
+        self,
+        question: FilterQuestion,
+        records: Iterable[T],
+        *,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[FilterRow[T]]: ...
+    @overload
+    def filter_rows(
+        self,
+        question: str,
+        records: Iterable[T],
+        *,
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        yes_means: str | None = None,
+        no_means: str | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[FilterRow[T]]: ...
+    def filter_rows(
+        self,
+        question: Any,
+        records: Any,
+        *,
+        threshold: Any = None,
+        field: Any = None,
+        yes_means: Any = None,
+        no_means: Any = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> Any:
+        """Stream every filter row, kept or not, with its original ``item``."""
         return self._rows(
             "filter",
             question,
             records,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            yes_means=yes_means,
+            no_means=no_means,
             name=name,
             cancel=cancel,
         )
@@ -395,24 +509,38 @@ class Client:
     @overload
     def choose(
         self,
-        question: ChooseQuestion,
+        question: ChooseQuestion[_Label],
         record: Record,
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> ChooseRow: ...
+    ) -> ChooseRow[_Label]: ...
     @overload
     def choose(
         self,
         question: str,
         record: Record,
         *,
-        choices: Strings,
+        choices: TypeForm[_Label],
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> ChooseRow: ...
+    ) -> ChooseRow[_Label]: ...
+    @overload
+    def choose(
+        self,
+        question: str,
+        record: Record,
+        *,
+        choices: list[_Label] | tuple[_Label, ...],
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> ChooseRow[_Label]: ...
     def choose(
         self,
         question: Any,
@@ -420,7 +548,8 @@ class Client:
         *,
         choices: Any = _MISSING,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -432,7 +561,8 @@ class Client:
             record,
             choices=choices,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -440,24 +570,38 @@ class Client:
     @overload
     def choose_stream(
         self,
-        question: ChooseQuestion,
+        question: ChooseQuestion[_Label],
         records: Iterable[Record],
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[ChooseRow]: ...
+    ) -> RowStream[ChooseRow[_Label]]: ...
     @overload
     def choose_stream(
         self,
         question: str,
         records: Iterable[Record],
         *,
-        choices: Strings,
+        choices: TypeForm[_Label],
         threshold: Threshold | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[ChooseRow]: ...
+    ) -> RowStream[ChooseRow[_Label]]: ...
+    @overload
+    def choose_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        choices: list[_Label] | tuple[_Label, ...],
+        threshold: Threshold | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[ChooseRow[_Label]]: ...
     def choose_stream(
         self,
         question: Any,
@@ -465,7 +609,8 @@ class Client:
         *,
         choices: Any = _MISSING,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -477,7 +622,8 @@ class Client:
             records,
             choices=choices,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -485,24 +631,38 @@ class Client:
     @overload
     def tag(
         self,
-        question: TagQuestion,
+        question: TagQuestion[_Label],
         record: Record,
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> TagRow: ...
+    ) -> TagRow[_Label]: ...
     @overload
     def tag(
         self,
         question: str,
         record: Record,
         *,
-        labels: Strings,
+        labels: TypeForm[_Label],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> TagRow: ...
+    ) -> TagRow[_Label]: ...
+    @overload
+    def tag(
+        self,
+        question: str,
+        record: Record,
+        *,
+        labels: list[_Label] | tuple[_Label, ...],
+        threshold: float | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> TagRow[_Label]: ...
     def tag(
         self,
         question: Any,
@@ -510,7 +670,8 @@ class Client:
         *,
         labels: Any = _MISSING,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -522,7 +683,8 @@ class Client:
             record,
             labels=labels,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -530,24 +692,38 @@ class Client:
     @overload
     def tag_stream(
         self,
-        question: TagQuestion,
+        question: TagQuestion[_Label],
         records: Iterable[Record],
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[TagRow]: ...
+    ) -> RowStream[TagRow[_Label]]: ...
     @overload
     def tag_stream(
         self,
         question: str,
         records: Iterable[Record],
         *,
-        labels: Strings,
+        labels: TypeForm[_Label],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[TagRow]: ...
+    ) -> RowStream[TagRow[_Label]]: ...
+    @overload
+    def tag_stream(
+        self,
+        question: str,
+        records: Iterable[Record],
+        *,
+        labels: list[_Label] | tuple[_Label, ...],
+        threshold: float | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
+        name: str | None = None,
+        cancel: Cancel | None = None,
+    ) -> RowStream[TagRow[_Label]]: ...
     def tag_stream(
         self,
         question: Any,
@@ -555,7 +731,8 @@ class Client:
         *,
         labels: Any = _MISSING,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -567,7 +744,8 @@ class Client:
             records,
             labels=labels,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -587,8 +765,9 @@ class Client:
         question: str,
         record: Record,
         *,
-        levels: Strings,
-        evidence: str | None = None,
+        levels: ChoiceInput[_Label],
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> ScoreRow: ...
@@ -598,7 +777,8 @@ class Client:
         record: Any,
         *,
         levels: Any = _MISSING,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -609,7 +789,8 @@ class Client:
             question,
             record,
             levels=levels,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -629,8 +810,9 @@ class Client:
         question: str,
         records: Iterable[Record],
         *,
-        levels: Strings,
-        evidence: str | None = None,
+        levels: ChoiceInput[_Label],
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[ScoreRow]: ...
@@ -640,7 +822,8 @@ class Client:
         records: Any,
         *,
         levels: Any = _MISSING,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -651,7 +834,8 @@ class Client:
             question,
             records,
             levels=levels,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -660,23 +844,24 @@ class Client:
     def rank(
         self,
         question: RankQuestion,
-        records: Iterable[Record],
+        records: Iterable[T],
         *,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[RankRow]: ...
+    ) -> RowStream[RankRow[T]]: ...
     @overload
     def rank(
         self,
         question: str,
-        records: Iterable[Record],
+        records: Iterable[T],
         *,
-        levels: Strings,
+        levels: ChoiceInput[_Label],
         top: int | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
+        descriptions: Descriptions[_Label] | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
-    ) -> RowStream[RankRow]: ...
+    ) -> RowStream[RankRow[T]]: ...
     def rank(
         self,
         question: Any,
@@ -684,7 +869,8 @@ class Client:
         *,
         levels: Any = _MISSING,
         top: Any = None,
-        evidence: Any = None,
+        field: Any = None,
+        descriptions: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -696,7 +882,8 @@ class Client:
             records,
             levels=levels,
             top=top,
-            evidence=evidence,
+            field=field,
+            descriptions=descriptions,
             name=name,
             cancel=cancel,
         )
@@ -717,7 +904,7 @@ class Client:
         record: Record,
         *,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> FindRow: ...
@@ -727,7 +914,7 @@ class Client:
         record: Any,
         *,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -736,7 +923,7 @@ class Client:
             question,
             record,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
             name=name,
             cancel=cancel,
         )
@@ -757,7 +944,7 @@ class Client:
         records: Iterable[Record],
         *,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[FindRow]: ...
@@ -767,7 +954,7 @@ class Client:
         records: Any,
         *,
         threshold: Any = None,
-        evidence: Any = None,
+        field: Any = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> Any:
@@ -776,7 +963,7 @@ class Client:
             question,
             records,
             threshold=threshold,
-            evidence=evidence,
+            field=field,
             name=name,
             cancel=cancel,
         )
@@ -797,7 +984,7 @@ class Client:
         *,
         kinds: Strings,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RecognizeRow: ...
@@ -820,7 +1007,7 @@ class Client:
         *,
         kinds: Strings,
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[RecognizeRow]: ...
@@ -843,7 +1030,7 @@ class Client:
         *,
         rules: list[RelationRule] | tuple[RelationRule, ...],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RelateRow: ...
@@ -866,7 +1053,7 @@ class Client:
         *,
         rules: list[RelationRule] | tuple[RelationRule, ...],
         threshold: float | None = None,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[RelateRow]: ...
@@ -885,10 +1072,10 @@ class Client:
     @overload
     def annotate(
         self,
-        toolbox: AnnotationQuestions,
+        toolbox: AnnotationInput,
         record: Record,
         *,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> AnnotateRow: ...
@@ -907,10 +1094,10 @@ class Client:
     @overload
     def annotate_stream(
         self,
-        toolbox: AnnotationQuestions,
+        toolbox: AnnotationInput,
         records: Iterable[Record],
         *,
-        evidence: str | None = None,
+        field: str | None = None,
         name: str | None = None,
         cancel: Cancel | None = None,
     ) -> RowStream[AnnotateRow]: ...
@@ -930,6 +1117,15 @@ def default_client() -> Client:
         return _default
 
 
+def set_default_client(client: Client) -> None:
+    """Use this client for module-level calls."""
+    if not isinstance(client, Client):
+        raise TypeError("client must be a Client")
+    global _default
+    with _default_lock:
+        _default = client
+
+
 def close_default_client() -> None:
     global _default
     with _default_lock:
@@ -939,4 +1135,4 @@ def close_default_client() -> None:
 
 
 atexit.register(close_default_client)
-__all__ = ["Client", "close_default_client"]
+__all__ = ["Client", "close_default_client", "set_default_client"]

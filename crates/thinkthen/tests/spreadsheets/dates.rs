@@ -131,7 +131,7 @@ fn excel_date_formats_reach_the_stub_as_iso_text() {
         let reference = support::command()
             .args(["decide", "Ready?", "--backend", "stub", "--from", "csv"])
             .arg(&csv)
-            .args(["--column", "Body", "--into", "ready"])
+            .args(["--column", "Body", "--into", "ready", "--details"])
             .output()
             .unwrap();
         assert!(reference.status.success(), "{reference:?}");
@@ -150,6 +150,7 @@ fn excel_date_formats_reach_the_stub_as_iso_text() {
             .args(["decide", "Ready?", "--backend", "stub", "--from", "xlsx"])
             .arg(&input)
             .args(["--sheet", "Intake", "--column", "Body", "--into", "ready"])
+            .arg("--details")
             .output()
             .unwrap();
         assert!(result.status.success(), "{index}: {result:?}");

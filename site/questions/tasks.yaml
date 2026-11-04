@@ -1,0 +1,120 @@
+# Jobs people use ThinkThen for. Source: cases (the support inbox, the task list of thinkthen.dev).
+- id: triage-inbox
+  question: How do I triage a support inbox with ThinkThen?
+  source: cases
+  frequency: the first case on every page; the triage-a-support-inbox task
+  rank: 56
+  page: /how-tos/triage-a-support-inbox/
+  reference: /reference/commands/annotate/
+- id: chain
+  question: How do I chain a ThinkThen answer into my own command?
+  source: product
+  frequency: run toolboxes with shell steps
+  rank: 57
+  page: /toolboxes/
+  reference: /reference/commands/run/
+- id: save-questions
+  question: How do I save ThinkThen questions in a file and reuse them?
+  source: product
+  frequency: annotate TOOLBOX and run --entry
+  rank: 58
+  page: /toolboxes/
+  reference: /reference/commands/run/
+- id: agent-tool
+  question: How does an agent call ThinkThen?
+  source: product
+  frequency: the command and --check are built for scripts and agents
+  rank: 59
+  page: /break-a-problem-into-decisions/
+  reference: /reference/exit-codes/
+- id: extract-names
+  question: How do I extract the names of people and companies from a folder of documents?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 71
+  page: /how-tos/extract-names-from-documents/
+  reference: /reference/commands/recognize/
+- id: works-for
+  question: How do I find who works for which company in documents?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 72
+  page: /how-tos/find-who-works-for-which-company/
+  reference: /reference/commands/relate/
+- id: survey-labels
+  question: How do I label survey answers in a spreadsheet?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 73
+  page: /how-tos/label-survey-answers-in-a-spreadsheet/
+  reference: /reference/commands/choose/
+- id: moderate-posts
+  question: How do I hold back posts that break community rules?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 74
+  page: /how-tos/hold-back-posts-that-break-the-rules/
+  reference: /reference/commands/filter/
+- id: expense-policy
+  question: How do I check expense claims against a policy?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 75
+  page: /how-tos/check-expenses-against-a-policy/
+  reference: /reference/commands/decide/
+- id: alert-kinds
+  question: How do I group monitoring alerts by kind?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 76
+  page: /how-tos/sort-alerts-by-kind/
+  reference: /reference/commands/choose/
+- id: contract-clause
+  question: How do I find the termination clause in a contract?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 77
+  page: /how-tos/find-the-clause-that-answers-a-question/
+  reference: /reference/commands/find/
+- id: measure-labels
+  question: How do I measure ThinkThen answers against my own labels?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 78
+  page: /how-tos/measure-answers-against-your-own-labels/
+  reference: /reference/rows/
+- id: ci-check
+  question: How do I fail a CI job when a pull request description lacks a test plan?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 79
+  page: /how-tos/fail-a-ci-job-on-a-yes-or-no-question/
+  reference: /reference/exit-codes/
+- id: several-columns
+  question: How do I add several answer columns to a spreadsheet at once?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 80
+  page: /how-tos/add-several-answer-columns-to-a-spreadsheet/
+  reference: /reference/commands/annotate/
+- id: pandas-filter
+  question: How do I filter a pandas DataFrame by meaning?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 81
+  page: /use/filter-a-pandas-dataframe/
+  reference: /reference/rows/
+- id: duckdb-decide
+  question: How do I add a yes-or-no column to a DuckDB table?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 82
+  page: /use/decide-in-duckdb/
+  reference: /reference/rows/
+- id: csv-tag-bash
+  question: How do I tag a CSV column from the shell?
+  source: cases
+  frequency: a job from the thinkthen.dev task list and the support inbox case
+  rank: 83
+  page: /use/tag-a-csv-column-in-bash/
+  reference: /reference/commands/tag/

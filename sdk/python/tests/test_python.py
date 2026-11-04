@@ -82,12 +82,12 @@ def test_missing_records_and_invalid_ids_preserve_position_without_calls(
         assert server.count() == 0
 
 
-def test_filter_yields_false_and_failed_rows_as_well_as_selected_rows(
+def test_filter_rows_yields_false_and_failed_rows_as_well_as_selected_rows(
     cases: Path,
 ) -> None:
     with Loopback(cases / "filter-rows.json") as server:
         client = tt.Client(url=server.url, api_key="synthetic")
-        with client.filter("Ready?", ["refund", "ordinary", None]) as stream:
+        with client.filter_rows("Ready?", ["refund", "ordinary", None]) as stream:
             rows = list(stream)
         assert len(rows) == 3 and [row.position for row in rows] == [1, 2, 3]
         assert [row.answer for row in rows] == [True, False, None]
@@ -226,7 +226,7 @@ def test_stream_close_bounds_input_and_releases_python_objects(tmp_path: Path) -
 
     with yes_server(tmp_path) as server:
         client = tt.Client(url=server.url, batch=1)
-        with client.decide_stream("Ready?", inputs(), evidence="/body") as rows:
+        with client.decide_stream("Ready?", inputs(), field="/body") as rows:
             assert next(rows).answer is True
             assert len(consumed) < 10_000
         gc.collect()

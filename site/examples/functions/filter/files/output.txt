@@ -1,0 +1,4 @@
+messages.thinkthen.csv
+message,is_refund
+Please refund my order.,TRUE
+I was charged twice for one invoice.,TRUE

@@ -16,6 +16,7 @@ import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parent.parent
+from duckdb_release import VERSION
 sys.path.insert(0, str(ROOT / 'scripts'))
 import release_images
 
@@ -26,7 +27,7 @@ def exercise(scratch, system, runtime=None):
     state = action.__globals__
     tools = scratch / system / 'tools'
     source = scratch / system / 'source'
-    for name in ('release-downloads.json', 'duckdb-prepare', 'floors/prepare-r',
+    for name in ('release-downloads.json', 'release-tools.json', 'duckdb_release.py', 'duckdb-prepare', 'floors/prepare-r',
                  'floors/prepare-macos', 'floors/prepare-linux', 'floors/prepare-duckdb'):
         target = source / 'scripts' / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -37,7 +38,7 @@ def exercise(scratch, system, runtime=None):
     from runtime_floors import FLOORS
     macos = system == 'Darwin'
     prefix = tools / ('floors/macos' + FLOORS['macos'] if macos else 'floors/linux-glibc' + FLOORS['linux']['glibc'])
-    marker = tools / 'duckdb/1.4.3/python-wheel'
+    marker = tools / f'duckdb/{VERSION}/python-wheel'
     marker.parent.mkdir(parents=True)
     wheel = next((runtime / 'duckdb').glob('*.whl')).name if runtime else 'duckdb-test.whl'
     marker.write_text(wheel + '\n')
@@ -62,12 +63,12 @@ def exercise(scratch, system, runtime=None):
         nonlocal prefix
         original_prefix = prefix
         prefix = Path(kwargs.get("env", {}).get("THINKTHEN_RUNTIME_PREFIX", prefix))
-        command = args[-1]
+        command = args[-2] if args[-1:] == ('--prepare-fish',) else args[-1]
         calls.append(command)
         if counter is not None:
             with counter.get_lock():
                 counter.value += 1
-        if command.endswith(('prepare-swift', 'prepare-image')):
+        if command.endswith(('prepare-swift', 'prepare-image', 'installer-test')):
             prefix = original_prefix
             return
         if runtime is not None:
@@ -94,8 +95,8 @@ def exercise(scratch, system, runtime=None):
                       'Frameworks/R.framework/Resources/etc/Makeconf',
                       'Frameworks/R.framework/Resources/etc/Renviron'] if macos else ['bin/sqlite3', 'sources/sqlite.zip']
         elif command.endswith('prepare-duckdb'):
-            names = ['duckdb/static/libduckdb_static.a', 'duckdb/static/libduckdb_yyjson.a',
-                     'duckdb/cli/duckdb', 'duckdb/duckdb-1.4.3/src/include/duckdb.hpp', 'duckdb/duckdb-test.whl']
+            names = ['duckdb/static/libduckdb_static.a',
+                     'duckdb/cli/duckdb', f'duckdb/duckdb-{VERSION}/src/include/duckdb.hpp', 'duckdb/duckdb-test.whl']
         else:
             names = ['r-frames/library/jsonlite/DESCRIPTION', 'r-frames/library/cli/DESCRIPTION',
                      'r-frames/library/dplyr/DESCRIPTION', 'r-frames/packages/cli_3.6.6.tgz',
@@ -128,14 +129,14 @@ def exercise(scratch, system, runtime=None):
         target = 'macos-arm64' if macos else 'linux-x86_64'
         with patch.object(platform, 'machine', return_value='arm64' if macos else 'x86_64'), patch.dict(os.environ, PM_JOB='floor-inputs-test'):
             module['prepare'](target)
-        assert calls == ([] if macos else ['scripts/floors/prepare-image', 'scripts/floors/prepare-swift']), calls
+        assert calls == ([] if macos else ['scripts/floors/prepare-image', 'scripts/installer-test', 'scripts/floors/prepare-swift']), calls
         calls.clear()
         missing = [('jansson/include/jansson.h', expected[0]),
                    ('sources/jsonlite_2.0.0.tar.gz', expected[0]),
                    ('r-frames/library/cli/DESCRIPTION', 'scripts/floors/prepare-r'),
                    ('r-frames/packages/cli_3.6.6.tgz', 'scripts/floors/prepare-r')]
         if macos:
-            missing += [('duckdb/static/libduckdb_yyjson.a', 'scripts/floors/prepare-duckdb'),
+            missing += [('duckdb/static/libduckdb_static.a', 'scripts/floors/prepare-duckdb'),
                         ('duckdb/cli/duckdb', 'scripts/floors/prepare-duckdb'),
                         ('duckdb/duckdb-test.whl', 'scripts/floors/prepare-duckdb')]
         for name, owner in missing:

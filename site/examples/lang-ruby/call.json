@@ -1,0 +1,5 @@
+{
+  "anchor": "  is_refund = client.decide?(\"Does the customer request a refund?\",",
+  "before": 0,
+  "after": 2
+}

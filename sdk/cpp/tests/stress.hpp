@@ -19,15 +19,15 @@ static int stress_main(int argc, char** argv) {
     auto drive = [&](std::size_t offset) {
         const auto records = records_for(offset);
         std::size_t received = 0, failed = 0;
-        for (const auto& row : owner.decide_each(tt::decide{"Ready?"}.evidence("/body"), records)) {
+        for (const auto& row : owner.decide_each(tt::decide{"Ready?"}.field("/body"), records)) {
             assert(row.position() == ++received);
             widths.fetch_or(UINT64_C(1) << json(row).at("id").get<std::string>().size());
             assert(json(row).at("id") == "record-" + std::to_string(offset + received - 1));
             if (row.status() == tt::status::failed) {
                 ++failed;
-                assert(std::string{thinkthen_code_name(static_cast<int>(row.failure()->code()))} == argv[5]);
+                assert(std::string{thinkthen_code_name(row.failure()->code().value())} == argv[5]);
             } else {
-                assert(row.status() == tt::status::answered && row.value() && *row.value());
+                assert(row.status() == tt::status::answered && row.answer() && *row.answer());
                 assert(row.probability() && *row.probability() == std::stod(argv[6]));
             }
         }
@@ -37,7 +37,7 @@ static int stress_main(int argc, char** argv) {
     const auto rounds = std::stoull(argv[8]);
     for (std::size_t round = 0; round < rounds; ++round) {
         if (cancel) {
-            auto rows = owner.decide_each(tt::decide{"Ready?"}.evidence("/body"), records_for(0));
+            auto rows = owner.decide_each(tt::decide{"Ready?"}.field("/body"), records_for(0));
             auto stop = rows.cancel_handle();
             bool cancelled = false;
             std::thread worker([&] {

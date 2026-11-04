@@ -1,0 +1,5 @@
+{
+  "anchor": "FROM thinkthen_relate((SELECT msg_id, body FROM messages),",
+  "before": 0,
+  "after": 2
+}

@@ -1,0 +1,19 @@
+#!/bin/sh
+# Exercise installed eager frame APIs without rebuilding unrelated surfaces.
+set -eu
+cd "$(dirname "$0")/.."
+. scripts/native-tools-env
+exec uv run --offline --no-project --python 3.10 --with 'maturin>=1.5,<2' --with 'pytest>=8,<9' --with 'pandas>=2.2' --with 'polars>=1.0' -- sh -eu <<'CHECKS'
+root=$PWD
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+cargo build -p loopback --bin loopback --locked
+mkdir "$scratch/wheels"
+(cd sdk/python && python -c 'import build_backend, sys; build_backend.build_wheel(sys.argv[1], {"build-args": "--locked --profile dev"})' "$scratch/wheels")
+uv pip install --offline --python "$VIRTUAL_ENV/bin/python" "$scratch"/wheels/*.whl
+export THINKTHEN_LOOPBACK="${CARGO_TARGET_DIR:-$root/target}/debug/loopback"
+export THINKTHEN_CASES="$root/conformance"
+unset THINKTHEN_API_KEY OPENAI_API_KEY THINKTHEN_BASE_URL THINKTHEN_BATCH PYTHONPATH
+cd "$scratch"
+python -m pytest "$root/sdk/python/tests/test_frame_answers.py" -q --tb=short
+CHECKS

@@ -1,0 +1,3 @@
+{"id":"a1","triage":{"refund":true,"topic":"billing"}}
+{"id":"a2","triage":{"refund":false,"topic":"shipping"}}
+{"id":"a3","triage":{"refund":"unsure","topic":"billing"}}

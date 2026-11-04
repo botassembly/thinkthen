@@ -1,0 +1,3 @@
+messages.thinkthen.csv
+message,urgency
+Please refund my order.,0.05

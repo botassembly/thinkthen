@@ -31,7 +31,7 @@ macro_rules! define_function {
     (Find) => {crate::core::results::functions::implementation!(Find,Option<Found>,NoDetail,a=>match a{crate::core::Answer::Found(v)=>Ok(v.map(Into::into)),_=>Err(mismatch())},d=>{let _=d;Ok(None)});};
     (Recognize) => {crate::core::results::functions::implementation!(Recognize,Vec<Name>,RecognizeDetail,a=>match a{crate::core::Answer::Names(v)=>Ok(v.into_iter().map(Into::into).collect()),_=>Err(mismatch())},d=>match d{Some(crate::core::Detail::Recognize(v))=>Ok(Some(v.into())),None=>Ok(None),_=>Err(mismatch())});};
     (Relate) => {crate::core::results::functions::implementation!(Relate,Vec<Relation>,PairDetail,a=>match a{crate::core::Answer::Relations(v)=>Ok(v.into_iter().map(Into::into).collect()),_=>Err(mismatch())},d=>match d{Some(crate::core::Detail::Relate(v))=>Ok(Some(PairDetail{names:v.names.into_iter().map(Into::into).collect(),pairs:v.pairs.into_iter().map(Into::into).collect()})),None=>Ok(None),_=>Err(mismatch())});};
-    (Annotate) => {crate::core::results::functions::implementation!(Annotate,std::collections::BTreeMap<String,AnnotationEntry>,NoDetail,a=>{let _=a;Err(mismatch())},d=>{let _=d;Ok(None)});};
+    (Annotate) => {crate::core::results::functions::implementation!(Annotate,Annotations,NoDetail,a=>{let _=a;Err(mismatch())},d=>{let _=d;Ok(None)});};
 }
 pub(crate) use define_function;
 pub(crate) use implementation;

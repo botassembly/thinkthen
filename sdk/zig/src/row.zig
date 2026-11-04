@@ -1,20 +1,35 @@
 const std = @import("std");
 const c = @import("c");
+const native = @import("native.zig");
 const t = @import("types.zig");
 const d = @import("diagnostic.zig");
 const Allocator = std.mem.Allocator;
+/// A row's state: answered, not sure, or failed.
 pub const Status = enum { answered, unsure, failed };
-pub const Source = struct { question_identity: []const u8, backend: t.Backend, model: []const u8, name: ?[]const u8 = null };
+/// Where an answer came from.
+pub const Source = struct {
+    /// A digest naming the question and its settings.
+    question_identity: []const u8,
+    /// The backend that answered.
+    backend: t.Backend,
+    /// The backend model.
+    model: []const u8,
+    /// The question's name, when it was given one.
+    name: ?[]const u8 = null,
+};
+/// A record's `id` field: a string or an integer.
 pub const RecordId = union(enum) {
     string: []const u8,
     signed: i64,
     unsigned: u64,
+    /// Read JSON, for `std.json.parseFromSlice`.
     pub fn jsonParse(allocator: Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!RecordId {
         var exact_options = options;
         exact_options.parse_numbers = false;
         const value = try std.json.innerParse(std.json.Value, allocator, source, exact_options);
         return fromValue(allocator, value, options);
     }
+    /// Read a parsed JSON value, for `std.json.parseFromValue`.
     pub fn jsonParseFromValue(allocator: Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!RecordId {
         return fromValue(allocator, value, options);
     }
@@ -26,22 +41,34 @@ pub const RecordId = union(enum) {
             else => error.UnexpectedToken,
         };
     }
+    /// Write as JSON, for `std.json.Stringify`.
     pub fn jsonStringify(self: RecordId, writer: anytype) !void {
         switch (self) {
             inline else => |v| try writer.write(v),
         }
     }
 };
+/// A piece of the record's text. Offsets are UTF-8 byte offsets into the field.
 pub const Span = struct { text: []const u8, start: u64, end: u64 };
+/// A recognized name, with its kind and probability.
 pub const Name = struct { text: []const u8, start: u64, end: u64, kind: []const u8, probability: f64 };
+/// One end of a relation.
 pub const Endpoint = struct { text: []const u8, start: u64, end: u64, kind: []const u8 };
+/// A relation found between two names.
 pub const Relation = struct { source: Endpoint, target: Endpoint, relation: []const u8, probability: f64, either: ?bool = null };
+/// Choose and tag detail: each label's probability.
 pub const LabelDetail = struct { labels: std.json.ArrayHashMap(f64) };
+/// Score and rank detail: each level's probability, in level order.
 pub const LevelDetail = struct { levels: []const f64 };
+/// A piece of text with each kind's probability.
 pub const Piece = struct { text: []const u8, start: u64, end: u64, tags: std.json.ArrayHashMap(f64) };
-pub const KindDetail = struct { start: u64, end: u64, kinds: std.json.ArrayHashMap(f64) };
+/// A candidate name with each kind's probability.
+pub const KindDetail = struct { text: []const u8, start: u64, end: u64, kinds: std.json.ArrayHashMap(f64) };
+/// Recognize detail.
 pub const RecognizeDetail = struct { pieces: []const Piece, names: []const KindDetail };
+/// Relate detail: the names found and every pair judged.
 pub const RelationDetail = struct { names: []const Name, pairs: []const Relation };
+/// The answer type of each function.
 pub fn Answer(comptime function: t.Function) type {
     return switch (function) {
         .decide, .filter => bool,
@@ -52,9 +79,10 @@ pub fn Answer(comptime function: t.Function) type {
         .find => ?Span,
         .recognize => []const Name,
         .relate => []const Relation,
-        .annotate => []const NamedAnnotation,
+        .annotate => Annotations,
     };
 }
+/// The detail type of each function; void where there is none.
 pub fn Detail(comptime function: t.Function) type {
     return switch (function) {
         .decide, .filter, .find, .annotate => void,
@@ -64,15 +92,92 @@ pub fn Detail(comptime function: t.Function) type {
         .relate => RelationDetail,
     };
 }
+/// One question's outcome. Read it with `answer`, or `switch` on it to handle every case.
 pub fn Outcome(comptime function: t.Function) type {
     return union(Status) {
         answered: struct { answer: Answer(function), probability: ?f64, detail: ?Detail(function) },
         unsure: struct { probability: f64, detail: ?Detail(function) },
         failed: d.Failure,
+        const Self = @This();
+        /// The answer. A not-sure outcome returns `error.Unsure`, with its probability in diag.
+        /// A failed outcome returns its error, with its code and message in diag.
+        pub fn answer(self: Self, diag: ?*d.Diagnostic) d.AnswerError!Answer(function) {
+            d.clear(diag);
+            return switch (self) {
+                .answered => |value| value.answer,
+                .unsure => |value| {
+                    if (diag) |target| target.setUnsure(value.probability);
+                    return error.Unsure;
+                },
+                .failed => |failure| d.promote(failure, diag),
+            };
+        }
+        /// The probability, when the outcome has one.
+        pub fn probability(self: Self) ?f64 {
+            return switch (self) {
+                .answered => |value| value.probability,
+                .unsure => |value| value.probability,
+                .failed => null,
+            };
+        }
+        /// True when the outcome is not sure.
+        pub fn isUnsure(self: Self) bool {
+            return self == .unsure;
+        }
+        /// True when the outcome failed.
+        pub fn isFailed(self: Self) bool {
+            return self == .failed;
+        }
+        /// Print the answer and probability, such as `true (0.97)`, `unsure (0.50)` or `failed record.missing: ...`.
+        pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+            switch (self) {
+                .answered => |value| {
+                    try std.json.Stringify.value(value.answer, .{}, writer);
+                    if (value.probability) |p| try writer.print(" ({d:.2})", .{p});
+                },
+                .unsure => |value| try writer.print("unsure ({d:.2})", .{value.probability}),
+                .failed => |failure| try writer.print("failed {s}: {s}", .{ failure.name(), failure.message }),
+            }
+        }
     };
 }
+/// One annotate question's outcome, by function.
 pub const Annotation = union(enum) { decide: Outcome(.decide), choose: Outcome(.choose), tag: Outcome(.tag), score: Outcome(.score), filter: Outcome(.filter), find: Outcome(.find), recognize: Outcome(.recognize), relate: Outcome(.relate) };
+/// One annotate question's name and outcome.
 pub const NamedAnnotation = struct { name: []const u8, value: Annotation };
+/// Annotate's answer: each question's outcome, read by name with `get`.
+pub const Annotations = struct {
+    /// The outcomes in question order.
+    entries: []const NamedAnnotation,
+    /// The outcome of the question with this name and function, or null when there is none.
+    pub fn get(self: Annotations, comptime function: t.Function, name: []const u8) ?Outcome(function) {
+        if (comptime !@hasField(Annotation, @tagName(function))) @compileError("annotate holds no " ++ @tagName(function) ++ " questions");
+        for (self.entries) |entry| {
+            if (std.mem.eql(u8, entry.name, name) and std.meta.activeTag(entry.value) == @field(std.meta.Tag(Annotation), @tagName(function))) {
+                return @field(entry.value, @tagName(function));
+            }
+        }
+        return null;
+    }
+    /// Write as JSON, for `std.json.Stringify`.
+    pub fn jsonStringify(self: Annotations, writer: anytype) !void {
+        try writer.beginObject();
+        for (self.entries) |entry| {
+            try writer.objectField(entry.name);
+            try writer.beginObject();
+            switch (entry.value) {
+                inline else => |child, tag| {
+                    const f = @field(t.Function, @tagName(tag));
+                    try writer.objectField("function");
+                    try writer.write(f);
+                    try writeOutcome(f, child, writer);
+                },
+            }
+            try writer.endObject();
+        }
+        try writer.endObject();
+    }
+};
 
 fn field(comptime T: type, allocator: Allocator, value: std.json.Value, key: []const u8, options: std.json.ParseOptions) std.json.ParseFromValueError!T {
     if (value != .object) return error.UnexpectedToken;
@@ -104,7 +209,7 @@ fn answer(comptime function: t.Function, allocator: Allocator, value: std.json.V
         }
         if (!found) return error.InvalidEnumTag;
     }
-    return result;
+    return .{ .entries = result };
 }
 fn outcome(comptime function: t.Function, allocator: Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Outcome(function) {
     const status = try field(Status, allocator, value, "status", options);
@@ -114,36 +219,62 @@ fn outcome(comptime function: t.Function, allocator: Allocator, value: std.json.
         .failed => .{ .failed = try field(d.Failure, allocator, value, "error", options) },
     };
 }
-/// A row borrows all nested values from the arena supplied to next or a One function.
+/// One record's result. Its strings and slices live in the memory of the call that returned it.
 pub fn Row(comptime function: t.Function) type {
     return struct {
+        /// The record's input position, counting from 1.
         position: u64,
+        /// The record's `id` field, when it had one.
         id: ?RecordId,
+        /// Where the answer came from.
         source: Source,
+        /// The outcome. `switch` on it to handle answered, not sure and failed together.
         outcome: Outcome(function),
+        /// Rank's original input, copied from the engine into the row's arena. Other functions use void.
+        /// Saved canonical row JSON does not include original input bytes.
+        item: if (function == .rank) t.Record else void = if (function == .rank) .missing else {},
         const Self = @This();
+        /// The row's status.
         pub fn status(self: Self) Status {
             return std.meta.activeTag(self.outcome);
         }
-        pub fn intoResult(self: Self, diag: ?*d.Diagnostic) d.Error!?Answer(function) {
-            d.clear(diag);
-            return switch (self.outcome) {
-                .answered => |v| @as(?Answer(function), v.answer),
-                .unsure => null,
-                .failed => |v| d.promote(v, diag),
-            };
+        /// The answer. A not-sure row returns `error.Unsure`, and a failed row returns its error.
+        /// diag then holds the row's position, and the probability or the failure's code and message.
+        pub fn answer(self: Self, diag: ?*d.Diagnostic) d.AnswerError!Answer(function) {
+            const result = self.outcome.answer(diag);
+            if (diag) |target| target.position = self.position;
+            return result;
         }
+        /// The probability, when the row has one.
+        pub fn probability(self: Self) ?f64 {
+            return self.outcome.probability();
+        }
+        /// True when the row is not sure.
+        pub fn isUnsure(self: Self) bool {
+            return self.outcome.isUnsure();
+        }
+        /// True when the row failed.
+        pub fn isFailed(self: Self) bool {
+            return self.outcome.isFailed();
+        }
+        /// Print the outcome, such as `true (0.97)`.
+        pub fn format(self: Self, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+            return self.outcome.format(writer);
+        }
+        /// Read JSON, for `std.json.parseFromSlice`.
         pub fn jsonParse(allocator: Allocator, source: anytype, options: std.json.ParseOptions) std.json.ParseError(@TypeOf(source.*))!Self {
             var exact_options = options;
             exact_options.parse_numbers = false;
             const value = try std.json.innerParse(std.json.Value, allocator, source, exact_options);
             return jsonParseFromValue(allocator, value, options);
         }
+        /// Read a parsed JSON value, for `std.json.parseFromValue`.
         pub fn jsonParseFromValue(allocator: Allocator, value: std.json.Value, options: std.json.ParseOptions) std.json.ParseFromValueError!Self {
             const kind = try field(t.Function, allocator, value, "function", options);
             if (kind != function) return error.UnexpectedToken;
             return .{ .position = try field(u64, allocator, value, "position", options), .id = try optional(RecordId, allocator, value, "id", options), .source = try field(Source, allocator, value, "source", options), .outcome = try outcome(function, allocator, value, options) };
         }
+        /// Write as JSON, for `std.json.Stringify`.
         pub fn jsonStringify(self: Self, writer: anytype) !void {
             try writer.beginObject();
             try writer.objectField("function");
@@ -172,23 +303,7 @@ fn writeOutcome(comptime function: t.Function, value: Outcome(function), writer:
         inline else => |payload, status| {
             if (status == .answered) {
                 try writer.objectField("answer");
-                if (function == .annotate) {
-                    try writer.beginObject();
-                    for (payload.answer) |entry| {
-                        try writer.objectField(entry.name);
-                        try writer.beginObject();
-                        switch (entry.value) {
-                            inline else => |child, tag| {
-                                const f = @field(t.Function, @tagName(tag));
-                                try writer.objectField("function");
-                                try writer.write(f);
-                                try writeOutcome(f, child, writer);
-                            },
-                        }
-                        try writer.endObject();
-                    }
-                    try writer.endObject();
-                } else try writer.write(payload.answer);
+                try writer.write(payload.answer);
             }
             if (status == .answered) {
                 if (payload.probability) |v| {
@@ -206,6 +321,7 @@ fn writeOutcome(comptime function: t.Function, value: Outcome(function), writer:
         },
     }
 }
+/// A row of any function.
 pub const AnyRow = union(t.Function) { decide: Row(.decide), choose: Row(.choose), tag: Row(.tag), score: Row(.score), filter: Row(.filter), find: Row(.find), recognize: Row(.recognize), relate: Row(.relate), rank: Row(.rank), annotate: Row(.annotate) };
 fn parse(comptime T: type, arena: Allocator, buffer: c.thinkthen_buffer) d.Error!T {
     const decoded = std.json.parseFromSliceLeaky(T, arena, d.bytes(buffer), .{ .allocate = .alloc_always, .parse_numbers = false }) catch |err| return if (err == error.OutOfMemory) error.OutOfMemory else error.Internal;
@@ -223,9 +339,21 @@ pub fn take(comptime function: t.Function, arena: Allocator, row: c.thinkthen_ro
         },
         else => return error.Internal,
     };
-    return .{ .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, arena, row.id), .source = try parse(Source, arena, row.source), .outcome = result };
+    const original: if (function == .rank) t.Record else void = if (function == .rank) blk: {
+        var view: c.thinkthen_record_view = .{};
+        var err = d.emptyError();
+        try d.check(native.function("thinkthen_row_original")(&row, &view, &err), &err, null);
+        const bytes = if (view.len == 0) "" else view.data[0..view.len];
+        break :blk switch (view.kind) {
+            c.THINKTHEN_RECORD_TEXT => .{ .text = try arena.dupe(u8, bytes) },
+            c.THINKTHEN_RECORD_JSON => .{ .json = try arena.dupe(u8, bytes) },
+            c.THINKTHEN_RECORD_MISSING => .missing,
+            else => return error.Internal,
+        };
+    } else {};
+    return .{ .item = original, .position = row.position, .id = if (row.id.len == 0) null else try parse(?RecordId, arena, row.id), .source = try parse(Source, arena, row.source), .outcome = result };
 }
-fn annotationAnswer(arena: Allocator, buffer: c.thinkthen_buffer) d.Error![]const NamedAnnotation {
+fn annotationAnswer(arena: Allocator, buffer: c.thinkthen_buffer) d.Error!Annotations {
     const children = try parse(std.json.Value, arena, buffer);
     var wrapper: std.json.ObjectMap = .empty;
     try wrapper.put(arena, "answer", children);

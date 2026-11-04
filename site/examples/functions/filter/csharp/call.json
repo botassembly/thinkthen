@@ -1,0 +1,5 @@
+{
+  "anchor": "await foreach (string refund in client.FilterAsync(",
+  "before": 0,
+  "after": 2
+}

@@ -1,0 +1,4 @@
+id,text,urgency_rank
+a1,Please refund my order.,3
+a2,Where is my parcel?,2
+a3,I was charged twice for one invoice.,1

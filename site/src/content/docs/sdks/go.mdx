@@ -1,0 +1,158 @@
+---
+title: Go SDK
+description: "Go SDK: the ten functions as methods on a client, with not sure returned as tt.ErrUnsure and failures as errors."
+goal: A Go developer installs the SDK, gets a first answer from decide, learns how not sure and failure arrive as errors, and finds the Go call for each function.
+reader: A Go developer who wants answers about text inside a service or a batch job
+kind: reference
+verified: 2026-11-03
+---
+import Example from '../../../components/Example.astro';
+import InstallLine from '../../../components/InstallLine.astro';
+
+The Go SDK gives your code the ten functions as methods on a client; `tt.Answer` turns each result into a typed answer and an error, such as `true` or `false` from decide.
+
+<Example id="lang-go" title="main.go" />
+
+Install it (Go 1.23 or later, with cgo and a C compiler):
+
+<InstallLine k="languages.go.install" />
+
+The client uses the key you set in the [Quickstart](/quickstart/). Call `client.Close()` when you're done with it.
+
+## When decide is not sure
+
+Give decide a low and a high bar, and a text that falls between them is not sure. `tt.Answer` then returns `tt.ErrUnsure`, and the answer beside it is the zero value, `false`. Check the error before the answer, or not sure reads as a no. This message lands between the bars:
+
+<Example id="sdk-go-unsure" title="main.go" />
+
+Send not sure to a person.
+
+## When a call fails
+
+Blank text fails at once, and nothing is sent. The error is a `*tt.Error`, and its `Code()` names the problem:
+
+<Example id="sdk-go-failure" title="main.go" />
+
+Any other failure, such as the service being down, comes back as a result whose `Status()` is `tt.Failed`, and `tt.Answer` returns its error. Match a family with `errors.Is(err, tt.ErrRecord)`, or one code with `errors.Is(err, tt.CodeRecordEmpty)`. A problem with the client itself, such as a wrong argument, comes back from `tt.New` or the call. [Troubleshooting](/reference/troubleshooting/) lists each code and its fix.
+
+## The ten functions
+
+Each example asks about the same support-inbox messages as the function pages. Each function has a one-message call, such as `client.Decide`, and an `All` call, such as `client.DecideAll`, that takes many messages and yields a result for each in a `range` loop. In an `All` loop, a failed message arrives as a result, and the loop's own error means the whole call failed.
+
+### decide
+
+<details class="example-disclosure">
+<summary>decide: yes, no or not sure</summary>
+
+<Example id="lang-go" title="main.go" />
+
+The message asks for a refund, so decide says `true`. `.WithThreshold(tt.Cutoff(0.8))` moves the bar, and `tt.Band(0.2, 0.8)` sets a low and a high bar, as above. `.WithField("/text")` picks the field to judge when a message is JSON. [decide](/functions/decide/) shows every answer.
+
+</details>
+
+### choose
+
+<details class="example-disclosure">
+<summary>choose: one answer from your list</summary>
+
+<Example id="sdk-go-choose" title="main.go" />
+
+A refund request is about billing. With `.WithThreshold(tt.Cutoff(0.8))`, choose is not sure when no choice reaches the bar, and `tt.Answer` returns `tt.ErrUnsure` with an empty string. `client.ChooseAll` reads many messages:
+
+<Example id="use-choose-go" title="main.go" />
+
+[choose](/functions/choose/) shows every answer.
+
+</details>
+
+### filter
+
+<details class="example-disclosure">
+<summary>filter: keep the messages that answer yes</summary>
+
+<Example id="sdk-go-filter" title="main.go" />
+
+`FilterAll` yields the messages that answer yes: the refund request and the double charge. `Item()` is your own message. Not-sure messages are left out. A failed message arrives with its error in its place, and the loop may go on; this example stops on it. `client.FilterRowsAll` yields a result for every message instead, with `Kept()`. [filter](/functions/filter/) shows every answer.
+
+</details>
+
+### tag
+
+<details class="example-disclosure">
+<summary>tag: every label that fits</summary>
+
+<Example id="sdk-go-tag" title="main.go" />
+
+The message names a double charge and a late parcel, so both labels fit. The answer is a `[]string`, empty when none fits. [tag](/functions/tag/) shows every answer.
+
+</details>
+
+### score
+
+<details class="example-disclosure">
+<summary>score: a number from 0 to 1</summary>
+
+<Example id="sdk-go-score" title="main.go" />
+
+A refund request is routine, so it scores near 0. The answer is a `float64`, and levels run lowest first. [score](/functions/score/) shows every answer.
+
+</details>
+
+### rank
+
+<details class="example-disclosure">
+<summary>rank: put messages in order</summary>
+
+<Example id="sdk-go-rank" title="main.go" />
+
+The double charge is the most urgent, so it ranks 1. The answer is an `int`, and `Item()` is the message it ranks. `.WithTop(2)` ranks only the first two. [rank](/functions/rank/) shows every answer.
+
+</details>
+
+### find
+
+<details class="example-disclosure">
+<summary>find: the line that answers</summary>
+
+<Example id="sdk-go-find" title="main.go" />
+
+The second line holds the request. The answer is a `*tt.Span` with `Text`, `Start` and `End`, counted in bytes, and it is `nil` when no line answers. [find](/functions/find/) shows every answer.
+
+</details>
+
+### recognize
+
+<details class="example-disclosure">
+<summary>recognize: names and their kinds</summary>
+
+<Example id="sdk-go-recognize" title="main.go" />
+
+Morgan is a person and Example Group an organization. Each `tt.Name` also has `Start`, `End` and `Probability`. [recognize](/functions/recognize/) shows every answer.
+
+</details>
+
+### relate
+
+<details class="example-disclosure">
+<summary>relate: how names connect</summary>
+
+<Example id="sdk-go-relate" title="main.go" />
+
+Morgan works for Example Group, so relate links the two by the rule. relate finds the names itself, so it needs no recognize call first. Each `tt.Relation` also has `Probability`. [relate](/functions/relate/) shows every answer.
+
+</details>
+
+### annotate
+
+<details class="example-disclosure">
+<summary>annotate: several questions at once</summary>
+
+<Example id="sdk-go-annotate" title="main.go" />
+
+Each message gets all three answers: refund or not, the topic, and its urgency. `answers.Decide("refund")` and the other selectors pick one answer, and `tt.Answer` reads it as a one-question call does, so a not-sure answer inside returns `tt.ErrUnsure` too. `client.Annotate` answers one message. [annotate](/functions/annotate/) shows every answer.
+
+</details>
+
+## The full API
+
+`tt.Config` sets the batch size and retries, and `tt.JSON` and `tt.Records` build messages with ids. The [Go source](https://github.com/botassembly/thinkthen/tree/v0.2.0/sdk/go/thinkthen) lists every name.

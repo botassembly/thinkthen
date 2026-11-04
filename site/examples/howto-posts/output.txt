@@ -1,0 +1,6 @@
+--- publish.jsonl
+{"id":"p1","text":"Our spring release adds dark mode and faster search."}
+{"id":"p3","text":"The new office opens in Porto next month."}
+--- review.jsonl
+{"id":"p2","status":"answered","answer":true,"probability":0.9}
+{"id":"p4","status":"answered","answer":true,"probability":0.82}

@@ -33,7 +33,7 @@ impl Annotate {
     }
 
     // The engine concatenates rounds. Replay each round's ask counts to recover
-    // each question's own history, including its record-specific evidence.
+    // each question's own history, including its record-specific field.
     #[expect(
         clippy::expect_used,
         reason = "the packer delivers one answer per prepared ask in round order"
@@ -48,7 +48,7 @@ impl Annotate {
             .questions
             .iter()
             .map(|(name, question)| {
-                let prepared = evidence(question, record.record()).and_then(|text| {
+                let prepared = field(question, record.record()).and_then(|text| {
                     question
                         .try_asks_record(&crate::core::AdmittedRecord::text(&text), limits)
                         .map(|asks| (crate::core::AdmittedRecord::text(text), asks))
@@ -115,8 +115,8 @@ struct Entry<'a> {
     history: Vec<Result<AskAnswer, Error>>,
 }
 
-fn evidence(question: &ToolboxQuestion, record: &Record) -> Result<String, Error> {
-    record.evidence_at(question.on().unwrap_or(&Pointer::default()))
+fn field(question: &ToolboxQuestion, record: &Record) -> Result<String, Error> {
+    record.field_at(question.on().unwrap_or(&Pointer::default()))
 }
 
 impl Function for Annotate {
@@ -139,7 +139,7 @@ impl Function for Annotate {
                 if position < entry.pending.len() {
                     Some(super::stub_key(
                         entry.question.stub_identity(),
-                        entry.text.evidence(),
+                        entry.text.field(),
                         entry.history.len(),
                         position,
                     ))
@@ -159,7 +159,7 @@ impl Function for Annotate {
             .questions
             .iter()
             .flat_map(|(_, question)| {
-                evidence(question, record.record())
+                field(question, record.record())
                     .and_then(|text| {
                         question.try_asks_record(&crate::core::AdmittedRecord::text(text), limits)
                     })

@@ -1,0 +1,9 @@
+{
+  "question": "Does the customer request a refund?",
+  "records": [
+    "Please refund my order.",
+    "Where is my parcel?",
+    "I was charged twice for one invoice."
+  ],
+  "answers": "The text of each kept record, in record order."
+}

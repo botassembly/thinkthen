@@ -60,7 +60,7 @@ impl ToolboxQuestion {
     pub(crate) const fn function(&self) -> &ToolboxFunction {
         &self.function
     }
-    /// The question's evidence pointer, including an inherited pointer.
+    /// The question's field pointer, including an inherited pointer.
     #[must_use]
     pub(crate) const fn on(&self) -> Option<&Pointer> {
         self.on.as_ref()

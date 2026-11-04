@@ -193,7 +193,7 @@ impl BackendTable {
                     ErrorKind::KeyMissing,
                     crate::core::diagnostic::requirement(
                         "api_key",
-                        "a credential in the selected backend key variable",
+                        &format!("a credential in {}", entry.key_variable),
                         "an unset or blank credential (contents redacted)",
                     ),
                 )

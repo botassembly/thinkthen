@@ -8,6 +8,7 @@ require_relative "cases"
 isolated_ruby_environment do
   require "thinkthen"
   require_relative "surface"
+  require_relative "interface"
   require_relative "lifecycle"
   require_relative "input_interruption"
   require_relative "traversal_lifetime"
@@ -19,6 +20,8 @@ isolated_ruby_environment do
   loaded = $LOADED_FEATURES.find { |path| path.end_with?("/lib/thinkthen.rb") }
   raise "source checkout was loaded" unless loaded && File.realpath(loaded).start_with?(File.realpath(ENV.fetch("GEM_HOME")) + "/")
 
+  ruby_interface
+  ruby_bounded_rank
   ruby_packaging
   shared_cases
   admission_cases
@@ -26,7 +29,7 @@ isolated_ruby_environment do
   ruby_saved_calls
   ruby_toolbox_json
   ruby_questions
-  ruby_threshold_and_evidence
+  ruby_threshold_and_field
   ruby_record_identity
   ruby_filter_rows
   ruby_row_values

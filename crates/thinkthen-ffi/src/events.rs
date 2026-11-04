@@ -5,41 +5,42 @@
 )]
 use crate::memory::CallHandle;
 
-/// An independently retained event source, safe after the call is freed.
+/// A call's wake source, from thinkthen_call_events; it may outlive the call. Free it with
+/// thinkthen_events_free.
 #[derive(Debug)]
 pub struct CallEventsHandle(thinkthen::native::Events);
 
-/// Retain the call's wake source without changing its input reservation.
+/// Get a wake source for a streaming call, for a host that waits on input and output at once.
 ///
-/// Host sequence: retain once; read events_version BEFORE call_next; on
-/// NEEDS_INPUT select caller input against events_wait(version). If input wins,
-/// call events_wake and join the waiter before sending through the sole driver.
-/// If an event wins, recheck call_next without issuing another input demand.
-/// Output may become ready while the reserved input remains outstanding.
-///
-/// Cancellation wakes this source through the call's queues. A host also wakes
-/// and joins its waiters on close; it frees the event handle only after all
-/// version/wait/wake operations return. The event handle can outlive call_free.
+/// Read thinkthen_events_version before thinkthen_call_next. When it returns
+/// THINKTHEN_NEEDS_INPUT, wait for your own input or thinkthen_events_wait(version), whichever
+/// comes first. If input comes first, call thinkthen_events_wake, join the waiter, then send.
+/// If an event comes first, call thinkthen_call_next again. Cancelling the call wakes the
+/// source. Returns a new handle the caller owns; free it with thinkthen_events_free after every
+/// wait and wake has returned. It may outlive the call.
 /// # Safety
-/// The sole driver owns a live call during this retain operation.
+/// The thread driving call calls this. call is live.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_events(call: *const CallHandle) -> *mut CallEventsHandle {
     // SAFETY: the sole driver grants shared access before concurrent waits start.
     let events = unsafe { (&*(*call).call.get()).events() };
     Box::into_raw(Box::new(CallEventsHandle(events)))
 }
-/// Read the version BEFORE the sole driver checks call readiness.
+/// Return the wake source's current version.
+///
+/// Read it before you check the call, then wait on it.
 /// # Safety
-/// Events stays live until this call returns. Concurrent event operations are safe.
+/// Any thread may call this while events is live; event functions may run at the same time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_version(events: *const CallEventsHandle) -> u64 {
     // SAFETY: only an immutable retained signal is accessed.
     unsafe { (*events).0.version() }
 }
-/// Wait for a change from version, returning immediately if it already changed.
-/// A wake requests a recheck; it does not promise a row or consume input capacity.
+/// Wait until the version is no longer version; return at once if it already changed.
+///
+/// A wake asks you to check the call again. It does not promise a row.
 /// # Safety
-/// Events stays live until this wait returns. Concurrent waits and wakes are safe.
+/// Any thread may call this while events is live; event functions may run at the same time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_wait(events: *const CallEventsHandle, version: u64) {
     // SAFETY: only the retained signal's mutex and condition variable are used.
@@ -47,10 +48,11 @@ pub unsafe extern "C" fn thinkthen_events_wait(events: *const CallEventsHandle, 
         (*events).0.wait(version);
     }
 }
-/// Wake waits on earlier versions, including waits not yet entered.
-/// This does not cancel the call or alter its reserved input.
+/// Wake every wait on an earlier version, including a wait not yet entered.
+///
+/// It does not cancel the call or change its input.
 /// # Safety
-/// Events stays live until this call returns. Concurrent event operations are safe.
+/// Any thread may call this while events is live; event functions may run at the same time.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_wake(events: *const CallEventsHandle) {
     // SAFETY: the retained signal provides its own synchronization.
@@ -58,9 +60,11 @@ pub unsafe extern "C" fn thinkthen_events_wake(events: *const CallEventsHandle) 
         (*events).0.wake();
     }
 }
-/// Free an event source after all its operations have returned.
+/// Free a wake source.
+///
+/// NULL is ignored.
 /// # Safety
-/// Events is uniquely owned and no version, wait or wake operation remains active.
+/// Call this once, after every version, wait and wake call on events has returned.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_events_free(events: *mut CallEventsHandle) {
     // SAFETY: the caller retires all uses before releasing this unique allocation.

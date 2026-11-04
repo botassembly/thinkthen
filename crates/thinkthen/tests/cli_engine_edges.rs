@@ -52,7 +52,7 @@ fn table_decide_requires_an_answer_column_before_file_work() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(support::reported(&output), "usage.question");
+    assert_eq!(support::reported(&output), "usage.option");
     let error = String::from_utf8(output.stderr).unwrap();
     assert!(
         error.contains("into: expected an answer column name"),
