@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 root=$PWD
 scripts/typescript-prepare
 addon=
-if [ "${1:-}" = --collection-only ]; then
+if [ "${1:-}" = --collection-only ] || [ "${1:-}" = --prepared-addon ]; then
     addon=${2:?Provide the already built native addon}
     case "$addon" in /*) ;; *) addon="$root/$addon" ;; esac
     printf 'Reuse prepared TypeScript addon: '

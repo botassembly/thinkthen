@@ -49,11 +49,7 @@ fn a_large_initial_backoff_is_capped_before_the_next_attempt() {
         1,
         "the retry arrives within its capped wait"
     );
-    let rows = result.unwrap();
-    assert_eq!(rows.len(), 1);
-    let thinkthen::Outcome::Failed { error } = rows[0].outcome() else {
-        panic!("the second attempt returns its backend failure");
-    };
+    let error = result.unwrap_err();
     assert_eq!(error.http_status(), Some(401));
     assert_eq!(server.count(), 2);
 }

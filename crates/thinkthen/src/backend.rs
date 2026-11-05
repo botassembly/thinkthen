@@ -51,7 +51,7 @@ pub(crate) struct BackendEntry {
     name: String,
     adapter: Option<Adapter>,
     address: String,
-    address_variable: Option<String>,
+    address_variables: &'static [&'static str],
     key_variable: String,
     default_model: String,
     limits: crate::Limits,
@@ -72,7 +72,7 @@ impl BackendEntry {
             name: name.into(),
             adapter: Some(adapter),
             address: address.into(),
-            address_variable: None,
+            address_variables: &[],
             key_variable: key_variable.into(),
             default_model: default_model.into(),
             limits,
@@ -103,8 +103,8 @@ impl Default for BackendTable {
             "jev-1.13.0",
             limits,
         );
-        systemone.address_variable = Some("THINKTHEN_BASE_URL".to_owned());
-        let openai = BackendEntry::new(
+        systemone.address_variables = &["THINKTHEN_URL", "THINKTHEN_BASE_URL"];
+        let mut openai = BackendEntry::new(
             crate::BackendName::OpenAi.as_str(),
             Adapter::OpenAi,
             "https://api.openai.com/v1",
@@ -115,11 +115,12 @@ impl Default for BackendTable {
                 ..limits
             },
         );
+        openai.address_variables = &["OPENAI_BASE_URL"];
         let stub = BackendEntry {
             name: crate::BackendName::Stub.as_str().to_owned(),
             adapter: None,
             address: "stub".to_owned(),
-            address_variable: None,
+            address_variables: &[],
             key_variable: String::new(),
             default_model: "stub".to_owned(),
             limits,
@@ -182,7 +183,12 @@ impl BackendTable {
         };
         let base = url
             .map(str::to_owned)
-            .or_else(|| entry.address_variable.as_deref().and_then(&variable))
+            .or_else(|| {
+                entry
+                    .address_variables
+                    .iter()
+                    .find_map(|name| variable(name))
+            })
             .unwrap_or_else(|| entry.address.clone());
         validate_url(&base)?;
         let key = api_key

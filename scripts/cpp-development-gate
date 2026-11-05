@@ -3,6 +3,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
+if [ "$(uname -s)" = Linux ]; then
+    scripts/source-linux-tools
+    PATH="$PWD/target/source-tools/bin:$PATH"
+    export PATH
+fi
 cargo fmt --all -- --check
 cargo build --locked --offline -p thinkthen-ffi -p loopback
 cargo run --locked --offline -p thinkthen-ffi --example headers -- --check
@@ -20,8 +25,8 @@ cmake --install "$scratch/c-build"
 cmake -S sdk/cpp -B "$scratch/cpp-build" -DCMAKE_PREFIX_PATH="$scratch/prefix" -DCMAKE_INSTALL_PREFIX="$scratch/prefix"
 cmake --install "$scratch/cpp-build"
 export PKG_CONFIG_PATH="$scratch/prefix/lib/pkgconfig"
-cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/consumer.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/c-consumer"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/consumer.c $(pkg-config --cflags --libs thinkthen-c) -Wl,-rpath,"$scratch/prefix/lib" -o "$scratch/c-consumer"
 "$scratch/c-consumer"
-cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $(pkg-config --cflags --libs thinkthen-c) -o "$scratch/c-original"
+cc -std=c11 -Wall -Wextra -Werror sdk/c/tests/original.c $(pkg-config --cflags --libs thinkthen-c) -Wl,-rpath,"$scratch/prefix/lib" -o "$scratch/c-original"
 "$scratch/c-original"
 sdk/cpp/tests/check-installed "$scratch/prefix" "$build_target/debug/loopback" "$build_target/debug/$library"

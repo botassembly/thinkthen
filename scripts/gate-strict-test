@@ -14,6 +14,10 @@ import unittest
 import sys
 from unittest.mock import patch
 
+# Fixture gates own their reports independently of the invoking gate.
+BASE_ENV = dict(os.environ)
+BASE_ENV.pop('THINKTHEN_GATE_FAILURE_TAILS', None)
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -30,7 +34,7 @@ class StrictGate(unittest.TestCase):
             (source / 'AGENTS.md').write_text('ExampleConfidential\n')
             subprocess.run(['git', 'init', '--quiet'], cwd=source, check=True)
             subprocess.run(['git', 'add', '.'], cwd=source, check=True)
-            env = dict(os.environ, THINKTHEN_GATE_STRICT='1')
+            env = dict(BASE_ENV, THINKTHEN_GATE_STRICT='1')
             missing = subprocess.run([source / 'scripts/words'], env=env, capture_output=True, text=True)
             self.assertNotEqual(missing.returncode, 0, 'candidate accepted absent private patterns')
             patterns = root / 'patterns'
@@ -85,6 +89,7 @@ class StrictGate(unittest.TestCase):
                     stub.write_text('#!/bin/sh\nexit 0\n')
                     stub.chmod(0o755)
             shutil.copy2(ROOT / 'scripts/gate', scripts / 'gate')
+            shutil.copy2(ROOT / 'scripts/gate-report', scripts / 'gate-report')
             tools = root / 'tools'
             tools.mkdir()
             for name in ('python3', 'git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake',
@@ -97,7 +102,7 @@ class StrictGate(unittest.TestCase):
             uname.chmod(0o755)
             patterns = root / 'patterns'
             patterns.write_text('ExampleConfidential')
-            env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ['PATH'],
+            env = dict(BASE_ENV, PATH=str(tools) + os.pathsep + os.environ['PATH'],
                        THINKTHEN_PRIVATE_PATTERNS=str(patterns), THINKTHEN_NATIVE_LIBRARY='fixture',
                        THINKTHEN_GATE_DIAGNOSTICS=str(root / 'diagnostics'))
             ordinary = subprocess.run([scripts / 'gate'], env=dict(env, THINKTHEN_GATE_STRICT='0'),
@@ -140,7 +145,8 @@ class StrictGate(unittest.TestCase):
                 path.write_text('#!/bin/sh\nexit ' + ('77' if name == 'python-gate' else '0') + '\n')
                 path.chmod(0o755)
             shutil.copy2(ROOT / 'scripts/sdk-gates', scripts / 'sdk-gates')
-            env = dict(os.environ)
+            shutil.copy2(ROOT / 'scripts/gate-report', scripts / 'gate-report')
+            env = dict(BASE_ENV)
             env.pop('THINKTHEN_SDK_GATE_RUNNER', None)
             ordinary = subprocess.run([scripts / 'sdk-gates'], env=dict(env, THINKTHEN_GATE_STRICT='0'),
                                       capture_output=True, text=True)

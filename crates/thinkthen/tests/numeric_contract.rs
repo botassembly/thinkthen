@@ -144,7 +144,7 @@ fn transport_errors_keep_their_cause_and_status_without_serializing_the_cause() 
     use thinkthen::{Decide, Key, Outcome, Record, Retry, Settings};
 
     {
-        let status = 429;
+        let status = 500;
         let server = Loopback::start(move |_| Reply::json(status, &serde_json::json!({}))).unwrap();
         let engine = Settings::default()
             .url(server.base())

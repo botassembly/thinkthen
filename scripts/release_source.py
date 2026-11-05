@@ -1,5 +1,4 @@
 """Stage release-only source additions using the checked native packages."""
-from pathlib import Path
 import shutil
 import tarfile
 
@@ -76,3 +75,21 @@ def archive_source(destination, output):
     with tarfile.open(output, 'w:gz') as archive:
         for path in sorted(destination.iterdir()):
             archive.add(path, arcname=path.name)
+
+
+def check_tag_source(source):
+    """Require each declared release target in both SDKs before installing the tag."""
+    from release_workflow import TARGETS
+    dependencies = dict(line.split(': ', 1) for line in
+                        (source / 'sdk/go/thinkthen/native/dependencies.txt').read_text().splitlines())
+    if dependencies.keys() != TARGETS.keys():
+        raise ValueError('tag source native manifest must contain every release platform')
+    for target, name in dependencies.items():
+        system, arch = GO[target]
+        go = source / 'sdk/go/thinkthen' / 'native' / f'{system}-{arch}' / name
+        swift = source / 'sdk/swift/Sources/ThinkThen/Native' / RIDS[target] / name
+        for path in (go, swift):
+            if not path.is_file() or not path.stat().st_size:
+                raise ValueError(f'tag source missing native library: {path.relative_to(source)}')
+        if go.read_bytes() != swift.read_bytes():
+            raise ValueError(f'tag source Go and Swift native libraries differ: {target}')

@@ -4,7 +4,7 @@ The PostgreSQL extension adds the ten functions to PostgreSQL 18, in the `thinkt
 
 ## Install
 
-The extension runs on PostgreSQL 18, on Linux x86-64 or arm64 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#verify-a-download), and copy its files into the server's folders:
+The extension runs on PostgreSQL 18, on Linux x86-64 or arm64 with glibc 2.28 or later. Download the PostgreSQL 18 archive for your server from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#download-a-release-file), and copy its files into the server's folders:
 
 ```sh
 mkdir thinkthen-postgres
@@ -45,6 +45,19 @@ FROM thinkthen.decide(
 
 Output:
 
+```text
+CREATE SCHEMA
+CREATE EXTENSION
+CREATE TABLE
+INSERT 0 6
+ msg_id | is_refund |  status  
+--------+-----------+----------
+ 1      | t         | answered
+ 2      | f         | answered
+ 3      | t         | answered
+(3 rows)
+```
+
 `id` comes back as `jsonb`, so `(id)::integer` joins it back to `messages`.
 
 ## Not sure and failures
@@ -62,8 +75,17 @@ FROM thinkthen.decide(
 
 Output:
 
+```text
+ msg_id | is_refund |  status  
+--------+-----------+----------
+ 1      | t         | answered
+ 2      | f         | answered
+ 3      |           | unsure
+(3 rows)
+```
+
 Test the answer with `IS TRUE` and `IS FALSE`, never with `coalesce(is_refund, false)`, which turns not sure and failures into no.
 
 ## Next
 
-The [PostgreSQL page](https://thinkthen.dev/sdks/postgresql/) shows all ten functions. The [PostgreSQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md) covers every option, column, setting and error, and moving from 0.1.0.
+The [PostgreSQL page](https://thinkthen.dev/sdks/postgresql/) shows all ten functions. The [PostgreSQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md) covers every option, column, setting and error, and moving from a 0.1 test build.

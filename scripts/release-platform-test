@@ -279,7 +279,7 @@ class PlatformRelease(unittest.TestCase):
         self.assertEqual(bundle.get('outputs', {}).get('artifact-ready'),
                          "${{ steps.upload-release.outcome == 'success' }}")
         admission = steps['admit-release']
-        self.assertEqual(admission['if'], "always() && steps.attach-registries.outcome == 'success'")
+        self.assertEqual(admission['if'], "always() && steps.attach-registries.outcome == 'success' && steps.tag-source-install.outcome == 'success'")
         self.assertIn('scripts/release-workflow draft release', admission['run'])
         self.assertIn('--dry-run', admission['run'])
         self.assertEqual(steps['upload-release']['if'],

@@ -154,7 +154,7 @@ pub(super) fn client(matches: &ArgMatches) -> Result<Engine, Error> {
             );
         }
     }
-    if let Some(url) = value(matches, "url") {
+    if let Some(url) = explicit(matches, "url") {
         settings.insert("url".into(), url.into());
     }
     Settings::from_json(&Value::Object(settings).to_string())?.engine(|key| std::env::var(key).ok())

@@ -1,0 +1,36 @@
+# Shared bounded failure output for gate stages and nested SDK children.
+# Each caller owns its capture scratch; nested callers share failure snippets.
+report_scratch=$(mktemp -d)
+if [ -z "${THINKTHEN_GATE_FAILURE_TAILS:-}" ]; then
+    THINKTHEN_GATE_FAILURE_TAILS="$report_scratch/failures"
+    export THINKTHEN_GATE_FAILURE_TAILS
+fi
+mkdir -p "$THINKTHEN_GATE_FAILURE_TAILS"
+mkfifo "$report_scratch/output"
+report_run() {
+    report_log=$1
+    shift
+    tee "$report_log" < "$report_scratch/output" &
+    report_output_pid=$!
+    if "$@" > "$report_scratch/output" 2>&1; then status=0; else status=$?; fi
+    wait "$report_output_pid"
+}
+report_save() {
+    # Bound bytes as well as lines: compiler and JSON errors can be one long line.
+    tail -c 4096 "$1" | tail -n 50 > "$report_scratch/tail"
+    {
+        printf '\nLast 50 lines of failed %s: %s (exit %s; at most 4096 bytes)\n' "$report_label" "$name" "$status"
+        cat "$report_scratch/tail"
+        printf '\n'
+    } > "$THINKTHEN_GATE_FAILURE_TAILS/$report_scope-$name.tail"
+}
+report_finish() {
+    if [ -n "$failed" ]; then
+        printf '%s%s\n' "$report_summary" "$failed" >&2
+        for report_tail in "$THINKTHEN_GATE_FAILURE_TAILS"/${report_filter:-*}.tail; do
+            [ -f "$report_tail" ] || continue
+            cat "$report_tail" >&2
+        done
+    fi
+    rm -rf "$report_scratch" || :
+}

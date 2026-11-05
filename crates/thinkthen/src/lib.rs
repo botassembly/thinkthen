@@ -1,4 +1,4 @@
-//! Ask typed questions about field and branch on the answer.
+//! Ask typed questions about text and branch on the answer.
 //!
 //! Build a question, run it on a record, and take the answer with
 //! [`Row::into_answer`]. That one step refuses "not sure" and a failed record,
@@ -45,7 +45,7 @@
 //! let how_urgent: f64 = engine.run(&urgency, "The site is down for everyone.")?.into_answer()?;
 //! assert!((0.0..=1.0).contains(&how_urgent));
 //!
-//! // Spans are UTF-8 byte offsets, so they slice the field directly.
+//! // Spans are UTF-8 byte offsets, so they slice the text directly.
 //! let policy = "Café orders ship daily.\nReturns close after 30 days.";
 //! let deadline = Find::new("Which line gives the return deadline?")?;
 //! if let Some(line) = engine.run(&deadline, policy)?.into_answer()? {

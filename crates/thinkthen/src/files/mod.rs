@@ -59,11 +59,11 @@ pub(crate) struct FileJob {
 /// The most failed rows a receipt names; `failed` counts them all.
 pub(crate) const NAMED_FAILURES: usize = 20;
 
-/// A completely published file and its outcome failures, if any.
+/// Table outcomes and the file published when the operation can safely complete.
 #[derive(Debug)]
 pub(crate) struct FileReceipt {
-    /// The file that was published.
-    pub(crate) output: PathBuf,
+    /// The published file, absent when failed filter rows prevent replacement.
+    pub(crate) output: Option<PathBuf>,
     /// The original input retained before in-place publication.
     pub(crate) backup: Option<PathBuf>,
     /// The first failed rows in input order, by source row number, at most

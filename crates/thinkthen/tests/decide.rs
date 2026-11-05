@@ -195,11 +195,13 @@ fn the_key_appears_in_no_result_or_debug_line() {
     let server =
         Loopback::start(|_| Reply::json(401, &json!({"error": format!("bad key {KEY}")}))).unwrap();
     let engine = engine(server.base());
-    let row = one(&engine, &Decide::new("Is it?").unwrap(), "text");
-    assert_eq!(failure_code(&row), "backend.status");
+    let error = engine
+        .run(&Decide::new("Is it?").unwrap(), Record::text("text"))
+        .unwrap_err();
+    assert_eq!(error.code().as_str(), "backend.status");
     for shown in [
-        format!("{row:?}"),
-        serde_json::to_string(&row).unwrap(),
+        format!("{error:?}"),
+        serde_json::to_string(&error).unwrap(),
         format!("{engine:?}"),
     ] {
         assert!(!shown.contains(KEY), "{shown}");

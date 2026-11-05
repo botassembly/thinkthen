@@ -12,6 +12,7 @@
 #include "duckdb/parallel/pipeline.hpp"
 #include "thinkthen_sql.h"
 #include "yyjson.hpp"
+#include <atomic>
 #include <cstdlib>
 #include <memory>
 #include <mutex>
@@ -106,12 +107,13 @@ struct RetainedChunk {
     idx_t remaining = 0;
 };
 struct LocalInvocation : LocalTableFunctionState {
-    bool finalized = false;
+    bool finalized = false, submitted = false;
 };
 struct Invocation : GlobalTableFunctionState {
-    idx_t remaining_pipelines = 0;
+    std::mutex mutex;
+    std::atomic<idx_t> remaining_pipelines{0};
     CallOwner call{nullptr, thinkthen_sql_call_free};
-    bool submitted = false, ended = false;
+    bool ended = false;
     uint64_t position = 0;
     uint64_t answered = 0, unsure = 0, failed = 0, backend_failed = 0;
     string first_code, first_message;
@@ -223,7 +225,9 @@ int32_t Poll(ClientContext &context, Invocation &state, RowOwner &row, uint32_t 
 }
 OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, DataChunk &input, DataChunk &output) {
     auto &state = data.global_state->Cast<Invocation>();
+    std::lock_guard<std::mutex> lock(state.mutex);
     auto &bind = data.bind_data->Cast<Binding>();
+    auto &local = data.local_state->Cast<LocalInvocation>();
     idx_t count = 0;
     while (count < STANDARD_VECTOR_SIZE) {
         RowOwner row;
@@ -233,7 +237,7 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
             output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT;
         }
         else if (result == THINKTHEN_NEEDS_INPUT) {
-            if (state.submitted) { state.submitted = false; output.CheckCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
+            if (local.submitted) { local.submitted = false; output.CheckCardinality(count); return OperatorResultType::NEED_MORE_INPUT; }
             vector<string> values;
             values.reserve(input.size());
             vector<thinkthen_sql_input> records;
@@ -259,7 +263,7 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
             }
             ErrorOwner error;
             Checked(thinkthen_sql_call_send_chunk(state.call.get(), records.data(), records.size(), &error.value), error);
-            state.submitted = true;
+            local.submitted = true;
         } else if (result == THINKTHEN_END) {
             if (count) { output.CheckCardinality(count); return OperatorResultType::HAVE_MORE_OUTPUT; }
             Complete(state, bind);
@@ -271,6 +275,7 @@ OperatorResultType Run(ExecutionContext &context, TableFunctionInput &data, Data
 }
 OperatorFinalizeResultType Final(ExecutionContext &context, TableFunctionInput &data, DataChunk &output) {
     auto &state = data.global_state->Cast<Invocation>();
+    std::lock_guard<std::mutex> lock(state.mutex);
     auto &bind = data.bind_data->Cast<Binding>();
     auto &local = data.local_state->Cast<LocalInvocation>();
     if (!local.finalized) {

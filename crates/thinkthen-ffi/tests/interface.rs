@@ -1,7 +1,7 @@
 #![cfg(test)]
 //! A compiled C program gets each answer in one call and keeps only kept records.
 mod support;
-use loopback::{KEY, Loopback};
+use loopback::{KEY, Loopback, Reply};
 use serde_json::{Value, json};
 
 fn program(mode: &str, server: Option<&Loopback>) -> String {
@@ -145,5 +145,75 @@ fn answer_meanings_and_descriptions_reach_the_backend_and_unknown_names_are_refu
         .collect();
     for meaning in ["ready to ship", "still failing", "charges and refunds"] {
         assert!(sent.contains(meaning), "{meaning} was not sent");
+    }
+}
+
+#[test]
+fn client_settings_keep_environment_addresses_with_their_provider() {
+    for backend in ["systemone", "openai"] {
+        for explicit_backend in [false, true] {
+            for explicit_url in [false, true] {
+                let system = Loopback::noul(0.9).unwrap();
+                let openai = Loopback::start(|_| {
+                    Reply::json(
+                        200,
+                        &json!({"answers":[{"type":"predicate","probability":0.9}]}),
+                    )
+                })
+                .unwrap();
+                let (server, other) = if backend == "systemone" {
+                    (&system, &openai)
+                } else {
+                    (&openai, &system)
+                };
+                let mut settings = json!({});
+                if explicit_backend {
+                    settings["backend"] = backend.into();
+                }
+                if explicit_url {
+                    settings["url"] = server.base().into();
+                }
+                let output = support::command("thinkthen-interface")
+                    .args(["decide", &settings.to_string()])
+                    .env(
+                        "THINKTHEN_BACKEND",
+                        if explicit_backend { "unknown" } else { backend },
+                    )
+                    .env("THINKTHEN_API_KEY", "synthetic-system")
+                    .env("OPENAI_API_KEY", "synthetic-openai")
+                    .env(
+                        "THINKTHEN_URL",
+                        if explicit_url {
+                            other.base()
+                        } else {
+                            system.base()
+                        },
+                    )
+                    .env(
+                        "OPENAI_BASE_URL",
+                        if explicit_url {
+                            other.base()
+                        } else {
+                            openai.base()
+                        },
+                    )
+                    .output()
+                    .unwrap();
+                assert_eq!(other.count(), 0);
+                assert!(output.status.success());
+                assert!(output.stdout.starts_with(b"decide rc=0 answer=1\n"));
+                assert!(output.stderr.is_empty());
+                let requests = server.requests();
+                assert_eq!(requests.len(), 1);
+                let key = if backend == "systemone" {
+                    "synthetic-system"
+                } else {
+                    "synthetic-openai"
+                };
+                assert!(
+                    requests[0].header("authorization") == Some(format!("Bearer {key}").as_str())
+                );
+            }
+        }
     }
 }

@@ -832,10 +832,123 @@ for platform, fallback in (
                         self.assertEqual(len(calls), 1, 'failed Wine preparation ran an application')
             self.assertEqual(len(calls), len(cases) + 3)
 
+    def test_live_install_names_use_public_sites_and_isolated_consumers(self):
+        script = ROOT / 'scripts/release-live-install-check'
+        scope = runpy.run_path(str(script))
+        main = scope['main']
+        for site in scope['SITES']:
+            calls = []
+            def execute(*arguments, **options):
+                command = list(map(str, arguments))
+                env = options['env']
+                self.assertNotIn('THINKTHEN_NATIVE_LIBRARY', env)
+                self.assertNotIn('NPM_TOKEN', env)
+                self.assertNotIn('THINKTHEN_INSTALL_BASE', env)
+                self.assertEqual(env['THINKTHEN_BACKEND'], 'stub')
+                self.assertNotEqual(env['HOME'], str(Path.home()))
+                calls.append(command)
+                fixture = next((Path(value) for value in command if value.endswith(('question.json', 'construction/stub.json'))), None)
+                if fixture:
+                    cases = json.loads(fixture.read_text())
+                    if site in ('pypi', 'nuget', 'maven'):
+                        self.assertEqual(fixture, ROOT / 'construction/stub.json')
+                        self.assertEqual({case['request']['question']['function'] for case in cases},
+                                         {case['request']['question']['function'] for case in json.loads((ROOT / 'construction/stub.json').read_text())})
+                    else:
+                        self.assertEqual(len(cases), 1)
+                        self.assertEqual(cases[0]['request']['question']['function'], 'decide')
+                if command[:2] == ['mvn', '-B']:
+                    output = next(value.removeprefix('-Dmdep.outputFile=') for value in command if value.startswith('-Dmdep.outputFile='))
+                    Path(output).write_text('resolved-public-packages.jar')
+                if command[:2] == ['brew', '--prefix']:
+                    return str(Path(env['HOME']).parent / 'installed')
+                if command[-1] == '--version':
+                    return 'thinkthen ' + version()
+                if 'decide' in command:
+                    return json.dumps({'status': 'answered', 'answer': False})
+                if command[0] == 'Rscript':
+                    self.assertIn('packageVersion("thinkthen", lib.loc=args[[1]])', command[3])
+                    self.assertIn('library(thinkthen, lib.loc=args[[1]])', command[3])
+                if command[:2] == ['go', 'test']:
+                    manifest = (Path(options['cwd']) / 'go.mod').read_text()
+                    self.assertNotIn('replace', manifest)
+                    self.assertIn('thinkthen v' + version(), manifest)
+                if command[:2] == ['swift', 'build']:
+                    manifest = (Path(command[3]) / 'Package.swift').read_text()
+                    self.assertIn('https://github.com/botassembly/thinkthen', manifest)
+                    self.assertIn('exact: "' + version() + '"', manifest)
+                    self.assertNotIn('.package(path:', manifest)
+                return ''
+            with self.subTest(site=site), patch.object(sys, 'argv', [str(script), site]), \
+                 patch.dict(os.environ, THINKTHEN_NATIVE_LIBRARY='stale-engine', NPM_TOKEN='unused',
+                            THINKTHEN_INSTALL_BASE='https://mirror.invalid'), \
+                 patch.dict(main.__globals__, run=execute):
+                main()
+            self.assertGreaterEqual(len(calls), 1 if site in ('go', 'r') else 2, site)
+            self.assertFalse(any('publish' in command or 'push' in command for command in calls))
+            installed = ' '.join(calls[0])
+            if site == 'pypi':
+                installed = ' '.join(calls[1])
+                self.assertIn('https://pypi.org/simple', installed)
+            elif site == 'npm':
+                self.assertIn('https://registry.npmjs.org', installed)
+            elif site == 'rubygems':
+                self.assertIn('https://rubygems.org', installed)
+            elif site == 'installer':
+                self.assertIn('https://thinkthen.dev/install.', installed)
+            if site in ('pypi', 'npm', 'rubygems', 'crates'):
+                self.assertIn(version(), installed)
+        calls = []
+        def fail_first(site, *arguments):
+            calls.append(site)
+            if site == 'pypi':
+                raise RuntimeError('seeded public install failure')
+        with patch.object(sys, 'argv', [str(script), 'pypi', 'npm']), \
+             patch.dict(main.__globals__, check=fail_first), self.assertRaises(SystemExit):
+            main()
+        self.assertEqual(calls, ['pypi', 'npm'])
+
+    def test_final_tag_source_rejects_an_absent_platform_before_installing(self):
+        from release_source import GO, RIDS, archive_source
+        from release_workflow import TARGETS
+        with tempfile.TemporaryDirectory(prefix='tag-source-test-') as temporary:
+            scratch = Path(temporary)
+            source = scratch / 'source'
+            dependencies = source / 'sdk/go/thinkthen/native/dependencies.txt'
+            dependencies.parent.mkdir(parents=True)
+            dependencies.write_text(''.join(target + ': engine-fixture\n' for target in TARGETS))
+            assets = []
+            for target in TARGETS:
+                system, arch = GO[target]
+                for path in (source / 'sdk/go/thinkthen/native' / f'{system}-{arch}' / 'engine-fixture',
+                             source / 'sdk/swift/Sources/ThinkThen/Native' / RIDS[target] / 'engine-fixture'):
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(target.encode())
+                    assets.append(path)
+            # Every absent native resource must fail through the shipped installer,
+            # before a compiler can consume the deliberately nonexecutable fixtures.
+            command = [sys.executable, ROOT / 'scripts/registry-site-check', scratch / 'tag-source.tar.gz']
+            for missing in assets:
+                with self.subTest(missing=missing):
+                    data = missing.read_bytes()
+                    missing.unlink()
+                    archive_source(source, scratch / 'tag-source.tar.gz')
+                    result = subprocess.run(command, cwd=scratch, capture_output=True, text=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn('tag source missing native library:', result.stdout + result.stderr)
+                    missing.write_bytes(data)
+            dependencies.write_text(dependencies.read_text().splitlines()[0] + '\n')
+            archive_source(source, scratch / 'tag-source.tar.gz')
+            result = subprocess.run(command, cwd=scratch, capture_output=True, text=True)
+            self.assertIn('native manifest must contain every release platform', result.stdout + result.stderr)
+
     def test_release_assets_have_provenance_after_platform_checks(self):
         workflow = (ROOT / '.github/workflows/release-prepare.yml').read_text()
         bundle = workflow.split('\n  bundle:\n', 1)[1].split('\n  registry-installed:\n', 1)[0]
         draft = workflow.split('\n  draft:\n', 1)[1]
+        self.assertIn('scripts/registry-site-check registries/tag-source.tar.gz', bundle)
+        self.assertIn("steps.tag-source-install.outcome == 'success'", bundle)
+        self.assertLess(bundle.index('scripts/release-workflow registry'), bundle.index('scripts/registry-site-check'))
         self.assertNotIn('actions/attest@', bundle)
         self.assertNotIn('id-token: write', bundle)
         self.assertNotIn('attestations: write', bundle)

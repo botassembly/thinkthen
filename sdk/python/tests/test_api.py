@@ -107,13 +107,13 @@ def test_failed_rows_finish_normally_and_explicit_raising_uses_typed_codes(
     tmp_path: Path,
 ) -> None:
     with (
-        backend(tmp_path, [{"status": 400, "body": {}}]) as server,
+        backend(tmp_path, [{"status": 501, "body": {}}]) as server,
         client(server) as selected,
     ):
         row = selected.decide("Ready?", "body")
         assert row.status is tt.Status.FAILED and row.answer is None
         assert row.error is not None and row.error.code is tt.ErrorCode.BACKEND_STATUS
-        assert row.error.http_status == 400 and row.probability is None
+        assert row.error.http_status == 501 and row.probability is None
         with pytest.raises(tt.RecordError) as raised:
             row.raise_for_error()
         assert raised.value.code is row.error.code

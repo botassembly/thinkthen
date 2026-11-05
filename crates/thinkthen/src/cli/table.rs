@@ -201,15 +201,19 @@ fn render(
 ) -> Result<u8, Error> {
     match result {
         Ok(receipt) => {
+            let Some(output) = &receipt.output else {
+                summarize(&receipt, false);
+                return Ok(6);
+            };
             if quiet {
                 // The file operation still completes; quiet suppresses its projection.
             } else if stdout {
-                let mut file = std::fs::File::open(&receipt.output)
+                let mut file = std::fs::File::open(output)
                     .map_err(|_| super::local("the completed table could not be opened"))?;
                 io::copy(&mut file, &mut io::stdout().lock())
                     .map_err(|error| super::output_error(error, cancel))?;
             } else {
-                writeln!(io::stdout().lock(), "{}", receipt.output.display())
+                writeln!(io::stdout().lock(), "{}", output.display())
                     .map_err(|error| super::output_error(error, cancel))?;
             }
             if !quiet && let Some(backup) = &receipt.backup {

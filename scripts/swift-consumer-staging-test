@@ -51,7 +51,7 @@ def staging(revision):
     failures = []
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-staging-') as temporary:
         for name in ('release-candidate', 'release_windows.py', 'source-install-check',
-                     'registry-site-check', 'toolbox-native-development'):
+                     'toolbox-native-development'):
             scratch = Path(temporary) / name
             scratch.mkdir()
             consumer = scratch / 'Consumer'
@@ -73,9 +73,6 @@ def staging(revision):
             elif name == 'source-install-check':
                 body = statements(text, "        swift = scratch / 'swift-consumer'", '        manifest =')
                 environment['args'] = argparse.Namespace(readmes=False)
-                consumer = scratch / 'swift-consumer'
-            elif name == 'registry-site-check':
-                body = statements(text, "    consumer = scratch / 'swift-consumer'", '    manifest =')
                 consumer = scratch / 'swift-consumer'
             else:
                 body = statements(text, 'mkdir "$scratch/consumer"', 'swift build ')

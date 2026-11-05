@@ -75,6 +75,8 @@ jobs:
 
   bundle:
     needs: [source, qualification]
+    env:
+      PM_JOB: release-${{ github.run_id }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions: {contents: read}
@@ -100,6 +102,10 @@ jobs:
           scripts/release-workflow prepare-registry
           python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_rust import prepare; prepare()'
           cargo fetch --locked
+      - name: Prepare Go and Swift consumer runtimes
+        run: |
+          python3 -c 'import sys; sys.path.insert(0,"scripts"); from release_go import prepare; prepare()'
+          scripts/floors/prepare-swift
       - name: Bundle every checked platform and its install guide
         id: bundle-platforms
         if: always()
@@ -116,6 +122,12 @@ jobs:
         run: |
           . scripts/native-tools-env
           scripts/release-workflow registry platforms registries "$RELEASE_SHA"
+      - name: Install Go and Swift from the final all-platform tag source
+        id: tag-source-install
+        if: always() && steps.registry-packages.outcome == 'success'
+        run: |
+          . scripts/native-tools-env
+          scripts/registry-site-check registries/tag-source.tar.gz
       - name: Install the final Rust crate offline
         id: crate-install
         if: always()
@@ -130,7 +142,7 @@ jobs:
         run: python3 scripts/release-workflow attach registries release "$RELEASE_SHA"
       - name: Admit the complete release before transporting it to consumers
         id: admit-release
-        if: always() && steps.attach-registries.outcome == 'success'
+        if: always() && steps.attach-registries.outcome == 'success' && steps.tag-source-install.outcome == 'success'
         env:
           RELEASE_TAG: ${{ needs.source.outputs.tag }}
           RELEASE_SHA: ${{ needs.source.outputs.sha }}

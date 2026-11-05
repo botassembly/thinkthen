@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from argument_cases import argument_order
 from join_cases import joins
-from union_cases import unions
+from union_cases import unions, benchmark
 from interface_cases import interface, blank_inputs
 from cases import canonical, invocation, quote
 from migration_cases import read_line, child_environment, command, fixture, forbidden_settings, run_cases, options_cases, SqlError
@@ -22,10 +22,11 @@ LIMIT_ONLY = sys.argv[3:] == ['--limit-only']
 STREAMING_ONLY = sys.argv[3:] == ['--streaming-only']
 ADMISSION_ONLY = sys.argv[3:] == ['--admission-only']
 UNION_ONLY = sys.argv[3:] == ['--union-only']
+UNION_BENCHMARK = sys.argv[3:] == ['--union-benchmark']
 RETENTION_ONLY = sys.argv[3:] == ['--retention-only']
 WIDE_ONLY = sys.argv[3:] == ['--wide-only']
 INTERFACE_ONLY = sys.argv[3:] == ['--interface-only']
-assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY or UNION_ONLY or INTERFACE_ONLY or WIDE_ONLY or RETENTION_ONLY, sys.argv[3:]
+assert not sys.argv[3:] or ADMISSION_ONLY or STREAMING_ONLY or LIMIT_ONLY or UNION_ONLY or UNION_BENCHMARK or INTERFACE_ONLY or WIDE_ONLY or RETENTION_ONLY, sys.argv[3:]
 
 
 class Host:
@@ -37,10 +38,10 @@ class Host:
         self.process = subprocess.Popen([str(PACKAGE / 'sql'), str(PACKAGE / 'thinkthen.duckdb_extension')],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)
 
-    def query(self, statement):
+    def query(self, statement, *, timeout=30):
         self.process.stdin.write(json.dumps(statement) + '\n')
         self.process.stdin.flush()
-        result = json.loads(read_line(self.process.stdout))
+        result = json.loads(read_line(self.process.stdout, timeout=timeout))
         if 'error' in result:
             raise SqlError(result['error'])
         return result['rows']
@@ -100,6 +101,9 @@ class Host:
                 self.process.wait()
 
 
+if UNION_BENCHMARK:
+    benchmark(Host)
+    sys.exit(0)
 if RETENTION_ONLY:
     streaming(Host, PACKAGE, LOOPBACK)
     unions(Host)

@@ -161,7 +161,7 @@ fn record_failures_remain_visible_and_override_filter_check() {
 }
 
 #[test]
-fn all_failed_rows_are_a_completed_call_and_never_leak_reply_keys() {
+fn rejected_credentials_stop_the_call_and_never_leak_reply_keys() {
     for name in ["systemone", "openai"] {
         let server = Loopback::start(|_| {
             Reply::json(401, &json!({"error":format!("bad credential {KEY}")}))
@@ -172,11 +172,8 @@ fn all_failed_rows_are_a_completed_call_and_never_leak_reply_keys() {
             b"evidence",
         );
         assert_eq!(output.status.code(), Some(4), "{name}: {output:?}");
-        let actual = rows(&output);
-        assert_eq!(actual.len(), 1);
-        assert_eq!(actual[0]["status"], "failed");
-        assert_eq!(actual[0]["error"]["code"], "backend.status");
-        assert_eq!(actual[0]["source"]["backend"], name);
+        assert!(output.stdout.is_empty());
+        assert_eq!(support::reported(&output), "backend.status");
         assert!(!String::from_utf8_lossy(&output.stdout).contains(KEY));
         assert!(!String::from_utf8_lossy(&output.stderr).contains(KEY));
     }

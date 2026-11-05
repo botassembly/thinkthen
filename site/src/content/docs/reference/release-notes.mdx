@@ -37,7 +37,7 @@ ThinkThen is still at 0.x, so commands, options and SDKs can change between rele
 | Limit | What happens | What to do |
 | --- | --- | --- |
 | Unsigned macOS files | Apple hasn't notarized them, so macOS can block them after a browser download. | Check the download against `SHA256SUMS`, then run `xattr -dr com.apple.quarantine thinkthen-0.2.0` on the folder you extracted. Do this only for a download that passed the check. |
-| Unsigned Windows files | They carry no signature, so Windows can block them. | Check the zip against `SHA256SUMS`, then run `Unblock-File` on it before you extract it. Windows policy can still block it. [Installation](/install/) shows both checks. |
+| Unsigned Windows files | They carry no signature, so Windows can block them. | Check the zip against `SHA256SUMS`, then run `Unblock-File .\thinkthen-0.2.0-windows-x86_64.zip` before you extract it. Windows policy can still block it. [Installation](/install/) shows both checks. |
 | Cancelling any run | Ctrl-C stops new questions, but answers to questions already sent can be lost, and the service still charges for them. | Run large jobs in smaller parts, and keep each part's answers. |
 | Running a database query again | Each run asks the questions again, and the service charges again. | Save the answers in a table, then query the table. |
 | SQLite joins | A ThinkThen function inside a join or a correlated subquery can run more than once and pay again. | Save one ThinkThen query in a temporary table, then join the table. [SQLite](/sdks/sqlite/) shows how. |

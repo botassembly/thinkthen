@@ -10,6 +10,10 @@ import sys
 import tempfile
 import unittest
 
+# Fixture gates own their reports independently of the invoking gate.
+BASE_ENV = dict(os.environ)
+BASE_ENV.pop('THINKTHEN_GATE_FAILURE_TAILS', None)
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -122,7 +126,7 @@ class QualificationContinuation(unittest.TestCase):
             docker = binary / 'docker'
             docker.write_text('#!/bin/sh\nprintf "%s\\n" "sha256:' + 'b' * 64 + '"\n')
             docker.chmod(0o755)
-            environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'],
+            environment = dict(BASE_ENV, PATH=str(binary) + os.pathsep + os.environ['PATH'],
                 RELEASE_TARGET='linux-x86_64', GITHUB_OUTPUT=str(root / 'output'),
                 GITHUB_ENV=str(root / 'environment'))
             environment.pop('THINKTHEN_FLOOR_IMAGE', None)
@@ -141,7 +145,7 @@ class QualificationContinuation(unittest.TestCase):
             self.assertIn('original native failure', result.stderr)
             self.assertEqual((root / 'output').read_text(), 'floor_image=sha256:' + 'b' * 64 + '\n')
             summary = subprocess.run([sys.executable, ROOT / 'scripts/qualification-summary'],
-                env=dict(os.environ, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
+                env=dict(BASE_ENV, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
             self.assertNotEqual(summary.returncode, 0, summary.stdout)
             self.assertIn('native', summary.stderr)
 
@@ -168,7 +172,7 @@ class QualificationContinuation(unittest.TestCase):
             pair.chmod(0o755)
             environment = root / 'environment'
             result = subprocess.run(['bash', '-eo', 'pipefail', '-c', step['run']], cwd=root,
-                env=dict(os.environ, RUNNER_TEMP=directory, GITHUB_ENV=str(environment)), capture_output=True, text=True)
+                env=dict(BASE_ENV, RUNNER_TEMP=directory, GITHUB_ENV=str(environment)), capture_output=True, text=True)
             self.assertEqual(result.returncode, 7, result.stderr)
             self.assertIn('invalid-pair', result.stderr)
             self.assertFalse(environment.exists())
@@ -186,9 +190,9 @@ class QualificationContinuation(unittest.TestCase):
                     target = scripts / path.name
                     target.write_text(fake)
                     target.chmod(0o755)
-            for name in ('gate', 'sdk-gates'):
+            for name in ('gate', 'sdk-gates', 'gate-report'):
                 shutil.copy2(ROOT / 'scripts' / name, scripts / name)
-            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm', 'mkfifo', 'date', 'tee', 'tail', 'cat', 'mkdir'):
+            for name in ('sh', 'dirname', 'basename', 'mktemp', 'rm', 'mkfifo', 'date', 'tee', 'tail', 'cat', 'mkdir', 'cp'):
                 (binary / name).symlink_to(shutil.which(name))
             for name in ('python3', 'git', 'cargo', 'rustc', 'cc', 'c++', 'make', 'cmake', 'pkg-config', 'uv', 'node', 'npm', 'ruby', 'R', 'Rscript', 'docker'):
                 (binary / name).write_text(fake)
@@ -233,7 +237,7 @@ class QualificationContinuation(unittest.TestCase):
                         outcomes[step['id']] = {'outcome': 'failure' if result.returncode else 'success'}
                     self.assertEqual(outcomes[diagnostics[-1]['id']]['outcome'], 'success')
                     result = subprocess.run([sys.executable, ROOT / summary['run'].split()[-1]],
-                        env=dict(os.environ, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
+                        env=dict(BASE_ENV, QUALIFICATION_STEPS=json.dumps(outcomes)), capture_output=True, text=True)
                     self.assertNotEqual(result.returncode, 0)
                     for failed in failures:
                         self.assertIn(failed, result.stderr)
@@ -280,7 +284,8 @@ class QualificationContinuation(unittest.TestCase):
             for step in prepare[name]['steps']:
                 if 'if' in step:
                     self.assertIn(step['if'], ('always()', "needs.source.outputs.retry == 'true'", "needs.source.outputs.retry != 'true'",
-                                               "always() && steps.attach-registries.outcome == 'success'",
+                                               "always() && steps.attach-registries.outcome == 'success' && steps.tag-source-install.outcome == 'success'",
+                                               "always() && steps.registry-packages.outcome == 'success'",
                                                "always() && steps.admit-release.outcome == 'success'",
                                                "always() && steps.admit-release.outcome != 'success'"))
                 self.assertFalse(step.get('continue-on-error', False))

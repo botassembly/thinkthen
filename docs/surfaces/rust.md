@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 How not sure and failures arrive:
 
 - `into_answer()` takes the typed answer and `answer()` borrows it. Each returns `NoAnswer::Unsure { probability }` for not sure and `NoAnswer::Failed(error)` for a failed record. Neither ever reads as `false`, and `?` passes either one up.
-- A failed record is an ordinary row, so `run` still returns `Ok(row)`, with one exception: blank field, such as empty or all-space text or an empty JSON object or array, makes `run` return `Err` with `record.empty`. Otherwise `run` returns `Err` only when the call itself fails, such as when it is cancelled.
+- A failed record is an ordinary row, so `run` still returns `Ok(row)`, with one exception: blank text, such as empty or all-space text or an empty JSON object or array, makes `run` return `Err` with `record.empty`. Otherwise `run` returns `Err` only when the call itself fails, such as when it is cancelled.
 - `error.code()` prints the shared code, such as `record.missing`. `error.code().family()` gives its family, and `error.http_status()` the backend's HTTP status when there was one.
 - `Status` and `Outcome` have exactly three cases: answered, unsure and failed. A `match` on them needs no catch-all arm, so the compiler flags a missed not-sure case.
 - A row prints as its answer, `unsure`, or `failed:` and the error code. Rows also compare with `==`.

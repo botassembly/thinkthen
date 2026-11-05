@@ -4,6 +4,7 @@ import dev.thinkthen.internal.DriverCall;
 import dev.thinkthen.internal.DriverException;
 import dev.thinkthen.internal.DriverRecord;
 import java.lang.ref.Cleaner;
+import java.lang.ref.Reference;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -159,11 +160,15 @@ final class Streams {
                     if (error instanceof DriverException coded) { LOG.log(System.Logger.Level.DEBUG,coded.error().name()); throw Values.error(coded); }
                     if (error instanceof java.util.concurrent.CancellationException cancelled) throw Values.cancellation(cancelled);
                     throw error;
+                } finally {
+                    // Keep cleanup from racing the final native pull in a traversal.
+                    Reference.reachabilityFence(this);
                 }
             }
         };
         var stream = StreamSupport.stream(spliterator,false).onClose(state);
-        var cleanable = CLEANER.register(stream,state);
+        // Iterators retain the spliterator after dropping their head stream.
+        var cleanable = CLEANER.register(spliterator,state);
         return stream.onClose(cleanable::clean);
     }
     static <A,D extends Detail> Stream<Row<A,D>> rows(ThinkThen client,byte[] request,Iterable<?> records,RowDecoder<A,D> decoder) {

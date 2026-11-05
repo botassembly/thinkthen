@@ -191,6 +191,7 @@ impl FileJob {
                 },
                 Event::Row(row) => {
                     if rows == 0
+                        && !(filter && matches!(self.output, FileOutput::InPlace))
                         && let Some(error) = row.failure()
                         && error.code() == crate::Code::BackendTransport
                     {
@@ -234,6 +235,17 @@ impl FileJob {
             }
         }
         check_cancel(cancel)?;
+        let mut receipt = FileReceipt {
+            output: None,
+            backup: None,
+            failures,
+            answered,
+            unsure,
+            failed,
+        };
+        if filter && matches!(self.output, FileOutput::InPlace) && !receipt.failed.is_empty() {
+            return Ok(receipt);
+        }
         let mut temporary = match self.output {
             FileOutput::InPlace => temporary_paths.temporary(Some(parent)),
             FileOutput::NewFile(_) => temporary_paths.output(parent, &permissions),
@@ -296,14 +308,9 @@ impl FileJob {
             temporary.persist_noclobber(&output).map_err(local)?;
             None
         };
-        Ok(FileReceipt {
-            output,
-            backup,
-            failures,
-            answered,
-            unsure,
-            failed,
-        })
+        receipt.output = Some(output);
+        receipt.backup = backup;
+        Ok(receipt)
     }
 
     /// One column's cell is the field text. Several columns form an object,

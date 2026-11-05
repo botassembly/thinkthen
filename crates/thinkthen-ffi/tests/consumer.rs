@@ -143,7 +143,10 @@ fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
         )
         .unwrap();
         for backend in ["systemone", "openai"] {
-            for mode in ["cancel", "free-held"] {
+            for mode in ["cancel", "free-held", "workload"] {
+                if mode == "workload" && function != "decide" {
+                    continue;
+                }
                 let (arrived, request) = mpsc::channel();
                 let (release, held) = mpsc::channel();
                 let held = Arc::new(Mutex::new(held));
@@ -168,27 +171,39 @@ fn c_cancel_and_free_return_while_the_loopback_reply_is_still_held() {
                     .stderr(Stdio::piped());
                 let mut child = process.spawn().unwrap();
                 let mut input = child.stdin.take().unwrap();
+                let parameters = if mode == "workload" {
+                    "1 1 1 1 0 0 0.9 -".to_owned()
+                } else {
+                    case["request"].to_string()
+                };
                 writeln!(
                     input,
                     "{}\n{}",
                     json!({"url":server.base(),"backend":backend}),
-                    case["request"]
+                    parameters
                 )
                 .unwrap();
                 input.flush().unwrap();
                 request.recv().unwrap();
                 input.write_all(b"x").unwrap();
                 drop(input);
-                let output = lines(child.wait_with_output().unwrap());
+                let output = child.wait_with_output();
+                let requests = server.count();
+                release.send(()).unwrap();
+                let output = lines(output.unwrap());
                 if mode == "cancel" {
                     assert_eq!(output.len(), 1, "{output:?}");
                     assert_eq!(output[0]["error"]["code"], "local.cancelled");
+                } else if mode == "workload" {
+                    assert_eq!(
+                        output,
+                        [json!({"calls":1,"rows":0,"failed":0,"cancelled":true})]
+                    );
                 } else {
                     assert_eq!(output.len(), 1);
                     assert_eq!(output[0]["freed"], true);
                 }
-                assert_eq!(server.count(), 1);
-                release.send(()).unwrap();
+                assert_eq!(requests, 1);
             }
         }
     }

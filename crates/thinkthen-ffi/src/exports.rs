@@ -543,7 +543,8 @@ pub unsafe extern "C" fn thinkthen_call_end_input(call: *mut CallHandle) {
 /// negative code for the call as a whole, such as -THINKTHEN_CODE_LOCAL_CANCELLED. A record
 /// that fails is still THINKTHEN_OK: its row has status THINKTHEN_STATUS_FAILED and its own
 /// code, and reading goes on. *out is empty unless the return is THINKTHEN_OK. A filter row's
-/// input comes from thinkthen_row_original.
+/// input comes from thinkthen_row_original. After a call-level error, every later read returns
+/// that same error until the call is freed; a failed call never returns THINKTHEN_END.
 /// # Safety
 /// One thread at a time drives call; thinkthen_call_cancel may run on any thread. out is
 /// initialized with THINKTHEN_ROW_INIT. Passing it again frees the row it held, so a reused row

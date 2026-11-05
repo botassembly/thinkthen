@@ -498,6 +498,12 @@ pub(crate) struct RequestAnswers {
     reply: Result<Reply, Error>,
 }
 
+impl RequestAnswers {
+    pub(crate) fn failure(&self) -> Option<&Error> {
+        self.reply.as_ref().err()
+    }
+}
+
 /// The original question's next request, or its finished rows.
 #[derive(Debug)]
 pub(crate) enum NextRound<'a, F: Function> {

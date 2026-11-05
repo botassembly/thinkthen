@@ -49,16 +49,47 @@ THINKTHEN_GATE_DIAGNOSTICS=${THINKTHEN_GATE_DIAGNOSTICS:-$PWD/target/gate-diagno
 export THINKTHEN_GATE_DIAGNOSTICS
 mkdir -p "$THINKTHEN_GATE_DIAGNOSTICS"
 : > "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
+failed=
+report_scope=environment
+report_label="gate environment"
+report_summary="Failed hosted gate stages:"
+. scripts/gate-report
+# A sourced prerequisite may exit before returning to the environment loop.
+# Keep the original stderr open because that exit can happen under redirection.
+exec 3>&2
+cleanup() {
+    exit_status=$?
+    trap - EXIT
+    if [ -n "${running_environment:-}" ] && [ "$exit_status" -ne 0 ]; then
+        name=$running_environment
+        status=$exit_status
+        report_save "$THINKTHEN_GATE_DIAGNOSTICS/$name.log"
+        failed="$failed $name"
+    fi
+    report_finish >&3 2>&3
+    exit "$exit_status"
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 status=0
 for environment in native-tools-env native-env; do
     started=$(date +%s)
     printf 'Gate environment: %s (start %s)\n' "$environment" "$started" | tee -a "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
+    running_environment=$environment
     environment_status=0
     . "scripts/$environment" > "$THINKTHEN_GATE_DIAGNOSTICS/$environment.log" 2>&1 || environment_status=$?
+    running_environment=
     ended=$(date +%s)
     printf 'Gate environment ended: %s (end %s; exit %s; elapsed %s seconds)\n' "$environment" "$ended" "$environment_status" "$((ended - started))" | tee -a "$THINKTHEN_GATE_DIAGNOSTICS/stages.log"
     cat "$THINKTHEN_GATE_DIAGNOSTICS/$environment.log"
-    if [ "$environment_status" -ne 0 ]; then status=$environment_status; fi
+    if [ "$environment_status" -ne 0 ]; then
+        status=$environment_status
+        name=$environment
+        report_save "$THINKTHEN_GATE_DIAGNOSTICS/$environment.log"
+        failed="$failed $environment"
+    fi
 done
-scripts/gate || status=$?
+scripts/gate || { status=$?; failed="$failed gate"; }
 exit "$status"

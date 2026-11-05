@@ -8,5 +8,5 @@ from test_control import read_line
 
 
 def child_environment():
-    names = ('PATH', 'HOME', 'SYSTEMROOT', 'TMPDIR', 'TEMP', 'TMP', 'LLVM_PROFILE_FILE')
+    names = ('PATH', 'HOME', 'SYSTEMROOT', 'TMPDIR', 'TEMP', 'TMP', 'LLVM_PROFILE_FILE', 'TSAN_OPTIONS')
     return {name: os.environ[name] for name in names if name in os.environ}

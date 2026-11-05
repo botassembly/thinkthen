@@ -163,7 +163,7 @@ fn failed_request_keeps_other_requests_answers_intact() {
             .values()
             .any(|q| q["instructions"].as_str().unwrap().contains("record 0\""))
         {
-            return Reply::json(400, &json!({}));
+            return Reply::json(501, &json!({}));
         }
         let answers: serde_json::Map<String, serde_json::Value> = questions
             .keys()

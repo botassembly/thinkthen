@@ -529,6 +529,8 @@ def adapter_contracts():
         assert 'CREATE EXTENSION thinkthen' in direct.stdout and 'ERROR' not in direct.stderr, direct
         query(database, "SET thinkthen.backend='stub'")
         query(database, "SET thinkthen.allowed_backends='stub:*'")
+        from interface import numeric_ids
+        numeric_ids(database, query)
         query(database, "CREATE TEMP TABLE memory_sample(bytes bigint, used bigint, contexts bigint)")
         query(database, """CREATE FUNCTION pg_temp.sample(i integer) RETURNS text LANGUAGE plpgsql VOLATILE AS $$
             BEGIN

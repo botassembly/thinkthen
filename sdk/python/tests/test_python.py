@@ -26,17 +26,16 @@ def cases() -> Path:
 
 
 @pytest.mark.parametrize("backend", ["systemone", "openai"])
-def test_single_and_stream_calls_return_failed_rows_without_terminal_error(
+def test_initial_client_errors_raise_and_later_failures_remain_rows(
     backend: str, cases: Path
 ) -> None:
     with Loopback(cases / "backend-isolation.json") as server:
         client = tt.Client(
             backend=tt.Backend(backend), url=server.url, api_key="synthetic", batch=1
         )
-        single = client.decide("Ready?", "bad")
-        assert single.status == "failed" and single.answer is None
-        assert single.error is not None
-        assert single.error.code == "backend.status" and single.error.http_status == 400
+        with pytest.raises(tt.SetupError) as raised:
+            client.decide("Ready?", "bad")
+        assert raised.value.code is tt.ErrorCode.BACKEND_STATUS
         with client.decide_stream("Ready?", ["good", "bad", "good again"]) as stream:
             rows = list(stream)
         assert [row.status for row in rows] == ["answered", "failed", "answered"]

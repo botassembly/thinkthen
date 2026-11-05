@@ -59,7 +59,7 @@ do {
 }
 ```
 
-A failed record is still a row, so the call returns it and `get()` throws `RowError.failed` there. `result()` gives the same outcome as a `Result<Answer, RowError>`, and `isUnsure` and `isFailed` test without throwing. Mistakes in the call itself, such as a bad threshold or a missing key, throw `ThinkThenError` from `Client(...)` or the call.
+A failed record is still a row, so the call returns it and `get()` throws `RowError.failed` there. The one exception is an empty or blank record in a one-record call, which throws `ThinkThenError.engine` with the `record.empty` failure instead of returning a row. `result()` gives the same outcome as a `Result<Answer, RowError>`, and `isUnsure` and `isFailed` test without throwing. Mistakes in the call itself, such as a bad threshold or a missing key, throw `ThinkThenError` from `Client(...)` or the call.
 
 `row.answer` is `nil` for both not sure and failure, so `row.answer == true` sends not-sure records down the "no" branch. Use `get()` or `result()` instead.
 

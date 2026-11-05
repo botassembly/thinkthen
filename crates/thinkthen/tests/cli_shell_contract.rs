@@ -211,7 +211,7 @@ fn table_backend_failures_exit_four_only_when_no_row_was_answered() {
         let server = Loopback::start(|request| {
             let body = request.json().unwrap();
             if body.to_string().contains("broken") {
-                loopback::Reply::json(401, &serde_json::json!({"error":"refused"}))
+                loopback::Reply::json(501, &serde_json::json!({"error":"refused"}))
             } else {
                 let answers: serde_json::Map<String, serde_json::Value> = body["questions"]
                     .as_object()

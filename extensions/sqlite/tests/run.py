@@ -434,7 +434,7 @@ for status in (401,402,429,500):
 # Feature: backend failures before the first answer still come back in order once one is answered.
 with tempfile.TemporaryDirectory() as temporary:
     case=Path(temporary)/'replies.json'
-    case.write_text(json.dumps({'replies':[{'body':{},'contains':'"bad"','status':400},{'probability':0.9}]}))
+    case.write_text(json.dumps({'replies':[{'body':{},'contains':'"bad"','status':501},{'probability':0.9}]}))
     with fixture(LOOPBACK,case) as (server,url),Host(url) as host:
         host.configure({'backend':'openai','batch':1,'retry':{'max_retries':0}})
         host.ok('CREATE TABLE mixed(n INTEGER PRIMARY KEY, record TEXT)')

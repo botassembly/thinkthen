@@ -1,6 +1,6 @@
 [package]
 name = "thinkthen"
-description = "Ask typed questions about field and branch on the answer"
+description = "Ask typed questions about text and branch on the answer"
 readme = "README.md"
 version.workspace = true
 edition.workspace = true
@@ -8,7 +8,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 include = ["LICENSE", "README.md", "src/**", "examples/**", "test-support/server/**", "tests/support/**", "tests/cli_transport_logging.rs", "tests/cli_version.rs", "tests/rank_bounds.rs", "tests/stream.rs", "tests/stub_local.rs", "tests/toolbox.rs"]
-keywords = ["field", "classification", "language-model", "decision"]
+keywords = ["text", "classification", "language-model", "decision"]
 categories = ["text-processing", "science"]
 
 [package.metadata.docs.rs]

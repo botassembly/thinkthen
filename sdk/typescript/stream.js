@@ -80,8 +80,11 @@ export function stream(client, request, records, signal, name, release) {
     const returned = Promise.resolve().then(async () => {
       if (!inputEnded && iterator?.return) await iterator.return();
     });
+    // A generator queues return behind next. Abort still requests its return,
+    // but only joins native completion; observe a late source rejection.
+    void returned.catch(() => {});
     cleaning = (async () => {
-      try { await Promise.all([returned, completion]); }
+      try { await Promise.all([signal?.aborted ? undefined : returned, completion]); }
       catch (error) { if (!failed) { failed = true; failure = error; } }
       finally { operation?.unreference(); operation?.close(); operation = undefined; iterator = undefined; originals.clear(); await release(); }
     })();

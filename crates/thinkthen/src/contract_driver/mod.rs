@@ -48,13 +48,29 @@ impl InputKind {
     }
 }
 
+#[derive(Debug)]
+enum RowState {
+    Active,
+    Finished,
+    Failed(Error),
+}
+impl RowState {
+    fn terminal(&self) -> Option<Result<(), &Error>> {
+        match self {
+            Self::Active => None,
+            Self::Finished => Some(Ok(())),
+            Self::Failed(error) => Some(Err(error)),
+        }
+    }
+}
+
 /// Rows from a question selected at runtime.
 #[non_exhaustive]
 #[derive(Debug)]
 pub struct AnyRows {
     output: Arc<Queue<Result<AnyRow, Error>>>,
     cancel: Cancel,
-    done: bool,
+    state: RowState,
 }
 impl AnyRows {
     /// Cancel this call and wake its blocked input and output operations.
@@ -65,26 +81,22 @@ impl AnyRows {
         &mut self,
         event: Received<Result<AnyRow, Error>>,
     ) -> Option<Result<AnyRow, Error>> {
-        match event {
-            Received::Item(row) => {
-                if row.is_err() {
-                    self.done = true;
-                }
-                Some(row)
-            }
+        let row = match event {
+            Received::Item(row) => row,
             Received::Closed => {
-                self.done = true;
-                None
+                self.state = RowState::Finished;
+                return None;
             }
-            Received::Cancelled => {
-                self.done = true;
-                Some(Err(crate::retry::cancelled()))
-            }
+            Received::Cancelled => Err(crate::retry::cancelled()),
+        };
+        if let Err(error) = &row {
+            self.state = RowState::Failed(error.clone());
         }
+        Some(row)
     }
     #[cfg(feature = "stream")]
     fn poll(&mut self, cx: &mut Context<'_>) -> Poll<Option<Result<AnyRow, Error>>> {
-        if self.done {
+        if self.state.terminal().is_some() {
             return Poll::Ready(None);
         }
         match self.output.poll(cx) {
@@ -96,7 +108,7 @@ impl AnyRows {
 impl Iterator for AnyRows {
     type Item = Result<AnyRow, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
+        if self.state.terminal().is_some() {
             return None;
         }
         let event = self.output.receive();
@@ -105,7 +117,7 @@ impl Iterator for AnyRows {
 }
 impl Drop for AnyRows {
     fn drop(&mut self) {
-        if !self.done {
+        if self.state.terminal().is_none() {
             self.cancel.cancel();
         }
         self.output.close();
@@ -125,8 +137,8 @@ impl<F: Function> Rows<F> {
     }
     fn admit(&mut self, row: Result<AnyRow, Error>) -> Result<Row<F>, Error> {
         let row = row.and_then(AnyRow::typed::<F>);
-        if row.is_err() {
-            self.inner.done = true;
+        if let Err(error) = &row {
+            self.inner.state = RowState::Failed(error.clone());
             self.inner.cancel.cancel();
         }
         row
@@ -406,7 +418,7 @@ impl Engine {
         Ok(AnyRows {
             output,
             cancel: self.cancel.clone(),
-            done: false,
+            state: RowState::Active,
         })
     }
 }

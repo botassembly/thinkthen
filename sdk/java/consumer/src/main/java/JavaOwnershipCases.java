@@ -285,6 +285,7 @@ public final class JavaOwnershipCases {
         noCallForRejectedRecords();
         unavailableServer();
         streamsAndCallerFailures();
+        JavaStreamReachabilityCases.main(new String[0]);
         closeFromLifecycleLogger();
         futureCancellation();
         cancellationDuringEncoding();

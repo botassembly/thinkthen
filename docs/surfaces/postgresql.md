@@ -32,9 +32,8 @@ FROM thinkthen.decide('SELECT record::jsonb AS record FROM input_lines ORDER BY 
 The first query judges `["first","second"]` as one record, because a JSON array in one source cell stays one record. The second reads each line of the file as its own record, in file order, and keeps every row:
 
 - Lines 1 and 2 are judged. Line 2 asks about a parcel, not a refund, so expect `f`.
-- Line 3 is `null` and line 4 has no `text` field, so both fail as `record.missing`, and no request is sent for them.
+- Line 3 is `null`, line 4 has no `text` field, and line 6's `text` is JSON null, so all three fail as `record.missing`, and no request is sent for them.
 - Line 5 is an array with nothing at `/text`, so it fails, and its message says to judge each value as its own record.
-- Line 6 sends its JSON null `text` to the backend, which answers it like any other record.
 
 `\copy` is a psql command, not server SQL. It reads the file from psql's working folder, not the server's.
 
@@ -59,8 +58,6 @@ FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages WHERE m
                       'Does the customer request a refund?');
 ```
 
-<!-- capture: real-backend output of the query above. -->
-
 `is_refund` is `true` or `false` when `status` is `answered`. It is NULL when `status` is `unsure` or `failed`. The other examples on this page use the same `messages` table.
 
 ## Install the extension
@@ -72,15 +69,18 @@ FROM thinkthen.decide('SELECT msg_id AS id, body AS record FROM messages WHERE m
 
 The extension contains the engine. [Grant access](#grant-access) lets other roles call it.
 
-### Upgrade from 0.1.0
+### Move from a 0.1 build
 
-Copy the 0.2.0 files over the 0.1.0 ones, then run in each database:
+This path is tested only from a 0.1 test build of the extension, which installed its functions in `public`.
+
+`ALTER EXTENSION thinkthen UPDATE` from that build succeeds, but the updated extension stays recorded in `public` and cannot be moved. A later dump of the whole database then fails to restore, with `extension "thinkthen" must be installed in schema "thinkthen"`. Instead, back up the database first, copy the 0.2.0 files over the old ones, and recreate the extension in each database:
 
 ```sql
-ALTER EXTENSION thinkthen UPDATE;
+DROP EXTENSION thinkthen;
+CREATE EXTENSION thinkthen;
 ```
 
-It drops 0.1.0's `thinkthen_*` functions and its event trigger, creates schema `thinkthen` if needed, and installs the ten functions there. Rewrite each 0.1.0 call as one of the ten, such as `thinkthen_decide(...)` as `thinkthen.decide(source_sql, question)`.
+The new extension lives in its fixed `thinkthen` schema. Your own tables and their rows are untouched, and dumps of the database restore. A view or a column that uses the old extension's functions or types blocks the `DROP`. ThinkThen does not drop or recreate them for you, so drop them yourself and recreate them on the ten functions afterward. Never add `CASCADE`, which drops them without asking. Rewrite each 0.1 call as one of the ten, such as `thinkthen_decide(...)` as `thinkthen.decide(source_sql, question)`.
 
 ## Write the query
 
@@ -135,8 +135,6 @@ WHERE to_jsonb(msg_id) IN (SELECT id FROM thinkthen.filter(
 ORDER BY msg_id;
 ```
 
-<!-- capture: real-backend output of the query above. -->
-
 If any record fails, filter judges every record, then raises one error and returns no rows. The message names how many records failed, the first failed position and its code, as in `1 of 4 records failed; the first, at position 4, failed with record.missing: ...`. The error's SQLSTATE is the first failure's. `failures => 'row'` returns each failed record as a row with `status = 'failed'` beside the kept rows instead, so the answers you paid for are kept:
 
 ```sql
@@ -146,8 +144,6 @@ SELECT id AS msg_id, status, error_code
 FROM thinkthen.filter('SELECT msg_id AS id, body AS record FROM messages WHERE msg_id IN (1, 2, 3, 7) ORDER BY msg_id',
                       'Does the customer request a refund?', failures => 'row');
 ```
-
-<!-- capture: real-backend output of the query above. -->
 
 Message 7 has no text, so it comes back as a failed `record.missing` row, and no request is sent for it.
 
@@ -301,7 +297,7 @@ FROM thinkthen.relate('SELECT msg_id AS id, body AS record FROM messages WHERE m
 LEFT JOIN LATERAL unnest(r.answer) AS link ON true;
 ```
 
-A rule is a `thinkthen.rule` built by position: `ROW(name, source kind, target kind, reads, either)`. `reads` is the relation's wording, and NULL derives it from the name. `either` is true when the relation has no direction. `answer` is an array of `thinkthen.relation`, each with `source`, `target`, `relation`, `probability` and `either`. `source` and `target` are `thinkthen.endpoint` values with `text`, `kind`, `start_offset` and `end_offset`. `detail` holds `names`, every recognized name, and `pairs`, every allowed pair with its score. Call relate alone when you need both the names and the relations.
+A rule is a `thinkthen.rule` built by position: `ROW(relation, source kind, target kind, reads, either)`. `reads` is the relation's wording, and NULL derives it from `relation`. `either` is true when the relation has no direction. `answer` is an array of `thinkthen.relation`, each with `source`, `target`, `relation`, `probability` and `either`. `source` and `target` are `thinkthen.endpoint` values with `text`, `kind`, `start_offset` and `end_offset`. `detail` holds `names`, every recognized name, and `pairs`, every allowed pair with its score. Call relate alone when you need both the names and the relations.
 
 ## Read JSON records and join on their id
 
@@ -321,8 +317,6 @@ FROM thinkthen.decide($$SELECT line AS record FROM inbox ORDER BY line ->> 'id'$
 
 SELECT * FROM refund_answers_by_ticket ORDER BY position;
 ```
-
-<!-- capture: real-backend output of the final SELECT above. -->
 
 `id` is `jsonb` on every row, because ids may be numbers or text. `id #>> '{}'` gives the text `a1`, `(id)::integer` gives a number back, and `to_jsonb(msg_id) = id` compares without a cast. A record that is JSON `null`, or has no `text` field, fails as `record.missing`.
 
@@ -421,7 +415,7 @@ Every function returns these columns in this order:
 | `thinkthen.recognized_name` | `text`, `kind`, `start_offset`, `end_offset`, `probability` |
 | `thinkthen.endpoint` | `text`, `kind`, `start_offset`, `end_offset` |
 | `thinkthen.relation` | `source`, `target`, `relation`, `probability`, `either` |
-| `thinkthen.rule` | `name`, `source`, `target`, `reads`, `either` |
+| `thinkthen.rule` | `relation`, `source`, `target`, `reads`, `either` |
 | `thinkthen.source` | `question_identity`, `name`, `backend`, `model` |
 
 In `psql`, `\df+ thinkthen.*` describes each function with an example, and `\dT+ thinkthen.*` each type.

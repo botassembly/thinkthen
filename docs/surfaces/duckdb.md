@@ -22,8 +22,6 @@ FROM thinkthen_decide((SELECT msg_id, body FROM messages WHERE msg_id = 1),
                       'Does the customer request a refund?', record := 'body');
 ```
 
-<!-- capture: real-backend output of the query above. -->
-
 `is_refund` is `true` or `false` when `status` is `answered`. It is NULL when `status` is `unsure` or `failed`. The other examples on this page use the same `messages` table.
 
 ## Load the extension
@@ -70,8 +68,6 @@ SELECT msg_id, body
 FROM thinkthen_filter((SELECT msg_id, body FROM messages WHERE msg_id <= 3),
                       'Does the customer request a refund?', record := 'body');
 ```
-
-<!-- capture: real-backend output of the query above. -->
 
 If any record fails, filter raises one error after judging every record. The error names how many records failed and the first error code, and the statement fails. `failures := 'row'` returns each failed record as a row with `status = 'failed'` instead, so the answers you paid for are kept:
 
@@ -238,8 +234,6 @@ FROM thinkthen_decide(
 
 SELECT * FROM refund_answers ORDER BY position;
 ```
-
-<!-- capture: real-backend output of the final SELECT above. -->
 
 `id` is `JSON`, because an id can be a string or a number. `id->>'$'` reads it as `VARCHAR`, ready to join to your own key, as in `JOIN tickets t ON t.ticket_id = refund_answers.ticket_id`. An `id` with nothing else is a blank record and fails as `record.empty`. A record without the `text` field, or with `"text": null`, fails as `record.missing`.
 

@@ -83,7 +83,7 @@ Without `--check`, filter exits 0 whenever it answers. [Exit codes](/command-lin
 
 <Example id="filter-into" />
 
-`--column` names the column to read, and `--into` names the new answer column. filter writes only the rows it keeps. [File types](/command-line/file-types/) covers TSV, Excel and other files.
+`--column` names the column to read, and `--into` names the new answer column. filter writes only the rows it keeps. With `--in-place`, a row that fails leaves your file as it was: filter exits 6 and says how many rows failed, so no row is lost. [File types](/command-line/file-types/) covers TSV, Excel and other files.
 
 </details>
 

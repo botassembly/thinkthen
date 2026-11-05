@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""After publication, install named packages from public sites and ask a stub question.
+
+Usage: release-live-install-check SITE [SITE ...]
+Run on a clean host with the selected sites' compilers/package managers installed.
+Each site uses an empty private cache. No model calls or registry writes occur.
+Output is one result per selected site plus package-manager diagnostics on failure.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from csharp_dependencies import package_id
+from release_registry_check import runtime_environment, legacy_jvm_consumer, java_arguments
+from release_workflow import ROOT, version
+
+SITES = ('pypi', 'npm', 'rubygems', 'nuget', 'maven', 'crates', 'go', 'swift', 'r', 'homebrew', 'installer')
+
+
+def run(*arguments, **options):
+    options.setdefault('capture_output', True)
+    options.setdefault('text', True)
+    options.setdefault('timeout', 1800)
+    if os.name == 'nt':
+        arguments = (shutil.which(str(arguments[0])) or arguments[0], *arguments[1:])
+    try:
+        return subprocess.run(list(map(str, arguments)), check=True, **options).stdout
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f'{arguments[0]} exited {error.returncode}:\n{(error.stdout or "")[-8000:]}\n{(error.stderr or "")[-8000:]}') from error
+
+
+def command_question(binary, case, env):
+    actual = json.loads(run(binary, 'decide', '--backend', 'stub', '--json',
+                            case['request']['question']['question'],
+                            input=case['request']['records'][0], env=env))
+    expected = case['expected'][0]
+    if (actual.get('status'), actual.get('answer')) != (expected['status'], expected['answer']):
+        raise ValueError(f'installed command returned {actual!r}')
+
+
+def check(site, scratch, fixture, case):
+    # These existing consumers require the complete canonical function coverage.
+    if site in ('pypi', 'nuget', 'maven'):
+        fixture = ROOT / 'construction/stub.json'
+    env = runtime_environment(scratch)
+    for key in list(env):
+        if key.startswith(('THINKTHEN_', 'CARGO_', 'RUSTUP_', 'GEM_', 'R_LIBS', 'R_PROFILE', 'R_ENVIRON', 'GIT_CONFIG', 'npm_config_', 'NPM_CONFIG_')):
+            env.pop(key)
+    for key in ('NPM_TOKEN', 'NODE_AUTH_TOKEN', 'NUGET_API_KEY', 'CARGO_REGISTRY_TOKEN',
+                'MAVEN_CENTRAL_USERNAME', 'MAVEN_CENTRAL_PASSWORD', 'RUBYGEMS_API_KEY'):
+        env.pop(key, None)
+    home = scratch / 'home'
+    home.mkdir(parents=True)
+    env.update(THINKTHEN_BACKEND='stub', GOTOOLCHAIN='local', GOWORK='off',
+               GOPATH=str(scratch / 'go'), GOMODCACHE=str(scratch / 'go/modules'),
+               GOCACHE=str(scratch / 'go/build'), GOPROXY='https://proxy.golang.org', GOSUMDB='sum.golang.org',
+               GEM_HOME=str(scratch / 'gems'), GEM_PATH=str(scratch / 'gems'),
+               CARGO_HOME=str(scratch / 'cargo'), CARGO_TARGET_DIR=str(scratch / 'target'),
+               RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
+               NPM_CONFIG_USERCONFIG=str(scratch / 'npmrc'),
+               HOMEBREW_NO_AUTO_UPDATE='1', HOMEBREW_NO_ANALYTICS='1', HOMEBREW_CACHE=str(scratch / 'brew-cache'),
+               THINKTHEN_STUB_CASES=str(fixture), THINKTHEN_CASES=str(ROOT / 'conformance'))
+    options = dict(cwd=scratch, env=env)
+    if site == 'pypi':
+        run(sys.executable, '-m', 'venv', scratch / 'venv', **options)
+        python = scratch / ('venv/Scripts/python.exe' if os.name == 'nt' else 'venv/bin/python')
+        run(python, '-m', 'pip', '--isolated', 'install', '--no-cache-dir', '--index-url',
+            'https://pypi.org/simple', 'thinkthen==' + version(), **options)
+        run(python, ROOT / 'scripts/release/python.py', fixture, **options)
+    elif site == 'npm':
+        run('npm', 'install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry',
+            'https://registry.npmjs.org', '--cache', scratch / 'npm-cache', 'thinkthen@' + version(), **options)
+        shutil.copy2(ROOT / 'scripts/release/node.mjs', scratch / 'check.mjs')
+        run('node', scratch / 'check.mjs', fixture, **options)
+    elif site == 'rubygems':
+        run('gem', 'install', '--no-document', '--clear-sources', '--source', 'https://rubygems.org',
+            '--version', version(), 'thinkthen', **options)
+        run('ruby', ROOT / 'scripts/release/ruby.rb', fixture, **options)
+    elif site == 'nuget':
+        consumer = scratch / 'consumer'
+        shutil.copytree(ROOT / 'sdk/csharp/tests', consumer)
+        config = consumer / 'NuGet.Config'
+        config.write_text('<configuration><packageSources><clear/><add key="public" value="https://api.nuget.org/v3/index.json"/></packageSources></configuration>')
+        project = consumer / 'Consumer.csproj'
+        if package_id() not in project.read_text():
+            raise ValueError('consumer does not name the published NuGet package')
+        run('dotnet', 'build', project, '--configfile', config, '--artifacts-path', scratch / 'artifacts',
+            '-o', scratch / 'bin', **options)
+        run('dotnet', scratch / 'bin/Consumer.dll', fixture, '--stub-only', **options)
+    elif site == 'maven':
+        consumer = scratch / 'consumer'
+        pom = legacy_jvm_consumer(consumer)
+        settings = scratch / 'settings.xml'
+        settings.write_text('<settings><mirrors><mirror><id>central</id><mirrorOf>*</mirrorOf><url>https://repo.maven.apache.org/maven2</url></mirror></mirrors></settings>')
+        classpath = scratch / 'classpath'
+        run('mvn', '-B', '-q', '-s', settings, '-Dmaven.repo.local=' + str(scratch / 'm2'), '-f', pom,
+            'package', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(classpath), **options)
+        for main in ('ConsumerCases', 'KotlinCasesKt'):
+            run('java', java_arguments(scratch / 'consumer.args', '--enable-native-access=ALL-UNNAMED', '-cp',
+                str(consumer / 'target/classes') + os.pathsep + classpath.read_text().strip(), main, fixture, '--stub-only'), **options)
+    elif site == 'crates':
+        run('cargo', 'install', '--locked', '--root', scratch / 'installed', '--version', version(), 'thinkthen', **options)
+        command_question(scratch / ('installed/bin/thinkthen.exe' if os.name == 'nt' else 'installed/bin/thinkthen'), case, env)
+    elif site == 'go':
+        shutil.copytree(ROOT / 'sdk/go/tests', scratch / 'consumer')
+        (scratch / 'consumer/go.mod').write_text('module liveconsumer\n\ngo 1.23\n\nrequire github.com/botassembly/thinkthen/sdk/go/thinkthen v' + version() + '\n')
+        run('go', 'test', '-mod=mod', '-run=^TestSharedStub$', '-count=1', cwd=scratch / 'consumer', env=env)
+    elif site == 'swift':
+        consumer = scratch / 'consumer'
+        consumer.mkdir()
+        for path in (ROOT / 'sdk/swift/tests').glob('*.swift'):
+            if path.name != 'Package.swift':
+                shutil.copy2(path, consumer / path.name)
+        (consumer / 'Package.swift').write_text('// swift-tools-version: 6.3\nimport PackageDescription\nlet package = Package(name: "Consumer", platforms: [.macOS("15.0")], dependencies: [.package(url: "https://github.com/botassembly/thinkthen", exact: "' + version() + '")], targets: [.executableTarget(name: "Consumer", dependencies: [.product(name: "ThinkThen", package: "thinkthen")], path: ".", exclude: ["Package.swift"])])\n')
+        run('swift', 'build', '--package-path', consumer, '--disable-sandbox', **options)
+        run(sys.executable, ROOT / 'scripts/release/swift.py', consumer / '.build/debug/Consumer', fixture, **options)
+    elif site == 'r':
+        library = scratch / 'r-library'
+        library.mkdir()
+        expression = ('args <- commandArgs(TRUE); .libPaths(c(args[[1]], .Library)); '
+            'install.packages("thinkthen", lib=args[[1]], repos=c("https://botassembly.r-universe.dev", "https://cloud.r-project.org")); '
+            'stopifnot(as.character(packageVersion("thinkthen", lib.loc=args[[1]])) == args[[2]]); '
+            'library(thinkthen, lib.loc=args[[1]]); result <- tt_decide(args[[3]], question=args[[4]]); '
+            'stopifnot(length(result) == 1L, !is.na(result), identical(result[[1]], args[[5]] == "true"))')
+        run('Rscript', '--vanilla', '-e', expression, library, version(), case['request']['records'][0],
+            case['request']['question']['question'], json.dumps(case['expected'][0]['answer']), **options)
+    elif site == 'homebrew':
+        installed = run('brew', 'list', '--formula', '--versions', **options)
+        if any(line.split()[0].rsplit('/', 1)[-1] == 'thinkthen' for line in installed.splitlines() if line.split()):
+            raise ValueError('Homebrew check requires an absent ThinkThen installation')
+        run('brew', 'install', 'botassembly/thinkthen/thinkthen', **options)
+        prefix = run('brew', '--prefix', 'botassembly/thinkthen/thinkthen', **options).strip()
+        binary = Path(prefix) / 'bin/thinkthen'
+        if run(binary, '--version', **options).strip() != 'thinkthen ' + version():
+            raise ValueError('Homebrew installed another version')
+        command_question(binary, case, env)
+    elif site == 'installer':
+        name = 'install.ps1' if os.name == 'nt' else 'install.sh'
+        installer = scratch / name
+        run('curl', '--fail', '--silent', '--show-error', '--location', 'https://thinkthen.dev/' + name,
+            '--output', installer, **options)
+        env.update(THINKTHEN_INSTALL_DIR=str(scratch / 'installed'), THINKTHEN_NO_MODIFY_PATH='1')
+        shell = ('powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File') if os.name == 'nt' else ('sh',)
+        run(*shell, installer, '--version', version(), **options)
+        command_question(scratch / ('installed/thinkthen.exe' if os.name == 'nt' else 'installed/thinkthen'), case, env)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('sites', nargs='+', choices=SITES)
+    args = parser.parse_args()
+    case = next(case for case in json.loads((ROOT / 'construction/stub.json').read_text())
+                if case['request']['question']['function'] == 'decide'
+                and len(case['request']['records']) == 1 and case['expected'][0]['status'] == 'answered')
+    failed = []
+    with tempfile.TemporaryDirectory(prefix='thinkthen-live-install-') as temporary:
+        root = Path(temporary)
+        fixture = root / 'question.json'
+        fixture.write_text(json.dumps([case]))
+        for site in dict.fromkeys(args.sites):
+            scratch = root / site
+            scratch.mkdir()
+            try:
+                check(site, scratch, fixture, case)
+            except Exception as error:  # noqa: BLE001 - Report every site failure before the final nonzero exit.
+                failed.append(site)
+                print(f'live install {site}: FAIL: {error}', flush=True)
+            else:
+                print(f'live install {site}: PASS (published {version()}, stub question)', flush=True)
+    if failed:
+        raise SystemExit('live install failed: ' + ', '.join(failed))
+
+
+if __name__ == '__main__':
+    main()

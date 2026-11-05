@@ -33,6 +33,13 @@ if [ "${1:-}" = --full ]; then
     export THINKTHEN_LOOPBACK
     exec scripts/duckdb-gate
 fi
+sanitizer=
+if [ "${1:-}" = --union-tsan ]; then
+    shift
+    set -- --union-only "$@"
+    sanitizer=-fsanitize=thread
+    export CFLAGS="${CFLAGS:-} $sanitizer" CXXFLAGS="${CXXFLAGS:-} $sanitizer" LDFLAGS="${LDFLAGS:-} $sanitizer"
+fi
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 THINKTHEN_SQL_TEST_BUILD=ON THINKTHEN_DUCKDB_OUTPUT="$scratch/package" sh databases/duckdb/build.sh
@@ -45,10 +52,16 @@ case $(uname -s) in
     Linux) library=$THINKTHEN_DUCKDB_DEPS/lib/libduckdb.so; rpath='$ORIGIN' ;;
 esac
 cp "$library" "$scratch/installed/"
-c++ -std=c++17 -pthread -Wall -Wextra -Werror -Wno-unused-parameter \
+c++ ${sanitizer:+"$sanitizer"} -std=c++17 -pthread -Wall -Wextra -Werror -Wno-unused-parameter \
     -I "$source/src/include" -I "$source/third_party/yyjson/include" \
     databases/duckdb/tests/runner.cpp \
     "$library" -Wl,-rpath,"$rpath" -o "$scratch/installed/sql"
+if [ "${1:-}" = --stage-only ]; then
+    : "${THINKTHEN_DUCKDB_ARTIFACT_DIR:?Provide the consumer staging directory}"
+    mkdir -p "$THINKTHEN_DUCKDB_ARTIFACT_DIR"
+    cp "$scratch/installed/"* "$THINKTHEN_DUCKDB_ARTIFACT_DIR/"
+    exit 0
+fi
 if [ "${1:-}" = --unknown-only ]; then
     python3 databases/unknown-code-check.py duckdb "$scratch/installed/sql" "$scratch/installed/thinkthen.duckdb_extension"
 else

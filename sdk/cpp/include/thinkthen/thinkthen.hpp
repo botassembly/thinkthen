@@ -86,29 +86,31 @@ template<class Q> class [[nodiscard]] stream {
     [[nodiscard]] std::optional<row<Q>> pull() {
         if (!state_) return std::nullopt;
         auto state = state_;
-        try {
-            for (;;) {
-                detail::native_row result;
-                detail::diagnostic diagnostic;
-                auto event = thinkthen_call_next(state->call, &result.value, &diagnostic.value);
-                detail::check(event, diagnostic);
-                if (event == THINKTHEN_OK) {
-                    return row<Q>(result.value);
-                }
-                if (event == THINKTHEN_END) { close(); return std::nullopt; }
-                if (event != THINKTHEN_NEEDS_INPUT) detail::incompatible();
-                auto r = source_ ? source_() : std::nullopt;
-                if (!r) {
-                    thinkthen_call_end_input(state->call); source_ = {};
-                } else {
-                    const auto input = detail::input(*r);
-                    if (input.kind == THINKTHEN_RECORD_TEXT) detail::invoke(thinkthen_call_send_text, state->call, input.data, input.len);
-                    else if (input.kind == THINKTHEN_RECORD_JSON) detail::invoke(thinkthen_call_send_json, state->call, input.data, input.len);
-                    else if (input.kind == THINKTHEN_RECORD_MISSING) detail::invoke(thinkthen_call_send_missing, state->call);
-                    else detail::invoke(thinkthen_call_send_invalid, state->call);
-                }
+        for (;;) {
+            detail::native_row result;
+            detail::diagnostic diagnostic;
+            auto event = thinkthen_call_next(state->call, &result.value, &diagnostic.value);
+            // Retain the native call's terminal error for later pulls.
+            detail::check(event, diagnostic);
+            if (event == THINKTHEN_OK) {
+                try { return row<Q>(result.value); }
+                catch (...) { close(); throw; }
             }
-        } catch (...) { close(); throw; }
+            if (event == THINKTHEN_END) { close(); return std::nullopt; }
+            if (event != THINKTHEN_NEEDS_INPUT) detail::incompatible();
+            std::optional<owned_record> r;
+            try { r = source_ ? source_() : std::nullopt; }
+            catch (...) { close(); throw; }
+            if (!r) {
+                thinkthen_call_end_input(state->call); source_ = {};
+            } else {
+                const auto input = detail::input(*r);
+                if (input.kind == THINKTHEN_RECORD_TEXT) detail::invoke(thinkthen_call_send_text, state->call, input.data, input.len);
+                else if (input.kind == THINKTHEN_RECORD_JSON) detail::invoke(thinkthen_call_send_json, state->call, input.data, input.len);
+                else if (input.kind == THINKTHEN_RECORD_MISSING) detail::invoke(thinkthen_call_send_missing, state->call);
+                else detail::invoke(thinkthen_call_send_invalid, state->call);
+            }
+        }
     }
 public:
     stream(const stream&) = delete;
@@ -133,7 +135,7 @@ public:
     }
     /// Obtain a handle that cancels without owning the stream.
     [[nodiscard]] thinkthen::cancel_handle cancel_handle() const noexcept { return thinkthen::cancel_handle(state_); }
-    /// Pull one row, or nullopt after input is drained.
+    /// Pull one row, or nullopt after input is drained; call errors keep throwing until close().
     [[nodiscard]] std::optional<row<Q>> next() { return pull(); }
     /// A single-pass iterator over typed rows.
     class iterator {

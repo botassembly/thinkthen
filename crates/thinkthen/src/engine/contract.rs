@@ -51,10 +51,20 @@ impl Engine {
                 scope.spawn(move || {
                     while let Some((place, chunk)) = next_job(inbox) {
                         let rows = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            self.answer(chunk, url)
+                            self.answer(
+                                chunk,
+                                url,
+                                if place == 0 {
+                                    BatchStage::First
+                                } else {
+                                    BatchStage::Later
+                                },
+                            )
                         }))
-                        .map_err(|_| fault());
-                        if events.send(Event::Answered(place, rows)).is_err() {
+                        .map_err(|_| fault())
+                        .and_then(std::convert::identity);
+                        let terminal = rows.is_err();
+                        if events.send(Event::Answered(place, rows)).is_err() || terminal {
                             break;
                         }
                     }

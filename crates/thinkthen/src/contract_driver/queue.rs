@@ -151,12 +151,11 @@ impl<T: Send + std::fmt::Debug + 'static> Queue<T> {
     #[cfg(any(feature = "native", feature = "command"))]
     pub(super) fn send_reserved(&self, item: T) -> Result<(), Error> {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        if state.closed || state.cancelled {
-            return Err(cancelled());
-        }
         if state.reserved == 0 {
             return Err(super::abi_error());
         }
+        // NEEDS_INPUT grants this slot until send or end_input. A concurrent
+        // cancellation must leave the host free to read the original call error.
         state.reserved -= 1;
         state.items.push_back(item);
         let waker = state.waker.take();

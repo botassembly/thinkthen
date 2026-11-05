@@ -44,76 +44,62 @@ fn redirects_cannot_send_evidence_to_another_address() {
 
 #[test]
 fn each_adapter_reads_only_its_own_key_and_address() {
-    let system = Loopback::noul(0.9).unwrap();
-    let openai = Loopback::start(|_| {
-        Reply::json(
-            200,
-            &json!({"answers":[{"type":"predicate","probability":0.9}]}),
-        )
-    })
-    .unwrap();
-    for (adapter, url, key_name, key, server) in [
-        (
-            BackendName::SystemOne,
-            None,
-            "THINKTHEN_API_KEY",
-            "synthetic-system",
-            &system,
-        ),
-        (
-            BackendName::OpenAi,
-            Some(openai.base()),
-            "OPENAI_API_KEY",
-            "synthetic-openai",
-            &openai,
-        ),
-    ] {
-        let settings = Settings::default()
-            .with_backend(adapter)
-            .batch("50".parse().unwrap());
-        let settings = if let Some(url) = url {
-            settings.url(url)
-        } else {
-            settings
-        };
-        let engine = settings
-            .engine(|name| match name {
-                "THINKTHEN_API_KEY" => {
-                    assert_eq!(key_name, name);
-                    Some("synthetic-system".to_owned())
-                }
-                "OPENAI_API_KEY" => {
-                    assert_eq!(key_name, name);
-                    Some("synthetic-openai".to_owned())
-                }
-                "THINKTHEN_BASE_URL" => {
-                    assert_eq!(adapter, BackendName::SystemOne);
-                    Some(system.base().to_owned())
-                }
-                _ => panic!("unexpected variable"),
+    for adapter in [BackendName::SystemOne, BackendName::OpenAi] {
+        for address_source in ["primary", "fallback", "explicit"] {
+            if adapter == BackendName::OpenAi && address_source == "fallback" {
+                continue;
+            }
+            let system = Loopback::noul(0.9).unwrap();
+            let openai = Loopback::start(|_| {
+                Reply::json(
+                    200,
+                    &json!({"answers":[{"type":"predicate","probability":0.9}]}),
+                )
             })
             .unwrap();
-        engine
-            .rows(&Decide::new("Is it?").unwrap(), [Record::text("text")])
-            .unwrap()
-            .map(|row| row.unwrap())
-            .for_each(|row| assert!(matches!(row.outcome(), Outcome::Answered { .. })));
-        let requests = server.requests();
-        assert_eq!(requests.len(), 1);
-        assert_eq!(
-            requests[0].header("authorization"),
-            Some(format!("Bearer {key}").as_str())
-        );
+            let (server, other, key) = if adapter == BackendName::SystemOne {
+                (&system, &openai, "synthetic-system")
+            } else {
+                (&openai, &system, "synthetic-openai")
+            };
+            let mut settings = Settings::default().batch("50".parse().unwrap());
+            if address_source == "explicit" {
+                settings = settings.url(server.base());
+            }
+            let engine = settings
+                .engine(|name| match name {
+                    "THINKTHEN_BACKEND" => Some(adapter.as_str().to_owned()),
+                    "THINKTHEN_API_KEY" => Some("synthetic-system".to_owned()),
+                    "OPENAI_API_KEY" => Some("synthetic-openai".to_owned()),
+                    "THINKTHEN_URL" if address_source == "fallback" => None,
+                    "THINKTHEN_URL" if address_source == "explicit" => {
+                        Some(other.base().to_owned())
+                    }
+                    "THINKTHEN_URL" => Some(system.base().to_owned()),
+                    "THINKTHEN_BASE_URL" if address_source == "fallback" => {
+                        Some(system.base().to_owned())
+                    }
+                    "THINKTHEN_BASE_URL" => Some(other.base().to_owned()),
+                    "OPENAI_BASE_URL" if address_source == "explicit" => {
+                        Some(other.base().to_owned())
+                    }
+                    "OPENAI_BASE_URL" => Some(openai.base().to_owned()),
+                    _ => panic!("unexpected variable"),
+                })
+                .unwrap();
+            let rows: Vec<_> = engine
+                .rows(&Decide::new("Is it?").unwrap(), [Record::text("text")])
+                .unwrap()
+                .map(|row| row.unwrap())
+                .collect();
+            assert_eq!(rows.len(), 1);
+            assert!(matches!(rows[0].outcome(), Outcome::Answered { .. }));
+            assert_eq!(other.count(), 0);
+            let requests = server.requests();
+            assert_eq!(requests.len(), 1);
+            assert!(requests[0].header("authorization") == Some(format!("Bearer {key}").as_str()));
+        }
     }
-    let backend = Settings::default()
-        .with_backend(BackendName::OpenAi)
-        .batch("50".parse().unwrap())
-        .engine(|name| {
-            assert_eq!(name, "OPENAI_API_KEY");
-            Some("synthetic-openai".to_owned())
-        })
-        .unwrap();
-    assert!(format!("{backend:?}").contains("https://api.openai.com/v1"));
 }
 
 #[test]

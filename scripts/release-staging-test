@@ -18,10 +18,14 @@ from release_windows import source_package, check_tools
 from release_workflow import ROOT, TARGETS, version
 
 
+BASE_ENV = dict(os.environ)
+BASE_ENV.pop('THINKTHEN_GATE_FAILURE_TAILS', None)
+
+
 def checker(scratch):
     delivered = scratch / 'delivered'
     check_tools(delivered)
-    env = {key: value for key, value in os.environ.items() if key != 'PYTHONPATH'}
+    env = {key: value for key, value in BASE_ENV.items() if key != 'PYTHONPATH'}
     output = subprocess.check_output([sys.executable, '-E', '-s', delivered / 'check', '--help'],
                                      cwd=scratch, env=env, text=True)
     assert 'check PLATFORM_DIRECTORY' in output
@@ -56,7 +60,8 @@ def missing_gate(scratch):
     source = scratch / 'missing-gate/scripts'
     source.mkdir(parents=True)
     shutil.copy2(ROOT / 'scripts/sdk-gates', source / 'sdk-gates')
-    environment = dict(os.environ, THINKTHEN_GATE_STRICT='0')
+    shutil.copy2(ROOT / 'scripts/gate-report', source / 'gate-report')
+    environment = dict(BASE_ENV, THINKTHEN_GATE_STRICT='0')
     environment.pop('THINKTHEN_SDK_GATE_RUNNER', None)
     result = subprocess.run([source / 'sdk-gates'], env=environment, capture_output=True, text=True)
     assert result.returncode != 0, 'SDK dispatcher accepted missing gate scripts'
@@ -110,6 +115,10 @@ def cleanup_status(scratch):
         for variable in required if path.name != 'hosted-candidate-check' else ():
             assert re.search(r'\$\{' + variable + r':?\?', text[:first_trap]), (path.name, variable, 'check required input before trapping cleanup')
         functions = '\n'.join(re.findall(r'^cleanup\(\) \{\n.*?^\}', text, re.M | re.S))
+        if '. scripts/gate-report' in text:
+            helper = (ROOT / 'scripts/gate-report').read_text()
+            functions += '\nfailed=\nreport_scratch=$scratch\nexec 3>&2\n' + re.search(
+                r'^report_finish\(\) \{\n.*?^\}', helper, re.M | re.S)[0]
         signals = '\n'.join(line.strip() for line in text.splitlines()
                             if line.strip().startswith('trap ') and
                             {'HUP', 'INT', 'TERM'}.intersection(shlex.split(line)[2:]))
@@ -126,7 +135,7 @@ def cleanup_status(scratch):
                                           *((f'kill -{signal} "$$"', None) for signal in ('HUP', 'INT', 'TERM'))):
                     owned = scratch / 'cleanup-owned'
                     owned.mkdir()
-                    environment = dict(os.environ, scratch=str(owned), red=str(owned), stage=str(owned), source_scratch=str(owned),
+                    environment = dict(BASE_ENV, scratch=str(owned), red=str(owned), stage=str(owned), source_scratch=str(owned),
                                        pair=str(owned / 'pair'), publishing='')
                     cleanup = 'rm() { return 7; }\n' if cleanup_fails else ''
                     result = subprocess.run(['sh', '-eu', '-c', functions + '\n' + cleanup + line + '\n' + signals + '\n' + command],
@@ -225,7 +234,7 @@ print('Every tracked POSIX shell script parses with the host shell and Bash', fl
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-release-staging-') as temporary:
     scratch = Path(temporary)
-    with patch.dict(os.environ, THINKTHEN_SDK_GATE_RUNNER='scripts/absent-runner'):
+    with patch.dict(BASE_ENV, THINKTHEN_SDK_GATE_RUNNER='scripts/absent-runner'):
         missing_gate(scratch)
     cleanup_status(scratch)
     checker(scratch)

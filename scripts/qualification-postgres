@@ -15,10 +15,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-readme-pg-') as temporary:
     subprocess.run(['initdb', '-D', data, '-A', 'trust', '-U', 'thinkthen', '--no-locale', '-E', 'UTF8'], check=True)
     subprocess.run(['pg_ctl', '-D', data, '-l', home / 'server.log', '-o', '-k ' + temporary + ' -c listen_addresses=', '-w', 'start'], check=True)
     try:
-        env = dict(os.environ, PGHOST=temporary, PGUSER='thinkthen', PGDATABASE='postgres')
+        env = dict(os.environ, PGHOST=temporary, PGUSER='thinkthen', PGDATABASE='postgres',
+                   PGOPTIONS='-c thinkthen.backend=stub -c thinkthen.allowed_backends=stub:*')
         sql = blocks[0]
         result = subprocess.run(['psql', '-X', '-v', 'ON_ERROR_STOP=1'], input=sql, text=True,
-                                capture_output=True, env=env, check=True)
+                                stdout=subprocess.PIPE, env=env, check=True)
         assert '(3 rows)' in result.stdout, result.stdout
     finally:
         subprocess.run(['pg_ctl', '-D', data, '-m', 'fast', '-w', 'stop'], check=True)

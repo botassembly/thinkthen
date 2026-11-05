@@ -181,7 +181,9 @@ for (const o of flags) for (const e of o.env.split(', ').filter(Boolean)) {
 // compared with crates/thinkthen/src/backend.rs and the build fails when the two differ.
 const BACKEND_VARIABLES = [
   { name: 'THINKTHEN_API_KEY', backend: 'systemone', holds: 'The key sent to the systemone backend.' },
-  { name: 'THINKTHEN_BASE_URL', backend: 'systemone', holds: 'The systemone address when `--url` is not given. `--url` wins; without either, the backend uses its default address.' },
+  { name: 'THINKTHEN_URL', backend: 'systemone', holds: 'The System One address. An explicit `--url` overrides it for the chosen backend.' },
+  { name: 'THINKTHEN_BASE_URL', backend: 'systemone', holds: 'The System One address when neither `--url` nor `THINKTHEN_URL` is given.' },
+  { name: 'OPENAI_BASE_URL', backend: 'openai', holds: 'The OpenAI address. An explicit `--url` overrides it for the chosen backend.' },
   { name: 'OPENAI_API_KEY', backend: 'openai', holds: 'The key sent to the openai backend.' },
 ];
 {

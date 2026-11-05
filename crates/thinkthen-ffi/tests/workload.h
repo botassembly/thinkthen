@@ -87,7 +87,9 @@ static void *run_workload(void *opaque) {
             } else if (status < 0) {
                 assert(worker->cancel && error.code == THINKTHEN_CODE_LOCAL_CANCELLED);
                 thinkthen_error_free(&error);
-                assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
+                assert(thinkthen_call_next(call, &row, &error) == status);
+                assert(error.code == THINKTHEN_CODE_LOCAL_CANCELLED);
+                thinkthen_error_free(&error);
                 break;
             } else {
                 assert(status == THINKTHEN_END && !worker->cancel);

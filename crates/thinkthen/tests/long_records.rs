@@ -138,7 +138,7 @@ fn one_oversized_ask_fails_its_row_before_the_round_sends() {
 
 #[test]
 fn a_failed_fragment_fails_its_record_after_collecting_the_round() {
-    let server = Loopback::start(|_| Reply::json(401, &json!({}))).unwrap();
+    let server = Loopback::start(|_| Reply::json(501, &json!({}))).unwrap();
     let text = (0..2000)
         .map(|n| format!("Name{n}"))
         .collect::<Vec<_>>()

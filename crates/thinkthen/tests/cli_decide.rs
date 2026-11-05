@@ -145,14 +145,7 @@ fn a_backend_failure_exits_4_and_never_prints_the_key() {
         let output = run(&server, args, Some(KEY));
         assert_eq!(output.status.code(), Some(4), "{args:?}");
         assert_eq!(reported(&output), "backend.status");
-        if args.contains(&"--json") {
-            assert_eq!(
-                serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap()["error"]["code"],
-                "backend.status"
-            );
-        } else {
-            assert!(output.stdout.is_empty());
-        }
+        assert!(output.stdout.is_empty());
         assert!(!text(&output.stdout).contains(KEY));
         assert!(!text(&output.stderr).contains(KEY));
     }

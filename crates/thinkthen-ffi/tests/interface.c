@@ -215,10 +215,13 @@ static int meanings(const thinkthen_client *client) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) return 2;
+    if (argc < 2 || argc > 3) return 2;
     thinkthen_client *client = NULL;
     thinkthen_error error = THINKTHEN_ERROR_INIT;
-    if (thinkthen_client_open(NULL, &client, &error) != THINKTHEN_OK) return failed("client", &error);
+    int opened = argc == 3
+        ? thinkthen_client_open_json(argv[2], THINKTHEN_NUL_TERMINATED, &client, &error)
+        : thinkthen_client_open(NULL, &client, &error);
+    if (opened != THINKTHEN_OK) return failed("client", &error);
     static const struct {
         const char *name;
         int (*run)(const thinkthen_client *);

@@ -42,9 +42,10 @@ for text in (install, (ROOT / 'docs/surfaces/postgresql.md').read_text(),
     # Preserve every supported-platform fact without prescribing prose order.
     for fact in ('Linux', 'x86-64', 'arm64', 'PostgreSQL 18', 'glibc 2.28 or later'):
         assert fact in text, fact
-for surface in ('PostgreSQL LIMIT', 'DuckDB short LIMIT', 'SQLite joins', 'DuckDB loading', 'Unsigned macOS', 'Unsigned Windows',
-                'Database cancellation'):
+for surface in ('PostgreSQL LIMIT', 'DuckDB LIMIT', 'SQLite joins', 'DuckDB version', 'Unsigned macOS', 'Unsigned Windows',
+                'Cancelling a database query', 'Swift 6.3.2', 'Toolbox shell steps'):
     assert '| ' + surface in note, surface
+assert '](/' not in note.split('## Known limits', 1)[1]
 assert note.index('## Install') < note.index('## For 0.1 users') < note.index('## Known limits')
 limits = (ROOT / 'docs/resource-observations.md').read_text()
 assert 'docs/resource-observations.md' in note
@@ -100,7 +101,21 @@ assert 'Botassembly.ThinkThen' in note
 assert 'github.com/botassembly/thinkthen/sdk/go/thinkthen' in note
 assert '0.1.2' in note
 assert '`--true TEXT` and `--false TEXT` describe what yes and no mean' in upgrade
-assert '`THINKTHEN_URL` sets the address for either backend' in upgrade
+assert '`THINKTHEN_URL` sets only the System One address' in upgrade
+assert 'OpenAI reads `OPENAI_BASE_URL`' in upgrade
+assert '`THINKTHEN_MODEL` applies only to commands' in upgrade
+assert 'TypeSafe service' not in note
 assert '`--details` becomes `--json`' not in upgrade
 assert r'Unblock-File .\thinkthen-0.2.0-windows-x86_64.zip' in note
+# Each database README output is the real capture of the program above it.
+for name, surface in (('extensions/sqlite/README.md', 'sqlite'),
+                      ('extensions/postgres/README.md', 'postgresql'),
+                      ('databases/duckdb/README.md', 'duckdb')):
+    text = (ROOT / name).read_text()
+    assert re.search(r'^Output:\n\n(?!```)', text, re.M) is None, name
+    captures = {path.read_text().strip(): path.parent
+                for path in (ROOT / 'site/examples/sdks' / surface).glob('*/show.sql')}
+    for program, output in re.findall(r'```sql\n(.*?)\n```\n\nOutput:\n\n```text\n(.*?)\n```', text, re.S):
+        capture = captures[program.strip()]
+        assert output == (capture / 'output.txt').read_text().rstrip('\n'), (name, capture.name)
 print('Release limits and upgrade notes: PASS')

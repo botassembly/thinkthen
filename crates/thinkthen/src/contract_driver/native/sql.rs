@@ -227,9 +227,13 @@ fn representation_error() -> Error {
     )
 }
 /// Check an explicitly selected PostgreSQL identifier before native allocation.
+/// PostgreSQL numeric output may include nonfinite tokens, which fail only this row.
 /// # Errors
 /// Rejects a host's invalid JSON as an internal conversion error.
 pub fn sql_postgres_id_error(id: &str) -> Result<Option<Error>, Error> {
+    if matches!(id, "NaN" | "Infinity" | "-Infinity") {
+        return Ok(Some(representation_error()));
+    }
     let value: &serde_json::value::RawValue =
         serde_json::from_str(id).map_err(|_| super::internal_error())?;
     Ok(raw_zero(value).then(representation_error))

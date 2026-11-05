@@ -87,7 +87,8 @@ impl Driver {
     }
     /// Transfer a record into the slot reserved by NeedsInput.
     /// # Errors
-    /// Returns cancellation or usage.abi for a driver protocol error.
+    /// Returns usage.abi for a driver protocol error. A concurrently stopped
+    /// call accepts its reserved slot and reports its terminal error on read.
     pub(crate) fn send(&mut self, record: Record) -> Result<(), Error> {
         if !self.waiting {
             return Err(abi_error());
@@ -115,8 +116,10 @@ impl Driver {
         self.signal.clone()
     }
     fn ready(&mut self) -> Result<Option<Event>, Error> {
-        if self.rows.done {
-            return Ok(Some(Event::Finished));
+        if let Some(terminal) = self.rows.state.terminal() {
+            return terminal
+                .map(|()| Some(Event::Finished))
+                .map_err(Clone::clone);
         }
         if let Some(event) = self.rows.output.try_receive() {
             return self
@@ -134,7 +137,7 @@ impl Driver {
     }
     /// Wait for a row, a safely reserved input slot or completion.
     /// # Errors
-    /// Yields a terminal call error once, then Finished on later reads.
+    /// Retains a terminal call error and returns it on every later read.
     pub(crate) fn next_event(&mut self) -> Result<Event, Error> {
         loop {
             let version = self.signal.version();

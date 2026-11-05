@@ -4,7 +4,7 @@ The DuckDB extension adds the ten functions to DuckDB as table functions. `think
 
 ## Install
 
-Download the DuckDB archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#verify-a-download), and extract it into a folder of its own. Start DuckDB 2.0.0 in that folder:
+Download the DuckDB archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#download-a-release-file), and extract it into a folder of its own. Start DuckDB 2.0.0 in that folder:
 
 ```sh
 mkdir thinkthen-duckdb
@@ -40,6 +40,17 @@ FROM thinkthen_decide(
 
 Output:
 
+```text
+┌────────┬───────────┬──────────────────┐
+│ msg_id │ is_refund │      status      │
+│ int32  │  boolean  │ thinkthen_status │
+├────────┼───────────┼──────────────────┤
+│      1 │ true      │ answered         │
+│      2 │ false     │ answered         │
+│      3 │ true      │ answered         │
+└────────┴───────────┴──────────────────┘
+```
+
 ## Not sure and failures
 
 Set a low and a high bar, and decide is not sure between them. A not-sure answer is NULL with the status `unsure`, and a message ThinkThen could not judge is NULL with the status `failed` and an `error_code`, so neither one passes for `false`. The query keeps going either way. Send both to a person. In the same session:
@@ -53,6 +64,17 @@ FROM thinkthen_decide(
 ```
 
 Output:
+
+```text
+┌────────┬───────────┬──────────────────┐
+│ msg_id │ is_refund │      status      │
+│ int32  │  boolean  │ thinkthen_status │
+├────────┼───────────┼──────────────────┤
+│      1 │ true      │ answered         │
+│      2 │ false     │ answered         │
+│      3 │ NULL      │ unsure           │
+└────────┴───────────┴──────────────────┘
+```
 
 Test the answer with `IS TRUE` and `IS FALSE`, never with `coalesce(is_refund, false)`, which turns not sure and failures into no.
 

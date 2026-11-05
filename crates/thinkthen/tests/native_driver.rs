@@ -141,3 +141,101 @@ fn finite_prepared_records_share_one_batch_and_keep_failed_rows_on_both_wires() 
         );
     }
 }
+
+#[cfg(feature = "native")]
+#[test]
+fn native_call_fault_stays_an_error_for_next_and_poll() {
+    use loopback::{KEY, Loopback};
+    use std::time::Duration;
+    use thinkthen::{
+        BackendName, Code, Key, OffsetUnit, Request, Settings,
+        native::{Call, Event},
+        questions,
+        records::Record,
+    };
+    for backend in [BackendName::SystemOne, BackendName::OpenAi] {
+        let server = Loopback::case(&serde_json::json!({"replies":[{"probability":0.9}]})).unwrap();
+        let engine = Settings::default()
+            .with_backend(backend)
+            .batch(1_u64.try_into().unwrap())
+            .url(server.base())
+            .api_key(Key::new(KEY).unwrap())
+            .engine(|_| None)
+            .unwrap();
+        let request = Request::new(questions::Decide::new("Ready?").unwrap());
+        let mut call = Call::open(&engine, &request, OffsetUnit::CodePoints).unwrap();
+        assert!(matches!(call.next_event().unwrap(), Event::NeedsInput));
+        call.send(Record::text("evidence")).unwrap();
+        loop {
+            match call.next_event().unwrap() {
+                Event::Row(row) => {
+                    assert!(row.error().is_none());
+                    break;
+                }
+                Event::NeedsInput => call.end_input(),
+                event => panic!("expected the published row, got {event:?}"),
+            }
+        }
+        call.cancel();
+        let failure = call.next_event().unwrap_err();
+        assert_eq!(failure.code(), Code::LocalCancelled);
+        for _ in 0..2 {
+            let repeated = call.next_event().unwrap_err();
+            assert_eq!(repeated.code(), failure.code());
+            assert_eq!(repeated.message(), failure.message());
+            let repeated = call.poll(Duration::ZERO).unwrap_err();
+            assert_eq!(repeated.code(), failure.code());
+            assert_eq!(repeated.message(), failure.message());
+        }
+        assert_eq!(server.count(), 1);
+    }
+}
+
+#[cfg(feature = "native")]
+#[test]
+fn reserved_input_does_not_hide_a_backend_terminal_error() {
+    use loopback::{KEY, Loopback, Reply};
+    use std::sync::Mutex;
+    use thinkthen::{
+        Code, Key, OffsetUnit, Request, Settings,
+        native::{Call, Event},
+        questions,
+        records::Record,
+    };
+    let (release, gate) = std::sync::mpsc::channel();
+    let gate = Mutex::new(gate);
+    let server = Loopback::start(move |_| {
+        gate.lock().unwrap().recv().unwrap();
+        Reply::json(401, &serde_json::json!({}))
+    })
+    .unwrap();
+    let engine = Settings::default()
+        .url(server.base())
+        .api_key(Key::new(KEY).unwrap())
+        .batch(1_u64.try_into().unwrap())
+        .engine(|_| None)
+        .unwrap();
+    let request = Request::new(questions::Decide::new("Ready?").unwrap());
+    let mut call = Call::open(&engine, &request, OffsetUnit::CodePoints).unwrap();
+    assert!(matches!(call.next_event().unwrap(), Event::NeedsInput));
+    call.send(Record::text("first")).unwrap();
+    assert!(matches!(call.next_event().unwrap(), Event::NeedsInput));
+    let token = call.cancellation();
+    let events = call.events();
+    release.send(()).unwrap();
+    loop {
+        let version = events.version();
+        if token.is_cancelled() {
+            break;
+        }
+        events.wait(version);
+    }
+    call.send(Record::text("reserved before rejection"))
+        .unwrap();
+    for _ in 0..2 {
+        let failure = call.next_event().unwrap_err();
+        assert_eq!(failure.code(), Code::BackendStatus);
+        assert_eq!(failure.http_status(), Some(401));
+    }
+    assert_eq!(server.count(), 1);
+}

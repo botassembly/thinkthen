@@ -236,9 +236,11 @@ int main(int argc, char **argv) {
             break;
         } else {
             assert(row.answer.data == NULL && row.detail.data == NULL);
+            int32_t terminal_code = error.code;
             print_error(&error);
-            /* A terminal error is owned and yielded once; later pulls end. */
-            assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
+            /* The call retains its terminal error until it is freed. */
+            assert(thinkthen_call_next(call, &row, &error) == status);
+            assert(error.code == terminal_code);
             thinkthen_error_free(&error);
             break;
         }

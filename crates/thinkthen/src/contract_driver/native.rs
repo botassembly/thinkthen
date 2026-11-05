@@ -68,7 +68,8 @@ impl Call {
     }
     /// Transfer one record into a reserved input slot.
     /// # Errors
-    /// Returns cancellation or usage.abi for a protocol error.
+    /// Returns usage.abi for a protocol error. A concurrently stopped call
+    /// accepts its reserved slot and reports its terminal error on read.
     pub fn send(&mut self, record: Record) -> Result<(), Error> {
         self.0.send(record)
     }
@@ -92,13 +93,13 @@ impl Call {
     }
     /// Wait for one event.
     /// # Errors
-    /// Returns a call error once, then completion.
+    /// Returns the same terminal call error on every later read.
     pub fn next_event(&mut self) -> Result<Event, Error> {
         self.0.next_event().map(Into::into)
     }
     /// Wait at most timeout for one event.
     /// # Errors
-    /// Returns a call error once, then completion.
+    /// Returns the same terminal call error on every later read.
     pub fn poll(&mut self, timeout: Duration) -> Result<Option<Event>, Error> {
         self.0.poll(timeout).map(|event| event.map(Into::into))
     }

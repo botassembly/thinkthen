@@ -21,6 +21,11 @@ mod limits;
 pub(crate) use contract::RecordEvent;
 use limits::{REORDER_WINDOW, WORKERS};
 
+enum BatchStage {
+    First,
+    Later,
+}
+
 enum Split {
     Allowed,
     Spent,
@@ -32,7 +37,7 @@ enum Split {
 pub struct Engine {
     backend: Backend,
     batch: Batch,
-    agent: Arc<OnceLock<ureq::Agent>>,
+    agent: Arc<OnceLock<transport::Agent>>,
     policy: RetryPolicy,
     pub(crate) cancel: Cancel,
     cancel_attached: bool,
@@ -138,29 +143,56 @@ impl Engine {
     ) -> Result<(), Error> {
         self.call_parallel(question, records, sink, identity)
     }
-    fn answer<F: Function>(&self, chunk: Chunk<'_, F>, url: &str) -> Vec<Row> {
+    fn answer<F: Function>(
+        &self,
+        chunk: Chunk<'_, F>,
+        url: &str,
+        stage: BatchStage,
+    ) -> Result<Vec<Row>, Error> {
         let replies = chunk
             .requests()
             .into_iter()
-            .flat_map(|request| self.send(request, url, Split::Allowed))
-            .collect();
+            .map(|request| self.send(request, url, Split::Allowed))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        if matches!(stage, BatchStage::First)
+            && replies.iter().all(|reply| reply.failure().is_some())
+            && let Some(error) = replies
+                .iter()
+                .filter_map(RequestAnswers::failure)
+                .find(|error| {
+                    error
+                        .http_status()
+                        .is_some_and(|status| (400..500).contains(&status))
+                })
+        {
+            return Err(error.clone());
+        }
         chunk
             .advance(replies, url, self.batch.get())
             .into_iter()
-            .flat_map(|round| match round {
-                NextRound::Ready(rows) => rows,
-                NextRound::Pending(chunk) => self.answer(chunk, url),
+            .map(|round| match round {
+                NextRound::Ready(rows) => Ok(rows),
+                NextRound::Pending(chunk) => self.answer(chunk, url, BatchStage::Later),
             })
-            .collect()
+            .collect::<Result<Vec<_>, _>>()
+            .map(|rounds| rounds.into_iter().flatten().collect())
     }
 
-    fn send(&self, request: Request<'_>, url: &str, split: Split) -> Vec<RequestAnswers> {
+    fn send(
+        &self,
+        request: Request<'_>,
+        url: &str,
+        split: Split,
+    ) -> Result<Vec<RequestAnswers>, Error> {
         let Some(remote) = self.backend.remote() else {
-            return vec![if self.cancel.is_cancelled() {
+            return Ok(vec![if self.cancel.is_cancelled() {
                 request.answered(Err(transport::Refused::cancelled().error))
             } else {
                 request.stub_answer()
-            }];
+            }]);
         };
         let reply = transport::post(
             self.agent.get_or_init(|| agent(self.policy)),
@@ -172,21 +204,26 @@ impl Engine {
             &self.cancel,
         );
         match reply {
+            Err(refused) if matches!(refused.error.http_status(), Some(401 | 403)) => {
+                Err(refused.error)
+            }
             Err(refused) if refused.too_large && matches!(split, Split::Allowed) => {
                 if let Some((left, right)) = request.split() {
-                    let mut answers = self.send(left, url, Split::Spent);
-                    answers.extend(self.send(right, url, Split::Spent));
-                    answers
+                    let mut answers = self.send(left, url, Split::Spent)?;
+                    answers.extend(self.send(right, url, Split::Spent)?);
+                    Ok(answers)
                 } else {
-                    vec![request.answered(Err(refused.error))]
+                    Ok(vec![request.answered(Err(refused.error))])
                 }
             }
-            reply => vec![request.answered(reply.map_err(|refused| refused.error))],
+            reply => Ok(vec![
+                request.answered(reply.map_err(|refused| refused.error)),
+            ]),
         }
     }
 }
 
-fn agent(policy: RetryPolicy) -> ureq::Agent {
+fn agent(policy: RetryPolicy) -> transport::Agent {
     let config = ureq::Agent::config_builder()
         .http_status_as_error(false)
         .max_redirects(0)

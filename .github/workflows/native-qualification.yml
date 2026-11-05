@@ -228,7 +228,7 @@ jobs:
         if: always()
         # The previous preparation took 22m22 of this job's 180m budget.
         # This leaves about seven minutes for diagnostics at that preparation time.
-        # The gate has a 45m per-stage watchdog: M5 gate 1014s, SDKs 615s, Rust tests 217s.
+        # The gate has a 45m per-stage watchdog: local Mac gate 1014s, SDKs 615s, Rust tests 217s.
         timeout-minutes: 150
         env:
           THINKTHEN_GATE_DIAGNOSTICS: ${{ runner.temp }}/gate-diagnostics

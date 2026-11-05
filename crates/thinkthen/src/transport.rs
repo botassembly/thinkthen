@@ -12,7 +12,42 @@ mod socket;
 mod socket_tests;
 mod tls;
 
-pub(crate) fn agent(config: ureq::config::Config) -> ureq::Agent {
+#[derive(Debug)]
+pub(crate) struct Agent {
+    inner: ureq::Agent,
+    unsupported_proxy: Option<&'static str>,
+}
+
+pub(crate) fn agent(config: ureq::config::Config) -> Agent {
+    let unsupported_proxy = config.proxy().and_then(|proxy| {
+        use ureq::ProxyProtocol::{Socks4, Socks4A, Socks5, Socks5h};
+        if !matches!(proxy.protocol(), Socks4 | Socks4A | Socks5 | Socks5h) {
+            return None;
+        }
+        // Identify the selected environment setting without retaining its secrets.
+        [
+            "ALL_PROXY",
+            "all_proxy",
+            "HTTPS_PROXY",
+            "https_proxy",
+            "HTTP_PROXY",
+            "http_proxy",
+        ]
+        .into_iter()
+        .find(|variable| {
+            std::env::var(variable)
+                .ok()
+                .and_then(|value| ureq::Proxy::new(&value).ok())
+                .is_some_and(|candidate| candidate.uri() == proxy.uri())
+        })
+    });
+    Agent {
+        inner: connect_agent(config),
+        unsupported_proxy,
+    }
+}
+
+fn connect_agent(config: ureq::config::Config) -> ureq::Agent {
     use ureq::unversioned::transport::{ConnectProxyConnector, Connector};
     let connector =
         ().chain(ConnectProxyConnector::default())
@@ -58,7 +93,7 @@ impl Refused {
 }
 
 pub(crate) fn post(
-    agent: &ureq::Agent,
+    agent: &Agent,
     backend: &crate::backend::Remote,
     name: crate::BackendName,
     url: &str,
@@ -70,6 +105,22 @@ pub(crate) fn post(
         error,
         too_large: false,
     })?;
+    if uri.scheme_str() != Some("http")
+        && let Some(variable) = agent.unsupported_proxy
+        && agent
+            .inner
+            .config()
+            .proxy()
+            .is_some_and(|proxy| !proxy.is_no_proxy(&uri))
+    {
+        return Err(Refused {
+            error: Error::new(
+                ErrorKind::Transport,
+                format!("{variable} selects an unsupported SOCKS proxy; use an HTTP CONNECT proxy"),
+            ),
+            too_large: false,
+        });
+    }
     let security = if uri.scheme_str() == Some("http") {
         scope::Security::Loopback
     } else {
@@ -85,7 +136,7 @@ pub(crate) fn post(
             return Err(Refused::cancelled());
         }
         response::begin();
-        let request = fresh.as_ref().unwrap_or(agent).post(url);
+        let request = fresh.as_ref().unwrap_or(&agent.inner).post(url);
         // Admission permits plaintext only on loopback. Its key must stay local.
         let request = if uri.scheme_str() == Some("http") {
             request.config().proxy(None).build()
@@ -104,7 +155,7 @@ pub(crate) fn post(
             Err(error) => {
                 if !connection_retried && (before_send(&error) || response::stale(&error)) {
                     connection_retried = true;
-                    fresh = Some(self::agent(agent.config().clone()));
+                    fresh = Some(connect_agent(agent.inner.config().clone()));
                     continue;
                 }
                 return Err(Refused::transport(error, name));

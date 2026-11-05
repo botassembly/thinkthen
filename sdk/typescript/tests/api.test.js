@@ -126,7 +126,7 @@ test("keys never appear in inspect JSON source or errors", async () => {
 test("answered unsure and failed rows map probabilities detail and HTTP status without raw replies", async () => {
   const probability = 0.8731942765123456;
   const server = await backend(caseFor({}, [], [
-    { contains: '"bad"', status: 400, body: {} },
+    { contains: '"bad"', status: 501, body: {} },
     { answer: { type: "choice", probabilities: { billing: probability, shipping: 1 - probability } } },
   ]));
   const client = new sdk.ThinkThen({ backend: "systemone", url: server.url, batch: 1 });
@@ -144,7 +144,7 @@ test("answered unsure and failed rows map probabilities detail and HTTP status w
     assert(!Object.hasOwn(unsure, "answer"));
     assert.equal(failed.status, "failed");
     assert.equal(failed.error.code, "backend.status");
-    assert.equal(failed.error.httpStatus, 400);
+    assert.equal(failed.error.httpStatus, 501);
     assert(!Object.hasOwn(failed, "answer"));
     for (const row of [answered, unsure, failed]) {
       assert.equal(row.function, "choose");

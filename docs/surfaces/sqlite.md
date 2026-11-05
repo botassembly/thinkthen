@@ -23,8 +23,6 @@ FROM thinkthen_decide('SELECT msg_id AS id, body AS record FROM messages WHERE m
                       'Does the customer request a refund?');
 ```
 
-<!-- capture: real-backend output of the query above. -->
-
 `is_refund` is 1 or 0 when `status` is `answered`. It is NULL when `status` is `unsure` or `failed`. The other examples on this page use the same `messages` table.
 
 ## Load the extension
@@ -98,8 +96,6 @@ WHERE msg_id IN (SELECT id FROM thinkthen_filter(
   'Does the customer request a refund?'))
 ORDER BY msg_id;
 ```
-
-<!-- capture: real-backend output of the query above. -->
 
 If any record fails, filter returns the kept rows, then raises one error. The error names how many records failed, the first failed position and its code, and the statement fails, so `CREATE TABLE ... AS` saves nothing. `failures = 'row'` returns each failed record as a row with `status = 'failed'` instead, so the answers you paid for are kept, unless the backend failed every record:
 
@@ -275,8 +271,6 @@ WHERE field = '/text';
 SELECT * FROM refund_answers_by_ticket ORDER BY position;
 ```
 
-<!-- capture: real-backend output of the final SELECT above. -->
-
 `id` keeps the JSON id's type: `"a1"` comes back as TEXT `a1`, and a number as INTEGER, so it joins to your own key as it is. An integer too large for SQLite's 64-bit integers comes back as TEXT digits. A record that is JSON `null`, or has no `text` field, fails as `record.missing`.
 
 A JSON array in one cell is one record, not several. Text read without `format = 'json'` or `field` is judged as text, even when it looks like JSON. In a pointer, write `/` in a key as `~1` and `~` as `~0`.
@@ -297,7 +291,7 @@ A JSON array in one cell is one record, not several. Text read without `format =
 | `threshold = 0.8` | decide, filter, choose, tag, find, recognize, relate | Sets the cut an answer must reach. |
 | `low = 0.2 AND high = 0.8` | decide, filter, choose | Sets a band. Decide answers no below `low`, yes at or above `high`, and not sure between them. |
 | `top = 5` | rank | Keeps the first five ranks. |
-| `yes_means = '...'`, `no_means = '...'` | decide | Says what yes and no mean for this question. |
+| `yes_means = '...'`, `no_means = '...'` | decide, filter | Says what yes and no mean for this question. |
 | `descriptions = '{"billing": "Invoices, fees and refunds."}'` | choose, tag, score, rank | Describes some or all options or levels. A key that is not an option or level is refused. |
 | `failures = 'row'` | filter | Returns failed records as rows instead of raising, unless the backend failed every record. `'raise'` is the default. |
 | `name = 'refund-check'` | all | Names the question in `source`. |

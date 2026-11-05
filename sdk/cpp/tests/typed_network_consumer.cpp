@@ -89,7 +89,17 @@ static void cancelled_stream(const tt::settings& config, std::size_t read_bound 
     assert(published == 0 && failure);
     try { std::rethrow_exception(failure); }
     catch (const tt::error& error) { assert(code_name(error.code()) == "local.cancelled"); }
-    assert(rows.begin() == rows.end());
+    for (int attempt = 0; attempt != 2; ++attempt) {
+        bool threw = false;
+        try { (void)rows.next(); }
+        catch (const tt::error& error) {
+            threw = true;
+            assert(code_name(error.code()) == "local.cancelled");
+        }
+        assert(threw);
+    }
+    rows.close();
+    assert(!rows.next());
 }
 
 int main(int argc, char** argv) {

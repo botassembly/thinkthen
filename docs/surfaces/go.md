@@ -123,7 +123,7 @@ func main() {
 How not sure and failures arrive:
 
 - `Answer()` on a row, and `tt.Answer(row, err)` on a one-record call, return the typed answer, or `tt.ErrUnsure`, or the error. A not-sure or failed message never reads as `false`.
-- A failed record is a row, not a call error: `client.Decide` returns it with a nil `err`, and `Answer()` returns its error. In an `All` loop, a failed record arrives as a row and the loop goes on. The loop's own `err` means the call failed, and the loop ends after it.
+- A failed record is a row, not a call error: `client.Decide` returns it with a nil `err`, and `Answer()` returns its error. The one exception is an empty or blank record in a one-record call: `client.Decide` returns the failed row and its `record.empty` error as `err`. In an `All` loop, a failed record arrives as a row and the loop goes on. The loop's own `err` means the call failed, and the loop ends after it.
 - `errors.Is` matches a failure's family: `tt.ErrUsage`, `tt.ErrRecord`, `tt.ErrBackend`, `tt.ErrLocal` or `tt.ErrInternal`. It also matches an exact code, such as `tt.CodeRecordMissing`. `errors.As(err, &failure)` with `var failure *tt.Error` gives `failure.Code()` and `failure.HTTPStatus()`.
 - A call on a closed client returns `tt.ErrClosed`.
 - `fmt.Println(row)` prints the answer and its probability, `unsure`, or `failed:` with the code and reason.

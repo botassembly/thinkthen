@@ -56,6 +56,94 @@ fn rows_workbook(path: &Path, bodies: &[&str]) {
 }
 
 #[test]
+fn failed_in_place_filter_leaves_the_original_table_and_existing_backup_untouched() {
+    for (format, separator) in [("csv", ","), ("tsv", "\t"), ("xlsx", "")] {
+        for bodies in [vec!["refund please", "boom", "no thanks"], vec!["boom"]] {
+            let directory = TempDir::new().unwrap();
+            let input = directory.path().join(format!("messages.{format}"));
+            let original = format!(
+                "\u{feff}Body{separator}Code\r\n{}",
+                bodies
+                    .iter()
+                    .enumerate()
+                    .map(|(index, body)| format!("\"{body}\"{separator}{index:03}"))
+                    .collect::<Vec<_>>()
+                    .join("\r\n")
+            );
+            if format == "xlsx" {
+                rows_workbook(&input, &bodies);
+            } else {
+                fs::write(&input, original.as_bytes()).unwrap();
+            }
+            let original = fs::read(&input).unwrap();
+            let backup = directory.path().join(format!("messages.backup.{format}"));
+            fs::write(&backup, b"previous backup").unwrap();
+            let mut options = vec!["--from", format, "--in-place"];
+            if format == "xlsx" {
+                options.extend(["--sheet", "Intake"]);
+            }
+            let output = judge(&server(), "filter", &input, &options);
+            assert_eq!(output.status.code(), Some(6), "{output:?}");
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert!(stderr.contains("1 rows failed"), "{stderr}");
+            assert_eq!(fs::read(&input).unwrap(), original);
+            assert_eq!(fs::read(&backup).unwrap(), b"previous backup");
+            assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
+        }
+    }
+}
+
+#[test]
+fn in_place_filter_reports_transport_failed_rows_without_replacing_the_source() {
+    let directory = TempDir::new().unwrap();
+    let input = directory.path().join("messages.csv");
+    let original = b"Body\nrefund please\nno thanks\n";
+    fs::write(&input, original).unwrap();
+    let server = crate::loopback::UnavailableBackend::new().unwrap();
+    let output = support::command()
+        .args(["filter", "Refund?", "--url", server.base()])
+        .arg(&input)
+        .args(["--column", "Body", "--into", "refund", "--in-place"])
+        .env("THINKTHEN_API_KEY", KEY)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(6), "{output:?}");
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(stderr.contains("backend.transport"), "{stderr}");
+    assert!(stderr.contains("2 rows failed"), "{stderr}");
+    assert_eq!(fs::read(&input).unwrap(), original);
+    assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
+}
+
+#[test]
+fn successful_in_place_filter_keeps_yes_rows_and_backs_up_the_original() {
+    for (format, separator) in [("csv", ","), ("tsv", "\t")] {
+        let directory = TempDir::new().unwrap();
+        let input = directory.path().join(format!("messages.{format}"));
+        let original = "Body\nrefund please\nmaybe later\nno thanks\nrefund now\n";
+        fs::write(&input, original).unwrap();
+        let output = judge(
+            &server(),
+            "filter",
+            &input,
+            &["--from", format, "--in-place"],
+        );
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        assert_eq!(
+            fs::read_to_string(&input).unwrap(),
+            format!(
+                "Body{separator}refund\nrefund please{separator}TRUE\nrefund now{separator}TRUE\n"
+            )
+        );
+        assert_eq!(
+            fs::read_to_string(directory.path().join(format!("messages.backup.{format}"))).unwrap(),
+            original
+        );
+        assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 2);
+    }
+}
+
+#[test]
 fn not_sure_and_failed_rows_are_missing_values_never_false() {
     let directory = TempDir::new().unwrap();
     let server = server();

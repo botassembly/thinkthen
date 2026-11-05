@@ -4,6 +4,12 @@ set -eu
 cd "$(dirname "$0")/../.."
 . scripts/native-tools-env
 case ${1:-check} in
+  pages-installers)
+    python3 site/scripts/pages-installers-test.py
+    actionlint .github/workflows/pages.yml
+    git diff --check
+    exit
+    ;;
   node-version-refusal)
     scratch=$(mktemp -d)
     trap 'status=$?; trap - EXIT; set +e; rm -rf "$scratch"; exit "$status"' EXIT

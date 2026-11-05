@@ -3,36 +3,31 @@
 set -eu
 cd "$(dirname "$0")/.."
 failed=
+report_scope=gate
+report_label="gate stage"
+report_summary="Failed gate stages:"
 stage_timeout=${THINKTHEN_GATE_STAGE_TIMEOUT_SECONDS:-}
 if [ -z "$stage_timeout" ]; then
-    # M5: whole gate 1014s, SDK stage 615s, Rust tests 217s. Allow 45m per Mac stage.
+    # A local Mac: whole gate 1014s, SDK stage 615s, Rust tests 217s. Allow 45m per Mac stage.
     case "$(uname -s)" in Darwin) stage_timeout=2700 ;; *) stage_timeout=0 ;; esac
 fi
 case "$stage_timeout" in *[!0-9]*|'') echo 'gate stage timeout must be whole seconds' >&2; exit 2 ;; esac
 diagnostics=${THINKTHEN_GATE_DIAGNOSTICS:-$PWD/target/gate-diagnostics}
 mkdir -p "$diagnostics"
-gate_scratch=$(mktemp -d)
-trap 'status=$?; trap - EXIT; rm -rf "$gate_scratch" || :; exit "$status"' EXIT
+. scripts/gate-report
+trap 'exit_status=$?; trap - EXIT; report_finish; exit "$exit_status"' EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
-mkfifo "$gate_scratch/output"
 stage() {
     name=$1
     shift
     started=$(date +%s)
     printf 'Gate stage: %s (start %s)\n' "$name" "$started" | tee -a "$diagnostics/stages.log"
-    tee "$diagnostics/running-stage.log" < "$gate_scratch/output" &
-    output_pid=$!
     if [ "$stage_timeout" -ne 0 ]; then
         set -- python3 scripts/gate-stage "$stage_timeout" "$name" "$@"
     fi
-    if "$@" > "$gate_scratch/output" 2>&1; then
-        status=0
-    else
-        status=$?
-    fi
-    wait "$output_pid"
+    report_run "$diagnostics/running-stage.log" "$@"
     ended=$(date +%s)
     elapsed=$(( ended - started ))
     printf 'Gate stage ended: %s (end %s; exit %s; elapsed %s seconds)\n' "$name" "$ended" "$status" "$elapsed" >> "$diagnostics/stages.log"
@@ -40,7 +35,8 @@ stage() {
         printf 'Passed gate stage: %s (elapsed %s seconds)\n' "$name" "$elapsed"
     else
         printf 'Failed gate stage: %s (exit %s; elapsed %s seconds)\n' "$name" "$status" "$elapsed" >&2
-        tail -n 50 "$diagnostics/running-stage.log" > "$diagnostics/$name.tail"
+        report_save "$diagnostics/running-stage.log"
+        cp "$report_scratch/tail" "$diagnostics/$name.tail"
         failed="$failed $name"
     fi
 }
@@ -85,11 +81,4 @@ stage sql-bridge-gate scripts/sql-bridge-gate
 stage abi-platform-routing-test scripts/abi-platform-routing-test
 stage abi-minor-check sh -eu -c 'scripts/abi-minor-check --native "${THINKTHEN_NATIVE_LIBRARY:?Provide the verified host native library}" --bindings-only'
 stage sdk-gates scripts/sdk-gates
-if [ -n "$failed" ]; then
-    printf 'Failed gate stages:%s\n' "$failed" >&2
-    for name in $failed; do
-        printf '\nLast 50 lines of failed gate stage: %s\n' "$name" >&2
-        cat "$diagnostics/$name.tail" >&2
-    done
-    exit 1
-fi
+[ -z "$failed" ] || exit 1

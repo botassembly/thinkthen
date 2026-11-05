@@ -39,7 +39,7 @@ The first argument is the query to judge, as text. Its `record` column holds the
 
 Each run of a query asks again and is billed again, so save answers you need twice with `CREATE TABLE refund_answers AS SELECT ...` and query that table.
 
-To move from 0.1.0, copy these files over the old ones and run `ALTER EXTENSION thinkthen UPDATE;` in each database. It replaces the 0.1.0 functions with the ten below.
+To move from a 0.1 test build, back up first, then drop and recreate the extension as the [PostgreSQL guide](https://github.com/botassembly/thinkthen/blob/v0.2.0/docs/surfaces/postgresql.md#move-from-a-01-build) shows.
 
 ## When decide is not sure
 

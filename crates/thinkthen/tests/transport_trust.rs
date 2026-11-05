@@ -115,6 +115,32 @@ fn connect_tunnels_tls_without_exposing_the_backend_key() {
 }
 
 #[test]
+fn no_proxy_bypasses_socks_for_matching_tls_destinations() {
+    let fixture = trust::Certificates::new();
+    let directory = tempfile::tempdir().unwrap();
+    let ca = directory.path().join("ca.pem");
+    std::fs::write(&ca, fixture.root.pem()).unwrap();
+    for variable in ["NO_PROXY", "no_proxy"] {
+        let server = fixture.server();
+        let output = isolated_child()
+            .env("THINKTHEN_TEST_URL", &server.url)
+            .env("THINKTHEN_TEST_ANSWERED", "true")
+            .env("THINKTHEN_CA_FILE", &ca)
+            .env("ALL_PROXY", "socks5://127.0.0.1:1080")
+            .env(variable, "127.0.0.1")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(server.finish().contains(KEY));
+    }
+}
+
+#[test]
 fn trusted_roots_still_require_the_server_name_and_validity() {
     let wrong_name = rcgen::CertificateParams::new(vec!["another.invalid".to_owned()]).unwrap();
     let mut expired = rcgen::CertificateParams::new(vec!["127.0.0.1".to_owned()]).unwrap();

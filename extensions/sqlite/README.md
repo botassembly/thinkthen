@@ -4,7 +4,7 @@ The SQLite extension adds the ten functions to SQLite as table-valued functions.
 
 ## Install
 
-Download the SQLite archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#verify-a-download), and extract it into a folder of its own. Start `sqlite3` in that folder:
+Download the SQLite archive for your platform from the [0.2.0 release](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0), [verify it](https://thinkthen.dev/install/#download-a-release-file), and extract it into a folder of its own. Start `sqlite3` in that folder:
 
 ```sh
 mkdir thinkthen-sqlite
@@ -42,6 +42,16 @@ FROM thinkthen_decide(
 
 Output:
 
+```text
+┌────────┬───────────┬──────────┐
+│ msg_id │ is_refund │  status  │
+├────────┼───────────┼──────────┤
+│ 1      │ 1         │ answered │
+│ 2      │ 0         │ answered │
+│ 3      │ 1         │ answered │
+└────────┴───────────┴──────────┘
+```
+
 The source query names the text `record` and the key `id`, and `id` comes back with your key's type, so it joins straight back to `messages`.
 
 ## Not sure and failures
@@ -58,6 +68,16 @@ WHERE low = 0.2 AND high = 0.8;
 ```
 
 Output:
+
+```text
+┌────────┬───────────┬──────────┐
+│ msg_id │ is_refund │  status  │
+├────────┼───────────┼──────────┤
+│ 1      │ 1         │ answered │
+│ 2      │ 0         │ answered │
+│ 3      │           │ unsure   │
+└────────┴───────────┴──────────┘
+```
 
 Test the answer with `IS TRUE` and `IS FALSE`, never with `coalesce(is_refund, 0)`, which turns not sure and failures into no.
 

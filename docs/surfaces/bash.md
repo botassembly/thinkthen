@@ -6,7 +6,7 @@ The one-line installer adds its command folder to your shell profiles for new te
 
 A whole JSON null record, a record without the selected field, or a selected field containing JSON null, such as `{"text":null}` with `/text`, returns a failed `record.missing` row locally and sends no HTTP request for that record. An empty or blank selected value, such as `""`, `{}` or `[]`, returns a failed `record.empty` row the same way. Invalid records return failed `record.*` rows. Pass every record to the collection call to retain false answers and failed rows.
 
-ThinkThen judges field with ten functions. Use Bash and install the command with `curl -fsSL https://thinkthen.dev/install.sh | sh`, or run `brew install botassembly/thinkthen/thinkthen`. See the [release downloads](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) for other platforms and runtime requirements.
+ThinkThen judges text with ten functions. Use Bash and install the command with `curl -fsSL https://thinkthen.dev/install.sh | sh`, or run `brew install botassembly/thinkthen/thinkthen`. See the [release downloads](https://github.com/botassembly/thinkthen/releases/tag/v0.2.0) for other platforms and runtime requirements.
 
 A normal call uses the default backend and reads its key from `THINKTHEN_API_KEY`. Supply the key through your environment or secret manager. Keep it out of scripts, output and reports.
 
@@ -57,7 +57,7 @@ jq -s 'length' outcomes.jsonl
 jq -c '{id, status, answer, error}' outcomes.jsonl
 ```
 
-For field spanning several fields, put those fields under one object and select that object. A pointer selects one value, which can itself be an object. For example, a record can be `{"id":"a1","message":{"subject":"Invoice refund","body":"Please refund my order."}}`; `--field /message` judges both subject and body while preserving the outer ID. Use `jq -c '{id, message: {subject, body}}' source.jsonl > messages.jsonl` to build that shape from existing fields, or repeat `--field`: `--field /subject --field /body` judges an object keyed by each pointer's last name, here `subject` and `body`.
+For text spanning several fields, put those fields under one object and select that object. A pointer selects one value, which can itself be an object. For example, a record can be `{"id":"a1","message":{"subject":"Invoice refund","body":"Please refund my order."}}`; `--field /message` judges both subject and body while preserving the outer ID. Use `jq -c '{id, message: {subject, body}}' source.jsonl > messages.jsonl` to build that shape from existing fields, or repeat `--field`: `--field /subject --field /body` judges an object keyed by each pointer's last name, here `subject` and `body`.
 
 Use the same `{id, text}` shape for a single record and for `messages.jsonl`. Retain `id` in saved result rows and join results by it. A row's position describes one call's input order; ranking changes output order. Spreadsheet output keeps original ID columns beside its answer columns.
 
@@ -150,11 +150,11 @@ An answered annotation row maps each question name to its own outcome. Inspect t
 
 Pass a whole record stream to one command so the engine can batch its questions. Avoid starting one process per record. `--batch` or `THINKTHEN_BATCH` controls packing; the engine also applies request size and backend limits. One row can require several backend questions. A batch is not a promise about the number of network requests. A backend error status or an unreadable reply answers a whole request, so it fails every record in that batch; a missing or out-of-range answer fails only its own record. Records that fail locally, such as `record.missing`, are never sent.
 
-When a task gives you a call or request-body budget, plan before making calls. Count records and named questions, select the field columns each question needs, and consider how much text each question repeats. Use one annotate command for several questions on the same records or spreadsheet. Keep the complete field needed by find, recognize and relate. Save completed output for later analysis instead of calling again to format a report. Batching reduces request overhead; it does not remove the questions or field bytes the backend must receive. Task budgets belong to the task and do not change product limits.
+When a task gives you a call or request-body budget, plan before making calls. Count records and named questions, select the text columns each question needs, and consider how much text each question repeats. Use one annotate command for several questions on the same records or spreadsheet. Keep the complete text needed by find, recognize and relate. Save completed output for later analysis instead of calling again to format a report. Batching reduces request overhead; it does not remove the questions or text bytes the backend must receive. Task budgets belong to the task and do not change product limits.
 
-XLSX date and time formats become ISO 8601 field text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values.
+XLSX date and time formats become ISO 8601 text. Elapsed times become ISO 8601 durations. Date-time and clock values carry no timezone. Fractional seconds round to milliseconds. Excel’s fictitious leap day becomes `1900-02-29 (Excel fictitious leap day)`. A date-time on that day includes its time before the note. Plain numbers and percentages keep their stored values. Locale-specific built-in formats 27–36 and 50–58 keep their stored values.
 
-CSV, TSV and XLSX inputs require at least one `--column`. One column supplies its cell as the field text for every function, annotate included, and replaces any field pointer a saved question or toolbox carries, so the `/text` pointer in `questions.json` gives way to `--column text`. Several columns supply an object with the column names as keys; each saved pointer must then name one of those columns, or the command exits 2 before any call. Don't pass `--field` with a single `--column`.
+CSV, TSV and XLSX inputs require at least one `--column`. One column supplies its cell as the text for every function, annotate included, and replaces any field pointer a saved question or toolbox carries, so the `/text` pointer in `questions.json` gives way to `--column text`. Several columns supply an object with the column names as keys; each saved pointer must then name one of those columns, or the command exits 2 before any call. Don't pass `--field` with a single `--column`.
 
 ```bash
 thinkthen decide 'Does the customer request a refund?' messages.csv \
@@ -184,7 +184,7 @@ thinkthen filter 'Does the customer request a refund?' messages.csv \
   --column text --into is_refund --output refunds.csv
 ```
 
-Filter writes only the kept rows to CSV and TSV, as `csvgrep` does. In xlsx it keeps every row, hides the rows it did not keep, and adds an AutoFilter on the answer column, so formulas that point at rows still work. Rank attaches ranks without sorting spreadsheet rows. Output files must be new. Without `--output`, a file input produces a sibling filename with `.thinkthen` before its extension. `--in-place` replaces the source after keeping a backup. Table choices come only from options, never from environment variables. Use saved formula values or plain text for selected field cells.
+Filter writes only the kept rows to CSV and TSV, as `csvgrep` does. In xlsx it keeps every row, hides the rows it did not keep, and adds an AutoFilter on the answer column, so formulas that point at rows still work. Rank attaches ranks without sorting spreadsheet rows. Output files must be new. Without `--output`, a file input produces a sibling filename with `.thinkthen` before its extension. `--in-place` replaces the source after keeping a backup. Filter with `--in-place` replaces nothing when any row fails: the source stays byte-for-byte unchanged, no backup is written, and the command exits 6 and says how many rows failed. This holds for CSV, TSV and xlsx. Table choices come only from options, never from environment variables. Use saved formula values or plain text for selected field cells.
 
 A saved entry runs on a table the same way, and a single `--column` replaces its field pointer. Save this one-entry toolbox as `toolbox.json`:
 
@@ -216,14 +216,14 @@ Call relate alone when you need names and relations from the same field. Its JSO
 
 ## Failures and cancellation
 
-Read standard output for results and standard error for diagnostics. Each library diagnostic has a stable dotted code and a message. Record failures, including nested annotation failures, yield exit 6 after the stream completes. If every row failed with a backend error, the command exits 4; this also applies to table files. A `backend.transport` failure before any row is written stops the command at once with exit 4 and nothing on standard output, even with `--json`. Failed rows remain in JSON output. A table call still publishes its file when rows fail. Standard error names each of the first 20 failed rows by its spreadsheet row number, where the header is row 1, as `thinkthen: CODE: row N: message`, counts any more, and then says how many rows were not sure and how many failed. Add `--details` to keep each error in the table. When the backend refuses a batch after its retries, every row in that batch fails. A call-level failure or cancellation does not publish a partial spreadsheet.
+Read standard output for results and standard error for diagnostics. Each library diagnostic has a stable dotted code and a message. Record failures, including nested annotation failures, yield exit 6 after the stream completes. If every row failed with a backend error, the command exits 4; this also applies to table files. A `backend.transport` failure before any row is written stops the command at once with exit 4 and nothing on standard output, even with `--json`. Failed rows remain in JSON output. A table call still publishes its file when rows fail, except filter with `--in-place`, which leaves the source unchanged. Standard error names each of the first 20 failed rows by its spreadsheet row number, where the header is row 1, as `thinkthen: CODE: row N: message`, counts any more, and then says how many rows were not sure and how many failed. Add `--details` to keep each error in the table. When the backend refuses a batch after its retries, every row in that batch fails. A call-level failure or cancellation does not publish a partial spreadsheet.
 
 Stop a scripted workload after any nonzero call status. Capture output before inspecting or exporting it, and keep the failed output for diagnosis. This example stops before any later command can make another call:
 
 ```bash
 set -euo pipefail
 if thinkthen annotate questions.json messages.jsonl --json > outcomes.jsonl; then
-  printf '%s\n' 'Completed; outcomes.jsonl contains the field.'
+  printf '%s\n' 'Completed; outcomes.jsonl contains the results.'
 else
   status=$?
   printf 'ThinkThen failed with exit %s; inspect outcomes.jsonl and the diagnostic.\n' "$status" >&2

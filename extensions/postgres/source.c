@@ -113,10 +113,10 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
             bool id_null;
             Oid type = TupleDescAttr(SPI_tuptable->tupdesc, owner->id_column - 1)->atttypid;
             Datum id_value = SPI_getbinval(SPI_tuptable->vals[index], SPI_tuptable->tupdesc, owner->id_column, &id_null);
-            TtId *entry = hash_search(owner->ids, &owner->input_position, HASH_ENTER, NULL);
-            char *encoded = "null";
-            size_t id_length;
             if (!id_null) {
+                TtId *entry = hash_search(owner->ids, &owner->input_position, HASH_ENTER, NULL);
+                char *encoded;
+                size_t id_length;
                 Oid output;
                 bool variable;
                 getTypeOutputInfo(type, &output, &variable);
@@ -129,11 +129,11 @@ void tt_fetch(TtOwner *owner, uint32 kind, MemoryContext fetch_context)
                     escape_json(&quoted, encoded);
                     encoded = quoted.data;
                 }
+                encoded = tt_utf8(encoded, strlen(encoded), &id_length);
+                entry->value.data = (char *)MemoryContextAlloc(owner->id_context, id_length);
+                memcpy((void *)entry->value.data, encoded, id_length);
+                entry->value.len = id_length;
             }
-            encoded = tt_utf8(encoded, strlen(encoded), &id_length);
-            entry->value.data = (char *)MemoryContextAlloc(owner->id_context, id_length);
-            memcpy((void *)entry->value.data, encoded, id_length);
-            entry->value.len = id_length;
         }
         if (is_null) {
             records[index].kind = THINKTHEN_RECORD_MISSING;

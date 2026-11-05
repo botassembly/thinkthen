@@ -8,6 +8,7 @@ import runpy
 import subprocess
 import sys
 import tempfile
+import tarfile
 import unittest
 import urllib.error
 from unittest.mock import patch
@@ -60,6 +61,35 @@ class PagesInstallers(unittest.TestCase):
         (self.dist / 'CNAME').symlink_to(outside)
         self.assertNotEqual(self.restore().returncode, 0)
         self.assertEqual(outside.read_bytes(), b'owned bytes')
+
+    def verify(self, entries):
+        artifact = self.root / 'artifact.tar'
+        with tarfile.open(artifact, 'w') as archive:
+            for name, body in entries:
+                member = tarfile.TarInfo(name)
+                member.size = len(body)
+                archive.addfile(member, io.BytesIO(body))
+        return subprocess.run([sys.executable, SCRIPT, 'verify', artifact,
+                               '--expected-sha', DIGEST], capture_output=True)
+
+    def test_deploy_accepts_the_downloaded_pages_tar(self):
+        result = self.verify([('./index.html', b'new docs'), ('./install.sh', OLD),
+                              ('./CNAME', b'thinkthen.dev\n')])
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_deploy_rejects_changed_or_missing_held_files_in_tar(self):
+        approved = [('install.sh', OLD), ('CNAME', b'thinkthen.dev\n')]
+        cases = [
+            [('install.sh', b'changed'), approved[1]],
+            [approved[1]],
+            [*approved, ('install.ps1', b'unreleased')],
+            [*approved, ('./install.sh', b'duplicate')],
+            [approved[0], ('CNAME', b'another.example\n')],
+            [*approved, ('../install.ps1', b'unsafe path')],
+        ]
+        for entries in cases:
+            with self.subTest(entries=[name for name, _ in entries]):
+                self.assertNotEqual(self.verify(entries).returncode, 0)
 
     def capture(self, responses):
         destination = self.root / 'captured'

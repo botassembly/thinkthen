@@ -42,7 +42,7 @@ Where the new table goes depends on how you give the file:
 | `--from csv < messages.csv` | the screen, as above |
 | `messages.csv` | a new file beside it, `messages.thinkthen.csv`, and the command prints that name |
 | `messages.csv --output reviewed.csv` | `reviewed.csv` |
-| `messages.csv --in-place` | `messages.csv` itself, after it keeps the original as `messages.backup.csv` |
+| `messages.csv --in-place` | `messages.csv` itself, after it keeps the original as `messages.backup.csv`. If filter fails on any row, `messages.csv` stays as it was and the command exits 6 |
 
 ThinkThen never overwrites an output file. If `messages.thinkthen.csv` already exists, the command stops with exit code 2; choose a new `--output` name or remove the old file. Repeat `--column` to judge several columns of each row together. `--details` adds five more columns for each answer, such as its status and probability.
 

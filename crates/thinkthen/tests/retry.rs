@@ -67,24 +67,25 @@ fn retryable_statuses_retry_up_to_the_policy_limit() {
     for status in [429, 500, 502, 503, 504, 529, 400, 401, 403, 408, 501] {
         for max_retries in [0, 1, 2] {
             let server = Loopback::start(move |_| Reply::json(status, &json!({}))).unwrap();
-            assert_eq!(
-                run(
-                    &settings(server.base())
-                        .retry(
-                            Retry::new(
-                                max_retries,
-                                Duration::from_millis(1),
-                                Duration::from_secs(2)
-                            )
-                            .unwrap()
+            let result = run(
+                &settings(server.base())
+                    .retry(
+                        Retry::new(
+                            max_retries,
+                            Duration::from_millis(1),
+                            Duration::from_secs(2),
                         )
-                        .engine(|_| None)
                         .unwrap(),
-                    &["one"]
-                )
-                .unwrap()[0]["error"]["code"],
-                "backend.status"
+                    )
+                    .engine(|_| None)
+                    .unwrap(),
+                &["one"],
             );
+            if (400..500).contains(&status) {
+                assert_eq!(result.unwrap_err().http_status(), Some(status));
+            } else {
+                assert_eq!(result.unwrap()[0]["error"]["code"], "backend.status");
+            }
             let expected = if matches!(status, 429 | 500 | 502 | 503 | 504 | 529) {
                 max_retries + 1
             } else {
@@ -115,8 +116,13 @@ fn oversized_requests_split_their_questions_only_once() {
                 }
             })
             .unwrap();
-            let rows = run(&engine(&server), &["one", "two", "three", "four", "four"]).unwrap();
+            let result = run(&engine(&server), &["one", "two", "three", "four", "four"]);
             assert_eq!(server.count(), 3);
+            if refuse_halves {
+                assert_eq!(result.unwrap_err().http_status(), Some(status));
+                continue;
+            }
+            let rows = result.unwrap();
             assert_eq!(
                 rows.iter()
                     .map(|row| row["position"].as_u64().unwrap())
@@ -144,14 +150,16 @@ fn oversized_requests_split_their_questions_only_once() {
     }
     let server = Loopback::start(|_| Reply::json(400, &json!({"error":"other"}))).unwrap();
     assert_eq!(
-        run(&engine(&server), &["one", "two"]).unwrap()[0]["status"],
-        "failed"
+        run(&engine(&server), &["one", "two"])
+            .unwrap_err()
+            .http_status(),
+        Some(400)
     );
     assert_eq!(server.count(), 1);
     let server = Loopback::start(|_| Reply::json(413, &json!({}))).unwrap();
     assert_eq!(
-        run(&engine(&server), &["one"]).unwrap()[0]["status"],
-        "failed"
+        run(&engine(&server), &["one"]).unwrap_err().http_status(),
+        Some(413)
     );
     assert_eq!(server.count(), 1);
 }
@@ -291,11 +299,11 @@ fn openai_does_not_split_on_a_system_one_error_code() {
         .batch("50".parse().unwrap())
         .engine(|_| panic!("explicit settings must not consult environment"))
         .unwrap();
-    let rows = run(&engine, &["first", "second"]).unwrap();
-    assert_eq!(rows.len(), 2);
-    assert!(
-        rows.iter()
-            .all(|row| row["error"]["code"] == "backend.status")
+    assert_eq!(
+        run(&engine, &["first", "second"])
+            .unwrap_err()
+            .http_status(),
+        Some(400)
     );
     assert_eq!(server.count(), 1);
 }

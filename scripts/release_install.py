@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import tarfile
 
+ROOT = Path(__file__).resolve().parent.parent
+
 from release_readme import package_readmes
 from release_python_dependencies import wheelhouse
 from native_platform import HOSTS, FIELDS
@@ -24,6 +26,14 @@ def r_archives(out):
     from release_r_dependencies import directories, refresh
     for folder in directories(out):
         refresh(folder)
+
+
+def known_limits():
+    """The release notes page's known-limits table, the one list both notes share."""
+    page = (ROOT / 'site/src/content/docs/reference/release-notes.mdx').read_text(encoding='utf-8')
+    table = page.split('\n## Known limits\n', 1)[1].split('\n## ', 1)[0].strip()
+    assert table.startswith('| Limit |') and f'DuckDB {DUCKDB_VERSION}' in table, 'release notes: known limits'
+    return table.replace('](/', '](https://thinkthen.dev/') + '\n'
 
 
 def install_note(out):
@@ -106,12 +116,12 @@ def release_note(version, platforms):
              'The options `--on-error`, `--plan`, `--dry-run`, `--timeout`, `--profile`, `--max-requests-total`, `--max-estimated-input-tokens-total`, `--facts`, `--context`, `--jobs`, `--max-retries`, `--max-request-bytes` and `--max-text-bytes` are removed. Remove them from scripts and review request limits and error handling against the current API.', '',
              'The old answer and question options `--raw`, `--option`, `--options`, `--relation`, `--relation-threshold`, `--kind-field` and `--none` are removed. For decide and filter, `--true TEXT` and `--false TEXT` describe what yes and no mean. Supply choices with `--choice` and scale levels with `--level`; `--label` and `--kind` take names rather than the old NAME=DESCRIPTION syntax. Use `--rule` for relations. `--quiet` now hides notices and progress; use `--check` when a supported command should return its answer as an exit code. Rewrite saved question files and `@FILE` callers as current toolboxes and `thinkthen run` entries.', '',
              f'Intel macOS and static musl Linux builds are no longer supplied. Use Apple Silicon on macOS and glibc Linux builds with glibc {FLOORS["linux"]["glibc"]} or newer; Swift has the separate floor listed below.', '',
-             'The built-in backend names are now `systemone`, `openai` and `stub`. The 0.1.2 names `typesafe`, `liquid` and `ollama` are no longer built in. Select `systemone` for the default TypeSafe service and configure your client again for the selected backend.', '',
+             'The built-in backend names are now `systemone`, `openai` and `stub`. The 0.1.2 names `typesafe`, `liquid` and `ollama` are no longer built in. Select `systemone` for the default System One service and configure your client again for the selected backend.', '',
              'Maven users replace `io.github.botassembly:thinkthen-jvm` with `io.github.botassembly:thinkthen-java` or `io.github.botassembly:thinkthen-kotlin`. Rust users use the single `thinkthen` crate for both the library and command. The Rust features `polars`, `bundled-sqlite` and `host-sqlite` are removed. Its default `command` feature replaces the old `cli` feature; the command installs with `cargo install thinkthen`.', '',
              'Go users replace imports of `github.com/botassembly/thinkthen/libraries/go` with `github.com/botassembly/thinkthen/sdk/go/thinkthen`. Language packages now carry their matching native engine; do not mix them with the separate native library from 0.1.2.', '',
              'The answer cache and the `--record`, `--replay`, `--cache`, `--no-cache` and `--refresh-cache` options from 0.1.2 are absent. Model-backed calls send their questions again. Use the offline `stub` backend for installation checks; it returns synthetic answers.', '',
              'Use the current surface guides when updating callers. The command selects a backend with `--backend` and structured output with `--json`. SDKs expose typed single-record results and collection APIs; compile callers against the current API and its matching native library.', '',
-             'For the command, `THINKTHEN_URL` sets the address for either backend. System One also reads `THINKTHEN_BASE_URL`. An explicit `--url` takes precedence over address variables. `OPENAI_BASE_URL` is not read.', '',
+             '`THINKTHEN_URL` sets only the System One address, taking precedence over `THINKTHEN_BASE_URL`. OpenAI reads `OPENAI_BASE_URL`. An explicit `--url` or SDK `Settings.url` overrides the address for the chosen backend, including when `THINKTHEN_BACKEND` chooses it. `THINKTHEN_MODEL` applies only to commands; in an SDK, set the model on your client.', '',
              '## Platforms and requirements', '',
              '| Platform | Minimum system libraries or operating system |',
              '| --- | --- |']
@@ -144,20 +154,8 @@ def release_note(version, platforms):
 
 Backend requests can incur charges even when a query returns fewer rows or is cancelled. Read these limits before making paid calls.
 
-| Surface or operation | Limit and action |
-| --- | --- |
-| SQLite joins and correlated subqueries | Putting a ThinkThen function on the inner side of a join or in a correlated subquery can execute it repeatedly and repeat paid backend calls. Materialize one standalone ThinkThen query into a temporary table before joining or querying its answers. Reexecuting any database query can make another paid call. |
-| DuckDB loading | The extension requires exactly DuckDB {duckdb} and unsigned extension loading. Start the CLI with `duckdb -unsigned` before `LOAD`. Other DuckDB versions are not supported by this binary. |
-| Unsigned macOS binaries | The binaries are unsigned and not notarized. After verifying the release checksum, remove quarantine from the extracted directory with `xattr -dr com.apple.quarantine /path/to/thinkthen` if macOS blocks loading or execution. Apply this only to the verified download. |
-| Unsigned Windows binaries | The binaries are unsigned. After verifying the release checksum, run `Unblock-File .\thinkthen-0.2.0-windows-x86_64.zip` in PowerShell before extraction. Windows policy may still block unsigned code. |
-| Database cancellation | Cancelling a DuckDB, SQLite or PostgreSQL run discards answers already obtained by that run. Backend charges for completed requests remain. Materialize completed results before later analysis; cancellation does not save a partial answer set for reuse. |
-| Cancellation on every surface | Cancellation stops future sends and closes the transport. Answers from paid requests already in flight can be lost. Refunds are not promised. |
-| PostgreSQL LIMIT | PostgreSQL materializes the function result before applying SQL LIMIT. LIMIT 1 can therefore pay for every input row; it is not a backend cost cap. |
-| DuckDB short LIMIT and input buffering | An outer LIMIT may wait for other requests or their timeout and may pay for rows it never returns. Put LIMIT inside the input subquery to bound input work. While a request is held, DuckDB can buffer one 2048-row input vector separately from the engine iterator's read-ahead bound. |
-| PostgreSQL correlated LATERAL | A correlated function invocation runs for each outer row and repeats paid backend work. The measured three-row LATERAL query sent three requests. Materialize one standalone ThinkThen query before joining its answers when the input and question can be reused. |
 """
-    lines[lines.index('## Platforms and requirements'):lines.index('## Platforms and requirements')] = [limits.replace('{duckdb}', DUCKDB_VERSION), '']
-    lines += [f'Resource observations are bounded measurements, not proof of leak-free operation. See the [resource observations](https://github.com/botassembly/thinkthen/blob/v{version}/docs/resource-observations.md) for completed soak intervals, measured rates and remaining uncertainty.', '']
+    lines[lines.index('## Platforms and requirements'):lines.index('## Platforms and requirements')] = [limits + known_limits(), '']
     return '\n'.join(lines)
 
 

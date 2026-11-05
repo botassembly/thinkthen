@@ -69,14 +69,24 @@ fi
 export CARGO_NET_OFFLINE=true UV_OFFLINE=1 npm_config_offline=true
 # Every selected slice runs even if another fails. Exit 77 is also a failure.
 failed=
+report_scope=source
+report_label="source gate stage"
+report_summary="Failed source gate stages:"
+report_filter='source-*'
+. scripts/gate-report
+trap 'exit_status=$?; trap - EXIT; report_finish; if [ -n "${source_scratch:-}" ]; then rm -rf "$source_scratch" || :; fi; exit "$exit_status"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 stage() {
     name=$1
     shift
     printf 'Source gate stage: %s\n' "$name"
-    if "$@"; then
+    report_run "$report_scratch/running.log" "$@"
+    if [ "$status" -eq 0 ]; then
         printf 'Passed source gate stage: %s\n' "$name"
     else
-        status=$?
+        report_save "$report_scratch/running.log"
         printf 'Failed source gate stage: %s (exit %s)\n' "$name" "$status" >&2
         failed="$failed $name"
     fi
@@ -117,10 +127,6 @@ case "$(uname -s)" in
 esac
 if [ "$shared_abi" = 1 ]; then
     source_scratch=$(mktemp -d)
-    trap 'status=$?; trap - EXIT; set +e; rm -rf "$source_scratch"; exit "$status"' EXIT
-    trap 'exit 129' HUP
-    trap 'exit 130' INT
-    trap 'exit 143' TERM
     # Ordinary consumers keep the feature-free library. SQL loopback fixtures
     # compile separately so their test interface never enters ordinary assets.
     fixture_target="$build_target/source-fixtures"
@@ -168,6 +174,5 @@ fi
 stage words scripts/words
 stage secrets scripts/secrets
 if [ -n "$failed" ]; then
-    printf 'Failed source gate stages:%s\n' "$failed" >&2
     exit 1
 fi

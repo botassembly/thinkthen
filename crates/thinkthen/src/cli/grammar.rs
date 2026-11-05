@@ -28,7 +28,7 @@ pub(super) fn command() -> Command {
             "Backend name [THINKTHEN_BACKEND; default: systemone]",
         ),
         ("model", "Model name [THINKTHEN_MODEL]"),
-        ("url", "Backend address [THINKTHEN_URL]"),
+        ("url", "Override the chosen backend address"),
         ("batch", "Texts per request [THINKTHEN_BATCH]"),
         (
             "from",
@@ -101,10 +101,15 @@ fn data_command(name: &str) -> Command {
     let spec = serde_json::from_value::<crate::FunctionName>(name.into())
         .ok()
         .map(crate::FunctionName::command);
+    let page = if name == "run" {
+        "command-line/toolboxes".to_owned()
+    } else {
+        format!("functions/{name}")
+    };
     let mut command = Command::new(name.to_owned())
         .before_help(super::help::examples(name))
         .after_help(format!(
-            "Reference: https://thinkthen.dev/functions/{name}/\n\n{}",
+            "Reference: https://thinkthen.dev/{page}/\n\n{}",
             environment_help()
         ));
     if let Some(spec) = &spec {
@@ -275,7 +280,7 @@ fn backends() -> String {
 
 fn environment_help() -> String {
     format!(
-        "{}\nCredentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_URL (both backends), THINKTHEN_BASE_URL (System One only); certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 backend failure; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe.",
+        "{}\nCredentials: THINKTHEN_API_KEY (System One), OPENAI_API_KEY (OpenAI).\nAddress: THINKTHEN_URL or THINKTHEN_BASE_URL (System One only), OPENAI_BASE_URL (OpenAI only); --url overrides the chosen backend; certificate authority: THINKTHEN_CA_FILE.\nExits: 0 success; 1 no (--check); 2 usage; 3 unsure (--check); 4 backend failure; 5 local or internal failure; 6 failed records; 130 cancelled; 141 broken pipe.",
         backends()
     )
 }

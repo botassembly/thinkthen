@@ -14,7 +14,7 @@ ThinkThen sends each question and its text to a model service, which answers it 
 |---|---|
 | A TypeSafe account, or no account yet | `THINKTHEN_API_KEY`. This is the default. |
 | An OpenAI account | `OPENAI_API_KEY` and `THINKTHEN_BACKEND=openai` |
-| A gateway or a model server of your own | `THINKTHEN_URL`, `THINKTHEN_MODEL` and the key it expects |
+| A gateway or a model server of your own | `THINKTHEN_URL` for System One or `OPENAI_BASE_URL` for OpenAI, plus the model and key it expects |
 
 An option on the command line wins over its variable. `--backend openai` on one command, for example, uses OpenAI for that command only.
 
@@ -74,7 +74,7 @@ export THINKTHEN_MODEL=my-model
 Three rules apply to the address:
 
 - It must use HTTPS, or plain HTTP to `localhost`, `127.0.0.1` or `[::1]`. Any other `http://` address stops with `usage.url` before a request is sent.
-- `THINKTHEN_URL` works for both backends. `THINKTHEN_BASE_URL` also sets the System One address, and `THINKTHEN_URL` or `--url` wins over it.
+- `THINKTHEN_URL` sets only the System One address, taking precedence over `THINKTHEN_BASE_URL`. OpenAI reads `OPENAI_BASE_URL`. An explicit `--url` or SDK `Settings.url` overrides the address for the chosen backend, including when `THINKTHEN_BACKEND` chooses it.
 - If your server's certificate comes from your own certificate authority, set `THINKTHEN_CA_FILE` to that authority's PEM file. ThinkThen trusts it as well as your system's certificates.
 
 The `source` in `--json` names the backend and model, so the check above shows the route each answer took.
@@ -85,10 +85,12 @@ The `source` in `--json` names the backend and model, so the check above shows t
 |---|---|---|
 | `--backend NAME` | `THINKTHEN_BACKEND` | `systemone` |
 | `--model MODEL` | `THINKTHEN_MODEL` | `jev-1.13.0`, or `gpt-6-luna` for `openai` |
-| `--url URL` | `THINKTHEN_URL` | The backend's own address |
+| `--url URL` | `THINKTHEN_URL` (System One), `OPENAI_BASE_URL` (OpenAI) | The backend's own address |
 | none | `THINKTHEN_API_KEY` | The System One key |
 | none | `OPENAI_API_KEY` | The OpenAI key |
 | none | `THINKTHEN_CA_FILE` | Your system's certificates only |
+
+`THINKTHEN_MODEL` applies only to commands. In an SDK, set the model on your client; without an explicit model setting, it uses the chosen backend's default model.
 
 Keys come only from these variables. Keep them in your shell or a secret manager, never in a script or a toolbox file. If the key is missing or blank, ThinkThen stops with `usage.key-missing` and exit code 2 before it sends anything; [Troubleshooting](/reference/troubleshooting/) lists that error and the others.
 

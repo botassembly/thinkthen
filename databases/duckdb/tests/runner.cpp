@@ -45,6 +45,8 @@ static void Print(QueryResult &result) {
 int main(int argc, char **argv) {
     try {
         if (argc < 2) return 2;
+        if (const char *options = std::getenv("TSAN_OPTIONS"))
+            std::cerr << "DuckDB SQL host TSAN_OPTIONS=" << options << std::endl;
         if (string(argv[1]) == "--platform") { std::cout << DuckDB::Platform(); return 0; }
         DBConfig config;
         config.SetOptionByName("allow_unsigned_extensions", Value::BOOLEAN(true));

@@ -4,21 +4,18 @@ on:
   workflow_dispatch:
 
 permissions: {}
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+  HELD_INSTALLER_SHA: 2e0bd5f3619cee856a27ad5e495113c2842ffb351c37ba38175838784511606d
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  pages:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions: {contents: read, pages: write, id-token: write}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    env:
-      PYTHONDONTWRITEBYTECODE: '1'
-      HELD_INSTALLER_SHA: 2e0bd5f3619cee856a27ad5e495113c2842ffb351c37ba38175838784511606d
+    permissions: {contents: read}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -57,5 +54,24 @@ jobs:
         run: python3 site/scripts/pages-installers.py restore "$RUNNER_TEMP/pages-installers" site/dist --expected-sha "$HELD_INSTALLER_SHA"
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with: {path: site/dist}
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {contents: read, pages: write, id-token: write}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/pages-artifact
+      - name: Verify held installers inside the downloaded Pages artifact
+        run: python3 site/scripts/pages-installers.py verify "$RUNNER_TEMP/pages-artifact/artifact.tar" --expected-sha "$HELD_INSTALLER_SHA"
       - id: deployment
         uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

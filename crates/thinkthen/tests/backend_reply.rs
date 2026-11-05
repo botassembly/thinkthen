@@ -72,13 +72,17 @@ fn failed_replies_keep_clean_reasons_and_stable_status() {
         .api_key(Key::new(key).unwrap())
         .engine(|_| None)
         .unwrap();
-        let rows = engine
+        let result = engine
             .rows(&Decide::new("Ready?").unwrap(), [Record::text("evidence")])
             .unwrap()
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
-        assert_eq!(rows.len(), 1);
-        let error = rows[0].error().unwrap();
+            .collect::<Result<Vec<_>, _>>();
+        let error = if (400..500).contains(&status) {
+            result.unwrap_err()
+        } else {
+            let rows = result.unwrap();
+            assert_eq!(rows.len(), 1);
+            rows[0].error().unwrap().clone()
+        };
         assert_eq!(error.code().as_str(), "backend.status");
         assert_eq!(json!(error)["http_status"], status);
         let expected = if excerpt.is_empty() {
@@ -87,7 +91,7 @@ fn failed_replies_keep_clean_reasons_and_stable_status() {
             format!("the backend answered status {status}: {excerpt}")
         };
         assert_eq!(error.message(), expected);
-        assert!(!json!(rows).to_string().contains(key));
+        assert!(!json!(error).to_string().contains(key));
         assert_eq!(server.count(), 1);
     }
 }

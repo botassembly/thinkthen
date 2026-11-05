@@ -60,6 +60,48 @@ for (const action of ["abort", "return", "dispose", "close"]) {
   });
 }
 
+// Feature: abort releases the call even when a real generator cannot return yet.
+test("abort rejects while an async generator is stalled and handles its late failure", { timeout: 10000 }, async () => {
+  const entered = deferred();
+  const resume = deferred();
+  const finished = deferred();
+  const controller = new AbortController();
+  const lateFailure = new Error("source failed after cancellation");
+  async function* source() {
+    try {
+      entered.resolve();
+      await resume.promise;
+      yield "late input must not publish";
+    } finally { finished.resolve(); throw lateFailure; }
+  }
+  const client = new sdk.ThinkThen({ backend: "stub" });
+  const stream = client.decideStream("Ready?", source(), { signal: controller.signal });
+  const outcome = stream.next().then(value => ({ value }), error => ({ error }));
+  let timer;
+  try {
+    await entered.promise;
+    controller.abort("stop stalled generator");
+    const result = await Promise.race([
+      outcome,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("abort waited for the stalled generator")), 800);
+      }),
+    ]);
+    assert(result.error instanceof sdk.CancelledError);
+    assert.equal(result.error.code, "local.cancelled");
+    assert.equal(result.error.cause, controller.signal.reason);
+    await stream.return();
+    await client.close();
+  } finally {
+    clearTimeout(timer);
+    resume.resolve();
+    await finished.promise;
+    await outcome;
+    await stream.return();
+    await client.close();
+  }
+});
+
 // Feature: AbortSignal cancellation has one typed error regardless of reason.
 test("already aborted signals never acquire the source and always use CancelledError", async () => {
   const client = new sdk.ThinkThen({ backend: "stub" });

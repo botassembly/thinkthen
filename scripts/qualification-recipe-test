@@ -236,13 +236,12 @@ rust.prepare('wasm32-unknown-unknown')
     def test_source_and_registry_go_launchers_expose_canonical_fixtures(self):
         source = (ROOT / 'scripts/source-install-check').read_text()
         source = textwrap.dedent(source[source.index('        go_env ='):source.index('        if args.readmes:')])
-        registry = (ROOT / 'scripts/registry-site-check').read_text()
-        registry = textwrap.dedent(registry[registry.index('    environment ='):registry.index("    consumer = scratch / 'swift-consumer'")])
         with tempfile.TemporaryDirectory() as directory:
-            for platform, recipe in [('linux', source), ('darwin', source), ('linux', registry)]:
-                with self.subTest(platform=platform, recipe='source' if recipe == source else 'registry'):
+            for platform, recipe in [('linux', source), ('darwin', source)]:
+                with self.subTest(platform=platform, recipe='source'):
                     calls = []
                     scope = dict(ROOT=ROOT, scratch=Path(directory), go=Path(directory), consumer=Path(directory),
+                                 args=SimpleNamespace(tag_source=False),
                                  env={'THINKTHEN_BACKEND': 'stub', 'HOME': directory, 'GOSUMDB': 'off', 'GOTOOLCHAIN': 'local',
                                       'GOWORK': 'off', 'CGO_ENABLED': '1'}, os=os,
                                  sys=SimpleNamespace(platform=platform, executable=sys.executable),
@@ -279,7 +278,7 @@ rust.prepare('wasm32-unknown-unknown')
                         self.assertEqual(calls[-1]['THINKTHEN_BACKEND'], 'stub')
                         self.assertEqual(calls[-1]['LOCAL_OPTION'], 'kept')
                 else:
-                    scope.update(ROOT=ROOT, Path=Path, os=os,
+                    scope.update(ROOT=ROOT, Path=Path, os=os, args=SimpleNamespace(tag_source=False),
                         sys=SimpleNamespace(platform='linux'),
                         run=lambda *a, **kw: calls.append((a, kw)))
                     exec(recipe(name, ast.Assign, lambda node: any(isinstance(target, ast.Name) and target.id == 'go_env' for target in node.targets)), scope)

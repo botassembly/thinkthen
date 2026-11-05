@@ -1,0 +1,20 @@
+#!/bin/sh
+# Scope TSAN to compiler-instrumented C++ accesses with a genuine red control.
+set -eu
+cd "$(dirname "$0")/.."
+baseline=${1:?Provide the pre-fix revision}
+source=databases/duckdb/src/extension.cpp
+saved=$(mktemp)
+cp "$source" "$saved"
+trap 'status=$?; trap - EXIT; cp "$saved" "$source"; rm -f "$saved"; exit "$status"' EXIT
+trap 'exit 1' HUP INT TERM
+export TSAN_OPTIONS=ignore_interceptors_accesses=1
+printf '%s\n' 'Scoped TSAN: compiler-instrumented C++ accesses; interceptor access checks disabled; Rust and DuckDB libraries uninstrumented.'
+printf 'Scoped TSAN baseline %s options=%s\n' "$baseline" "$TSAN_OPTIONS"
+git show "$baseline:$source" > "$source"
+baseline_status=0
+scripts/duckdb-union-check --union-tsan || baseline_status=$?
+printf 'Scoped TSAN baseline exit=%s; the retained log must contain the direct C++ Run/Run Invocation race.\n' "$baseline_status"
+cp "$saved" "$source"
+printf 'Scoped TSAN candidate %s options=%s\n' "$(git rev-parse HEAD)" "$TSAN_OPTIONS"
+scripts/duckdb-union-check --union-tsan

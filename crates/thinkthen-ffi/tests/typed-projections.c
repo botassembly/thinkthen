@@ -148,8 +148,11 @@ int main(int argc, char **argv) {
         if (result == THINKTHEN_END) break;
         if (result < 0) {
             assert(row.answer.data == NULL && row.detail.data == NULL);
+            int32_t terminal_code = error.code;
             printf("{\"error\":\"%s\"}\n", thinkthen_code_name(error.code));
-            assert(thinkthen_call_next(call, &row, &error) == THINKTHEN_END);
+            assert(thinkthen_call_next(call, &row, &error) == result);
+            assert(error.code == terminal_code);
+            thinkthen_error_free(&error);
             break;
         }
         ok(result, &error);

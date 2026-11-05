@@ -3,27 +3,39 @@
 set -eu
 cd "$(dirname "$0")/.."
 failed=
-for gate in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate zig-sdk-gate swift-gate go-gate jvm-gate csharp-gate duckdb-gate sqlite-gate postgres-gate; do
-    if [ ! -f "scripts/$gate" ]; then
-        printf 'Missing SDK gate: scripts/%s\n' "$gate" >&2
-        failed="$failed $gate"
+report_scope=sdk
+report_label="SDK gate"
+report_summary="Failed SDK gates:"
+report_filter='sdk-*'
+. scripts/gate-report
+trap 'exit_status=$?; trap - EXIT; report_finish; exit "$exit_status"' EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+for name in python-gate typescript-gate r-gate c-sdk-gate cpp-sdk-gate ruby-gate zig-sdk-gate swift-gate go-gate jvm-gate csharp-gate duckdb-gate sqlite-gate postgres-gate; do
+    if [ ! -f "scripts/$name" ]; then
+        printf 'Missing SDK gate: scripts/%s\n' "$name" >&2
+        status=127
+        printf 'Missing SDK gate: scripts/%s\n' "$name" > "$report_scratch/running.log"
+        report_save "$report_scratch/running.log"
+        failed="$failed $name"
     else
-        status=0
-        ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$gate" || status=$?
+        report_run "$report_scratch/running.log" ${THINKTHEN_SDK_GATE_RUNNER:+"$THINKTHEN_SDK_GATE_RUNNER"} "scripts/$name"
         case "$status" in
-            0) printf 'Passed SDK gate: %s\n' "$gate" ;;
+            0) printf 'Passed SDK gate: %s\n' "$name" ;;
             77) if [ "${THINKTHEN_GATE_STRICT:-0}" = 1 ]; then
-                    printf 'Failed required SDK gate: %s (exit 77)\n' "$gate" >&2
-                    failed="$failed $gate"
+                    printf 'Failed required SDK gate: %s (exit 77)\n' "$name" >&2
+                    report_save "$report_scratch/running.log"
+                    failed="$failed $name"
                 else
-                    printf 'Skipped SDK gate: %s\n' "$gate"
+                    printf 'Skipped SDK gate: %s\n' "$name"
                 fi ;;
-            *) printf 'Failed SDK gate: %s (exit %s)\n' "$gate" "$status" >&2
-               failed="$failed $gate" ;;
+            *) printf 'Failed SDK gate: %s (exit %s)\n' "$name" "$status" >&2
+               report_save "$report_scratch/running.log"
+               failed="$failed $name" ;;
         esac
     fi
 done
 if [ -n "$failed" ]; then
-    printf 'Failed SDK gates:%s\n' "$failed" >&2
     exit 1
 fi
