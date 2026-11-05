@@ -341,6 +341,7 @@ def swift_package(out, version, host, rid, cache):
     consumer.mkdir()
     for path in (ROOT / 'sdk/swift/tests').glob('*.swift'): copy(path, consumer / path.name)
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
+    run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', consumer / 'Examples')
     run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', consumer / 'Guide')
     destination = out / 'checks/swift'
     destination.mkdir()

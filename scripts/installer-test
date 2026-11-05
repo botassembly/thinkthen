@@ -305,7 +305,10 @@ def main():
     parser.add_argument('--first-success', type=Path, metavar='ABS_OUTPUT')
     parser.add_argument('--cache', type=Path)
     parser.add_argument('--provenance', type=Path)
+    parser.add_argument('--readme', type=Path, help='run literal Install and Ask a question blocks against the candidate mirror')
     args = parser.parse_args()
+    if args.readme and (not args.binary or args.first_success or args.path_only or args.prepare_fish or args.fish):
+        parser.error('--readme requires --binary and cannot combine with other modes')
     if args.first_success:
         if (platform.system() != 'Linux' or not args.binary or not args.cache or not args.provenance
                 or args.path_only or args.prepare_fish or args.fish):
@@ -379,6 +382,16 @@ def main():
             install = home / '.local/bin'
             installed = install / binary.name
             receipt = install / 'thinkthen.install.json'
+            if args.readme:
+                from release_readme_candidate import run_readme
+                from release_registry_check import runtime_environment
+                # Share qualification's isolated environment, including native OS settings.
+                clean = runtime_environment(scratch)
+                clean.update({key: value for key, value in env.items()
+                              if key.startswith('THINKTHEN_INSTALL_') or key == 'THINKTHEN_NO_MODIFY_PATH'})
+                clean['SHELL'] = '/bin/sh'
+                run_readme(args.readme, binary, clean, home, mirror, base, installed, receipt)
+                return
             command = (['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
                         '-File', str(ROOT / 'install.ps1')] if windows else ['dash' if platform.system() == 'Linux' else 'sh', str(ROOT / 'install.sh')])
             if args.first_success:

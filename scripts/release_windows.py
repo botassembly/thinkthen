@@ -363,6 +363,8 @@ def check_sources(out):
                 copy(path, out / 'checks' / family / path.name)
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md',
         out / 'checks/swift/Readme')
+    run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md',
+        out / 'checks/swift/Examples')
     run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift',
         out / 'checks/swift/Guide')
     copy(ROOT / 'sdk/r/tests/run.R', out / 'checks/run.R')

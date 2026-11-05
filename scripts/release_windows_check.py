@@ -78,17 +78,28 @@ def smoke(folder):
             from release_windows_sdks import runtime_environment
             env = runtime_environment(scratch, env)
         runner = [] if os.name == 'nt' else [wine_executable()]
-        def run(binary, *args, payload=None, code=0):
+        if runner:
+            runtime = scratch / 'runtime'
+            runtime.mkdir(mode=0o700)
+            env['XDG_RUNTIME_DIR'] = str(runtime)
+            prepared = subprocess.run([*runner, 'wineboot', '-u'], stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE, env=env, cwd=scratch, timeout=120)
+            preparation = {'returncode': prepared.returncode,
+                           'stdout': prepared.stdout.decode(errors='replace'),
+                           'stderr': prepared.stderr.decode(errors='replace')}
+            print('Wine prefix preparation: ' + json.dumps(preparation), flush=True)
+            assert prepared.returncode == 0, preparation
+        def run(binary, *args, payload=None, code=0, stderr_empty=False):
             result = subprocess.run([*runner, str(binary), *args], input=payload, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, env=env, cwd=scratch, timeout=120)
-            assert result.returncode == code, {
+            assert result.returncode == code and (not stderr_empty or not result.stderr), {
                 'binary': str(binary), 'sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
                 'returncode': result.returncode, 'stdout': result.stdout.decode(errors='replace'),
                 'stderr': result.stderr.decode(errors='replace')[-2000:]}
             return result.stdout.decode()
         command = scratch / 'command/thinkthen.exe'
-        banner = run(command, '--version')
-        assert banner.startswith('thinkthen ' + build['version'] + ' (backends '), {
+        banner = run(command, '--version', stderr_empty=True)
+        assert banner == 'thinkthen ' + build['version'] + '\n', {
             'binary': str(command), 'sha256': hashlib.sha256(command.read_bytes()).hexdigest(),
             'expected_version': build['version'], 'stdout': banner}
         cases = json.loads((folder / 'checks/stub.json').read_text(encoding='utf-8'))

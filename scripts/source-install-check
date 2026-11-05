@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
     scratch = Path(temporary)
     try:
         host = json.loads((package / 'build.json').read_text(encoding='utf-8'))['platform']
-        env = environment(scratch) | {'GOSUMDB': 'off', 'GOTOOLCHAIN': 'local', 'GOWORK': 'off', 'CGO_ENABLED': '1'}
+        env = environment(scratch) | {'THINKTHEN_BACKEND': 'stub', 'GOSUMDB': 'off', 'GOTOOLCHAIN': 'local', 'GOWORK': 'off', 'CGO_ENABLED': '1'}
         tag = scratch / 'tag'
         libraries = native_libraries({host: package}, scratch)
         additions = scratch / 'additions'
@@ -102,7 +102,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
             if sys.platform == 'linux':
                 floor_env = dict(os.environ, THINKTHEN_CANDIDATE_OUT=str(scratch))
                 values = go_env | {'GOCACHE': str(scratch / 'go-build')}
-                selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
+                selected = ['HOME', 'GOPROXY', 'GOMODCACHE', 'GOCACHE', 'GOSUMDB', 'GOTOOLCHAIN', 'GOWORK', 'CGO_ENABLED', 'THINKTHEN_BACKEND', 'THINKTHEN_STUB_CASES', 'THINKTHEN_CASES']
                 return run(ROOT / 'scripts/runtime-floor-build', 'env',
                            *[name + '=' + values[name] for name in selected], 'go', *arguments, cwd=cwd, env=floor_env)
             if sys.platform == 'darwin':
@@ -122,6 +122,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
         swift = scratch / 'swift-consumer'
         shutil.copytree(ROOT / 'sdk/swift/tests', swift, ignore=shutil.ignore_patterns('*.py'))
         run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', package / 'swift/README.md' if args.readmes else ROOT / 'sdk/swift/README.md', swift / 'Readme')
+        run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', swift / 'Examples')
         run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', swift / 'Guide')
         manifest = swift / 'Package.swift'
         manifest.write_text(manifest.read_text(encoding='utf-8').replace('.package(path: "../ThinkThen")',
@@ -135,6 +136,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
                 return run('docker', 'run', '--rm', '--network', 'none', '--label', 'pm.repo=thinkthen',
                     '--label', 'pm.ticket=' + os.environ['PM_JOB'].split()[0], '--user', f'{os.getuid()}:{os.getgid()}',
                     '-v', f'{scratch}:{scratch}', '-v', f'{ROOT}:{ROOT}:ro', '-v', f'{toolchain}:/opt/swift:ro',
+                    '-e', 'THINKTHEN_BACKEND=' + env['THINKTHEN_BACKEND'],
                     '-e', 'HOME=' + str(home), '-e', 'PATH=/opt/swift/usr/bin:/usr/bin:/bin',
                     image('swift'), *arguments)
             return run(*arguments, env=env)

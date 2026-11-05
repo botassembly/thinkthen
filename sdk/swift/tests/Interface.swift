@@ -51,6 +51,8 @@ func checkPublicInterface() throws {
     precondition(error.localizedDescription == "future diagnostic")
     let status: Int? = error.httpStatus
     precondition(status == 503)
+  } catch RowError.unsure(let probability) {
+    throw RowError.unsure(probability: probability)
   }
   let annotations = try JSONDecoder().decode(
     Annotations.self,

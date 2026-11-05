@@ -32,12 +32,17 @@ JSON.parse(File.read(ARGV.fetch(0)), max_nesting: false).each do |fixture|
   function = definition.fetch('function')
   settings = fixture.fetch('client').transform_keys(&:to_sym)
   settings[:backend] = settings.fetch(:backend).to_sym
-  settings[:retry] = ThinkThen::Retry.new(**settings[:retry].transform_keys(&:to_sym)) if settings[:retry]
+  if settings[:retry]
+    policy = settings[:retry].transform_keys(&:to_sym)
+    policy[:initial_backoff] = policy.delete(:initial_backoff_ms) / 1000.0 if policy.key?(:initial_backoff_ms)
+    policy[:attempt_timeout] = policy.delete(:attempt_timeout_ms) / 1000.0 if policy.key?(:attempt_timeout_ms)
+    settings[:retry] = ThinkThen::Retry.new(**policy)
+  end
   ThinkThen::Client.open(**settings) do |client|
     stream = client.public_send("#{function}_each", admitted(definition), request.fetch('records'))
     begin
       actual = stream.map do |value|
-        row = value.is_a?(ThinkThen::FilterRow) ? value.row : value
+        row = value.is_a?(ThinkThen::FilterRow) || value.is_a?(ThinkThen::RankRow) ? value.row : value
         row.to_h
       end
       raise "#{function}: expected #{fixture.fetch('expected').inspect}, got #{actual.inspect}" unless actual == fixture.fetch('expected')

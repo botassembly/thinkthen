@@ -24,6 +24,42 @@ import release_windows_sdks
 
 
 class ReleaseScripts(unittest.TestCase):
+    def test_readme_candidate_fetch_runs_literal_install_and_rejects_other_urls(self):
+        from functools import partial
+        from http.server import ThreadingHTTPServer
+        import threading
+        from release_readme_candidate import blocks, fetch_setup
+        mirror = runpy.run_path(str(ROOT / 'scripts/installer-test'))['Mirror']
+        windows = os.name == 'nt'
+        install, question, expected = blocks((ROOT / 'README.md').read_text(), windows)
+        self.assertEqual(expected, 'true\n')
+        self.assertIn('thinkthen decide', question)
+        with tempfile.TemporaryDirectory(prefix='readme-fetch-test-') as temporary:
+            work = Path(temporary)
+            body = "Write-Output 'candidate-installer'" if windows else "printf 'candidate-installer\\n'"
+            (work / ('install.ps1' if windows else 'install.sh')).write_text(body)
+            server = ThreadingHTTPServer(('127.0.0.1', 0), partial(mirror, directory=str(work)))
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            try:
+                setup = fetch_setup(work, f'http://127.0.0.1:{server.server_port}', windows)
+                shell = ['powershell.exe', '-NoProfile', '-NonInteractive', '-Command'] if windows else ['sh', '-eu', '-c']
+                prefix = "$ErrorActionPreference = 'Stop'\n" if windows else ''
+                good = subprocess.run(shell + [prefix + setup + install], capture_output=True, timeout=15)
+                self.assertEqual(good.returncode, 0, good.stderr)
+                self.assertEqual(good.stdout.replace(b'\r\n', b'\n'), b'candidate-installer\n')
+                forbidden = "irm https://example.invalid/install.ps1" if windows else "curl -fsSL https://example.invalid/install.sh"
+                bad = subprocess.run(shell + [prefix + setup + forbidden], capture_output=True, timeout=15)
+                self.assertNotEqual(bad.returncode, 0)
+                self.assertIn(b'Unexpected README fetch URI', bad.stderr)
+            finally:
+                server.shutdown()
+                thread.join()
+                server.server_close()
+
+    def test_swift_consumer_staging_matches_shared_manifest(self):
+        subprocess.run([sys.executable, ROOT / 'scripts/swift-consumer-staging-test'], check=True)
+
     def test_qualification_readmes_imports_current_csharp_helpers(self):
         namespace = runpy.run_path(str(ROOT / 'scripts/qualification-readmes'),
                                    run_name='qualification_readmes_import')
@@ -323,8 +359,8 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
                     release_windows_sdks.full(delivered, {'packages': {'go': 'go.zip'}}, caller_owned=True)
             self.assertEqual(len(environments), 2, 'normal and cache consumers must both run')
 
-    def test_installed_zig_filter_kept_preserves_strict_rows(self):
-        with tempfile.TemporaryDirectory(prefix='thinkthen-zig-kept-') as temporary:
+    def test_installed_zig_compares_canonical_filter_rows(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-zig-rows-') as temporary:
             scratch = Path(temporary)
             fixtures = scratch / 'cases.json'
             expected = [{'function': 'filter', 'status': 'answered', 'answer': answer}
@@ -336,16 +372,17 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
             consumer.write_text('#!' + sys.executable + '\nfrom pathlib import Path\n'
                                 'print(Path(__file__).with_name("rows.json").read_text())\n')
             consumer.chmod(0o755)
-            rows = [dict(row, kept=row.get('answer') is True) for row in expected]
-            for change in ['valid', 'wrong', 'missing', 'numeric', 'extra']:
+            for change in ['valid', 'answer', 'status', 'missing', 'kept', 'extra']:
                 with self.subTest(change=change):
-                    actual = json.loads(json.dumps(rows))
-                    if change == 'wrong':
-                        actual[1]['kept'] = True
+                    actual = json.loads(json.dumps(expected))
+                    if change == 'answer':
+                        actual[1]['answer'] = True
+                    elif change == 'status':
+                        actual[2]['status'] = 'failed'
                     elif change == 'missing':
-                        del actual[0]['kept']
-                    elif change == 'numeric':
-                        actual[0]['kept'] = 1
+                        actual.pop()
+                    elif change == 'kept':
+                        actual[0]['kept'] = True
                     elif change == 'extra':
                         actual[0]['unexpected'] = True
                     (scratch / 'rows.json').write_text(json.dumps(actual))
@@ -711,7 +748,7 @@ for platform, fallback in (
                 self.assertEqual(set(files), declared_notices(files))
 
     def test_windows_smoke_preserves_construction_list_record(self):
-        self.windows_smoke('thinkthen ' + version() + ' (backends stub)\n')
+        self.windows_smoke('thinkthen ' + version() + '\n')
 
     def test_windows_smoke_reads_utf8_fixtures_with_a_windows_text_encoding(self):
         read_text = Path.read_text
@@ -721,21 +758,30 @@ for platform, fallback in (
             return read_text(path, *args, **kwargs)
 
         with patch.object(Path, 'read_text', windows_read_text):
-            self.windows_smoke('thinkthen ' + version() + ' (backends stub)\n')
+            self.windows_smoke('thinkthen ' + version() + '\n')
 
     def test_windows_smoke_reports_wrong_banner_and_binary(self):
-        for banner, status in [('thinkthen 9.0.0 (backends stub)\n', 0),
-                               ('thinkthen ' + version() + '1 (backends stub)\n', 0),
-                               ('thinkthen ' + version() + ' (contract 0)\n', 0),
-                               ('other ' + version() + ' (backends stub)\n', 0),
-                               ('thinkthen ' + version() + ' (backends stub)\n', 7)]:
+        for banner, status, stderr in [('thinkthen 9.0.0\n', 0, b''),
+                                       ('thinkthen ' + version() + '1\n', 0, b''),
+                                       ('thinkthen ' + version() + ' (backends stub)\n', 0, b''),
+                                       ('thinkthen ' + version() + ' trailing text\n', 0, b''),
+                                       ('thinkthen ' + version(), 0, b''),
+                                       ('other ' + version() + '\n', 0, b''),
+                                       ('thinkthen ' + version() + '\n', 7, b''),
+                                       ('thinkthen ' + version() + '\n', 0, b'unexpected notice')]:
             with self.subTest(banner=banner, status=status), self.assertRaises(AssertionError) as failure:
-                self.windows_smoke(banner, status)
+                self.windows_smoke(banner, status, stderr)
             self.assertIn(banner.rstrip(), str(failure.exception))
             self.assertIn('thinkthen.exe', str(failure.exception))
             self.assertIn(hashlib.sha256(b'fixture image').hexdigest(), str(failure.exception))
 
-    def windows_smoke(self, banner, status=0):
+    def test_windows_smoke_stops_before_application_when_wine_preparation_fails(self):
+        with self.assertRaises(AssertionError) as failure:
+            self.windows_smoke('thinkthen ' + version() + '\n', boot_status=7)
+        self.assertIn("'returncode': 7", str(failure.exception))
+        self.assertIn('Wine initialization diagnostic', str(failure.exception))
+
+    def windows_smoke(self, banner, status=0, stderr=b'', boot_status=0):
         cases = json.loads((ROOT / 'construction/stub.json').read_bytes())
         first = next(case for case in cases if case['request']['question']['function'] == 'decide')
         # Keep the framing regression on a nonempty structured array.
@@ -756,8 +802,14 @@ for platform, fallback in (
 
             def run(args, **options):
                 calls.append((args, options.get('input')))
-                if args[-1] == '--version':
-                    return subprocess.CompletedProcess(args, status, banner.encode(), b'')
+                if args[-2:] == ['wineboot', '-u']:
+                    runtime = Path(options['env']['XDG_RUNTIME_DIR'])
+                    self.assertEqual(runtime.parent, options['cwd'])
+                    self.assertEqual(runtime.stat().st_mode & 0o777, 0o700)
+                    self.assertEqual(Path(options['env']['WINEPREFIX']).parent, options['cwd'])
+                    return subprocess.CompletedProcess(args, boot_status, b'', b'Wine initialization diagnostic')
+                elif args[-1] == '--version':
+                    return subprocess.CompletedProcess(args, status, banner.encode(), stderr)
                 elif Path(args[-3]).name == 'c-consumer.exe':
                     case = next(case for case in cases if json.loads(args[-2]) == case['request'])
                     output = json.dumps({'rows': case['expected']})
@@ -773,8 +825,12 @@ for platform, fallback in (
                  patch.object(release_windows_check, 'pe'), \
                  patch.object(release_windows_check, 'wine_executable', return_value='fixture-wine'), \
                  patch.object(release_windows_check.subprocess, 'run', side_effect=run):
-                release_windows_check.smoke(package)
-            self.assertEqual(len(calls), len(cases) + 2)
+                try:
+                    release_windows_check.smoke(package)
+                finally:
+                    if boot_status:
+                        self.assertEqual(len(calls), 1, 'failed Wine preparation ran an application')
+            self.assertEqual(len(calls), len(cases) + 3)
 
     def test_release_assets_have_provenance_after_platform_checks(self):
         workflow = (ROOT / '.github/workflows/release-prepare.yml').read_text()

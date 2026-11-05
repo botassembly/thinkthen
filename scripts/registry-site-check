@@ -47,6 +47,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-sites-') as temporary:
     consumer = scratch / 'swift-consumer'
     shutil.copytree(ROOT / 'sdk/swift/tests', consumer, ignore=shutil.ignore_patterns('*.py'))
     run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', ROOT / 'sdk/swift/README.md', consumer / 'Readme')
+    run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', consumer / 'Examples')
     run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', consumer / 'Guide')
     manifest = consumer / 'Package.swift'
     manifest.write_text(manifest.read_text().replace('../ThinkThen', str(source)).replace('package: "ThinkThen"', 'package: "tag-source"'))

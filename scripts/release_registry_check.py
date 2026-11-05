@@ -72,7 +72,8 @@ def node_install(packages, node, scratch, isolated):
         thread.join()
 
 
-def environment(scratch):
+def runtime_environment(scratch):
+    """Isolate runtime settings without preparing SDK-specific cache proofs."""
     environment = dict(os.environ, HOME=str(scratch / 'home'), DOTNET_CLI_HOME=str(scratch / 'home'),
                        XDG_CACHE_HOME=str(scratch / 'cache'), XDG_CONFIG_HOME=str(scratch / 'config'),
                        NUGET_PACKAGES=str(scratch / 'nuget-cache'), DOTNET_CLI_TELEMETRY_OPTOUT='1',
@@ -84,6 +85,11 @@ def environment(scratch):
                  '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_ARGS', 'MAVEN_OPTS',
                  'DOTNET_ADDITIONAL_DEPS', 'DOTNET_SHARED_STORE'):
         environment.pop(name, None)
+    return environment
+
+
+def environment(scratch):
+    environment = runtime_environment(scratch)
     if os.name == 'nt':
         from release_windows_cache import cache_environment, prepare_cache
         cache = scratch / 'cache'

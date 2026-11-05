@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Exercise consumer staging without rebuilding the engine or other SDKs."""
+import argparse
+import ast
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import runpy
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def run(*arguments, **options):
+    subprocess.run(list(map(str, arguments)), check=True, **options)
+
+
+def source(name, revision):
+    if revision:
+        return subprocess.check_output(['git', 'show', revision + ':scripts/' + name],
+                                       cwd=ROOT, text=True)
+    return (ROOT / 'scripts' / name).read_text()
+
+
+def statements(text, start, end):
+    """Execute the real staging statements, stopping before compiler invocation."""
+    first, last = text.index(start), text.index(end, text.index(start))
+    # Preserve compound statements and relative indentation from the recipe.
+    import textwrap
+    return textwrap.dedent(text[first:last])
+
+
+def check_consumer(consumer):
+    manifest = (consumer / 'Package.swift').read_text()
+    for folder in re.findall(r'path: "([^"]+)"', manifest.split('targets: [', 1)[1]):
+        if folder != '.':
+            path = consumer / folder
+            assert path.is_dir(), f'manifest target directory absent: {folder}'
+            assert list(path.glob('*.swift')), f'no Swift sources: {folder}'
+    assert 'import ThinkThen' in (consumer / 'Examples/Examples.swift').read_text()
+    assert 'entries' in json.loads((consumer / 'Examples/toolbox.json').read_text())
+
+
+def staging(revision):
+    failures = []
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-staging-') as temporary:
+        for name in ('release-candidate', 'release_windows.py', 'source-install-check',
+                     'registry-site-check', 'toolbox-native-development'):
+            scratch = Path(temporary) / name
+            scratch.mkdir()
+            consumer = scratch / 'Consumer'
+            environment = dict(ROOT=ROOT, Path=Path, shutil=shutil, sys=sys, run=run,
+                               scratch=scratch, consumer=consumer, swift=scratch / 'ThinkThen')
+            def copy(original, destination):
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(original, destination)
+            environment['copy'] = copy
+            text = source(name, revision)
+            if name == 'release-candidate':
+                body = statements(text, "    consumer = swift.parent / 'Consumer'", '    destination =')
+            elif name == 'release_windows.py':
+                # Run the complete portable-source staging function, including its real copy loop.
+                function = next(node for node in ast.parse(text).body
+                                if isinstance(node, ast.FunctionDef) and node.name == 'check_sources')
+                body = ast.unparse(function) + '\ncheck_sources(scratch)\n'
+                consumer = scratch / 'checks/swift'
+            elif name == 'source-install-check':
+                body = statements(text, "        swift = scratch / 'swift-consumer'", '        manifest =')
+                environment['args'] = argparse.Namespace(readmes=False)
+                consumer = scratch / 'swift-consumer'
+            elif name == 'registry-site-check':
+                body = statements(text, "    consumer = scratch / 'swift-consumer'", '    manifest =')
+                consumer = scratch / 'swift-consumer'
+            else:
+                body = statements(text, 'mkdir "$scratch/consumer"', 'swift build ')
+                run('sh', '-eu', '-c', body, cwd=ROOT, env=dict(os.environ, scratch=str(scratch)))
+                consumer = scratch / 'consumer'
+                body = ''
+            try:
+                exec(compile(body, str(ROOT / 'scripts' / name), 'exec'), environment)
+                check_consumer(consumer)
+                print(name + ': shared manifest targets and actual Examples sources/resources pass', flush=True)
+            except AssertionError as error:
+                failures.append(name + ': ' + str(error))
+    if failures:
+        raise SystemExit('\n'.join(failures))
+
+
+def mac_package(assets, receipt_path, revision):
+    assert sys.platform == 'darwin', 'the actual package proof requires macOS'
+    receipt = json.loads(receipt_path.read_text())
+    relative = 'osx-arm64/libthinkthen_ffi.dylib'
+    engine = assets / relative
+    digest = hashlib.sha256(engine.read_bytes()).hexdigest()
+    assert receipt['host'] == 'aarch64-apple-darwin'
+    assert receipt['native_production_executed'] is True
+    assert digest == receipt['assets'][relative]
+    print('Prepared engine provenance: ' + json.dumps(dict(source=receipt['source_revision'],
+          native_key=receipt['native_key'], engine_sha256=digest)), flush=True)
+    print('Consumer source: ' + subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), flush=True)
+    for name in ('scripts/swift-package', 'scripts/header_contract.py', 'sdk/swift/Package.swift',
+                 'sdk/swift/tests/Package.swift', 'sdk/swift/tests/docs.py', 'docs/surfaces/swift.md'):
+        print(name + ' sha256 ' + hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), flush=True)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-package-') as temporary:
+        scratch = Path(temporary)
+        candidate = scratch / 'release-candidate'
+        candidate.write_text(source('release-candidate', revision))
+        namespace = runpy.run_path(str(candidate))
+        function = namespace['swift_package']
+        function.__globals__['ROOT'] = ROOT
+        out = scratch / 'candidate'
+        out.mkdir()
+        (out / 'checks').mkdir()
+        assert not (ROOT / '.swift-installed').exists(), 'proof needs its own clean job checkout'
+        try:
+            # The real function packages, archives, extracts and compiles the release consumer.
+            try:
+                function(out, '0.2.0', 'macos-arm64', 'osx-arm64', assets)
+            except subprocess.CalledProcessError as error:
+                # The production runner tails output; retain the primary compiler diagnostic here.
+                print((error.stdout or '') + (error.stderr or ''), file=sys.stderr)
+                raise
+            installed = scratch / 'relocated'
+            shutil.move(out / 'checks/swift', installed)
+            shutil.rmtree(ROOT / '.swift-installed')
+            environment = dict(os.environ)
+            environment.pop('THINKTHEN_NATIVE_LIBRARY', None)
+            run(sys.executable, ROOT / 'scripts/release/swift.py', installed / 'Consumer',
+                ROOT / 'construction/stub.json', cwd=scratch, env=environment)
+            run(installed / 'Consumer', 'surface', cwd=scratch, env=environment)
+            print('Actual Mac archive round-trip, release build and relocated consumer surface pass', flush=True)
+        finally:
+            shutil.rmtree(ROOT / '.swift-installed', ignore_errors=True)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-revision', help='exercise the actual recipes at an earlier revision')
+    parser.add_argument('--mac-native-assets', type=Path)
+    parser.add_argument('--native-receipt', type=Path)
+    args = parser.parse_args()
+    if args.mac_native_assets:
+        if not args.native_receipt:
+            parser.error('--mac-native-assets requires --native-receipt')
+        mac_package(args.mac_native_assets, args.native_receipt, args.source_revision)
+    else:
+        staging(args.source_revision)

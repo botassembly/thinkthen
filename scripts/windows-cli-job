@@ -392,7 +392,7 @@ def replay_windows(options, metadata, prepared):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory'))
+    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme'))
     parser.add_argument('output', type=Path)
     parser.add_argument('--source', default='HEAD')
     parser.add_argument('--host', default='Docker@localhost')
@@ -405,7 +405,10 @@ def main():
     parser.add_argument('--until-eof', action='store_true')
     parser.add_argument('--cleanup-root', action='append', default=[], help='exact ended-job native root authorized for removal')
     parser.add_argument('--replay-inputs', type=Path, help='verified Linux version-probe CLI and public cache for the one strict Windows replay')
+    parser.add_argument('--binary', type=Path, help='existing genuine candidate executable for readme mode; never build')
     options = parser.parse_args()
+    if (options.mode == 'readme') != (options.binary is not None):
+        parser.error('readme mode requires --binary; other modes do not accept it')
     options.python_home = None
     if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds)):
         parser.error('duration bounds must be finite and positive')
@@ -477,7 +480,7 @@ def main():
                 raise ValueError('Cannot remove the active owned native root')
             cleanup = "$ErrorActionPreference='Stop'; if(Test-Path -LiteralPath " + quote(ended_root) + "){Remove-Item -LiteralPath " + quote(ended_root) + " -Recurse -Force}; [Console]::Out.WriteLine('Removed ended-job native root: ' + " + quote(ended_root) + ")"
             python_ssh(options, cleanup, phase='cleanup-' + ended_root.rsplit('/', 1)[1])
-        if options.mode == 'build':
+        if options.mode in ('build', 'readme'):
             provision_python(options, native, python_manifest)
         elif options.mode == 'hold':
             verify_python(options, native, python_manifest)
@@ -486,6 +489,19 @@ def main():
             ready(options)
         if options.mode == 'inventory':
             inventory(options)
+        elif options.mode == 'readme':
+            source = stage_source(ROOT, revision, output / 'source.tar.gz')
+            upload_archive(options, native + '/source.tar.gz', output / 'source.tar.gz', source['archive_sha256'])
+            binary_sha = hashlib.sha256(options.binary.read_bytes()).hexdigest()
+            upload_archive(options, native + '/candidate.exe', options.binary, binary_sha)
+            script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; Set-Location source; & " + quote(metadata['python']) + " scripts/release-script-test ReleaseScripts.test_readme_candidate_fetch_runs_literal_install_and_rejects_other_urls; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(metadata['python']) + " scripts/installer-test --binary ../candidate.exe --readme README.md; exit $LASTEXITCODE"
+            result = subprocess.run(ssh_command(options, script), capture_output=True, timeout=240)
+            (output / 'readme.stdout').write_bytes(result.stdout)
+            (output / 'readme.stderr').write_bytes(result.stderr)
+            sys.stdout.buffer.write(result.stdout)
+            sys.stderr.buffer.write(result.stderr)
+            result.check_returncode()
+            (output / 'readme.json').write_text(json.dumps({'source': revision, 'candidate_sha256': binary_sha, 'exit': 0}) + '\n')
         elif options.mode == 'build':
             source = stage_source(ROOT, revision, output / 'source.tar.gz')
             (output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')

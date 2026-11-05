@@ -4,6 +4,10 @@ set -eu
 cd "$(dirname "$0")/.."
 . scripts/native-tools-env
 case "${1:-}" in
+    --readme-candidate)
+        cargo build --offline --locked -p thinkthen --bin thinkthen
+        exec python3 scripts/installer-test --binary "${CARGO_TARGET_DIR:-target}/debug/thinkthen" --readme README.md
+        ;;
     --generate-contracts)
         generated_output=${2:?usage: command-check --generate-contracts ABSOLUTE_OUTPUT}
         python3 - "$generated_output" <<'PY'
