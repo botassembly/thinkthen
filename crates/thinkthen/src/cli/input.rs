@@ -5,6 +5,47 @@ use clap::ArgMatches;
 use std::collections::VecDeque;
 use std::io::{self, BufRead, BufReader, Read};
 
+const UTF8_PREAMBLE: &[u8] = b"\xef\xbb\xbf";
+
+/// Decode one transport preamble while retaining original bytes for projections.
+pub(super) fn source_body(bytes: &[u8], stream_start: bool) -> &[u8] {
+    if stream_start {
+        bytes.strip_prefix(UTF8_PREAMBLE).unwrap_or(bytes)
+    } else {
+        bytes
+    }
+}
+
+pub(super) fn read_record(
+    input: &mut dyn BufRead,
+    format: Format,
+    stream_start: bool,
+) -> io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    if stream_start {
+        for expected in UTF8_PREAMBLE {
+            if input.fill_buf()?.first() != Some(expected) {
+                break;
+            }
+            bytes.push(*expected);
+            input.consume(1);
+        }
+    }
+    let preamble = if bytes == UTF8_PREAMBLE {
+        UTF8_PREAMBLE.len()
+    } else {
+        0
+    };
+    let remaining = crate::files::MAX_RECORD_BYTES + 1 + preamble - bytes.len();
+    let mut reader = input.take(remaining as u64);
+    if format == Format::Text {
+        reader.read_to_end(&mut bytes)?;
+    } else {
+        reader.read_until(b'\n', &mut bytes)?;
+    }
+    Ok(bytes)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub(super) enum Format {
     Text,
@@ -31,6 +72,7 @@ pub(super) struct Input {
     pub format: Format,
     pub selection: Vec<crate::Pointer>,
     literal: bool,
+    stream_start: bool,
 }
 impl Input {
     pub(super) fn resolve(function: &str, args: &ArgMatches) -> Result<Self, Error> {
@@ -50,6 +92,7 @@ impl Input {
                 format: Format::Text,
                 selection: super::question_options::field(args)?,
                 literal: true,
+                stream_start: false,
             });
         }
         Self::from_files(function, args, files(args))
@@ -111,6 +154,7 @@ impl Input {
             format: default,
             selection,
             literal: false,
+            stream_start: false,
         })
     }
     pub(super) fn table(&self) -> bool {
@@ -135,7 +179,7 @@ impl Input {
         }
         Ok(())
     }
-    pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>)>, Error> {
+    pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>, bool)>, Error> {
         loop {
             if self.current.is_none() {
                 let Some((path, format)) = self.pending.pop_front() else {
@@ -149,6 +193,7 @@ impl Input {
                     )?))
                 };
                 self.current = Some((input, format, path));
+                self.stream_start = true;
             }
             let Some((input, format, origin)) = self.current.as_mut() else {
                 continue;
@@ -156,18 +201,11 @@ impl Input {
             self.origin.clone_from(origin);
             let format = *format;
             self.format = format;
-            let mut bytes = Vec::new();
-            let length = if format == Format::Text {
-                input
-                    .take((crate::files::MAX_RECORD_BYTES + 1) as u64)
-                    .read_to_end(&mut bytes)
-            } else {
-                input
-                    .take((crate::files::MAX_RECORD_BYTES + 1) as u64)
-                    .read_until(b'\n', &mut bytes)
-            }
-            .map_err(|_| super::local(&format!("input {} could not be read", self.origin)))?;
-            if bytes.len() > crate::files::MAX_RECORD_BYTES {
+            let stream_start = std::mem::take(&mut self.stream_start);
+            let bytes = read_record(input.as_mut(), format, stream_start)
+                .map_err(|_| super::local(&format!("input {} could not be read", self.origin)))?;
+            let body = source_body(&bytes, stream_start);
+            if body.len() > crate::files::MAX_RECORD_BYTES {
                 return Err(Error::new(
                     crate::ErrorKind::Question,
                     crate::files::record_limit().to_string(),
@@ -175,24 +213,28 @@ impl Input {
             }
             if format == Format::Text {
                 self.current = None;
-            } else if length == 0 {
+            } else if bytes.is_empty() {
                 self.current = None;
                 continue;
             }
-            if format != Format::Text && bytes.iter().all(u8::is_ascii_whitespace) {
+            if format != Format::Text && body.iter().all(u8::is_ascii_whitespace) {
                 continue;
             }
             let record = if format == Format::Jsonl
                 || (format == Format::Text && !self.selection.is_empty())
             {
-                std::str::from_utf8(&bytes).map_or_else(|_| Record::invalid(), Record::from_json)
+                std::str::from_utf8(body).map_or_else(|_| Record::invalid(), Record::from_json)
             } else {
-                std::str::from_utf8(&bytes).map_or_else(
+                std::str::from_utf8(body).map_or_else(
                     |_| Record::invalid(),
                     |s| Record::text(if self.literal { s } else { super::field(s) }),
                 )
             };
-            return Ok(Some((record.select_field(self.selection.clone()), bytes)));
+            return Ok(Some((
+                record.select_field(self.selection.clone()),
+                bytes,
+                stream_start,
+            )));
         }
     }
 }
@@ -230,9 +272,9 @@ pub(super) struct StreamInput {
     read: u64,
     pub format: Format,
 }
-type FramedRecord = (Record, Vec<u8>, String, Format);
+type FramedRecord = (Record, Vec<u8>, String, Format, bool);
 pub(super) enum InputEvent {
-    Record(Record, Vec<u8>),
+    Record(Record, Vec<u8>, bool),
     Pending,
     Finished,
 }
@@ -243,8 +285,9 @@ impl StreamInput {
         let receiver = spawn(
             move || {
                 input.next().map(|record| {
-                    record
-                        .map(|(record, bytes)| (record, bytes, input.origin.clone(), input.format))
+                    record.map(|(record, bytes, start)| {
+                        (record, bytes, input.origin.clone(), input.format, start)
+                    })
                 })
             },
             cancel.clone(),
@@ -257,10 +300,12 @@ impl StreamInput {
             format,
         })
     }
-    pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>)>, Error> {
+    pub(super) fn next(&mut self) -> Result<Option<(Record, Vec<u8>, bool)>, Error> {
         loop {
             match self.poll()? {
-                InputEvent::Record(record, bytes) => return Ok(Some((record, bytes))),
+                InputEvent::Record(record, bytes, start) => {
+                    return Ok(Some((record, bytes, start)));
+                }
                 InputEvent::Finished => return Ok(None),
                 InputEvent::Pending => {}
             }
@@ -271,7 +316,7 @@ impl StreamInput {
         if self.cancel.is_cancelled() {
             return Err(crate::retry::cancelled());
         }
-        let (record, bytes, path, format) = match self
+        let (record, bytes, path, format, start) = match self
             .receiver
             .recv_timeout(std::time::Duration::from_millis(20))
         {
@@ -282,7 +327,7 @@ impl StreamInput {
         self.read += 1;
         self.format = format;
         self.origins.record(self.read, path);
-        Ok(InputEvent::Record(record, bytes))
+        Ok(InputEvent::Record(record, bytes, start))
     }
     pub(super) fn origin(&self, position: u64) -> &str {
         self.origins.at(position)

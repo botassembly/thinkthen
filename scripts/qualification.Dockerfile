@@ -20,4 +20,3 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 # SwiftPM's source-package rehearsal resolves a local Git tag.
 FROM thinkthen-swift-build:6.3.2-ubuntu22.04 AS swift-source
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*

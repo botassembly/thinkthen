@@ -31,7 +31,14 @@ fn run(server: &Loopback, args: &[&str], batch: Option<&str>, input: &[u8]) -> O
     }
     let mut child = command.spawn().unwrap();
     // A command that refuses its arguments may exit before it reads the input.
-    let _ = child.stdin.take().unwrap().write_all(input);
+    let mut writer = child.stdin.take().unwrap();
+    let (prefix, rest) = input.split_at(input.len().min(3));
+    // A transport preamble may arrive in separate writes.
+    for byte in prefix {
+        let _ = writer.write_all(std::slice::from_ref(byte));
+    }
+    let _ = writer.write_all(rest);
+    drop(writer);
     child.wait_with_output().unwrap()
 }
 
@@ -57,6 +64,113 @@ fn yes(id: Value) -> Value {
 
 fn no(id: Value) -> Value {
     json!({"function":"decide","position":id,"status":"answered","answer":false,"probability":0.1})
+}
+
+#[test]
+fn a_stream_preamble_is_not_judged_but_record_characters_are() {
+    type Case = (
+        &'static [&'static str],
+        &'static str,
+        &'static [&'static str],
+    );
+    let cases: [Case; 6] = [
+        (&["--json"], "\u{fee0}refund", &["\u{fee0}refund"]),
+        (&["--json"], "\u{feff}refund\r\n", &["refund"]),
+        (
+            &["--from", "lines", "--json"],
+            "\u{feff}refund\n\u{feff}later\nx\u{feff}inside\n",
+            &["refund", "\u{feff}later", "x\u{feff}inside"],
+        ),
+        (
+            &["--from", "jsonl", "--field", "/body", "--json"],
+            "\u{feff}{\"body\":\"refund\"}\n{\"body\":\"\u{feff}later\"}\n",
+            &["refund", "\u{feff}later"],
+        ),
+        (
+            &["--from", "jsonl", "--field", "/body", "--into", "answer"],
+            "\u{feff}{\"body\":\"refund\"}\n",
+            &["refund"],
+        ),
+        (
+            &["--text", "\u{feff}literal", "--json"],
+            "",
+            &["\u{feff}literal"],
+        ),
+    ];
+    for (args, input, expected) in cases {
+        let server = Loopback::refunds().unwrap();
+        let output = run(&server, args, None, input.as_bytes());
+        assert_eq!(output.status.code(), Some(0), "{args:?}: {output:?}");
+        let mut sent: Vec<_> = server
+            .requests()
+            .iter()
+            .flat_map(|request| {
+                request.json().unwrap()["questions"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .map(|q| q["instructions"].as_str().unwrap().to_owned())
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        let mut expected: Vec<_> = expected
+            .iter()
+            .map(|text| {
+                format!(
+                    "The text is {}. Is it a refund request?",
+                    serde_json::to_string(text).unwrap()
+                )
+            })
+            .collect();
+        sent.sort();
+        expected.sort();
+        assert_eq!(sent, expected, "{args:?}");
+    }
+    for args in [
+        vec!["--json"],
+        vec!["--from", "lines", "--json"],
+        vec!["--from", "jsonl", "--json"],
+        vec!["--from", "jsonl", "--into", "answer"],
+    ] {
+        let server = Loopback::refunds().unwrap();
+        let empty = run(&server, &args, None, b"");
+        let preamble = run(&server, &args, None, b"\xef\xbb\xbf");
+        assert_eq!(preamble.status.code(), empty.status.code(), "{args:?}");
+        assert_eq!(preamble.stdout, empty.stdout, "{args:?}");
+        assert_eq!(preamble.stderr, empty.stderr, "{args:?}");
+        assert!(server.requests().is_empty());
+    }
+    let first = tempfile::NamedTempFile::new().unwrap();
+    let second = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(first.path(), "\u{feff}refund\n").unwrap();
+    std::fs::write(second.path(), "\u{feff}refund\n").unwrap();
+    let server = Loopback::refunds().unwrap();
+    let output = run(
+        &server,
+        &[
+            "--from",
+            "lines",
+            "--json",
+            first.path().to_str().unwrap(),
+            second.path().to_str().unwrap(),
+        ],
+        None,
+        b"",
+    );
+    assert_eq!(rows(&output), vec![yes(json!(1)), yes(json!(2))]);
+    assert_eq!(output.status.code(), Some(0));
+    for request in server.requests() {
+        for question in request.json().unwrap()["questions"]
+            .as_object()
+            .unwrap()
+            .values()
+        {
+            assert_eq!(
+                question["instructions"],
+                "The text is \"refund\". Is it a refund request?"
+            );
+        }
+    }
 }
 
 #[test]
@@ -286,7 +400,14 @@ fn input_that_cannot_be_read_exits_5_and_sends_nothing() {
 
 #[test]
 fn record_byte_limit_returns_before_the_input_pipe_closes() {
-    for format in ["text", "lines", "jsonl"] {
+    for (format, preamble) in [
+        ("text", b"".as_slice()),
+        ("lines", b"".as_slice()),
+        ("jsonl", b"".as_slice()),
+        ("text", b"\xef\xbb\xbf".as_slice()),
+        ("lines", b"\xef\xbb\xbf".as_slice()),
+        ("jsonl", b"\xef\xbb\xbf".as_slice()),
+    ] {
         let mut child = support::command()
             .args(["decide", "Ready?", "--backend", "stub", "--from", format])
             .stdin(Stdio::piped())
@@ -295,6 +416,7 @@ fn record_byte_limit_returns_before_the_input_pipe_closes() {
             .spawn()
             .unwrap();
         let mut input = child.stdin.take().unwrap();
+        input.write_all(preamble).unwrap();
         input.write_all(&vec![b'x'; 64 * 1024 * 1024 + 1]).unwrap();
         let (send, receive) = std::sync::mpsc::channel();
         std::thread::spawn(move || send.send(child.wait_with_output().unwrap()).unwrap());

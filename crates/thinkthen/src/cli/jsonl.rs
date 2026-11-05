@@ -9,7 +9,7 @@ use clap::ArgMatches;
 use serde_json::{Value, value::RawValue};
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Write};
 use store::Store;
 
 pub(super) fn run(
@@ -79,12 +79,9 @@ fn admit(input: Input, name: &str, cancel: &Cancel) -> Result<(Store, u64, input
             let Some((path, line, reader)) = current.as_mut() else {
                 continue;
             };
-            let mut bytes = Vec::new();
-            let length = reader
-                .take((crate::files::MAX_RECORD_BYTES + 1) as u64)
-                .read_until(b'\n', &mut bytes)
+            let bytes = input::read_record(reader.as_mut(), input::Format::Jsonl, *line == 0)
                 .map_err(|_| super::local("JSON Lines input could not be read"))?;
-            if length == 0 {
+            if input::source_body(&bytes, *line == 0).is_empty() {
                 current = None;
                 continue;
             }
@@ -104,16 +101,17 @@ fn admit(input: Input, name: &str, cancel: &Cancel) -> Result<(Store, u64, input
                 &format!("{path} line {line}: {why}"),
             )
         };
-        if bytes.len() > crate::files::MAX_RECORD_BYTES {
+        let body = input::source_body(&bytes, line == 1);
+        if body.len() > crate::files::MAX_RECORD_BYTES {
             return Err(invalid("record exceeds the byte limit"));
         }
-        let members = serde_json::from_slice::<BTreeMap<String, Box<RawValue>>>(&bytes)
+        let members = serde_json::from_slice::<BTreeMap<String, Box<RawValue>>>(body)
             .map_err(|_| invalid("expected a JSON object"))?;
         if members.contains_key(name) {
             return Err(invalid("answer field already exists"));
         }
         count += 1;
-        records.put(count, &bytes)?;
+        records.put(count, body)?;
         origins.record(count, path);
     }
     Ok((records, count, origins))

@@ -36,6 +36,7 @@ def statements(text, start, end):
 
 
 def check_consumer(consumer):
+    assert not (consumer / 'minor').exists(), 'ABI fixture leaked into ordinary consumer'
     manifest = (consumer / 'Package.swift').read_text()
     for folder in re.findall(r'path: "([^"]+)"', manifest.split('targets: [', 1)[1]):
         if folder != '.':
@@ -91,13 +92,15 @@ def staging(revision):
         raise SystemExit('\n'.join(failures))
 
 
-def mac_package(assets, receipt_path, revision):
-    assert sys.platform == 'darwin', 'the actual package proof requires macOS'
+def prepared_engine(assets, receipt_path):
+    assert sys.platform in ('darwin', 'linux')
     receipt = json.loads(receipt_path.read_text())
-    relative = 'osx-arm64/libthinkthen_ffi.dylib'
+    relative = ('osx-arm64/libthinkthen_ffi.dylib' if sys.platform == 'darwin'
+                else 'linux-x64/libthinkthen_ffi.so')
     engine = assets / relative
     digest = hashlib.sha256(engine.read_bytes()).hexdigest()
-    assert receipt['host'] == 'aarch64-apple-darwin'
+    expected = 'aarch64-apple-darwin' if sys.platform == 'darwin' else 'x86_64-unknown-linux-gnu'
+    assert receipt['host'] == expected
     assert receipt['native_production_executed'] is True
     assert digest == receipt['assets'][relative]
     print('Prepared engine provenance: ' + json.dumps(dict(source=receipt['source_revision'],
@@ -106,6 +109,12 @@ def mac_package(assets, receipt_path, revision):
     for name in ('scripts/swift-package', 'scripts/header_contract.py', 'sdk/swift/Package.swift',
                  'sdk/swift/tests/Package.swift', 'sdk/swift/tests/docs.py', 'docs/surfaces/swift.md'):
         print(name + ' sha256 ' + hashlib.sha256((ROOT / name).read_bytes()).hexdigest(), flush=True)
+    return engine
+
+
+def mac_package(assets, receipt_path, revision):
+    assert sys.platform == 'darwin', 'the actual package proof requires macOS'
+    prepared_engine(assets, receipt_path)
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-package-') as temporary:
         scratch = Path(temporary)
         candidate = scratch / 'release-candidate'
@@ -138,15 +147,88 @@ def mac_package(assets, receipt_path, revision):
             shutil.rmtree(ROOT / '.swift-installed', ignore_errors=True)
 
 
+def source_install(assets, receipt_path, revision, resolve_only=False):
+    """Run the real source-install Swift recipe against a local version-tag mirror."""
+    from contextlib import contextmanager
+    from release_metadata import version
+    from release_source import stage
+
+    assert sys.platform == ('linux' if resolve_only else 'darwin')
+    engine = prepared_engine(assets, receipt_path)
+    recipe = source('source-install-check', revision)
+    setup = next(node for node in ast.parse(recipe).body
+                 if isinstance(node, ast.With))
+    swift = next(node for node in setup.body if isinstance(node, ast.With)
+                 and ast.unparse(node.items[0].context_expr) == "check('Swift')")
+    if resolve_only:
+        from release_images import image
+        print('Offline source-resolution image: ' + image('swift'), flush=True)
+        build = next(i for i, node in enumerate(swift.body)
+                     if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call)
+                     and isinstance(node.value.func, ast.Name) and node.value.func.id == 'swift_run'
+                     and any(isinstance(arg, ast.Constant) and arg.value == 'build'
+                             for arg in node.value.args))
+        resolve = ast.parse("swift_run('swift', 'package', '--package-path', swift, 'resolve')").body[0]
+        swift.body = swift.body[:build] + [resolve]
+        ast.fix_missing_locations(swift)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-source-install-') as temporary:
+        scratch = Path(temporary)
+        tag = scratch / 'tag'
+        # Use the real release source staging with a previously verified engine.
+        # This proof tests source installation, not package notice assembly.
+        host = 'linux-x86_64' if resolve_only else 'macos-arm64'
+        stage({host: engine}, tag, {})
+        run('git', 'init', '--quiet', tag)
+        run('git', '-C', tag, 'add', '.')
+        run('git', '-C', tag, '-c', 'user.name=Release rehearsal',
+            '-c', 'user.email=release@example.invalid', 'commit', '--quiet',
+            '-m', 'Stage local Swift source installation')
+        run('git', '-C', tag, 'tag', 'v' + version())
+
+        @contextmanager
+        def check(name):
+            yield
+            print('source install ' + name + ': PASS', flush=True)
+
+        environment = dict(os.environ, THINKTHEN_BACKEND='stub')
+        environment.pop('THINKTHEN_NATIVE_LIBRARY', None)
+        def source_run(*arguments, **options):
+            print('Source-install command: ' + json.dumps(list(map(str, arguments))), flush=True)
+            run(*arguments, **options)
+
+        namespace = dict(ROOT=ROOT, scratch=scratch, tag=tag, args=argparse.Namespace(readmes=False),
+                         run=source_run, check=check, shutil=shutil, sys=sys, os=os, Path=Path,
+                         version=version, env=environment)
+        print('Source-install recipe: ' + (revision or 'HEAD'), flush=True)
+        exec(compile(ast.Module(body=[swift], type_ignores=[]),
+                     str(ROOT / 'scripts/source-install-check'), 'exec'), namespace)
+        if resolve_only:
+            print('Actual offline SwiftPM local version-tag mirror resolution passes', flush=True)
+        else:
+            run(namespace['binary'], 'surface', cwd=scratch, env=environment)
+            print('Actual mirrored source-installed Swift debug consumer and surface pass', flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source-revision', help='exercise the actual recipes at an earlier revision')
-    parser.add_argument('--mac-native-assets', type=Path)
+    parser.add_argument('--mac-native-assets', '--native-assets', type=Path)
     parser.add_argument('--native-receipt', type=Path)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--mac-source-install', action='store_true',
+                        help='run the actual Swift source-install recipe with a local tag mirror')
+    modes.add_argument('--linux-source-resolve', action='store_true',
+                       help='resolve the actual Swift source mirror in its offline Linux image')
     args = parser.parse_args()
+    if (args.mac_source_install or args.linux_source_resolve) and not args.mac_native_assets:
+        parser.error('source installation proof requires --native-assets')
     if args.mac_native_assets:
         if not args.native_receipt:
             parser.error('--mac-native-assets requires --native-receipt')
-        mac_package(args.mac_native_assets, args.native_receipt, args.source_revision)
+        if args.mac_source_install or args.linux_source_resolve:
+            source_install(args.mac_native_assets, args.native_receipt, args.source_revision,
+                           resolve_only=args.linux_source_resolve)
+        else:
+            mac_package(args.mac_native_assets, args.native_receipt, args.source_revision)
     else:
         staging(args.source_revision)

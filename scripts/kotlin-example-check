@@ -17,6 +17,8 @@ import subprocess
 import sys
 import tempfile
 
+from kotlin_compiler import classpath as compiler_classpath
+
 root = Path(__file__).resolve().parent.parent
 guide = root / 'docs/surfaces/kotlin.md'
 classpath, repository, home = sys.argv[1:]
@@ -55,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='kotlin-guide-examples-') as folder:
                       + body + '\n    }\n    Unit\n}\n')
         (sources / f'Example{index}.kt').write_text(source)
         programs.append((index, package + '.Example' + str(index) + 'Kt'))
-    compiler = os.pathsep.join(str(path) for path in Path(repository).rglob('*.jar'))
+    compiler = compiler_classpath(repository)
     subprocess.run([java, '-Duser.home=' + home, '-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
                     '-no-stdlib', '-no-reflect', '-jvm-target', '22', '-classpath', classpath,
                     '-d', str(scratch / 'classes'), str(sources)], cwd=scratch, env=environment, check=True)

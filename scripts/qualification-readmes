@@ -4,6 +4,7 @@
 Examples use their documented entry points. The command installs the delivered
 candidate through a private installer mirror before its literal first question.
 """
+from kotlin_compiler import classpath as compiler_classpath
 from contextlib import contextmanager
 import json
 import os
@@ -44,6 +45,20 @@ def unpack(folder, destination):
 def example(name, language, match=None):
     blocks = re.findall(r'```' + language + r'\n(.*?)\n```', (PACKAGE / name / 'README.md').read_text(encoding='utf-8'), re.S)
     return next(block for block in blocks if match is None or match in block)
+
+
+def kotlin_readme(package, scratch, run):
+    literal = (package / 'kotlin/README.md').read_text(encoding='utf-8')
+    kotlin = re.findall(r'```kotlin\n(.*?)\n```', literal, re.S)[0]
+    source = scratch / 'First.kt'
+    source.write_text(kotlin + '\n', encoding='utf-8')
+    jars = [*sorted((package / 'kotlin').glob('*.jar')), *sorted((package / 'kotlin/dependencies').glob('*.jar'))]
+    classpath = os.pathsep.join(map(str, jars))
+    run('java', java_arguments(scratch / 'kotlin-compiler.args', '-cp', compiler_classpath(),
+        'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
+        '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source))
+    run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
+    print('README: Kotlin passes', flush=True)
 
 
 failures = []
@@ -145,17 +160,7 @@ if __name__ == '__main__':
             print('README: Java passes', flush=True)
 
         with check('Kotlin'):
-            kotlin = example('kotlin', 'kotlin')
-            source = write('First.kt', kotlin + '\n')
-            jars = [*sorted((PACKAGE / 'kotlin').glob('*.jar')), *sorted((PACKAGE / 'kotlin/dependencies').glob('*.jar'))]
-            classpath = os.pathsep.join(map(str, jars))
-            tools = Path.home() / '.local/share/thinkthen-build-tools/jvm/m2'
-            compiler = os.pathsep.join(str(path) for path in tools.rglob('*.jar'))
-            run('java', java_arguments(scratch / 'kotlin-compiler.args', '-cp', compiler,
-                'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler', '-no-stdlib', '-no-reflect',
-                '-jvm-target', '22', '-classpath', classpath, '-d', scratch / 'kotlin-classes', source))
-            run('java', '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch / 'kotlin-classes') + os.pathsep + classpath, 'FirstKt')
-            print('README: Kotlin passes', flush=True)
+            kotlin_readme(PACKAGE, scratch, run)
 
         with check('C#'):
             write('dotnet/Program.cs', example('csharp', 'csharp'))

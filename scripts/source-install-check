@@ -120,7 +120,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporar
     with check('Swift'):
         # SwiftPM resolves the version tag through its normal mirror facility.
         swift = scratch / 'swift-consumer'
-        shutil.copytree(ROOT / 'sdk/swift/tests', swift, ignore=shutil.ignore_patterns('*.py'))
+        shutil.copytree(ROOT / 'sdk/swift/tests', swift, ignore=shutil.ignore_patterns('*.py', 'minor'))
         run(sys.executable, ROOT / 'sdk/swift/tests/readme.py', package / 'swift/README.md' if args.readmes else ROOT / 'sdk/swift/README.md', swift / 'Readme')
         run(sys.executable, ROOT / 'sdk/swift/tests/docs.py', ROOT / 'docs/surfaces/swift.md', swift / 'Examples')
         run(sys.executable, ROOT / 'scripts/surface-example', 'prepare', 'swift', swift / 'Guide')

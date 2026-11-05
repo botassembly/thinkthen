@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 
+from kotlin_compiler import classpath as compiler_classpath
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -33,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-quickstarts-') as folder:
         run('java', '-Duser.home=' + home, '--enable-native-access=ALL-UNNAMED', '-cp', str(scratch) + os.pathsep + classpath, 'Example', cwd=scratch, env=environment)
         source = scratch / 'Quickstart.kt'
         source.write_text(block(ROOT / 'sdk/kotlin/README.md', 'kotlin'))
-        compiler = os.pathsep.join(str(p) for p in Path(repository).rglob('*.jar'))
+        compiler = compiler_classpath(repository)
         run('java', '-Duser.home=' + home, '-cp', compiler, 'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler',
             '-no-stdlib', '-no-reflect', '-jvm-target', '22', '-classpath', classpath,
             '-d', scratch / 'kotlin', source, cwd=scratch, env=environment)

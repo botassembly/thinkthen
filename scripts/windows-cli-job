@@ -163,6 +163,8 @@ $known = @{
     tar = @("$env:WINDIR\System32\tar.exe", "$programs\Git\usr\bin\tar.exe")
     cargo = @("$userRoot\.cargo\bin\cargo.exe", "$userRoot\.rustup\toolchains\*\bin\cargo.exe")
     rustup = @("$userRoot\.cargo\bin\rustup.exe")
+    swift = @("C:\Library\Developer\Toolchains\*\usr\bin\swift.exe", "$programs\Swift\Toolchains\*\usr\bin\swift.exe", "$env:LOCALAPPDATA\Programs\Swift\Toolchains\*\usr\bin\swift.exe")
+    swiftc = @("C:\Library\Developer\Toolchains\*\usr\bin\swiftc.exe", "$programs\Swift\Toolchains\*\usr\bin\swiftc.exe", "$env:LOCALAPPDATA\Programs\Swift\Toolchains\*\usr\bin\swiftc.exe")
     cl = @()
     link = @()
 }
@@ -170,7 +172,7 @@ $vsRoots = @($visualStudio | ForEach-Object { $_.installationPath }) + @("$progr
 foreach($name in @('cl','link')) {
     $known[$name] = @($vsRoots | ForEach-Object { "$_\VC\Tools\MSVC\*\bin\Hostx64\x64\$name.exe" })
 }
-$tools = foreach($name in @('python','python3','py','git','tar','cargo','rustup','cl','link')) {
+$tools = foreach($name in @('python','python3','py','git','tar','cargo','rustup','swift','swiftc','cl','link')) {
     $selected = Get-Command $name -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     $paths = @($known[$name])
     if($selected) { $paths += $selected.Source }
@@ -390,9 +392,26 @@ def replay_windows(options, metadata, prepared):
     result.check_returncode()
 
 
+
+def swift_consumer(options, native, revision):
+    source = stage_source(ROOT, revision, options.output / 'source.tar.gz')
+    (options.output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
+    upload_archive(options, native + '/source.tar.gz', options.output / 'source.tar.gz',
+                   source['archive_sha256'])
+    checksum = hashlib.sha256(options.swift_inputs.read_bytes()).hexdigest()
+    print('Genuine Windows Swift input bundle sha256 ' + checksum, flush=True)
+    upload_archive(options, native + '/inputs.tar.gz', options.swift_inputs, checksum)
+    script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; New-Item -ItemType Directory inputs|Out-Null; tar -xzf inputs.tar.gz -C inputs; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(options.python_home + '/python.exe') + " source/scripts/swift-windows-consumer-check inputs proof; exit $LASTEXITCODE"
+    with (options.output / 'swift-consumer.log').open('wb') as log:
+        result = subprocess.run(ssh_command(options, script), stdout=log,
+                                stderr=subprocess.STDOUT, timeout=600)
+    sys.stdout.buffer.write((options.output / 'swift-consumer.log').read_bytes())
+    result.check_returncode()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme'))
+    parser.add_argument('mode', choices=('build', 'hold', 'stage-only', 'inventory', 'readme', 'readme-input', 'readme-build', 'swift'))
     parser.add_argument('output', type=Path)
     parser.add_argument('--source', default='HEAD')
     parser.add_argument('--host', default='Docker@localhost')
@@ -406,8 +425,11 @@ def main():
     parser.add_argument('--cleanup-root', action='append', default=[], help='exact ended-job native root authorized for removal')
     parser.add_argument('--replay-inputs', type=Path, help='verified Linux version-probe CLI and public cache for the one strict Windows replay')
     parser.add_argument('--binary', type=Path, help='existing genuine candidate executable for readme mode; never build')
+    parser.add_argument('--swift-inputs', type=Path, help='verified genuine candidate Swift input bundle')
     options = parser.parse_args()
-    if (options.mode == 'readme') != (options.binary is not None):
+    if (options.mode == 'swift') != (options.swift_inputs is not None):
+        parser.error('swift mode requires --swift-inputs; other modes do not accept it')
+    if (options.mode in ('readme', 'readme-input')) != (options.binary is not None):
         parser.error('readme mode requires --binary; other modes do not accept it')
     options.python_home = None
     if any(not math.isfinite(value) or value <= 0 for value in (options.seconds, options.ready_seconds, options.lock_seconds)):
@@ -480,7 +502,7 @@ def main():
                 raise ValueError('Cannot remove the active owned native root')
             cleanup = "$ErrorActionPreference='Stop'; if(Test-Path -LiteralPath " + quote(ended_root) + "){Remove-Item -LiteralPath " + quote(ended_root) + " -Recurse -Force}; [Console]::Out.WriteLine('Removed ended-job native root: ' + " + quote(ended_root) + ")"
             python_ssh(options, cleanup, phase='cleanup-' + ended_root.rsplit('/', 1)[1])
-        if options.mode in ('build', 'readme'):
+        if options.mode in ('build', 'readme', 'readme-input', 'readme-build', 'swift'):
             provision_python(options, native, python_manifest)
         elif options.mode == 'hold':
             verify_python(options, native, python_manifest)
@@ -489,12 +511,15 @@ def main():
             ready(options)
         if options.mode == 'inventory':
             inventory(options)
-        elif options.mode == 'readme':
+        elif options.mode == 'swift':
+            swift_consumer(options, native, revision)
+        elif options.mode in ('readme', 'readme-input'):
             source = stage_source(ROOT, revision, output / 'source.tar.gz')
             upload_archive(options, native + '/source.tar.gz', output / 'source.tar.gz', source['archive_sha256'])
             binary_sha = hashlib.sha256(options.binary.read_bytes()).hexdigest()
             upload_archive(options, native + '/candidate.exe', options.binary, binary_sha)
-            script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; Set-Location source; & " + quote(metadata['python']) + " scripts/release-script-test ReleaseScripts.test_readme_candidate_fetch_runs_literal_install_and_rejects_other_urls; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(metadata['python']) + " scripts/installer-test --binary ../candidate.exe --readme README.md; exit $LASTEXITCODE"
+            proof = 'scripts/windows-readme-input-probe --binary ../candidate.exe' if options.mode == 'readme-input' else 'scripts/installer-test --binary ../candidate.exe --readme README.md'
+            script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native) + "; tar -xzf source.tar.gz; if($LASTEXITCODE){exit $LASTEXITCODE}; Set-Location source; & " + quote(metadata['python']) + " scripts/release-script-test ReleaseScripts.test_readme_candidate_fetch_runs_literal_install_and_rejects_other_urls; if($LASTEXITCODE){exit $LASTEXITCODE}; & " + quote(metadata['python']) + " " + proof + "; exit $LASTEXITCODE"
             result = subprocess.run(ssh_command(options, script), capture_output=True, timeout=240)
             (output / 'readme.stdout').write_bytes(result.stdout)
             (output / 'readme.stderr').write_bytes(result.stderr)
@@ -502,7 +527,7 @@ def main():
             sys.stderr.buffer.write(result.stderr)
             result.check_returncode()
             (output / 'readme.json').write_text(json.dumps({'source': revision, 'candidate_sha256': binary_sha, 'exit': 0}) + '\n')
-        elif options.mode == 'build':
+        elif options.mode in ('build', 'readme-build'):
             source = stage_source(ROOT, revision, output / 'source.tar.gz')
             (output / 'source.json').write_text(json.dumps(source, indent=2) + '\n')
             upload_archive(options, native + '/source.tar.gz', output / 'source.tar.gz',
@@ -529,6 +554,16 @@ def main():
             (output / 'identity.json').write_bytes(identity_bytes)
             metadata['sha256'] = checksum
             (output / 'vm.json').write_text(json.dumps(metadata, indent=2) + '\n')
+            if options.mode == 'readme-build':
+                # Reproduce the hosted console's UTF-8 input condition, including
+                # PowerShell's emitted preamble. Do not change the README bytes.
+                script = "$ErrorActionPreference='Stop'; Set-Location " + quote(native + '/source') + "; & " + quote(metadata['python']) + " scripts/windows-readme-input-probe --binary ../build/cli/thinkthen.exe --expect-decoded; if($LASTEXITCODE){exit $LASTEXITCODE}; [Console]::InputEncoding=[Text.Encoding]::GetEncoding(65001); [Console]::OutputEncoding=[Text.Encoding]::GetEncoding(65001); & " + quote(metadata['python']) + " scripts/installer-test --binary ../build/cli/thinkthen.exe --readme README.md; exit $LASTEXITCODE"
+                result = subprocess.run(ssh_command(options, script), capture_output=True, timeout=240)
+                (output / 'readme.stdout').write_bytes(result.stdout)
+                (output / 'readme.stderr').write_bytes(result.stderr)
+                sys.stdout.buffer.write(result.stdout)
+                sys.stderr.buffer.write(result.stderr)
+                result.check_returncode()
             scratch_paths = [native + suffix for suffix in ('/source', '/source.tar.gz', '/cli.zip', '/build/target')]
             cleanup = '$ErrorActionPreference="Stop"; ' + '; '.join('if(Test-Path -LiteralPath ' + quote(item) + '){Remove-Item -LiteralPath ' + quote(item) + ' -Recurse -Force}' for item in scratch_paths)
             ssh(options, cleanup, timeout=120)

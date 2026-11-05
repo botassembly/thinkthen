@@ -554,7 +554,7 @@ jobs:
       - name: Prepare Kotlin README compiler dependencies
         id: prepare-kotlin-readme-compiler-dependencies
         if: always()
-        run: mvn -B -q -f sdk/java/pom.xml "-Dmaven.repo.local=$HOME/.local/share/thinkthen-build-tools/jvm/m2" dependency:go-offline
+        run: python3 scripts/kotlin_compiler.py
       - name: Unpack the Windows candidate
         id: unpack-the-windows-candidate
         if: always()

@@ -236,6 +236,7 @@ final class Native: Sendable {
   func openCall(_ client: OpaquePointer, _ bytes: Data, name: String?, records: [Record]?) throws
     -> OpaquePointer
   {
+    let offsetUnit = UInt32(THINKTHEN_OFFSET_CODE_POINTS.rawValue)
     let question = try admit(bytes, using: admitQuestion)
     defer { questionFree(question) }
     var pointer: OpaquePointer?
@@ -248,7 +249,7 @@ final class Native: Sendable {
         let named = name == nil ? nil : nameView
         guard let records else {
           return callOpen(
-            client, question, named, THINKTHEN_OFFSET_CODE_POINTS.rawValue, &pointer, &error)
+            client, question, named, offsetUnit, &pointer, &error)
         }
         var payload = Data()
         var inputs: [thinkthen_record_input] = []
@@ -281,7 +282,7 @@ final class Native: Sendable {
           return inputs.withUnsafeBufferPointer {
             recordsOpen(
               client, question, named, $0.baseAddress, inputs.count,
-              MemoryLayout<thinkthen_record_input>.stride, THINKTHEN_OFFSET_CODE_POINTS.rawValue,
+              MemoryLayout<thinkthen_record_input>.stride, offsetUnit,
               &pointer, &error)
           }
         }

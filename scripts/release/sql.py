@@ -45,7 +45,7 @@ def arguments(question):
             rules = []
             for rule in value:
                 fields = [(key, rule.get(key, False if key == 'either' else None))
-                          for key in ('name', 'source', 'target', 'reads', 'either')]
+                          for key in ('relation', 'source', 'target', 'reads', 'either')]
                 if kind == 'postgres':
                     rules.append('ROW(' + ','.join(scalar(item) for _, item in fields) + ')::thinkthen.rule')
                 else:
@@ -80,7 +80,8 @@ def compact(value):
     if isinstance(value, list):
         return [compact(child) for child in value]
     if isinstance(value, dict):
-        return {key: compact(child) for key, child in value.items()
+        return {{'start_offset': 'start', 'end_offset': 'end'}.get(key, key): compact(child)
+                for key, child in value.items()
                 if (child is not None or key == 'answer' and value.get('status') == 'answered')
                 and not (key == 'either' and child is False)}
     return value
@@ -91,48 +92,44 @@ def normalize(row, function):
     for name in ('id', 'source', 'detail'):
         item = row.get(name)
         if item is not None:
-            value[name] = json.loads(item) if kind == 'sqlite' else compact(item)
+            value[name] = compact(json.loads(item) if kind == 'sqlite' and name != 'id' else item)
             if name == 'source' and value[name].get('name') is None:
                 value[name].pop('name', None)
     if row.get('probability') is not None:
         value['probability'] = row['probability']
+    if row['status'] != 'answered':
+        assert row['answer'] is None, row
+    if row['status'] != 'failed':
+        assert all(row[name] is None for name in ('error_code', 'error_message', 'error_http_status')), row
     if row['status'] == 'failed':
         value['error'] = {'code': row['error_code'], 'message': row['error_message']}
         if row['error_http_status'] is not None:
             value['error']['http_status'] = row['error_http_status']
     elif row['status'] == 'answered':
         answer = row.get('answer')
-        if function == 'rank':
-            answer = row['rank']
-        elif function == 'find':
-            answer = (row.get('found') if kind.startswith('duckdb') else
-                None if row['found_text'] is None else
-                dict(text=row['found_text'], start=row['found_start'], end=row['found_end']))
-        elif kind == 'sqlite' and answer is not None:
+        if kind == 'sqlite' and answer is not None:
             if function in ('decide', 'filter'):
                 assert type(answer) is int and answer in (0, 1), row
                 answer = bool(answer)
-            elif function in ('tag', 'recognize', 'relate', 'annotate'):
+            elif function in ('tag', 'find', 'recognize', 'relate', 'annotate'):
                 answer = json.loads(answer)
-        value['answer'] = compact(answer) if kind != 'sqlite' else answer
+        if function == 'annotate' and 'detail' in value:
+            outcomes = value.pop('detail')
+            bare = {name: compact(child) for name, child in answer.items()}
+            assert bare == {name: child.get('answer') if child['status'] == 'answered' else None
+                              for name, child in outcomes.items()}, row
+            answer = outcomes
+        else:
+            answer = compact(answer)
+        value['answer'] = answer
     if function == 'filter':
-        assert row['kept'] == (row['status'] == 'answered' and value.get('answer') is True), row
+        assert row['status'] == 'failed' or (row['status'] == 'answered' and value.get('answer') is True), row
     return value
-
-
-def public_question(question):
-    question = json.loads(json.dumps(question))
-    if question['function'] == 'relate':
-        for rule in question['rules']:
-            rule['name'] = rule.pop('relation')
-    elif question['function'] == 'annotate':
-        question['questions'] = {name: public_question(child) for name, child in question['questions'].items()}
-    return question
 
 
 for case, selected_field in cases:
     request = case['request']
-    question = public_question(request['question'])
+    question = request['question']
     function = question['function']
     settings = settings_sql(case['client'])
     if kind == 'sqlite':
@@ -147,6 +144,8 @@ for case, selected_field in cases:
             else:
                 name = 'toolbox' if name == 'questions' else name
                 constraints.append(name + ' = ' + (quote(json.dumps(item)) if isinstance(item, (dict, list)) else scalar(item)))
+        if function == 'filter':
+            constraints.append("failures = 'row'")
         if 'name' in request:
             constraints.append('name = ' + quote(request['name']))
         statement = 'SELECT * FROM thinkthen_' + function + ' WHERE ' + ' AND '.join(constraints) + ';'
@@ -155,6 +154,8 @@ for case, selected_field in cases:
         command = [executable, ':memory:']
     else:
         args = arguments(question)
+        if function == 'filter':
+            args.append(('failures', quote('row')))
         if 'name' in request:
             args.append(('name', quote(request['name'])))
         if kind.startswith('duckdb'):
@@ -188,7 +189,8 @@ for case, selected_field in cases:
     if kind.startswith('duckdb'):
         result = [json.loads(row['row']) for row in result]
     actual = [normalize(row, function) for row in result]
-    expected = case['expected']
+    expected = [row for row in case['expected'] if function != 'filter' or row['status'] == 'failed'
+                or (row['status'] == 'answered' and row.get('answer') is True)]
     if selected_field:
         for row, wanted in zip(actual, expected, strict=True):
             identity = row['source']['question_identity']

@@ -89,7 +89,7 @@ pub(super) fn stream(
     let engine = engine.clone().cancel(cancel.clone());
     let mut call = if matches!(request.question(), crate::Question::Rank(_)) {
         let mut records = Vec::new();
-        while let Some((record, bytes)) = input.next()? {
+        while let Some((record, bytes, _)) = input.next()? {
             if cancel.is_cancelled() {
                 return Err(crate::retry::cancelled());
             }
@@ -110,7 +110,7 @@ pub(super) fn stream(
         }
         match call.next_event()? {
             Event::NeedsInput => match input.poll()? {
-                InputEvent::Record(record, bytes) => {
+                InputEvent::Record(record, bytes, start) => {
                     if let Some(items) = &mut items {
                         let format = if selected_field && input.format == super::input::Format::Text
                         {
@@ -118,7 +118,10 @@ pub(super) fn stream(
                         } else {
                             input.format
                         };
-                        items.push_back(super::render::item(&bytes, format)?);
+                        items.push_back(super::render::item(
+                            super::input::source_body(&bytes, start),
+                            format,
+                        )?);
                     }
                     if let Some(originals) = &mut originals {
                         originals.push(&bytes)?;

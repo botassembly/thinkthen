@@ -49,7 +49,12 @@ fn command(server: &Loopback, args: &[&str]) -> Command {
 #[test]
 fn passing_records_keep_their_exact_input_bytes() {
     type Case = (&'static [&'static str], &'static [u8], &'static [u8]);
-    let cases: [Case; 3] = [
+    let cases: [Case; 4] = [
+        (
+            &["--from", "lines"],
+            b"\xef\xbb\xbfrefund\r\nparcel\n",
+            b"\xef\xbb\xbfrefund\r\n",
+        ),
         (
             &["--from", "lines"],
             b" refund first \r\nparcel\nmaybe\nbroken\nrefund last",

@@ -108,16 +108,16 @@ pub(super) fn run(
     }
     let receiver = super::input::spawn(
         move || {
-            let Some((_, bytes)) = input.next()? else {
+            let Some((_, bytes, start)) = input.next()? else {
                 return Ok(None);
             };
-            let text = String::from_utf8(bytes)
+            let text = std::str::from_utf8(super::input::source_body(&bytes, start))
                 .map_err(|_| super::local("input could not be read as UTF-8"))?;
             // Each step reads exactly one JSON value per line.
             let value = if input.format == super::input::Format::Jsonl {
-                super::field(&text).to_owned()
+                super::field(text).to_owned()
             } else {
-                serde_json::to_string(super::field(&text))
+                serde_json::to_string(super::field(text))
                     .map_err(|_| super::local("input could not be encoded"))?
             };
             Ok(Some(value))
