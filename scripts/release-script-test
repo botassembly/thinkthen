@@ -353,7 +353,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
             with patch.object(release_windows_sdks, 'os', SimpleNamespace(name='nt', environ={}, pathsep=';')), patch.object(
                     release_windows_sdks, 'environment', return_value={'PATH': ''}), patch.object(
                     release_windows_sdks, 'runtime_environment', return_value={'PATH': ''}), patch.object(
-                    release_windows_sdks.tempfile, 'TemporaryDirectory', return_value=nullcontext(str(scratch))), patch.object(
+                    release_windows_sdks, 'sdk_scratch', return_value=nullcontext(scratch)), patch.object(
                     release_windows_sdks, 'run', side_effect=consumer), patch('release_windows_cache.check_cache', side_effect=cache):
                 with self.assertRaises(GoFinished):
                     release_windows_sdks.full(delivered, {'packages': {'go': 'go.zip'}}, caller_owned=True)

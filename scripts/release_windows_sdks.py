@@ -11,7 +11,6 @@ from package_inventory import python_wheelhouse as wheelhouse
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
@@ -118,6 +117,24 @@ def runtime_environment(scratch, prepared):
     return env
 
 
+@contextmanager
+def sdk_scratch():
+    # npm cache files can pass 260 characters. Without the extended-length prefix,
+    # Windows reports them missing, tempfile skips them, and their folder stays full.
+    root = Path(tempfile.gettempdir()).resolve()
+    root = '\\\\?\\' + str(root) if len(root.drive) == 2 else str(root)
+    temporary = tempfile.TemporaryDirectory(prefix='thinkthen-windows-sdks-', dir=root)
+    scratch = Path(temporary.name.removeprefix('\\\\?\\'))
+    try:
+        yield scratch
+    finally:
+        try:
+            temporary.cleanup()
+        except OSError as error:
+            raise RuntimeError('Windows SDK scratch cleanup failed; retained '
+                               + str(scratch) + ': ' + str(error)) from error
+
+
 def full(folder, build, *, caller_owned=False):
     if os.name != 'nt':
         raise RuntimeError('All installed Windows SDK checks require a native Windows runner')
@@ -138,14 +155,13 @@ def full(folder, build, *, caller_owned=False):
     def check(name):
         try:
             yield
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001 - report every SDK before failing the step
             failures[name] = str(error)
             print('candidate Windows ' + name + ': FAIL: ' + str(error), flush=True)
         else:
             print('candidate Windows ' + name + ': installed shared stub cases pass', flush=True)
 
-    with tempfile.TemporaryDirectory(prefix='thinkthen-windows-sdks-') as temporary:
-        scratch = Path(temporary)
+    with sdk_scratch() as scratch:
         try:
             packages = {name: folder / path for name, path in build['packages'].items()}
             cases = json.loads((folder / 'checks/stub.json').read_text(encoding='utf-8'))

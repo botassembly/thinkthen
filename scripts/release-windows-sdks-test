@@ -86,6 +86,18 @@ def fixture(failure):
                 archive.writestr('fixture', b'')
         calls = []
         original_run = sdks.run
+        original_rmtree = shutil.rmtree
+        cleanup_attempts = []
+
+        def remove_tree(path, *args, **kwargs):
+            path = Path(path)
+            if path.name.startswith('thinkthen-windows-sdks-') and failure == 'cleanup':
+                cleanup_attempts.append(path)
+                leftover = path / 'local/npm-cache/held'
+                leftover.parent.mkdir(parents=True, exist_ok=True)
+                leftover.write_text('named leftover')
+                raise OSError(39, 'injected directory not empty', str(leftover.parent))
+            return original_rmtree(path, *args, **kwargs)
 
         def run(*args, **options):
             args = list(map(str, args))
@@ -119,23 +131,32 @@ def fixture(failure):
              patch.object(sdks, 'environment', environment), \
              patch.object(sdks, 'runtime_environment', return_value={'PATH': ''}), \
              patch.object(sdks, 'run', run), \
+             patch.object(sdks.shutil, 'rmtree', remove_tree), \
              patch('release_windows_cache.check_cache'), \
              patch.object(sdks.shutil, 'which', side_effect=lambda name, **kwargs: name):
             try:
                 sdks.full(folder, {'version': '0.0.0', 'packages': packages}, caller_owned=True)
             finally:
                 print('fixture commands: ' + json.dumps(calls), flush=True)
+                if cleanup_attempts:
+                    print('fixture cleanup attempts: ' + str(len(cleanup_attempts)), flush=True)
+                    retained = cleanup_attempts[0]
+                    assert (retained / 'local/npm-cache/held').is_file(), 'cleanup failure lost its evidence'
+                    print('fixture retained scratch: ' + str(retained), flush=True)
+                    if retained.exists():
+                        original_rmtree(retained)
 
 
 if len(sys.argv) == 2:
     fixture(sys.argv[1])
 else:
     candidate_imports()
-    for failure in ('Swift', 'C', 'Python', 'setup', 'none'):
+    for failure in ('Swift', 'C', 'Python', 'setup', 'none', 'cleanup'):
         result = subprocess.run([sys.executable, __file__, failure], capture_output=True, text=True)
         print('\n'.join(line for line in result.stdout.splitlines()
                         if not line.startswith('fixture commands: ')), flush=True)
-        assert (result.returncode == 0) == (failure == 'none'), result.stderr
+        success = failure == 'none'
+        assert (result.returncode == 0) == success, result.stderr
         for language in LANGUAGES:
             prefix = 'candidate Windows ' + language + ':'
             assert result.stdout.count(prefix) == 1, (failure, language, result.stdout, result.stderr)
@@ -150,5 +171,9 @@ else:
             assert 'swift exited 19:' in result.stdout and 'injected Swift compiler stderr' in result.stdout
         if failure == 'C':
             assert any('/EHsc' in command for command in commands), 'C++ was hidden by C failure'
-        assert ('every installed SDK passed' in result.stdout) == (failure == 'none')
+        if failure == 'cleanup':
+            assert 'fixture cleanup attempts: 1' in result.stdout, result.stdout
+            assert 'Windows SDK scratch cleanup failed; retained' in result.stderr, result.stderr
+            assert 'npm-cache' in result.stderr, result.stderr
+        assert ('every installed SDK passed' in result.stdout) == success
     print('Windows installed SDK runner: all results reported; failures remain nonzero')

@@ -20,7 +20,7 @@ import release_workflow
 class ReleaseReplay(unittest.TestCase):
     def test_idless_artifact_preserves_files_and_continues_after_failure(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             temporary, output = root / 'tmp', root / 'logs'
             temporary.mkdir()
             output.mkdir()
@@ -52,7 +52,7 @@ class ReleaseReplay(unittest.TestCase):
     def test_artifact_missing_file_policy_and_unknown_actions_keep_collecting(self):
         for policy, expected in [('warn', []), ('error', ['step-0'])]:
             with self.subTest(policy=policy), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
+                root = Path(directory).resolve()
                 steps = [{'uses': 'actions/upload-artifact@pinned', 'if': 'always()',
                     'with': {'name': 'diagnostics', 'path': 'missing/', 'if-no-files-found': policy}},
                     {'id': 'after', 'if': 'always()', 'run': 'echo after'}]
@@ -64,7 +64,7 @@ class ReleaseReplay(unittest.TestCase):
 
     def test_own_run_blocks_keep_order_environment_and_all_failures(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             temporary, output = root / 'tmp', root / 'logs'
             temporary.mkdir()
             output.mkdir()
@@ -88,7 +88,7 @@ class ReleaseReplay(unittest.TestCase):
 
     def test_declared_shells_preserve_environment_failure_and_refusal(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "folder's path"
+            root = Path(directory).resolve() / "folder's path"
             root.mkdir()
             binary, temporary, output = root / 'bin', root / 'tmp', root / 'logs'
             for path in (binary, temporary, output):
@@ -132,7 +132,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
 
     def test_unknown_setup_cannot_silently_pass(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             step = {'id': 'setup', 'uses': 'actions/new-setup@pinned', 'with': {'version': '1'}}
             source = {'jobs': {'windows-check': {'steps': [step,
                 {'uses': 'actions/new-setup@pinned', 'if': 'always()', 'with': {'version': '1'}},
@@ -154,7 +154,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
     def test_foreign_action_paths_cannot_claim_builtin_artifact_or_checkout(self):
         for family in ('download-artifact', 'checkout'):
             with self.subTest(family=family), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
+                root = Path(directory).resolve()
                 workspace, output = root / 'workspace', root / 'logs'
                 workspace.mkdir()
                 output.mkdir()
@@ -172,7 +172,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
 
     def test_artifact_cannot_retain_files_outside_the_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             workspace, output = root / 'workspace', root / 'logs'
             workspace.mkdir()
             output.mkdir()
@@ -195,9 +195,24 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
             self.assertEqual(results[-1]['outcome'], 'success')
             self.assertFalse((output / '00-step-0-artifact').exists())
 
+    def test_absolute_artifact_path_outside_fixture_root_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory).resolve()
+            secret = Path(outside).resolve() / 'outside.log'
+            secret.write_text('outside diagnostic')
+            steps = [{'uses': 'actions/upload-artifact@pinned', 'if': 'always()',
+                'with': {'name': 'diagnostics', 'path': str(secret)}},
+                {'id': 'after', 'if': 'always()', 'run': 'echo after'}]
+            results, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps}}},
+                'abc', root, root, root / 'unused', {}, root, root)
+            self.assertEqual(failures, ['step-0'])
+            self.assertIn('path must stay inside its workspace', (root / '00-step-0.log').read_text())
+            self.assertEqual(results[-1]['outcome'], 'success')
+            self.assertFalse((root / '00-step-0-artifact').exists())
+
     def test_setup_receipt_cannot_claim_a_different_selected_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             executable = root / 'go'
             executable.write_text('#!/bin/sh\necho go version go1.24.12 linux/amd64\n')
             executable.chmod(0o755)
@@ -211,7 +226,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
 
     def test_dotnet_requested_install_and_measured_default_stay_distinct(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             executable = root / 'dotnet'
             def install(version):
                 executable.write_text('#!/bin/sh\ncase "$1" in --list-sdks) echo "' + version
@@ -235,7 +250,7 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
 
     def test_complete_candidate_survives_failed_windows_smoke(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             package = root / 'candidate' / release_workflow.version() / 'windows-x86_64'
             package.mkdir(parents=True)
             sha = 'a' * 40
