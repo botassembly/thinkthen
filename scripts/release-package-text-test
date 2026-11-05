@@ -154,8 +154,13 @@ class PackageText(unittest.TestCase):
         namespace = {'m': 'http://maven.apache.org/POM/4.0.0'}
         assert document.findtext('m:distributionManagement/m:relocation/m:artifactId', namespaces=namespace) == 'thinkthen-java'
         from release_registry_check import legacy_jvm_consumer, maven_feed
+        from release_installed_prepare import jvm as prepare_jvm
+        prepare_jvm(scratch, scratch, prepared=scratch / 'maven-build-cache')
         pom = legacy_jvm_consumer(scratch / 'consumer')
-        feed, settings = maven_feed(scratch, scratch)
+        # Dependency preparation belongs to this check. A cold caller profile
+        # must not redirect the offline consumer to an unrelated repository.
+        with patch.object(Path, 'home', return_value=scratch / 'cold-home'):
+            feed, settings = maven_feed(scratch, scratch)
         cache = scratch / 'cold-maven'
         arguments = ['mvn', '-B', '-q', '-s', settings, '-f', pom, 'dependency:build-classpath']
         classpath = scratch / 'resolved-classpath'

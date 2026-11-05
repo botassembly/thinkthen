@@ -4,7 +4,7 @@ import shutil
 import tarfile
 
 from csharp_dependencies import prepare_project
-from jvm_repository import consumer
+from jvm_repository import consumer, seed
 from release_downloads import fetch
 from release_registry_check import environment, run
 from release_workflow import ROOT
@@ -22,17 +22,23 @@ def dotnet(scratch):
         '--source', 'https://api.nuget.org/v3/index.json', env=environment(scratch))
 
 
-def jvm(packages, scratch):
-    url = 'https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz'
-    archive = fetch(url, scratch / 'maven.tar.gz')
-    with tarfile.open(archive) as packed:
-        packed.extractall(scratch / 'tools', filter='data')
-    os.environ['PATH'] = str(scratch / 'tools/apache-maven-3.9.11/bin') + os.pathsep + os.environ['PATH']
+def jvm(packages, scratch, *, prepared=None):
     repository = scratch / 'm2'
-    shutil.copytree(packages / 'maven', repository)
+    if prepared is None:
+        url = 'https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz'
+        archive = fetch(url, scratch / 'maven.tar.gz')
+        with tarfile.open(archive) as packed:
+            packed.extractall(scratch / 'tools', filter='data')
+        os.environ['PATH'] = str(scratch / 'tools/apache-maven-3.9.11/bin') + os.pathsep + os.environ['PATH']
+    else:
+        # Registry assembly already compiled the current Java and Kotlin SDKs
+        # with this dependency closure. Resolve their consumer offline too.
+        seed(prepared, repository)
+    shutil.copytree(packages / 'maven', repository, dirs_exist_ok=prepared is not None)
     staged = consumer(ROOT, scratch / 'dependency-jvm')
     # Compile only the consumer to resolve plugin dependencies that go-offline
     # omits. The proof later stages a fresh consumer and permits no network.
-    run('mvn', '-B', '-q', '-Dmaven.repo.local=' + str(repository), '-f', staged / 'pom.xml',
+    run('mvn', *(['-o'] if prepared is not None else []), '-B', '-q',
+        '-Dmaven.repo.local=' + str(repository), '-f', staged / 'pom.xml',
         'package', 'dependency:build-classpath', '-Dmdep.outputFile=' + str(scratch / 'prepared-classpath'),
         env=environment(scratch))

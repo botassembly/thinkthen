@@ -15,6 +15,58 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class Export(unittest.TestCase):
+    def test_planning_scan_checks_tracked_plans_and_agent_instructions(self):
+        with tempfile.TemporaryDirectory(prefix='public-planning-') as temporary:
+            root = Path(temporary)
+            source = root / 'source'
+            scripts = source / 'scripts'
+            scripts.mkdir(parents=True)
+            for name in ('public-export-check', 'words'):
+                shutil.copy2(ROOT / 'scripts' / name, scripts / name)
+            (scripts / 'native-tools-env').write_text(':\n')
+            (source / 'sdlc/planning').mkdir(parents=True)
+            paths = (source / 'AGENTS.md', source / 'sdlc/planning/current.md')
+            clean = 'Use the build host. The coordinator assigns a reviewer.\n'
+            for path in paths:
+                path.write_text(clean)
+            (source / 'asset.bin').write_bytes(b'\0ExampleAgent\n')
+            subprocess.run(['git', 'init', '--quiet'], cwd=source, check=True)
+            subprocess.run(['git', 'add', '.'], cwd=source, check=True)
+            patterns = root / 'patterns'
+            patterns.write_text(r'/home/\S+|/Users/\S+|192\.0\.2\.7|preview\.example\.test'
+                                r'|\bExample(?:Agent|Machine|Project|Customer)\b|sk-[A-Za-z0-9]{32}')
+            command = [scripts / 'public-export-check', '--planning', patterns]
+            env = dict(os.environ, THINKTHEN_GATE_STRICT='1')
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for sample in ('/home/example/work', '/Users/example/work', '192.0.2.7',
+                           'https://preview.example.test', 'ExampleAgent', 'ExampleMachine',
+                           'ExampleProject', 'ExampleCustomer', 'sk-' + 'A' * 32):
+                for path in paths:
+                    with self.subTest(sample=sample, path=path.name):
+                        path.write_text(sample + '\n')
+                        result = subprocess.run(command, env=env, capture_output=True, text=True)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn(str(path.relative_to(source)) + ':1:', result.stderr)
+                        self.assertNotIn(sample, result.stderr, 'scan exposed private contents')
+                        path.write_text(clean)
+            for path in paths:
+                path.write_bytes(b'\0ExampleAgent\n')
+                result = subprocess.run(command, env=env, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0, 'scan skipped NUL-containing planning text')
+                self.assertIn(str(path.relative_to(source)) + ':1:', result.stderr)
+                self.assertNotIn('ExampleAgent', result.stderr, 'scan exposed private contents')
+                path.write_text(clean)
+            routing = source / 'sdlc/pm.json'
+            routing.write_text(json.dumps({'mailroom': {'name': 'ExampleAgent'}}))
+            subprocess.run(['git', 'add', '.'], cwd=source, check=True)
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'scan skipped internal routing names')
+            self.assertIn('sdlc/pm.json:1:', result.stderr)
+            patterns.write_text('')
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, 'scan accepted empty private patterns')
+
     def test_focused_sdks_require_strict_verification_and_never_run_full_gate(self):
         with tempfile.TemporaryDirectory(prefix='focused-sdk-dispatch-') as temporary:
             root = Path(temporary)

@@ -261,7 +261,9 @@ def package_sites(packages, staged, scratch):
             copy_unique(artifact, staged / 'crates' / artifact.name)
     homebrew(staged)
     validate(staged)
+    from release_installed_prepare import jvm as prepare_jvm
     from release_registry_check import install, install_python
+    prepare_jvm(staged, scratch, prepared=scratch / 'maven-build-cache')
     install(staged, scratch)
     install_python(staged, scratch)
 

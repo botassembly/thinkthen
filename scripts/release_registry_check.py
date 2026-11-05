@@ -134,7 +134,10 @@ def legacy_jvm_consumer(consumer):
 
 def maven_feed(packages, scratch):
     """Expose only prepared third-party artifacts and this release's packages."""
-    feed = seed(Path.home() / '.local/share/thinkthen-build-tools/jvm/m2', scratch / 'maven-feed')
+    prepared = scratch / 'm2'
+    if not prepared.is_dir() or not (scratch / 'prepared-classpath').is_file():
+        raise ValueError('Maven dependencies were not prepared for this registry check')
+    feed = seed(prepared, scratch / 'maven-feed')
     shutil.copytree(packages / 'maven', feed, dirs_exist_ok=True)
     settings = scratch / 'maven-settings.xml'
     settings.write_text('<settings><mirrors><mirror><id>release</id><mirrorOf>*</mirrorOf><url>' +

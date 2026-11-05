@@ -12,9 +12,10 @@ import sys
 import tempfile
 import time
 
-# Fixture gates own their reports independently of the invoking gate.
+# Fixture gates own their reports and staged SDK commands independently of the invoking gate.
 BASE_ENV = dict(os.environ)
 BASE_ENV.pop('THINKTHEN_GATE_FAILURE_TAILS', None)
+BASE_ENV.pop('THINKTHEN_SDK_GATE_RUNNER', None)
 
 ROOT = Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory(prefix='gate-report-') as temporary:

@@ -38,15 +38,18 @@ def resolve(value, revision, temporary, outcomes):
 
 
 def setup_equivalent(step, receipt, environment):
-    expected = {'uses': step['uses'], 'with': step.get('with', {})}
+    identifier = step.get('id', step.get('uses', 'unnamed step'))
+    expected = {'uses': step.get('uses'), 'with': step.get('with', {})}
     if not receipt or {key: receipt.get(key) for key in expected} != expected or not receipt.get('evidence'):
-        raise ValueError('missing exact setup action equivalent and evidence: ' + step['id'])
+        raise ValueError('missing exact setup action equivalent and evidence: ' + identifier)
     selected = receipt.get('environment', {})
     allowed = {'PATH', 'JAVA_HOME', 'JAVA_HOME_22_X64', 'GOROOT', 'DOTNET_ROOT', 'RUBY_ROOT', 'PYTHONLOCATION'}
     if set(selected) - allowed:
         raise ValueError('unsupported setup environment override')
     environment.update(selected)
-    pins = step['with']
+    pins = expected['with']
+    if not isinstance(pins, dict):
+        raise ValueError('unsupported Windows setup inputs')
     probes = {
         'setup-python': ('python3', ['--version'], pins.get('python-version')),
         'setup-go': ('go', ['version'], pins.get('go-version')),
@@ -55,9 +58,10 @@ def setup_equivalent(step, receipt, environment):
         'setup-node': ('node', ['--version'], pins.get('node-version')),
         'setup-ruby': ('ruby', ['--version'], pins.get('ruby-version')),
     }
-    if step['id'] not in probes:
-        raise ValueError('unknown Windows setup action: ' + step['id'])
-    command, arguments, version = probes[step['id']]
+    family = ('ruby/' if identifier == 'setup-ruby' else 'actions/') + identifier + '@'
+    if identifier not in probes or not str(step.get('uses', '')).startswith(family):
+        raise ValueError('unknown Windows setup action: ' + identifier)
+    command, arguments, version = probes[identifier]
     executable = shutil.which(command, path=environment['PATH'])
     if not executable:
         raise ValueError('missing prepared runtime: ' + command)
@@ -82,6 +86,44 @@ def setup_equivalent(step, receipt, environment):
     return {'action': expected, 'executable': executable,
             'sha256': hashlib.sha256(Path(executable).read_bytes()).hexdigest(), 'version_output': banner,
             'installed_sdks': installed, 'preparation_evidence': receipt['evidence']}
+
+
+def preserve_artifact(step, workspace, destination):
+    settings = step.get('with', {})
+    if not isinstance(settings, dict) or set(settings) - {'name', 'path', 'if-no-files-found', 'retention-days'}:
+        raise ValueError('unsupported Windows artifact setting')
+    declared = settings.get('path', '')
+    policy = settings.get('if-no-files-found', 'warn')
+    if not isinstance(declared, str) or not declared or any(character in declared for character in '*?[') or policy not in ('warn', 'error', 'ignore'):
+        raise ValueError('unsupported Windows artifact path or missing-file setting')
+    source = workspace / declared
+    if source.is_symlink() or (os.name == 'nt' and source.is_junction()) or not source.resolve().is_relative_to(workspace.resolve()):
+        raise ValueError('Windows artifact path must stay inside its workspace')
+    source = source.resolve()
+    files = []
+    for path in sorted(source.rglob('*')) if source.is_dir() else [source]:
+        relative = path.relative_to(source) if source.is_dir() else Path(path.name)
+        if any(part.startswith('.') for part in path.relative_to(workspace).parts):
+            continue  # upload-artifact excludes hidden files by default.
+        if path.is_symlink() or (os.name == 'nt' and path.is_junction()) or not path.resolve().is_relative_to(workspace.resolve()):
+            raise ValueError('Windows artifact links are unsupported')
+        if path.is_file():
+            files.append((path, relative))
+    result = {'action': {'uses': step['uses'], 'with': settings}, 'files': {}, 'directory': destination.name}
+    if not files:
+        message = 'No files found for Windows artifact: ' + declared
+        if policy == 'error':
+            raise ValueError(message)
+        result['warning' if policy == 'warn' else 'notice'] = message
+        return result
+    destination.mkdir()
+    for path, relative in files:
+        retained = destination / relative
+        retained.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, retained)
+        result['files'][relative.as_posix()] = {
+            'sha256': hashlib.sha256(retained.read_bytes()).hexdigest(), 'bytes': retained.stat().st_size}
+    return result
 
 
 def execute(source, revision, workspace, temporary, candidate, receipts, output, repository):
@@ -141,7 +183,7 @@ def execute(source, revision, workspace, temporary, candidate, receipts, output,
                 if paths.exists():
                     environment['PATH'] = os.pathsep.join(paths.read_text(encoding='utf-8-sig').splitlines()) + os.pathsep + environment['PATH']
                     paths.unlink()
-            elif 'actions/checkout@' in step.get('uses', ''):
+            elif step.get('uses', '').startswith('actions/checkout@'):
                 subprocess.run(['git', 'init', str(workspace)], check=True, stdout=subprocess.PIPE)
                 subprocess.run(['git', '-C', str(workspace), 'fetch', '--no-tags', str(repository), revision], check=True)
                 subprocess.run(['git', '-C', str(workspace), 'checkout', '--detach', 'FETCH_HEAD'], check=True)
@@ -151,14 +193,16 @@ def execute(source, revision, workspace, temporary, candidate, receipts, output,
                 # A finalizer must not silently alter source bytes after checkout.
                 if subprocess.check_output(['git', '-C', str(workspace), 'config', '--get', 'core.autocrlf'], text=True).strip() != 'false':
                     raise ValueError('production checkout did not disable autocrlf')
-            elif 'actions/download-artifact@' in step.get('uses', ''):
+            elif step.get('uses', '').startswith('actions/download-artifact@'):
                 if step['with'] != {'name': 'platform-windows-x86_64', 'path': 'windows-candidate'}:
                     raise ValueError('Windows artifact action changed; update its local equivalent')
                 destination = workspace / 'windows-candidate'
                 destination.mkdir()
                 shutil.copy2(candidate, destination / candidate.name)
             else:
-                measured = setup_equivalent(step, receipts.get(identifier), environment)
+                measured = (preserve_artifact(step, workspace, output / f'{index:02d}-{identifier}-artifact')
+                            if step.get('uses', '').startswith('actions/upload-artifact@') else
+                            setup_equivalent(step, receipts.get(identifier), environment))
                 log.write_text(json.dumps(measured, indent=2) + '\n', encoding='utf-8')
         except (OSError, ValueError, subprocess.SubprocessError) as error:
             status = 1
@@ -205,7 +249,8 @@ def main():
         results, failures = execute(source, args.revision, workspace, temporary,
             args.candidate.resolve(), json.loads(args.setup_receipts.read_text(encoding='utf-8')),
             args.output.resolve(), args.repository.resolve())
-        report = {'revision': args.revision, 'workflow_sha256': digest, 'workspace': str(workspace),
+        report = {'revision': args.revision, 'workflow_sha256': digest,
+                  'controller_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'workspace': str(workspace),
                   'temporary': str(temporary), 'administrator': True, 'default_encoding': locale.getencoding(),
                   'console_codepage': ctypes.windll.kernel32.GetConsoleOutputCP(),
                   'candidate_sha256': hashlib.sha256(args.candidate.read_bytes()).hexdigest(),

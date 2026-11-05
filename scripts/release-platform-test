@@ -156,6 +156,25 @@ class PlatformRelease(unittest.TestCase):
                 check.install(Path('packages'), Path('scratch'))
         self.assertEqual(seen, ['npm', 'nuget', 'maven'])
 
+    def test_maven_feed_requires_this_checks_completed_preparation(self):
+        from release_registry_check import maven_feed
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            packages, scratch, home = work / 'packages', work / 'scratch', work / 'home'
+            (packages / 'maven').mkdir(parents=True)
+            scratch.mkdir()
+            global_cache = home / '.local/share/thinkthen-build-tools/jvm/m2'
+            global_cache.mkdir(parents=True)
+            (global_cache / 'unrelated-user-artifact.jar').write_bytes(b'not prepared for this check')
+            with patch.object(Path, 'home', return_value=home):
+                for state in ('missing', 'incomplete'):
+                    with self.subTest(preparation=state):
+                        if state == 'incomplete':
+                            (scratch / 'm2').mkdir()
+                        with self.assertRaisesRegex(ValueError, 'not prepared for this registry check'):
+                            maven_feed(packages, scratch)
+                        self.assertFalse((scratch / 'maven-feed').exists())
+
     def test_python_and_brew_run_after_registry_failure(self):
         entry = runpy.run_path(str(ROOT / 'scripts/release-platform-check'))
         seen = []

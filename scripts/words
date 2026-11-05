@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Reject private infrastructure and implementation history in tracked text."""
 
-import json
 import os
 import pathlib
 import re
@@ -33,16 +32,16 @@ for entry in paths:
     if metadata.split()[0] == b"160000":
         continue
     path = pathlib.Path(name.decode())
-    if strict and (path.as_posix() == 'AGENTS.md' or path.parts[0] == 'sdlc'):
+    planning = path.as_posix() == 'AGENTS.md' or path.parts[0] == 'sdlc'
+    if strict and planning:
         continue
     if path.as_posix() in {"scripts/words"}:
         continue
     data = (root / path).read_bytes()
-    if path.as_posix() == "sdlc/pm.json":
-        settings = json.loads(data)
-        settings.pop("mailroom", None)
-        data = json.dumps(settings).encode()
     if b"\0" in data:
+        if planning:
+            print(f"{path}:1: planning text contains a NUL byte", file=sys.stderr)
+            failed = True
         continue
     for number, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), 1):
         # Microsoft names this CRT library and its stem in linker inputs.

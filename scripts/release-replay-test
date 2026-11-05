@@ -18,6 +18,50 @@ import release_workflow
 
 
 class ReleaseReplay(unittest.TestCase):
+    def test_idless_artifact_preserves_files_and_continues_after_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            temporary, output = root / 'tmp', root / 'logs'
+            temporary.mkdir()
+            output.mkdir()
+            artifact = {'name': 'Preserve Windows CLI failure evidence', 'if': 'always()',
+                'uses': 'actions/upload-artifact@pinned', 'with': {'name': 'windows-cli-diagnostics',
+                'path': 'target/windows-cli-diagnostics/', 'if-no-files-found': 'warn', 'retention-days': 7}}
+            steps = [
+                {'id': 'failed', 'if': 'always()', 'run': 'mkdir -p target/windows-cli-diagnostics/nested; '
+                 'printf "actual diagnostic\\n" > target/windows-cli-diagnostics/nested/failure.log; '
+                 'echo hidden > target/windows-cli-diagnostics/.hidden.log; exit 7'},
+                artifact,
+                {'id': 'after', 'if': 'always()', 'run': 'echo retained'},
+            ]
+            source = {'jobs': {'windows-check': {'steps': steps}}}
+            results, failures = replay['execute'](source, 'abc', root, temporary, root / 'unused', {}, output, root)
+            self.assertEqual(failures, ['failed'])
+            self.assertEqual([result['outcome'] for result in results], ['failure', 'success', 'success'])
+            content = b'actual diagnostic\n'
+            retained = output / '01-step-1-artifact/nested/failure.log'
+            self.assertEqual(retained.read_bytes(), content)
+            metadata = json.loads((output / '01-step-1.log').read_text())
+            self.assertEqual(metadata['files']['nested/failure.log'], {
+                'sha256': hashlib.sha256(content).hexdigest(), 'bytes': len(content)})
+            self.assertEqual(list(metadata['files']), ['nested/failure.log'])
+            self.assertFalse((output / '01-step-1-artifact/.hidden.log').exists())
+            self.assertEqual(metadata['action'], {'uses': artifact['uses'], 'with': artifact['with']})
+            self.assertEqual((output / '02-after.log').read_text().strip(), 'retained')
+
+    def test_artifact_missing_file_policy_and_unknown_actions_keep_collecting(self):
+        for policy, expected in [('warn', []), ('error', ['step-0'])]:
+            with self.subTest(policy=policy), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                steps = [{'uses': 'actions/upload-artifact@pinned', 'if': 'always()',
+                    'with': {'name': 'diagnostics', 'path': 'missing/', 'if-no-files-found': policy}},
+                    {'id': 'after', 'if': 'always()', 'run': 'echo after'}]
+                results, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps}}},
+                    'abc', root, root, root / 'unused', {}, root, root)
+                self.assertEqual(failures, expected)
+                self.assertEqual(results[-1]['outcome'], 'success')
+                self.assertIn('No files', (root / '00-step-0.log').read_text())
+
     def test_own_run_blocks_keep_order_environment_and_all_failures(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -90,9 +134,66 @@ sys.exit(int(os.environ.get('REPLAY_EXIT', '0')))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             step = {'id': 'setup', 'uses': 'actions/new-setup@pinned', 'with': {'version': '1'}}
-            source = {'jobs': {'windows-check': {'steps': [step]}}}
+            source = {'jobs': {'windows-check': {'steps': [step,
+                {'uses': 'actions/new-setup@pinned', 'if': 'always()', 'with': {'version': '1'}},
+                {'id': 'after', 'if': 'always()', 'run': 'echo after'}]}}}
             _, failures = replay['execute'](source, 'abc', root, root, root / 'unused', {}, root, root)
-            self.assertEqual(failures, ['setup'])
+            self.assertEqual(failures, ['setup', 'step-1'])
+            self.assertIn('missing exact setup action', (root / '01-step-1.log').read_text())
+            self.assertEqual((root / '02-after.log').read_text().strip(), 'after')
+
+    def test_known_setup_id_cannot_admit_an_unknown_action(self):
+        steps = [{'id': 'setup-go', 'uses': 'other/setup-go@pinned', 'with': {'go-version': '1.24.13'}},
+                 {'uses': 'actions/new-tool@pinned'}]
+        for step in steps:
+            with self.subTest(step=step):
+                receipt = {'uses': step['uses'], 'with': step.get('with', {}), 'evidence': 'unsupported action'}
+                with self.assertRaisesRegex(ValueError, 'unknown Windows setup action'):
+                    replay['setup_equivalent'](step, receipt, dict(os.environ))
+
+    def test_foreign_action_paths_cannot_claim_builtin_artifact_or_checkout(self):
+        for family in ('download-artifact', 'checkout'):
+            with self.subTest(family=family), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                workspace, output = root / 'workspace', root / 'logs'
+                workspace.mkdir()
+                output.mkdir()
+                candidate = root / 'candidate.tar.gz'
+                candidate.write_bytes(b'candidate bytes')
+                step = {'id': 'foreign', 'uses': 'other/actions/' + family + '@pinned',
+                        'with': {'name': 'platform-windows-x86_64', 'path': 'windows-candidate'}}
+                receipt = {'uses': step['uses'], 'with': step['with'], 'evidence': 'foreign action'}
+                _, failures = replay['execute']({'jobs': {'windows-check': {'steps': [step]}}},
+                    'abc', workspace, root, candidate, {'foreign': receipt}, output, root)
+                self.assertEqual(failures, ['foreign'])
+                self.assertIn('unknown Windows setup action', (output / '00-foreign.log').read_text())
+                self.assertFalse((workspace / 'windows-candidate').exists())
+                self.assertFalse((workspace / '.git').exists())
+
+    def test_artifact_cannot_retain_files_outside_the_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace, output = root / 'workspace', root / 'logs'
+            workspace.mkdir()
+            output.mkdir()
+            (root / 'outside.log').write_text('outside diagnostic')
+            steps = [{'uses': 'actions/upload-artifact@pinned', 'if': 'always()',
+                'with': {'name': 'diagnostics', 'path': '../outside.log'}},
+                {'id': 'after', 'if': 'always()', 'run': 'echo after'}]
+            results, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps}}},
+                'abc', workspace, root, root / 'unused', {}, output, root)
+            self.assertEqual(failures, ['step-0'])
+            self.assertEqual(results[-1]['outcome'], 'success')
+            self.assertFalse((output / '00-step-0-artifact').exists())
+            diagnostics = workspace / 'diagnostics'
+            diagnostics.mkdir()
+            (diagnostics / 'linked.log').symlink_to(root / 'outside.log')
+            steps[0]['with']['path'] = 'diagnostics'
+            results, failures = replay['execute']({'jobs': {'windows-check': {'steps': steps}}},
+                'abc', workspace, root, root / 'unused', {}, output, root)
+            self.assertEqual(failures, ['step-0'])
+            self.assertEqual(results[-1]['outcome'], 'success')
+            self.assertFalse((output / '00-step-0-artifact').exists())
 
     def test_setup_receipt_cannot_claim_a_different_selected_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
