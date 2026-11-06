@@ -148,10 +148,8 @@ def candidate(destination):
     r = verified()
     native = build_native()
     from release_notices import compiled_names
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.json') as messages:
-        messages.write((native / 'artifacts.json').read_text().rstrip() + '\n' + (r / 'artifacts.json').read_text())
-        messages.flush()
-        names = compiled_names('windows-x86_64', messages.name, ROOT)
+    # The engine surfaces and R are separate Cargo builds, each matched with its own resolved graph.
+    names = compiled_names('windows-x86_64', [native / 'artifacts.json', r / 'artifacts.json'], ROOT)
     (out / 'compiled-crates.json').write_text(json.dumps({'target': 'windows-x86_64', 'crates': names}, indent=2) + '\n')
     # Protect adapter writes and every package copy from another recipe writer.
     with (native / 'distribution.lock').open('w') as lock, tempfile.TemporaryDirectory(prefix='thinkthen-windows-pack-') as temporary:
@@ -344,6 +342,7 @@ def check_tools(out):
     copy(ROOT / 'scripts/release_windows_check.py', out / 'release_windows_check.py')
     copy(ROOT / 'scripts/production_native.py', out / 'production_native.py')
     copy(ROOT / 'scripts/release_windows_sdks.py', out / 'release_windows_sdks.py')
+    copy(ROOT / 'scripts/long_path_scratch.py', out / 'long_path_scratch.py')
     copy(ROOT / 'scripts/release_windows_cache.py', out / 'release_windows_cache.py')
     copy(ROOT / 'scripts/windows_caller_process.py', out / 'windows_caller_process.py')
 

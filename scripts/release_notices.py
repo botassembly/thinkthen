@@ -205,26 +205,51 @@ def combine(bundles):
     return files
 
 
-def compiled_names(target, messages, root=ROOT):
-    """Compare notice resolution with the shared producer's target library outputs."""
-    selected = set().union(*(resolve(root, target, family) for family in [*SURFACES, 'ffi']))
+def crate(package_id):
+    """Name a compiled package by name and version, since a cached build's path IDs name an earlier checkout."""
+    match = re.fullmatch(r'[a-z]+\+([^#]+)#(?:([^@]+)@)?([^@]+)', package_id)
+    if not match: raise ValueError('unrecognized compiled package: ' + package_id)
+    return match[2] or match[1].split('?')[0].rstrip('/').rsplit('/', 1)[-1], match[3]
+
+
+def linked(root, target, roots):
+    """Crates linked into the target libraries of one Cargo build of these packages."""
+    args = ['cargo', 'tree', '--offline', '--locked', '--target', TARGETS[target],
+            '--edges', 'normal,no-proc-macro', '--prefix', 'none', '--format', '{p}']
+    for name in sorted(roots): args += ['-p', name]
+    lines = subprocess.check_output(args, cwd=root, text=True).splitlines()
+    return {(name, version.removeprefix('v')) for name, version, *_ in (line.split() for line in lines if line)}
+
+
+def compiled_names(target, builds, root=ROOT):
+    """Name every third-party crate in each build's target libraries, matched with its resolved graph."""
     data = metadata(root, TARGETS[target])
     changes = patched(root)
-    identities = {p['id']: p['name'] + '-' + p['version'] for p in data['packages'] if p['source'] or p['name'] in changes}
-    actual = set()
-    for line in Path(messages).read_text().splitlines():
-        item = json.loads(line)
-        if item.get('reason') != 'compiler-artifact' or item['package_id'] not in identities: continue
-        if any('/' + TARGETS[target] + '/' in filename for filename in item['filenames']):
-            actual.add(identities[item['package_id']])
-    if not actual or actual - selected:
-        raise ValueError(f'notice graph differs from compiled target libraries: missing={sorted(actual-selected)}, extra={sorted(selected-actual)}')
+    members = {p['name'] for p in data['packages'] if p['source'] is None and p['name'] not in changes}
+    starts = {SURFACES.get(family, 'thinkthen-ffi') for family in [*SURFACES, 'ffi']}
+    actual, expected = set(), set()
+    for messages in builds:
+        roots = set()
+        for line in Path(messages).read_text().splitlines():
+            item = json.loads(line)
+            if item.get('reason') != 'compiler-artifact': continue
+            if not any('/' + TARGETS[target] + '/' in filename for filename in item['filenames']): continue
+            name, version = crate(item['package_id'])
+            if name not in members: actual.add(name + '-' + version)
+            elif name in starts: roots.add(name)
+        if not roots: raise ValueError('compiled messages build no notice root: ' + str(messages))
+        expected |= {name + '-' + version for name, version in linked(root, target, roots) if name not in members}
+    selected = set().union(*(resolve(root, target, family) for family in [*SURFACES, 'ffi']))
+    missing, extra = sorted(expected - actual), sorted((actual - expected) | (actual - selected))
+    if missing or extra:
+        raise ValueError(f'compiled target libraries differ from the resolved graph: missing={missing}, extra={extra}')
     return sorted(actual)
 
 
-def compiled(target, messages, root=ROOT):
-    names = compiled_names(target, messages, root)
-    selected = set().union(*(json.loads(bundle(target, family, root, names)[NOTICE + '/index.json'])['crates']
-                             for family in [*SURFACES, 'ffi']))
-    if selected != set(names): raise ValueError('notices omit compiled target crates')
+def compiled(target, builds, root=ROOT):
+    names = compiled_names(target, builds, root)
+    families = {family: sorted(json.loads(bundle(target, family, root, names)[NOTICE + '/index.json'])['crates'])
+                for family in [*SURFACES, 'ffi']}
+    if set().union(*families.values()) != set(names): raise ValueError('notices omit compiled target crates')
+    print(json.dumps({'target': target, 'crates': names, 'families': families}, indent=2))
     print(f'target notices match {len(names)} compiled crates: {target}')

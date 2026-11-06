@@ -419,7 +419,7 @@ def build(out, version):
     with prepare_native(ROOT, run, native_run) as (cache, rust):
         from release_notices import compiled_names
         target = host_info()[0]
-        names = compiled_names(target, rust.parent / 'artifacts.json', ROOT)
+        names = compiled_names(target, [rust.parent / 'artifacts.json'], ROOT)
         (out / 'compiled-crates.json').write_text(json.dumps({'target': target, 'crates': names}, indent=2) + '\n')
         host, rid, cache, java, r_version = language_packages(out, version, cache, rust)
         cpp_package(out, version, host)

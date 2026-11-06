@@ -29,6 +29,12 @@ def checker(scratch):
     output = subprocess.check_output([sys.executable, '-E', '-s', delivered / 'check', '--help'],
                                      cwd=scratch, env=env, text=True)
     assert 'check PLATFORM_DIRECTORY' in output
+    # Windows loads these modules only on native Windows, so import each one here.
+    modules = sorted(path.stem for path in delivered.glob('*.py'))
+    assert 'release_windows_sdks' in modules, modules
+    subprocess.run([sys.executable, '-E', '-s', '-c',
+                    'import importlib, sys\nfor name in sys.argv[1:]: importlib.import_module(name)', *modules],
+                   cwd=delivered, env=env, check=True)
     print('Delivered Windows checker starts outside the source tree with its actual shipped imports', flush=True)
 
 

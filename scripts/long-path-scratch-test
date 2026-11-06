@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Feature: Windows-run scratch cleanup reaches long paths and never hides a failure."""
+from contextlib import contextmanager
+import os
+from pathlib import Path, PureWindowsPath
+import runpy
+import subprocess
+import sys
+import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
+
+import long_path_scratch as scratch_module
+
+README = Path(__file__).resolve().parent / 'qualification-readmes'
+READMES = ('command', 'Python', 'TypeScript', 'c', 'cpp', 'Java', 'Kotlin', 'C#', 'R', 'sqlite', 'duckdb')
+LEFTOVER = 'npm-cache/_cacache/content-v2/sha512/2a/cd/held'
+
+
+def windows_root():
+    """Scenario: a Windows drive temp root is cleaned through its extended-length form."""
+    class WindowsPath(PureWindowsPath):
+        def resolve(self):
+            return self
+
+    created = []
+
+    class Temporary:
+        error = None
+
+        def __init__(self, prefix, dir):
+            self.root, self.name, self.cleaned = dir, dir + '\\' + prefix + 'fixture', 0
+            created.append(self)
+
+        def cleanup(self):
+            self.cleaned += 1
+            if self.error:
+                raise self.error
+
+    def scratch(temp, failure=None):
+        Temporary.error = failure
+        with patch.object(scratch_module, 'os', SimpleNamespace(name='nt')), \
+             patch.object(scratch_module, 'Path', WindowsPath), \
+             patch.object(scratch_module.tempfile, 'gettempdir', return_value=temp), \
+             patch.object(scratch_module.tempfile, 'TemporaryDirectory', Temporary):
+            with scratch_module.long_path_scratch('thinkthen-readme-install-', 'README') as folder:
+                return folder, created[-1]
+
+    temp = 'C:\\Users\\runneradmin\\AppData\\Local\\Temp'
+    folder, temporary = scratch(temp)
+    assert temporary.root == '\\\\?\\' + temp, temporary.root
+    assert str(folder) == temp + '\\thinkthen-readme-install-fixture', folder
+    assert temporary.cleaned == 1
+    share = '\\\\server\\share\\temp'
+    assert scratch(share)[1].root == share, 'a UNC root must not gain a drive prefix'
+    leftover = temporary.name + '\\npm-cache\\_cacache\\content-v2\\sha512\\2a\\cd'
+    try:
+        scratch(temp, OSError(145, 'The directory is not empty', leftover))
+    except RuntimeError as error:
+        message = str(error)
+    else:
+        raise AssertionError('a Windows cleanup failure was swallowed')
+    assert message.startswith('README scratch cleanup failed; retained ' + str(folder) + ': '), message
+    assert repr(leftover) in message, message
+    print('Windows scratch: extended-length root cleans; tools see the ordinary path; failures name the leftover')
+
+
+def readme_child(failure, package):
+    """Run the real README check and its real cleanup after an npm cache file is written."""
+    real_scratch, real_unlink = scratch_module.long_path_scratch, os.unlink
+
+    @contextmanager
+    def scratch(prefix, label):
+        with real_scratch(prefix, label) as folder:
+            yield folder
+            held = folder / LEFTOVER
+            held.parent.mkdir(parents=True)
+            held.write_text('npm cache entry', encoding='utf-8')
+
+    def unlink(path, *args, **kwargs):
+        # Windows reports a file past 260 characters missing, so its folder stays full.
+        if failure == 'cleanup' and os.path.basename(os.fspath(path)) == Path(LEFTOVER).name:
+            raise FileNotFoundError(2, 'injected long path is unreachable', os.fspath(path))
+        return real_unlink(path, *args, **kwargs)
+
+    sys.argv = [str(README), package]
+    with patch.object(scratch_module, 'long_path_scratch', scratch), patch.object(os, 'unlink', unlink):
+        runpy.run_path(str(README), run_name='__main__')
+
+
+def readme_cleanup():
+    """Scenario: the README check cleans up after every README and fails on a held leftover."""
+    with tempfile.TemporaryDirectory(prefix='thinkthen-readme-cleanup-test-') as directory:
+        root = Path(directory)
+        package, temp = root / 'package', root / 'tmp'
+        package.mkdir()
+        temp.mkdir()
+        for failure in ('none', 'cleanup'):
+            result = subprocess.run([sys.executable, __file__, failure, str(package)], capture_output=True,
+                                    text=True, env=dict(os.environ, TMPDIR=str(temp)), timeout=300)
+            assert result.returncode != 0, result.stdout
+            for name in READMES:
+                assert result.stdout.count('README: ' + name + ': FAIL') == 1, (failure, name, result.stdout)
+            retained = sorted(temp.glob('thinkthen-readme-install-*'))
+            if failure == 'none':
+                assert 'README checks failed: ' + ', '.join(READMES) in result.stderr, result.stderr
+                assert not retained, retained
+                continue
+            assert len(retained) == 1, (retained, result.stderr)
+            assert 'README scratch cleanup failed; retained ' + str(retained[0]) in result.stderr, result.stderr
+            assert 'Directory not empty' in result.stderr, result.stderr
+            assert (retained[0] / LEFTOVER).is_file(), 'cleanup failure lost its evidence'
+    print('README check: every README runs before cleanup; a held npm cache fails the step and is kept')
+
+
+if len(sys.argv) == 3:
+    readme_child(sys.argv[1], sys.argv[2])
+else:
+    windows_root()
+    readme_cleanup()

@@ -460,7 +460,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
 
             def compiled(target, path, root):
                 self.assertEqual(target, 'linux-x86_64')
-                self.assertEqual(path, messages)
+                self.assertEqual(path, [messages])
                 return ['compiled-fixture-1.0']
 
             def run(*args, env):
@@ -487,6 +487,42 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
                   + hashlib.sha256(native.read_bytes()).hexdigest()
                   + '; compiled input producer/artifacts.json '
                   + hashlib.sha256(messages.read_bytes()).hexdigest())
+
+    def test_cached_build_notices_name_every_compiled_crate(self):
+        from release_notices import TARGETS, compiled_names, linked, metadata
+        # Trimmed from a cached Mac release build whose messages name an earlier job's checkout.
+        fixture = ROOT / 'scripts/tests/cached-build-artifacts.json'
+        lines = fixture.read_text().splitlines()
+        live = {p['id'] for p in metadata(ROOT, TARGETS['macos-arm64'])['packages']}
+        paths = {json.loads(line)['package_id'] for line in lines if 'path+file' in line}
+        self.assertEqual(len(paths), 3)
+        self.assertFalse(paths & live)
+        # The R library links both vendored extendr crates, but not the host-built macro crate.
+        graph = linked(ROOT, 'macos-arm64', {'thinkthen-r'})
+        self.assertLessEqual({('extendr-api', '0.8.2'), ('extendr-ffi', '0.8.2')}, graph)
+        self.assertNotIn('extendr-macros', {name for name, _ in graph})
+        built = {('thinkthen-r', '0.2.0'), ('extendr-api', '0.8.2'), ('extendr-ffi', '0.8.2')}
+        unlisted = json.dumps({'reason': 'compiler-artifact', 'package_id': 'registry+https://example.invalid/index#unlisted@1.0.0',
+                               'filenames': ['/build/native-cache/target/aarch64-apple-darwin/release/deps/libunlisted.rlib']})
+        cases = {
+            'cached': (lines, built, None),
+            'graph crate without output': ([line for line in lines if 'libextendr_api-' not in line], built,
+                                           r"missing=\['extendr-api-0\.8\.2'\], extra=\[\]"),
+            'output outside build graph': (lines, built - {('extendr-ffi', '0.8.2')}, r"missing=\[\], extra=\['extendr-ffi-0\.8\.2'\]"),
+            'output outside notice graph': ([*lines, unlisted], built | {('unlisted', '1.0.0')},
+                                            r"missing=\[\], extra=\['unlisted-1\.0\.0'\]"),
+        }
+        with tempfile.TemporaryDirectory(prefix='thinkthen-compiled-crates-') as temporary:
+            for case, (messages, resolved, error) in cases.items():
+                with self.subTest(case), patch('release_notices.linked', return_value=resolved):
+                    path = Path(temporary) / 'artifacts.json'
+                    path.write_text('\n'.join(messages) + '\n')
+                    if error is None:
+                        self.assertEqual(compiled_names('macos-arm64', [path]),
+                                         ['extendr-api-0.8.2',
+                                          'extendr-ffi-0.8.2'])
+                    else:
+                        with self.assertRaisesRegex(ValueError, error): compiled_names('macos-arm64', [path])
 
     def test_jvm_build_payload_precedes_final_notice_checks(self):
         from jvm_repository import verify
@@ -530,6 +566,7 @@ while (-not [IO.File]::Exists($env:PSModuleAnalysisCachePath)) {
     def test_qualification_recipes(self):
         subprocess.run([sys.executable, ROOT / "scripts/qualification-recipe-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-windows-sdks-test"], check=True)
+        subprocess.run([sys.executable, ROOT / "scripts/long-path-scratch-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/qualification-continuation-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-replay-test"], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/release-report-all-test"], check=True)

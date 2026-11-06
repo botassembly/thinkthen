@@ -9,9 +9,9 @@ from pathlib import Path
 import shutil
 import sys
 import tarfile
-import tempfile
 import zipfile
 
+from long_path_scratch import long_path_scratch
 from release_registry import native_libraries, one
 from release_registry_check import environment
 from release_notice_check import package_notices
@@ -54,8 +54,7 @@ def check(name):
     else:
         print(f'source install {name}: PASS', flush=True)
 
-with tempfile.TemporaryDirectory(prefix='thinkthen-source-install-') as temporary:
-    scratch = Path(temporary)
+with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch:
     try:
         env = environment(scratch) | {'THINKTHEN_BACKEND': 'stub', 'GOSUMDB': 'off', 'GOTOOLCHAIN': 'local', 'GOWORK': 'off', 'CGO_ENABLED': '1'}
         tag = scratch / 'tag'

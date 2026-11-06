@@ -8,10 +8,10 @@ import json
 import os
 from pathlib import Path
 from package_inventory import python_wheelhouse as wheelhouse
+from long_path_scratch import long_path_scratch
 import shutil
 import subprocess
 import sys
-import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 
@@ -117,22 +117,8 @@ def runtime_environment(scratch, prepared):
     return env
 
 
-@contextmanager
 def sdk_scratch():
-    # npm cache files can pass 260 characters. Without the extended-length prefix,
-    # Windows reports them missing, tempfile skips them, and their folder stays full.
-    root = Path(tempfile.gettempdir()).resolve()
-    root = '\\\\?\\' + str(root) if len(root.drive) == 2 else str(root)
-    temporary = tempfile.TemporaryDirectory(prefix='thinkthen-windows-sdks-', dir=root)
-    scratch = Path(temporary.name.removeprefix('\\\\?\\'))
-    try:
-        yield scratch
-    finally:
-        try:
-            temporary.cleanup()
-        except OSError as error:
-            raise RuntimeError('Windows SDK scratch cleanup failed; retained '
-                               + str(scratch) + ': ' + str(error)) from error
+    return long_path_scratch('thinkthen-windows-sdks-', 'Windows SDK')
 
 
 def full(folder, build, *, caller_owned=False):
