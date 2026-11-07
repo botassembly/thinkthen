@@ -176,8 +176,8 @@ is_refund = frame.thinkthen.decide(
     threshold=(0.2, 0.8),
     errors="coerce",
 )
-failed_messages = is_refund.thinkthen.failures()
-print(failed_messages[["position", "error_code"]])
+failed = is_refund.thinkthen.failures()
+print(failed[["position", "error_code"]])
 ```
 
 `failures()` gives each failure's place in your input, counted from 1, its code and its message. An answer with no failure gives no warning and an empty table. `filter` and annotate work the same way.
@@ -319,9 +319,10 @@ import thinkthen.aio as aio
 
 async def main() -> None:
     retry = tt.RetryPolicy(max_retries=5)
-    aio.set_default_client(tt.AsyncClient(retry=retry))
+    client = tt.AsyncClient(retry=retry)
+    aio.set_default_client(client)
     is_refund = await aio.decide(
-        "Does the customer request a refund?",
+        "Is this a refund request?",
         "Please refund my order.",
     )
     print(is_refund)

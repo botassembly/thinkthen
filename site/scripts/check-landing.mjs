@@ -340,6 +340,7 @@ try {
     finally {
       const name = `${route.replace(/[^a-z0-9]+/gi, '-') || 'home'}-${width}-${theme}.png`;
       await page.screenshot({ path: path.join(shots, name), fullPage: true }).catch((error) => fail('Screenshot failed', error.message));
+      result.shot = name;
       cases.push(result);
       console.log(`${result.failures.length ? 'FAIL' : 'PASS'} ${route} ${width}x${height} ${theme}: ${result.failures.length} finding(s)`);
       await context.close();
@@ -491,5 +492,11 @@ try {
 const failures = [...redirectVisits.filter(({ failure }) => failure).map(({ address, target, failure }) => ({ route: address, problem: failure, target })), ...cases.flatMap((entry) => entry.failures.map((failure) => ({ route: entry.route, width: entry.width, theme: entry.theme, ...failure }))), ...readerWalk.filter((entry) => !entry.completed).map(({ task, failure }) => ({ problem: 'Reader walk did not complete', task, detail: failure }))];
 fs.writeFileSync('landing-report.json', JSON.stringify({ mode: searchOnly ? 'search-only' : templateReview ? 'templates' : 'journeys', rules: '2026-11-03-docs-rules-and-sitemap', redirectVisits, cases, readerWalk, failures, passed: !failures.length }, null, 2) + '\n');
 fs.writeFileSync('landing-geometry.json', JSON.stringify(cases.map(({ route, width, height, theme, geometry, pageHeight }) => ({ route, width, height, theme, geometry, pageHeight })), null, 2) + '\n');
+// Name each finding in the log too, so a lost report does not hide what failed.
+for (const { route, width, theme, problem, detail } of failures) {
+  const where = [route, width && `${width}px`, theme].filter(Boolean).join(' ');
+  const text = detail === undefined ? '' : `: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`;
+  console.log(`Finding ${where}: ${problem}${text.length > 600 ? text.slice(0, 600) + '...' : text}`);
+}
 console.log(`Docs browser: ${cases.length} cases, ${failures.length} findings; landing-report.json`);
 if (failures.length) process.exitCode = 1;

@@ -179,10 +179,23 @@ func closeCache(t *testing.T, path string) {
 	}
 }
 
+// cacheStillWritable reports whether this token can publish a file under a denied
+// cache anyway, as an elevated token with backup and restore privileges enabled can.
+func cacheStillWritable(t *testing.T, path string) bool {
+	t.Helper()
+	probe := filepath.Join(path, "write-probe")
+	defer os.RemoveAll(probe)
+	if err := os.MkdirAll(probe, 0700); err != nil {
+		return false
+	}
+	return os.WriteFile(filepath.Join(probe, "file"), nil, 0600) == nil
+}
+
 func denyCacheWrites(t *testing.T, path string) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
-		icacls(t, path, "/deny", "*"+currentSID(t)+":(AD,WD)")
+		// Inherited, so a subfolder made by restore privilege is denied as well.
+		icacls(t, path, "/deny", "*"+currentSID(t)+":(OI)(CI)(AD,WD)")
 		return
 	}
 	if err := os.Chmod(path, 0500); err != nil {
@@ -226,11 +239,13 @@ func TestNativeTemporaryCache(t *testing.T) {
 				cache = filepath.Join(root, strings.Repeat("x", 256))
 				home = cache
 			}
+			writable := false
 			if mode == "readonly" {
 				if os.Geteuid() == 0 {
 					t.Skip("root can write read-only folders")
 				}
 				denyCacheWrites(t, cache)
+				writable = cacheStillWritable(t, cache)
 			}
 			if mode == "occupied" {
 				if err := os.WriteFile(filepath.Join(root, predictableCache(t)), []byte("foreign occupant"), 0600); err != nil {
@@ -257,6 +272,17 @@ func TestNativeTemporaryCache(t *testing.T) {
 				t.Fatalf("%v: %s", err, output)
 			}
 			folders, err := filepath.Glob(filepath.Join(root, "thinkthen-*"))
+			if writable {
+				// This token can still write the user cache, so the engine belongs there and
+				// no fallback is made. The other modes prove the fallback itself.
+				library := map[bool]string{true: "library.dll", false: "library"}[runtime.GOOS == "windows"]
+				assets, globErr := filepath.Glob(filepath.Join(cache, "thinkthen", "native", "*", library))
+				if err != nil || globErr != nil || len(folders) != 0 || len(assets) != 1 {
+					t.Fatalf("a writable cache was not used: temp %v %v, cache %v %v", folders, err, assets, globErr)
+				}
+				t.Log("this token writes past the deny entry; the engine was published in the user cache")
+				return
+			}
 			if mode == "occupied" {
 				var private []string
 				for _, folder := range folders {

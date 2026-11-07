@@ -360,11 +360,7 @@ impl FileJob {
                 }
                 Err(error) => return Err(error),
             };
-            if unlocked {
-                file.set_permissions(permissions).map_err(local)?;
-            }
-            file.sync_all().map_err(local)?;
-            sync_directory(parent)?;
+            finish_swap(&file, unlocked.then_some(permissions), parent, &backup.path)?;
             Some(backup.path.clone())
         } else {
             temporary
@@ -612,6 +608,27 @@ fn unlock_source(_source: &Path, _permissions: &fs::Permissions) -> std::io::Res
     Ok(false)
 }
 
+/// Restore the read-only flag, then flush the swapped file and its folder.
+/// The source is already replaced, so a failure says so and names the backup
+/// that holds the original.
+fn finish_swap(
+    file: &File,
+    read_only: Option<fs::Permissions>,
+    parent: &Path,
+    backup: &Path,
+) -> Result<(), FileError> {
+    read_only
+        .map_or(Ok(()), |permissions| file.set_permissions(permissions).map_err(local))
+        .and_then(|()| file.sync_all().map_err(local))
+        .and_then(|()| sync_directory(parent))
+        .map_err(|error| {
+            local(format!(
+                "the source was replaced with the output, but finishing the swap failed: {error}; the original source is kept at {}",
+                backup.display()
+            ))
+        })
+}
+
 /// A failed publication must not delete finished, possibly paid-for output.
 struct Keeper<'a> {
     cancel: &'a Cancel,
@@ -774,4 +791,32 @@ fn invalid(code: Code, message: &str) -> FileError {
         code,
         crate::core::diagnostic::requirement("file", "a valid file operation", message),
     )
+}
+
+/// Only Unix flushes the folder, so a missing folder fails the step there.
+#[cfg(all(test, unix))]
+mod tests {
+    use super::{FileError, finish_swap};
+    use std::path::Path;
+
+    #[test]
+    fn a_failure_after_the_swap_names_the_replaced_source_and_its_backup() {
+        let file = tempfile::tempfile().unwrap();
+        let folder = Path::new("/nonexistent-thinkthen-folder");
+        let backup = Path::new("data.thinkthen-backup.csv");
+        let error = finish_swap(&file, None, folder, backup).unwrap_err();
+        assert!(matches!(error, FileError::Local(_)));
+        assert_eq!(error.code(), "local.io");
+        let message = error.to_string();
+        assert!(
+            message.starts_with(
+                "the source was replaced with the output, but finishing the swap failed: "
+            ),
+            "{message}"
+        );
+        assert!(
+            message.ends_with("; the original source is kept at data.thinkthen-backup.csv"),
+            "{message}"
+        );
+    }
 }

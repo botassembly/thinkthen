@@ -5,8 +5,9 @@
 #[path = "../../loopback/src/lib.rs"]
 pub mod loopback;
 
-use std::sync::{Arc, Condvar, Mutex, mpsc};
+use std::sync::{Arc, Condvar, Mutex, PoisonError, mpsc};
 use std::thread;
+use std::time::Duration;
 
 use loopback::{KEY, Loopback, Reply, Request};
 use serde_json::{Value, json};
@@ -112,27 +113,68 @@ fn the_batch_never_changes_the_wire_questions() {
     assert_eq!(alone, packed);
 }
 
+/// How long any one step of a test may wait before it fails with a message.
+const PATIENCE: Duration = Duration::from_secs(20);
+
+/// Gates the loopback handler holds requests on. Dropping it opens both, so
+/// a failing test never leaves the engine or the server's workers held.
+struct Gates(Arc<(Mutex<(bool, bool)>, Condvar)>);
+
+impl Gates {
+    /// Open the gate for every request but the slow first (`false`), or for
+    /// the first too (`true`).
+    fn open(&self, first: bool) {
+        let (gates, wake) = &*self.0;
+        let mut gates = gates.lock().unwrap_or_else(PoisonError::into_inner);
+        gates.1 = true;
+        gates.0 |= first;
+        wake.notify_all();
+    }
+
+    /// Hold a request until its gate opens, or fail after `PATIENCE`.
+    fn hold(gates: &(Mutex<(bool, bool)>, Condvar), first: bool) {
+        let (gates, wake) = gates;
+        let open = |gates: &(bool, bool)| if first { gates.0 } else { gates.1 };
+        let (guard, waited) = wake
+            .wait_timeout_while(
+                gates.lock().unwrap_or_else(PoisonError::into_inner),
+                PATIENCE,
+                |gates| !open(gates),
+            )
+            .unwrap_or_else(PoisonError::into_inner);
+        drop(guard);
+        assert!(
+            !waited.timed_out(),
+            "the test never released a held request"
+        );
+    }
+}
+
+impl Drop for Gates {
+    fn drop(&mut self) {
+        self.open(true);
+    }
+}
+
 #[test]
 fn rows_keep_input_order_and_at_most_four_requests_wait_on_a_slow_first() {
+    // The server holds every request. Only four may be open at once, so four
+    // arrive and no fifth. Then the later requests are answered while the
+    // first stays slow, and the rows still come out in input order.
     let (arrived, arrivals) = mpsc::channel();
-    let release = Arc::new((Mutex::new(false), Condvar::new()));
-    let held = Arc::clone(&release);
+    let shared = Arc::new((Mutex::new((false, false)), Condvar::new()));
+    let held = Arc::clone(&shared);
     let server = Loopback::start(move |request| {
-        arrived.send(()).unwrap();
+        let _ = arrived.send(());
         let body = request.json().unwrap();
         let questions = body["questions"].as_object().unwrap();
-        if questions.values().any(|question| {
+        let first = questions.values().any(|question| {
             question["instructions"]
                 .as_str()
                 .unwrap()
                 .contains("parcel first")
-        }) {
-            let (ready, wake) = &*held;
-            drop(
-                wake.wait_while(ready.lock().unwrap(), |ready| !*ready)
-                    .unwrap(),
-            );
-        }
+        });
+        Gates::hold(&held, first);
         let answers: serde_json::Map<String, Value> = questions
             .iter()
             .map(|(name, question)| {
@@ -155,15 +197,27 @@ fn rows_keep_input_order_and_at_most_four_requests_wait_on_a_slow_first() {
         n => Record::text(format!("parcel {n}")),
     });
     let engine = engine(&server, Some(50));
-    let rows = thread::scope(|scope| {
-        let running = scope.spawn(|| run(&engine, records));
-        for _ in 0..4 {
-            arrivals.recv().unwrap();
+    let arrive = |count: usize, why: &str| {
+        for n in 1..=count {
+            arrivals
+                .recv_timeout(PATIENCE)
+                .unwrap_or_else(|error| panic!("request {n} of {count} {why}: {error}"));
         }
+    };
+    let rows = thread::scope(|scope| {
+        // Dropped on the way out, a failed step included, so nothing stays held.
+        let gates = Gates(shared);
+        let running = scope.spawn(|| run(&engine, records));
+        arrive(4, "never arrived while every request was held");
+        assert!(
+            arrivals.recv_timeout(Duration::from_millis(500)).is_err(),
+            "a fifth request was sent while four were open"
+        );
         assert_eq!(server.count(), 4);
-        let (ready, wake) = &*release;
-        *ready.lock().unwrap() = true;
-        wake.notify_all();
+        gates.open(false);
+        arrive(4, "after the first never arrived while the first was slow");
+        assert_eq!(server.count(), 8);
+        gates.open(true);
         running.join().unwrap()
     });
     assert_eq!(server.count(), 8);

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Compile the pure core module without access to engine or command dependencies."""
+"""Compile the pure core module without access to engine or command dependencies,
+and hold unsafe code in the thinkthen crate to its one Windows module."""
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +12,46 @@ import tomllib
 
 root = Path(__file__).resolve().parent.parent
 workspace = tomllib.loads((root / 'Cargo.toml').read_text())['workspace']
+
+# The thinkthen crate restates the workspace lint table with unsafe_code denied
+# rather than forbidden, so that files/mod.rs alone can allow the Windows
+# access-list module. Deny accepts any allow, so this guard holds the rest of
+# the crate, its tests included, to the workspace rule.
+UNSAFE_HOME = 'src/files/mod.rs'
+ALLOWANCE = re.compile(r'\b(?:allow|expect|warn)\s*\([^)]*\bunsafe_code\b')
+
+
+def unsafe_problems(workspace_lints, crate_lints, sources):
+    """Name each way the crate's lints or sources drift from the one allowance."""
+    problems = []
+    unsafe = {table: dict(lints) for table, lints in crate_lints.items()}
+    if unsafe.get('rust', {}).pop('unsafe_code', None) != 'deny':
+        problems.append('crates/thinkthen/Cargo.toml: [lints.rust] must set unsafe_code = "deny"')
+    shared = {table: dict(lints) for table, lints in workspace_lints.items()}
+    if shared.get('rust', {}).pop('unsafe_code', None) != 'forbid':
+        problems.append('Cargo.toml: [workspace.lints.rust] must set unsafe_code = "forbid"')
+    if unsafe != shared:
+        problems.append('crates/thinkthen/Cargo.toml: [lints] differs from [workspace.lints] beyond unsafe_code')
+    for name, text in sorted(sources.items()):
+        found = len(ALLOWANCE.findall(text))
+        if found != (name == UNSAFE_HOME):
+            problems.append(f'crates/thinkthen/{name}: {found} unsafe_code allowances; only {UNSAFE_HOME} may hold one')
+    return problems
+
+
+crate = root / 'crates/thinkthen'
+sources = {path.relative_to(crate).as_posix(): path.read_text()
+           for path in sorted(crate.rglob('*.rs')) if 'target' not in path.relative_to(crate).parts}
+crate_lints = tomllib.loads((crate / 'Cargo.toml').read_text())['lints']
+# The guard must see a stray allowance, a second one, and a drifted table.
+for planted in ({**sources, 'src/runs/mod.rs': '#[allow(unsafe_code, reason = "x")]'},
+                {**sources, UNSAFE_HOME: sources.get(UNSAFE_HOME, '') + '#![expect( unsafe_code )]'},):
+    assert unsafe_problems(workspace['lints'], crate_lints, planted), 'unsafe guard missed a planted allowance'
+assert unsafe_problems(workspace['lints'], {**crate_lints, 'clippy': {}}, sources), 'unsafe guard missed lint drift'
+problems = unsafe_problems(workspace['lints'], crate_lints, sources)
+if problems:
+    raise SystemExit('core: ' + '\n'.join(problems))
+
 # This allowlist is the no-I/O dependency boundary.
 pure = ('schemars', 'serde', 'serde_json', 'sha2', 'thiserror', 'unicode-general-category', 'unicode-normalization')
 with tempfile.TemporaryDirectory(prefix='thinkthen-core-') as temporary:
@@ -33,4 +75,4 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-core-') as temporary:
     subprocess.run(['cargo', 'clippy', '--offline', '--manifest-path', str(stage / 'Cargo.toml'),
                     '--all-features', '--', '-D', 'warnings', '-F', 'unsafe_code'], check=True,
                    env=dict(os.environ, CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))))
-print('core: isolated pure module compiles with I/O and dynamic JSON bans')
+print('core: isolated pure module compiles with I/O and dynamic JSON bans; only files/mod.rs allows unsafe code')

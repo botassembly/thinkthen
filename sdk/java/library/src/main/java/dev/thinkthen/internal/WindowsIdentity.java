@@ -37,7 +37,7 @@ final class WindowsIdentity {
             var free = linker.downcallHandle(SymbolLookup.libraryLookup("Kernel32.dll", arena).find("LocalFree").orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
             var name = arena.allocateFrom(ValueLayout.JAVA_BYTE,
-                (securityPath(path.toAbsolutePath().toString()) + "\0").getBytes(StandardCharsets.UTF_16LE));
+                (securityPath(path.toAbsolutePath().normalize().toString()) + "\0").getBytes(StandardCharsets.UTF_16LE));
             var list = arena.allocate(ValueLayout.ADDRESS);
             var descriptor = arena.allocate(ValueLayout.ADDRESS);
             // SE_FILE_OBJECT and DACL_SECURITY_INFORMATION.

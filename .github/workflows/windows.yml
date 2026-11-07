@@ -77,6 +77,10 @@ jobs:
         id: spreadsheets
         if: always() && inputs.surface == 'all'
         run: cargo test --locked -p thinkthen --test cli_spreadsheets
+      - name: Lint the Windows-only thinkthen code
+        id: clippy
+        if: always() && inputs.surface == 'all'
+        run: cargo clippy --locked -p thinkthen --all-features --all-targets -- -D warnings
       - name: Report every Windows qualification failure
         if: always()
         env:

@@ -210,6 +210,18 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         assert 'cache owner or permissions' in output.lower(), output
         print('Windows cache: unsafe root answered from safe temp and refused in unsafe temp: ' + label, flush=True)
 
+    def messy_deep_root():
+        """Check that a deep cache root spelled with `/`, `.` and `..` still loads the engine."""
+        deep = root.with_name('d' + 'x' * max(0, 95 - len(str(root.parent))))
+        private_root(deep, env)
+        messy = deep.parent.as_posix() + '/./detour/../' + deep.name
+        status, output = run_consumer(command, env | {'LOCALAPPDATA': messy})
+        assert status == 0, 'consumer did not answer from a messy deep cache root: ' + output
+        copies = list(Path(extended(deep)).glob('thinkthen/native/*/' + filename))
+        assert len(copies) == 1, f'consumer answered without the messy deep cache: {copies}'
+        assert len(str(copies[0]).removeprefix(EXTENDED)) > 260, f'the deep cache is not past 260 characters: {copies[0]}'
+        print('Windows cache: deep root spelled with /, . and .. answered: ' + messy, flush=True)
+
     def refused(path, label):
         # The root belongs to other programs too, so every consumer falls back there.
         if path == root:
@@ -224,6 +236,7 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         for path in sorted(root.rglob('*')):
             print('Windows cache baseline child ' + str(path) + ': ' + json.dumps(state(path)), flush=True)
         raise
+    messy_deep_root()
     asset, = root.glob('thinkthen/native/*/' + filename)
     paths = (asset, asset.parent, asset.parent.parent, root / 'thinkthen', root)
     caller = identity['caller']

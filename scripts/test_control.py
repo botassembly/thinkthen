@@ -90,7 +90,8 @@ class Capture:
 
     def drain(self):
         with self.pipe:
-            while block := self.pipe.read(4096):
+            # read1 returns what has arrived; read(4096) would hold a short diagnostic until the pipe closes.
+            while block := self.pipe.read1(4096):
                 self.size += len(block)
                 self.data.extend(block)
                 del self.data[:-4096]

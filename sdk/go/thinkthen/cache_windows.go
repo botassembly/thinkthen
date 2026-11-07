@@ -17,6 +17,9 @@ import (
 )
 
 func checkCachePath(path string, directory bool) error {
+	// The extended prefix turns off Windows path cleaning, so clean here first:
+	// `..`, `.` and `/` would otherwise reach the security calls verbatim.
+	path = filepath.Clean(path)
 	if _, err := os.Lstat(path); err != nil {
 		return err
 	}
