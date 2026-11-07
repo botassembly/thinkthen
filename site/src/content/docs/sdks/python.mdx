@@ -182,9 +182,9 @@ print(failed_messages[["position", "error_code"]])
 
 `failures()` gives each failure's place in your input, counted from 1, its code and its message. An answer with no failure gives no warning and an empty table. `filter` and annotate work the same way.
 
-Call `failures()` on the object the call returned. pandas keeps the list in that object's `.attrs`. A subset keeps the whole list, including failures outside the subset. `pd.concat` keeps it only when every input's `.attrs` are identical and not empty. `frame.assign(is_refund=is_refund)` loses it, because the list sits on the answer column and not on `frame`. Where the list was lost, `failures()` gives zero rows, so an empty table there does not mean the call had no failures.
+Call `failures()` on the object the call returned. pandas keeps the list in that object's `.attrs`. A subset keeps the whole list, including failures outside the subset. `pd.concat` keeps it only when every input's `.attrs` are identical and not empty. `frame.assign(is_refund=is_refund)` loses it, because the list sits on the answer column and not on `frame`. Where the list was lost, `failures()` gives an empty table, which does not mean the call had no failures.
 
-An `id` column with a gap holds floats in pandas. Each whole number, such as `3.0`, is read as `3`, and the row with the gap fails with `record.invalid`, as any null or fractional `id` does.
+An `id` column with a gap holds floats in pandas. Each whole number, such as `3.0`, is read as `3`, and the message with the gap fails with `record.invalid`, as any null or fractional `id` does.
 
 <details class="example-disclosure">
 <summary>Every function on a pandas column</summary>
@@ -247,7 +247,7 @@ A missing cell fails and sends nothing. The namespace answers every other messag
 
 <Example id="sdk-polars-failure" />
 
-`errors="coerce"` works as it does in pandas: `null` for not sure and for a failure, one `tt.FailedRowsWarning`, and `.thinkthen.failures()` for the list, as a Polars DataFrame. On older Polars, such as 1.0, a missing `find` or annotate answer reads back as a struct of nulls, so check with `is_null()`, which works on every supported version. Polars has no place to keep the list, so call `failures()` on the object the call returned: every Polars operation that makes a new object loses it. Then `failures()` gives zero rows, so an empty table there does not mean the call had no failures.
+`errors="coerce"` works as it does in pandas: `null` for not sure and for a failure, one `tt.FailedRowsWarning`, and `.thinkthen.failures()` for the list, as a Polars DataFrame. On older Polars, such as 1.0, a missing `find` or annotate answer reads back as a struct of nulls, so check with `is_null()`, which works on every supported version. Polars has no place to keep the list, so call `failures()` on the object the call returned: every Polars operation that makes a new object loses it. Then `failures()` gives an empty table, which does not mean the call had no failures.
 
 <details class="example-disclosure">
 <summary>Every function on a Polars column</summary>

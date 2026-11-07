@@ -207,8 +207,10 @@ with long_path_scratch('thinkthen-source-install-', 'Source install') as scratch
                     (app / 'build.zig.zon').write_text(bare_manifest, encoding='utf-8')
                     (app / 'build.zig').write_text(example('zig', 'zig', 'pub fn build'), encoding='utf-8')
                     (app / 'src/main.zig').write_text(example('zig', 'zig'), encoding='utf-8')
-                    address = f'https://github.com/botassembly/thinkthen/releases/download/v{version()}/{zig_archive.name}'
-                    run(*windows_steps(package / 'zig/README.md', app, {address: str(zig_archive)}), cwd=app, env=zig_env)
+                    # The README splits the address in two so each line fits the page.
+                    address = {'https://github.com/botassembly/thinkthen/releases/download': str(zig_archive.parent),
+                               f'v{version()}/{zig_archive.name}': zig_archive.name}
+                    run(*windows_steps(package / 'zig/README.md', app, address), cwd=app, env=zig_env)
                 else:
                     (zig / 'consumer.zig').write_text(example('zig', 'zig'), encoding='utf-8')
                     zig_run('build', '-j2')

@@ -44,7 +44,7 @@ You see `thinkthen: usage.url: url: expected HTTPS, or HTTP to localhost, 127.0.
 
 You see `thinkthen: usage.url: url: expected an address with no user name or password; received a URL holding credentials (contents redacted)`.
 
-**Code:** `usage.url`. **Cause:** the address holds a user name or password, as in `https://name:password@host`. ThinkThen prints the address in its settings, so a password there could leak. **Fix:** take them out of the address and put the key in the backend's key variable.
+**Code:** `usage.url`. **Cause:** the address holds a user name or password, as in `https://name:password@host`. ThinkThen prints the address in its settings, so a password there could leak. **Fix:** take them out of the address and put the key in the service's key variable.
 
 <span id="usage-threshold"></span>
 
@@ -350,7 +350,7 @@ The command never returns these. An SDK or a database extension returns them wit
 
 **Code:** `record.invalid`. **Cause:** an SDK was given a value with no exact text or JSON form, such as a number too large for JSON. That value fails, and the others still answer. **Fix:** turn the value into text or plain JSON yourself before the call, so you decide what the model reads.
 
-An `id` that isn't a string or a whole number fails the same way, with the same code. A null `id` is refused, so a gap in a pandas `id` column fails that row. A whole number stored as a float, such as `3.0`, is read as `3`, up to 9,007,199,254,740,991; past that, a float may no longer hold the number you meant. Fill the gaps, or store large ids as text.
+An `id` that isn't a string or a whole number fails the same way, with the same code. A null `id` is refused, so a gap in a pandas `id` column fails that message. A whole number stored as a float, such as `3.0`, is read as `3`, up to 9,007,199,254,740,991; past that, a float may no longer hold the number you meant. Fill the gaps, or store large ids as text.
 
 ## Next
 

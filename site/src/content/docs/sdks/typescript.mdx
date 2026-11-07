@@ -25,7 +25,7 @@ Give decide a low and a high bar, and a text that falls between them is not sure
 
 <Example id="sdk-typescript-unsure" />
 
-Send not sure to a person. To read the answer without the throw, call `.row()` on the call, as in `await tt.decide(...).row()`. The result's `status` is `"answered"`, `"unsure"` or `"failed"`, and TypeScript lets you read `answer` only once `status` is `"answered"`. A blank record still throws `record.empty`, with or without `.row()`. The error's `probability` and `row` hold the details.
+Send not sure to a person. To read the answer without the throw, call `.row()` on the call, as in `await tt.decide(...).row()`. The result's `status` is `"answered"`, `"unsure"` or `"failed"`, and TypeScript lets you read `answer` only once `status` is `"answered"`. A blank message still throws `record.empty`, with or without `.row()`. The error's `probability` and `row` hold the details.
 
 ## When a call fails
 

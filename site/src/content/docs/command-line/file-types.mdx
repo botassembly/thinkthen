@@ -75,11 +75,11 @@ An Excel file (`.xlsx`) works by name, never from a pipe. This workbook holds on
 
 The command writes `messages.thinkthen.xlsx` beside the input and prints its name. Its `is_refund` column holds real `TRUE` and `FALSE` cells, and `#N/A` for not sure or a failed message, so an Excel formula can't mistake either for a no.
 
-Every other worksheet, style and formula stays as it was. When a workbook holds more than one worksheet, name one with `--sheet Messages`. Formula cells are read from their saved values and never recalculated. Older `.xls` files, macro-enabled workbooks and signed workbooks are refused; save an unsigned `.xlsx` copy first. A worksheet row larger than 64 MiB, counting the text of every cell, is refused, as a CSV record of that size is.
+Every other worksheet, style and formula stays as it was. When a workbook holds more than one worksheet, name one with `--sheet Messages`. Formula cells are read from their saved values and never recalculated. Older `.xls` files, macro-enabled workbooks and signed workbooks are refused; save an unsigned `.xlsx` copy first. A worksheet row larger than 64 MiB, counting the text of every cell, is refused, as a CSV row of that size is.
 
-ThinkThen loads a workbook's whole shared-string table, where Excel keeps its text, into memory. A table larger than 512 MiB is refused. So is a record larger than 64 MiB in plain text, lines, CSV, TSV or JSON Lines, and an Excel row larger than 64 MiB. A record may be up to 64 MiB, but the text sent for judging, with its question, must fit the 96,000-byte request limit: a longer judged text fails that row with `record.too-large`, and the rest of the file completes.
+ThinkThen loads a workbook's whole shared-string table, where Excel keeps its text, into memory. A table larger than 512 MiB is refused. So is a message larger than 64 MiB in plain text, lines, CSV, TSV or JSON Lines, and an Excel row larger than 64 MiB. A message may be up to 64 MiB, but the text sent for judging, with its question, must fit the 96,000-byte request limit: a longer judged text fails that message with `record.too-large`, and the rest of the file completes.
 
-In one run with the stub backend on a Linux build machine (x86_64, glibc 2.43, 12 cores, 27.6 GiB of memory), a 100,000-row workbook with a shared-string table just under the limit peaked at 515.7 MiB of memory. A table with a 64 MiB record peaked at 135.6 MiB, or 263.2 MiB when the record was the judged text.
+In one local test that called no model, on a Linux build machine (x86_64, glibc 2.43, 12 cores, 27.6 GiB of memory), a workbook of 100,000 messages with a shared-string table just under the limit peaked at 515.7 MiB of memory. A table with a 64 MiB message peaked at 135.6 MiB, or 263.2 MiB when that message was the judged text.
 
 ## Judge many files at once
 

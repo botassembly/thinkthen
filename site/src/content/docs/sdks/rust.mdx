@@ -102,7 +102,7 @@ The levels run lowest first, so a plain refund request scores near routine. [sco
 
 <Example id="functions/rank/rust" title="src/main.rs" />
 
-The double charge is the most urgent. `engine.rank` gives back your own items, best first, each with its row. Each answer is a `NonZeroUsize` rank, starting at 1. A message that fails comes last, still holding its item, and its row's `into_answer()` gives the error. `Rank` takes `.top(...)` to keep only the first few. [rank](/functions/rank/) shows every option.
+The double charge is the most urgent. `engine.rank` gives back your own items, best first, each with its result. Each answer is a `NonZeroUsize` rank, starting at 1. A message that fails comes last, still holding its item, and its result's `into_answer()` gives the error. `Rank` takes `.top(...)` to keep only the first few. [rank](/functions/rank/) shows every option.
 
 </details>
 

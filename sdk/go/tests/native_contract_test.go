@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
@@ -266,6 +267,13 @@ func TestNativeTemporaryCache(t *testing.T) {
 				folders = private
 			}
 			if err != nil || len(folders) != 1 {
+				// Name where the child put its engine, so a Windows token difference shows.
+				for _, top := range []string{root, cache} {
+					filepath.WalkDir(top, func(path string, entry fs.DirEntry, walkErr error) error {
+						t.Logf("after child: %s %v", path, walkErr)
+						return nil
+					})
+				}
 				t.Fatalf("missing private fallback: %v %v", folders, err)
 			}
 			info, err := os.Lstat(folders[0])

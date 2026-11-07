@@ -29,7 +29,7 @@ Extract the Windows archives, `thinkthen-cpp-0.2.0-windows-x86_64.zip` and `thin
 
 <InstallLine k="languages.cpp.installWindows" lang="powershell" />
 
-`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the `$env:PATH` line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
 
 ## Catch not sure and failures
 

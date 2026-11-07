@@ -96,7 +96,7 @@
       "package": "the C archive from the release",
       "install": "cc -std=c11 -Wall -Wextra -Werror example.c -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
       "installLang": "sh",
-      "installWindows": "clang-cl /nologo /std:c11 /MD /Ithinkthen\\include example.c /Fe:example.exe /link thinkthen\\lib\\thinkthen_ffi.lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
+      "installWindows": "$flags = \"/nologo\", \"/std:c11\", \"/MD\", \"/Ithinkthen\\include\"\n$lib = \"thinkthen\\lib\\thinkthen_ffi.lib\"\nclang-cl @flags example.c /Fe:example.exe /link $lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
       "requires": "A C11 compiler and pkg-config"
     },
     "cpp": {
@@ -105,7 +105,7 @@
       "package": "the C++ and C archives from the release",
       "install": "c++ -std=c++17 -Wall -Wextra -Werror example.cpp -o example \\\n  $(PKG_CONFIG_PATH=\"$PWD/thinkthen/lib/pkgconfig\" \\\n    pkg-config --cflags --libs thinkthen-c) \\\n  -Wl,-rpath,\"$PWD/thinkthen/lib\"",
       "installLang": "sh",
-      "installWindows": "clang-cl /nologo /std:c++17 /EHsc /MD /Ithinkthen\\include example.cpp /Fe:example.exe /link thinkthen\\lib\\thinkthen_ffi.lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
+      "installWindows": "$flags = \"/nologo\", \"/std:c++17\", \"/EHsc\", \"/MD\", \"/Ithinkthen\\include\"\n$lib = \"thinkthen\\lib\\thinkthen_ffi.lib\"\nclang-cl @flags example.cpp /Fe:example.exe /link $lib\n$env:PATH = \"$PWD\\thinkthen\\bin;$env:PATH\"\n.\\example.exe",
       "requires": "A C++17 compiler and the matching C library"
     },
     "ruby": {
@@ -130,7 +130,7 @@
       "package": "the Zig archive from the release",
       "install": "release=https://github.com/botassembly/thinkthen/releases/\\\ndownload/v0.2.0\nzig fetch --save=thinkthen \\\n  \"$release/thinkthen-zig-0.2.0-linux-x86_64.tar.gz\"",
       "installLang": "sh",
-      "installWindows": "zig fetch --save=thinkthen \"https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip\"\nzig build\n.\\zig-out\\bin\\example.exe",
+      "installWindows": "$release = \"https://github.com/botassembly/thinkthen/releases/download\"\n$archive = \"v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip\"\nzig fetch --save=thinkthen \"$release/$archive\"\nzig build\n.\\zig-out\\bin\\example.exe",
       "requires": "Zig 0.17.0"
     },
     "rust": {

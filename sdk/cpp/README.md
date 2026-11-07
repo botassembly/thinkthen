@@ -19,12 +19,14 @@ CMake projects use `find_package(ThinkThenCpp CONFIG REQUIRED)`, link `ThinkThen
 Extract the Windows archives, `thinkthen-cpp-0.2.0-windows-x86_64.zip` and `thinkthen-c-0.2.0-windows-x86_64.zip`, into the same `thinkthen` folder. You need clang-cl and the Visual Studio C++ tools. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.cpp`, then run:
 
 ```powershell
-clang-cl /nologo /std:c++17 /EHsc /MD /Ithinkthen\include example.cpp /Fe:example.exe /link thinkthen\lib\thinkthen_ffi.lib
+$flags = "/nologo", "/std:c++17", "/EHsc", "/MD", "/Ithinkthen\include"
+$lib = "thinkthen\lib\thinkthen_ffi.lib"
+clang-cl @flags example.cpp /Fe:example.exe /link $lib
 $env:PATH = "$PWD\thinkthen\bin;$env:PATH"
 .\example.exe
 ```
 
-`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the `$env:PATH` line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
 
 ## Ask a question
 

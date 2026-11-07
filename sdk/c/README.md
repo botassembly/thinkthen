@@ -19,12 +19,14 @@ The `-rpath` flag tells the program where to find the library, because the pkg-c
 Extract the C archive for Windows, `thinkthen-c-0.2.0-windows-x86_64.zip`, into `thinkthen`. You need clang-cl and the Visual Studio C++ tools, and no pkg-config. Open Developer PowerShell for Visual Studio in the folder that holds `thinkthen` and `example.c`, then run:
 
 ```powershell
-clang-cl /nologo /std:c11 /MD /Ithinkthen\include example.c /Fe:example.exe /link thinkthen\lib\thinkthen_ffi.lib
+$flags = "/nologo", "/std:c11", "/MD", "/Ithinkthen\include"
+$lib = "thinkthen\lib\thinkthen_ffi.lib"
+clang-cl @flags example.c /Fe:example.exe /link $lib
 $env:PATH = "$PWD\thinkthen\bin;$env:PATH"
 .\example.exe
 ```
 
-`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the second line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
+`thinkthen_ffi.lib` links the program. When it runs, Windows looks for `thinkthen_ffi.dll` on `PATH`, so the `$env:PATH` line adds `thinkthen\bin`; copying the DLL beside `example.exe` works too. Releases are tested with clang-cl.
 
 ## Ask a question
 

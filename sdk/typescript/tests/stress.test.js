@@ -38,10 +38,16 @@ async function adapter(sample) {
       function* records() { for (let i = 0; i < sample.records; i++) { pulled++; if (sample.read_ahead_limit !== null) assert.ok(pulled <= sample.read_ahead_limit, "input read ahead exceeded the engine bound"); yield "body"; } }
       const iterator = client.decideStream("Ready?", records(), { signal: controller.signal })[Symbol.asyncIterator]();
       const pending = assert.rejects(iterator.next(), e => e instanceof sdk.CancelledError && e.code === "local.cancelled");
+      // Each step names itself on stderr, which is a synchronous pipe here, so a hang shows
+      // whether the event loop still turns and whether the cancel line arrived.
+      console.error("cancel: waiting for the cancel line");
+      const beat = setInterval(() => console.error("cancel: event loop turns"), 2000).unref();
+      process.stdin.once("data", () => console.error("cancel: input arrived"));
       const lines = createInterface({ input: process.stdin });
       // The cancel check prints stderr when a call outlives its limit, so a hang names its step.
       for await (const line of lines) { assert.equal(line, "cancel"); controller.abort(); break; }
       console.error("cancel: aborted");
+      clearInterval(beat);
       await pending;
       console.error("cancel: rejected");
       assert.equal((await iterator.next()).done, true);

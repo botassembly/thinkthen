@@ -133,7 +133,9 @@ Save the program as `src/main.zig`, run `zig build`, then run `./zig-out/bin/exa
 Plain `zig build` works on Windows, with no `-Dtarget` flag and no Visual Studio, because Zig brings its own Windows C library. Set up `build.zig` and `src/main.zig` as above, then run this in PowerShell, which fetches the Windows archive:
 
 ```powershell
-zig fetch --save=thinkthen "https://github.com/botassembly/thinkthen/releases/download/v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip"
+$release = "https://github.com/botassembly/thinkthen/releases/download"
+$archive = "v0.2.0/thinkthen-zig-0.2.0-windows-x86_64.zip"
+zig fetch --save=thinkthen "$release/$archive"
 zig build
 .\zig-out\bin\example.exe
 ```
