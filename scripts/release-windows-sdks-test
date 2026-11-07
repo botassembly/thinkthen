@@ -147,9 +147,27 @@ def fixture(failure):
                         original_rmtree(retained)
 
 
+def deep_cache_paths():
+    """Deep cache roots pass 260 characters under short and long temp roots, within 255 per name."""
+    from pathlib import PureWindowsPath
+    from release_windows_cache import deep_name
+    for parent_length in (3, 20, 85, 120, 160):
+        parent = PureWindowsPath('C:\\' + 'p' * (parent_length - 3))
+        assert len(str(parent)) == parent_length
+        for revision in ('a' * 16, 'a' * 64):
+            library = PureWindowsPath('thinkthen', 'native', revision, 'library.dll')
+            for prefix, suffix in (('d', library), ('ps', PureWindowsPath('thinkthen-x') / library)):
+                name = deep_name(prefix, parent, suffix)
+                assert name.startswith(prefix) and len(name) <= 255, (parent_length, name)
+                path = parent / name / suffix
+                assert len(str(path)) > 260, (parent_length, prefix, len(str(path)))
+    print('Windows deep cache roots: library paths pass 260 characters for 3 to 160 character temp roots')
+
+
 if len(sys.argv) == 2:
     fixture(sys.argv[1])
 else:
+    deep_cache_paths()
     candidate_imports()
     for failure in ('Swift', 'C', 'Python', 'setup', 'none', 'cleanup'):
         result = subprocess.run([sys.executable, __file__, failure], capture_output=True, text=True)

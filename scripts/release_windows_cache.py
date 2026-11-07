@@ -10,6 +10,19 @@ import sys
 from long_path_scratch import EXTENDED, extended
 
 
+# Deep cache checks aim past Windows' 260-character path limit with room to spare.
+DEEP_PATH = 270
+
+
+def deep_name(prefix, parent, suffix):
+    """Name a folder under parent so parent/name/suffix passes 260 characters on any runner."""
+    padding = DEEP_PATH - len(str(parent)) - len(str(suffix)) - 2 - len(prefix)
+    name = prefix + 'x' * max(0, padding)
+    if len(name) > 255:
+        raise ValueError(f'deep cache folder name passes 255 characters: {len(name)}')
+    return name
+
+
 def cache_environment(root, environment):
     """Keep PowerShell's known-folder fallback out of the checked package."""
     root = Path(root).resolve()
@@ -195,7 +208,8 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
     def root_fallback(label):
         """Check that a consumer leaves an unsafe root for temp: a safe temp answers, an unsafe one refuses."""
         # A deep safe temp puts the library past 260 characters on every runner, as a deep %TEMP% does.
-        safe = root.with_name(label[0] + 's' + 'x' * max(0, 95 - len(str(root.parent))))
+        # The consumer's temp folder is named thinkthen-*, so thinkthen-x is its shortest spelling.
+        safe = root.with_name(deep_name(label[0] + 's', root.parent, Path('thinkthen-x') / asset.relative_to(root)))
         unsafe = root.with_name(label[0] + 'u')
         private_root(safe, env)
         private_root(unsafe, env)
@@ -212,7 +226,7 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
 
     def messy_deep_root():
         """Check that a deep cache root spelled with `/`, `.` and `..` still loads the engine."""
-        deep = root.with_name('d' + 'x' * max(0, 95 - len(str(root.parent))))
+        deep = root.with_name(deep_name('d', root.parent, asset.relative_to(root)))
         private_root(deep, env)
         messy = deep.parent.as_posix() + '/./detour/../' + deep.name
         status, output = run_consumer(command, env | {'LOCALAPPDATA': messy})
@@ -236,8 +250,8 @@ Set-Acl -LiteralPath $env:TT_CACHE_PATH -AclObject $a''', path, TT_CACHE_ACCESS=
         for path in sorted(root.rglob('*')):
             print('Windows cache baseline child ' + str(path) + ': ' + json.dumps(state(path)), flush=True)
         raise
-    messy_deep_root()
     asset, = root.glob('thinkthen/native/*/' + filename)
+    messy_deep_root()
     paths = (asset, asset.parent, asset.parent.parent, root / 'thinkthen', root)
     caller = identity['caller']
     for path in paths:

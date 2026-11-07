@@ -46,6 +46,9 @@ async function adapter(sample) {
       const lines = createInterface({ input: process.stdin });
       // The cancel check prints stderr when a call outlives its limit, so a hang names its step.
       for await (const line of lines) { assert.equal(line, "cancel"); controller.abort(); break; }
+      // On Windows a paused pipe stdin keeps its pending read, and so the process, alive.
+      // The cancel line was the only input this adapter reads, so release stdin now.
+      process.stdin.destroy();
       console.error("cancel: aborted");
       clearInterval(beat);
       await pending;

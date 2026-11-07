@@ -14,8 +14,11 @@ def workload():
 
 def environment(case):
     client = case['client']
+    # The engine runs in the database process, so it writes the soak's packing reports.
+    hooks = {name: os.environ[name] for name in ('THINKTHEN_INPUT_REPORT', 'THINKTHEN_INPUT_REPORT_RUN')
+             if name in os.environ}
     return dict(child_environment(), THINKTHEN_TEST_LOOPBACK_URL=client['url'],
-                THINKTHEN_API_KEY=client['api_key'], OPENAI_API_KEY=client['api_key'])
+                THINKTHEN_API_KEY=client['api_key'], OPENAI_API_KEY=client['api_key'], **hooks)
 
 
 def settings(case):

@@ -182,7 +182,7 @@ def run(command, table, wire, scenario, count, concurrency=1, rounds=1, cancel=F
                 else:
                     requests = int(fixture.command('count'))
                     packing, idle_added = input_reports(packing_path, packing_run,
-                        expected_calls, count, client['batch'], required=surface in {'java', 'kotlin'})
+                        expected_calls, count, client['batch'], required=surface in {'java', 'kotlin', 'postgres', 'duckdb', 'sqlite'})
                     if packing:
                         report['input_packing'] = packing
                         report['idle_added_requests'] = idle_added
