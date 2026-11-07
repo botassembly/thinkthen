@@ -46,14 +46,18 @@ fn runNamed(comptime function: tt.Function, client: *const tt.Client, a: A, valu
         _ = call.next(&diagnostic) catch return fail(a, diagnostic);
         return error.CancellationWasIgnored;
     }
-    write("[");
     var count: usize = 0;
-    while (try (if (function == .filter) call.nextRow(&diagnostic) else call.next(&diagnostic))) |item| {
-        if (count > 0) write(",");
+    while (true) {
+        const next = if (function == .filter) call.nextRow(&diagnostic) else call.next(&diagnostic);
+        const item = (next catch |err| {
+            if (count == 0) return fail(a, diagnostic);
+            return err;
+        }) orelse break;
+        write(if (count == 0) "[" else ",");
         try emitItem(function, a, item);
         count += 1;
     }
-    write("]");
+    write(if (count == 0) "[]" else "]");
 }
 fn run(a: A, settings_json: []const u8, request_json: []const u8, mode: Mode) !void {
     const settings = try fixture.settings(a, settings_json);

@@ -267,6 +267,10 @@ fn unrepresentable_excel_answers_and_details_become_failed_cells() {
         ("xml-answer", "choose", "invalid\u{1}text".to_owned()),
         ("long-detail", "tag", "x".repeat(32_760)),
     ] {
+        // A Windows command line stops at 32,767 characters.
+        if cfg!(windows) && bad.len() > 32_000 {
+            continue;
+        }
         let input = directory.path().join(format!("{name}.xlsx"));
         workbook(&input);
         change_sheet(&input, |sheet| {

@@ -283,8 +283,10 @@ $owners=@($directory,$file) | ForEach-Object {
 """
         source = Path(temporary) / 'probe.ps1'
         source.write_text(script, encoding='utf-8')
+        # A pwsh parent's module path hides Windows PowerShell's own Get-Acl.
+        modules = {key: value for key, value in env.items() if key.upper() != 'PSMODULEPATH'}
         launch([powershell, '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', source],
-               cwd=cwd, env=env | {'TT_OWNER_PROBE': str(temporary)} | ({'TT_NORMAL_PROBE': '1'} if normal else {}),
+               cwd=cwd, env=modules | {'TT_OWNER_PROBE': str(temporary)} | ({'TT_NORMAL_PROBE': '1'} if normal else {}),
                probe=True, normal_log=Path(temporary) / 'child.log' if normal else None)
 
 

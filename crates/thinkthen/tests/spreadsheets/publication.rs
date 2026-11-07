@@ -335,6 +335,14 @@ fn grant_only(path: &Path, rights: &str) {
     assert!(status.success());
 }
 
+/// A runner's temp folder can hand down nothing, which leaves a new file with
+/// explicit entries from the token. This folder hands down one entry, so a new
+/// file's list is inherited and `grant_only` can replace all of it.
+#[cfg(windows)]
+fn hand_down_access(folder: &Path) {
+    grant_only(folder, "(OI)(CI)F");
+}
+
 #[cfg(windows)]
 fn make_private(path: &Path) {
     grant_only(path, "F");
@@ -372,6 +380,7 @@ fn in_place_keeps_the_access_list_on_the_result_and_the_backup() {
     for private in [true, false] {
         let directory = tempfile::tempdir().unwrap();
         let root = directory.path();
+        hand_down_access(root);
         let input = root.join("input.csv");
         fs::write(&input, ORIGINAL).unwrap();
         if private {
@@ -417,6 +426,7 @@ fn a_private_file_moved_in_from_another_folder_stays_private() {
 #[test]
 fn a_list_that_would_block_the_swap_stops_before_any_call() {
     let directory = tempfile::tempdir().unwrap();
+    hand_down_access(directory.path());
     let input = directory.path().join("input.csv");
     fs::write(&input, ORIGINAL).unwrap();
     grant_only(&input, "R");
